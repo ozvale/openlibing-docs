@@ -2,7 +2,7 @@
 
 ## 1. 基本信息
 
-* **需求链接**: xxx
+* **需求链接**: https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
 * **需求名称**: openlibing漏洞看板SLO管理规则计算调整
 * **核心目标**:
   验证功能正确性，以及架构设计中定义的安全与隐私、可靠性与韧性、可服务性与可观测性和性能与伸缩性等非功能专项任务的闭环验收。
