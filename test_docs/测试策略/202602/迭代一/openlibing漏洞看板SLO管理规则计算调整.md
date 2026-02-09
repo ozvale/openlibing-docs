@@ -71,10 +71,18 @@
 > * 边界与非法输入：验证大数据量、空字段、特殊字符及非法 JSON 格式的拦截能力。
 > * 业务状态机闭环：验证资源从“创建中”到“运行中”再到“已释放”的全生命周期逻辑。
 
-**1.接口响应**: 按照接口文档进行调用。查看XX接口响应
+**1.openlibing的SLO计算规则符合开源漏洞管理策略—配置中心**:查看配置中心中的SLO配置详情
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
+* **预期结果**: openlibing的SLO配置是：高危、致命为30天；中危为90天；低危为30天
 
-* **对应task(issueID)链接:** https://git
-* **预期结果**: _如：统一返回 2XX。
+**2.openlibing的SLO计算规则符合开源漏洞管理策略—openLiBing平台**:分别计算各级别漏洞的SLO时间（Issue计划完成时间-修复起始时间）
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
+* **预期结果**: SLO时间满足新规则（高危、致命为30天；中危为90天；低危为30天）
+
+**3.更改修复起始时间，issue计划完成时间随之刷新**:选择漏洞，修改修复起始时间
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
+* **预期结果**: 1.修复起始时间成功修改 2.issue计划完成时间刷新(修复起始时间+SLO时间)
+
 
 ### 3.2 体验测试专项
 
