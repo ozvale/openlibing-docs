@@ -6,7 +6,7 @@
 * **需求名称**: openLiBing二阶段安全与隐私整改
 * **核心目标**:
   验证功能正确性，以及架构设计中定义的安全与隐私、可靠性与韧性、可服务性与可观测性和性能与伸缩性等非功能专项任务的闭环验收。
-* **开发责任人**: 
+* **开发责任人**: linyapeng/fanyuan/sunchenglong/chaizongxiang/musheng
 * **测试责任人**: alice5426_qing
 
 ---
