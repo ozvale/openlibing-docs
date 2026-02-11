@@ -4,7 +4,7 @@
 
 * **需求链接**: https://gitcode.com/openlibing/openlibing-framework/issues/21
 * **需求名称**: openLiBing二阶段安全与隐私整改
-* **开发责任人**: 
+* **开发责任人**: linyapeng/fanyuan/sunchenglong/chaizongxiang/musheng
 * **测试责任人**: alice5426_qing
 * **最终结论：**： 通过
 * **测试维度** ：
