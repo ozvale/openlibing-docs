@@ -2,7 +2,7 @@
 
 ## 1. 基本信息
 
-* **需求链接**: xx
+* **需求链接**: https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
 * **需求名称**: openlibing漏洞看板SLO管理规则计算调整
 * **开发责任人**: wurq
 * **测试责任人**: qq_42806737
@@ -20,44 +20,19 @@
 
 ### 2.1 功能测试专项
 
-**1.鉴权校验**: 模拟无 Token、过期 Token、伪造请求。查看XX接口响应
+**1.openlibing的SLO计算规则符合开源漏洞管理策略—配置中心**:查看配置中心中的SLO配置详情
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
+* **用例链接**: openlibing的SLO配置是：高危、致命为30天；中危为90天；低危为30天
 
-* **对应task(issueID)链接:** https://githu
-* **预期结果**: 统一返回 401/403 Unauthorized。
-* **测试结果**： Passed/Failed
-* **证明截图**:  xxx
+**2.openlibing的SLO计算规则符合开源漏洞管理策略—openLiBing平台**:分别计算各级别漏洞的SLO时间（Issue计划完成时间-修复起始时间）
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
+* **用例链接**: SLO时间满足新规则（高危、致命为30天；中危为90天；低危为30天）
 
-### 2.2 体验测试专项
-
-**1.验证码测试**: 验证码是否清晰，是否容易让用户理解
-
-* **对应task(issueID)链接:** https://gi
-* **预期结果**: 如：验证码清晰无误易让人理解。
-* **测试结果**： Passed
-* **证明截图**:  xx
-
-### 2.3 集成测试专项
-
-> **不涉及应直接删除**
-
-**1.鉴权校验**: 模拟无 Token、过期 Token、伪造请求。查看XX接口响应
-
-* **对应task(issueID)链接:** https://git
-* **预期结果**: 统一返回 401/403 Unauthorized。
-* **测试结果**： Passed/Failed
-* **证明截图**:  xx
-
-### 2.4 安全与隐私测试专项
-
-> **不涉及应直接删除**
+**3.更改修复起始时间，issue计划完成时间随之刷新**:选择漏洞，修改修复起始时间
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
+* **用例链接**: 
 
 
-**1.鉴权校验**: 模拟无 Token、过期 Token、伪造请求。查看XX接口响应
-
-* **对应task(issueID)链接:** https://git
-* **预期结果**: 如：统一返回 401/403 Unauthorized。
-* **测试结果**：Passed/Failed
-* **证明截图**:  xx
 
 ---
 
@@ -65,11 +40,8 @@
 
 | 测试维度        | 用例总数 | 重点测试点描述             | 通过数 | 不通过数 | 结论 (Pass/Fail) |
 |-------------|------|---------------------|-----|------|----------------|
-| **功能测试**    | 1    | 覆盖核心业务逻辑与 API 契约。   | 1   | 0    | Pass           |
-| **体验测试**    | 1    | 判定产品是否能让用户快速的接受和使用。 | 1   | 0    | Pass           |
-| **集成测试**    | 1    | 跨组件调用及上下游数据流转。      | 1   | 0    | Pass           |
-| **安全与隐私测试** | 1    | 漏洞扫描、凭证加密及日志脱敏。     | 1   | 0    | Pass           |
-
+| **功能测试**    | 3    | 覆盖核心业务逻辑。   | 3   | 0    | Pass           |
+          
 ---
 
 ## 4. 遗留问题与风险说明
