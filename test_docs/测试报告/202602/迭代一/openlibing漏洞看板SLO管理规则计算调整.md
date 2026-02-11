@@ -11,7 +11,7 @@
 * [X] **功能自检测试**
 * [ ] **体验测试**
 * [ ] **集成测试**
-* [X] **安全与隐私测试**：
+* [ ] **安全与隐私测试**：
 * [ ] **可靠性与韧性测试**
 * [ ] **可服务性与可观测性测试**
 * [ ] **性能与伸缩性测试**
@@ -22,15 +22,15 @@
 
 **1.openlibing的SLO计算规则符合开源漏洞管理策略—配置中心**:查看配置中心中的SLO配置详情
 * **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
-* **用例链接**: openlibing的SLO配置是：高危、致命为30天；中危为90天；低危为30天
+* **用例链接**:https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb21000114vcksrg
 
 **2.openlibing的SLO计算规则符合开源漏洞管理策略—openLiBing平台**:分别计算各级别漏洞的SLO时间（Issue计划完成时间-修复起始时间）
 * **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
-* **用例链接**: SLO时间满足新规则（高危、致命为30天；中危为90天；低危为30天）
+* **用例链接**: https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb21000114vcksrg
 
 **3.更改修复起始时间，issue计划完成时间随之刷新**:选择漏洞，修改修复起始时间
 * **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
-* **用例链接**: 
+* **用例链接**: https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb21000114vcksrg
 
 
 
