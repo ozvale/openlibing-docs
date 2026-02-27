@@ -6,3 +6,4 @@
 | #28     |[需求]: openlibing-framework| zouzelan | 通过   |
 | #29     |[需求]: 蓝区作业运营数据入湖-代码仓| yanzhaohong | 通过   |
 | #31     |[需求]: openLiBing项目空间信息开放查看，方便用户寻找归属项目进行权限申请| zhuangzt | 通过   |
+| #28     | [需求]: openlibing-framework| zouzelan | 通过   |
