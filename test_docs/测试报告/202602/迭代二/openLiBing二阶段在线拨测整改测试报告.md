@@ -20,8 +20,6 @@
 
 ### 2.1 功能测试专项
 
-#### 2.1.1 整改管理中心页面接口权限
-
 **1.管理中心查看各个服务的swagger接口信息**:查看各个服务swagger接口信息
 * **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-ai/issues/12
 * **预期结果**:各个服务模块增加swagger接口信息，且各关键接口通过tag进行标识
