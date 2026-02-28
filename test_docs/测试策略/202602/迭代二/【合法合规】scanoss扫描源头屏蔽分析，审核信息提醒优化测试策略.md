@@ -1,12 +1,12 @@
-# #1 [全链路https改造测试策略] 测试策略设计说明书
+# #1 [scanoss扫描源头屏蔽分析，审核信息提醒优化] 测试策略设计说明书
 
 ## 1. 基本信息
 
-* **需求链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **需求名称**: 全链路https改造
+* **需求链接**: https://gitcode.com/openlibing/openlibing-sca/issues/20
+* **需求名称**: 【合法合规】scanoss扫描源头屏蔽分析，审核信息提醒优化
 * **核心目标**:
   验证功能正确性，以及架构设计中定义的安全与隐私、可靠性与韧性、可服务性与可观测性和性能与伸缩性等非功能专项任务的闭环验收。
-* **开发责任人**: wanxiaochuan
+* **开发责任人**: musheng、gaojiangning、caolongheng
 * **测试责任人**: alice5426_qing
 
 ---
@@ -62,21 +62,25 @@
 
 > 测试自检
 >* [ ] **Task 闭环**: 架构设计说明书中定义的 **TASK** 是否均有对应的测试结果？
->* [X] **证据留存**: 关键测试（如性能、安全扫描）是否附带了截图或报告链接？
+>* [ ] **证据留存**: 关键测试（如性能、安全扫描）是否附带了截图或报告链接？
 
 ### 3.1 功能测试专项
 
+> 参考测试设计方向
+> * API 语义验证：验证 HTTP 状态码（2xx, 4xx, 5xx）的使用是否符合 RESTful 规范。
+> * 边界与非法输入：验证大数据量、空字段、特殊字符及非法 JSON 格式的拦截能力。
+> * 业务状态机闭环：验证资源从“创建中”到“运行中”再到“已释放”的全生命周期逻辑。
 
-**1.访问Apollo配置中心**: 查看apollo配置中心，查看访问链接
+**1.审批信息使用角标红色数量显著标识**:查看合法合规审核信息页面的我的申请和待我审核，检查是否存在角标显著标识数量
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-sca/issues/20
+* **预期结果**:我的申请和待我审核，存在红色数量的角标信息显著标识
 
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **预期结果**: Apollo配置中心通过https访问，且访问成功
+**2.Sca审核时给出供应商和组件名称**:查看合法合规审核信息页面的我的申请和待我审核、审批历史，检查是否存在供应商和组件名称
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-sca/issues/20
+* **预期结果**:我的申请和待我审核、审批历史页面，均存在供应商和组件名称信息
 
-**2.查看openlibing各服务功能**: 访问openlibing平台，查看各模块功能，检查功能是否可用
-
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **预期结果**: openlibing各模块功能可用，无异常
+**3.scanoss扫描源头屏蔽分析**: 查看合法合规社区管理页面，检查页面是否可以查看/新增/删除scanoss屏蔽规则
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-sca/issues/20
+* **预期结果**: 社区管理页面新增窗口，可以查看/新增/删除scanoss的屏蔽规则
 
 ---
-
-

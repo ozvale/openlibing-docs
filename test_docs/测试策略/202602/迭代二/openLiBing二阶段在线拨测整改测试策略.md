@@ -1,12 +1,12 @@
-# #1 [全链路https改造测试策略] 测试策略设计说明书
+# #1 [openLiBing二阶段在线拨测整改] 测试策略设计说明书
 
 ## 1. 基本信息
 
-* **需求链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **需求名称**: 全链路https改造
+* **需求链接**: https://gitcode.com/openlibing/openlibing-ai/issues/12
+* **需求名称**: openLiBing二阶段在线拨测整改
 * **核心目标**:
   验证功能正确性，以及架构设计中定义的安全与隐私、可靠性与韧性、可服务性与可观测性和性能与伸缩性等非功能专项任务的闭环验收。
-* **开发责任人**: wanxiaochuan
+* **开发责任人**: zouzelan
 * **测试责任人**: alice5426_qing
 
 ---
@@ -62,21 +62,25 @@
 
 > 测试自检
 >* [ ] **Task 闭环**: 架构设计说明书中定义的 **TASK** 是否均有对应的测试结果？
->* [X] **证据留存**: 关键测试（如性能、安全扫描）是否附带了截图或报告链接？
+>* [ ] **证据留存**: 关键测试（如性能、安全扫描）是否附带了截图或报告链接？
 
 ### 3.1 功能测试专项
 
+> 参考测试设计方向
+> * API 语义验证：验证 HTTP 状态码（2xx, 4xx, 5xx）的使用是否符合 RESTful 规范。
+> * 边界与非法输入：验证大数据量、空字段、特殊字符及非法 JSON 格式的拦截能力。
+> * 业务状态机闭环：验证资源从“创建中”到“运行中”再到“已释放”的全生命周期逻辑。
 
-**1.访问Apollo配置中心**: 查看apollo配置中心，查看访问链接
+**1.各服务添加在线拨测用例**:查看华为云的在线拨测
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-ai/issues/12
+* **预期结果**:除前端外，各服务模块均添加在线拨测用例，且用例正常执行
 
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **预期结果**: Apollo配置中心通过https访问，且访问成功
+**2.管理中心查看各个服务的swagger接口信息**:查看各个服务swagger接口信息
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-ai/issues/12
+* **预期结果**:各个服务模块增加swagger接口信息，且各关键接口通过tag进行标识
 
-**2.查看openlibing各服务功能**: 访问openlibing平台，查看各模块功能，检查功能是否可用
-
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **预期结果**: openlibing各模块功能可用，无异常
+**3.普通用户查看swagger接口页面**：普通用户权限访问swagger接口页面，检查是否访问成功
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-ai/issues/12
+* **预期结果**:普通用户访问swagger接口页面失败
 
 ---
-
-
