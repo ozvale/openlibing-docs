@@ -1,0 +1,285 @@
+/openlibing-ai/agent/dashboard/getCommOverview
+Get
+入参：无
+出参：
+{
+    "code": 200,
+    "message": "success",
+    "result": {
+        "totalRepoCount": 900,
+        "totalAiRepoCount": 28,
+        "totalUserCount": 2700,
+        "totalAiUserCount": 7,
+        "communityDetails": [
+            {
+                "community": "BoostKit",
+                "aiRepoCount": 1,
+                "totalRepoCount": 100,
+                "aiUserCount": 0,
+                "totalUserCount": 300
+            },
+            {
+                "community": "CANN",
+                "aiRepoCount": 7,
+                "totalRepoCount": 100,
+                "aiUserCount": 0,
+                "totalUserCount": 300
+            },
+            {
+                "community": "HPC",
+                "aiRepoCount": 0,
+                "totalRepoCount": 100,
+                "aiUserCount": 0,
+                "totalUserCount": 300
+            },
+            {
+                "community": "MindSpore",
+                "aiRepoCount": 4,
+                "totalRepoCount": 100,
+                "aiUserCount": 0,
+                "totalUserCount": 300
+            },
+            {
+                "community": "Mind系列",
+                "aiRepoCount": 10,
+                "totalRepoCount": 100,
+                "aiUserCount": 7,
+                "totalUserCount": 300
+            },
+            {
+                "community": "openEuler",
+                "aiRepoCount": 3,
+                "totalRepoCount": 100,
+                "aiUserCount": 0,
+                "totalUserCount": 300
+            },
+            {
+                "community": "openFuyao",
+                "aiRepoCount": 1,
+                "totalRepoCount": 100,
+                "aiUserCount": 0,
+                "totalUserCount": 300
+            },
+            {
+                "community": "openGauss",
+                "aiRepoCount": 1,
+                "totalRepoCount": 100,
+                "aiUserCount": 0,
+                "totalUserCount": 300
+            },
+            {
+                "community": "openUBMC",
+                "aiRepoCount": 1,
+                "totalRepoCount": 100,
+                "aiUserCount": 0,
+                "totalUserCount": 300
+            }
+        ]
+    }
+}
+验证条件：code = 200
+
+
+/openlibing-ai/agent/dashboard/getCommDetails
+Get
+入参：
+startTime=2026-02-28
+endTime=2026-03-10
+community=CANN
+pageNo=1
+pageSize=5
+出参：
+{
+    "code": 200,
+    "message": "success",
+    "result": {
+        "totalCount": 9,
+        "list": [
+            {
+                "community": "CANN",
+                "repoName": "12",
+                "gitcodeUrl": "45",
+                "typeCount": 3,
+                "userCount": 0,
+                "triggerTimes": 0
+            },
+            {
+                "community": "CANN",
+                "repoName": "123",
+                "gitcodeUrl": "345",
+                "typeCount": 1,
+                "userCount": 0,
+                "triggerTimes": 0
+            },
+            {
+                "community": "CANN",
+                "repoName": "123",
+                "gitcodeUrl": "78",
+                "typeCount": 2,
+                "userCount": 0,
+                "triggerTimes": 0
+            },
+            {
+                "community": "CANN",
+                "repoName": "1234",
+                "gitcodeUrl": "1234",
+                "typeCount": 2,
+                "userCount": 0,
+                "triggerTimes": 0
+            },
+            {
+                "community": "CANN",
+                "repoName": "1234",
+                "gitcodeUrl": "4444",
+                "typeCount": 1,
+                "userCount": 0,
+                "triggerTimes": 0
+            }
+        ]
+    }
+}
+验证条件：code = 200
+
+
+
+/openlibing-ai/agent/config/getConfig
+Get
+入参：
+pageNo=1
+pageSize=5
+出参：
+{
+    "code": 200,
+    "message": "success",
+    "result": {
+        "totalCount": 30,
+        "list": [
+            {
+                "id": 46,
+                "uuid": "f964fda1fed04626b8ee3ac793ae5c40",
+                "community": "CANN",
+                "repoName": "123",
+                "gitcodeUrl": "78",
+                "agentTypes": "code_review,pr_summary",
+                "createdBy": "jingruiquan",
+                "updatedBy": "李娜",
+                "createdAt": "2025-12-30 15:33:16",
+                "updatedAt": "2026-01-29 16:04:19",
+                "isDelete": 0
+            },
+            {
+                "id": 45,
+                "uuid": "121b6467918045cda583460128f09ba0",
+                "community": "MindSpore",
+                "repoName": "78",
+                "gitcodeUrl": "8",
+                "agentTypes": "code_review",
+                "createdBy": "jingruiquan",
+                "updatedBy": "jingruiquan",
+                "createdAt": "2025-12-30 15:33:02",
+                "updatedAt": "2025-12-30 15:33:02",
+                "isDelete": 0
+            },
+            {
+                "id": 44,
+                "uuid": "c15afe1f1aa54f2995ec4640398137a7",
+                "community": "Mind系列",
+                "repoName": "22",
+                "gitcodeUrl": "333",
+                "agentTypes": "code_review",
+                "createdBy": "李娜",
+                "updatedBy": "jingruiquan",
+                "createdAt": "2025-12-30 15:31:02",
+                "updatedAt": "2025-12-30 15:31:25",
+                "isDelete": 0
+            },
+            {
+                "id": 42,
+                "uuid": "441b4bea6c3e4a46957f421151e2b26e",
+                "community": "Mind系列",
+                "repoName": "456",
+                "gitcodeUrl": "789",
+                "agentTypes": "issue_labels,ci_failed_analysis",
+                "createdBy": "jingruiquan",
+                "updatedBy": "jingruiquan",
+                "createdAt": "2025-12-30 15:30:00",
+                "updatedAt": "2025-12-30 15:31:04",
+                "isDelete": 0
+            },
+            {
+                "id": 41,
+                "uuid": "a5b204d0085e47a7800cfbbe24d801ee",
+                "community": "Mind系列",
+                "repoName": "11",
+                "gitcodeUrl": "222",
+                "agentTypes": "code_review,pr_summary",
+                "createdBy": "李娜",
+                "updatedBy": "李娜",
+                "createdAt": "2025-12-30 15:29:56",
+                "updatedAt": "2025-12-30 15:29:56",
+                "isDelete": 0
+            }
+        ]
+    }
+}
+验证条件：code = 200
+
+
+/openlibing-ai/tool/apply/query
+Get
+入参：
+pageNo=1
+pageSize=5
+出参：
+{
+    "code": 200,
+    "message": "success",
+    "result": {
+        "totalCount": 3,
+        "list": [
+            {
+                "id": 21,
+                "userName": "Mao Congcong",
+                "employeeId": "m00781915",
+                "aiToolName": "字节Trae",
+                "applicationTime": "2026-02-27 20:03:25",
+                "applicationStatus": "PENDING",
+                "operator": null,
+                "approvalTime": null,
+                "rejectionTime": null,
+                "updateTime": null,
+                "remarks": null,
+                "isDeleted": 0
+            },
+            {
+                "id": 20,
+                "userName": "jingruiquan",
+                "employeeId": "j30068980",
+                "aiToolName": "字节Trae",
+                "applicationTime": "2026-02-27 10:51:03",
+                "applicationStatus": "PENDING",
+                "operator": "jingruiquan",
+                "approvalTime": "2026-02-27 11:03:50",
+                "rejectionTime": "2026-02-27 10:51:34",
+                "updateTime": "2026-02-27 11:05:26",
+                "remarks": null,
+                "isDeleted": 0
+            },
+            {
+                "id": 14,
+                "userName": "lina",
+                "employeeId": "l30074365",
+                "aiToolName": "字节Trae",
+                "applicationTime": "2026-01-31 11:25:50",
+                "applicationStatus": "REJECTED",
+                "operator": "lina",
+                "approvalTime": "2026-01-31 11:43:56",
+                "rejectionTime": "2026-01-31 11:52:46",
+                "updateTime": "2026-01-31 11:52:46",
+                "remarks": "okkkk",
+                "isDeleted": 0
+            }
+        ]
+    }
+}
+验证条件：code = 200
