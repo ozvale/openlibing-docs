@@ -3,7 +3,7 @@
 ## 1. 基础信息
 
 * **需求链接**: https://gitcode.com/openlibing/openlibing-gateway/issues/85
-* **需求名称**: 全链路https改造
+* **需求名称**: openLiBing支持业务运行时关键接口/核心业务逻辑告警
 * **开发责任人**: wanxiaochuan
 
 ---
