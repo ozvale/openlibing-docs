@@ -2,11 +2,11 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097432549
-* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/17
-* **需求名称**: 【需求】蓝区作业运营数据入湖-代码检查
-* **开发责任人**: 陶获权
-* **测试责任人**: 徐愚冰
+
+* **需求链接**: https://gitcode.com/openlibing/openlibing-sync/issues/9
+* **需求名称**: 同步ai工具使用数据
+* **开发责任人**: 柴进
+* **测试责任人**: 马天宏
 * **最终结论：**： 通过
 * **测试维度** ：
 * [X] **功能自检测试**
