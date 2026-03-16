@@ -1,8 +1,8 @@
 # #1 【蓝区】蓝区AI工具管理链路改造 测试报告
 ## 1. 基本信息
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097832276
-* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-ai/issues/23
-											  https://gitcode.com/openlibing/openlibing-ai-web/issues/15
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-docs/pull/67
+											  https://gitcode.com/openlibing/openlibing-web/pull/381
 * **需求名称**: 【蓝区】蓝区AI工具管理链路改造
 * **开发责任人**: 毛聪聪、李娜
 * **测试责任人**: 井睿权
