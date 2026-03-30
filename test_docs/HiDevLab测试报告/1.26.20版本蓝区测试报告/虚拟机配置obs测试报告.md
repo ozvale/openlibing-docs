@@ -24,7 +24,7 @@
 * **对应task(issueID)链接:** https://gitcode.com/openlibing/hidevlab-transport-service/issues/13
 * **预期结果**: 技术合作和高校科研合作支持虚拟机预置obs，用户可以正常使用在虚拟机中obs往项目空间的项目附件上传下载文件
 * **测试结果**：Passed
-* **证明截图**: 详情查看黄区HiDevLab 1.26.20版本测试报告内容
+* **证明截图**: 详情查看HiDevLab 1.26.20版本整体测试报告内容
 
 
 ---
