@@ -24,7 +24,7 @@
 * **对应task(issueID)链接:** https://gitcode.com/openlibing/hidevlab-infra-manager-service/issues/14
 * **预期结果**: 在HiDevLab平台业务申请的鲲鹏920新型号裸金属和虚拟机支持新系统BC-linux 21.10U4和CYyunOS 22.06版本，机器可以发放成功，用户可以正常连接并使用新系统的机器
 * **测试结果**：Passed
-* **证明截图**: 详情查看黄区HiDevLab 1.26.20版本测试报告内容
+* **证明截图**: 详情查看HiDevLab 1.26.20版本整体测试报告内容
 
 
 ---
