@@ -1,13 +1,14 @@
-# #1 [全链路https改造测试策略] 测试策略设计说明书
+# #1 【SBOM】OpenHarmony获取三方组件元数据功能适配GitCode场景 测试策略设计说明书
 
 ## 1. 基本信息
 
-* **需求链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **需求名称**: 全链路https改造
+* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097867803
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/10
+* **需求名称**: 【SBOM】OpenHarmony获取三方组件元数据功能适配GitCode场景
 * **核心目标**:
-  验证功能正确性，以及架构设计中定义的安全与隐私、可靠性与韧性、可服务性与可观测性和性能与伸缩性等非功能专项任务的闭环验收。
-* **开发责任人**: wanxiaochuan
-* **测试责任人**: alice5426_qing
+  验证OpenHarmony获取三方组件元数据功能能够适配GitCode场景；验证元数据获取的准确性和完整性。
+* **开发责任人**: 后端：张霁阳、杨宇萌  前端：陈宁
+* **测试责任人**: 刘东方
 
 ---
 
@@ -15,7 +16,7 @@
 
 > **操作指南**：请依据需求分析阶段的标签勾选。勾选后，必须在“第 3 节”提供对应的测试用例或方案。
 
-* [X] **功能自检测试**
+* [x] **功能自检测试**
 
 > * **测试重点：** API 契约验证、业务逻辑分支覆盖、边界值测试。
 >* **目的：** 确保功能实现符合设计预期。
@@ -62,21 +63,23 @@
 
 > 测试自检
 >* [ ] **Task 闭环**: 架构设计说明书中定义的 **TASK** 是否均有对应的测试结果？
->* [X] **证据留存**: 关键测试（如性能、安全扫描）是否附带了截图或报告链接？
+>* [x] **证据留存**: 关键测试（如性能、安全扫描）是否附带了截图或报告链接？
 
 ### 3.1 功能测试专项
 
+**1.上传接口验证**:
+* 前置条件：无
+* 测试步骤：
+* 1.使用接口publishSbomFile上传SBOM文件，观察能否触发分析
+* 预期结果：
+* 上传成功，能够触发分析
 
-**1.访问Apollo配置中心**: 查看apollo配置中心，查看访问链接
-
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **预期结果**: Apollo配置中心通过https访问，且访问成功
-
-**2.查看openlibing各服务功能**: 访问openlibing平台，查看各模块功能，检查功能是否可用
-
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **预期结果**: openlibing各模块功能可用，无异常
-
----
-
-
+**2.导出接口验证**:
+* 前置条件：
+* 已完成上传文件的分析
+* 测试步骤：
+* 1.导出查看获取的元数据内容
+* 2.与GitCode仓库中的实际组件信息进行对比和上传文件对比
+* 3.验证元数据的准确性
+* 预期结果：
+* 获取的元数据与GitCode仓库中的实际组件信息一致

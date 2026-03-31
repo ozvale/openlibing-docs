@@ -1,13 +1,13 @@
-# #1 [全链路https改造测试策略] 测试策略设计说明书
+# #1 [openlibing漏洞看板SLO管理规则计算调整] 测试策略设计说明书
 
 ## 1. 基本信息
 
-* **需求链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **需求名称**: 全链路https改造
+* **需求链接**: https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
+* **需求名称**: openlibing漏洞看板SLO管理规则计算调整
 * **核心目标**:
   验证功能正确性，以及架构设计中定义的安全与隐私、可靠性与韧性、可服务性与可观测性和性能与伸缩性等非功能专项任务的闭环验收。
-* **开发责任人**: wanxiaochuan
-* **测试责任人**: alice5426_qing
+* **开发责任人**: wurq
+* **测试责任人**: qq_42806737
 
 ---
 
@@ -62,20 +62,30 @@
 
 > 测试自检
 >* [ ] **Task 闭环**: 架构设计说明书中定义的 **TASK** 是否均有对应的测试结果？
->* [X] **证据留存**: 关键测试（如性能、安全扫描）是否附带了截图或报告链接？
+>* [ ] **证据留存**: 关键测试（如性能、安全扫描）是否附带了截图或报告链接？
 
 ### 3.1 功能测试专项
 
+> 参考测试设计方向
+> * API 语义验证：验证 HTTP 状态码（2xx, 4xx, 5xx）的使用是否符合 RESTful 规范。
+> * 边界与非法输入：验证大数据量、空字段、特殊字符及非法 JSON 格式的拦截能力。
+> * 业务状态机闭环：验证资源从“创建中”到“运行中”再到“已释放”的全生命周期逻辑。
 
-**1.访问Apollo配置中心**: 查看apollo配置中心，查看访问链接
+**1.openlibing的SLO计算规则符合开源漏洞管理策略—配置中心**:查看配置中心中的SLO配置详情
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
+* **预期结果**: openlibing的SLO配置是：高危、致命为30天；中危为90天；低危为30天
 
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **预期结果**: Apollo配置中心通过https访问，且访问成功
+**2.openlibing的SLO计算规则符合开源漏洞管理策略—openLiBing平台**:分别计算各级别漏洞的SLO时间（Issue计划完成时间-修复起始时间）
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
+* **预期结果**: SLO时间满足新规则（高危、致命为30天；中危为90天；低危为30天）
 
-**2.查看openlibing各服务功能**: 访问openlibing平台，查看各模块功能，检查功能是否可用
+**3.更改修复起始时间，issue计划完成时间随之刷新**:选择漏洞，修改修复起始时间
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/11
+* **预期结果**: 1.修复起始时间成功修改 2.issue计划完成时间刷新(修复起始时间+SLO时间)
 
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **预期结果**: openlibing各模块功能可用，无异常
+
+
+
 
 ---
 

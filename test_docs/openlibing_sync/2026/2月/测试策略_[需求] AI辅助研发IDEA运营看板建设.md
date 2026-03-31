@@ -1,13 +1,13 @@
-# #1 [全链路https改造测试策略] 测试策略设计说明书
+# #1 [需求名称] 测试策略设计说明书
 
 ## 1. 基本信息
 
-* **需求链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **需求名称**: 全链路https改造
+* **需求链接**: https://gitcode.com/openlibing/openlibing-sync/issues/9
+* **需求名称**: 同步ai工具使用数据
 * **核心目标**:
   验证功能正确性，以及架构设计中定义的安全与隐私、可靠性与韧性、可服务性与可观测性和性能与伸缩性等非功能专项任务的闭环验收。
-* **开发责任人**: wanxiaochuan
-* **测试责任人**: alice5426_qing
+* **开发责任人**: chaijin_1701
+* **测试责任人**: qq_42589833
 
 ---
 
@@ -33,13 +33,13 @@
 >* **目的：** 消除组件间级联影响风险。
 >* **触发条件：** 需求标签含 `need_itest`
 
-* [ ] **安全与隐私测试**：
+* [X] **安全与隐私测试**：
 
 > * **测试重点：** 鉴权绕过测试、SQL/命令注入、敏感数据（PII）日志脱敏校验、SBOM 依赖漏洞扫描。
 >* **目的：** 验证“纵深防御”机制是否生效，确保无隐私泄露。
 >* **触发条件：** 需求标签含 `need_security`
 
-* [ ] **可靠性与韧性测试**
+* [X] **可靠性与韧性测试**
 
 > * **测试重点：** 故障注入（Chaos）。模拟网络丢包/延迟、进程意外溢出、磁盘 IO 满载后等异常情况下的系统自愈行为。
 >* **目的：** 验证架构设计中的“面向失败设计”等能力。
@@ -66,17 +66,10 @@
 
 ### 3.1 功能测试专项
 
+**1.用户使用数据接口调用正常
+* **操作步骤** 调用用户使用数据接口/gateway/openlibing-metric/metric/ai-dashboard/user-usage
+* **预期结果**: 响应码为200
 
-**1.访问Apollo配置中心**: 查看apollo配置中心，查看访问链接
-
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **预期结果**: Apollo配置中心通过https访问，且访问成功
-
-**2.查看openlibing各服务功能**: 访问openlibing平台，查看各模块功能，检查功能是否可用
-
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **预期结果**: openlibing各模块功能可用，无异常
-
----
-
-
+**.用户数据接口调用正常
+* **操作步骤** 调用用户数据接口/gateway/openlibing-metric/metric/ai-dashboard/user-data
+* **预期结果**: 响应码为200

@@ -1,13 +1,14 @@
-# #1 [全链路https改造测试策略] 测试策略设计说明书
+# #1 【需求】代码检查告警屏蔽支持选择sig-info目录级的committer 测试策略设计说明书
 
 ## 1. 基本信息
 
-* **需求链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **需求名称**: 全链路https改造
+* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097822238
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/23
+* **需求名称**: 【需求】代码检查告警屏蔽支持选择sig-info目录级的committer
 * **核心目标**:
-  验证功能正确性，以及架构设计中定义的安全与隐私、可靠性与韧性、可服务性与可观测性和性能与伸缩性等非功能专项任务的闭环验收。
-* **开发责任人**: wanxiaochuan
-* **测试责任人**: alice5426_qing
+  代码检查告警屏蔽支持选择sig-info目录级的committer。
+* **开发责任人**: 董家辉
+* **测试责任人**: 徐愚冰
 
 ---
 
@@ -15,7 +16,7 @@
 
 > **操作指南**：请依据需求分析阶段的标签勾选。勾选后，必须在“第 3 节”提供对应的测试用例或方案。
 
-* [X] **功能自检测试**
+* [x] **功能自检测试**
 
 > * **测试重点：** API 契约验证、业务逻辑分支覆盖、边界值测试。
 >* **目的：** 确保功能实现符合设计预期。
@@ -62,21 +63,46 @@
 
 > 测试自检
 >* [ ] **Task 闭环**: 架构设计说明书中定义的 **TASK** 是否均有对应的测试结果？
->* [X] **证据留存**: 关键测试（如性能、安全扫描）是否附带了截图或报告链接？
+>* [x] **证据留存**: 关键测试（如性能、安全扫描）是否附带了截图或报告链接？
 
 ### 3.1 功能测试专项
 
+**1.未配置sig-info目录级committer的告警屏蔽验证**:
+* 前置条件：
+* 当前版本有未配置sig-info目录级committer的告警
+* 测试步骤：
+* 1.进入门禁检查/版本级检查指定代码仓的代码问题页面
+* 2.选择一条未配置sig-info目录级committer的告警，点击屏蔽
+* 3.查询可选的committer
+* 预期结果：
+* 可选committer中仅包含代码仓级的committer
 
-**1.访问Apollo配置中心**: 查看apollo配置中心，查看访问链接
+**2.已配置sig-info目录级committer的单条告警屏蔽验证**:
+* 前置条件：
+* 当前版本有已配置sig-info目录级committer的告警
+* 测试步骤：
+* 1.进入门禁检查/版本级检查指定代码仓的代码问题页面
+* 2.选择一条已配置sig-info目录级committer的告警，点击屏蔽
+* 3.查询可选的committer
+* 预期结果：
+* 可选committer中包含代码仓级的committer和对应sig-info目录级committer
 
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **预期结果**: Apollo配置中心通过https访问，且访问成功
+**3.已配置不同sig-info目录级committer的多条告警屏蔽验证**:
+* 前置条件：
+* 当前版本有已配置不同sig-info目录级committer的告警
+* 测试步骤：
+* 1.进入门禁检查/版本级检查指定代码仓的代码问题页面
+* 2.选择多条配置不同sig-info目录级committer的告警，点击屏蔽
+* 3.查询可选的committer
+* 预期结果：
+* 可选committer中包含代码仓级的committer和涉及sig-info目录级committer的交集
 
-**2.查看openlibing各服务功能**: 访问openlibing平台，查看各模块功能，检查功能是否可用
-
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-cicd/issues/21
-* **预期结果**: openlibing各模块功能可用，无异常
-
----
-
-
+**4.未配置及已配置不同sig-info目录级committer的多条告警屏蔽验证**:
+* 前置条件：
+* 当前版本有已配置不同sig-info目录级committer的告警
+* 测试步骤：
+* 1.进入门禁检查/版本级检查指定代码仓的代码问题页面
+* 2.选择多条配置不同sig-info目录级committer的告警和未配置目录级committer的告警，点击屏蔽
+* 3.查询可选的committer
+* 预期结果：
+* 可选committer中仅包含代码仓级的committer
