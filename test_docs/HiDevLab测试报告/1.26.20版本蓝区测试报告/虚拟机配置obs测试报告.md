@@ -24,7 +24,7 @@
 * **对应task(issueID)链接:** https://gitcode.com/openlibing/hidevlab-transport-service/issues/13
 * **预期结果**: 技术合作和高校科研合作支持虚拟机预置obs，用户可以正常使用在虚拟机中obs往项目空间的项目附件上传下载文件
 * **测试结果**：Passed
-* **证明截图**: 详情查看HiDevLab 1.26.20版本整体测试报告内容
+* **证明截图**: https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb1n00011709qaqn
 
 
 ---
@@ -36,7 +36,7 @@
 | **功能测试**    | 4    | 覆盖核心业务逻辑与 API 契约。   | 4   | 0    | Pass          |
 | **体验测试**    | 0    | 判定产品是否能让用户快速的接受和使用。 | 0   | 0    | /             |
 | **集成测试**    | 0    | 跨组件调用及上下游数据流转。      | 0   | 0    | /             |
-| **安全与隐私测试** | 0    | 漏洞扫描、凭证加密及日志脱敏。     | 0   | 0    | Pass              |
+| **安全与隐私测试** | 0    | 漏洞扫描、凭证加密及日志脱敏。     | 0   | 0    | /              |
 | **可靠性与韧性测试** | 0    | 漏洞扫描、凭证加密及日志脱敏。     | 0   | 0    | /             |
 ---
 
