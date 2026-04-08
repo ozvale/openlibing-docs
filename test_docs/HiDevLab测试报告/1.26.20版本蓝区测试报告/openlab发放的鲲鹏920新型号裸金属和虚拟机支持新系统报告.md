@@ -24,7 +24,7 @@
 * **对应task(issueID)链接:** https://gitcode.com/openlibing/hidevlab-infra-manager-service/issues/14
 * **预期结果**: 在HiDevLab平台业务申请的鲲鹏920新型号裸金属和虚拟机支持新系统BC-linux 21.10U4和CYyunOS 22.06版本，机器可以发放成功，用户可以正常连接并使用新系统的机器
 * **测试结果**：Passed
-* **证明截图**: 详情查看HiDevLab 1.26.20版本整体测试报告内容
+* **证明截图**: https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb1n00011709qaqn
 
 
 ---
@@ -36,7 +36,7 @@
 | **功能测试**    | 12    | 覆盖核心业务逻辑与 API 契约。   | 12   | 0    | Pass          |
 | **体验测试**    | 0    | 判定产品是否能让用户快速的接受和使用。 | 0   | 0    | /             |
 | **集成测试**    | 0    | 跨组件调用及上下游数据流转。      | 0   | 0    | /             |
-| **安全与隐私测试** | 0    | 漏洞扫描、凭证加密及日志脱敏。     | 0   | 0    | Pass              |
+| **安全与隐私测试** | 0    | 漏洞扫描、凭证加密及日志脱敏。     | 0   | 0    | /              |
 | **可靠性与韧性测试** | 0    | 漏洞扫描、凭证加密及日志脱敏。     | 0   | 0    | /             |
 ---
 
