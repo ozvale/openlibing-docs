@@ -3,4 +3,4 @@
 | #64     | [需求]: 流水线支持批量编辑 | yangyumeng | 通过   |
 | #67     | [缺陷]: 镜像管理版本数不为0 打开无数据 | yangyumeng | 通过   |
 | #66     | [缺陷]: 流水线定时任务无法一次删除所有 | yangyumeng | 通过   |
-| #66     | [缺陷]: 【openLibing】【bug】测试结果过滤规则筛选出来结果和实际结果不一致 | zhangjiyang | 通过   |
+| #68     | [缺陷]: 【openLibing】【bug】测试结果过滤规则筛选出来结果和实际结果不一致 | zhangjiyang | 通过   |
