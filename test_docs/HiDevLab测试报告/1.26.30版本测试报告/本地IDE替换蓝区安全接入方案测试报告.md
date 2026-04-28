@@ -20,7 +20,7 @@
 
 ### 2.1 功能测试专项
 
-**1.本地IDE替换蓝区安全接入方案**:HiDevLab运维平台支持对虚拟机模板进行硬盘扩容配置
+**1.本地IDE替换蓝区安全接入方案**:本地IDE替换蓝区安全接入方案
 * **对应task(issueID)链接:** https://gitcode.com/openlibing/hidevlab-infra-manager-service/issues/21
 * **预期结果**: HiDevLab用户面在线开发功能在替换蓝区安全接入方案之后继承功能正常
 * **测试结果**：Passed
