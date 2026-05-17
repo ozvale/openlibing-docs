@@ -1,6 +1,6 @@
 # openlibing-docs
 
-本文档面向 OpenLibing 开发人员、设计评审人员和 AI Coding Assistant，用来说明 `openlibing-docs` 仓库的结构、使用方式，以及新增的轻量级 Spec 工作流。
+本文档面向 OpenLibing 开发人员、设计评审人员和 AI Coding Assistant，用来说明 `openlibing-docs` 仓库的结构、使用方式，以及轻量级 Spec 工作流。
 
 ## 1. 仓库定位
 
@@ -12,7 +12,7 @@ OpenLibing 是公司内部支撑产品代码构建、打包、发布、PR 门禁
 
 - 当前代码仓的源代码。
 - `spec/<repo-name>/` 下对应代码仓的系统级设计、需求级设计和 AI 记忆。
-- 历史 `architecture_desgin/`、`issue_docs/`、`test_docs/`、`release_docs/` 中与需求相关的文档。
+- `architecture_desgin/`、`issue_docs/`、`test_docs/`、`release_docs/` 中与需求相关的文档。
 
 ## 2. 仓库目录
 
@@ -49,15 +49,15 @@ openlibing-docs/
 
 - `README.md`：本仓库唯一总说明，给人和 AI 共同阅读。
 - `design.md`：OpenLibing AI 化研发 Spec 体系设计方案，可用于汇报和决策。
-- `spec/`：新增的 AI 化研发 Spec 工作区。
-- `architecture_desgin/`：历史架构设计、威胁分析、系统级方案图和说明。目录名保留历史拼写。
-- `issue_docs/`：历史需求设计、安全设计、接口设计等需求级文档。
+- `spec/`：AI 化研发 Spec 工作区。
+- `architecture_desgin/`：架构设计、威胁分析、系统级方案图和说明。
+- `issue_docs/`：需求设计、安全设计、接口设计等需求级文档。
 - `test_docs/`：测试策略和测试报告。
 - `release_docs/`：各代码仓发布报告。
 
 ## 3. Spec 工作区
 
-`spec/` 用于支撑 OpenLibing 的 AI 化研发。它借鉴 OpenSpec “先设计、后实现、再归档”的思想，但只保留轻量流程，不要求每个小需求都写完整的大型规格包。
+`spec/` 用于支撑 OpenLibing 的 AI 化研发。它借鉴 OpenSpec “先设计、后实现、再归档”的思想，并采用轻量流程，不要求每个小需求都写完整的大型规格包。
 
 每个代码仓一个目录：
 
@@ -106,14 +106,14 @@ AI 参与 OpenLibing 开发时必须遵守：
 
 1. 先读取对应代码仓的 `spec/<repo-name>/ai_memory.md`。
 2. 再读取对应需求目录下的 `design.md` 和 `task.md`。
-3. 涉及系统边界、接口、数据模型、安全或发布影响时，检索 `system_design/` 和历史文档。
+3. 涉及系统边界、接口、数据模型、安全或发布影响时，检索 `system_design/` 和相关文档。
 4. 实现过程中发现设计遗漏，应先补充到需求目录文档，再继续编码。
 5. 完成后在 `archive.md` 记录最终结果、偏差、验证方式、AI 错误和可复用规则。
 6. 只有被验证有效、或明显会复用的规则，才沉淀到 `ai_memory.md`，避免规则膨胀。
 
-## 6. 新增代码仓 Spec 的方式
+## 6. 代码仓 Spec 目录约定
 
-新增一个 OpenLibing 代码仓时，按以下结构创建：
+每个 OpenLibing 代码仓在 `spec/` 下按以下结构维护：
 
 ```text
 spec/<repo-name>/
@@ -132,4 +132,4 @@ spec/<repo-name>/
 - `archive_template.md`：完成归档模板。
 - `ai_memory_template.md`：仓库级 AI 记忆模板。
 
-如果该代码仓已有历史文档，应在 `系统设计索引.md` 中补充历史文档路径。
+如果该代码仓存在相关架构、需求、测试或发布文档，应在 `系统设计索引.md` 中补充文档路径。
