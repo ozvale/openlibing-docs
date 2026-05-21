@@ -1,0 +1,3 @@
+| issueID | issue名称                                                                                             | 责任人            | 评审结果 |
+|---------|-----------------------------------------------------------------------------------------------------|----------------| -------- |
+| #20     | 【openLiBing-Sbom】OpenEuler License和CVE漏洞适配 https://gitcode.com/openlibing/openlibing-sbom/issues/20 | chenhongliangn | 通过     |
