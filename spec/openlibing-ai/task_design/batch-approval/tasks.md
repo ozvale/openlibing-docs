@@ -11,6 +11,12 @@
 
 ## 进度: 3/3 complete
 
+| # | Task | Commit |
+|---|------|--------|
+| 1 | BatchApprovalRequestDTO | `45bd16b` |
+| 2 | Service batchApprove 方法 | `c06cd59` |
+| 3 | App 层委托方法 | `1bfb086` |
+
 ---
 
 ### Task 1: 创建 BatchApprovalRequestDTO
