@@ -15,11 +15,12 @@
 ## 管理后台鉴权
 
 - 管理后台使用白名单访问控制，不再使用用户名密码 + HMAC token 登录。
-- 白名单配置从 Apollo 读取（`admin_whitelist`、`admin_user_header`），用户标识从网关注入的请求头获取。
-- 白名单校验逻辑在 `app/whitelist.py`，依赖项为 `require_whitelisted`。
-- 前端通过 `GET /api/admin/check-access` 判断当前用户是否有管理后台权限。
-- 所有 `/api/admin/*` 接口使用 `dependencies=[Depends(require_whitelisted)]` 保护。
-- 白名单匹配大小写不敏感，白名单为空时拒绝所有访问。
+- 白名单配置从 Apollo 读取（`admin_whitelist`），值为逗号分隔的用户 ID 字符串。
+- 白名单校验逻辑在 `app/auth.py`，依赖项为 `require_whitelist_user`。
+- 前端通过 `X-User-Id` 请求头传递用户标识，后端校验是否在白名单中。
+- 所有 `/api/admin/*` 接口使用 `dependencies=[Depends(require_whitelist_user)]` 保护。
+- 无 `X-User-Id` 返回 401，非白名单用户返回 403。
+- `/api/admin/login` 和 `/api/admin/me` 接口已删除。
 
 ## 常见 AI 错误与规避
 
