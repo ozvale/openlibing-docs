@@ -140,37 +140,27 @@ QEMU任务调度系统使用分布式锁确保同一任务在集群环境中不�
 
 ```java
 @Transactional
+@Override
 public String acquireLock(String lockName, int expireSeconds) {
-    // 清理过期锁
-    qemuTaskMapper.deleteExpiredLocks(LocalDateTime.now());
+    // 清理过期锁（可选：定期清理，可通过定时任务单独执行）
+    // qemuTaskMapper.deleteExpiredLocks(LocalDateTime.now());
     
-    // 尝试获取锁
-    Optional<LockEntity> existingLock = qemuTaskMapper.findByLockName(lockName);
     LocalDateTime now = LocalDateTime.now();
     LocalDateTime expiredAt = now.plusSeconds(expireSeconds);
     
-    if (existingLock.isEmpty()) {
-        // 锁不存在，创建新锁
-        LockEntity newLock = new LockEntity();
-        newLock.setLockName(lockName);
-        newLock.setCreatedAt(now);
-        newLock.setExpiredAt(expiredAt);
-        qemuTaskMapper.insertLock(newLock);
-        return newLock.getLockName();
-    } else {
-        // 锁存在，检查是否过期
-        LockEntity lock = existingLock.get();
-        if (lock.getExpiredAt().isBefore(now)) {
-            // 锁已过期，更新锁
-            lock.setCreatedAt(now);
-            lock.setExpiredAt(expiredAt);
-            qemuTaskMapper.updateLock(lock);
-            return lock.getLockName();
-        } else {
-            // 锁未过期，获取失败
-            return "";
-        }
-    }
+    // 使用单一原子操作获取锁：INSERT ... ON DUPLICATE KEY UPDATE
+    // 锁不存在则插入，锁存在且已过期则更新，锁存在且未过期则不操作
+    LockEntity lock = new LockEntity();
+    lock.setLockName(lockName);
+    lock.setCreatedAt(now);
+    lock.setExpiredAt(expiredAt);
+    lock.setId(CommonUtils.getUuid());
+    
+    int result = qemuTaskMapper.acquireLockAtomic(lock);
+    
+    // result > 0 表示成功获取锁（插入新锁或更新过期锁）
+    // result == 0 表示锁已被其他线程持有（未过期）
+    return result > 0 ? lockName : "";
 }
 ```
 
