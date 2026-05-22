@@ -1,30 +1,27 @@
-# batch-approval — 归档凭证
+# batch-approval — 最终归档
 
-## 业务 PR
-- https://gitcode.com/openlibing/openlibing-ai/pulls/121
+## 关联
+- **Issue**: openlibing/openlibing-ai#41
+- **PR**: openlibing/openlibing-ai#122
+- **Commit**: aeb8c9c
+- **分支**: feat/batch-approval → master-mcc-0521（已合入）
+- **归档日期**: 2026-05-22
 
-## 业务 Commit 历史
-| Commit | 描述 |
-|--------|------|
-| `1daf247` | test(aitool): fix batchApprove tests to match all-or-nothing strategy |
-| `1bfb086` | feat(aitool): add batchApprove delegation in app layer |
-| `c06cd59` | feat(aitool): add batchApprove method with pre-check and rollback |
-| `45bd16b` | feat(aitool): add BatchApprovalRequestDTO for batch approval |
+## 变更摘要
+在 `AiToolApplicationRecordService` 新增 `batchApprove` 批量审批方法，支持一次性对多条 AI 工具申请记录执行统一的审批操作（APPROVED/REJECTED）。
 
-## 归档日期
-2026-05-21
+### 新增文件
+- `BatchApprovalRequestDTO.java` — 批量审批请求 DTO
+- `BatchApprovalResultDTO.java` — 批量审批结果 DTO（含 BatchApprovalItem）
 
-## 审计追踪
-| 步骤 | 状态 | 证据 |
-|------|------|------|
-| brainstorming | ✅ | [proposal.md](spec/openlibing-ai/task_design/batch-approval/proposal.md) |
-| issue-create | ✅ | https://gitcode.com/openlibing/openlibing-ai/issues/40 |
-| issue-review | ✅ | https://gitcode.com/openlibing/openlibing-ai/issues/40#note_172388008 |
-| docs PR (Phase 1) | ✅ | https://gitcode.com/openlibing/openlibing-docs/pulls/275 |
-| writing-plans | ✅ | [tasks.md](spec/openlibing-ai/task_design/batch-approval/tasks.md) |
-| TDD: task-1 | ✅ | `45bd16b` — BatchApprovalRequestDTO |
-| TDD: task-2 | ✅ | `c06cd59` — batchApprove method |
-| TDD: task-3 | ✅ | `1bfb086` — app layer delegation |
-| test fix | ✅ | `1daf247` — 修复测试匹配 all-or-nothing |
-| pr-create | ✅ | https://gitcode.com/openlibing/openlibing-ai/pulls/121 |
-| pr-review | ✅ | https://gitcode.com/openlibing/openlibing-ai/pulls/121#note_172389741 |
+### 修改文件
+- `AiToolApplicationRecordService.java` — 新增 `batchApprove` 方法
+- `AiToolApplicationRecordServiceTest.java` — 8 个测试用例
+
+## 验收结果
+- [x] 新增批量审批接口 `batchApprove`，接收 ID 列表 + 统一 action + 统一 remarks
+- [x] 非 PENDING 状态记录返回失败提示，不阻断后续
+- [x] APPROVED 时检查工具余量
+- [x] 记录审批人工号和审批/拒绝时间
+- [x] 返回 BatchApprovalResultDTO 含逐条结果和汇总计数
+- [x] 8 个单元测试覆盖主要场景
