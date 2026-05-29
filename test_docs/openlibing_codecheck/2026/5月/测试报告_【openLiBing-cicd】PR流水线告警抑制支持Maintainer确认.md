@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2101195138
-* **对应task(issueID)链接**: https://gitcode.com/openlibing/opegaojingnlibing-codecheck/issues/92
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/92
 * **需求名称**: PR流水线告警抑制支持Maintainer确认
 * **开发责任人**: 闫兆鸿
 * **测试责任人**: 赵威
