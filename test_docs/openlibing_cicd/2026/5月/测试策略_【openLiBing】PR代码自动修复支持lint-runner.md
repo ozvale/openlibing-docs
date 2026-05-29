@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2101194712
-* **对应task(issueID)链接**: 
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/100
 * **需求名称**: 【openLiBing】PR代码自动修复支持lint-runner
 * **核心目标**:
   验证PR代码自动修复功能支持lint-runner工具，包括检查触发验证、修复结果正确性、多工具配置支持、自动修复提交推送、文件屏蔽配置生效及PR评论区修复内容展示。

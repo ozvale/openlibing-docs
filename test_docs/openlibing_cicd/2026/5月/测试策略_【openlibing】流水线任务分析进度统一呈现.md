@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2101163292
-* **对应task(issueID)链接**: 
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd-web/issues/19
 * **需求名称**: 【openLiBing】流水线任务分析进度统一呈现
 * **核心目标**:
   验证流水线任务的分析进度能够统一呈现，包括构建产物分析、测试结果、UT门禁等多个分析模块的进度展示，确保用户能够清晰了解各分析任务的执行状态和进度。

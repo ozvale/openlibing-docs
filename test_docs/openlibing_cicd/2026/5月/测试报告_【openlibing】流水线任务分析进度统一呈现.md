@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2101163292
-* **对应task(issueID)链接**: 
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd-web/issues/19
 * **需求名称**: 【openLiBing】流水线任务分析进度统一呈现
 * **开发责任人**: 陈宁
 * **测试责任人**: 刘东方
