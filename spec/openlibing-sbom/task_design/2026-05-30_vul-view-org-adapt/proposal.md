@@ -14,6 +14,7 @@
 4. **一对多返回**：一个 CVE 对应多个社区的 CVE-ISSUE 信息，以 `ShowVulnerabilityVo`（`vulId` + `List<VulnerabilityVo> data`）结构返回
 5. **按包所属社区过滤**：查询漏洞时根据包所属的 Sbom → Product → productType 自动过滤，只返回该社区下的 Issue 信息
 6. **productType 提前解析**：`productType` 在 `queryVulnerability` 中提前解析一次，避免遍历每条 Vulnerability 时重复计算
+7. **按包名+版本过滤**：查询漏洞时根据包的 ExternalPurlRef 提取包名和版本号，过滤 `VulnerabilityLifecycle` 中 `affectedSoftware` 匹配包名且 `versions` 包含该版本的记录；支持多个 ExternalPurlRef，任一匹配即可
 
 ## 验收标准
 
@@ -26,6 +27,8 @@
 | 5 | 查询漏洞返回 `ShowVulnerabilityVo` 结构，`data` 列表仅包含该包所属社区的 Issue 信息 | API 调用验证 |
 | 6 | 单社区同步失败不影响其他社区 | 模拟某社区 API 异常，验证其他社区数据正常 |
 | 7 | 存量数据（`product_type` 为 NULL）不影响系统运行 | 升级后首次同步前系统无报错 |
+| 8 | 漏洞查询按包名+版本过滤，仅返回 `affectedSoftware` 匹配且 `versions` 包含该版本的记录 | API 调用验证，确认不同版本的包返回不同漏洞信息 |
+| 9 | 多个 ExternalPurlRef 场景下，任一匹配即可返回对应漏洞信息 | 构造多 purl 的包，验证匹配结果 |
 
 ## 影响范围
 

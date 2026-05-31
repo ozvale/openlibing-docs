@@ -141,7 +141,7 @@ public void syncMajunVulData() {
 
 ### SbomServiceImpl.queryVulnerability
 
-`PageVo<VulnerabilityVo>` 改为 `PageVo<ShowVulnerabilityVo>`，`productType` 提前解析一次传入 `getVulnerabilityStatus`：
+`PageVo<VulnerabilityVo>` 改为 `PageVo<ShowVulnerabilityVo>`，`productType` 和包名版本提前解析一次传入 `getVulnerabilityStatus`：
 
 ```java
 @Override
@@ -151,8 +151,9 @@ public PageVo<ShowVulnerabilityVo> queryVulnerability(String productName, String
             productName, Objects.isNull(packageId) ? null : UUID.fromString(packageId), severity, vulId, pageable);
     Package pkg = packageRepository.findById(UUID.fromString(packageId)).orElse(new Package());
     String productType = resolveProductType(pkg, productName);
+    List<OpenlibingVulPkgInfo> pkgInfoList = resolvePurlNameAndVersion(pkg);
     List<ShowVulnerabilityVo> showVoList = result.stream()
-            .map(v -> getVulnerabilityStatus(productName, v, productType))
+            .map(v -> getVulnerabilityStatus(productName, v, productType, pkgInfoList))
             .toList();
     return new PageVo<>(new PageImpl<>(showVoList, result.getPageable(), result.getTotalElements()));
 }
@@ -166,14 +167,73 @@ private String resolveProductType(Package pkg, String productName) {
     }
     return productName;
 }
+
+private List<OpenlibingVulPkgInfo> resolvePurlNameAndVersion(Package pkg) {
+    if (pkg == null || pkg.getExternalPurlRefs() == null) {
+        return List.of();
+    }
+    return pkg.getExternalPurlRefs().stream()
+            .filter(ref -> StringUtils.equals(ref.getCategory(), ReferenceCategory.PACKAGE_MANAGER.name()))
+            .map(ExternalPurlRef::getPurl)
+            .filter(purl -> purl != null && StringUtils.isNotBlank(purl.getName()))
+            .map(PurlUtil::convertExternalToRequest)
+            .flatMap(List::stream)
+            .toList();
+}
 ```
+
+### PurlUtil 新增方法
+
+将 `UvpServiceImpl` 中的 `convertExternalToRequest` 和 `convertPackageToPkgInfo` 提取为 `PurlUtil` 的静态方法，确保与 `queryUvpVulView` 的逻辑一致：
+
+```java
+public static List<OpenlibingVulPkgInfo> convertExternalToRequest(PackageUrlVo vo) {
+    if (vo == null) {
+        return new ArrayList<>();
+    }
+    PackageURL purl = packageUrlVoToPackageURL(vo);
+    PackageURL packageURL = convertPurlForVulnMatch(purl);
+    OpenlibingVulPkgInfo pkgInfo = convertPackageToPkgInfo(purl);
+    OpenlibingVulPkgInfo vulPkgInfo = convertPackageToPkgInfo(packageURL);
+    return List.of(pkgInfo, vulPkgInfo);
+}
+
+public static OpenlibingVulPkgInfo convertPackageToPkgInfo(PackageURL purl) {
+    OpenlibingVulPkgInfo pkgInfo = new OpenlibingVulPkgInfo();
+    pkgInfo.setName(purl.getName());
+    pkgInfo.setVersion(purl.getVersion());
+    return pkgInfo;
+}
+
+public static List<String> parseBracketArray(String input) {
+    List<String> list = new ArrayList<>();
+    String str = input;
+    if (str == null || str.trim().isEmpty()) {
+        return list;
+    }
+    str = str.trim().replaceAll("^\\[|]$", "");
+    if (str.isEmpty()) {
+        return list;
+    }
+    String[] parts = str.split(",");
+    for (String part : parts) {
+        list.add(part.trim());
+    }
+    return list;
+}
+```
+
+关键点：
+- `convertExternalToRequest` 对每个 purl 生成两组 `OpenlibingVulPkgInfo`：原始 purl 和 `convertPurlForVulnMatch` 转换后的（RPM 版本号去掉 `-` 后缀，类型统一转 `generic`）
+- `parseBracketArray` 将 `[v1, v2]` 格式的字符串解析为 `List<String>`
 
 ### SbomServiceImpl.getVulnerabilityStatus
 
-返回类型改为 `ShowVulnerabilityVo`，接收 `productType` 参数而非 `Package`：
+返回类型改为 `ShowVulnerabilityVo`，接收 `productType` 和 `pkgInfoList` 参数，按社区+包名+版本过滤：
 
 ```java
-public ShowVulnerabilityVo getVulnerabilityStatus(String productName, Vulnerability vulnerability, String productType) {
+public ShowVulnerabilityVo getVulnerabilityStatus(String productName, Vulnerability vulnerability,
+                                                  String productType, List<OpenlibingVulPkgInfo> pkgInfoList) {
     List<VulnerabilityLifecycle> vulnerabilityList = vulnerabilityLifecycleRepository
             .findByCveNumAndProductType(vulnerability.getVulId(), productType);
     ShowVulnerabilityVo showVo = new ShowVulnerabilityVo();
@@ -182,58 +242,43 @@ public ShowVulnerabilityVo getVulnerabilityStatus(String productName, Vulnerabil
         return showVo;
     }
 
-    Gson gson = new Gson();
-    Type type = new TypeToken<Map<String, String>>() {}.getType();
+    List<VulnerabilityLifecycle> filteredList = vulnerabilityList.stream()
+            .filter(vl -> matchesPurl(vl, pkgInfoList))
+            .toList();
+    if (filteredList.isEmpty()) {
+        return showVo;
+    }
 
-    List<VulnerabilityVo> voList = vulnerabilityList.stream()
-        .map(vl -> {
-            VulnerabilityVo vo = new VulnerabilityVo();
-            vo.setVulId(vulnerability.getVulId());
-            VulnerabilityVo.inferAndSetScore(vo, vulnerability);
-            vo.setIssueId(vl.getIssueId());
-            vo.setIssueCustomizeState(vl.getIssueCustomizeState());
-            vo.setIssueUrl(vl.getIssueUrl());
-            vo.setProductType(vl.getProductType());
-            vo.setAffectedSoftware(vl.getAffectedSoftware());
-            vo.setAffectedBranches(vl.getAffectedBranches());
-            vo.setUnAffectedBranches(vl.getUnAffectedBranches());
-            vo.setNotAnalyzedBranches(vl.getNotAnalyzedBranches());
+    // ... 后续映射逻辑不变
+}
 
-            String stateMapString = vl.getStateMap();
-            if (StringUtils.isNotBlank(stateMapString) && !"{}".equals(stateMapString)) {
-                Map<String, String> stateMap = gson.fromJson(stateMapString, type);
-                for (Map.Entry<String, String> entry : stateMap.entrySet()) {
-                    if (productName.contains(entry.getKey())) {
-                        vo.setState(entry.getValue());
-                        break;
-                    }
-                }
-            }
+private boolean matchesPurl(VulnerabilityLifecycle vl, List<OpenlibingVulPkgInfo> pkgInfoList) {
+    if (pkgInfoList == null || pkgInfoList.isEmpty()) {
+        return true;
+    }
+    return pkgInfoList.stream().anyMatch(pkgInfo -> matchesPurl(vl, pkgInfo));
+}
 
-            String reasonMapString = vl.getReasonMap();
-            if (StringUtils.isNotBlank(reasonMapString) && !"{}".equals(reasonMapString)) {
-                Map<String, String> reasonMap = gson.fromJson(reasonMapString, type);
-                for (Map.Entry<String, String> entry : reasonMap.entrySet()) {
-                    if (productName.contains(entry.getKey())) {
-                        vo.setReason(entry.getValue());
-                        break;
-                    }
-                }
-            }
-            return vo;
-        })
-        .toList();
-
-    showVo.setData(voList);
-    return showVo;
+private boolean matchesPurl(VulnerabilityLifecycle vl, OpenlibingVulPkgInfo pkgInfo) {
+    if (StringUtils.isBlank(pkgInfo.getName())) {
+        return true;
+    }
+    boolean nameMatched = StringUtils.equals(vl.getAffectedSoftware(), pkgInfo.getName());
+    if (!nameMatched) {
+        return false;
+    }
+    if (StringUtils.isBlank(pkgInfo.getVersion()) || StringUtils.isBlank(vl.getVersions())) {
+        return true;
+    }
+    List<String> versionList = PurlUtil.parseBracketArray(vl.getVersions());
+    return versionList.contains(pkgInfo.getVersion());
 }
 ```
 
-关键变化：
-- `queryVulnerability` 中提前调用 `resolveProductType` 解析一次 productType
-- `getVulnerabilityStatus` 签名从 `(productName, vulnerability, pkg)` 改为 `(productName, vulnerability, productType)`
-- 使用 `findByCveNumAndProductType` 替代 `findByCveNum`，数据库层面按社区过滤
-- 返回 `ShowVulnerabilityVo` 封装一对多关系
+过滤逻辑说明：
+- `matchesPurl(List)` 对多个 `OpenlibingVulPkgInfo` 做 `anyMatch`，任一匹配即可
+- `matchesPurl(单条)` 先匹配 `affectedSoftware` == 包名，再匹配 `versions` 字段包含该版本
+- `versions` 字段格式为 `[v1, v2, v3]`，通过 `PurlUtil.parseBracketArray` 解析为 `List<String>` 后做 `contains` 判断
 
 ## 7. 接口层变更
 
