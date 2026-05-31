@@ -13,6 +13,7 @@
 3. **issueUrl 透传**：从 API 返回的 `issueUrl` 字段完整存储并返回给前端
 4. **一对多返回**：一个 CVE 对应多个社区的 CVE-ISSUE 信息，以 `ShowVulnerabilityVo`（`vulId` + `List<VulnerabilityVo> data`）结构返回
 5. **按包所属社区过滤**：查询漏洞时根据包所属的 Sbom → Product → productType 自动过滤，只返回该社区下的 Issue 信息
+6. **productType 提前解析**：`productType` 在 `queryVulnerability` 中提前解析一次，避免遍历每条 Vulnerability 时重复计算
 
 ## 验收标准
 

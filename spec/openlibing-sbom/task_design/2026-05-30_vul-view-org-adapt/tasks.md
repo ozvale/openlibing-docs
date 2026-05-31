@@ -1,6 +1,6 @@
 # vul-view-org-adapt — 实现任务
 
-## 进度: 9/9 complete
+## 进度: 10/10 complete
 
 - [x] Task 1: `IssueDetail.java` 新增 `issueUrl` 字段及 getter/setter
 - [x] Task 2: `VulnerabilityLifecycle.java` 新增 `productType`、`issueUrl` 字段及 getter/setter
@@ -11,3 +11,4 @@
 - [x] Task 6: `MajunVulServiceImpl.java` 改造为遍历 active 社区同步，映射 `productType` 和 `issueUrl`
 - [x] Task 7: `SbomServiceImpl.java` 改造 `getVulnerabilityStatus` 返回 `ShowVulnerabilityVo`，按包所属社区过滤
 - [x] Task 8: 更新测试适配新逻辑
+- [x] Task 9: `productType` 提前解析优化，`getVulnerabilityStatus` 签名改为接收 `productType` 而非 `Package`

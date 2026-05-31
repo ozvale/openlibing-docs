@@ -139,17 +139,41 @@ public void syncMajunVulData() {
 
 ## 6. 查询服务改造
 
-### SbomServiceImpl.getVulnerabilityStatus
+### SbomServiceImpl.queryVulnerability
 
-返回类型改为 `ShowVulnerabilityVo`，根据包所属社区过滤漏洞 Issue：
+`PageVo<VulnerabilityVo>` 改为 `PageVo<ShowVulnerabilityVo>`，`productType` 提前解析一次传入 `getVulnerabilityStatus`：
 
 ```java
-public ShowVulnerabilityVo getVulnerabilityStatus(String productName, Vulnerability vulnerability, Package pkg) {
-    String pkgProductType = null;
+@Override
+public PageVo<ShowVulnerabilityVo> queryVulnerability(String productName, String packageId,
+                                                      String severity, String vulId, Pageable pageable) {
+    Page<Vulnerability> result = vulnerabilityRepository.findByProductNameAndPackageIdAndSeverityAndVulId(
+            productName, Objects.isNull(packageId) ? null : UUID.fromString(packageId), severity, vulId, pageable);
+    Package pkg = packageRepository.findById(UUID.fromString(packageId)).orElse(new Package());
+    String productType = resolveProductType(pkg, productName);
+    List<ShowVulnerabilityVo> showVoList = result.stream()
+            .map(v -> getVulnerabilityStatus(productName, v, productType))
+            .toList();
+    return new PageVo<>(new PageImpl<>(showVoList, result.getPageable(), result.getTotalElements()));
+}
+
+private String resolveProductType(Package pkg, String productName) {
     if (pkg != null && pkg.getSbom() != null && pkg.getSbom().getProduct() != null) {
-        pkgProductType = pkg.getSbom().getProduct().getProductType();
+        String pkgProductType = pkg.getSbom().getProduct().getProductType();
+        if (pkgProductType != null) {
+            return pkgProductType;
+        }
     }
-    String productType = pkgProductType != null ? pkgProductType : productName;
+    return productName;
+}
+```
+
+### SbomServiceImpl.getVulnerabilityStatus
+
+返回类型改为 `ShowVulnerabilityVo`，接收 `productType` 参数而非 `Package`：
+
+```java
+public ShowVulnerabilityVo getVulnerabilityStatus(String productName, Vulnerability vulnerability, String productType) {
     List<VulnerabilityLifecycle> vulnerabilityList = vulnerabilityLifecycleRepository
             .findByCveNumAndProductType(vulnerability.getVulId(), productType);
     ShowVulnerabilityVo showVo = new ShowVulnerabilityVo();
@@ -206,27 +230,10 @@ public ShowVulnerabilityVo getVulnerabilityStatus(String productName, Vulnerabil
 ```
 
 关键变化：
-- 通过 `pkg.getSbom().getProduct().getProductType()` 获取包所属社区
+- `queryVulnerability` 中提前调用 `resolveProductType` 解析一次 productType
+- `getVulnerabilityStatus` 签名从 `(productName, vulnerability, pkg)` 改为 `(productName, vulnerability, productType)`
 - 使用 `findByCveNumAndProductType` 替代 `findByCveNum`，数据库层面按社区过滤
 - 返回 `ShowVulnerabilityVo` 封装一对多关系
-
-### SbomServiceImpl.queryVulnerability
-
-`PageVo<VulnerabilityVo>` 改为 `PageVo<ShowVulnerabilityVo>`：
-
-```java
-@Override
-public PageVo<ShowVulnerabilityVo> queryVulnerability(String productName, String packageId,
-                                                      String severity, String vulId, Pageable pageable) {
-    Page<Vulnerability> result = vulnerabilityRepository.findByProductNameAndPackageIdAndSeverityAndVulId(
-            productName, Objects.isNull(packageId) ? null : UUID.fromString(packageId), severity, vulId, pageable);
-    Package pkg = packageRepository.findById(UUID.fromString(packageId)).orElse(new Package());
-    List<ShowVulnerabilityVo> showVoList = result.stream()
-            .map(v -> getVulnerabilityStatus(productName, v, pkg))
-            .toList();
-    return new PageVo<>(new PageImpl<>(showVoList, result.getPageable(), result.getTotalElements()));
-}
-```
 
 ## 7. 接口层变更
 
