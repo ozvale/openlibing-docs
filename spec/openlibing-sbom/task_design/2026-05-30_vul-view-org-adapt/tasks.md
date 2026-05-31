@@ -1,0 +1,13 @@
+# vul-view-org-adapt — 实现任务
+
+## 进度: 9/9 complete
+
+- [x] Task 1: `IssueDetail.java` 新增 `issueUrl` 字段及 getter/setter
+- [x] Task 2: `VulnerabilityLifecycle.java` 新增 `productType`、`issueUrl` 字段及 getter/setter
+- [x] Task 3: `VulnerabilityVo.java` 新增 `issueUrl`、`productType` 字段
+- [x] Task 3b: 新增 `ShowVulnerabilityVo.java`，封装 `vulId` + `List<VulnerabilityVo> data`
+- [x] Task 4: `VulnerabilityLifecycleRepository.java` 新增 `deleteByProductType`、`findByCveNumAndProductType` 方法
+- [x] Task 5: `VulViewClient.java` 接口方法新增 `org` 参数
+- [x] Task 6: `MajunVulServiceImpl.java` 改造为遍历 active 社区同步，映射 `productType` 和 `issueUrl`
+- [x] Task 7: `SbomServiceImpl.java` 改造 `getVulnerabilityStatus` 返回 `ShowVulnerabilityVo`，按包所属社区过滤
+- [x] Task 8: 更新测试适配新逻辑
