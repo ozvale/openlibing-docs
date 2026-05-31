@@ -61,11 +61,15 @@ public class ShowVulnerabilityVo {
 新增方法：
 
 ```java
+@Modifying
+@Transactional
+@Query(value = "DELETE FROM vulnerability_lifecycle WHERE product_type = :productType", nativeQuery = true)
 void deleteByProductType(String productType);
+
 List<VulnerabilityLifecycle> findByCveNumAndProductType(String cveNum, String productType);
 ```
 
-- `deleteByProductType`：按社区删除，支持逐社区全量刷新
+- `deleteByProductType`：按社区删除，支持逐社区全量刷新；使用原生 SQL + `@Modifying` + `@Transactional` 确保删除操作在事务中正确执行
 - `findByCveNumAndProductType`：按 CVE 编号 + 社区查询，替代原来的 `findByCveNum`
 
 ## 4. Feign Client 变更
@@ -100,6 +104,10 @@ public void syncMajunVulData() {
         try {
             MajunVulDetailsResponse majunVulDetails = vulViewClient.getMajunVulDetails(org);
             List<IssueDetail> details = majunVulDetails.getResult();
+            if (details == null || details.isEmpty()) {
+                logger.info("org={}, no data returned, skip", org);
+                continue;
+            }
             List<VulnerabilityLifecycle> lifecycles = details.stream()
                 .map(detail -> {
                     VulnerabilityLifecycle vl = new VulnerabilityLifecycle();
@@ -133,6 +141,7 @@ public void syncMajunVulData() {
 关键变化：
 - 遍历 `product_type` 表获取 active 社区列表
 - 逐社区调用 API（传 org 参数）
+- `getResult()` 返回 null 或空列表时跳过该社区，避免 NPE
 - 每个 `VulnerabilityLifecycle` 记录设置 `productType` 和 `issueUrl`
 - 按社区维度刷新：`deleteByProductType(org)` + `saveAll`
 - 单社区失败不影响其他社区
