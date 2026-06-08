@@ -464,24 +464,161 @@ User-Agent: MindIE-Reporter/1.0
 
 ## 10. 实施建议
 
-### 10.1 客户端实施建议
+### 10.1 业务场景说明
+
+**上报主体：** 各开源社区业务团队  
+**上报内容：** 前24小时（昨日）的推广数据  
+**上报频率：** 每日定时上报一次  
+**上报时间：** 建议在每日 00:00-02:00 之间（避开业务高峰期）
+
+### 10.2 定时上报机制
+
+**数据时间范围定义：**
+- 上报数据时间范围：前24小时（昨日 00:00-23:59）
+- 数据采集周期：每日一次，聚合昨日全天数据
+- 上报时间窗口：每日固定时间段（建议 00:00-06:00）
+
+**定时任务配置（示例）：**
+
+```yaml
+# 定时任务配置示例
+schedule:
+  cron: "0 0 1 * * ?"  # 每日凌晨1点执行
+  task: "DailyReportTask"
+  parameters:
+    time_range: "yesterday"  # 前24小时
+    communities: ["MindIE", "PTA", "MindSpeed", ...]
+```
+
+**定时任务实现流程：**
+
+```
+每日凌晨1点
+    ↓
+业务团队定时任务启动
+    ↓
+采集昨日数据（前24小时）
+    ↓
+聚合计算指标值
+    ↓
+调用 POST /api/v1/dashboard/report
+    ↓
+数据入库 + 保存历史记录
+```
+
+### 10.3 数据聚合逻辑
+
+**用户指标聚合：**
+
+| 指标   | 聚合方式     | 计算说明                                |
+|-------|-------------|----------------------------------------|
+| UV    | 累加计数     | 昨日新增用户数（去重后）                 |
+| PV    | 累加计数     | 昨日总访问量（所有请求次数）              |
+
+**业务指标聚合：**
+
+| 指标类型     | 聚合方式        | 示例                                      |
+|------------|----------------|------------------------------------------|
+| 计数类       | 累加求和         | 执行次数：昨日总执行次数                  |
+| 百分比类     | 平均值/加权平均   | 成功率：昨日所有任务成功率平均值          |
+| 时长类       | 平均值           | 平均时长：昨日所有任务耗时平均值          |
+| 状态类       | 当前状态快照     | 排名：昨日结束时排名状态                  |
+
+**聚合示例代码：**
+
+```python
+# 示例：计算昨日门禁检查指标
+def aggregate_yesterday_metrics():
+    # 时间范围：昨日 00:00-23:59
+    yesterday_start = get_yesterday_start()
+    yesterday_end = get_yesterday_end()
+    
+    # 聚合用户指标
+    uv = db.query_unique_users(start=yesterday_start, end=yesterday_end)
+    pv = db.query_total_requests(start=yesterday_start, end=yesterday_end)
+    
+    # 聚合业务指标
+    avg_duration = db.query_avg_duration(start=yesterday_start, end=yesterday_end)
+    block_rate = db.query_block_rate(start=yesterday_start, end=yesterday_end)
+    success_rate = db.query_success_rate(start=yesterday_start, end=yesterday_end)
+    
+    # 组装上报数据
+    report_data = {
+        "community": "MindIE",
+        "feature": "门禁检查",
+        "status": "active",
+        "user_metrics": {
+            "uv": uv,
+            "pv": pv
+        },
+        "business_metrics": {
+            "avg_duration": f"{avg_duration}分钟",
+            "block_rate": f"{block_rate}%",
+            "success_rate": f"{success_rate}%"
+        },
+        "timestamp": yesterday_end.isoformat()  # 昨日结束时间
+    }
+    
+    return report_data
+```
+
+### 10.4 客户端实施建议
 
 **上报时机：**
-- 定时上报：每日固定时间（如每天 00:00）
-- 事件上报：关键指标变化时（如用户数突破目标值）
-- 手动上报：运营人员手动触发
+- **定时上报（强制）：** 每日固定时间上报昨日数据
+- 推荐时间：每日凌晨 01:00（避开业务高峰）
+- 最晚时间：每日 06:00 前完成上报
 
 **上报频率：**
-- 正常频率：每日 1 次
-- 高频场景：每分钟最多 1 次（单特性）
-- 低频场景：每周 1 次（稳定期）
+- 正常频率：每日 1 次（上报昨日全天数据）
+- 不允许高频上报（频率限制生效）
+- 延迟上报：如遇网络故障，可在当日 06:00-12:00 补报
+
+**数据采集要求：**
+- 数据时间范围：严格限制为前24小时（昨日）
+- 数据完整性：确保昨日数据完整采集后再上报
+- 数据准确性：聚合计算需去重、校验、过滤异常值
 
 **错误处理：**
 - 网络超时：重试 3 次，间隔 5 秒
 - 认证失败：重新申请 Token
 - 频率超限：等待 reset_at 时间后重试
+- 上报失败：记录日志，次日补报
 
-### 10.2 服务端实施建议
+**客户端定时任务实现：**
+
+```python
+# Python 示例：定时任务框架
+import schedule
+import time
+
+def daily_report_job():
+    """每日数据上报任务"""
+    try:
+        # 1. 采集昨日数据
+        data = aggregate_yesterday_metrics()
+        
+        # 2. 上报到运营看板
+        response = report_to_dashboard(data)
+        
+        # 3. 记录上报日志
+        log_report_result(response)
+        
+    except Exception as e:
+        # 4. 异常处理：记录日志，次日补报
+        log_error(e)
+        schedule_retry_job()
+
+# 配置定时任务：每日凌晨1点执行
+schedule.every().day.at("01:00").do(daily_report_job)
+
+# 启动定时任务
+while True:
+    schedule.run_pending()
+    time.sleep(60)
+```
+
+### 10.5 服务端实施建议
 
 **技术选型：**
 - REST API：Spring Boot / Express.js
@@ -489,11 +626,39 @@ User-Agent: MindIE-Reporter/1.0
 - 认证：JWT（jsonwebtoken库）
 - 频率限制：Redis + Lua脚本
 - 日志：结构化日志（JSON格式）
+- 定时任务监控：可选（监控上报延迟、失败情况）
 
 **性能优化：**
-- 批量上报接口：支持一次上报多个特性
+- 批量上报接口：支持一次上报多个特性（可选）
 - 数据缓存：Redis 缓存热点数据
 - 异步处理：上报数据异步写入数据库
+- 数据压缩：历史数据定期归档（超过30天）
+
+**数据校验：**
+- 时间戳校验：验证 timestamp 是否在昨日范围内
+- 数据合理性校验：UV/PV 不能为负数，百分比不能超过100%
+- 重复上报检测：同一 (community, feature, timestamp) 只接受一次
+
+### 10.6 运营看板展示逻辑
+
+**数据展示策略：**
+
+| 数据来源         | 展示逻辑                                |
+|-----------------|----------------------------------------|
+| 最新上报数据      | 展示当前值（来自最近一次上报）            |
+| 目标值           | 展示年度目标值（来自目标值设置接口）      |
+| 达成率           | 当前值 / 目标值 × 100%                   |
+| 进度条           | 根据达成率显示进度（<50%黄色，≥50%绿色）  |
+
+**数据时效性：**
+- 最新数据时间：显示最后一次上报的 timestamp
+- 数据过期判断：超过 48 小时未上报，显示灰色（inactive）
+- 数据过期提醒：运营看板前端显示"数据已过期，请及时上报"
+
+**数据对比功能：**
+- 昨日 vs 今日对比（需前端实时计算）
+- 本周 vs 上周对比（需历史数据支持）
+- 本月 vs 上月对比（需历史数据支持）
 
 ---
 
