@@ -130,32 +130,6 @@ Authorization: Bearer <token>
     },
     "description": "业务指标当前值数据（key-value 形式）"
   },
-  "reporter": {
-    "type": "object",
-    "required": false,
-    "properties": {
-      "name": {
-        "type": "string",
-        "description": "上报负责人姓名"
-      },
-      "email": {
-        "type": "string",
-        "format": "email",
-        "description": "上报负责人邮箱"
-      },
-      "organization": {
-        "type": "string",
-        "description": "上报组织/团队"
-      }
-    },
-    "description": "上报负责人信息（可选）"
-  },
-  "notes": {
-    "type": "string",
-    "required": false,
-    "max_length": 500,
-    "description": "备注信息（可选，最大500字符）"
-  },
   "timestamp": {
     "type": "string",
     "format": "date-time",
@@ -228,9 +202,7 @@ Authorization: Bearer <token>
 | data.report_id    | string   | 本次上报的唯一ID（UUID格式）              |
 | data.community    | string   | 接收的社区名称                           |
 | data.feature      | string   | 接收的特性名称                           |
-| data.status       | string   | 接收的推广状态                           |
 | data.received_at  | string   | 接收时间（ISO 8601格式）                 |
-| data.updated_fields | array   | 本次更新的字段列表                       |
 | timestamp         | string   | 响应生成时间                             |
 
 ---
@@ -331,12 +303,6 @@ User-Agent: MindIE-Reporter/1.0
     "block_rate": "23.4%",
     "success_rate": "96.7%"
   },
-  "reporter": {
-    "name": "张三",
-    "email": "zhangsan@example.com",
-    "organization": "MindIE Team"
-  },
-  "notes": "已完成门禁规则配置，支持PR自动检查和质量门禁",
   "timestamp": "2026-06-05T14:30:25.123Z"
 }
 ```
@@ -350,13 +316,7 @@ User-Agent: MindIE-Reporter/1.0
     "report_id": "550e8400-e29b-41d4-a716-446655440000",
     "community": "MindIE",
     "feature": "门禁检查",
-    "received_at": "2026-06-05T14:30:25.123Z",
-    "updated_fields": [
-      "user_metrics",
-      "business_metrics",
-      "reporter",
-      "notes"
-    ]
+    "received_at": "2026-06-05T14:30:25.123Z"
   },
   "timestamp": "2026-06-05T14:30:25.123Z"
 }
@@ -373,8 +333,7 @@ User-Agent: MindIE-Reporter/1.0
     "uv": 0,
     "pv": 0
   },
-  "business_metrics": {},
-  "notes": "暂未对接，如有需求请联系运营团队"
+  "business_metrics": {}
 }
 ```
 
@@ -387,12 +346,7 @@ User-Agent: MindIE-Reporter/1.0
     "report_id": "550e8400-e29b-41d4-a716-446655440001",
     "community": "MindIE",
     "feature": "Skill市场",
-    "received_at": "2026-06-05T14:30:26.456Z",
-    "updated_fields": [
-      "user_metrics",
-      "business_metrics",
-      "notes"
-    ]
+    "received_at": "2026-06-05T14:30:26.456Z"
   },
   "timestamp": "2026-06-05T14:30:26.456Z"
 }
@@ -544,7 +498,7 @@ def aggregate_yesterday_metrics():
             "block_rate": f"{block_rate}%",
             "success_rate": f"{success_rate}%"
         },
-        "timestamp": yesterday_end.isoformat()  # 昨日结束时间
+        "timestamp": yesterday_end.isoformat()
     }
     
     return report_data
