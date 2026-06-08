@@ -817,13 +817,13 @@ User-Agent: openLiBing-Ops/1.0
 {
   "metrics": [
     {
-      "feature": "门禁检查",
-      "metric_type": "user_metric",
-      "metric_name": "用户数",
-      "metric_key": "uv",
-      "aggregation_type": "sum",
-      "target_value": "200",
-      "description": "昨日新增用户数（去重后）"
+      "feature": "门禁检查",              // 特性名称
+      "metric_type": "user_metric",       // 指标类型（user_metric/business_metric）
+      "metric_name": "用户数",             // 指标名称
+      "metric_key": "uv",                 // 指标标识（对应上报接口的key）
+      "aggregation_type": "sum",          // 统计方式（sum累加/avg平均）
+      "target_value": "200",              // 指标目标值
+      "description": "昨日新增用户数（去重后）"  // 指标说明（可选）
     },
     {
       "feature": "门禁检查",
