@@ -1,4 +1,4 @@
-# openLiBing 运营看板数据上报接口规范
+# openLiBing 运营看板接口规范
 
 **版本：** v1.0  
 **状态：** Draft  
@@ -8,24 +8,37 @@
 
 ## 1. 接口概述
 
-### 1.1 接口用途
+本规范定义了两个 REST API 接口：
 
-各开源社区通过此接口向 openLiBing 运营看板上报推广数据，包括：
+### 1.1 接口一：数据上报接口
+
+各开源社区通过此接口上报推广数据的当前值，包括：
 - 社区和特性信息
 - 推广状态（已使用、对接中、未使用）
-- 用户指标（UV/PV 当前值和目标值）
-- 业务指标（key-value 形式，含当前值和目标值）
+- 用户指标当前值（UV/PV）
+- 业务指标当前值（key-value 形式）
 
-### 1.2 接口信息
+**接口地址：** `/api/v1/dashboard/report`
 
-| 属性         | 值                                    |
-|-------------|---------------------------------------|
-| 接口名称     | 运营看板数据上报接口                   |
-| 接口地址     | `/api/v1/dashboard/report`            |
-| 请求方法     | POST                                  |
-| 数据格式     | application/json                      |
-| 认证方式     | Bearer Token (JWT)                    |
-| 编码格式     | UTF-8                                 |
+### 1.2 接口二：目标值设置接口
+
+运营人员通过此接口设置各指标的年度目标值，包括：
+- 社区和特性信息
+- 用户指标目标值（UV/PV）
+- 业务指标目标值（key-value 形式）
+
+**接口地址：** `/api/v1/dashboard/targets`
+
+### 1.3 接口信息对比
+
+| 属性         | 数据上报接口                            | 目标值设置接口                          |
+|-------------|----------------------------------------|----------------------------------------|
+| 接口地址     | `/api/v1/dashboard/report`            | `/api/v1/dashboard/targets`           |
+| 请求方法     | POST                                  | POST                                  |
+| 数据格式     | application/json                      | application/json                      |
+| 认证方式     | Bearer Token (JWT)                    | Bearer Token (JWT)                    |
+| 编码格式     | UTF-8                                 | UTF-8                                 |
+| 使用角色     | 各开源社区                             | 运营团队                               |
 
 ---
 
@@ -101,63 +114,28 @@ Authorization: Bearer <token>
     "required": true,
     "properties": {
       "uv": {
-        "type": "object",
+        "type": "integer",
         "required": true,
-        "properties": {
-          "current": {
-            "type": "integer",
-            "required": true,
-            "min": 0,
-            "description": "当前用户数"
-          },
-          "target": {
-            "type": "integer",
-            "required": true,
-            "min": 0,
-            "description": "目标用户数"
-          }
-        }
+        "min": 0,
+        "description": "当前用户数"
       },
       "pv": {
-        "type": "object",
+        "type": "integer",
         "required": true,
-        "properties": {
-          "current": {
-            "type": "integer",
-            "required": true,
-            "min": 0,
-            "description": "当前访问量"
-          },
-          "target": {
-            "type": "integer",
-            "required": true,
-            "min": 0,
-            "description": "目标访问量"
-          }
-        }
+        "min": 0,
+        "description": "当前访问量"
       }
     },
-    "description": "用户指标数据"
+    "description": "用户指标当前值数据"
   },
   "business_metrics": {
     "type": "object",
     "required": true,
     "additionalProperties": {
-      "type": "object",
-      "properties": {
-        "current": {
-          "type": "string",
-          "required": true,
-          "description": "当前业务指标值（可包含单位）"
-        },
-        "target": {
-          "type": "string",
-          "required": true,
-          "description": "目标业务指标值（可包含单位）"
-        }
-      }
+      "type": "string",
+      "description": "业务指标当前值（可包含单位）"
     },
-    "description": "业务指标数据（key-value 形式，value 包含 current 和 target）"
+    "description": "业务指标当前值数据（key-value 形式）"
   },
   "reporter": {
     "type": "object",
@@ -353,28 +331,13 @@ User-Agent: MindIE-Reporter/1.0
   "feature": "门禁检查",
   "status": "active",
   "user_metrics": {
-    "uv": {
-      "current": 156,
-      "target": 200
-    },
-    "pv": {
-      "current": 1234,
-      "target": 1500
-    }
+    "uv": 156,
+    "pv": 1234
   },
   "business_metrics": {
-    "avg_duration": {
-      "current": "12.5分钟",
-      "target": "10分钟"
-    },
-    "block_rate": {
-      "current": "23.4%",
-      "target": "20%"
-    },
-    "success_rate": {
-      "current": "96.7%",
-      "target": "98%"
-    }
+    "avg_duration": "12.5分钟",
+    "block_rate": "23.4%",
+    "success_rate": "96.7%"
   },
   "reporter": {
     "name": "张三",
@@ -417,14 +380,8 @@ User-Agent: MindIE-Reporter/1.0
   "feature": "Skill市场",
   "status": "inactive",
   "user_metrics": {
-    "uv": {
-      "current": 0,
-      "target": 50
-    },
-    "pv": {
-      "current": 0,
-      "target": 100
-    }
+    "uv": 0,
+    "pv": 0
   },
   "business_metrics": {},
   "notes": "暂未对接，如有需求请联系运营团队"
@@ -583,6 +540,217 @@ User-Agent: MindIE-Reporter/1.0
 - Python SDK: `pip install openlibing-dashboard-reporter`
 - Java SDK: Maven依赖
 - Node.js SDK: npm包
+
+---
+
+## 13. 接口二：目标值设置接口
+
+### 13.1 接口信息
+
+| 属性         | 值                                    |
+|-------------|---------------------------------------|
+| 接口名称     | 目标值设置接口                         |
+| 接口地址     | `/api/v1/dashboard/targets`           |
+| 请求方法     | POST                                  |
+| 数据格式     | application/json                      |
+| 认证方式     | Bearer Token (JWT, Admin权限)         |
+| 编码格式     | UTF-8                                 |
+| 使用角色     | 运营团队                               |
+
+### 13.2 认证要求
+
+运营团队需要申请 **Admin权限** Token：
+- Token权限：可设置任意社区的目标值
+- Token有效期：永久（需定期审计）
+- Token绑定：运营团队成员身份
+
+### 13.3 请求 Headers
+
+与数据上报接口相同（见3.1节），但需使用 Admin Token。
+
+### 13.4 请求 Body（JSON Schema）
+
+```json
+{
+  "community": {
+    "type": "string",
+    "required": true,
+    "enum": [
+      "MindIE", "PTA", "MindSpeed", "openEuler", 
+      "HPCkit", "UBS Core", "openUBMC", "CANN", "openLiBing"
+    ],
+    "description": "开源社区名称"
+  },
+  "feature": {
+    "type": "string",
+    "required": true,
+    "enum": [
+      "门禁检查", "接口兼容性", "流水线", "测试框架", "SBOM",
+      "漏洞视图", "发布评审", "工具市场", "AI agent", 
+      "Skill市场", "数字化运营看板"
+    ],
+    "description": "openLiBing 特性名称"
+  },
+  "user_targets": {
+    "type": "object",
+    "required": true,
+    "properties": {
+      "uv_target": {
+        "type": "integer",
+        "required": true,
+        "min": 0,
+        "description": "用户数年度目标值"
+      },
+      "pv_target": {
+        "type": "integer",
+        "required": true,
+        "min": 0,
+        "description": "访问量年度目标值"
+      }
+    },
+    "description": "用户指标年度目标值"
+  },
+  "business_targets": {
+    "type": "object",
+    "required": true,
+    "additionalProperties": {
+      "type": "string",
+      "description": "业务指标年度目标值（可包含单位）"
+    },
+    "description": "业务指标年度目标值（key-value 形式）"
+  },
+  "year": {
+    "type": "integer",
+    "required": false,
+    "description": "目标年份（默认为当前年份）"
+  },
+  "notes": {
+    "type": "string",
+    "required": false,
+    "max_length": 500,
+    "description": "备注信息（可选）"
+  }
+}
+```
+
+### 13.5 响应格式（HTTP 200）
+
+```json
+{
+  "code": 200,
+  "message": "目标值设置成功",
+  "data": {
+    "target_id": "660e8400-e29b-41d4-a716-446655440000",
+    "community": "MindIE",
+    "feature": "门禁检查",
+    "year": 2026,
+    "user_targets": {
+      "uv_target": 200,
+      "pv_target": 1500
+    },
+    "business_targets": {
+      "avg_duration": "10分钟",
+      "block_rate": "20%",
+      "success_rate": "98%"
+    },
+    "created_at": "2026-06-05T14:30:25.123Z"
+  },
+  "timestamp": "2026-06-05T14:30:25.123Z"
+}
+```
+
+### 13.6 完整请求示例
+
+**请求 Headers:**
+```
+POST /api/v1/dashboard/targets
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... (Admin Token)
+Content-Type: application/json
+X-Reporter-ID: ops-team
+X-Request-ID: 660e8400-e29b-41d4-a716-446655440000
+User-Agent: openLiBing-Ops/1.0
+```
+
+**请求 Body:**
+```json
+{
+  "community": "MindIE",
+  "feature": "门禁检查",
+  "user_targets": {
+    "uv_target": 200,
+    "pv_target": 1500
+  },
+  "business_targets": {
+    "avg_duration": "10分钟",
+    "block_rate": "20%",
+    "success_rate": "98%"
+  },
+  "year": 2026,
+  "notes": "2026年度推广目标"
+}
+```
+
+**成功响应（HTTP 200）:**
+```json
+{
+  "code": 200,
+  "message": "目标值设置成功",
+  "data": {
+    "target_id": "660e8400-e29b-41d4-a716-446655440000",
+    "community": "MindIE",
+    "feature": "门禁检查",
+    "year": 2026,
+    "user_targets": {
+      "uv_target": 200,
+      "pv_target": 1500
+    },
+    "business_targets": {
+      "avg_duration": "10分钟",
+      "block_rate": "20%",
+      "success_rate": "98%"
+    },
+    "created_at": "2026-06-05T14:30:25.123Z"
+  },
+  "timestamp": "2026-06-05T14:30:25.123Z"
+}
+```
+
+### 13.7 错误码定义
+
+| HTTP状态码 | 错误码 | 错误消息                                | 原因                                      |
+|-----------|-------|----------------------------------------|------------------------------------------|
+| 400       | 40001 | 缺少必填字段                             | 请求体缺少 required 字段                  |
+| 400       | 40002 | 字段类型错误                             | 字段类型不符合 JSON Schema 定义           |
+| 400       | 40003 | 目标年份无效                             | 年份不在合理范围（2020-2030）            |
+| 401       | 40101 | 缺少认证信息                             | Header 中未包含 Authorization             |
+| 401       | 40102 | Token 无效                              | Token 格式错误或已被撤销                  |
+| 403       | 40303 | 无权限设置目标值                         | Token 不是 Admin 权限                    |
+| 409       | 40901 | 目标值已存在                             | 该年份的目标值已设置，需先删除            |
+| 500       | 50001 | 内部服务错误                             | 服务器处理异常                            |
+
+### 13.8 目标值管理规则
+
+**存储策略：**
+- 按 (community, feature, year) 组合作为唯一键
+- 每年只能设置一次目标值
+- 目标值一经设置，不可修改（需先删除再重新设置）
+
+**查询接口（v1.1计划）：**
+- 查询某社区某特性当前目标值
+- 查询某社区全部目标值
+- 查询某年份全平台目标值
+
+**删除接口（v1.1计划）：**
+- 删除某社区某特性某年目标值
+- 仅 Admin 权限可删除
+
+### 13.9 目标值生效规则
+
+运营看板展示时：
+- 当前值与目标值对比
+- 计算达成率：`当前值 / 目标值 × 100%`
+- 显示进度条（绿色表示达成，黄色表示进展中）
+- 未设置目标值时，不显示对比和进度条
 
 ---
 
