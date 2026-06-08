@@ -14,7 +14,6 @@
 
 各开源社区通过此接口上报推广数据的当前值，包括：
 - 社区和特性信息
-- 推广状态（已使用、对接中、未使用）
 - 用户指标当前值（UV/PV）
 - 业务指标当前值（key-value 形式）
 
@@ -102,12 +101,6 @@ Authorization: Bearer <token>
       "Skill市场", "数字化运营看板"
     ],
     "description": "openLiBing 特性名称"
-  },
-  "status": {
-    "type": "string",
-    "required": true,
-    "enum": ["active", "in_progress", "inactive"],
-    "description": "推广状态：active=已使用, in_progress=对接中, inactive=未使用"
   },
   "user_metrics": {
     "type": "object",
@@ -329,7 +322,6 @@ User-Agent: MindIE-Reporter/1.0
 {
   "community": "MindIE",
   "feature": "门禁检查",
-  "status": "active",
   "user_metrics": {
     "uv": 156,
     "pv": 1234
@@ -358,7 +350,6 @@ User-Agent: MindIE-Reporter/1.0
     "report_id": "550e8400-e29b-41d4-a716-446655440000",
     "community": "MindIE",
     "feature": "门禁检查",
-    "status": "active",
     "received_at": "2026-06-05T14:30:25.123Z",
     "updated_fields": [
       "user_metrics",
@@ -371,14 +362,13 @@ User-Agent: MindIE-Reporter/1.0
 }
 ```
 
-### 8.2 示例 2：未使用特性上报
+### 8.2 示例 2：未对接特性上报
 
 **请求 Body:**
 ```json
 {
   "community": "MindIE",
   "feature": "Skill市场",
-  "status": "inactive",
   "user_metrics": {
     "uv": 0,
     "pv": 0
@@ -397,7 +387,6 @@ User-Agent: MindIE-Reporter/1.0
     "report_id": "550e8400-e29b-41d4-a716-446655440001",
     "community": "MindIE",
     "feature": "Skill市场",
-    "status": "inactive",
     "received_at": "2026-06-05T14:30:26.456Z",
     "updated_fields": [
       "user_metrics",
@@ -546,7 +535,6 @@ def aggregate_yesterday_metrics():
     report_data = {
         "community": "MindIE",
         "feature": "门禁检查",
-        "status": "active",
         "user_metrics": {
             "uv": uv,
             "pv": pv
