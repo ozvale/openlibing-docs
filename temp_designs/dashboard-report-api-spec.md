@@ -19,25 +19,30 @@
 
 **接口地址：** `/api/v1/dashboard/report`
 
-### 1.2 接口二：目标值设置接口
+### 1.2 接口二：自定义运营指标接口
 
-运营人员通过此接口设置各指标的年度目标值，包括：
-- 社区和特性信息
-- 用户指标目标值（UV/PV）
-- 业务指标目标值（key-value 形式）
+运营人员通过此接口定义运营看板的指标配置，包括：
+- 特性名称
+- 指标类型（用户指标、业务指标）
+- 指标名称和标识（key）
+- 指标统计方式（累加、平均）
+- 指标目标值
+- 指标说明（计算公式等）
 
-**接口地址：** `/api/v1/dashboard/targets`
+**接口地址：** `/api/v1/dashboard/metrics`  
+**支持批量：** 一次请求可定义多个指标
 
 ### 1.3 接口信息对比
 
-| 属性         | 数据上报接口                            | 目标值设置接口                          |
+| 属性         | 数据上报接口                            | 自定义运营指标接口                       |
 |-------------|----------------------------------------|----------------------------------------|
-| 接口地址     | `/api/v1/dashboard/report`            | `/api/v1/dashboard/targets`           |
+| 接口地址     | `/api/v1/dashboard/report`            | `/api/v1/dashboard/metrics`           |
 | 请求方法     | POST                                  | POST                                  |
 | 数据格式     | application/json                      | application/json                      |
-| 认证方式     | Bearer Token (JWT)                    | Bearer Token (JWT)                    |
+| 认证方式     | Bearer Token (JWT)                    | Bearer Token (JWT, Admin权限)         |
 | 编码格式     | UTF-8                                 | UTF-8                                 |
 | 使用角色     | 各开源社区                             | 运营团队                               |
+| 批量支持     | 不支持                                 | 支持（一次定义多个指标）                |
 
 ---
 
@@ -650,24 +655,25 @@ while True:
 
 ---
 
-## 13. 接口二：目标值设置接口
+## 13. 接口二：自定义运营指标接口
 
 ### 13.1 接口信息
 
 | 属性         | 值                                    |
 |-------------|---------------------------------------|
-| 接口名称     | 目标值设置接口                         |
-| 接口地址     | `/api/v1/dashboard/targets`           |
+| 接口名称     | 自定义运营指标接口                     |
+| 接口地址     | `/api/v1/dashboard/metrics`           |
 | 请求方法     | POST                                  |
 | 数据格式     | application/json                      |
 | 认证方式     | Bearer Token (JWT, Admin权限)         |
 | 编码格式     | UTF-8                                 |
 | 使用角色     | 运营团队                               |
+| 批量支持     | 支持（一次定义多个指标）                |
 
 ### 13.2 认证要求
 
 运营团队需要申请 **Admin权限** Token：
-- Token权限：可设置任意社区的目标值
+- Token权限：可定义任意特性的运营指标
 - Token有效期：永久（需定期审计）
 - Token绑定：运营团队成员身份
 
@@ -677,65 +683,69 @@ while True:
 
 ### 13.4 请求 Body（JSON Schema）
 
+**批量上报结构：**
+
 ```json
 {
-  "community": {
-    "type": "string",
+  "metrics": {
+    "type": "array",
     "required": true,
-    "enum": [
-      "MindIE", "PTA", "MindSpeed", "openEuler", 
-      "HPCkit", "UBS Core", "openUBMC", "CANN", "openLiBing"
-    ],
-    "description": "开源社区名称"
-  },
-  "feature": {
-    "type": "string",
-    "required": true,
-    "enum": [
-      "门禁检查", "接口兼容性", "流水线", "测试框架", "SBOM",
-      "漏洞视图", "发布评审", "工具市场", "AI agent", 
-      "Skill市场", "数字化运营看板"
-    ],
-    "description": "openLiBing 特性名称"
-  },
-  "user_targets": {
-    "type": "object",
-    "required": true,
-    "properties": {
-      "uv_target": {
-        "type": "integer",
-        "required": true,
-        "min": 0,
-        "description": "用户数年度目标值"
-      },
-      "pv_target": {
-        "type": "integer",
-        "required": true,
-        "min": 0,
-        "description": "访问量年度目标值"
+    "items": {
+      "type": "object",
+      "properties": {
+        "feature": {
+          "type": "string",
+          "required": true,
+          "enum": [
+            "门禁检查", "接口兼容性", "流水线", "测试框架", "SBOM",
+            "漏洞视图", "发布评审", "工具市场", "AI agent", 
+            "Skill市场", "数字化运营看板"
+          ],
+          "description": "openLiBing 特性名称"
+        },
+        "metric_type": {
+          "type": "string",
+          "required": true,
+          "enum": ["user_metric", "business_metric"],
+          "description": "指标类型：user_metric=用户指标, business_metric=业务指标"
+        },
+        "metric_name": {
+          "type": "string",
+          "required": true,
+          "max_length": 50,
+          "description": "指标名称（如：用户数、平均时长、成功率）"
+        },
+        "metric_key": {
+          "type": "string",
+          "required": true,
+          "max_length": 50,
+          "description": "指标标识（对应数据上报接口中的key，如：uv、avg_duration、success_rate）"
+        },
+        "aggregation_type": {
+          "type": "string",
+          "required": true,
+          "enum": ["sum", "avg"],
+          "description": "指标统计方式：sum=累加, avg=平均（支持时间段筛选时的统计）"
+        },
+        "target_value": {
+          "type": "string",
+          "required": true,
+          "description": "指标目标值（可包含单位，如：200、10分钟、98%）"
+        },
+        "description": {
+          "type": "string",
+          "required": false,
+          "max_length": 500,
+          "description": "指标说明（说明指标计算公式等，如：昨日新增用户数（去重））"
+        }
       }
     },
-    "description": "用户指标年度目标值"
-  },
-  "business_targets": {
-    "type": "object",
-    "required": true,
-    "additionalProperties": {
-      "type": "string",
-      "description": "业务指标年度目标值（可包含单位）"
-    },
-    "description": "业务指标年度目标值（key-value 形式）"
+    "description": "运营指标配置数组（批量定义）"
   },
   "year": {
     "type": "integer",
     "required": false,
     "description": "目标年份（默认为当前年份）"
-  },
-  "notes": {
-    "type": "string",
-    "required": false,
-    "max_length": 500,
-    "description": "备注信息（可选）"
   }
 }
 ```
@@ -745,22 +755,46 @@ while True:
 ```json
 {
   "code": 200,
-  "message": "目标值设置成功",
+  "message": "运营指标定义成功",
   "data": {
-    "target_id": "660e8400-e29b-41d4-a716-446655440000",
-    "community": "MindIE",
-    "feature": "门禁检查",
+    "batch_id": "770e8400-e29b-41d4-a716-446655440000",
     "year": 2026,
-    "user_targets": {
-      "uv_target": 200,
-      "pv_target": 1500
-    },
-    "business_targets": {
-      "avg_duration": "10分钟",
-      "block_rate": "20%",
-      "success_rate": "98%"
-    },
-    "created_at": "2026-06-05T14:30:25.123Z"
+    "total_metrics": 3,
+    "created_metrics": [
+      {
+        "metric_id": "770e8400-e29b-41d4-a716-446655440001",
+        "feature": "门禁检查",
+        "metric_type": "user_metric",
+        "metric_name": "用户数",
+        "metric_key": "uv",
+        "aggregation_type": "sum",
+        "target_value": "200",
+        "description": "昨日新增用户数（去重后）",
+        "created_at": "2026-06-05T14:30:25.123Z"
+      },
+      {
+        "metric_id": "770e8400-e29b-41d4-a716-446655440002",
+        "feature": "门禁检查",
+        "metric_type": "business_metric",
+        "metric_name": "平均时长",
+        "metric_key": "avg_duration",
+        "aggregation_type": "avg",
+        "target_value": "10分钟",
+        "description": "昨日所有任务耗时平均值",
+        "created_at": "2026-06-05T14:30:25.123Z"
+      },
+      {
+        "metric_id": "770e8400-e29b-41d4-a716-446655440003",
+        "feature": "门禁检查",
+        "metric_type": "business_metric",
+        "metric_name": "成功率",
+        "metric_key": "success_rate",
+        "aggregation_type": "avg",
+        "target_value": "98%",
+        "description": "昨日所有任务成功率平均值",
+        "created_at": "2026-06-05T14:30:25.123Z"
+      }
+    ]
   },
   "timestamp": "2026-06-05T14:30:25.123Z"
 }
@@ -770,30 +804,47 @@ while True:
 
 **请求 Headers:**
 ```
-POST /api/v1/dashboard/targets
+POST /api/v1/dashboard/metrics
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... (Admin Token)
 Content-Type: application/json
 X-Reporter-ID: ops-team
-X-Request-ID: 660e8400-e29b-41d4-a716-446655440000
+X-Request-ID: 770e8400-e29b-41d4-a716-446655440000
 User-Agent: openLiBing-Ops/1.0
 ```
 
-**请求 Body:**
+**请求 Body（批量定义3个指标）:**
 ```json
 {
-  "community": "MindIE",
-  "feature": "门禁检查",
-  "user_targets": {
-    "uv_target": 200,
-    "pv_target": 1500
-  },
-  "business_targets": {
-    "avg_duration": "10分钟",
-    "block_rate": "20%",
-    "success_rate": "98%"
-  },
-  "year": 2026,
-  "notes": "2026年度推广目标"
+  "metrics": [
+    {
+      "feature": "门禁检查",
+      "metric_type": "user_metric",
+      "metric_name": "用户数",
+      "metric_key": "uv",
+      "aggregation_type": "sum",
+      "target_value": "200",
+      "description": "昨日新增用户数（去重后）"
+    },
+    {
+      "feature": "门禁检查",
+      "metric_type": "business_metric",
+      "metric_name": "平均时长",
+      "metric_key": "avg_duration",
+      "aggregation_type": "avg",
+      "target_value": "10分钟",
+      "description": "昨日所有任务耗时平均值"
+    },
+    {
+      "feature": "门禁检查",
+      "metric_type": "business_metric",
+      "metric_name": "成功率",
+      "metric_key": "success_rate",
+      "aggregation_type": "avg",
+      "target_value": "98%",
+      "description": "昨日所有任务成功率平均值"
+    }
+  ],
+  "year": 2026
 }
 ```
 
@@ -801,22 +852,46 @@ User-Agent: openLiBing-Ops/1.0
 ```json
 {
   "code": 200,
-  "message": "目标值设置成功",
+  "message": "运营指标定义成功",
   "data": {
-    "target_id": "660e8400-e29b-41d4-a716-446655440000",
-    "community": "MindIE",
-    "feature": "门禁检查",
+    "batch_id": "770e8400-e29b-41d4-a716-446655440000",
     "year": 2026,
-    "user_targets": {
-      "uv_target": 200,
-      "pv_target": 1500
-    },
-    "business_targets": {
-      "avg_duration": "10分钟",
-      "block_rate": "20%",
-      "success_rate": "98%"
-    },
-    "created_at": "2026-06-05T14:30:25.123Z"
+    "total_metrics": 3,
+    "created_metrics": [
+      {
+        "metric_id": "770e8400-e29b-41d4-a716-446655440001",
+        "feature": "门禁检查",
+        "metric_type": "user_metric",
+        "metric_name": "用户数",
+        "metric_key": "uv",
+        "aggregation_type": "sum",
+        "target_value": "200",
+        "description": "昨日新增用户数（去重后）",
+        "created_at": "2026-06-05T14:30:25.123Z"
+      },
+      {
+        "metric_id": "770e8400-e29b-41d4-a716-446655440002",
+        "feature": "门禁检查",
+        "metric_type": "business_metric",
+        "metric_name": "平均时长",
+        "metric_key": "avg_duration",
+        "aggregation_type": "avg",
+        "target_value": "10分钟",
+        "description": "昨日所有任务耗时平均值",
+        "created_at": "2026-06-05T14:30:25.123Z"
+      },
+      {
+        "metric_id": "770e8400-e29b-41d4-a716-446655440003",
+        "feature": "门禁检查",
+        "metric_type": "business_metric",
+        "metric_name": "成功率",
+        "metric_key": "success_rate",
+        "aggregation_type": "avg",
+        "target_value": "98%",
+        "description": "昨日所有任务成功率平均值",
+        "created_at": "2026-06-05T14:30:25.123Z"
+      }
+    ]
   },
   "timestamp": "2026-06-05T14:30:25.123Z"
 }
@@ -828,36 +903,102 @@ User-Agent: openLiBing-Ops/1.0
 |-----------|-------|----------------------------------------|------------------------------------------|
 | 400       | 40001 | 缺少必填字段                             | 请求体缺少 required 字段                  |
 | 400       | 40002 | 字段类型错误                             | 字段类型不符合 JSON Schema 定义           |
-| 400       | 40003 | 目标年份无效                             | 年份不在合理范围（2020-2030）            |
+| 400       | 40003 | 指标标识重复                             | 同一特性的同一metric_key已存在            |
+| 400       | 40004 | JSON 格式错误                            | 请求体不是有效的 JSON                     |
+| 400       | 40005 | 批量指标数量超限                         | metrics数组超过50个                       |
 | 401       | 40101 | 缺少认证信息                             | Header 中未包含 Authorization             |
 | 401       | 40102 | Token 无效                              | Token 格式错误或已被撤销                  |
-| 403       | 40303 | 无权限设置目标值                         | Token 不是 Admin 权限                    |
-| 409       | 40901 | 目标值已存在                             | 该年份的目标值已设置，需先删除            |
+| 403       | 40303 | 无权限定义运营指标                       | Token 不是 Admin 权限                    |
+| 409       | 40901 | 指标已存在                               | 该特性的该指标已定义，需先删除            |
 | 500       | 50001 | 内部服务错误                             | 服务器处理异常                            |
 
-### 13.8 目标值管理规则
+### 13.8 运营指标管理规则
 
 **存储策略：**
-- 按 (community, feature, year) 组合作为唯一键
-- 每年只能设置一次目标值
-- 目标值一经设置，不可修改（需先删除再重新设置）
+- 按 (feature, metric_key) 组合作为唯一键
+- 每个特性可定义多个指标（用户指标 + 业务指标）
+- 指标定义支持批量（一次最多50个）
 
 **查询接口（v1.1计划）：**
-- 查询某社区某特性当前目标值
-- 查询某社区全部目标值
-- 查询某年份全平台目标值
+- 查询某特性的所有指标配置
+- 查询全平台所有指标配置
 
 **删除接口（v1.1计划）：**
-- 删除某社区某特性某年目标值
+- 删除某特性的某个指标
 - 仅 Admin 权限可删除
 
-### 13.9 目标值生效规则
+### 13.9 指标统计方式说明
 
-运营看板展示时：
-- 当前值与目标值对比
-- 计算达成率：`当前值 / 目标值 × 100%`
-- 显示进度条（绿色表示达成，黄色表示进展中）
-- 未设置目标值时，不显示对比和进度条
+**统计方式定义：**
+
+| 统计方式     | 说明                                    | 适用指标                                |
+|------------|----------------------------------------|----------------------------------------|
+| sum（累加）  | 时间段内的数值累加求和                   | UV、PV、执行次数、下载次数                |
+| avg（平均）  | 时间段内的数值平均值                     | 平均时长、成功率、覆盖率                  |
+
+**时间段筛选统计示例：**
+
+**场景：查询过去7天的数据**
+
+| 指标       | 统计方式 | 计算逻辑                                | 示例                                      |
+|-----------|---------|----------------------------------------|------------------------------------------|
+| UV        | sum     | 过去7天每日UV累加                        | Day1:100 + Day2:120 + ... = 780          |
+| PV        | sum     | 过去7天每日PV累加                        | Day1:500 + Day2:600 + ... = 3500         |
+| avg_duration | avg   | 过去7天每日平均值再平均                  | (10+12+8+11+9+13+10) / 7 = 10.4分钟       |
+| success_rate | avg   | 过去7天每日成功率平均值                  | (96+98+95+97+96+98+97) / 7 = 96.7%        |
+
+### 13.10 指标配置与数据上报的对应关系
+
+**配置 -> 上报 -> 展示流程：**
+
+```
+运营团队                指标配置数据库              开源社区                运营看板前端
+    |                         |                        |                        |
+    |--POST /metrics---------->| (定义指标配置)          |                        |
+    |   {                     |                        |                        |
+    |     metric_key: "uv",   |                        |                        |
+    |     aggregation: "sum", |                        |                        |
+    |     target: "200"       |                        |                        |
+    |   }                     |                        |                        |
+    |                         |                        |                        |
+    |                         |                        |                        |
+    |                         |<---POST /report---------| (每日上报当前值)        |
+    |                         |   {                    |                        |
+    |                         |     uv: 156            |                        |
+    |                         |   }                    |                        |
+    |                         |                        |                        |
+    |                         |                        |                        |
+    |                         |                        |<----GET (查询)----------|
+    |                         |                        |   {                    |
+    |                         |                        |     uv_current: 156,   |
+    |                         |----------------------->|     uv_target: 200,    |
+    |                         |   (返回配置+数据)       |     aggregation: "sum" |
+    |                         |                        |   }                    |
+    |                         |                        |                        |
+    |                         |                        |   前端展示：            |
+    |                         |                        |   - 当前值：156         |
+    |                         |                        |   - 目标值：200         |
+    |                         |                        |   - 达成率：78%         |
+    |                         |                        |   - 统计方式：累加      |
+```
+
+### 13.11 指标字段使用规范
+
+**metric_key 唯一性：**
+- 同一特性内，metric_key 必须唯一
+- metric_key 与数据上报接口中的 key 保持一致
+- 例如：上报接口用 `uv`，配置接口也必须用 `uv`
+
+**target_value 格式：**
+- 用户指标：纯数字（如："200"）
+- 业务指标：数字 + 单位（如："10分钟"、"98%"）
+- 单位必须与上报数据单位一致
+
+**description 内容建议：**
+- 说明指标计算公式
+- 说明数据来源和采集方式
+- 说明数据时间范围定义
+- 例如："昨日新增用户数（去重后），来源于访问日志统计"
 
 ---
 
