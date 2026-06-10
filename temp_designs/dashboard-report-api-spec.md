@@ -18,7 +18,7 @@
 - 用户指标当前值（UV/PV）
 - 业务指标当前值（count类型为值，rate类型为分子分母对象）
 
-**接口地址：** `/api/v1/dashboard/report`
+**接口地址：** `/openlibing-framework/manage/feature-dashboard/report`
 
 ### 1.2 接口二：自定义运营指标接口
 
@@ -30,7 +30,7 @@
 - 指标目标值
 - 指标说明（计算公式等）
 
-**接口地址：** `/api/v1/dashboard/metrics`  
+**接口地址：** `/openlibing-framework/manage/feature-dashboard/metrics`  
 **支持批量：** 一次请求可定义多个指标
 
 ### 1.3 接口信息对比
