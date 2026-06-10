@@ -13,9 +13,10 @@
 ### 1.1 接口一：数据上报接口
 
 各开源社区通过此接口上报推广数据的当前值，包括：
-- 社区和特性信息
+- 社区（可选）或代码仓链接（可选）
+- 特性信息
 - 用户指标当前值（UV/PV）
-- 业务指标当前值（key-value 形式）
+- 业务指标当前值（count类型为值，rate类型为分子分母对象）
 
 **接口地址：** `/api/v1/dashboard/report`
 
@@ -25,7 +26,7 @@
 - 特性名称
 - 指标类型（用户指标、业务指标）
 - 指标名称和标识（key）
-- 指标统计方式（累加、平均）
+- 指标统计方式（count计数、rate比率）
 - 指标目标值
 - 指标说明（计算公式等）
 
@@ -90,12 +91,21 @@ Authorization: Bearer <token>
 {
   "community": {
     "type": "string",
-    "required": true,
+    "required": false,
     "enum": [
       "MindIE", "PTA", "MindSpeed", "openEuler", 
       "HPCkit", "UBS Core", "openUBMC", "CANN", "openLiBing"
     ],
-    "description": "开源社区名称（必须与Token绑定的社区一致）"
+    "description": "开源社区名称（可选，若不填则根据repo自动关联）"
+  },
+  "repo": {
+    "type": "string",
+    "required": false,
+    "description": "代码仓链接（可选，后端根据代码仓与社区关联关系确认community）",
+    "examples": [
+      "https://gitcode.com/mindie/mindie-core",
+      "https://github.com/openeuler/openeuler"
+    ]
   },
   "feature": {
     "type": "string",
@@ -112,26 +122,87 @@ Authorization: Bearer <token>
     "required": true,
     "properties": {
       "uv": {
-        "type": "integer",
-        "required": true,
-        "min": 0,
-        "description": "当前用户数"
+        "oneOf": [
+          {
+            "type": "integer",
+            "min": 0,
+            "description": "用户数当前值（aggregation_type为count时）"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "numerator": {
+                "type": "integer",
+                "min": 0,
+                "description": "分子（如：活跃用户数）"
+              },
+              "denominator": {
+                "type": "integer",
+                "min": 0,
+                "description": "分母（如：总用户数）"
+              }
+            },
+            "description": "用户数比率对象（aggregation_type为rate时）"
+          }
+        ]
       },
       "pv": {
-        "type": "integer",
-        "required": true,
-        "min": 0,
-        "description": "当前访问量"
+        "oneOf": [
+          {
+            "type": "integer",
+            "min": 0,
+            "description": "访问量当前值（aggregation_type为count时）"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "numerator": {
+                "type": "integer",
+                "min": 0,
+                "description": "分子（如：有效访问数）"
+              },
+              "denominator": {
+                "type": "integer",
+                "min": 0,
+                "description": "分母（如：总访问数）"
+              }
+            },
+            "description": "访问量比率对象（aggregation_type为rate时）"
+          }
+        ]
       }
     },
-    "description": "用户指标当前值数据"
+    "description": "用户指标当前值数据（count类型为整数，rate类型为分子分母对象）"
   },
   "business_metrics": {
     "type": "object",
     "required": true,
     "additionalProperties": {
-      "type": "string",
-      "description": "业务指标当前值（可包含单位）"
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "业务指标当前值（aggregation_type为count时，可包含单位）"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "numerator": {
+              "type": "integer",
+              "min": 0,
+              "description": "分子（如：成功次数）"
+            },
+            "denominator": {
+              "type": "integer",
+              "min": 0,
+              "description": "分母（如：总次数）"
+            }
+          },
+          "description": "业务指标比率对象（aggregation_type为rate时）"
+        }
+      ]
+    },
+    "description": "业务指标当前值数据（count类型为字符串，rate类型为分子分母对象）"
+  },
     },
     "description": "业务指标当前值数据（key-value 形式）"
   },
@@ -282,7 +353,7 @@ Authorization: Bearer <token>
 
 ## 8. 完整请求示例
 
-### 8.1 示例 1：门禁检查特性上报
+### 8.1 示例 1：使用 repo 字段上报（自动关联社区）
 
 **请求 Headers:**
 ```
@@ -297,7 +368,7 @@ User-Agent: MindIE-Reporter/1.0
 **请求 Body:**
 ```json
 {
-  "community": "MindIE",
+  "repo": "https://gitcode.com/mindie/mindie-core",
   "feature": "门禁检查",
   "user_metrics": {
     "uv": 156,
@@ -305,8 +376,10 @@ User-Agent: MindIE-Reporter/1.0
   },
   "business_metrics": {
     "avg_duration": "12.5分钟",
-    "block_rate": "23.4%",
-    "success_rate": "96.7%"
+    "success_rate": {
+      "numerator": 145,
+      "denominator": 150
+    }
   },
   "timestamp": "2026-06-05T14:30:25.123Z"
 }
@@ -320,6 +393,7 @@ User-Agent: MindIE-Reporter/1.0
   "data": {
     "report_id": "550e8400-e29b-41d4-a716-446655440000",
     "community": "MindIE",
+    "repo": "https://gitcode.com/mindie/mindie-core",
     "feature": "门禁检查",
     "received_at": "2026-06-05T14:30:25.123Z"
   },
@@ -327,7 +401,51 @@ User-Agent: MindIE-Reporter/1.0
 }
 ```
 
-### 8.2 示例 2：未对接特性上报
+**说明：**
+- 通过 `repo` 字段传递代码仓链接
+- 后端自动根据代码仓与社区关联关系确认 `community`（响应中返回）
+- `success_rate` 为 rate 类型指标，上报 numerator（成功次数）和 denominator（总次数）
+- 前端可计算比率：145/150 = 96.7%
+
+### 8.2 示例 2：使用 community 字段上报
+
+**请求 Body:**
+```json
+{
+  "community": "MindIE",
+  "feature": "门禁检查",
+  "user_metrics": {
+    "uv": 156,
+    "pv": 1234
+  },
+  "business_metrics": {
+    "avg_duration": "12.5分钟",
+    "block_rate": "23.4%",
+    "success_rate": {
+      "numerator": 145,
+      "denominator": 150
+    }
+  },
+  "timestamp": "2026-06-05T14:30:25.123Z"
+}
+```
+
+**成功响应（HTTP 200）:**
+```json
+{
+  "code": 200,
+  "message": "数据上报成功",
+  "data": {
+    "report_id": "550e8400-e29b-41d4-a716-446655440001",
+    "community": "MindIE",
+    "feature": "门禁检查",
+    "received_at": "2026-06-05T14:30:25.123Z"
+  },
+  "timestamp": "2026-06-05T14:30:25.123Z"
+}
+```
+
+### 8.3 示例 3：未对接特性上报
 
 **请求 Body:**
 ```json
@@ -348,7 +466,7 @@ User-Agent: MindIE-Reporter/1.0
   "code": 200,
   "message": "数据上报成功",
   "data": {
-    "report_id": "550e8400-e29b-41d4-a716-446655440001",
+    "report_id": "550e8400-e29b-41d4-a716-446655440002",
     "community": "MindIE",
     "feature": "Skill市场",
     "received_at": "2026-06-05T14:30:26.456Z"
@@ -357,7 +475,7 @@ User-Agent: MindIE-Reporter/1.0
 }
 ```
 
-### 8.3 示例 3：错误响应示例
+### 8.4 示例 4：错误响应示例
 
 **请求 Body（缺少必填字段）:**
 ```json
@@ -724,8 +842,8 @@ while True:
         "aggregation_type": {
           "type": "string",
           "required": true,
-          "enum": ["sum", "avg"],
-          "description": "指标统计方式：sum=累加, avg=平均（支持时间段筛选时的统计）"
+          "enum": ["count", "rate"],
+          "description": "指标统计方式：count=计数（累加统计），rate=比率（分子分母计算）"
         },
         "target_value": {
           "type": "string",
@@ -817,20 +935,20 @@ User-Agent: openLiBing-Ops/1.0
 {
   "metrics": [
     {
-      "feature": "门禁检查",              // 特性名称
-      "metric_type": "user_metric",       // 指标类型（user_metric/business_metric）
-      "metric_name": "用户数",             // 指标名称
-      "metric_key": "uv",                 // 指标标识（对应上报接口的key）
-      "aggregation_type": "sum",          // 统计方式（sum累加/avg平均）
-      "target_value": "200",              // 指标目标值
-      "description": "昨日新增用户数（去重后）"  // 指标说明（可选）
+      "feature": "门禁检查",
+      "metric_type": "user_metric",
+      "metric_name": "用户数",
+      "metric_key": "uv",
+      "aggregation_type": "count",
+      "target_value": "200",
+      "description": "昨日新增用户数（去重后）"
     },
     {
       "feature": "门禁检查",
       "metric_type": "business_metric",
       "metric_name": "平均时长",
       "metric_key": "avg_duration",
-      "aggregation_type": "avg",
+      "aggregation_type": "count",
       "target_value": "10分钟",
       "description": "昨日所有任务耗时平均值"
     },
@@ -839,9 +957,9 @@ User-Agent: openLiBing-Ops/1.0
       "metric_type": "business_metric",
       "metric_name": "成功率",
       "metric_key": "success_rate",
-      "aggregation_type": "avg",
+      "aggregation_type": "rate",
       "target_value": "98%",
-      "description": "昨日所有任务成功率平均值"
+      "description": "昨日所有任务成功率（分子：成功次数，分母：总次数）"
     }
   ],
   "year": 2026
@@ -864,7 +982,7 @@ User-Agent: openLiBing-Ops/1.0
         "metric_type": "user_metric",
         "metric_name": "用户数",
         "metric_key": "uv",
-        "aggregation_type": "sum",
+        "aggregation_type": "count",
         "target_value": "200",
         "description": "昨日新增用户数（去重后）",
         "created_at": "2026-06-05T14:30:25.123Z"
@@ -875,7 +993,7 @@ User-Agent: openLiBing-Ops/1.0
         "metric_type": "business_metric",
         "metric_name": "平均时长",
         "metric_key": "avg_duration",
-        "aggregation_type": "avg",
+        "aggregation_type": "count",
         "target_value": "10分钟",
         "description": "昨日所有任务耗时平均值",
         "created_at": "2026-06-05T14:30:25.123Z"
@@ -885,6 +1003,17 @@ User-Agent: openLiBing-Ops/1.0
         "feature": "门禁检查",
         "metric_type": "business_metric",
         "metric_name": "成功率",
+        "metric_key": "success_rate",
+        "aggregation_type": "rate",
+        "target_value": "98%",
+        "description": "昨日所有任务成功率（分子：成功次数，分母：总次数）",
+        "created_at": "2026-06-05T14:30:25.123Z"
+      }
+    ]
+  },
+  "timestamp": "2026-06-05T14:30:25.123Z"
+}
+```
         "metric_key": "success_rate",
         "aggregation_type": "avg",
         "target_value": "98%",
@@ -931,10 +1060,10 @@ User-Agent: openLiBing-Ops/1.0
 
 **统计方式定义：**
 
-| 统计方式     | 说明                                    | 适用指标                                |
-|------------|----------------------------------------|----------------------------------------|
-| sum（累加）  | 时间段内的数值累加求和                   | UV、PV、执行次数、下载次数                |
-| avg（平均）  | 时间段内的数值平均值                     | 平均时长、成功率、覆盖率                  |
+| 统计方式     | 说明                                    | 适用指标                                | 数据上报格式         |
+|------------|----------------------------------------|----------------------------------------|---------------------|
+| count（计数）| 时间段内的数值累加统计                   | UV、PV、执行次数、下载次数                | 整数或字符串         |
+| rate（比率）| 分子分母计算比率                         | 成功率、覆盖率、通过率                    | numerator/denominator对象 |
 
 **时间段筛选统计示例：**
 
@@ -942,10 +1071,43 @@ User-Agent: openLiBing-Ops/1.0
 
 | 指标       | 统计方式 | 计算逻辑                                | 示例                                      |
 |-----------|---------|----------------------------------------|------------------------------------------|
-| UV        | sum     | 过去7天每日UV累加                        | Day1:100 + Day2:120 + ... = 780          |
-| PV        | sum     | 过去7天每日PV累加                        | Day1:500 + Day2:600 + ... = 3500         |
-| avg_duration | avg   | 过去7天每日平均值再平均                  | (10+12+8+11+9+13+10) / 7 = 10.4分钟       |
-| success_rate | avg   | 过去7天每日成功率平均值                  | (96+98+95+97+96+98+97) / 7 = 96.7%        |
+| UV        | count   | 过去7天每日UV累加                        | Day1:100 + Day2:120 + ... = 780          |
+| PV        | count   | 过去7天每日PV累加                        | Day1:500 + Day2:600 + ... = 3500         |
+| avg_duration | count   | 过去7天每日平均时长累加                   | (10+12+8+11+9+13+10) = 73分钟（总量）      |
+| success_rate | rate   | 过去7天分子分母分别累加后计算比率          | (140+150+...)/(145+155+...) = 96.7%       |
+
+**rate类型指标的特殊处理：**
+
+当 `aggregation_type` 为 `rate` 时：
+1. **配置接口**：定义 metric_key 时指定 aggregation_type = "rate"
+2. **上报接口**：必须传 numerator/denominator 对象
+3. **前端展示**：后端计算比率 = numerator / denominator
+
+**示例：**
+
+```json
+// 配置接口（定义指标）
+{
+  "metric_key": "success_rate",
+  "aggregation_type": "rate",
+  "target_value": "98%"
+}
+
+// 上报接口（上报分子分母）
+{
+  "business_metrics": {
+    "success_rate": {
+      "numerator": 145,    // 成功次数
+      "denominator": 150   // 总次数
+    }
+  }
+}
+
+// 前端展示
+当前值：145/150 = 96.7%
+目标值：98%
+达成率：96.7/98 = 98.7%
+```
 
 ### 13.10 指标配置与数据上报的对应关系
 
@@ -957,7 +1119,7 @@ User-Agent: openLiBing-Ops/1.0
     |--POST /metrics---------->| (定义指标配置)          |                        |
     |   {                     |                        |                        |
     |     metric_key: "uv",   |                        |                        |
-    |     aggregation: "sum", |                        |                        |
+    |     aggregation: "count",|                        |                        |
     |     target: "200"       |                        |                        |
     |   }                     |                        |                        |
     |                         |                        |                        |
@@ -972,7 +1134,7 @@ User-Agent: openLiBing-Ops/1.0
     |                         |                        |   {                    |
     |                         |                        |     uv_current: 156,   |
     |                         |----------------------->|     uv_target: 200,    |
-    |                         |   (返回配置+数据)       |     aggregation: "sum" |
+    |                         |   (返回配置+数据)       |     aggregation: "count"|
     |                         |                        |   }                    |
     |                         |                        |                        |
     |                         |                        |   前端展示：            |
@@ -989,6 +1151,13 @@ User-Agent: openLiBing-Ops/1.0
 - metric_key 与数据上报接口中的 key 保持一致
 - 例如：上报接口用 `uv`，配置接口也必须用 `uv`
 
+**aggregation_type 与数据格式对应：**
+
+| aggregation_type | 数据上报格式                                | 示例                                      |
+|------------------|-------------------------------------------|------------------------------------------|
+| count            | 整数或字符串                                | `"uv": 156` 或 `"avg_duration": "12.5分钟"` |
+| rate             | numerator/denominator 对象                 | `"success_rate": {"numerator": 145, "denominator": 150}` |
+
 **target_value 格式：**
 - 用户指标：纯数字（如："200"）
 - 业务指标：数字 + 单位（如："10分钟"、"98%"）
@@ -999,6 +1168,51 @@ User-Agent: openLiBing-Ops/1.0
 - 说明数据来源和采集方式
 - 说明数据时间范围定义
 - 例如："昨日新增用户数（去重后），来源于访问日志统计"
+
+---
+
+## 14. 数据上报接口：repo 字段说明
+
+### 14.1 repo 字段用途
+
+**目的：**
+- 社区可以不传 `community` 字段，而是传代码仓链接 `repo`
+- 后端自动根据代码仓与社区的关联关系确认 `community`
+
+**使用场景：**
+- 新接入社区不清楚 community 名称
+- 多个代码仓归属同一社区
+- 自动化上报脚本只知道代码仓链接
+
+### 14.2 代码仓与社区关联规则
+
+**后端关联逻辑：**
+
+| 代码仓链接                                    | 关联社区       | 说明                      |
+|----------------------------------------------|---------------|--------------------------|
+| https://gitcode.com/mindie/mindie-core        | MindIE        | MindIE 官方仓库            |
+| https://github.com/openeuler/openeuler        | openEuler     | openEuler 官方仓库         |
+| https://gitcode.com/pta/pta-framework         | PTA           | PTA 官方仓库               |
+
+**关联表维护：**
+- 后端维护代码仓与社区映射表
+- 支持手动配置和自动发现
+- 一个社区可关联多个代码仓
+
+### 14.3 community 和 repo 字段优先级
+
+**优先级规则：**
+
+| 字段组合                 | 后端处理逻辑                                    | 响应返回          |
+|-------------------------|------------------------------------------------|-------------------|
+| 只传 community          | 直接使用 community                              | community         |
+| 只传 repo               | 根据关联表确认 community                         | community + repo  |
+| 同时传 community + repo | 验证 repo 是否归属于 community                  | community + repo  |
+| 都不传                  | 报错（HTTP 400：缺少 community 或 repo）        | -                 |
+
+**验证逻辑：**
+- 若同时传 community + repo，后端验证 repo 是否归属于 community
+- 若不匹配，报错（HTTP 403：repo 不属于该 community）
 
 ---
 
