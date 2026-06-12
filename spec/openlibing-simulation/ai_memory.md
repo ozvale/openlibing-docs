@@ -93,6 +93,13 @@ ResponseEntity(code, message, data, total)  // 分页场景
 | 配置文件敏感信息硬编码 | 使用 `@EnableEncryptableProperties` 和 Jasypt 加密敏感配置 | 通用规范 |
 | 跨域配置遗漏导致前端无法访问 | 确保 Controller 或全局配置中包含 `@CrossOrigin` 注解 | 通用规范 |
 | 分页查询未设置合理的 pageSize 上限 | 分页接口必须校验 pageSize，最大不超过 100 | 通用规范 |
+| Javadoc 功能描述与标签间缺少空行 | Javadoc 中功能描述与 `@param`/`@return`/`@throws` 标签之间必须有一个空行 | matrixserver-qemu-deploy |
+| 行宽超过120窄字符 | Java 代码行宽不超过120个窄字符，方法签名过长时拆分参数到下一行（8空格缩进） | matrixserver-qemu-deploy |
+| 使用 `null` 返回值而非 `Optional` | 方法返回可能为空的值时使用 `Optional<T>`，调用方用 `orElse`/`isPresent` 处理；禁止 `Optional.get()` 和 `Optional` 赋值为 `null` | matrixserver-qemu-deploy |
+| 局部变量声明远离首次使用位置 | 局部变量应声明在接近首次使用的行，避免在方法开头集中声明 | matrixserver-qemu-deploy |
+| `public static final` 常量缺少 Javadoc | 每个 `public`/`protected` 修饰的 `static final` 字段必须有 Javadoc 注释，描述功能含义而非仅重复变量名 | matrixserver-qemu-deploy |
+| 方法间多余空行 | 方法之间仅保留一个空行，减少不必要的空行保持代码紧凑 | matrixserver-qemu-deploy |
+| 未使用的 import 语句残留 | 每次修改后检查并删除未使用的 import 语句 | matrixserver-qemu-deploy |
 
 ## 模块职责边界
 
