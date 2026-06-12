@@ -28,7 +28,7 @@
 
 ## 关联
 
-- 业务 Issue: openlibing/openlibing-cicd-web#26
+- 迭代发布 Issue: openlibing/openlibing-docs#70
 - 缺陷 Issue: openlibing/openlibing-cicd-web#24
 - 业务 PR: openlibing/openlibing-cicd-web#44
 
