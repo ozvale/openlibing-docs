@@ -20,4 +20,4 @@
 
 ## 关联 Issue
 
-openlibing/openlibing-cicd-web#24
+openlibing/openlibing-cicd-web#26
