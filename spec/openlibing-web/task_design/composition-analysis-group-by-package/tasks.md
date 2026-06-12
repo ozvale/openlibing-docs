@@ -12,3 +12,5 @@
 - [x] Supplier 列父行不显示内容
 - [x] 详情按钮改为根据 `scope.row.id` 判断显示
 - [x] 分页组件添加 `:current-page` 绑定
+- [x] 新增"来源信息"列（sourceInfo），无值显示 "--"
+- [x] 修复 licenseIds 取值来源为 `Object.keys(res.data.licenseDistribution)`
