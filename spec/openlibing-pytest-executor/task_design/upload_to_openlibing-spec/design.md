@@ -70,9 +70,9 @@ headers = {
 
 | 文件 | 操作 | 说明 |
 |------|------|------|
-| `plugins/upload_to_openlibing/upload_to_openlibing.py` | 已存在 | 核心实现文件（356 行） |
+| `plugins/upload_to_openlibing/upload_to_openlibing.py` | 已存在 | 核心实现文件 |
 | `plugins/upload_to_openlibing/__init__.py` | 已存在 | 包初始化文件 |
-| `plugins/upload_to_openlibing/tests/test_upload_to_openlibing.py` | 已存在 | 单元测试文件（511 行） |
+| `plugins/upload_to_openlibing/tests/test_upload_to_openlibing.py` | 已存在 | 单元测试文件 |
 | `plugins/upload_to_openlibing/requirements.txt` | 已存在 | 依赖声明文件 |
 
 ## 数据流
@@ -132,12 +132,12 @@ response = upload_data_to_openlibing(
 
 ### 单元测试覆盖
 
-| 测试类 | 覆盖范围 | 测试数量 |
-|--------|----------|----------|
-| `TestProcessJsonParam` | JSON 参数解析 | 8 |
-| `TestUploadDataToOpenlibing` | 核心上传逻辑 | 11 |
-| `TestCliArgValidation` | CLI 参数校验 | 6 |
-| `TestIntegration` | 集成测试（需真实 secret） | 4 |
+| 测试类 | 覆盖范围 |
+|--------|----------|
+| `TestProcessJsonParam` | JSON 参数解析 |
+| `TestUploadDataToOpenlibing` | 核心上传逻辑 |
+| `TestCliArgValidation` | CLI 参数校验 |
+| `TestIntegration` | 集成测试（需真实 secret） |
 
 ### Mock 策略
 
@@ -173,7 +173,6 @@ response = upload_data_to_openlibing(
 
 - 文件逐个打开和上传，避免内存爆炸
 - 使用 `finally` 块确保文件句柄正确关闭
-- 不支持并发上传（未来可优化）
 
 ## 可扩展性
 
