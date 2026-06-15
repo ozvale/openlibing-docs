@@ -2,9 +2,10 @@
 
 ## 需求背景
 
-OpenLibing 平台需要将测试元数据和结果文件上传到 OBS 存储桶，用于测试报告归档、结果追踪和历史数据分析。现有插件 `upload_to_openlibing.py` 已实现完整功能，但缺乏规范的文档说明，不利于团队协作和新人上手。
+OpenLibing 平台需要将测试元数据和结果文件上传到 OBS 存储桶，用于测试报告归档、结果追踪和历史数据分析。
 
 ## 功能描述
+提供一个公共插件，支持将测试相关结果过性文档上传到 OBS 存储桶，供问题追溯和看板运营使用。
 
 ### 核心功能
 
@@ -37,10 +38,31 @@ OpenLibing 平台需要将测试元数据和结果文件上传到 OBS 存储桶�
 
 ## 验收标准
 
-- [x] proposal.md 描述清晰需求背景和功能范围
-- [x] design.md 包含技术架构和关键决策
-- [x] tasks.md 列出完整的实现任务清单
-- [x] 文档格式符合 OpenLibing 规范要求
+### 功能验收
+
+- [x] **文件上传功能**：支持上传单个或多个文件到 OpenLibing OBS 存储桶
+- [x] **流水线参数模式**：传入 `--pipeline-id`/`--pipeline-run-id`/`--job-id` 时，正确归档到 `testcase-metadata/{pipeline_id}/{pipeline_run_id}/{job_id}/{filename}`
+- [x] **Label 模式**：传入 `--label` 时，正确归档到 `/{label}/{filename}`
+- [x] **Label + Archive Path 模式**：同时传入 `--label` 和 `--archive-path` 时，正确归档到 `/{label}/{archive_path}/{filename}`
+- [x] **CLI 调用**：支持通过命令行参数传递所有配置项
+- [x] **Python 模块调用**：支持通过 `import upload_to_openlibing` 导入并调用 `upload_data_to_openlibing()` 函数
+- [x] **Secret 参数解析**：支持标准 JSON 格式 `{"key": "value"}` 和简化格式 `{key: value}`
+- [x] **环境变量支持**：未传入 `--openlibing-secret` 时，自动从 `OPENLIBING_SECRET` 环境变量读取
+- [x] **文件不存在处理**：文件不存在时跳过并记录警告日志，不中断整体上传流程
+
+### 错误处理验收
+
+- [x] **参数校验**：`--archive-path` 必须配合 `--label` 使用，否则报错退出
+- [x] **必填参数校验**：必须提供 `--label` 或流水线参数，否则报错退出
+- [x] **Secret 校验**：未提供 secret 时报错退出
+- [x] **HTTP 错误处理**：上传失败时抛出异常并记录详细错误日志
+
+### 测试验收
+
+- [x] **单元测试覆盖率**：核心功能单元测试覆盖率 100%
+- [x] **JSON 参数解析测试**：覆盖标准格式和简化格式的解析
+- [x] **上传逻辑测试**：覆盖正常上传和异常场景
+- [x] **CLI 参数校验测试**：覆盖各种参数组合的校验逻辑
 
 ## 影响范围
 
