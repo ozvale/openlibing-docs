@@ -2,9 +2,9 @@
 
 ## 1. 基础信息
 
-* **需求链接**: **[TODO]**
-* **需求名称**: **MindCluster二进制许可证自动录入与合规性检查定时任务**
-* **开发责任人**: **[TODO]**
+* **需求链接**: https://gitcode.com/openlibing/openlibing-sca/issues/42
+* **需求名称**: MindCluster二进制许可证与合规性检查
+* **开发责任人**: musheng
 
 ---
 
@@ -20,7 +20,7 @@
 
 > 明确需求完成的标志，必须是可量化、可测试的。
 
-- [x] 定时任务按配置的cron表达式（默认每1分钟）自动执行
+- [x] 定时任务按配置的cron表达式（默认每晚1点执行）自动执行
 - [x] 多实例部署时通过分布式锁保证同一环境仅一个实例执行，避免重复录入
 - [x] 能正确遍历MindCluster配置树，获取所有版本×产品×OS×架构×构建来源的组合
 - [x] 对每个组合查询SBOM制品并获取name字段，name为空时跳过并记录warn日志
@@ -43,7 +43,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                   Spring @Scheduled 触发                        │
 │              cron: job.cron.auto.mindcluster.binary.license.task│
-│                    默认: 0 0/1 * * * ?                          │
+│                    默认: 0 0 0/1 * * ?                          │
 └──────────────────────────┬──────────────────────────────────────┘
                            ▼
 ┌─────────────────────────────────────────────────────────────────┐
@@ -157,11 +157,11 @@
 
 ### 4.4 apoll配置清单
 
-| 配置项                             | 说明          | 默认值                                  |
-|---------------------------------|-------------|--------------------------------------|
-| job.cron.auto.mindcluster.binary.license.task | MindCluster许可证录入定时任务cron表达式 | 0 0/1 * * * ? （每1分钟） |
-| spring.profiles.active          | 当前环境标识，用于分布式锁key隔离 | - |
-| sca.to.sbom.url                 | SBOM平台服务地址 | - |
+| 配置项                             | 说明          | 默认值                  |
+|---------------------------------|-------------|----------------------|
+| job.cron.auto.mindcluster.binary.license.task | MindCluster许可证录入定时任务cron表达式 | 0 0 0/1 * * ? （每1分钟） |
+| spring.profiles.active          | 当前环境标识，用于分布式锁key隔离 | -                    |
+| sca.to.sbom.url                 | SBOM平台服务地址 | -                    |
 
 ### 4.5 任务清单
 
@@ -169,7 +169,7 @@
 |--------------------|------------------------------------|---------------------|-------------|
 | **task1** | 实现MindClusterLicenseSchedule定时任务主逻辑 | 定时任务类代码 | **1** |
 | **task2** | 实现getMindClusterVersion配置树遍历与展平 | BinaryLicenseEnterUtils新增方法 | **1** |
-| **task3** | 实现enter2许可证合规性检查录入 | BinaryLicenseEnterUtils新增方法 | **1.5** |
+| **task3** | 实现enter2许可证合规性检查录入 | BinaryLicenseEnterUtils新增方法 | **1** |
 | **task4** | 编写单元测试（锁竞争/正常流程/异常容错/多版本） | 测试类代码 | **1** |
 
 ---
@@ -177,8 +177,6 @@
 ## 5. 需求相关性分析
 
 ### A. 安全相关性分析
-
-**[无需打标]**
 
 * [ ] **边界变更**：新增公网端口、修改防火墙规则、变更网关配置。
 * [ ] **凭证处理**：涉及密钥（Secret/Key）、Token、证书的存储或分发。
@@ -189,16 +187,12 @@
 
 ### B. 架构设计相关性分析
 
-**[无需打标]**
-
 * [ ] A环节判定需要完成安全设计
 * [ ] 改变了现有系统的物理/逻辑拓扑
 * [ ] 新增或大幅修改对外暴露的 API/CLI 接口
 * [ ] 引入了新的中间件、数据库或三方核心组件
 
 ### C. 系统集成测试相关性分析
-
-**[无需打标]**
 
 * [ ] 上述环节判定需要执行安全设计或架构设计。
 * [ ] **跨组件影响**：变更会触发下游服务或关联系统的连锁反应（级联效应）。
@@ -207,8 +201,6 @@
 * [ ] **端到端流程**：涉及从用户输入到持久化存储的全链路逻辑。
 
 ### D. 用户体验相关性分析
-
-**[无需打标]**
 
 * [ ] **交互逻辑变更**：涉及 Web 门户、控制台或命令行工具的交互流程调整。
 * [ ] **感知性能变动**：变更可能显著影响页面的加载时间、同步请求的响应时延或异步任务的进度反馈。
@@ -224,17 +216,3 @@
 * [ ] need_light (上述均未勾选，走快速合入通道)
 
 ---
-
-## 6. 关键代码引用
-
-| 组件 | 文件路径 |
-|------|---------|
-| 定时任务入口 | [MindClusterLicenseSchedule.java](file:///d:/openlibing/openlibing-sca/src/main/java/com/openlibing/sca/common/schedule/MindClusterLicenseSchedule.java#L66-L119) |
-| 版本配置树遍历 | [BinaryLicenseEnterUtils.getMindClusterVersion()](file:///d:/openlibing/openlibing-sca/src/main/java/com/openlibing/sca/analysis/utils/binary/BinaryLicenseEnterUtils.java#L509-L536) |
-| 许可证录入 | [BinaryLicenseEnterUtils.enter()](file:///d:/openlibing/openlibing-sca/src/main/java/com/openlibing/sca/analysis/utils/binary/BinaryLicenseEnterUtils.java#L104) |
-| 合规性检查录入 | [BinaryLicenseEnterUtils.enter2()](file:///d:/openlibing/openlibing-sca/src/main/java/com/openlibing/sca/analysis/utils/binary/BinaryLicenseEnterUtils.java#L580) |
-| SBOM导出 | [BinaryLicenseEnterUtils.getLicenseFromSbom()](file:///d:/openlibing/openlibing-sca/src/main/java/com/openlibing/sca/analysis/utils/binary/BinaryLicenseEnterUtils.java#L390-L406) |
-| 分布式锁服务 | [DistributedLockService.java](file:///d:/openlibing/openlibing-sca/src/main/java/com/openlibing/sca/common/config/DistributedLockService.java) |
-| SBOM Feign客户端 | [OpenlibingSbomClient.java](file:///d:/openlibing/openlibing-sca/src/main/java/com/openlibing/sca/common/feign/OpenlibingSbomClient.java) |
-| DTO定义 | [MindClusterBinaryLicenseDto.java](file:///d:/openlibing/openlibing-sca/src/main/java/com/openlibing/sca/common/domain/MindClusterBinaryLicenseDto.java) |
-| 单元测试 | [MindClusterLicenseScheduleTest.java](file:///d:/openlibing/openlibing-sca/src/test/java/com/openlibing/sca/common/schedule/MindClusterLicenseScheduleTest.java) |
