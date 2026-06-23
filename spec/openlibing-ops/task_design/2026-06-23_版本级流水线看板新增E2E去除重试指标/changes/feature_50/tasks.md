@@ -1,6 +1,6 @@
 # 版本级流水线看板新增E2E执行平均时长(去除重试)指标 — 实现任务
 
-## 进度: 8/8 complete
+## 进度: 8/10 complete
 
 ### 后端 — openlibing-ops
 
@@ -43,3 +43,16 @@
 - [ ] 前端表格正确展示新分组和列
 - [ ] Chart正确渲染去除重试的平均时长
 - [ ] 字段为NULL时页面显示"-"或空值（不崩溃）
+
+### ETL任务
+
+- [ ] **T9: 任务1 [dwi→dwr] 修改 — LEFT JOIN效率表**
+  - ds wf export 工作流169496639078592 → 修改JSON
+  - INSERT SELECT中新增LEFT JOIN `dwr_rd_efc_pipeline_run_efficiency eff`
+  - 字段列表末尾新增第37列: `eff.efficiency_duration_sec * 1000`
+  - ds wf import 更新任务定义（版本v14→v15）
+
+- [ ] **T10: 任务2 [dwr→dm] 修改 — 新增聚合字段**
+  - ds wf export 工作流169496639269056 → 修改JSON
+  - SELECT聚合列表末尾新增第19列: `CAST(ROUND(AVG(efficiency_duration_ms), 0) AS BIGINT) AS efficiency_duration_ms`
+  - ds wf import 更新任务定义（版本v4→v5）

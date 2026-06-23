@@ -83,6 +83,69 @@ ETL任务写入
 - 新增接口字段不影响现有前端解析（前端只取需要的字段）
 - Chart替换key是前端行为，后端同时返回`avgAccessDuration`和`avgEfficiencyDuration`不会破坏兼容性
 
+## ETL设计
+
+### 数据流
+
+```
+PR门禁流水线效率计算任务（已有）
+    │
+    ├── dwr_rd_efc_pipeline_run_efficiency.efficiency_duration_sec（已有，单位秒）
+    │     ↑ 已有ETL任务计算（PR模块）
+    │
+    │     ↓ LEFT JOIN
+    │
+    ├── [dwi→dwr] Nightly流水线测试用例执行事实表
+    │     dwr_rd_efc_build_fact_nightly_test_case_pipeline_run.efficiency_duration_ms（新增）
+    │     ← LEFT JOIN dwr_rd_efc_pipeline_run_efficiency → efficiency_duration_sec * 1000
+    │
+    │     ↓
+    │
+    └── [dwr→dm] nightly流水线每日汇总
+          dm_rd_efc_build_dim_nightly_pipeline_day.efficiency_duration_ms（新增）
+          ← AVG(efficiency_duration_ms) FROM DWR表
+```
+
+### 任务1: [dwi→dwr] Nightly流水线测试用例执行事实表
+
+**改动1** — INSERT SELECT 中新增 LEFT JOIN（在 `test_case_statistics` JOIN 之后）：
+
+```sql
+LEFT JOIN dwr_rd_efc_pipeline_run_efficiency eff 
+    ON fp.project_id = eff.project_id 
+    AND fp.pipeline_id = eff.pipeline_id 
+    AND fp.pipeline_run_id = eff.pipeline_run_id
+```
+
+**改动2** — INSERT SELECT 字段列表末尾新增第37列：
+
+```sql
+fp.pipeline_end_time,                              -- 36. pipeline_run_endtime
+eff.efficiency_duration_sec * 1000                 -- 37. efficiency_duration_ms(去除重试)
+```
+
+### 任务2: [dwr→dm] nightly流水线执行任务每日汇总
+
+**改动** — SELECT 聚合列表末尾新增第19列（在 `is_version_available` 之后）：
+
+```sql
+MAX(is_version_available) AS is_version_available, -- 18. 版本可用度
+CAST(ROUND(AVG(efficiency_duration_ms), 0) AS BIGINT) AS efficiency_duration_ms  -- 19. E2E执行平均时长(去除重试)
+```
+
+### 涉及DS任务
+
+| 任务 | 工作流编码 | 任务编码 | 当前版本 |
+|------|-----------|---------|---------|
+| [dwr]dwr_rd_efc_build_fact_nightly_test_case_pipeline_run | 169496639078592 | 169496639079616 | v14 |
+| [dm]nightly流水线执行任务每日汇总 | 169496639269056 | 169496639269058 | v4 |
+
+### 验证方式
+
+1. 任务执行后查询DWR表：`SELECT pipeline_run_id, efficiency_duration_ms FROM dwr_rd_efc_build_fact_nightly_test_case_pipeline_run WHERE efficiency_duration_ms IS NOT NULL LIMIT 10`
+2. 任务执行后查询DM表：`SELECT pipeline_id, pipeline_run_endtime, efficiency_duration_ms FROM dm_rd_efc_build_dim_nightly_pipeline_day WHERE efficiency_duration_ms IS NOT NULL LIMIT 10`
+3. 调用后端API验证数据返回
+
 ## 跨仓影响
 - **openlibing-ops** ↔ **openlibing-ops-web**：后端新增字段与前端新增列一一对应，需协调发布
 - **上游ETL**：需同步计算`efficiency_duration_ms`并写入两个表
