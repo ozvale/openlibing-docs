@@ -3,10 +3,9 @@
 ## 1. 需求背景
 
 当前 `openlibing-tep-executor` 测试执行器的日志系统存在以下问题：
-1. 环境日志收集仅按 IP 判断，无法直接收集本地 localhost 日志
-2. 缺少独立的 tep-executor.log 日志文件
-3. 部分关键日志散落在其他日志中，不便于问题追踪
-4. 日志文件 URL 未统一打印
+1. 缺少独立的 tep-executor.log 日志文件
+2. 部分关键日志散落在其他日志中，不便于问题追踪
+3. 日志文件 URL 未统一打印
 
 ## 2. 功能描述
 
@@ -16,28 +15,7 @@
 - 与现有的 `hutafagent.log` 独立
 - 便于问题定位和日志分析
 
-### 2.2 增强环境日志收集逻辑
-
-**当前逻辑：**
-```python
-if host in current_ips:
-    # 处理本地文件
-else:
-    # 通过 SFTP 处理远程文件
-```
-
-**增强后逻辑：**
-```python
-if host in current_ips:
-    # 处理本地文件
-else:
-    # 通过 SFTP 处理远程文件
-
-# 新增：不判断 IP，直接收集 localhost 日志
-collect_localhost_logs()
-```
-
-### 2.3 日志场景增强
+### 2.2 日志场景增强
 
 需要收集并打印到 `tep-executor.log` 的日志场景：
 
@@ -48,7 +26,7 @@ collect_localhost_logs()
 | `_get_all_testset_files` | `_tmp_testset_files` 文件列表 | executor.py |
 | `zip_files_in_conf_log` | 压缩文件列表/跳过文件列表 | executor.py |
 
-### 2.4 日志文件 URL 打印
+### 2.3 日志文件 URL 打印
 
 在 `generate_logs` 函数中打印所有日志文件的 URL，参考 `collect_result_metadata` 中 `log_metadata_url` 的方式。
 
@@ -75,45 +53,7 @@ tep_executor_handler.setLevel(logging.INFO)
 tep_executor_logger.addHandler(tep_executor_handler)
 ```
 
-### 3.2 增强 zip_files_in_conf_log 函数
-
-**文件：** `tepexecor_frame/executor.py`
-
-```python
-def zip_files_in_conf_log(self):
-    """收集配置文件日志并压缩"""
-    # ... 保留原有逻辑 ...
-
-    # 新增：直接收集 localhost 日志（不判断 IP）
-    self._collect_localhost_logs(zipf)
-
-    # ... 原有逻辑继续 ...
-```
-
-```python
-def _collect_localhost_logs(self, zipf):
-    """直接收集 localhost 日志"""
-    hostname = "localhost"
-
-    for model, all_paths in self.log_conf.items():
-        for path_pattern in all_paths:
-            expanded_path = os.path.expanduser(path_pattern)
-
-            if os.path.isdir(expanded_path):
-                for root, dirs, files in os.walk(expanded_path):
-                    for file in files:
-                        file_path = os.path.join(root, file)
-                        if self._should_add_file(file_path):
-                            zip_path = os.path.join(hostname, model, file_path.lstrip("/"))
-                            self._add_file_to_zip(zipf, file_path, zip_path, model, hostname)
-            else:
-                for file_path in glob.glob(expanded_path):
-                    if self._should_add_file(file_path):
-                        zip_path = os.path.join(hostname, model, file_path.lstrip("/"))
-                        self._add_file_to_zip(zipf, file_path, zip_path, model, hostname)
-```
-
-### 3.3 增强文件压缩日志
+### 3.2 增强文件压缩日志
 
 **文件：** `tepexecor_frame/executor.py`
 
@@ -137,7 +77,7 @@ def _add_file_to_zip(self, zipf, file_path, zip_path, model, hostname):
         raise
 ```
 
-### 3.4 增强 TestSet.gen 日志
+### 3.3 增强 TestSet.gen 日志
 
 **文件：** `tepexecor_frame/test_set.py`
 
@@ -151,7 +91,7 @@ def gen(self, test_set_gen_params: TestSetGenParams):
     # ... 原有代码 ...
 ```
 
-### 3.5 增强 get_metadata_info_from_testset 日志
+### 3.4 增强 get_metadata_info_from_testset 日志
 
 **文件：** `tepexecor_frame/cte/utils.py`
 
@@ -164,7 +104,7 @@ def get_metadata_info_from_testset(testset_file):
     # ... 原有代码 ...
 ```
 
-### 3.6 增强 _get_all_testset_files 日志
+### 3.5 增强 _get_all_testset_files 日志
 
 **文件：** `tepexecor_frame/executor.py`
 
@@ -184,7 +124,7 @@ def _get_all_testset_files(self):
     return _tmp_testset_files
 ```
 
-### 3.7 增强 generate_logs 日志 URL 打印
+### 3.6 增强 generate_logs 日志 URL 打印
 
 **文件：** `tepexecor_frame/executor.py`
 
@@ -240,7 +180,6 @@ def generate_logs(self):
 ## 6. 验收标准
 
 - [ ] `tep-executor.log` 日志文件独立生成
-- [ ] localhost 环境日志被正确收集
 - [ ] `get_metadata_info_from_testset` 打印日志到 tep-executor.log
 - [ ] `TestSet.gen` 打印 `Valid testset files` 到 tep-executor.log
 - [ ] `_get_all_testset_files` 打印 `_tmp_testset_files` 文件列表
@@ -252,6 +191,5 @@ def generate_logs(self):
 | 测试场景 | 预期结果 |
 |---------|---------|
 | 正常执行流程 | tep-executor.log 生成，包含所有增强日志 |
-| 仅 localhost 环境 | localhost 日志正确收集 |
 | 文件超限 | 跳过文件并打印 [SKIP] 日志 |
 | URL 打印 | generate_logs 后所有 URL 打印到 tep-executor.log |
