@@ -2,7 +2,9 @@
 
 ## 方案概述
 
-在 `/project-repo/query-repo` 接口的请求 DTO 中新增 4 个 List 过滤字段（`purposes` / `visibilities` / `repoLanguages` / `statuses`）和 1 个单值字段（`status`）。Service 层将 List 透传到 `RepoInfoEntity`（`@TableField(exist=false)`），Mapper SQL 改用 `<choose>/<when>/<otherwise>`：List 非空走 `IN (...)`，否则回退到原单值字段。
+在 `/project-repo/query-repo` 接口的请求 DTO 中新增 **9 个 List 过滤字段**（`purposes` / `visibilities` / `repoLanguages` / `statuses` / `platforms` / `assumePrs` / `autoTriggers` / `openSources` / `webhookStatuses`）和 1 个单值字段（`status`）。Service 层将 List 透传到 `RepoInfoEntity`（`@TableField(exist=false)`），Mapper SQL 改用 `<choose>/<when>/<otherwise>`：List 非空走 `IN (...)`，否则回退到原单值字段。
+
+首批 4 个字段（用途 / 可见性 / 语言 / 状态）在 commit `47ace31` 落地；扩展 5 个字段（平台 / 接管 PR / 自动触发 / 开源类型 / Webhook 状态）在 commit `3ce1d1f` 落地，沿用同一 PR #76 提交。
 
 ## 架构决策
 
@@ -14,7 +16,7 @@
 
 ### 决策 2：双轨保留 List + 原 String
 
-**选择**：保留原 `purpose` / `visibility` / `repoLanguage` 字符串字段，新增 `purposes` / `visibilities` / `repoLanguages` List 字段；status 字段（之前未在 DTO 暴露）新增 `status` 单值 + `statuses` List。
+**选择**：保留原 `purpose` / `visibility` / `repoLanguage` / `platform` / `assumePr` / `autoTrigger` / `webhookStatus` 字符串字段，新增对应 `…s` List 字段；`status` / `openSource` 字段（之前未在 DTO 暴露为过滤维度）新增 `status` 单值 + `statuses` List；`openSources` 仅有 List 形态。
 
 **原因**：
 - 旧调用方传 `purpose=test` 仍然生效（List 为 null/空时回退到单值）
@@ -43,12 +45,12 @@
 
 | 文件 | 操作 | 说明 |
 |------|------|------|
-| `QueryRepoDTO.java` | 修改 | 新增 `purposes` / `visibilities` / `repoLanguages` / `statuses` List 字段 + `status` 单值字段 |
-| `RepoInfoEntity.java` | 修改 | 新增 4 个 `@TableField(exist=false)` List 字段 |
-| `RepoServiceImpl.java` | 修改 | `queryRepoInfo` 透传 List + 新增 `status` 字段 |
-| `RepoInfoMapper.xml` | 修改 | `queryRepoInfoByLimit` / `queryRepoInfo` / `count` 三处 SQL 的 4 个过滤条件改 `<choose>/<when>/<otherwise>` |
-| `doc/api/repo-management.md` | 修改 | 补充多选参数说明与示例 |
-| `RepoServiceImplTest.java` | 新增/修改 | 覆盖：List 命中、List 空回退单值、单值命中、status 过滤 |
+| `QueryRepoDTO.java` | 修改 | 新增 9 个 `…s` List 字段 + `status` 单值字段 |
+| `RepoInfoEntity.java` | 修改 | 新增 9 个 `@TableField(exist=false)` List 字段 |
+| `RepoServiceImpl.java` | 修改 | `queryRepoInfo` 透传 9 个 List + 1 个新单值字段 |
+| `RepoInfoMapper.xml` | 修改 | `queryRepoInfoByLimit` / `queryRepoInfo` / `count` 三处 SQL 的 9 个过滤条件改 `<choose>/<when>/<otherwise>` |
+| `doc/api/repo-management.md` | 修改 | 补充 9 个多选参数说明与示例 |
+| `RepoServiceImplTest.java` | 新增/修改 | 覆盖：List 命中、List 空回退单值、单值命中、9 字段多选组合 |
 
 ## Mapper XML 改动模式
 
@@ -68,24 +70,15 @@
 </choose>
 ```
 
-`count` SQL 同样模式（属性 bare，无 `info.` 前缀），4 个字段统一处理。
+9 个字段统一处理：`purpose` / `visibility` / `repo_language` / `status` / `platform` / `assume_pr` / `auto_trigger` / `open_source` / `webhook_status`。
+
+`open_source` 因为只有 List 形态，Mapper 中只保留 `<when>` 单分支。
+
+`count` SQL 同样模式（属性 bare，无 `info.` 前缀）。
 
 ## 接口示例
 
-```http
-POST /project-repo/query-repo
-{
-  "projectId": 1,
-  "pageNum": 1,
-  "pageSize": 20,
-  "purposes": ["test", "formal"],
-  "visibilities": ["private", "internal"],
-  "repoLanguages": ["java", "go"],
-  "statuses": ["normal", "suspend"]
-}
-```
-
-兼容调用（旧字段仍生效）：
+**多选筛选（推荐新调用方使用）**：
 
 ```http
 POST /project-repo/query-repo
@@ -93,11 +86,51 @@ POST /project-repo/query-repo
   "projectId": 1,
   "pageNum": 1,
   "pageSize": 20,
-  "purpose": "test",
-  "visibility": "private",
-  "repoLanguage": "java"
+  "purposes":        ["test", "formal"],
+  "visibilities":    ["private", "internal"],
+  "repoLanguages":   ["java", "go"],
+  "statuses":        ["normal", "suspend"],
+  "platforms":       ["gitcode", "gitee"],
+  "assumePrs":       ["0", "1"],
+  "autoTriggers":    ["0", "1"],
+  "openSources":     ["lead", "participate"],
+  "webhookStatuses": ["0", "1", "2"]
 }
 ```
+
+**兼容调用（旧字段仍生效）**：
+
+```http
+POST /project-repo/query-repo
+{
+  "projectId": 1,
+  "pageNum": 1,
+  "pageSize": 20,
+  "purpose":     "test",
+  "visibility":  "private",
+  "repoLanguage": "java",
+  "status":      "normal",
+  "platform":    "gitcode",
+  "assumePr":    "1",
+  "autoTrigger": "1",
+  "webhookStatus": "1"
+}
+```
+
+**多选 + 单值混合（多选优先）**：
+
+```http
+POST /project-repo/query-repo
+{
+  "projectId": 1,
+  "pageNum": 1,
+  "pageSize": 20,
+  "platforms": ["gitcode", "gitee"],
+  "platform":  "gitee"
+}
+```
+
+按 `<choose>` 优先级：因 `platforms` 非空，走 `IN ('gitcode','gitee')`；`platform` 字段被忽略。
 
 ## 风险 & 缓解
 
@@ -107,7 +140,15 @@ POST /project-repo/query-repo
 | 旧的单值字段被无意覆盖 | 字段独立保留，List 与 String 互不干扰；`<choose>` 保证二选一 |
 | count 与 list 查询条件不一致 | 三个 SQL 同步改用同一 `<choose>` 模式 |
 | 性能：List 长度无上限 | 当前场景 List 通常 < 10 项（用途/可见性/语言/状态枚举数有限），可接受 |
+| 9 个 IN 子句叠加性能开销 | 单字段仍是命中索引的范围扫描；9 个 AND 拼接属于标准分页过滤；分页 size 上限 200 兜底 |
+| `openSources` 仅 List 形态 | 旧调用方不能用单值筛选 `openSource`，但 `openSource` 原本就不在 DTO 过滤维度，零回归 |
 
 ## 跨仓影响
 
 无。仅影响 `openlibing-coderepo` 仓的查询接口，无跨仓接口/契约变化。
+
+## 后续可选优化（非本 PR 范围）
+
+- 引入 `IN (...)` 长度上限（IN 子句超过 100 项时改为临时表 join）
+- 9 个过滤维度统一用 `@QueryFilter` 自定义注解简化 DTO
+- 前端联动：根据用户选中的 `openSource` 自动联动 `assumePr` 灰显
