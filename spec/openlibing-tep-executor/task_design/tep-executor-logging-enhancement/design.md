@@ -13,6 +13,7 @@
 
 - 创建独立的 `tep-executor.log` 日志文件
 - 与现有的 `hutafagent.log` 独立
+- 新增 `change_tep_executor_logger_file_handler` 函数，支持按 group_id 动态修改日志文件
 - 便于问题定位和日志分析
 
 ### 2.2 日志场景增强
