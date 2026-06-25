@@ -12,6 +12,7 @@
 ### 1. 新增 tep-executor.log 日志文件
 - 创建独立的 `tep-executor.log` 日志文件
 - 与现有的 `hutafagent.log` 独立
+- 新增 `change_tep_executor_logger_file_handler` 函数，支持按 group_id 动态修改日志文件
 - 便于问题定位和日志分析
 
 ### 2. 日志场景增强
@@ -26,6 +27,7 @@
 ## 验收标准
 
 - [ ] `tep-executor.log` 日志文件独立生成
+- [ ] `change_tep_executor_logger_file_handler` 函数正确工作，支持按 group_id 动态修改日志文件
 - [ ] `get_metadata_info_from_testset` 打印日志到 tep-executor.log
 - [ ] `TestSet.gen` 打印 `Valid testset files` 到 tep-executor.log
 - [ ] `_get_all_testset_files` 打印 `_tmp_testset_files` 文件列表

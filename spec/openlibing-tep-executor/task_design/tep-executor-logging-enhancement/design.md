@@ -4,7 +4,7 @@
 
 当前 `openlibing-tep-executor` 测试执行器的日志系统存在以下问题：
 1. 缺少独立的 tep-executor.log 日志文件
-2. 部分关键日志散落在其他日志中，不便于问题追踪
+2. 部分日志直接打印到控制台在流水线打屏日志，对业务测试日志定位有干扰，框架日志仅保留关键进度日志，其他日志单独落盘保存
 3. 日志文件 URL 未统一打印
 
 ## 2. 功能描述
@@ -53,7 +53,43 @@ tep_executor_handler.setLevel(logging.INFO)
 tep_executor_logger.addHandler(tep_executor_handler)
 ```
 
-### 3.2 增强文件压缩日志
+### 3.2 新增 change_tep_executor_logger_file_handler 函数
+
+**文件：** `tepexecor_frame/cte/log.py`
+
+为 `tep_executor_logger` 提供与 `change_logger_file_handler` 类似的动态修改文件 handler 功能，确保在多执行组场景下日志文件可以按 group_id 进行隔离。
+
+```python
+def change_tep_executor_logger_file_handler(group_id, log_file_name=None):
+    """Change tep_executor logger file handler for current agent process
+
+    :param group_id: Group id of current agent process
+    :param log_file_name: Log file name to use, default is None
+    :return: None
+    """
+    for hdlr in tep_executor_logger.handlers:
+        if not isinstance(hdlr, ExtRotatingFileHandler):
+            continue
+
+        log_dir = os.path.dirname(hdlr.baseFilename)
+        if not log_file_name:
+            log_file_name = os.path.basename(hdlr.baseFilename)
+        handler = ExtRotatingFileHandler(os.path.join(log_dir, "%s_%s" % (group_id, log_file_name)),
+                                         mode=hdlr.mode,
+                                         max_bytes=hdlr.maxBytes,
+                                         backup_count=hdlr.backupCount,
+                                         directory='',
+                                         encoding=hdlr.encoding,
+                                         delay=hdlr.delay)
+        handler.setFormatter(hdlr.formatter)
+        handler.setLevel(hdlr.level)
+
+        tep_executor_logger.removeHandler(hdlr)
+        tep_executor_logger.addHandler(handler)
+        break
+```
+
+### 3.3 增强文件压缩日志
 
 **文件：** `tepexecor_frame/executor.py`
 
@@ -77,7 +113,7 @@ def _add_file_to_zip(self, zipf, file_path, zip_path, model, hostname):
         raise
 ```
 
-### 3.3 增强 TestSet.gen 日志
+### 3.4 增强 TestSet.gen 日志
 
 **文件：** `tepexecor_frame/test_set.py`
 
@@ -91,7 +127,7 @@ def gen(self, test_set_gen_params: TestSetGenParams):
     # ... 原有代码 ...
 ```
 
-### 3.4 增强 get_metadata_info_from_testset 日志
+### 3.5 增强 get_metadata_info_from_testset 日志
 
 **文件：** `tepexecor_frame/cte/utils.py`
 
@@ -104,7 +140,7 @@ def get_metadata_info_from_testset(testset_file):
     # ... 原有代码 ...
 ```
 
-### 3.5 增强 _get_all_testset_files 日志
+### 3.6 增强 _get_all_testset_files 日志
 
 **文件：** `tepexecor_frame/executor.py`
 
@@ -124,7 +160,7 @@ def _get_all_testset_files(self):
     return _tmp_testset_files
 ```
 
-### 3.6 增强 generate_logs 日志 URL 打印
+### 3.7 增强 generate_logs 日志 URL 打印
 
 **文件：** `tepexecor_frame/executor.py`
 
@@ -156,7 +192,7 @@ def generate_logs(self):
 
 | 文件 | 操作 | 说明 |
 |-----|------|------|
-| `tepexecor_frame/cte/log.py` | 修改 | 新增 tep_executor_logger 和文件处理器 |
+| `tepexecor_frame/cte/log.py` | 修改 | 新增 tep_executor_logger、文件处理器、`change_tep_executor_logger_file_handler` 函数 |
 | `tepexecor_frame/executor.py` | 修改 | 增强日志收集、_get_all_testset_files、generate_logs |
 | `tepexecor_frame/test_set.py` | 修改 | TestSet.gen 增加文件列表打印 |
 | `tepexecor_frame/cte/utils.py` | 修改 | get_metadata_info_from_testset 增加 tep_executor_logger |
@@ -166,7 +202,9 @@ def generate_logs(self):
 | 日志文件 | 路径 | 说明 |
 |---------|------|------|
 | `tep-executor.log` | `tepexecor_frame/logs/` | 新增，独立日志 |
+| `{group_id}_tep-executor.log` | `tepexecor_frame/logs/` | 动态修改后，按执行组隔离 |
 | `hutafagent.log` | `tepexecor_frame/logs/` | 原有日志，保持不变 |
+| `{group_id}_hutafagent.log` | `tepexecor_frame/logs/` | 原有动态修改后，按执行组隔离 |
 | `all_conf_log.zip` | `cases_log/` | 压缩的配置文件日志 |
 
 ## 5. 风险与缓解
@@ -180,6 +218,7 @@ def generate_logs(self):
 ## 6. 验收标准
 
 - [ ] `tep-executor.log` 日志文件独立生成
+- [ ] `change_tep_executor_logger_file_handler` 函数正确工作，支持按 group_id 动态修改日志文件
 - [ ] `get_metadata_info_from_testset` 打印日志到 tep-executor.log
 - [ ] `TestSet.gen` 打印 `Valid testset files` 到 tep-executor.log
 - [ ] `_get_all_testset_files` 打印 `_tmp_testset_files` 文件列表
@@ -191,5 +230,6 @@ def generate_logs(self):
 | 测试场景 | 预期结果 |
 |---------|---------|
 | 正常执行流程 | tep-executor.log 生成，包含所有增强日志 |
+| 动态修改日志文件 | 调用 `change_tep_executor_logger_file_handler` 后，日志写入 `{group_id}_tep-executor.log` |
 | 文件超限 | 跳过文件并打印 [SKIP] 日志 |
 | URL 打印 | generate_logs 后所有 URL 打印到 tep-executor.log |
