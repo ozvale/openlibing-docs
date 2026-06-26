@@ -159,6 +159,7 @@ Foreman Host 创建请求体涉及的关键 Foreman 实体字段（来自 `host_
 - **敏感配置加密**：appkey、SSL 证书/私钥均以密文存于 Apollo，启动时 AES-GCM 解密后写入临时文件加载，加载后删除。
 - **入向鉴权**：业务请求经 `auth_filter` 调 APIG `TOKEN_VALID_URL` 校验 token；回调路径与 `/health` 列入 `EXCLUDE_PATH` 免鉴权。
 - **出向签名**：调用 APIG 统一走 HW 签名（`X-HW-ID`/`X-HW-DATE`/`X-HW-SIGN`，SHA-256）。
+- **Foreman 调用证书校验缺失（已知安全债务）**：出向调用 Foreman REST API 时 `verify=False`，禁用了对端 TLS 证书校验，请求体含 `root_pass` 等敏感数据，在内网被 ARP 欺骗/DNS 劫持时存在 MITM 风险。当前依赖内网隔离缓解；建议后续部署内部 CA 证书并在调用时指定 `verify=<CA 路径>`。
 - **日志脱敏**：对 `foremanAccount`、`X-HW-ID` 做 mask 脱敏，对客户端 IP 做 SHA-256+salt 哈希。
 
 ## 10. 异常处理

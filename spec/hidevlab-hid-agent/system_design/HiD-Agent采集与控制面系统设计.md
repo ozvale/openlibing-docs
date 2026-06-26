@@ -164,8 +164,9 @@ Agent 侧 HTTPS 服务，监听 `:51234`。所有请求需携带 `X-HiD-Signatur
 
 ## 10. 安全机制
 
-- **双向 HTTPS**：自签名证书 + TLS1.2/1.3，控制面接口对外提供 HTTPS 服务。
-- **签名鉴权**：控制面请求需携带 `X-HiD-Signature`（HMAC-SHA256，密钥为 Token），由 `ValidateSignature` 校验。
+- **传输层 HTTPS（非 mTLS）**：控制面接口对外提供 HTTPS 服务，使用运行时生成的自签名证书 + TLS1.2/1.3，仅为服务端单向 TLS，不涉及客户端证书双向认证。
+- **控制面鉴权**：控制面请求需携带 `X-HiD-Signature`（HMAC-SHA256，密钥为 Token），由 `ValidateSignature` 校验——客户端身份认证依赖签名头而非 TLS 客户端证书。
+- **客户端侧证书校验缺失（已知安全债务）**：Agent 作为客户端发起上报与 token 请求时 `InsecureSkipVerify: true`，跳过了对服务端 TLS 证书的校验，存在中间人风险；建议后续部署内部 CA 并启用证书校验。
 - **Token 三段式加密存储**：Token 获取后经三段式 AES-GCM 加密落盘 `config/tk.txt`。
 - **敏感配置加密**：密钥文件、Token 均以密文落盘。
 
