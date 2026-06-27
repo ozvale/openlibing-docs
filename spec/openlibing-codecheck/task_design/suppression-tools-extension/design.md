@@ -72,11 +72,11 @@ new SuppressionPattern("#\\s*nosec(?:\\s+\\S+(?:\\s*,\\s*\\S+)*)?", SuppressionT
 
 语法：
 - 行级：`// SUPPRESS CHECKSTYLE rule`、`// SUPPRESS CHECKSTYLE ALL`
-- 块级配对：`// CHECKSTYLE:OFF LineLength` ... `// CHECKSTYLE:ON LineLength`（阶段三增强：支持 OFF/ON 配对及规则名）
+- 块级起始：`// CHECKSTYLE:OFF LineLength`（按设计只识别起始标记 OFF，不识别结束标记 ON，与 CLANG_FORMAT/SPOTLESS 等工具一致；支持规则名）
 
 ```java
 new SuppressionPattern("//\\s*SUPPRESS\\s+CHECKSTYLE(?:\\s+\\S+)?"),
-new SuppressionPattern("//\\s*CHECKSTYLE:(?:OFF|ON)(?:\\s+\\w+)?")
+new SuppressionPattern("//\\s*CHECKSTYLE:OFF(?:\\s+\\w+)?")
 ```
 
 ### PMD（行级，注释 + 注解）
@@ -310,7 +310,7 @@ for (SuppressionStrategy.MatchResult matchResult : matchResults) {
 
 | 工具 | 原正则缺陷 | 阶段三修复 |
 |------|-----------|-----------|
-| checkstyle | 仅 `CHECKSTYLE:OFF`，不支持 ON 和规则名 | `// CHECKSTYLE:(?:OFF\|ON)(?:\s+\w+)?` 支持 OFF/ON 配对及规则名 |
+| checkstyle | 仅 `CHECKSTYLE:OFF`，不支持规则名 | `// CHECKSTYLE:OFF(?:\s+\w+)?` 支持规则名；按设计只识别起始标记 OFF，不识别结束标记 ON |
 | PMD | `@SuppressWarnings("PMD...")` 仅单规则 | `(?:\s*,\s*"PMD[\w.]*")*` 支持多 PMD 规则和数组形式 |
 | SpotBugs | `@SuppressFBWarnings\([^)]*\)` 过于宽泛且无法精确匹配参数 | 精确匹配 `value`/`justification`/`matchType` 等参数：`(?:\s*,\s*\w+\s*=\s*[^)]+)*` |
 | rustfmt | `#[cfg_attr([^)]*rustfmt::skip[^)]*)]` 的 `[^)]` 遇 `any()` 嵌套括号提前结束 | 改用 `[^\]\n]` 排除 `]` 和换行符，确保整个 `#[...]` 属性完整匹配 |
