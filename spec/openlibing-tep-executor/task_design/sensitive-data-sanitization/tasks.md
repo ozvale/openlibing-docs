@@ -23,3 +23,4 @@
 | `cc59374` | feat: add debug logging to sanitize sensitive data function |
 | `2a12af4` | test: add regex pattern unit tests for _sanitize_sensitive_data_str |
 | `a7885cc` | test: merge regex pattern tests into test_sanitize_sensitive_data |
+| `852e02f` | fix: remove ak= and sk= from sensitive keywords to avoid false positives |
