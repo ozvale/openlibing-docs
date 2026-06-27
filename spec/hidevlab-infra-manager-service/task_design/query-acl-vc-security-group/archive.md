@@ -10,7 +10,7 @@
   - https://gitcode.com/openlibing/hidevlab-infra-manager-service/merge_requests/48 （阶段 1，merged）
   - https://gitcode.com/openlibing/hidevlab-infra-manager-service/merge_requests/52 （阶段 2，merged）
   - https://gitcode.com/openlibing/hidevlab-infra-manager-service/merge_requests/53 （阶段 3，merged）
-- docs PR: <待 docs PR 创建后回填 permalink>
+- docs PR: https://gitcode.com/openlibing/openlibing-docs/merge_requests/460
 
 ## 交付历程
 
