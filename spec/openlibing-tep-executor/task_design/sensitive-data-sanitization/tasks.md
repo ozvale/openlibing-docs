@@ -7,7 +7,7 @@
 - [x] Task 3: 修复 `unified.py` Ansible hosts 文件安全写入
 - [x] Task 4: 修复 `test_set.py` kwargs 日志脱敏
 - [x] Task 5: 修复 `_sanitize_sensitive_data` 正则匹配缺陷（JSON 格式、空格分隔值）
-- [x] Task 6: 添加 21 个单元测试用例
+- [x] Task 6: 添加 44 个单元测试用例（21 原始 + 23 正则模式）
 - [x] Task 7: 添加调试日志用于排查脱敏失败
 
 ## 关联 Commit
@@ -21,3 +21,5 @@
 | `c1649e2` | refactor: extract _sanitize_sensitive_data_str helper function |
 | `7122881` | fix: handle tuple/set types and add edge case tests |
 | `cc59374` | feat: add debug logging to sanitize sensitive data function |
+| `2a12af4` | test: add regex pattern unit tests for _sanitize_sensitive_data_str |
+| `a7885cc` | test: merge regex pattern tests into test_sanitize_sensitive_data |
