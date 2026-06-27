@@ -19,9 +19,7 @@
   - 标注任务完成状态
   - 位置：`openlibing-docs/spec/openlibing-pytest-executor/task_design/upload_to_openlibing-spec/tasks.md`
 
-### 已完成代码任务（历史）
-
-以下任务已在插件开发过程中完成，此处仅作记录：
+### 代码生成任务
 
 - [x] Task 4: 实现核心上传函数 `upload_data_to_openlibing()`
   - 文件收集与验证

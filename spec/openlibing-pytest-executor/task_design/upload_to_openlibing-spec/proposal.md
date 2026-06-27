@@ -68,4 +68,3 @@ OpenLibing 平台需要将测试元数据和结果文件上传到 OBS 存储桶�
 
 - **文档位置**：`openlibing-docs/spec/openlibing-pytest-executor/task_design/upload_to_openlibing-spec/`
 - **相关代码**：`openlibing-pytest-executor/plugins/upload_to_openlibing/`
-- **测试覆盖**：25 个单元测试用例，覆盖率 100%
