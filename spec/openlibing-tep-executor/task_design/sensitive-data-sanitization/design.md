@@ -20,7 +20,7 @@
 | 模式 | 匹配场景 | 示例 |
 |------|---------|------|
 | `"keyword": "value"` | JSON 格式（带引号） | `"password": "secret123"` |
-| `keyword=value` | 等号格式（无空格分隔） | `token=abc123` |
+| `keyword=value` | 等号/冒号格式（支持空格分隔） | `token=abc123`, `password = secret123` |
 | `keyword: value (space)` | 冒号格式（值包含空格） | `Authorization: Bearer eyJhbG...` |
 
 ### 3. Ansible 文件写入安全改进
