@@ -72,11 +72,11 @@ new SuppressionPattern("#\\s*nosec(?:\\s+\\S+(?:\\s*,\\s*\\S+)*)?", SuppressionT
 
 语法：
 - 行级：`// SUPPRESS CHECKSTYLE rule`、`// SUPPRESS CHECKSTYLE ALL`
-- 块级起始：`//CHECKSTYLE:OFF`（按设计只识别起始标记）
+- 块级配对：`// CHECKSTYLE:OFF LineLength` ... `// CHECKSTYLE:ON LineLength`（阶段三增强：支持 OFF/ON 配对及规则名）
 
 ```java
-new SuppressionPattern("//\\s*SUPPRESS\\s+CHECKSTYLE(?:\\s+\\S+)?", SuppressionType.LINE),
-new SuppressionPattern("//\\s*CHECKSTYLE:OFF", SuppressionType.LINE)
+new SuppressionPattern("//\\s*SUPPRESS\\s+CHECKSTYLE(?:\\s+\\S+)?"),
+new SuppressionPattern("//\\s*CHECKSTYLE:(?:OFF|ON)(?:\\s+\\w+)?")
 ```
 
 ### PMD（行级，注释 + 注解）
@@ -84,20 +84,27 @@ new SuppressionPattern("//\\s*CHECKSTYLE:OFF", SuppressionType.LINE)
 语法：
 - 注释：`// NOPMD - explanation`
 - 注解：`@SuppressWarnings("PMD")`、`@SuppressWarnings("PMD.RuleName")`
+- 多规则（阶段三增强）：`@SuppressWarnings("PMD.rule1", "PMD.rule2")`、`@SuppressWarnings({"PMD.rule1", "PMD.rule2"})`
 
 注解型仅匹配含 `"PMD"` 前缀的 `@SuppressWarnings`，避免与 Java 原生冲突。
 
 ```java
-new SuppressionPattern("//\\s*NOPMD(?:\\s.*)?", SuppressionType.LINE),
-new SuppressionPattern("@SuppressWarnings\\s*\\(\\s*\\{?\\s*\"PMD(?:\\.\\w+)?\"", SuppressionType.LINE)
+new SuppressionPattern("//\\s*NOPMD(?:\\s.*)?"),
+new SuppressionPattern(
+    "@SuppressWarnings\\s*\\(\\s*\\{?\\s*\"PMD[\\w.]*\""
+    + "(?:\\s*,\\s*\"PMD[\\w.]*\")*\\s*\\}?\\s*\\)")
 ```
 
 ### SpotBugs（行级，注解）
 
-语法：`@SuppressFBWarnings("rule")`、`@SuppressFBWarnings(value = {"rule1", "rule2"}, justification = "...")`
+语法：
+- 单参数：`@SuppressFBWarnings("rule")`
+- 带参数（阶段三增强）：`@SuppressFBWarnings(value = "rule", justification = "explanation")`、`@SuppressFBWarnings(value = "rule", justification = "explanation", matchType = SuppressMatchType.EXACT)`
 
 ```java
-new SuppressionPattern("@SuppressFBWarnings\\s*\\([^)]*\\)", SuppressionType.LINE)
+new SuppressionPattern(
+    "@SuppressFBWarnings\\s*\\(\\s*(?:value\\s*=\\s*)?(?:\"[^\"]*\"|\\{[^}]*\\})"
+    + "(?:\\s*,\\s*\\w+\\s*=\\s*[^)]+)*\\s*\\)")
 ```
 
 ### spotless（块级起始）
@@ -111,36 +118,38 @@ new SuppressionPattern("//\\s*spotless:off", SuppressionType.LINE)
 ### rustfmt（行级 / 块级 / 文件级，Rust 属性）
 
 语法：
-- 行级：`#[rustfmt::skip]`、`#[cfg_attr(any(), rustfmt::skip)]`
+- 行级：`#[rustfmt::skip]`、`#[cfg_attr(any(), rustfmt::skip)]`（阶段三增强：支持 cfg_attr 内嵌套括号）
 - 块级：`#[rustfmt::skip]`（放在函数/结构体前）、`#[rustfmt::skip::macros(name)]`
 - 文件级：`#![rustfmt::skip]`、`#![rustfmt::skip::macros(name)]`
 
 ```java
 new SuppressionPattern(
-    "#!\\[rustfmt::skip(?:\\s*::\\s*(?:macros|attributes)\\s*\\([^)]*\\))?\\s*\\]",
-    SuppressionType.FILE_TOP),
+    "#!\\[rustfmt::skip(?:\\s*::\\s*(?:macros|attributes)\\s*\\([^)]*\\))?\\s*\\]"),
 new SuppressionPattern(
-    "#\\[rustfmt::skip(?:\\s*::\\s*(?:macros|attributes)\\s*\\([^)]*\\))?\\s*\\]",
-    SuppressionType.LINE_OR_BLOCK_UNPAIRED),
-new SuppressionPattern("#\\[cfg_attr\\([^)]*rustfmt::skip[^)]*\\)\\]", SuppressionType.LINE)
+    "#\\[rustfmt::skip(?:\\s*::\\s*(?:macros|attributes)\\s*\\([^)]*\\))?\\s*\\]"),
+// 用 [^\]\n] 替代 [^)] 以支持 cfg_attr 内的嵌套括号（如 any()），同时限制单行
+new SuppressionPattern("#\\[cfg_attr\\([^\\]\\n]*rustfmt::skip[^\\]\\n]*\\)\\]")
 ```
 
-`#![` 为文件级内部属性，`#[` 为行级/块级外部属性。
+`#![` 为文件级内部属性，`#[` 为行级/块级外部属性。cfg_attr 的 `[^)]` 改为 `[^\]\n]` 是因为 `any()` 等嵌套括号会提前结束匹配，改用排除 `]` 和换行符确保整个 `#[...]` 属性被完整匹配。
 
 ### clippy（行级 / 块级 / 文件级，Rust 属性）
 
 语法：
 - 行级：`#[allow(clippy::<rule>)]`、`#[expect(clippy::<rule>)]`
+- 多规则（阶段三增强）：`#[allow(clippy::rule1, clippy::rule2)]`、`#[expect(clippy::rule1, clippy::rule2)]`
 - 文件级：`#![allow(clippy::<rule>)]`、`#![expect(clippy::<rule>)]`
 
 ```java
 new SuppressionPattern(
-    "#!\\[(?:allow|expect)\\s*\\(\\s*clippy::\\w+\\s*\\)\\s*\\]",
-    SuppressionType.FILE_TOP),
+    "#!\\[(?:allow|expect)\\s*\\(\\s*clippy::\\w+\\s*"
+    + "(?:,\\s*clippy::\\w+\\s*)*\\)\\s*\\]"),
 new SuppressionPattern(
-    "#\\[(?:allow|expect)\\s*\\(\\s*clippy::\\w+\\s*\\)\\s*\\]",
-    SuppressionType.LINE_OR_BLOCK_UNPAIRED)
+    "#\\[(?:allow|expect)\\s*\\(\\s*clippy::\\w+\\s*"
+    + "(?:,\\s*clippy::\\w+\\s*)*\\)\\s*\\]")
 ```
+
+`(?:,\\s*clippy::\\w+\\s*)*` 匹配零个或多个附加规则，支持单规则和多规则两种形式。
 
 ## 核心改动点
 
@@ -243,3 +252,72 @@ for (SuppressionStrategy.MatchResult matchResult : matchResults) {
 ## 安全设计
 
 不涉及
+
+## 阶段一：防误报词法分析器设计
+
+### 问题背景
+
+原实现仅用 `isInvalidSuppressionComment` 检查匹配位置是否在块注释内，无法处理：
+- 字符串字面量内的抑制标记（如 `String s = "// NOPMD";`）会被误识别为有效
+- diff 上下文行截断的字符串/行注释跨行错误传递状态，导致下一行的有效抑制标记被误判为嵌套
+- Markdown 等文档类文件中的说明性文字（如 `## 标题 # noqa`）被误识别为有效告警抑制
+
+### SuppressionLexer 状态机
+
+8 种状态：NORMAL、LINE_COMMENT、BLOCK_COMMENT、STRING_DOUBLE、STRING_SINGLE、STRING_BACKTICK、TRIPLE_DOUBLE、TRIPLE_SINGLE。
+
+跨行规则：
+- 行注释（LINE_COMMENT）、单双引号字符串（STRING_DOUBLE/STRING_SINGLE）**不跨行**，行尾自动重置为 NORMAL —— 这是阶段一修复的关键，避免 diff 截断的字符串/行注释错误影响下一行
+- 块注释（BLOCK_COMMENT）、三引号字符串（TRIPLE_DOUBLE/TRIPLE_SINGLE）、模板字符串（STRING_BACKTICK）**可跨行**，通过 `entryState`/`exitState` 在行间传递
+
+### LexRules 扩展名分派
+
+| 扩展名 | 规则 | 说明 |
+|--------|------|------|
+| `.py` | python | # 行注释，"""/''' 三引号，"/' 字符串 |
+| `.java/.c/.cpp/.js/.ts/.go/.rs/...` | cLike | // 行注释，/* */ 块注释，"/'/` 字符串 |
+| `.sh/.bash/.yml/.toml/...` | hash | # 行注释，"/' 字符串 |
+| `.sql` | sql | -- 行注释，/* */ 块注释，'/\" 字符串 |
+| `.lua` | lua | -- 行注释，--[[ ]] 块注释 |
+| `.html/.xml/.vue/...` | markup | <!-- --> 块注释，"/' 字符串 |
+| `.txt/.rst/.adoc` 及未知 | defaultRules | treatAllAsComment=true，所有内容视为注释 |
+
+### 防误报判定逻辑
+
+`isNestedInCommentOrString(start)`：
+- `start == 0`：检查上一行跨行状态 `entryState`，若非 NORMAL 则整行嵌套
+- `start > 0`：检查 `charStates[start - 1]`，若非 NORMAL 则匹配嵌套在注释/字符串内
+
+抑制注释标记本身也是注释（如 `# noqa` 的 `#` 是 Python 行注释开始），故检查匹配**起始位置的前一字符**状态而非匹配区间状态。
+
+### `shouldSkipValidation` 与 lexer 的协作
+
+`SuppressionScanServiceImpl.filterValidMatchResults`：
+- `shouldSkipValidation=true` 的工具（gitleaks）直接保留，不调用 lexer 校验
+- `shouldSkipValidation=false` 的工具：lexer 判定嵌套则过滤
+
+## 阶段三：.md 文件 markup 规则与 5 个工具正则增强
+
+### .md 文件从 defaultRules 改为 markup
+
+**问题**：阶段一将 `.md`/`.markdown` 用 `defaultRules`（treatAllAsComment=true），导致 `.md` 中的真实告警抑制注释（如 `# // CHECKSTYLE:OFF LineLength`）被识别为嵌套误报而过滤。
+
+**修复**：`.md`/`.markdown` 改用 `markup` 规则（HTML 块注释 + "/' 字符串）。markup 规则下 `#` 不是行注释前缀（`#` 是 Markdown 标题），故 `# // CHECKSTYLE:OFF LineLength` 中的 `// CHECKSTYLE:OFF` 位于 NORMAL 状态，被识别为有效。
+
+**权衡**：`.md` 中的说明性文字（如示例代码 `String s = "// NOPMD"`）可能被误识别，但用户诉求是识别真实的告警抑制注释，这是合理 trade-off。`.txt`/`.rst`/`.adoc` 仍保留 `defaultRules` 避免纯文本文档误报。
+
+### 5 个工具正则增强
+
+| 工具 | 原正则缺陷 | 阶段三修复 |
+|------|-----------|-----------|
+| checkstyle | 仅 `CHECKSTYLE:OFF`，不支持 ON 和规则名 | `// CHECKSTYLE:(?:OFF\|ON)(?:\s+\w+)?` 支持 OFF/ON 配对及规则名 |
+| PMD | `@SuppressWarnings("PMD...")` 仅单规则 | `(?:\s*,\s*"PMD[\w.]*")*` 支持多 PMD 规则和数组形式 |
+| SpotBugs | `@SuppressFBWarnings\([^)]*\)` 过于宽泛且无法精确匹配参数 | 精确匹配 `value`/`justification`/`matchType` 等参数：`(?:\s*,\s*\w+\s*=\s*[^)]+)*` |
+| rustfmt | `#[cfg_attr([^)]*rustfmt::skip[^)]*)]` 的 `[^)]` 遇 `any()` 嵌套括号提前结束 | 改用 `[^\]\n]` 排除 `]` 和换行符，确保整个 `#[...]` 属性完整匹配 |
+| clippy | `clippy::\w+` 仅单规则 | `(?:,\s*clippy::\w+\s*)*` 支持多规则，含文件级 `#![...]` 和 `expect` 形式 |
+
+### rustfmt cfg_attr 嵌套括号正则设计
+
+原正则 `#[cfg_attr\([^)]*rustfmt::skip[^)]*\)\]` 对 `#[cfg_attr(any(), rustfmt::skip)]` 会匹配到 `#[cfg_attr(any()` 就停止（`)` 提前结束），无法完整匹配。
+
+改用 `#[cfg_attr\([^\]\n]*rustfmt::skip[^\]\n]*\)\]`：`[^\]\n]` 排除 `]`（属性结束符）和换行符（限制单行），允许内部任意字符（含嵌套括号），确保 `#[cfg_attr(any(), rustfmt::skip)]` 完整匹配。

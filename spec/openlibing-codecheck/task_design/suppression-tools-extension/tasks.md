@@ -1,6 +1,6 @@
 # suppression-tools-extension — 实现任务
 
-## 进度: 14/14 complete
+## 进度: 21/21 complete
 
 ### 核心改动
 
@@ -27,3 +27,30 @@
 
 - [x] Task 13: 编译通过（`mvn compile`）
 - [x] Task 14: 相关单元测试全部通过（`SuppressionStrategyTest` + `SuppressionScanServiceImplTest`）
+
+### 阶段一：防误报词法分析器与 detect-secrets 适配
+
+- [x] Task 15: 新增 `SuppressionLexer` 状态机词法分析器（8 种状态：NORMAL/LINE_COMMENT/BLOCK_COMMENT/STRING_DOUBLE/STRING_SINGLE/STRING_BACKTICK/TRIPLE_DOUBLE/TRIPLE_SINGLE），跨行状态通过 entryState/exitState 传递
+- [x] Task 16: 新增 `LexRules` 按文件扩展名分派词法规则（python/cLike/hash/sql/lua/markup/defaultRules）
+- [x] Task 17: `SuppressionScanServiceImpl.scanAddedLines` 引入 lexer 防误报，匹配位置前一字符为注释/字符串状态则过滤；`shouldSkipValidation=true` 的工具（gitleaks）跳过该校验
+- [x] Task 18: 修复行尾告警抑制注释跨行状态 bug（行注释/单双引号字符串行尾重置为 NORMAL，避免上一行截断状态影响下一行）
+- [x] Task 19: detect-secrets 适配连字符分隔写法（`allowlist-secret` / `allowlist - secret` / `allowlist nextline-secret`）
+- [x] Task 20: `.txt`/`.rst`/`.adoc` 及未知扩展名用 `defaultRules`（treatAllAsComment=true）避免文档说明性文字误报
+
+### 阶段三：5 个工具正则匹配增强
+
+- [x] Task 21: `LexRules` 将 `.md`/`.markdown` 从 `defaultRules`（treatAllAsComment）改为 `markup` 规则，使 `.md` 中的 `# // CHECKSTYLE:OFF LineLength` 能被识别为有效（# 是 Markdown 标题非注释前缀，// CHECKSTYLE:OFF 位于 NORMAL 状态）
+- [x] Task 22: checkstyle 正则支持 `CHECKSTYLE:OFF/ON` 配对及规则名（`// CHECKSTYLE:OFF LineLength` / `// CHECKSTYLE:ON LineLength`）
+- [x] Task 23: PMD `@SuppressWarnings` 注解正则支持多 PMD 规则（`@SuppressWarnings("PMD.rule1", "PMD.rule2")`）和数组形式（`@SuppressWarnings({"PMD.rule1", "PMD.rule2"})`）
+- [x] Task 24: SpotBugs `@SuppressFBWarnings` 正则支持 `value`/`justification`/`matchType` 等参数（`@SuppressFBWarnings(value = "rule", justification = "explanation", matchType = SuppressMatchType.EXACT)`）
+- [x] Task 25: rustfmt 新增 `#[cfg_attr(any(), rustfmt:skip)]` 识别，用 `[^\]\n]` 替代 `[^)]` 支持 cfg_attr 内嵌套括号（如 `any()`）
+- [x] Task 26: clippy 正则支持多规则（`#[allow(clippy::rule1, clippy::rule2)]` / `#![allow(...)]` / `#[expect(...)]`）
+
+### 阶段三测试
+
+- [x] Task 27: `SuppressionStrategyTest` 新增 5 个测试（checkstyle OFF/ON + 规则名、PMD 多规则、SpotBugs 参数、rustfmt 嵌套括号、clippy 多规则）
+- [x] Task 28: `SuppressionLexerTest` 新增 2 个 `.md` markup 测试（`# // CHECKSTYLE:OFF` 识别为有效、`<!-- # noqa -->` 识别为嵌套误报）
+
+### 阶段三验证
+
+- [x] Task 29: `SuppressionStrategyTest`（13 个）+ `SuppressionLexerTest`（17 个）共 30 个测试全部通过

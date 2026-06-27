@@ -16,6 +16,13 @@ openlibing-codecheck 的 `SuppressionStrategy` 已支持 14 个开源代码检�
 4. **多工具匹配同一注释**：如 `# noqa` 同时匹配 flake8 和 ruff，`identifyAllToolsAndTypes` 返回 `List<MatchResult>`，全部返回供 coderepo 在评论中列出多个工具。
 5. **CodeQL 注释修正**：按汇总表修正为 `// lgtm`、`# lgtm`、`// codeql [rule]` 等行级语法。
 6. **detect-secrets 精确匹配**：精确匹配 6 种注释前缀（`#`、`//`、`/*...*/`、`'`、`--`、`<!-- ... -->`），不使用模糊匹配。
+7. **防误报词法分析器**（阶段一）：新增 `SuppressionLexer` 状态机，按文件扩展名分派词法规则，识别注释/字符串 token，过滤嵌套在注释/字符串内的抑制标记误报；修复行尾告警抑制注释跨行状态 bug；detect-secrets 适配连字符分隔写法。
+8. **5 个工具正则匹配增强**（阶段三）：
+   - **checkstyle**：支持 `CHECKSTYLE:OFF/ON` 配对及规则名（如 `// CHECKSTYLE:OFF LineLength`）；`.md` 文件改用 `markup` 规则使 `# // CHECKSTYLE:OFF` 能被识别为有效。
+   - **PMD**：`@SuppressWarnings` 注解支持多 PMD 规则（`@SuppressWarnings("PMD.rule1", "PMD.rule2")`）和数组形式。
+   - **SpotBugs**：`@SuppressFBWarnings` 支持 `value`/`justification`/`matchType` 等参数。
+   - **rustfmt**：新增 `#[cfg_attr(any(), rustfmt:skip)]` 识别，支持 cfg_attr 内嵌套括号。
+   - **clippy**：支持多规则（`#[allow(clippy::rule1, clippy::rule2)]`），含文件级 `#![...]` 和 `expect` 形式。
 
 ## 不做什么
 
@@ -32,6 +39,13 @@ openlibing-codecheck 的 `SuppressionStrategy` 已支持 14 个开源代码检�
 - [ ] CodeQL 按 `// lgtm` / `# lgtm` / `// codeql [rule]` 识别
 - [ ] detect-secrets 精确匹配 6 种注释前缀，不误识别
 - [ ] PMD 仅识别含 `"PMD"` 前缀的 `@SuppressWarnings`
+- [ ] 防误报：注释/字符串内的抑制标记被过滤，行尾抑制注释跨行状态正确
+- [ ] `.md` 文件中 `# // CHECKSTYLE:OFF LineLength` 被识别为有效（checkstyle）
+- [ ] `// CHECKSTYLE:OFF LineLength` / `// CHECKSTYLE:ON LineLength` 匹配 checkstyle
+- [ ] `@SuppressWarnings("PMD.rule1", "PMD.rule2")` 多规则匹配 PMD
+- [ ] `@SuppressFBWarnings(value = "rule", justification = "explanation", matchType = SuppressMatchType.EXACT)` 匹配 SpotBugs
+- [ ] `#[cfg_attr(any(), rustfmt:skip)]` 匹配 rustfmt（支持嵌套括号）
+- [ ] `#[allow(clippy::rule1, clippy::rule2)]` 多规则匹配 clippy
 - [ ] 编译通过，相关单元测试全部通过
 
 ## 影响范围
@@ -40,8 +54,12 @@ openlibing-codecheck 的 `SuppressionStrategy` 已支持 14 个开源代码检�
 
 | 文件 | 操作 | 说明 |
 |------|------|------|
-| `common/enums/SuppressionStrategy.java` | 修改 | 新增 10 个工具枚举；`SuppressionPattern` 新增 `skipValidation` 字段；`MatchResult` record 新增 `skipValidation`；`identifyToolAndType` 改为 `identifyAllToolsAndTypes` 返回 `List<MatchResult>` |
-| `business/service/impl/SuppressionScanServiceImpl.java` | 修改 | `scanAddedLines` 支持 `skipValidation` 和多工具结果；移除全部块级处理逻辑 |
+| `common/enums/SuppressionStrategy.java` | 修改 | 新增 10 个工具枚举；`SuppressionPattern` 新增 `skipValidation` 字段；`MatchResult` record 新增 `skipValidation`；`identifyToolAndType` 改为 `identifyAllToolsAndTypes` 返回 `List<MatchResult>`；阶段三：checkstyle/PMD/SpotBugs/rustfmt/clippy 5 个工具正则增强 |
+| `common/lexer/LexRules.java` | 新增 | 阶段一：按文件扩展名分派词法规则；阶段三：`.md`/`.markdown` 改用 `markup` 规则 |
+| `common/lexer/SuppressionLexer.java` | 新增 | 阶段一：状态机词法分析器，跨行状态维护，防误报 |
+| `business/service/impl/SuppressionScanServiceImpl.java` | 修改 | `scanAddedLines` 支持 `skipValidation` 和多工具结果；移除全部块级处理逻辑；引入 lexer 防误报 |
+| `src/test/java/.../SuppressionStrategyTest.java` | 修改 | 适配枚举数 14→24；阶段三新增 5 个工具正则测试 |
+| `src/test/java/.../SuppressionLexerTest.java` | 新增 | 阶段一/三：词法分析器测试（17 个） |
 
 ### docs 仓 `openlibing-docs`
 
