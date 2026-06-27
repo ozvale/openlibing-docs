@@ -68,16 +68,31 @@ new SuppressionPattern("#\\s*pylint:\\s*skip-file", SuppressionType.FILE_TOP)
 new SuppressionPattern("#\\s*nosec(?:\\s+\\S+(?:\\s*,\\s*\\S+)*)?", SuppressionType.LINE)
 ```
 
-### checkstyle（行级 + 块级起始）
+### checkstyle（行级 + 块级起始，纯文本匹配）
 
 语法：
 - 行级：`// SUPPRESS CHECKSTYLE rule`、`// SUPPRESS CHECKSTYLE ALL`
 - 块级起始：`// CHECKSTYLE:OFF LineLength`（按设计只识别起始标记 OFF，不识别结束标记 ON，与 CLANG_FORMAT/SPOTLESS 等工具一致；支持规则名）
 
+checkstyle 的 `SuppressWithPlainTextCommentFilter` 为**纯文本匹配**，支持非 Java 文件（`.sh`/`.properties`/`.xml`/`.md` 等）。在这些文件中，抑制标记需写在对应注释里，例如 `.sh`/`.properties` 中写作 `# // CHECKSTYLE:OFF`。
+
 ```java
-new SuppressionPattern("//\\s*SUPPRESS\\s+CHECKSTYLE(?:\\s+\\S+)?"),
-new SuppressionPattern("//\\s*CHECKSTYLE:OFF(?:\\s+\\w+)?")
+// shouldSkipValidation=true：跳过 lexer 嵌套校验。
+// 原因：.sh 中 # 是行注释前缀，// 落在 # 注释内被判为嵌套误报；
+// .properties 走 defaultRules（treatAllAsComment=true），所有内容被判为注释内。
+// 纯文本匹配是 checkstyle 自身语义，跳过嵌套校验与该语义一致（与 gitleaks 同机制）。
+new SuppressionPattern("//\\s*SUPPRESS\\s+CHECKSTYLE(?:\\s+\\S+)?", true),
+new SuppressionPattern("//\\s*CHECKSTYLE:OFF(?:\\s+\\w+)?", true)
 ```
+
+各文件类型的识别表现：
+
+| 文件类型 | lexer 规则 | `#` 是否行注释前缀 | 识别结果 |
+|---------|-----------|------------------|---------|
+| `.java`/`.c`/`.js` 等 | cLike | 否（`//` 是） | 识别 ✓ |
+| `.sh`/`.bash`/`.yml` | hash | 是 | 识别 ✓（依赖 skipValidation） |
+| `.properties`/`.txt`/未知 | defaultRules（treatAllAsComment） | — | 识别 ✓（依赖 skipValidation） |
+| `.md`/`.xml`/`.html` | markup | 否 | 识别 ✓ |
 
 ### PMD（行级，注释 + 注解）
 
@@ -95,17 +110,26 @@ new SuppressionPattern(
     + "(?:\\s*,\\s*\"PMD[\\w.]*\")*\\s*\\}?\\s*\\)")
 ```
 
-### SpotBugs（行级，注解）
+### SpotBugs（行级，注解，支持跨行合并）
 
 语法：
 - 单参数：`@SuppressFBWarnings("rule")`
 - 带参数（阶段三增强）：`@SuppressFBWarnings(value = "rule", justification = "explanation")`、`@SuppressFBWarnings(value = "rule", justification = "explanation", matchType = SuppressMatchType.EXACT)`
+- 参数可跨行（阶段三增强）：参数换行书写时通过跨行合并匹配识别
 
 ```java
 new SuppressionPattern(
     "@SuppressFBWarnings\\s*\\(\\s*(?:value\\s*=\\s*)?(?:\"[^\"]*\"|\\{[^}]*\\})"
     + "(?:\\s*,\\s*\\w+\\s*=\\s*[^)]+)*\\s*\\)")
 ```
+
+正则中 `\s*` 和 `[^)]+` 均可匹配换行符，故正则本身支持跨行；但 `SuppressionScanServiceImpl.scanAddedLines` 默认按单行 `matcher.find(codeLine)`，无法匹配跨行注解。阶段三新增**跨行注解合并匹配**逻辑：
+
+1. 单行匹配失败时，检测当前行是否为未闭合注解开始（`@SuppressFBWarnings`/`@SuppressWarnings` 后有 `(` 且括号未平衡）
+2. 合并后续行直到 `(` 和 `)` 平衡，对合并字符串执行 `combinedPattern.matcher(merged).find()`
+3. 匹配成功则记录结果，并标记合并的后续行为已处理避免重复匹配
+
+适用场景：`@SuppressFBWarnings(value = "DM_DEFAULT_ENCODING",\n justification = "测试用例：演示注解抑制，实际项目应显式指定 UTF-8")` 等参数换行写法。
 
 ### spotless（块级起始）
 
@@ -293,8 +317,10 @@ for (SuppressionStrategy.MatchResult matchResult : matchResults) {
 ### `shouldSkipValidation` 与 lexer 的协作
 
 `SuppressionScanServiceImpl.filterValidMatchResults`：
-- `shouldSkipValidation=true` 的工具（gitleaks）直接保留，不调用 lexer 校验
+- `shouldSkipValidation=true` 的工具（gitleaks、checkstyle）直接保留，不调用 lexer 校验
 - `shouldSkipValidation=false` 的工具：lexer 判定嵌套则过滤
+
+checkstyle 设 `shouldSkipValidation=true` 的原因：其 `SuppressWithPlainTextCommentFilter` 为纯文本匹配，抑制标记在 `.sh`/`.properties` 等文件的注释内是合法用法，但 lexer 会将 `# // CHECKSTYLE:OFF` 中的 `//` 判为嵌套在 `#` 行注释内而过滤，导致漏报。跳过嵌套校验与 checkstyle 纯文本匹配语义一致。
 
 ## 阶段三：.md 文件 markup 规则与 5 个工具正则增强
 
@@ -310,7 +336,7 @@ for (SuppressionStrategy.MatchResult matchResult : matchResults) {
 
 | 工具 | 原正则缺陷 | 阶段三修复 |
 |------|-----------|-----------|
-| checkstyle | 仅 `CHECKSTYLE:OFF`，不支持规则名 | `// CHECKSTYLE:OFF(?:\s+\w+)?` 支持规则名；按设计只识别起始标记 OFF，不识别结束标记 ON |
+| checkstyle | 仅 `CHECKSTYLE:OFF`，不支持规则名 | `// CHECKSTYLE:OFF(?:\s+\w+)?` 支持规则名；按设计只识别起始标记 OFF，不识别结束标记 ON；`shouldSkipValidation=true` 支持 `.sh`/`.properties` 等非 Java 文件中 `# // CHECKSTYLE:OFF` 识别 |
 | PMD | `@SuppressWarnings("PMD...")` 仅单规则 | `(?:\s*,\s*"PMD[\w.]*")*` 支持多 PMD 规则和数组形式 |
 | SpotBugs | `@SuppressFBWarnings\([^)]*\)` 过于宽泛且无法精确匹配参数 | 精确匹配 `value`/`justification`/`matchType` 等参数：`(?:\s*,\s*\w+\s*=\s*[^)]+)*` |
 | rustfmt | `#[cfg_attr([^)]*rustfmt::skip[^)]*)]` 的 `[^)]` 遇 `any()` 嵌套括号提前结束 | 改用 `[^\]\n]` 排除 `]` 和换行符，确保整个 `#[...]` 属性完整匹配 |
