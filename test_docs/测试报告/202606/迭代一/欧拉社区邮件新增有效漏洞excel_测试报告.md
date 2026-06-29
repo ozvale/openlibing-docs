@@ -23,7 +23,7 @@
 - **预期结果**:
   - 1.附件列表除了预警文件还有一个有效漏洞文件
 - **测试结果**： Passed
-- **证明截图**: 
+- **证明截图**: https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb1v00011ef7p9q0&case_id=vb1v00011f6hnd83&detail=result
 
 ---
 

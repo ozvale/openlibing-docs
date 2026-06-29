@@ -38,7 +38,7 @@
 
 **1.欧拉社区邮件新增有效漏洞excel_邮件附件包含有效漏洞文件**:
 
-- **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-sbom/issues/21
+- **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability/issues/21
 - **前置条件**: 可以接收到欧拉社区邮件
 - **步骤一**：
   - 1.每天一点欧拉社区自动发送漏洞超期预警邮件后，打开该邮件
