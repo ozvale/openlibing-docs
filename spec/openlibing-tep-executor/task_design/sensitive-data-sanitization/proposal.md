@@ -27,7 +27,6 @@
 ## 验收标准
 
 - [ ] HTTP 响应日志中的敏感字段（password, token, api_key, access_key 等）被替换为 "***"
-- [ ] Ansible hosts 文件使用安全方式写入，密码不通过 shell 命令传递
 - [ ] kwargs 日志中的敏感数据被脱敏
 - [ ] 支持 dict/list/str/tuple/set 等多种数据类型
 - [ ] 支持 JSON 格式字符串解析和脱敏
