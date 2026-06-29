@@ -76,23 +76,28 @@ new SuppressionPattern("#\\s*nosec(?:\\s+\\S+(?:\\s*,\\s*\\S+)*)?", SuppressionT
 
 checkstyle 的 `SuppressWithPlainTextCommentFilter` 为**纯文本匹配**，支持非 Java 文件（`.sh`/`.properties`/`.xml`/`.md` 等）。在这些文件中，抑制标记需写在对应注释里，例如 `.sh`/`.properties` 中写作 `# // CHECKSTYLE:OFF`。
 
+**关键区分**：`// CHECKSTYLE:OFF` 中的 `//` 在不同文件类型中语义不同：
+- **cLike 文件**（`.java`/`.c`/`.js` 等）：`//` 是行注释前缀，`// CHECKSTYLE:OFF` 整体是行注释。块注释 `/* // CHECKSTYLE:OFF */` 或行注释 `// 说明 // CHECKSTYLE:OFF` 内的 `// CHECKSTYLE:OFF` 是嵌套示例文字，不应识别。
+- **非 cLike 文件**（`.sh`/`.properties`/`.md` 等）：`//` 不是注释前缀，是字面量。写在 `#` 注释里的 `// CHECKSTYLE:OFF`（如 `# // CHECKSTYLE:OFF`）是合法抑制标记，应识别。
+
+因此 checkstyle 不用 `shouldSkipValidation`（会漏过滤 Java 字符串字面量 `"// CHECKSTYLE:OFF"` 的误报），改用 `allowInComment=true`：注释内匹配默认保留，但 `filterValidMatchResults` 中额外检查 `//` 是否是该文件注释前缀，cLike 文件注释内仍过滤。
+
 ```java
-// shouldSkipValidation=true：跳过 lexer 嵌套校验。
-// 原因：.sh 中 # 是行注释前缀，// 落在 # 注释内被判为嵌套误报；
-// .properties 走 defaultRules（treatAllAsComment=true），所有内容被判为注释内。
-// 纯文本匹配是 checkstyle 自身语义，跳过嵌套校验与该语义一致（与 gitleaks 同机制）。
-new SuppressionPattern("//\\s*SUPPRESS\\s+CHECKSTYLE(?:\\s+\\S+)?", true),
-new SuppressionPattern("//\\s*CHECKSTYLE:OFF(?:\\s+\\w+)?", true)
+// allowInComment=true：注释内匹配默认保留（.sh/.properties 等 // 是字面量）。
+// filterValidMatchResults 中进一步判断：cLike 文件（// 是注释前缀）注释内的
+// // CHECKSTYLE:OFF 是嵌套示例，仍过滤；字符串字面量内一律过滤。
+new SuppressionPattern("//\\s*SUPPRESS\\s+CHECKSTYLE(?:\\s+\\S+)?", false, true),
+new SuppressionPattern("//\\s*CHECKSTYLE:OFF(?:\\s+\\w+)?", false, true)
 ```
 
-各文件类型的识别表现：
+各文件类型的识别表现（`allowInComment=true` + cLike 区分）：
 
-| 文件类型 | lexer 规则 | `#` 是否行注释前缀 | 识别结果 |
-|---------|-----------|------------------|---------|
-| `.java`/`.c`/`.js` 等 | cLike | 否（`//` 是） | 识别 ✓ |
-| `.sh`/`.bash`/`.yml` | hash | 是 | 识别 ✓（依赖 skipValidation） |
-| `.properties`/`.txt`/未知 | defaultRules（treatAllAsComment） | — | 识别 ✓（依赖 skipValidation） |
-| `.md`/`.xml`/`.html` | markup | 否 | 识别 ✓ |
+| 文件类型 | lexer 规则 | `//` 是否行注释前缀 | 行首 `// CHECKSTYLE:OFF` | 注释内 `// CHECKSTYLE:OFF` | 字符串内 `// CHECKSTYLE:OFF` |
+|---------|-----------|------------------|----------------------|------------------------|---------------------------|
+| `.java`/`.c`/`.js` 等 | cLike | 是 | 识别 ✓ | 不识别（嵌套示例） | 不识别（误报） |
+| `.sh`/`.bash`/`.yml` | hash | 否 | 识别 ✓ | 识别 ✓（`# // CHECKSTYLE:OFF`，`//` 是字面量） | 不识别（误报） |
+| `.properties`/`.txt`/未知 | defaultRules（treatAllAsComment） | 否 | 识别 ✓ | 识别 ✓（`//` 是字面量） | 不识别（误报） |
+| `.md`/`.xml`/`.html` | markup | 否 | 识别 ✓ | 识别 ✓（`<!-- // CHECKSTYLE:OFF -->`） | 不识别（误报） |
 
 ### PMD（行级，注释 + 注解）
 
@@ -314,13 +319,20 @@ for (SuppressionStrategy.MatchResult matchResult : matchResults) {
 
 抑制注释标记本身也是注释（如 `# noqa` 的 `#` 是 Python 行注释开始），故检查匹配**起始位置的前一字符**状态而非匹配区间状态。
 
-### `shouldSkipValidation` 与 lexer 的协作
+### 三级校验机制：`shouldSkipValidation` / `allowInComment` / 默认
 
-`SuppressionScanServiceImpl.filterValidMatchResults`：
-- `shouldSkipValidation=true` 的工具（gitleaks、checkstyle）直接保留，不调用 lexer 校验
-- `shouldSkipValidation=false` 的工具：lexer 判定嵌套则过滤
+`SuppressionScanServiceImpl.filterValidMatchResults` 按三级机制过滤匹配结果：
 
-checkstyle 设 `shouldSkipValidation=true` 的原因：其 `SuppressWithPlainTextCommentFilter` 为纯文本匹配，抑制标记在 `.sh`/`.properties` 等文件的注释内是合法用法，但 lexer 会将 `# // CHECKSTYLE:OFF` 中的 `//` 判为嵌套在 `#` 行注释内而过滤，导致漏报。跳过嵌套校验与 checkstyle 纯文本匹配语义一致。
+1. **`shouldSkipValidation=true`**（gitleaks）：直接保留，不调用 lexer 校验。`gitleaks:allow` 可出现在行内任意位置（甚至非注释中），跳过校验与其语义一致。
+2. **`allowInComment=true`**（checkstyle）：区分"注释内"与"字符串内"——
+   - 字符串内：过滤（所有工具都不应在字符串字面量里识别）
+   - 注释内：再按文件类型区分——cLike 文件（`//` 是注释前缀）注释内的 `// CHECKSTYLE:OFF` 是嵌套示例，过滤；非 cLike 文件（`//` 是字面量）保留
+   - NORMAL 状态：保留（行首合法标记）
+3. **默认**（其他工具）：注释内和字符串内都过滤，只有 NORMAL 状态保留。
+
+checkstyle 用 `allowInComment=true` 而非 `shouldSkipValidation=true` 的原因：`shouldSkipValidation=true` 会跳过所有校验，导致 Java 字符串字面量 `"// CHECKSTYLE:OFF"` 也被误识别。`allowInComment=true` 配合 cLike 判断，既保留 `.sh`/`.properties` 中 `# // CHECKSTYLE:OFF` 的合法用法，又过滤 Java 注释内嵌套示例和字符串字面量误报。
+
+`SuppressionLexer.getStateAt(start)` 返回匹配起始位置的具体词法状态（NORMAL/LINE_COMMENT/BLOCK_COMMENT/STRING_*），供 `filterValidMatchResults` 区分注释与字符串。`SuppressionLexer.getRules()` 暴露 `LexRules`，供查询 `//` 是否是该文件的行注释前缀。
 
 ## 阶段三：.md 文件 markup 规则与 5 个工具正则增强
 
@@ -336,7 +348,7 @@ checkstyle 设 `shouldSkipValidation=true` 的原因：其 `SuppressWithPlainTex
 
 | 工具 | 原正则缺陷 | 阶段三修复 |
 |------|-----------|-----------|
-| checkstyle | 仅 `CHECKSTYLE:OFF`，不支持规则名 | `// CHECKSTYLE:OFF(?:\s+\w+)?` 支持规则名；按设计只识别起始标记 OFF，不识别结束标记 ON；`shouldSkipValidation=true` 支持 `.sh`/`.properties` 等非 Java 文件中 `# // CHECKSTYLE:OFF` 识别 |
+| checkstyle | 仅 `CHECKSTYLE:OFF`，不支持规则名 | `// CHECKSTYLE:OFF(?:\s+\w+)?` 支持规则名；按设计只识别起始标记 OFF，不识别结束标记 ON；`allowInComment=true` 支持 `.sh`/`.properties` 等非 Java 文件中 `# // CHECKSTYLE:OFF` 识别，同时 cLike 文件注释内嵌套示例和字符串字面量误报被过滤 |
 | PMD | `@SuppressWarnings("PMD...")` 仅单规则 | `(?:\s*,\s*"PMD[\w.]*")*` 支持多 PMD 规则和数组形式 |
 | SpotBugs | `@SuppressFBWarnings\([^)]*\)` 过于宽泛且无法精确匹配参数 | 精确匹配 `value`/`justification`/`matchType` 等参数：`(?:\s*,\s*\w+\s*=\s*[^)]+)*` |
 | rustfmt | `#[cfg_attr([^)]*rustfmt::skip[^)]*)]` 的 `[^)]` 遇 `any()` 嵌套括号提前结束 | 改用 `[^\]\n]` 排除 `]` 和换行符，确保整个 `#[...]` 属性完整匹配 |
