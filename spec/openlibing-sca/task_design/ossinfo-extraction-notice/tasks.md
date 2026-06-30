@@ -19,12 +19,12 @@
 - [x] `@Data` Lombok 注解
 - [x] `repoName` 字段 `@NotBlank`
 - [x] `language` 字段可选
-- [x] `items` 字段 `@NotEmpty` + `@Valid` 级联校验
+- [x] `items` 字段 `@NotEmpty` + `@Size(max=50)` + `@Valid` 级联校验（上限防止单次请求耗尽线程池/磁盘/耗时过长）
 
 **文件**: `src/main/java/com/openlibing/sca/analysis/entity/dto/OssInfoExtractionItem.java`
 
 - [x] `@Data` Lombok 注解
-- [x] `downloadUrl` 字段 `@NotBlank` + `@Pattern("^https?://.+$")`
+- [x] `downloadUrl` 字段 `@NotBlank` + `@Pattern("^https?://.+$")`（格式校验） + SSRF 防护：拒绝 localhost/127.0.0.0/8、内网地址段（10.0.0.0/8、172.16.0.0/12、192.168.0.0/16）、云元数据地址（169.254.169.254）
 - [x] `softwareName` 字段 `@NotBlank`
 - [x] `softwareVersion` 字段 `@NotBlank`
 
@@ -82,7 +82,7 @@
 - [x] `Process.waitFor(PYTHON_TIMEOUT_MINUTES=60, MINUTES)` 超时等待
 - [x] 超时 → `destroyForcibly` + 日志记录 stdout/stderr + 抛 `ScaException`
 - [x] 退出码非 0 → 日志 + 抛 `ScaException`
-- [x] 字符集使用 `sun.jnu.encoding` 系统属性，回退 UTF-8
+- [x] 字符集使用 `file.encoding` 系统属性，回退 UTF-8
 - [x] `safeJoinStreamFuture` 等待流读取线程最多 60s，超时取消
 
 ## Task 8: Readme.opensource 定位与追加 ✅

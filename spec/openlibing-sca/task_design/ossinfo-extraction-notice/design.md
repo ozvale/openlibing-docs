@@ -47,13 +47,13 @@ OssInfoExtractionController (REST)
 |------|------|------|------|
 | `repoName` | String | `@NotBlank` | 代码仓名称，用于构造 OBS objectKey |
 | `language` | String | 可选 | 软件语言生态（java/python/go/nodejs），用于选择下载镜像 |
-| `items` | List\<OssInfoExtractionItem\> | `@NotEmpty` `@Valid` | 待提取的软件列表 |
+| `items` | List\<OssInfoExtractionItem\> | `@NotEmpty` `@Size(max=50)` `@Valid` | 待提取的软件列表。上限 50 条，防止单次请求耗尽线程池/磁盘/耗时过长 |
 
 ### 请求体子项: OssInfoExtractionItem
 
 | 字段 | 类型 | 校验 | 说明 |
 |------|------|------|------|
-| `downloadUrl` | String | `@NotBlank` `@Pattern("^https?://.+$")` | 软件源码压缩包下载地址 |
+| `downloadUrl` | String | `@NotBlank` `@Pattern("^https?://.+$")` + 编程校验拒绝内网/云元数据 IP | 软件源码压缩包下载地址。格式校验由正则完成；SSRF 防护由编程逻辑校验目标 IP，拒绝 localhost、内网地址段（10/8、172.16/12、192.168/16）、云元数据地址（169.254.169.254） |
 | `softwareName` | String | `@NotBlank` | 软件名称 |
 | `softwareVersion` | String | `@NotBlank` | 软件版本号 |
 
