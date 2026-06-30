@@ -35,7 +35,7 @@
 **1.在测试代码仓库Action下手动触发Anti-Poison PR Scan扫描流水线_得到扫描结果**:
 
 * **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-sca/issues/43
-* **步骤一**：在测试代码仓库 Actions下填写对应的参数手动运行SCA PR Scan扫描流水线
+* **步骤一**：在测试代码仓库 Actions下填写对应的参数手动运行Anti-Poison PR Scan扫描流水线
 * **预期结果**: 流水线进入运行状态，运行结束后状态变为成功或者失败（代表扫描的结果是否存在问题）
 * **测试结果**： Passed
 * **步骤二**：查看运行结果

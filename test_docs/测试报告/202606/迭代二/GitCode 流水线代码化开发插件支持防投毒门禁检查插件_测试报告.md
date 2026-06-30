@@ -30,7 +30,7 @@
 * **步骤二**：查看运行结果
 * **预期结果**: Anti-Poison PR Scan summary中正确展示对应的扫描结果
 * **测试结果**： Passed
-* **证明截图**:  https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb1v00011ef7p9q0&detail=result
+* **证明截图**:  https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb1v00011ef7p9q0&case_id=vb2100011ganh4ck&detail=result
 
 ---
 
