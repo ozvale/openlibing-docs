@@ -19,7 +19,7 @@
 - 业务 PR: https://gitcode.com/openlibing/openlibing-cicd/merge_requests/413
 - 业务 commit 1 (4bec3c18): https://gitcode.com/openlibing/openlibing-cicd/commit/4bec3c182d9e757ccf48be2899ca1f21ab1e032f
 - 业务 commit 2 (59a89896): https://gitcode.com/openlibing/openlibing-cicd/commit/59a89896daff42d883523be9abe940476923e0a7
-- docs PR: 待创建后补
+- docs PR: https://gitcode.com/openlibing/openlibing-docs/merge_requests/479
 
 ## 交付历程
 
