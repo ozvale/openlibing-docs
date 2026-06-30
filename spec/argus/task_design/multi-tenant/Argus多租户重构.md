@@ -1,0 +1,1576 @@
+# Argus 多租户重构设计文档
+
+## Section 1：架构概述
+
+### 整体架构
+
+Argus 多租户功能采用 **无界微前端 + Gateway 网关 + Framework 服务** 三层架构：
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    openlibing-web (前端主应用)                                 │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  统一登录页面 (Login.vue)                                               │  │
+│  │  → 点击登录 → 重定向到 Gateway OAuth 授权页面                            │  │
+│  │  → Gateway 回调 → 获取 JWT Token + 存储到 Cookie                        │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  项目选择器 (ProjectSelect.vue)                                        │  │
+│  │  → 调用 Framework API 获取 Product/Project 列表                         │  │
+│  │  → 存储到 app.projectInfo (Pinia store)                                │  │
+│  │  → 通过 bus.$emit('projectInfoChange') 通知子应用                       │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  WujieMiddleware.vue (子应用容器)                                       │  │
+│  │  → props: { app, tabbar, wujieRoute }                                  │  │
+│  │  → bus: projectInfoChange / mainRouteChange                            │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+│                              │                                               │
+│                              │ 无界微前端嵌入                                 │
+│                              ▼                                               │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │                    Argus 前端 (子应用)                                   │  │
+│  │  → 监听 bus.$on('projectInfoChange') 获取 projectInfo                  │  │
+│  │  → 通过 bus.$emit('host-router') 请求主应用路由跳转                      │  │
+│  │  → API 调用携带 projectId/productId                                    │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼ HTTP 请求（携带 JWT Token）
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    openlibing-gateway (统一网关)                              │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  OAuth 登录                                                            │  │
+│  │  → /oauth2/authorization/{gitee|gitcode|github|uniportal|openubmc}     │  │
+│  │  → 第三方平台授权 → 回调 → 生成 JWT Token                               │  │
+│  └───────────────────────────────────────────────────────────────────────┐  │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  认证过滤器链                                                          │  │
+│  │  → WebhookAuthFilter: Webhook 鉴权                                     │  │
+│  │  → AuthFilter: JWT Token 验证 + CSRF 校验                              │  │
+│  │  → PrivacyProfileFilter: 隐私声明校验                                   │  │
+│  │  → SbomCheckFilter: SBOM 校验                                          │  │
+│  │  → PermissionCheckFilter: URL 权限校验                                 │  │
+│  └───────────────────────────────────────────────────────────────────────┐  │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  流量治理                                                              │  │
+│  │  → GatewayLimiterFilter: Redis 漏桶限流                                │  │
+│  │  → ApiGatewayFilter: API 网关签名校验                                  │  │
+│  └───────────────────────────────────────────────────────────────────────┐  │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  路由转发                                                              │  │
+│  │  → /openlibing-framework/** → framework 服务                           │  │
+│  │  → /argus/** → Argus 服务                                              │  │
+│  │  → 其他路径 → 对应后端服务                                              │  │
+│  └───────────────────────────────────────────────────────────────────────┐  │
+│                              │                                               │
+│                              │ 共享数据库                                     │
+│                              ▼                                               │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  user_role_info 表 (用户角色)                                          │  │
+│  │  → user_id, role, product_id, project_id, repo_id                     │  │
+│  └───────────────────────────────────────────────────────────────────────┐  │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  menu_url_info 表 (菜单 URL)                                           │  │
+│  │  → menu_id, menu_url, request_method                                  │  │
+│  └───────────────────────────────────────────────────────────────────────┐  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼ 路由转发
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    openlibing-framework (业务框架服务)                         │
+│  /api/login          → 用户登录（Gateway 已处理，此接口可能用于 Token 刷新）    │
+│  /api/products       → 获取用户 Product 列表                                 │
+│  /api/user/roles     → 获取用户在 Product 下的角色                           │
+│  /api/user/info      → 获取用户信息                                          │
+│  /api/project/select → 获取项目选择树                                        │
+│  /manage/menu/**     → 菜单管理                                              │
+│  /manage/role/**     → 角色管理                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼ 路由转发
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Argus 后端                                             │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  argus-trigger                                                         │  │
+│  │  → 所有 API 携带 projectId/productId (租户隔离)                         │  │
+│  │  → HarnessController / VulnerabilityController / ...                   │  │
+│  └───────────────────────────────────────────────────────────────────────┐  │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  argus-domain                                                          │  │
+│  │  → ProductEntity / ProjectEntity / RepoEntity                          │  │
+│  │  → 所有查询强制过滤 productId                                           │  │
+│  └───────────────────────────────────────────────────────────────────────┐  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 核心设计决策
+
+| 决策 | 说明 |
+|------|------|
+| **前端嵌入方式** | Argus 前端作为无界微前端子应用嵌入 openlibing-web |
+| **登录认证** | 由 Gateway 统一处理 OAuth 登录，生成 JWT Token |
+| **权限校验** | Gateway 通过 AuthFilter + PermissionCheckFilter 校验用户权限 |
+| **租户切换** | 由 openlibing-web 的 ProjectSelect 组件提供，通过 bus 通知 Argus |
+| **数据模型** | Argus 采用 Product/Project/Repo 三层结构，与 framework 一致 |
+| **数据库共享** | Gateway 和 framework 共享数据库（user_role_info、menu_url_info 等表） |
+| **租户隔离** | 所有 Argus 业务表增加 product_id 字段，查询时强制过滤 |
+
+### 用户登录流程
+
+```
+1. 用户访问 openlibing-web → 点击登录
+2. 前端重定向到 Gateway: /oauth2/authorization/{platform}
+3. Gateway 重定向到第三方平台授权页面（Gitee/Gitcode/GitHub/Uniportal/OpenUBMC）
+4. 用户在第三方平台授权
+5. 第三方平台重定向回 Gateway 回调地址（携带授权码）
+6. Gateway 处理回调：
+   - 获取第三方平台用户信息
+   - 创建/更新 openlibing 用户信息（存储到数据库）
+   - 生成 JWT Token
+   - 重定向回前端（携带 Token）
+7. 前端存储 Token 到 Cookie
+8. 前端调用 Framework API 获取 Product/Project 列表
+9. 前端显示项目选择器，用户选择项目
+10. 前端通过 bus 通知 Argus 子应用项目切换
+```
+
+### 主子应用通信机制
+
+| 事件 | 方向 | 数据 | 用途 |
+|------|------|------|------|
+| `projectInfoChange` | 主 → 子 | `{ productId, projectName, ... }` | 通知 Argus 项目切换 |
+| `mainRouteChange` | 主 → 子 | `{ path, query, fullPath }` | 通知 Argus 路由变化 |
+| `host-router` | 子 → 主 | `{ path, query }` | Argus 请求主应用路由跳转 |
+| `add-route-tab` | 子 → 主 | `{ name, path, title, query }` | Argus 请求添加标签页 |
+
+---
+
+## Section 2：Argus 前端改造方案
+
+### 改造目标
+
+将 Argus 前端从独立应用改造为无界微前端子应用，复用 openlibing-web 提供的公共能力。
+
+### 改造清单
+
+| 序号 | 改造项 | 当前状态 | 改造后状态 | 说明 |
+|------|--------|----------|------------|------|
+| 1 | 登录页面 | 独立 login.tsx | 移除 | 由 openlibing-web 统一提供 |
+| 2 | 认证上下文 | auth-context.tsx 管理用户状态 | 从 Wujie 获取 token + projectInfo | 主应用传递认证信息 |
+| 3 | 路由配置 | spa-app.tsx 定义完整路由 | 移除登录路由，调整路径前缀 | 子应用路由由主应用同步 |
+| 4 | API Client | localStorage 存储 token | 从 Wujie props 获取 token | 主应用传递 JWT Token |
+| 5 | 布局组件 | DashboardLayout 包含 sidebar/topbar | 移除 sidebar/topbar | 由 openlibing-web 提供 |
+| 6 | 项目选择器 | 无 | 从 Wujie props 获取 projectInfo | 主应用传递当前项目信息 |
+
+### 改造详细方案
+
+#### 1. 新增 Wujie 上下文
+
+创建 `wujie-context.tsx`，从主应用获取认证信息和项目信息：
+
+```typescript
+// app/lib/wujie-context.tsx
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+
+interface ProjectInfo {
+  productId: number
+  projectName: string
+  projectId?: number
+  repoId?: number
+}
+
+interface WujieProps {
+  app?: {
+    projectInfo?: ProjectInfo
+    userInfo?: {
+      id: string
+      name: string
+      token: string
+    }
+  }
+  wujieRoute?: {
+    path: string
+    query: Record<string, string>
+  }
+}
+
+interface WujieContextValue {
+  projectInfo: ProjectInfo | null
+  userInfo: { id: string; name: string; token: string } | null
+  loading: boolean
+  navigateToMain: (path: string, query?: Record<string, string>) => void
+}
+
+const WujieContext = createContext<WujieContextValue | undefined>(undefined)
+
+export function WujieProvider({ children }: { children: ReactNode }) {
+  const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null)
+  const [userInfo, setUserInfo] = useState<{ id: string; name: string; token: string } | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // 从 Wujie props 获取初始数据
+    const props = (window as any).__WUJIE_PROPS__ as WujieProps
+    if (props?.app?.projectInfo) {
+      setProjectInfo(props.app.projectInfo)
+    }
+    if (props?.app?.userInfo) {
+      setUserInfo(props.app.userInfo)
+    }
+    setLoading(false)
+
+    // 监听主应用的 projectInfoChange 事件
+    const bus = (window as any).__WUJIE_BUS__
+    if (bus) {
+      bus.$on('projectInfoChange', (data: ProjectInfo) => {
+        setProjectInfo(data)
+      })
+    }
+  }, [])
+
+  const navigateToMain = (path: string, query?: Record<string, string>) => {
+    const bus = (window as any).__WUJIE_BUS__
+    if (bus) {
+      bus.$emit('host-router', { path, query })
+    }
+  }
+
+  return (
+    <WujieContext.Provider value={{ projectInfo, userInfo, loading, navigateToMain }}>
+      {children}
+    </WujieContext.Provider>
+  )
+}
+
+export function useWujie() {
+  const ctx = useContext(WujieContext)
+  if (!ctx) throw new Error("useWujie must be used within WujieProvider")
+  return ctx
+}
+```
+
+#### 2. 改造 API Client
+
+修改 `client.ts`，从 Wujie 获取 token，携带 projectId/productId：
+
+```typescript
+// app/lib/api/client.ts
+import { useWujie } from "~/lib/wujie-context"
+
+function getToken(): string | null {
+  // 优先从 Wujie props 获取 token
+  const props = (window as any).__WUJIE_PROPS__
+  if (props?.app?.userInfo?.token) {
+    return props.app.userInfo.token
+  }
+  // 兜底：从 localStorage 获取（用于独立运行测试）
+  return localStorage.getItem("argus_token")
+}
+
+function getProjectParams(): Record<string, string> {
+  const props = (window as any).__WUJIE_PROPS__
+  const projectInfo = props?.app?.projectInfo
+  if (!projectInfo) return {}
+  
+  return {
+    productId: String(projectInfo.productId),
+    ...(projectInfo.projectId && { projectId: String(projectInfo.projectId) }),
+    ...(projectInfo.repoId && { repoId: String(projectInfo.repoId) }),
+  }
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken()
+  const projectParams = getProjectParams()
+  
+  // 将 projectId/productId 添加到查询参数或请求体
+  const url = new URL(`${getApiBase()}${path}`, window.location.origin)
+  Object.entries(projectParams).forEach(([key, value]) => {
+    url.searchParams.set(key, value)
+  })
+  
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  }
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`
+  }
+
+  const resp = await fetch(url.toString(), { ...options, headers })
+  const data = await resp.json()
+  if (!resp.ok || data.code !== 200) {
+    throw new Error(data.message || "请求失败")
+  }
+  return data.data as T
+}
+```
+
+#### 3. 改造认证上下文
+
+修改 `auth-context.tsx`，简化为仅从 Wujie 获取用户信息：
+
+```typescript
+// app/lib/auth-context.tsx
+import { createContext, useContext, type ReactNode } from "react"
+import { useWujie } from "~/lib/wujie-context"
+
+interface AuthContextValue {
+  user: { id: string; name: string } | null
+  loading: boolean
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const { userInfo, loading } = useWujie()
+  
+  return (
+    <AuthContext.Provider value={{ user: userInfo, loading }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider")
+  return ctx
+}
+```
+
+#### 4. 改造路由配置
+
+修改 `spa-app.tsx`，移除登录路由，调整路径前缀：
+
+```typescript
+// app/spa-app.tsx
+import { Routes, Route, Navigate } from "react-router"
+import { useWujie } from "~/lib/wujie-context"
+import { WujieProvider } from "~/lib/wujie-context"
+import { AuthProvider } from "~/lib/auth-context"
+import DashboardPage from "~/pages/dashboard"
+import ProjectsPage from "~/pages/projects"
+// ... 其他页面导入
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { userInfo, loading } = useWujie()
+  if (loading) {
+    return <div className="flex min-h-screen items-center justify-center">加载中...</div>
+  }
+  if (!userInfo) {
+    // 子应用不处理登录，由主应用负责
+    return <Navigate to="/" replace />
+  }
+  return <>{children}</>
+}
+
+export default function App() {
+  return (
+    <WujieProvider>
+      <AuthProvider>
+        <Routes>
+          {/* 移除 /login 路由 */}
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+          <Route path="/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
+          <Route path="/analysis" element={<ProtectedRoute><AnalysisCenterPage /></ProtectedRoute>} />
+          <Route path="/executions/:id" element={<ProtectedRoute><ExecutionDetailPage /></ProtectedRoute>} />
+          <Route path="/vulnerabilities" element={<ProtectedRoute><VulnerabilitiesPage /></ProtectedRoute>} />
+          <Route path="/skills" element={<ProtectedRoute><SkillsPage /></ProtectedRoute>} />
+          <Route path="/system" element={<ProtectedRoute><SystemPage /></ProtectedRoute>} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
+    </WujieProvider>
+  )
+}
+```
+
+#### 5. 改造布局组件
+
+修改 `dashboard-layout.tsx`，移除 sidebar/topbar：
+
+```typescript
+// app/components/layout/dashboard-layout.tsx
+import { Outlet } from "react-router"
+
+export function DashboardLayout() {
+  return (
+    <div className="flex min-h-screen flex-col">
+      {/* 移除 Sidebar 和 Topbar，由主应用提供 */}
+      <main className="flex-1 p-6">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
+```
+
+#### 6. 删除文件
+
+删除以下不再需要的文件：
+
+- `app/pages/login.tsx` - 登录页面
+- `app/components/layout/sidebar.tsx` - 侧边栏
+- `app/components/layout/topbar.tsx` - 顶部栏
+
+### 前端路由映射
+
+Argus 子应用路由需要与 openlibing-web 主应用路由同步：
+
+| 主应用路由 | 子应用路由 | 说明 |
+|------------|------------|------|
+| `/argus/dashboard` | `/dashboard` | 数据看板 |
+| `/argus/projects` | `/projects` | 项目目录 |
+| `/argus/tasks` | `/tasks` | 任务管理 |
+| `/argus/analysis` | `/analysis` | 分析中心 |
+| `/argus/executions/:id` | `/executions/:id` | 执行详情 |
+| `/argus/vulnerabilities` | `/vulnerabilities` | 漏洞管理 |
+| `/argus/skills` | `/skills` | 技能管理 |
+| `/argus/system` | `/system` | 系统管理 |
+
+### openlibing-web 路由配置
+
+需要在 openlibing-web 的 `menu.ts` 中添加 Argus 路由：
+
+```typescript
+// openlibing-web/apps/web-openlibing/src/router/routes/modules/menu.ts
+{
+  path: '/apps/argus',
+  name: 'argus',
+  component: WujieMiddleware,
+  meta: {
+    title: 'Argus',
+    url: import.meta.env.DEV
+      ? 'http://localhost:5173'
+      : `${import.meta.env.VITE_APP_ARGUS_URL}`,
+    icon: getIcon(shield),
+    noKeepAlive: true,
+    auth: 'argus',
+  },
+  children: [
+    {
+      path: '/apps/argus/dashboard',
+      name: 'argusDashboard',
+      component: WujieMiddleware,
+      meta: { title: '数据看板', hideInMenu: true },
+    },
+    // ... 其他子路由
+  ],
+}
+```
+
+---
+
+## Section 3：Argus 后端改造方案
+
+### 改造目标
+
+将 Argus 后端改造为多租户架构，实现数据隔离和认证集成。
+
+### 改造清单
+
+| 序号 | 改造项 | 当前状态 | 改造后状态 | 说明 |
+|------|--------|----------|------------|------|
+| 1 | 数据库表结构 | 无 product_id 字段 | 所有业务表添加 product_id | 租户数据隔离 |
+| 2 | 认证模块 | 独立 JWT 认证 | 复用 Gateway JWT | 移除独立登录，从 Gateway JWT 解析用户信息 |
+| 3 | JwtAuthFilter | 解析 userId/username | 解析 userId/username + productId | 从 JWT Token 中获取租户信息 |
+| 4 | Controller 层 | 无租户参数 | 接收 productId 参数 | 前端传递租户信息 |
+| 5 | Repository 层 | 无租户过滤 | 查询强制过滤 productId | 数据隔离 |
+| 6 | framework-client | 无 | 新增模块 | 调用 framework API 获取用户 Product/Project 列表 |
+
+### 改造详细方案
+
+#### 1. 数据库表结构改造
+
+创建 Flyway 迁移脚本 `V4__multi_tenant.sql`，为所有业务表添加 `product_id` 字段：
+
+```sql
+-- V4__multi_tenant.sql — 多租户字段添加
+
+-- 1. 项目目录相关表
+ALTER TABLE t_proj_domain ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_proj_component ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_proj_project ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_proj_import ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+
+-- 2. Harness 相关表
+ALTER TABLE t_harness_harness ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_harness_execution ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_harness_schedule ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_harness_batch ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_harness_artifact ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_harness_bind_skill ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+
+-- 3. Vulnerability 相关表
+ALTER TABLE t_vuln_vulnerability ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_vuln_assign ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_vuln_note ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_vuln_flow ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_vuln_parse_log ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+
+-- 4. Threat 相关表
+ALTER TABLE t_ta_snapshot ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE t_ta_risk ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+
+-- 5. Analysis 相关表
+ALTER TABLE t_analysis ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+
+-- 6. Knowledge 相关表
+ALTER TABLE t_kg_snapshot ADD COLUMN product_id BIGINT NOT NULL DEFAULT 0;
+
+-- 7. 创建索引（加速租户过滤查询）
+CREATE INDEX idx_proj_domain_product ON t_proj_domain (product_id);
+CREATE INDEX idx_proj_component_product ON t_proj_component (product_id);
+CREATE INDEX idx_proj_project_product ON t_proj_project (product_id);
+CREATE INDEX idx_harness_product ON t_harness_harness (product_id);
+CREATE INDEX idx_execution_product ON t_harness_execution (product_id);
+CREATE INDEX idx_vulnerability_product ON t_vuln_vulnerability (product_id);
+CREATE INDEX idx_analysis_product ON t_analysis (product_id);
+
+-- 8. 注释
+COMMENT ON COLUMN t_proj_domain.product_id IS '租户ID（对应 framework 的 product_id）';
+COMMENT ON COLUMN t_proj_project.product_id IS '租户ID（对应 framework 的 product_id）';
+```
+
+#### 2. 新增 framework-client 模块
+
+在 `argus-infrastructure` 下新增 `framework-client` 包，调用 framework API：
+
+```java
+// argus-infrastructure/src/main/java/com/argus/framework/client/FrameworkProductClient.java
+package com.argus.framework.client;
+
+import com.argus.framework.client.dto.ProductInfoDTO;
+import com.argus.framework.client.dto.UserInfoDTO;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+
+/**
+ * Framework API 客户端。
+ * <p>
+ * 调用 openlibing-framework 的用户、产品、项目等 API。
+ * </p>
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class FrameworkClient {
+
+    private final RestTemplate restTemplate;
+    private final FrameworkClientConfig config;
+
+    /**
+     * 获取用户信息。
+     *
+     * @param token JWT Token
+     * @return 用户信息
+     */
+    public UserInfoDTO getUserInfo(String token) {
+        String url = config.getFrameworkUrl() + "/api/user/info";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        // ... 调用 framework API
+        return restTemplate.getForObject(url, UserInfoDTO.class);
+    }
+
+    /**
+     * 获取用户 Product 列表。
+     *
+     * @param token JWT Token
+     * @return Product 列表
+     */
+    public List<ProductInfoDTO> getUserProducts(String token) {
+        String url = config.getFrameworkUrl() + "/api/products";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        // ... 调用 framework API
+        return restTemplate.getForObject(url, List.class);
+    }
+}
+```
+
+```java
+// argus-infrastructure/src/main/java/com/argus/framework/client/dto/ProductInfoDTO.java
+package com.argus.framework.client.dto;
+
+import lombok.Data;
+
+/**
+ * Framework Product 信息 DTO。
+ */
+@Data
+public class ProductInfoDTO {
+    private Integer productId;
+    private String productName;
+    private Long projectTotal;
+}
+```
+
+#### 3. 改造 JwtAuthFilter
+
+修改 `JwtAuthFilter`，从 JWT Token 中解析 productId：
+
+```java
+// argus-app/src/main/java/com/argus/config/JwtAuthFilter.java
+package com.argus.config;
+
+import com.argus.trigger.security.UserPrincipal;
+import io.jsonwebtoken.Claims;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.Collections;
+
+/**
+ * JWT 鉴权过滤器（多租户改造版）。
+ * <p>
+ * 从 JWT Token 中解析 userId、username、productId，构造 {@link UserPrincipal}。
+ * productId 从请求参数或 JWT Token 中获取，优先使用请求参数。
+ * </p>
+ */
+@Component
+public class JwtAuthFilter extends OncePerRequestFilter {
+
+    private final JwtUtils jwtUtils;
+
+    public JwtAuthFilter(JwtUtils jwtUtils) {
+        this.jwtUtils = jwtUtils;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+        String token = extractToken(request);
+        if (StringUtils.hasText(token) && jwtUtils.validateToken(token)) {
+            Claims claims = jwtUtils.parseToken(token);
+            Long userId = Long.parseLong(claims.getSubject());
+            String username = claims.get("username", String.class);
+            
+            // 从请求参数获取 productId（前端传递）
+            String productIdParam = request.getParameter("productId");
+            Long productId = null;
+            if (StringUtils.hasText(productIdParam)) {
+                productId = Long.parseLong(productIdParam);
+            } else {
+                // 从 JWT Token 获取 productId（兜底）
+                Object productIdClaim = claims.get("productId");
+                if (productIdClaim != null) {
+                    productId = Long.parseLong(productIdClaim.toString());
+                }
+            }
+            
+            // 构造包含 productId 的 UserPrincipal
+            UserPrincipal principal = new UserPrincipal(userId, username, productId);
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                    principal, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+            SecurityContextHolder.getContext().setAuthentication(auth);
+        }
+        filterChain.doFilter(request, response);
+    }
+
+    private String extractToken(HttpServletRequest request) {
+        String bearer = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearer) && bearer.startsWith("Bearer ")) {
+            return bearer.substring(7);
+        }
+        return null;
+    }
+}
+```
+
+#### 4. 改造 UserPrincipal
+
+修改 `UserPrincipal`，添加 productId 字段：
+
+```java
+// argus-trigger/src/main/java/com/argus/trigger/security/UserPrincipal.java
+package com.argus.trigger.security;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+/**
+ * 用户认证主体（多租户改造版）。
+ * <p>
+ * 包含 userId、username、productId。
+ * </p>
+ */
+@Getter
+@AllArgsConstructor
+public class UserPrincipal {
+    private final Long userId;
+    private final String username;
+    private final Long productId;
+    
+    // 兼容旧代码的构造方法
+    public UserPrincipal(Long userId, String username) {
+        this(userId, username, null);
+    }
+}
+```
+
+#### 5. 改造 SecurityUtils
+
+修改 `SecurityUtils`，提供获取 productId 的方法：
+
+```java
+// argus-trigger/src/main/java/com/argus/trigger/security/SecurityUtils.java
+package com.argus.trigger.security;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+/**
+ * 安全上下文工具类（多租户改造版）。
+ */
+public class SecurityUtils {
+
+    /**
+     * 获取当前用户 ID。
+     */
+    public static Long getUserId() {
+        UserPrincipal principal = getPrincipal();
+        return principal != null ? principal.getUserId() : null;
+    }
+
+    /**
+     * 获取当前用户名。
+     */
+    public static String getUsername() {
+        UserPrincipal principal = getPrincipal();
+        return principal != null ? principal.getUsername() : null;
+    }
+
+    /**
+     * 获取当前租户 ID（productId）。
+     */
+    public static Long getProductId() {
+        UserPrincipal principal = getPrincipal();
+        return principal != null ? principal.getProductId() : null;
+    }
+
+    /**
+     * 获取当前认证主体。
+     */
+    public static UserPrincipal getPrincipal() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserPrincipal) {
+            return (UserPrincipal) auth.getPrincipal();
+        }
+        return null;
+    }
+}
+```
+
+#### 6. 改造 Repository 层
+
+修改所有 Repository 实现，查询时强制过滤 productId：
+
+```java
+// argus-infrastructure/src/main/java/com/argus/project/persistence/repository/ProjectRepositoryImpl.java
+package com.argus.project.persistence.repository;
+
+import com.argus.project.model.dto.ProjectInfo;
+import com.argus.project.persistence.mapper.ProjProjectMapper;
+import com.argus.project.repository.IProjectRepository;
+import com.argus.types.response.PageResult;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * 项目仓储实现（多租户改造版）。
+ * <p>
+ * 所有查询强制过滤 productId，实现租户数据隔离。
+ * </p>
+ */
+@Repository
+public class ProjectRepositoryImpl implements IProjectRepository {
+
+    private final ProjProjectMapper projectMapper;
+
+    public ProjectRepositoryImpl(ProjProjectMapper projectMapper) {
+        this.projectMapper = projectMapper;
+    }
+
+    @Override
+    public com.argus.project.model.entity.ProjProjectEntity findById(Long id, Long productId) {
+        LambdaQueryWrapper<com.argus.project.persistence.entity.ProjProjectEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(com.argus.project.persistence.entity.ProjProjectEntity::getId, id);
+        wrapper.eq(com.argus.project.persistence.entity.ProjProjectEntity::getProductId, productId);
+        return toDomain(projectMapper.selectOne(wrapper));
+    }
+
+    @Override
+    public PageResult<com.argus.project.model.entity.ProjProjectEntity> page(long current, long size,
+                                                                             String keyword,
+                                                                             Long domainId,
+                                                                             Long componentId,
+                                                                             String status,
+                                                                             Long productId) {
+        Page<com.argus.project.persistence.entity.ProjProjectEntity> page = new Page<>(current, size);
+        LambdaQueryWrapper<com.argus.project.persistence.entity.ProjProjectEntity> wrapper = new LambdaQueryWrapper<>();
+        
+        // 强制过滤 productId（租户隔离）
+        wrapper.eq(com.argus.project.persistence.entity.ProjProjectEntity::getProductId, productId);
+        
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w
+                    .like(com.argus.project.persistence.entity.ProjProjectEntity::getProjectName, keyword)
+                    .or()
+                    .like(com.argus.project.persistence.entity.ProjProjectEntity::getProjectCode, keyword)
+                    .or()
+                    .like(com.argus.project.persistence.entity.ProjProjectEntity::getRepositoryUrl, keyword));
+        }
+        if (domainId != null) {
+            wrapper.eq(com.argus.project.persistence.entity.ProjProjectEntity::getDomainId, domainId);
+        }
+        if (componentId != null) {
+            wrapper.eq(com.argus.project.persistence.entity.ProjProjectEntity::getComponentId, componentId);
+        }
+        if (StringUtils.hasText(status)) {
+            wrapper.eq(com.argus.project.persistence.entity.ProjProjectEntity::getStatus, status);
+        }
+        wrapper.orderByDesc(com.argus.project.persistence.entity.ProjProjectEntity::getCreatedAt);
+        
+        Page<com.argus.project.persistence.entity.ProjProjectEntity> result = projectMapper.selectPage(page, wrapper);
+        List<com.argus.project.model.entity.ProjProjectEntity> records = result.getRecords().stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+        return new PageResult<>(records, result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    // ... 其他方法类似改造
+}
+```
+
+#### 7. 改造 Repository 接口
+
+修改所有 Repository 接口，添加 productId 参数：
+
+```java
+// argus-domain/src/main/java/com/argus/project/repository/IProjectRepository.java
+package com.argus.project.repository;
+
+import com.argus.project.model.entity.ProjProjectEntity;
+import com.argus.types.response.PageResult;
+
+import java.util.List;
+
+/**
+ * 项目仓储接口（多租户改造版）。
+ * <p>
+ * 所有方法添加 productId 参数，强制租户隔离。
+ * </p>
+ */
+public interface IProjectRepository {
+
+    /**
+     * 按主键查询项目（租户隔离）。
+     *
+     * @param id 项目 ID
+     * @param productId 租户 ID
+     * @return 项目实体
+     */
+    ProjProjectEntity findById(Long id, Long productId);
+
+    /**
+     * 分页查询项目（租户隔离）。
+     *
+     * @param current 当前页码
+     * @param size 每页条数
+     * @param keyword 关键词
+     * @param domainId 领域 ID
+     * @param componentId 父组件 ID
+     * @param status 状态
+     * @param productId 租户 ID
+     * @return 分页结果
+     */
+    PageResult<ProjProjectEntity> page(long current, long size, String keyword, Long domainId, Long componentId, String status, Long productId);
+
+    // ... 其他方法类似改造
+}
+```
+
+#### 8. 改造 Controller 层
+
+修改所有 Controller，从 SecurityUtils 获取 productId 并传递给 Service/Repository：
+
+```java
+// argus-trigger/src/main/java/com/argus/project/trigger/http/ProjectController.java
+package com.argus.project.trigger.http;
+
+import com.argus.project.model.dto.ProjectRequest;
+import com.argus.project.service.ProjectService;
+import com.argus.trigger.security.SecurityUtils;
+import com.argus.types.response.ApiResponse;
+import com.argus.types.response.PageResult;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
+
+/**
+ * 项目 REST 接口（多租户改造版）。
+ * <p>
+ * 所有接口从 SecurityUtils 获取 productId，传递给 Service/Repository。
+ * </p>
+ */
+@Slf4j
+@RestController
+@RequestMapping("/api/projects")
+@RequiredArgsConstructor
+public class ProjectController {
+
+    private final ProjectService projectService;
+
+    /**
+     * 分页查询项目（租户隔离）。
+     */
+    @GetMapping
+    public ApiResponse<PageResult<ProjectVO>> page(
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "20") long size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long domainId,
+            @RequestParam(required = false) Long componentId,
+            @RequestParam(required = false) String status) {
+        
+        // 从 SecurityUtils 获取 productId（租户隔离）
+        Long productId = SecurityUtils.getProductId();
+        if (productId == null) {
+            return ApiResponse.error(400, "缺少租户信息，请先选择项目");
+        }
+        
+        PageResult<ProjectVO> result = projectService.page(current, size, keyword, domainId, componentId, status, productId);
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 查询项目详情（租户隔离）。
+     */
+    @GetMapping("/{id}")
+    public ApiResponse<ProjectVO> getById(@PathVariable Long id) {
+        Long productId = SecurityUtils.getProductId();
+        if (productId == null) {
+            return ApiResponse.error(400, "缺少租户信息，请先选择项目");
+        }
+        
+        ProjectVO vo = projectService.getById(id, productId);
+        return ApiResponse.success(vo);
+    }
+
+    // ... 其他方法类似改造
+}
+```
+
+#### 9. 改造 SecurityConfig
+
+修改 `SecurityConfig`，移除独立登录路径，放行 Gateway 回调路径：
+
+```java
+// argus-app/src/main/java/com/argus/config/SecurityConfig.java
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    http
+        .csrf(csrf -> csrf.disable())
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -> auth
+            // 移除 /api/auth/login，由 Gateway 处理登录
+            .requestMatchers("/api/health", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+            .anyRequest().authenticated()
+        )
+        .exceptionHandling(ex -> ex
+            .authenticationEntryPoint((request, response, authException) ->
+                writeErrorResponse(response, 401, "未登录或令牌已过期"))
+            .accessDeniedHandler((request, response, accessDeniedException) ->
+                writeErrorResponse(response, 403, "无权限访问"))
+        )
+        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+    return http.build();
+}
+```
+
+#### 10. 删除文件
+
+删除以下不再需要的文件：
+
+- `argus-trigger/src/main/java/com/argus/auth/trigger/http/AuthController.java` - 登录接口（由 Gateway 处理）
+- `argus-domain/src/main/java/com/argus/auth/service/AuthService.java` - 登录服务
+- `argus-infrastructure/src/main/java/com/argus/auth/persistence/repository/AuthUserRepositoryImpl.java` - 用户仓储（由 framework 提供）
+
+### 需要改造的表清单
+
+| 模块 | 表名 | 说明 |
+|------|------|------|
+| 项目目录 | `t_proj_domain` | 领域表 |
+| 项目目录 | `t_proj_component` | 父组件表 |
+| 项目目录 | `t_proj_project` | 项目表 |
+| 项目目录 | `t_proj_import` | 项目导入表 |
+| 项目目录 | `t_proj_sync` | 项目同步表 |
+| 项目目录 | `t_proj_sync_item` | 项目同步项表 |
+| Harness | `t_harness_harness` | Harness 配置表 |
+| Harness | `t_harness_execution` | 执行记录表 |
+| Harness | `t_harness_schedule` | 定时任务表 |
+| Harness | `t_harness_batch` | 批次表 |
+| Harness | `t_harness_artifact` | 制品表 |
+| Harness | `t_harness_bind_skill` | 技能绑定表 |
+| Vulnerability | `t_vuln_vulnerability` | 漏洞表 |
+| Vulnerability | `t_vuln_assign` | 漏洞分配表 |
+| Vulnerability | `t_vuln_note` | 漏洞备注表 |
+| Vulnerability | `t_vuln_flow` | 漏洞流转表 |
+| Vulnerability | `t_vuln_parse_log` | 解析日志表 |
+| Threat | `t_ta_snapshot` | 威胁分析快照表 |
+| Threat | `t_ta_risk` | 威胁风险表 |
+| Analysis | `t_analysis` | 分析记录表 |
+| Knowledge | `t_kg_snapshot` | 知识图谱快照表 |
+
+### 需要改造的 Repository 清单
+
+| 模块 | Repository 接口 | Repository 实现 |
+|------|-----------------|-----------------|
+| 项目目录 | `IProjectRepository` | `ProjectRepositoryImpl` |
+| 项目目录 | `IDomainRepository` | `DomainRepositoryImpl` |
+| 项目目录 | `IComponentRepository` | `ComponentRepositoryImpl` |
+| 项目目录 | `IImportRepository` | `ImportRepositoryImpl` |
+| 项目目录 | `ISyncRepository` | `SyncRepositoryImpl` |
+| 项目目录 | `ISyncItemRepository` | `SyncItemRepositoryImpl` |
+| Harness | `IHarnessRepository` | `HarnessRepositoryImpl` |
+| Harness | `IExecutionRepository` | `ExecutionRepositoryImpl` |
+| Harness | `IScheduleRepository` | `ScheduleRepositoryImpl` |
+| Harness | `IBatchRepository` | `BatchRepositoryImpl` |
+| Vulnerability | `IVulnerabilityRepository` | `VulnerabilityRepositoryImpl` |
+| Threat | `ITaSnapshotRepository` | `TaSnapshotRepositoryImpl` |
+| Analysis | `IAnalysisRepository` | `AnalysisRepositoryImpl` |
+| Knowledge | `IKgSnapshotRepository` | `KgSnapshotRepositoryImpl` |
+
+### 需要改造的 Controller 清单
+
+| 模块 | Controller | 说明 |
+|------|------------|------|
+| 项目目录 | `ProjectController` | 项目管理 |
+| 项目目录 | `DomainController` | 领域管理 |
+| 项目目录 | `ComponentController` | 父组件管理 |
+| Harness | `HarnessController` | Harness 配置 |
+| Harness | `ExecutionController` | 执行记录 |
+| Harness | `ScheduleController` | 定时任务 |
+| Harness | `BatchController` | 批次管理 |
+| Vulnerability | `VulnerabilityController` | 漏洞管理 |
+| Threat | `ThreatController` | 威胁分析 |
+| Analysis | `AnalysisController` | 分析中心 |
+| Knowledge | `KgController` | 知识图谱 |
+
+---
+
+## Section 4：数据库迁移方案
+
+### 迁移目标
+
+将现有 Argus 数据库改造为多租户架构，确保数据完整性和迁移可回滚。
+
+### 迁移策略
+
+采用 **增量迁移 + 数据回填** 策略：
+
+1. **阶段 1**：添加字段（ALTER TABLE ADD COLUMN）
+2. **阶段 2**：创建索引（CREATE INDEX）
+3. **阶段 3**：数据回填（UPDATE SET product_id）
+4. **阶段 4**：添加约束（ALTER TABLE ADD CONSTRAINT）
+
+### Flyway 迁移脚本
+
+#### V4__multi_tenant_add_column.sql
+
+```sql
+-- V4__multi_tenant_add_column.sql — 多租户字段添加（阶段 1）
+
+-- 1. 项目目录相关表
+ALTER TABLE t_proj_domain ADD COLUMN product_id BIGINT;
+ALTER TABLE t_proj_component ADD COLUMN product_id BIGINT;
+ALTER TABLE t_proj_project ADD COLUMN product_id BIGINT;
+ALTER TABLE t_proj_import ADD COLUMN product_id BIGINT;
+ALTER TABLE t_proj_sync ADD COLUMN product_id BIGINT;
+ALTER TABLE t_proj_sync_item ADD COLUMN product_id BIGINT;
+
+-- 2. Harness 相关表
+ALTER TABLE t_harness_harness ADD COLUMN product_id BIGINT;
+ALTER TABLE t_harness_execution ADD COLUMN product_id BIGINT;
+ALTER TABLE t_harness_schedule ADD COLUMN product_id BIGINT;
+ALTER TABLE t_harness_batch ADD COLUMN product_id BIGINT;
+ALTER TABLE t_harness_artifact ADD COLUMN product_id BIGINT;
+ALTER TABLE t_harness_bind_skill ADD COLUMN product_id BIGINT;
+
+-- 3. Vulnerability 相关表
+ALTER TABLE t_vuln_vulnerability ADD COLUMN product_id BIGINT;
+ALTER TABLE t_vuln_assign ADD COLUMN product_id BIGINT;
+ALTER TABLE t_vuln_note ADD COLUMN product_id BIGINT;
+ALTER TABLE t_vuln_flow ADD COLUMN product_id BIGINT;
+ALTER TABLE t_vuln_parse_log ADD COLUMN product_id BIGINT;
+
+-- 4. Threat 相关表
+ALTER TABLE t_ta_snapshot ADD COLUMN product_id BIGINT;
+ALTER TABLE t_ta_risk ADD COLUMN product_id BIGINT;
+
+-- 5. Analysis 相关表
+ALTER TABLE t_analysis ADD COLUMN product_id BIGINT;
+
+-- 6. Knowledge 相关表
+ALTER TABLE t_kg_snapshot ADD COLUMN product_id BIGINT;
+
+-- 7. 注释
+COMMENT ON COLUMN t_proj_domain.product_id IS '租户ID（对应 framework 的 product_id）';
+COMMENT ON COLUMN t_proj_component.product_id IS '租户ID（对应 framework 的 product_id）';
+COMMENT ON COLUMN t_proj_project.product_id IS '租户ID（对应 framework 的 product_id）';
+COMMENT ON COLUMN t_harness_harness.product_id IS '租户ID（对应 framework 的 product_id）';
+COMMENT ON COLUMN t_vuln_vulnerability.product_id IS '租户ID（对应 framework 的 product_id）';
+```
+
+#### V5__multi_tenant_add_index.sql
+
+```sql
+-- V5__multi_tenant_add_index.sql — 多租户索引创建（阶段 2）
+
+-- 1. 项目目录相关表索引
+CREATE INDEX idx_proj_domain_product ON t_proj_domain (product_id);
+CREATE INDEX idx_proj_component_product ON t_proj_component (product_id);
+CREATE INDEX idx_proj_project_product ON t_proj_project (product_id);
+CREATE INDEX idx_proj_import_product ON t_proj_import (product_id);
+CREATE INDEX idx_proj_sync_product ON t_proj_sync (product_id);
+CREATE INDEX idx_proj_sync_item_product ON t_proj_sync_item (product_id);
+
+-- 2. Harness 相关表索引
+CREATE INDEX idx_harness_product ON t_harness_harness (product_id);
+CREATE INDEX idx_execution_product ON t_harness_execution (product_id);
+CREATE INDEX idx_schedule_product ON t_harness_schedule (product_id);
+CREATE INDEX idx_batch_product ON t_harness_batch (product_id);
+CREATE INDEX idx_artifact_product ON t_harness_artifact (product_id);
+CREATE INDEX idx_bind_skill_product ON t_harness_bind_skill (product_id);
+
+-- 3. Vulnerability 相关表索引
+CREATE INDEX idx_vulnerability_product ON t_vuln_vulnerability (product_id);
+CREATE INDEX idx_assign_product ON t_vuln_assign (product_id);
+CREATE INDEX idx_note_product ON t_vuln_note (product_id);
+CREATE INDEX idx_flow_product ON t_vuln_flow (product_id);
+CREATE INDEX idx_parse_log_product ON t_vuln_parse_log (product_id);
+
+-- 4. Threat 相关表索引
+CREATE INDEX idx_ta_snapshot_product ON t_ta_snapshot (product_id);
+CREATE INDEX idx_ta_risk_product ON t_ta_risk (product_id);
+
+-- 5. Analysis 相关表索引
+CREATE INDEX idx_analysis_product ON t_analysis (product_id);
+
+-- 6. Knowledge 相关表索引
+CREATE INDEX idx_kg_snapshot_product ON t_kg_snapshot (product_id);
+```
+
+#### V6__multi_tenant_data_backfill.sql
+
+```sql
+-- V6__multi_tenant_data_backfill.sql — 多租户数据回填（阶段 3）
+
+-- 说明：
+-- 1. 现有数据默认归属到"默认租户"（product_id = 1）
+-- 2. 如果需要按项目分配租户，需要编写更复杂的回填逻辑
+-- 3. 本脚本假设所有现有数据属于同一个租户
+
+-- 1. 项目目录相关表回填
+UPDATE t_proj_domain SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_proj_component SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_proj_project SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_proj_import SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_proj_sync SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_proj_sync_item SET product_id = 1 WHERE product_id IS NULL;
+
+-- 2. Harness 相关表回填
+UPDATE t_harness_harness SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_harness_execution SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_harness_schedule SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_harness_batch SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_harness_artifact SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_harness_bind_skill SET product_id = 1 WHERE product_id IS NULL;
+
+-- 3. Vulnerability 相关表回填
+UPDATE t_vuln_vulnerability SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_vuln_assign SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_vuln_note SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_vuln_flow SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_vuln_parse_log SET product_id = 1 WHERE product_id IS NULL;
+
+-- 4. Threat 相关表回填
+UPDATE t_ta_snapshot SET product_id = 1 WHERE product_id IS NULL;
+UPDATE t_ta_risk SET product_id = 1 WHERE product_id IS NULL;
+
+-- 5. Analysis 相关表回填
+UPDATE t_analysis SET product_id = 1 WHERE product_id IS NULL;
+
+-- 6. Knowledge 相关表回填
+UPDATE t_kg_snapshot SET product_id = 1 WHERE product_id IS NULL;
+
+-- 7. 创建默认租户种子数据（可选）
+-- INSERT INTO t_framework_product (product_id, product_name, ...) VALUES (1, '默认租户', ...);
+```
+
+#### V7__multi_tenant_add_constraint.sql
+
+```sql
+-- V7__multi_tenant_add_constraint.sql — 多租户约束添加（阶段 4）
+
+-- 1. 项目目录相关表约束
+ALTER TABLE t_proj_domain ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_proj_component ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_proj_project ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_proj_import ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_proj_sync ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_proj_sync_item ALTER COLUMN product_id SET NOT NULL;
+
+-- 2. Harness 相关表约束
+ALTER TABLE t_harness_harness ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_harness_execution ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_harness_schedule ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_harness_batch ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_harness_artifact ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_harness_bind_skill ALTER COLUMN product_id SET NOT NULL;
+
+-- 3. Vulnerability 相关表约束
+ALTER TABLE t_vuln_vulnerability ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_vuln_assign ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_vuln_note ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_vuln_flow ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_vuln_parse_log ALTER COLUMN product_id SET NOT NULL;
+
+-- 4. Threat 相关表约束
+ALTER TABLE t_ta_snapshot ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE t_ta_risk ALTER COLUMN product_id SET NOT NULL;
+
+-- 5. Analysis 相关表约束
+ALTER TABLE t_analysis ALTER COLUMN product_id SET NOT NULL;
+
+-- 6. Knowledge 相关表约束
+ALTER TABLE t_kg_snapshot ALTER COLUMN product_id SET NOT NULL;
+
+-- 7. 添加外键约束（可选，取决于是否与 framework 共享数据库）
+-- ALTER TABLE t_proj_domain ADD CONSTRAINT fk_proj_domain_product 
+--     FOREIGN KEY (product_id) REFERENCES t_framework_product(product_id);
+```
+
+### 迁移执行步骤
+
+```
+1. 备份数据库
+   pg_dump -h localhost -U argus -d argus > argus_backup_$(date +%Y%m%d).sql
+
+2. 执行 Flyway 迁移
+   mvn flyway:migrate -Dflyway.url=jdbc:postgresql://localhost:5432/argus
+
+3. 验证迁移结果
+   SELECT table_name, column_name, is_nullable 
+   FROM information_schema.columns 
+   WHERE column_name = 'product_id' 
+   ORDER BY table_name;
+
+4. 验证数据回填
+   SELECT COUNT(*) FROM t_proj_project WHERE product_id IS NULL;
+   SELECT COUNT(*) FROM t_harness_harness WHERE product_id IS NULL;
+
+5. 验证索引创建
+   SELECT indexname, indexdef FROM pg_indexes 
+   WHERE indexname LIKE '%product%';
+```
+
+### 迁移回滚方案
+
+如果迁移失败，可以通过以下方式回滚：
+
+```sql
+-- 回滚 V7（移除约束）
+ALTER TABLE t_proj_domain ALTER COLUMN product_id DROP NOT NULL;
+-- ... 其他表类似
+
+-- 回滚 V6（清空 product_id）
+UPDATE t_proj_domain SET product_id = NULL;
+-- ... 其他表类似
+
+-- 回滚 V5（删除索引）
+DROP INDEX idx_proj_domain_product;
+-- ... 其他索引类似
+
+-- 回滚 V4（删除字段）
+ALTER TABLE t_proj_domain DROP COLUMN product_id;
+-- ... 其他表类似
+```
+
+---
+
+## Section 5：实施计划
+
+### 实施阶段
+
+| 阶段 | 任务 | 预估工作量 | 依赖 |
+|------|------|------------|------|
+| **Phase 1** | 数据库迁移 | 1 天 | 无 |
+| **Phase 2** | 后端认证改造 | 2 天 | Phase 1 |
+| **Phase 3** | 后端 Repository 改造 | 3 天 | Phase 2 |
+| **Phase 4** | 后端 Controller 改造 | 2 天 | Phase 3 |
+| **Phase 5** | 前端改造 | 3 天 | Phase 4 |
+| **Phase 6** | 集成测试 | 2 天 | Phase 5 |
+| **Phase 7** | 部署上线 | 1 天 | Phase 6 |
+
+### Phase 1：数据库迁移（1 天）
+
+#### 任务清单
+
+- [ ] 创建 Flyway 迁移脚本 V4-V7
+- [ ] 备份数据库
+- [ ] 执行 Flyway 迁移
+- [ ] 验证迁移结果
+- [ ] 验证数据回填
+- [ ] 验证索引创建
+
+#### 验收标准
+
+1. 所有业务表都包含 `product_id` 字段
+2. 所有业务表 `product_id` 字段都设置为 NOT NULL
+3. 所有业务表都创建了 `product_id` 索引
+4. 现有数据都回填了 `product_id = 1`（默认租户）
+
+### Phase 2：后端认证改造（2 天）
+
+#### 任务清单
+
+- [ ] 新增 `framework-client` 模块
+- [ ] 改造 `JwtAuthFilter`（解析 productId）
+- [ ] 改造 `UserPrincipal`（添加 productId）
+- [ ] 改造 `SecurityUtils`（提供 getProductId）
+- [ ] 改造 `SecurityConfig`（移除独立登录）
+- [ ] 删除 `AuthController`、`AuthService`
+
+#### 验收标准
+
+1. JWT Token 能正确解析 productId
+2. SecurityUtils.getProductId() 能返回正确的 productId
+3. 移除独立登录后，API 仍能正常鉴权
+
+### Phase 3：后端 Repository 改造（3 天）
+
+#### 任务清单
+
+- [ ] 改造 `IProjectRepository` 接口
+- [ ] 改造 `ProjectRepositoryImpl` 实现
+- [ ] 改造 `IDomainRepository` 接口
+- [ ] 改造 `DomainRepositoryImpl` 实现
+- [ ] 改造 `IComponentRepository` 接口
+- [ ] 改造 `ComponentRepositoryImpl` 实现
+- [ ] 改造 `IHarnessRepository` 接口
+- [ ] 改造 `HarnessRepositoryImpl` 实现
+- [ ] 改造 `IExecutionRepository` 接口
+- [ ] 改造 `ExecutionRepositoryImpl` 实现
+- [ ] 改造 `IVulnerabilityRepository` 接口
+- [ ] 改造 `VulnerabilityRepositoryImpl` 实现
+- [ ] 改造其他 Repository（按清单逐个）
+
+#### 验收标准
+
+1. 所有 Repository 接口都包含 productId 参数
+2. 所有 Repository 实现都强制过滤 productId
+3. 单元测试通过
+
+### Phase 4：后端 Controller 改造（2 天）
+
+#### 任务清单
+
+- [ ] 改造 `ProjectController`
+- [ ] 改造 `DomainController`
+- [ ] 改造 `ComponentController`
+- [ ] 改造 `HarnessController`
+- [ ] 改造 `ExecutionController`
+- [ ] 改造 `VulnerabilityController`
+- [ ] 改造其他 Controller（按清单逐个）
+
+#### 验收标准
+
+1. 所有 Controller 都从 SecurityUtils 获取 productId
+2. productId 为 null 时返回错误响应
+3. API 接口测试通过
+
+### Phase 5：前端改造（3 天）
+
+#### 任务清单
+
+- [ ] 新增 `wujie-context.tsx`
+- [ ] 改造 `client.ts`（从 Wujie 获取 token）
+- [ ] 改造 `auth-context.tsx`（从 Wujie 获取用户信息）
+- [ ] 改造 `spa-app.tsx`（移除登录路由）
+- [ ] 改造 `dashboard-layout.tsx`（移除 sidebar/topbar）
+- [ ] 删除 `login.tsx`、`sidebar.tsx`、`topbar.tsx`
+- [ ] 配置 openlibing-web 路由
+
+#### 验收标准
+
+1. 前端能从 Wujie 获取 projectInfo
+2. 前端能监听 projectInfoChange 事件
+3. API 调用携带 productId 参数
+4. 移除独立登录后，前端能正常访问
+
+### Phase 6：集成测试（2 天）
+
+#### 任务清单
+
+- [ ] 测试登录流程（Gateway → openlibing-web → Argus）
+- [ ] 测试租户切换流程（ProjectSelect → bus → Argus）
+- [ ] 测试数据隔离（不同租户数据不互相访问）
+- [ ] 测试 API 权限（Gateway 权限校验）
+- [ ] 测试前端路由同步（主应用 → 子应用）
+- [ ] 测试前端数据通信（bus 事件）
+
+#### 验收标准
+
+1. 登录流程正常
+2. 租户切换正常
+3. 数据隔离正常
+4. API 权限校验正常
+5. 前端路由同步正常
+6. 前端数据通信正常
+
+### Phase 7：部署上线（1 天）
+
+#### 任务清单
+
+- [ ] 部署 Argus 后端
+- [ ] 部署 Argus 前端
+- [ ] 配置 Gateway 路由
+- [ ] 配置 openlibing-web 路由
+- [ ] 生产环境验证
+
+#### 验收标准
+
+1. 生产环境登录正常
+2. 生产环境租户切换正常
+3. 生产环境数据隔离正常
+4. 生产环境 API 正常
+
+---
+
+## Section 6：风险评估与应对
+
+### 风险清单
+
+| 风险 | 影响 | 可能性 | 应对措施 |
+|------|------|--------|----------|
+| 数据库迁移失败 | 高 | 中 | 备份数据库 + 回滚脚本 |
+| JWT Token 格式不兼容 | 高 | 中 | 与 Gateway 团队确认 Token 格式 |
+| 前端 Wujie 通信失败 | 高 | 中 | 充分测试 bus 事件机制 |
+| Repository 改造遗漏 | 中 | 高 | 逐个检查 Repository 清单 |
+| Controller 改造遗漏 | 中 | 高 | 逐个检查 Controller 清单 |
+| 数据隔离不彻底 | 高 | 低 | 充分测试多租户数据隔离 |
+
+### 应对措施详情
+
+#### 1. 数据库迁移失败
+
+**应对措施**：
+- 执行迁移前备份数据库
+- 编写回滚脚本（见 Section 4）
+- 分阶段执行迁移（添加字段 → 创建索引 → 数据回填 → 添加约束）
+- 每阶段执行后验证结果
+
+#### 2. JWT Token 格式不兼容
+
+**应对措施**：
+- 与 Gateway 团队确认 JWT Token 格式
+- 确认 Token 中是否包含 productId 字段
+- 如果 Token 不包含 productId，从请求参数获取
+- 编写兼容代码，支持多种获取 productId 的方式
+
+#### 3. 前端 Wujie 通信失败
+
+**应对措施**：
+- 充分测试 bus 事件机制
+- 编写调试代码，打印 bus 事件日志
+- 与 openlibing-web 团队确认 Wujie props 格式
+- 编写兜底代码，支持独立运行测试
+
+#### 4. Repository 改造遗漏
+
+**应对措施**：
+- 逐个检查 Repository 清单（见 Section 3）
+- 编写自动化测试，验证所有 Repository 都过滤 productId
+- Code Review 时重点检查 Repository 改造
+
+#### 5. Controller 改造遗漏
+
+**应对措施**：
+- 逐个检查 Controller 清单（见 Section 3）
+- 编写自动化测试，验证所有 Controller 都获取 productId
+- Code Review 时重点检查 Controller 改造
+
+#### 6. 数据隔离不彻底
+
+**应对措施**：
+- 充分测试多租户数据隔离
+- 创建多个测试租户，验证数据不互相访问
+- 编写自动化测试，验证所有查询都过滤 productId
+- Code Review 时重点检查数据隔离逻辑
+
+---
+
+## Section 7：附录
+
+### A. Gateway JWT Token 格式
+
+待与 Gateway 团队确认。
+
+### B. openlibing-web Wujie Props 格式
+
+待与 openlibing-web 团队确认。
+
+### C. Framework API 接口清单
+
+| 接口 | 说明 | 调用方 |
+|------|------|--------|
+| `/api/user/info` | 获取用户信息 | openlibing-web |
+| `/api/products` | 获取用户 Product 列表 | openlibing-web |
+| `/api/user/roles` | 获取用户在 Product 下的角色 | openlibing-web |
+| `/api/project/select` | 获取项目选择树 | openlibing-web |
+
+### D. Argus API 接口清单（改造后）
+
+| 接口 | 说明 | 租户隔离 |
+|------|------|----------|
+| `/api/projects` | 项目分页查询 | 是 |
+| `/api/projects/{id}` | 项目详情 | 是 |
+| `/api/domains` | 领域分页查询 | 是 |
+| `/api/components` | 父组件分页查询 | 是 |
+| `/api/harness` | Harness 分页查询 | 是 |
+| `/api/executions` | 执行记录分页查询 | 是 |
+| `/api/vulnerabilities` | 漏洞分页查询 | 是 |
+| `/api/analysis` | 分析记录分页查询 | 是 |
+
+---
+
+**文档版本**: v1.0
+**最后更新**: 2026-06-30
+**作者**: wangshuai1949
