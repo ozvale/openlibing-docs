@@ -1,4 +1,4 @@
-| issueID | issue名称                                                                                | 责任人   | 评审结果 |
+﻿| issueID | issue名称                                                                                | 责任人   | 评审结果 |
 | ------- | ----------------------------------------------------------------------------------------- | -------- | -------- |
 | #27     | fix(security): 修复 ECharts Tooltip XSS (M-01) 与 Object.assign 原型污染 (L-01)             | wf1009   | 通过     |
-| #26     | feat(ops-web): 适配 repo/branch/all 接口分页（PR 门禁看板 + 工程能力看板）                  | wf1009   | 通过     |
+| #28     | feat(ops-web): 适配 repo/branch/all 接口分页（PR 门禁看板 + 工程能力看板）                  | wf1009   | 通过     |
