@@ -142,71 +142,32 @@ public final class CommandArgSanitizer {
 
 3. `getCheckTaskIncEntityList` / `getDailyCheckTasks`：保留 `try/catch` 行为，但补一次**显式** `null` 检查（如果 `getProcessingTasks` 接收 null）。
 
-### F-004 — InternalController 微服务间鉴权
+### F-004 — InternalController 微服务间鉴权 — **本次 PR 透档**
 
-#### 方案：Header-based Token Filter（最小化改动）
+**状态**：F-004 不在本次 PR 范围内，作为遗留项单独跟进。
 
-**新增 `InternalSecurityFilter`**：
+**透档原因**：
 
-```java
-@Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
-public class InternalSecurityFilter extends OncePerRequestFilter {
+F-004 当前推荐方案（`X-Internal-Token` Header + `INTERNAL_SERVICE_TOKEN` 环境变量）需要：
 
-    private static final String INTERNAL_TOKEN_HEADER = "X-Internal-Token";
-    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+1. **3 个上游服务改动**：openlibing-coderepo / openlibing-cicd / openlibing-framework 都要在调用 `/internal/**` 时新增 `X-Internal-Token` Header
+2. **部署侧协调**：codecheck 部署环境需要配置 `INTERNAL_SERVICE_TOKEN` 环境变量，且需要与上游服务同步
+3. **协调成本**：跨仓 PR + 跨环境配置同步，发布链路过长
 
-    @Value("${internal.service.token:}")
-    private String expectedToken;
+经团队评审，决定**将 F-004 作为遗留项单独跟进**，由独立工单评估候选方案。
 
-    @Override
-    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
-            throws ServletException, IOException {
-        String uri = req.getRequestURI();
-        if (uri != null && uri.startsWith("/internal/")) {
-            // 配置未设置 → 拒绝（fail-closed）
-            if (StringUtils.isBlank(expectedToken)) {
-                writeUnauthorized(res, "internal service token not configured");
-                return;
-            }
-            String provided = req.getHeader(INTERNAL_TOKEN_HEADER);
-            if (!constantTimeEquals(expectedToken, provided)) {
-                writeUnauthorized(res, "invalid internal token");
-                return;
-            }
-        }
-        chain.doFilter(req, res);
-    }
+#### 后续方案候选
 
-    private boolean constantTimeEquals(String a, String b) {
-        if (a == null || b == null) return false;
-        return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
-    }
+| 方案 | 改动范围 | 协调成本 | 安全性 |
+|------|---------|---------|--------|
+| K8s NetworkPolicy / Service Mesh AuthorizationPolicy | 运维 K8s YAML | 仅运维 | 高 |
+| `InternalSecurityFilter` 改为"源 IP / CIDR 白名单 OR Token" | codecheck + 配置 CIDR | 部署侧 | 中 |
+| Feign `RequestInterceptor` 自动注入 Token | 每个调用方加 ~5 行 Bean | 小 | 高 |
+| 维持现状（接受风险） | 0 | 0 | 低 |
 
-    private void writeUnauthorized(HttpServletResponse res, String message) throws IOException {
-        res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        res.setContentType("application/json");
-        res.getWriter().write("{\"code\":401,\"message\":\"" + message + "\"}");
-    }
-}
-```
+详细对比将在 F-004 跟进工单中给出。
 
-**配置**（`application.yml` / `application-prod.yml`）：
-
-```yaml
-internal:
-  service:
-    token: ${INTERNAL_SERVICE_TOKEN:}  # 从环境变量注入
-```
-
-**`fail-closed` 策略**：未配置 `internal.service.token` → 全部 `/internal/**` 拒绝（避免遗漏配置导致对外开放）。
-
-**常时比较**：`MessageDigest.isEqual` 避免时序攻击。
-
-**安全**：
-- 不在错误响应中泄露预期 token 长度/内容。
-- 不记录预期 token。
-- 仅对 `/internal/**` 路径生效（其它路径不受影响）。
+> **注意**：本节仅记录透档状态与候选方案。具体设计、影响范围、文件清单等留待 F-004 独立工单补充。
 
 ## 关键决策
 
@@ -215,8 +176,7 @@ internal:
 | F-001 防护策略 | 白名单 + 类型校验 | 最小化改动，对调用方透明；MongoDB 操作符无法用 Map 传递 |
 | F-002 防护策略 | ProcessBuilder 列表形式 + sanitizer | 完全避免 shell 解析；sanitizer 防止非法 URL/分支名进入 |
 | F-003 防护策略 | 静默拒绝 + 保留旧值 | 不影响正在运行的 pre-commit 流程；可观测性靠 ERROR 日志 |
-| F-004 鉴权方式 | Header-based Token Filter | 最小化改动；不引入 Spring Security 依赖；与现有代码风格一致 |
-| F-004 失败策略 | fail-closed | 避免配置缺失导致对外开放 |
+| ~~F-004 鉴权方式~~ | ~~Header-based Token Filter~~ | **本次 PR 透档**；F-004 由独立工单评估 |
 | 集合白名单范围 | 12 个核心集合 | 覆盖现有 webhoook 调用场景；后续新增集合需显式加白名单 |
 
 ## 风险 & 缓解
@@ -226,18 +186,20 @@ internal:
 | F-001 白名单遗漏导致合法调用被拒 | 集合名常量与 `CodeCheckCollectionName` 对齐；如发生回归可通过错误码定位 |
 | F-002 sanitizer 误杀合法 URL | 正则允许 `https?://` + 路径字符 + `.git`；不限制端口以外的合法字符 |
 | F-003 lint runner checks 中含特殊字符 | 校验正则已允许 `[a-zA-Z0-9_\\-, ]`，覆盖原用法；如需中文/特殊字符可后续扩展 |
-| F-004 配置 token 泄露 | 从环境变量 `INTERNAL_SERVICE_TOKEN` 注入；不写入代码；可定期轮换 |
-| F-004 调用方未带 token 导致集成失败 | 同步通知调用方（openlibing-coderepo 等）补充 Header；回归测试覆盖 |
+| ~~F-004 配置 token 泄露~~ | **本次 PR 透档**；由 F-004 独立工单评估 |
+| ~~F-004 调用方未带 token 导致集成失败~~ | **本次 PR 透档**；F-004 涉及跨仓改造，统一在独立工单评估 |
 
 ## 跨仓影响
 
 | 仓 | 集成点 | 风险 |
 |----|--------|------|
-| openlibing-coderepo | 调用 `/internal/rule-set/recompute-used` | 调用方需带 `X-Internal-Token` Header；需配套部署协调 |
+| openlibing-coderepo | 调用 `/internal/rule-set/recompute-used` | F-004 透档；当前仍依赖网络层隔离 |
 | openlibing-cicd | 调用 `/internal/pre-commit` | 同上 |
 | openlibing-framework | 调用 `/internal/repo/getRepoAccessToken` | 同上 |
 
-**协调方式**：在 PR 描述中明确列出调用方仓与所需 Header 变更；建议在 Phase 4 PR 创建时同步在 `#openlibing-dev` 通知。
+**F-001~F-003 跨仓影响**：无。本次修复仅收紧 codecheck 内部对输入的处理，对外接口契约不变。
+
+**F-004 跨仓影响（已透档）**：F-004 由独立工单跟进，跨仓协调在独立工单内进行。
 
 ## 文件清单
 
@@ -251,10 +213,10 @@ internal:
 | `XxlJobHandler.java` | 修改 | lintRunnerChecks 校验 + timeout 边界 |
 | `common/security/WebhookInputValidator.java` | 新增 | F-001 白名单集中管理 |
 | `common/security/CommandArgSanitizer.java` | 新增 | F-002 sanitizer |
-| `common/security/InternalSecurityFilter.java` | 新增 | F-004 鉴权 Filter |
-| `application.yml` | 修改 | 新增 `internal.service.token` 配置项 |
+| ~~`common/security/InternalSecurityFilter.java`~~ | ~~新增~~ | **F-004 透档，本次 PR 不新增** |
+| ~~`application.yml`~~ | ~~修改~~ | **F-004 透档，本次 PR 不修改** |
 | `WebhookDelegateImplTest.java` | 修改 | 新增非法输入 → 拒绝用例 |
 | `PipelineDelegateImplTest.java` | 修改 | 新增非法 repoUrl → 拒绝用例 |
 | `XxlJobHandlerTest.java` | 修改 | 新增非法 lintRunnerChecks → 拒绝用例 |
-| `InternalSecurityFilterTest.java` | 新增 | F-004 鉴权用例 |
+| ~~`InternalSecurityFilterTest.java`~~ | ~~新增~~ | **F-004 透档，本次 PR 不新增** |
 | `WebhookInputValidatorTest.java` | 新增 | F-001 白名单覆盖 |

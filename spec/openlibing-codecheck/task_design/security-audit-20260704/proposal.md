@@ -1,4 +1,4 @@
-# Proposal: codecheck 安全审计漏洞修复（F-001~F-004）
+# Proposal: codecheck 安全审计漏洞修复（F-001~F-003，F-004 透档）
 
 ## 需求背景
 
@@ -27,7 +27,7 @@
    - 将 `PipelineDelegateImpl.preMergeAndFix` 中 `ProcessBuilder("bash", "-c", cmd)` 改造为**列表形式**（不经过 shell 解析）。
    - 新增 `sanitizeRepoUrl` / `sanitizeBranchName` 严格校验 `repoUrl`、`source_branch`、`target_branch` 格式（白名单正则）。
 3. **F-003 修复**：在 `XxlJobHandler.lintRunnerChecksHandler` 增加 `^[a-zA-Z0-9_\\-, ]*$` 校验；其他 `jobParam` 解析（`syncIncCheckTasksHandler` / `syncDailyCheckTasksHandler` / `rollbackTimeoutTasks`）也补强类型与边界校验。
-4. **F-004 修复**：新增 `InternalSecurityFilter`（基于 `OncePerRequestFilter`），对 `/internal/**` 路径校验 `X-Internal-Token` Header（值来自配置 `internal.service.token`），缺失/错误则 401 拒绝。
+4. ~~**F-004 修复**：新增 `InternalSecurityFilter`（基于 `OncePerRequestFilter`），对 `/internal/**` 路径校验 `X-Internal-Token` Header（值来自配置 `internal.service.token`），缺失/错误则 401 拒绝。~~  **本次 PR 透档为遗留项**。原因：F-004 当前推荐方案（`X-Internal-Token` + `INTERNAL_SERVICE_TOKEN`）需要 openlibing-coderepo / openlibing-cicd / openlibing-framework 三个上游服务同步改造 + 部署侧协调，协调成本较高。F-004 将由独立工单跟进，可选方案见设计文档 `design.md` 的"后续方案候选"小节。
 
 ### 不做什么
 
@@ -46,26 +46,24 @@
 - [ ] F-002：合法仓库 URL 与分支名继续正常工作
 - [ ] F-003：xxl-job `lintRunnerChecksHandler` 收到 `"foo; rm -rf /"` 时拒绝更新并打 ERROR 日志
 - [ ] F-003：`fullTaskTimeout` / `incTaskTimeout` 接收非整数或负数时使用默认值
-- [ ] F-004：`/internal/**` 缺失 `X-Internal-Token` Header 返回 401
-- [ ] F-004：`/internal/**` `X-Internal-Token` 与配置不一致返回 401
-- [ ] F-404：合法 token 调用行为不变
+- [ ] **F-004 透档为遗留项**：本次 PR 不实现鉴权，audit report 仍标记为"未修复 / 已知风险"，由独立工单跟进
 - [ ] 现有单元测试（`WebhookControllerTest` / `WebhookDelegateImplTest` / `WebhookOperationTest` / `InternalControllerTest` / `PipelineDelegateImplTest` / `XxlJobHandlerTest`）全部通过
 - [ ] 编译 `mvn -DskipTests clean compile` 通过
 
 ## 影响范围
 
-- **修改文件**（预估 6 个）：
+- **修改文件**（预估 5 个）：
   - `WebhookController.java`
   - `WebhookDelegateImpl.java`
   - `WebhookOperation.java`
   - `InternalController.java`
   - `PipelineDelegateImpl.java`
   - `XxlJobHandler.java`
-  - `application.yml` / `application-*.yml`（新增 `internal.service.token` 配置项）
-- **新增文件**（预估 3 个）：
-  - `common/security/InternalSecurityFilter.java`
+  - （`application.yml` / `application-*.yml` **不**再修改 — F-004 配置已透档）
+- **新增文件**（预估 2 个）：
   - `common/security/WebhookInputValidator.java`（白名单常量集中管理）
   - `common/security/CommandArgSanitizer.java`（仓库 URL/分支名 sanitizer）
+  - ~~`common/security/InternalSecurityFilter.java`~~（F-004 已透档，不新增）
 - **接口/契约变化**：无（仅收紧输入校验，行为对外不变）
 - **数据库/Schema**：无
 - **依赖**：无新增

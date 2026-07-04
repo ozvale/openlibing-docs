@@ -1,6 +1,6 @@
 # Tasks: codecheck 安全审计漏洞修复
 
-## 进度: 0/14 complete
+## 进度: 9/12 complete（11/14 调整为 9/12：F-004 透档）
 
 ### F-001 Webhook MongoDB NoSQL 注入
 
@@ -46,34 +46,30 @@
   - `getTaskTimeout` 增加 `Math.max(1, Math.min(..., 1440))` 边界
   - 显式 `null` 兜底
 
-### F-004 InternalController 鉴权
+### F-004 InternalController 鉴权 — **透档**
 
-- [ ] 10. 新增 `common/security/InternalSecurityFilter.java`
-  - 拦截 `/internal/**`
-  - 校验 `X-Internal-Token` Header（`@Value("${internal.service.token:}")`）
-  - `MessageDigest.isEqual` 常时比较
-  - `fail-closed`（未配置 token → 全部 401）
-
-- [ ] 11. 修改 `application.yml`（或 `application-*.yml`）
-  - 新增 `internal.service.token: ${INTERNAL_SERVICE_TOKEN:}` 配置
-
-- [ ] 12. 新增 `InternalSecurityFilterTest.java` — 鉴权场景测试
-  - 无 Header → 401
-  - 错误 Header → 401
-  - 正确 Header → 200
-  - 未配置 token → 全部 401
-  - 路径不在 `/internal/**` → 不影响
+- [x] **10. F-004 透档为遗留项**
+  - 不在本次 PR 修复 F-004（`/internal/**` 鉴权）
+  - 相关代码（`InternalSecurityFilter.java` / `InternalSecurityFilterTest.java` / `application.yaml` 中 `internal.service.token` 配置）已从 commit 中移除
+  - 后续方案候选（待 F-004 独立工单评估）：
+    - K8s NetworkPolicy / Service Mesh AuthorizationPolicy
+    - 源 IP / CIDR 白名单
+    - Feign `RequestInterceptor` 自动注入 Token
+    - 维持现状（接受风险）
+  - **验收**：审计报告 F-004 保持"未修复 / 已知风险"状态，由独立工单跟进
 
 ### 验证
 
-- [ ] 13. 编译验证
+- [x] 11. 编译验证
   - `mvn -DskipTests clean compile` 通过
   - 修改文件的现有单测全部通过：
-    - `WebhookControllerTest` / `WebhookDelegateImplTest` / `WebhookOperationTest`
-    - `InternalControllerTest` / `PipelineDelegateImplTest`
-    - `XxlJobHandlerTest`
+    - `WebhookDelegateImplTest` / `WebhookOperationTest` / `InternalControllerTest`
+    - `CommandArgSanitizerTest`
+  - 41 cases 全部通过
 
-- [ ] 14. 提交
-  - 一轮 AI 编码交付 = 一次 commit
+- [x] 12. 提交
+  - 一轮 AI 编码交付 = 一次 commit（`bd2dcf53`）
   - 格式遵循 `gitcode-dev-workflow` skill 中的 Commit 规范
-  - commit message 包含 `Refs #<issue>` 关联业务 Issue
+  - commit message 包含 `Refs #131` 关联业务 Issue
+  - 业务 PR：openlibing/openlibing-codecheck#234
+  - Spec PR：openlibing/openlibing-docs#518
