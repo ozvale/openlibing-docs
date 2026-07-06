@@ -19,6 +19,8 @@
 | `180fc080` | fix(pipeline-status): unblock pipeline_status_queue from ClassCastException poison message（业务代码兜底 + 框架 retry interceptor） |
 | `d9e41aea` | fix(pipeline-status): log fallback path when parsing PR labels response（用户反馈加 WARN 日志） |
 | `54bb6f47` | fix(security): mask sensitive fields (accessToken/token/etc) in pipeline status update logs（用户反馈加日志脱敏） |
+| `0ba7a612` | 修改代码规范问题（用户自查修复 RabbitConnectionFactoryConfig.java） |
+| `98d2735c` | fix(security): reorder class declaration to comply with G.FMT.04（用户反馈 G.FMT.04 违规，方法移位） |
 
 ## 用户自测反馈
 

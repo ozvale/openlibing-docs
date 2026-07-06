@@ -1,10 +1,11 @@
 # pipeline-status-poison-message-fix — 实现任务
 
-## 进度: 3/3 complete
+## 进度: 4/4 complete
 
 - [x] Task 1: 修改 `PipelineServiceImpl.getPRAllLabels` 兼容字符串数组返回 + 兜底路径 WARN 日志
 - [x] Task 2: 修改 `RabbitConnectionFactoryConfig.pipelineStatusListenerContainerFactory` 加 retry interceptor + 关 default requeue
 - [x] Task 3: 修改 `PipelineStatusUpdateConsumer` 新增 `maskSensitiveFields` + 替换 3 个日志点
+- [x] Task 4: 修复 G.FMT.04 违规 —— 把 `maskSensitiveFields` 静态方法从类变量区移到类底部方法区，遵循"类变量 → 实例变量 → 构造器 → 方法"声明顺序
 
 ## 详细任务
 
@@ -40,6 +41,8 @@
 | `180fc080` | fix(pipeline-status): unblock pipeline_status_queue from ClassCastException poison message（Task 1 + Task 2） |
 | `d9e41aea` | fix(pipeline-status): log fallback path when parsing PR labels response（Task 1 补充 WARN 日志） |
 | `54bb6f47` | fix(security): mask sensitive fields (accessToken/token/etc) in pipeline status update logs（Task 3） |
+| `0ba7a612` | 修改代码规范问题（用户自查修复 RabbitConnectionFactoryConfig.java 其他规范问题） |
+| `98d2735c` | fix(security): reorder class declaration to comply with G.FMT.04（Task 4，静态方法移到方法区） |
 
 ## 验证状态
 
