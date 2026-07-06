@@ -38,5 +38,5 @@
 
 - [x] 用户自测验收（对照验收标准）
 - [x] 创建 GitCode Issue（用户手动在主仓创建）→ openlibing/openlibing-web#205 https://gitcode.com/openlibing/openlibing-web/issues/205
-- [x] Phase 4 业务 PR → openlibing/openlibing-web#553 https://gitcode.com/openlibing/openlibing-web/pulls/553（WIP draft + ai-assisted 标签 + 关联 #205）
-- [ ] Phase 5 归档 archive.md（用户触发）
+- [x] Phase 4 业务 PR → openlibing/openlibing-web#553 https://gitcode.com/openlibing/openlibing-web/pulls/553（ai-assisted 标签 + 关联 #205）
+- [x] Phase 5 归档 → openlibing/openlibing-docs#540 https://gitcode.com/openlibing/openlibing-docs/pulls/540（spec 四件套 + ai-assisted 标签）
