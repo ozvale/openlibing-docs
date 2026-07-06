@@ -9,6 +9,7 @@
 ## 稳定规则
 
 - AI 开发前必须读取当前需求的 `design.md` 和 `task.md`。
+- 只有在phase 4阶段才会生成ut，之前不需要生成测试用例
 - 生成的测试文件目录需要在`sbom-web/src/test/java`目录下。
 - 单个文件测试必须在`openlbing-sbom` 目录下执行`mvn test -pl sbom-web "-Dtest=测试类名"`命令
 - 生成类时，如果是全新的类，则用@Data注解（lombok），不需要手写get和set方法，如果是已有的类，存在get\set方法，则保持原样
