@@ -129,46 +129,60 @@ AIGC:
 
 ### 2.1.1 资产树组件
 
-资产树分为**业务场景库**和**故障模式库**两个独立管理的模块，每个项目拥有独立的资产树，项目资产树与公共资产树存在引用与合并关系。
+资产树分为**业务场景库**和**故障模式库**两个独立管理的模块。公共资产树是完整的资产集合，项目资产树是公共资产树的子集，两者树结构保持一致。
 
 **业务场景库组织结构**：
 
 ```
-业务场景库
-├── 公共场景
-│   ├── 通用场景
-│   │   └── health_check (scenario)
-│   └── 跨项目场景
-│       └── login_common (scenario)
-├── 项目A场景（项目独立管理）
+业务场景库（公共资产树）
+├── 通用场景
+│   └── health_check (scenario)
+├── 跨项目场景
+│   └── login_common (scenario)
+├── 项目A
 │   ├── 模块A1
 │   │   ├── 场景A1-1 (scenario)
 │   │   └── 场景A1-2 (scenario)
 │   └── 模块A2
 │       └── 场景A2-1 (scenario)
-└── 项目B场景（项目独立管理）
+└── 项目B
     ├── 模块B1
     │   └── 场景B1-1 (scenario)
     └── 模块B2
         └── 场景B2-1 (scenario)
 ```
 
+**项目A资产树（公共资产树的子集）**：
+
+```
+项目A场景（公共资产树子集）
+├── 通用场景                    ← 继承自公共
+│   └── health_check (scenario)
+├── 跨项目场景                  ← 继承自公共
+│   └── login_common (scenario)
+└── 项目A                       ← 项目专属
+    ├── 模块A1
+    │   ├── 场景A1-1 (scenario)
+    │   └── 场景A1-2 (scenario)
+    └── 模块A2
+        └── 场景A2-1 (scenario)
+```
+
 **故障模式库组织结构**：
 
 ```
-故障模式库
-├── 公共故障
-│   ├── 通用故障
-│   │   ├── net_delay_3s (fault)
-│   │   └── packet_loss (fault)
-│   └── 跨项目故障
-│       └── db_failure (fault)
-├── 项目A故障（项目独立管理）
+故障模式库（公共资产树）
+├── 通用故障
+│   ├── net_delay_3s (fault)
+│   └── packet_loss (fault)
+├── 跨项目故障
+│   └── db_failure (fault)
+├── 项目A
 │   ├── 模块A1
 │   │   └── 故障A1-1 (fault)
 │   └── 模块A2
 │       └── 故障A2-1 (fault)
-└── 项目B故障（项目独立管理）
+└── 项目B
     ├── 模块B1
     │   └── 故障B1-1 (fault)
     └── 模块B2
@@ -179,10 +193,12 @@ AIGC:
 
 | 关系 | 说明 |
 |------|------|
-| 项目独立管理 | 每个项目的资产树独立管理，项目内场景/故障只对本项目可见 |
-| 公共引用 | 项目资产树可以从公共资产树引用场景/故障（引用而非复制） |
-| 合并到公共 | 项目创建的资产（场景/故障）可申请合并到公共资产树，供所有项目使用 |
-| 使用隔离 | 编排时只从当前项目的资产树引用插入，公共资产通过项目引用间接使用 |
+| 树结构一致 | 项目资产树与公共资产树的层级结构保持一致 |
+| 子集关系 | 项目资产树是公共资产树的子集，包含公共部分和项目专属部分 |
+| 继承公共 | 项目资产树自动继承公共资产树中的通用场景/故障 |
+| 项目专属 | 项目创建的资产存储在公共资产树的项目节点下，仅对本项目可见 |
+| 合并到公共 | 项目专属资产可申请提升为公共资产，供所有项目使用 |
+| 使用隔离 | 编排时只从当前项目的资产树（子集）引用插入 |
 
 **交互方式**：
 
@@ -194,8 +210,7 @@ AIGC:
 | 搜索框 | 支持按名称搜索场景和故障 |
 | 筛选标签 | 按类型（scenario/fault）、项目、模块筛选 |
 | 切换库 | 切换业务场景库和故障模式库 |
-| 引用公共资产 | 从公共资产树引用到项目资产树（创建引用关系） |
-| 合并到公共 | 将项目资产提交到公共资产树（需审核） |
+| 提升为公共 | 将项目专属资产提升为公共资产（需审核） |
 
 ### 2.1.2 自动插入机制
 
@@ -209,13 +224,13 @@ AIGC:
 | 去重检查 | 如果相同 ID 已存在，跳过重复插入 |
 | 位置保持 | 插入到对应声明列表的末尾，保持用户已有顺序 |
 | 自动引用 | 如果拖拽到 DAG 画布，自动创建 `run` 或 `inject` 步骤引用 |
-| 项目隔离 | 编排时只从当前项目的资产树引用插入，其他项目的资产不可直接使用 |
-| 公共引用 | 公共资产需先引用到项目资产树，再从项目资产树插入；引用后保持与公共资产的关联关系 |
-| 公共资产 ID | 公共资产引用后，ID 格式：`public_<公共资产ID>`（如 `public_health_check`） |
+| 项目隔离 | 编排时只从当前项目的资产树（子集）引用插入，其他项目的资产不可直接使用 |
+| 公共资产继承 | 公共资产（通用场景/跨项目场景）自动继承到项目资产树，可直接插入 |
+| 公共资产 ID | 公共资产插入时，ID 格式：`public_<公共资产ID>`（如 `public_health_check`） |
 
-**示例流程**：
+**示例流程（项目专属资产）**：
 
-1. 用户在资产树中双击 `登录场景`（项目A）
+1. 用户在项目A资产树中双击 `登录场景`（项目A → 模块A1）
 2. 系统自动在 `scenarios` 中添加：
    ```yaml
    - id: projA_modA1_login
@@ -228,25 +243,26 @@ AIGC:
    - run: projA_modA1_login
    ```
 
-**公共资产引用流程**：
+**示例流程（继承的公共资产）**：
 
-1. 用户从公共资产树选择 `health_check`
-2. 系统提示"是否引用到项目A资产树"
-3. 用户确认后，在项目A资产树中创建引用节点
-4. 用户从项目A资产树双击引用的 `health_check`
-5. 系统在 `scenarios` 中添加：
+1. 用户在项目A资产树中双击 `健康检查`（通用场景）
+2. 系统自动在 `scenarios` 中添加：
    ```yaml
    - id: public_health_check
      cmd: "curl http://localhost:8080/health"
      params: {}
      source: "public"
    ```
+3. 如果用户将其拖拽到 DAG 画布，自动在对应 job 的 steps 中添加：
+   ```yaml
+   - run: public_health_check
+   ```
 
 ### 2.1.3 资产树数据模型
 
-资产树分为业务场景库和故障模式库两个独立模块，每个模块包含公共资产和项目资产。
+资产树分为业务场景库和故障模式库两个独立模块。公共资产树是完整的资产集合，项目资产树是公共资产树的子集视图，两者树结构保持一致。
 
-**业务场景库数据模型**：
+**业务场景库数据模型（公共资产树）**：
 
 ```json
 {
@@ -255,55 +271,51 @@ AIGC:
   "type": "library",
   "children": [
     {
-      "id": "public",
-      "name": "公共场景",
-      "type": "public",
+      "id": "common_scenarios",
+      "name": "通用场景",
+      "type": "category",
+      "visibility": "public",
       "children": [
         {
-          "id": "common_scenarios",
-          "name": "通用场景",
-          "type": "category",
-          "children": [
-            {
-              "id": "health_check",
-              "name": "健康检查",
-              "type": "scenario",
-              "data": {
-                "cmd": "curl http://localhost:8080/health",
-                "params": {},
-                "description": "服务健康检查",
-                "tags": ["common", "health"],
-                "owner": "platform"
-              }
-            }
-          ]
-        },
+          "id": "health_check",
+          "name": "健康检查",
+          "type": "scenario",
+          "data": {
+            "cmd": "curl http://localhost:8080/health",
+            "params": {},
+            "description": "服务健康检查",
+            "tags": ["common", "health"],
+            "owner": "platform"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cross_project",
+      "name": "跨项目场景",
+      "type": "category",
+      "visibility": "public",
+      "children": [
         {
-          "id": "cross_project",
-          "name": "跨项目场景",
-          "type": "category",
-          "children": [
-            {
-              "id": "login_common",
-              "name": "通用登录",
-              "type": "scenario",
-              "data": {
-                "cmd": "pytest tests/common/login.py",
-                "params": {},
-                "description": "跨项目通用登录场景",
-                "tags": ["common", "auth"],
-                "owner": "platform"
-              }
-            }
-          ]
+          "id": "login_common",
+          "name": "通用登录",
+          "type": "scenario",
+          "data": {
+            "cmd": "pytest tests/common/login.py",
+            "params": {},
+            "description": "跨项目通用登录场景",
+            "tags": ["common", "auth"],
+            "owner": "platform"
+          }
         }
       ]
     },
     {
       "id": "project_a",
-      "name": "项目A场景",
+      "name": "项目A",
       "type": "project",
       "project_id": "projA",
+      "visibility": "private",
       "children": [
         {
           "id": "module_a1",
@@ -319,33 +331,32 @@ AIGC:
                 "params": { "env": "test" },
                 "description": "用户登录测试场景",
                 "tags": ["smoke", "auth"],
-                "owner": "project_a",
-                "source": "local"
-              }
-            },
-            {
-              "id": "projA_modA1_health_check_ref",
-              "name": "健康检查（引用）",
-              "type": "scenario",
-              "data": {
-                "cmd": "curl http://localhost:8080/health",
-                "params": {},
-                "description": "服务健康检查",
-                "tags": ["common", "health"],
-                "owner": "project_a",
-                "source": "public",
-                "ref_id": "health_check"
+                "owner": "project_a"
               }
             }
           ]
+        },
+        {
+          "id": "module_a2",
+          "name": "模块A2",
+          "type": "module",
+          "children": []
         }
       ]
+    },
+    {
+      "id": "project_b",
+      "name": "项目B",
+      "type": "project",
+      "project_id": "projB",
+      "visibility": "private",
+      "children": []
     }
   ]
 }
 ```
 
-**故障模式库数据模型**：
+**故障模式库数据模型（公共资产树）**：
 
 ```json
 {
@@ -354,36 +365,63 @@ AIGC:
   "type": "library",
   "children": [
     {
-      "id": "public",
-      "name": "公共故障",
-      "type": "public",
+      "id": "common_faults",
+      "name": "通用故障",
+      "type": "category",
+      "visibility": "public",
       "children": [
         {
-          "id": "common_faults",
-          "name": "通用故障",
-          "type": "category",
-          "children": [
-            {
-              "id": "net_delay_3s",
-              "name": "网络延迟3秒",
-              "type": "fault",
-              "data": {
-                "cmd": "tc qdisc add dev eth0 root netem delay 3000ms",
-                "params": { "duration": 3 },
-                "description": "注入3秒网络延迟",
-                "tags": ["network", "chaos"],
-                "owner": "platform"
-              }
-            }
-          ]
+          "id": "net_delay_3s",
+          "name": "网络延迟3秒",
+          "type": "fault",
+          "data": {
+            "cmd": "tc qdisc add dev eth0 root netem delay 3000ms",
+            "params": { "duration": 3 },
+            "description": "注入3秒网络延迟",
+            "tags": ["network", "chaos"],
+            "owner": "platform"
+          }
+        },
+        {
+          "id": "packet_loss",
+          "name": "网络丢包",
+          "type": "fault",
+          "data": {
+            "cmd": "tc qdisc add dev eth0 root netem loss 10%",
+            "params": { "duration": 5 },
+            "description": "注入10%网络丢包",
+            "tags": ["network", "chaos"],
+            "owner": "platform"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cross_project_faults",
+      "name": "跨项目故障",
+      "type": "category",
+      "visibility": "public",
+      "children": [
+        {
+          "id": "db_failure",
+          "name": "数据库故障",
+          "type": "fault",
+          "data": {
+            "cmd": "systemctl stop mysql",
+            "params": { "duration": 30 },
+            "description": "停止数据库服务",
+            "tags": ["db", "chaos"],
+            "owner": "platform"
+          }
         }
       ]
     },
     {
       "id": "project_a",
-      "name": "项目A故障",
+      "name": "项目A",
       "type": "project",
       "project_id": "projA",
+      "visibility": "private",
       "children": [
         {
           "id": "module_a1",
@@ -399,32 +437,46 @@ AIGC:
                 "params": { "duration": 5 },
                 "description": "数据库网络延迟",
                 "tags": ["db", "chaos"],
-                "owner": "project_a",
-                "source": "local"
+                "owner": "project_a"
               }
             }
           ]
         }
       ]
+    },
+    {
+      "id": "project_b",
+      "name": "项目B",
+      "type": "project",
+      "project_id": "projB",
+      "visibility": "private",
+      "children": []
     }
   ]
 }
 ```
 
+**项目资产树生成规则**：
+
+项目资产树是公共资产树的子集视图，生成规则如下：
+
+1. **公共资产自动继承**：`visibility: "public"` 的节点（通用场景/跨项目场景等）自动包含到所有项目的资产树中
+2. **项目专属资产**：`visibility: "private"` 且 `project_id` 匹配当前项目的节点包含到项目资产树中
+3. **其他项目资产排除**：`visibility: "private"` 且 `project_id` 不匹配当前项目的节点排除
+
 **字段说明**：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `type` | string | 节点类型：`library` / `public` / `project` / `category` / `module` / `scenario` / `fault` |
+| `type` | string | 节点类型：`library` / `project` / `category` / `module` / `scenario` / `fault` |
 | `project_id` | string | 项目唯一标识（仅项目节点） |
-| `source` | string | 资产来源：`local`（项目本地）/ `public`（公共引用） |
-| `ref_id` | string | 公共资产引用的原始 ID（仅引用资产） |
+| `visibility` | string | 可见性：`public`（公共可见）/ `private`（项目私有） |
 | `owner` | string | 资产归属：`platform`（平台公共）/ `<project_id>`（项目） |
 | `tags` | array | 标签列表，用于搜索和筛选 |
 
 ### 2.1.4 与 DAG 画布的协作
 
-资产树与 DAG 画布双向协作，遵循项目隔离原则：
+资产树与 DAG 画布双向协作，遵循项目隔离原则。项目资产树是公共资产树的子集视图，自动继承公共资产：
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -432,17 +484,19 @@ AIGC:
 │                                                      │
 │  ┌─────────────┐         ┌─────────────┐            │
 │  │ 业务场景库  │         │ 故障模式库  │            │
-│  │ ┌─────────┐ │         │ ┌─────────┐ │            │
-│  │ │公共场景 │ │         │ │公共故障 │ │            │
-│  │ │项目A场景│ │         │ │项目A故障│ │            │
-│  │ └────┬────┘ │         │ └────┬────┘ │            │
-│  └──────┼──────┘         └──────┼──────┘            │
+│  │ (公共资产树)│         │ (公共资产树)│            │
+│  │             │         │             │            │
+│  │ 通用场景    │         │ 通用故障    │            │
+│  │ 跨项目场景  │         │ 跨项目故障  │            │
+│  │ 项目A/B/C   │         │ 项目A/B/C   │            │
+│  └──────┬──────┘         └──────┬──────┘            │
 │         │                       │                    │
 │         └──────────┬────────────┘                    │
-│                    ▼                                 │
+│                    ▼  子集过滤                        │
 │          ┌──────────────┐                            │
-│          │ 当前项目资产树│  ← 公共资产引用后合并显示    │
-│          │ (仅本项目)   │                            │
+│          │ 当前项目资产树│  ← 公共资产自动继承 + 项目专属 │
+│          │ (公共资产树的)│                            │
+│          │    子集视图   │                            │
 │          └──────┬───────┘                            │
 │                 │ 双击/拖拽                          │
 │                 ▼                                    │
@@ -461,23 +515,24 @@ AIGC:
 
 | 方向 | 场景 | 行为 |
 |------|------|------|
-| 资产树 → DAG | 双击场景（项目本地） | 自动创建 `run` 节点并添加到画布 |
-| 资产树 → DAG | 双击故障（项目本地） | 自动创建 `inject` 节点并添加到画布 |
-| 资产树 → DAG | 双击公共引用资产 | 自动创建节点，ID 前缀 `public_` |
+| 资产树 → DAG | 双击场景（项目专属） | 自动创建 `run` 节点并添加到画布 |
+| 资产树 → DAG | 双击故障（项目专属） | 自动创建 `inject` 节点并添加到画布 |
+| 资产树 → DAG | 双击继承的公共资产 | 自动创建节点，ID 前缀 `public_` |
 | 资产树 → DAG | 拖拽到节点 | 自动建立依赖关系 |
 | DAG → 资产树 | 删除节点 | 如果无其他引用，提示是否从声明层移除 |
 | DAG → 资产树 | 修改引用 ID | 同步更新声明层 ID |
-| 公共资产 → 项目 | 引用操作 | 在项目资产树创建引用节点，不复制数据 |
-| 项目资产 → 公共 | 合并操作 | 提交审核，审核通过后加入公共资产树 |
+| 项目资产 → 公共 | 提升操作 | 提交审核，审核通过后 `visibility` 改为 `public` |
 
 **项目隔离规则**：
 
 | 规则 | 说明 |
 |------|------|
-| 可见性 | 资产树默认只显示当前项目的资产树（含引用的公共资产） |
+| 可见性 | 资产树默认只显示当前项目的资产树（公共资产树的子集视图） |
 | 可操作性 | 只有当前项目资产树中的资产可双击插入或拖拽到画布 |
-| 公共资产访问 | 需先引用到项目资产树，才能在编排中使用 |
-| 数据一致性 | 引用的公共资产与公共资产树保持同步，公共资产更新后引用自动生效 |
+| 公共资产继承 | 公共资产（`visibility: public`）自动继承到项目资产树，无需手动引用 |
+| 项目专属隔离 | 其他项目的专属资产（`visibility: private`）不可见、不可用 |
+| 数据一致性 | 继承的公共资产与公共资产树保持同步，公共资产更新后自动生效 |
+| 子集关系 | 项目资产树是公共资产树的子集，树结构保持一致 |
 
 ### 2.1.5 DSL 预览与编辑
 
