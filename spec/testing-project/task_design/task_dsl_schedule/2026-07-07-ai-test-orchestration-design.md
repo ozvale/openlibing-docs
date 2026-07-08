@@ -46,6 +46,38 @@ AIGC:
 
 ---
 
+## 1.4 术语表
+
+| 术语 | 全称 | 含义 |
+|------|------|------|
+| DSL | Domain-Specific Language | 领域特定语言，AI 与执行引擎之间的唯一契约 |
+| AI | Artificial Intelligence | 人工智能，用于解析用户意图并生成 DSL |
+| LLM | Large Language Model | 大语言模型，AI 编译层的核心组件 |
+| DAG | Directed Acyclic Graph | 有向无环图，编排计划的内部表示形式 |
+| MCP | Model Context Protocol | 模型上下文协议，供 LLM Agent 调用的工具接口 |
+| CLI | Command Line Interface | 命令行界面，供用户直接执行编排计划 |
+| CI/CD | Continuous Integration / Continuous Deployment | 持续集成/持续部署，自动化流水线 |
+| Manifest | - | 清单文件，注册可用的场景和故障定义 |
+| Job | - | 作业，一组步骤的集合，可通过 `needs` 声明依赖 |
+| Step | - | 步骤，最小执行单元（run/inject/cleanup/loop/condition/parallel/call） |
+| Scenario | - | 场景，可执行的测试用例或命令 |
+| Fault | - | 故障，混沌工程中的故障注入定义 |
+| Inject | - | 故障注入，在执行场景前应用故障条件 |
+| Cleanup | - | 故障回收，在执行场景后恢复系统状态 |
+| Parallel | - | 并行执行，多个步骤同时运行 |
+| Loop | - | 循环控制，重复执行一组步骤 |
+| Condition | - | 条件分支，根据表达式结果选择执行路径 |
+| Call | - | 调用另一个 job，实现复用和嵌套 |
+| Strategy | - | 执行策略，包括 retry、backoff、fail-fast 等 |
+| Retry | - | 重试机制，失败后重新执行 |
+| Backoff | - | 退避策略，重试间隔时间 |
+| Fail-fast | - | 快速失败，步骤失败立即终止整个计划 |
+| Adapter | - | 适配器，统一执行接口，支持不同类型的执行器 |
+| Executor | - | 执行器，实际执行命令的组件（Python/Shell/JMeter等） |
+| Orchestrator | - | 编排器，DSL 解析、DAG 编译、调度执行的核心引擎 |
+
+---
+
 ## 2. 架构总览
 
 ```
