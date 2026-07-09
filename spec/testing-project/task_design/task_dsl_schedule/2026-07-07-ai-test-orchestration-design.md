@@ -412,28 +412,35 @@ fault_library (library)
 name: "登录+下单冒烟测试"
 
 scenarios:
+  # 基础场景
   - id: login
-    cmd: "pytest tests/login.py"
+    cmd: "pytest tests/login.py"              # 用户登录测试
   - id: create_order
-    cmd: "pytest tests/create_order.py"
+    cmd: "pytest tests/create_order.py"        # 创建订单测试
   - id: check_network
-    cmd: "ping 10.0.0.1 -n 3"
+    cmd: "ping 10.0.0.1 -n 3"                 # 网络连通性检查
+
+  # 嵌套循环示例场景
   - id: outer_iteration
-    cmd: "echo 'outer iteration'"
+    cmd: "echo 'outer iteration'"              # 外层循环迭代标记
   - id: inner_iteration
-    cmd: "echo 'inner iteration'"
+    cmd: "echo 'inner iteration'"              # 内层循环迭代标记
+
+  # API 测试场景（用于 loop 串行执行示例）
   - id: api_test_1
-    cmd: "pytest tests/api/test_user.py"
+    cmd: "pytest tests/api/test_user.py"       # 用户模块 API 测试
   - id: api_test_2
-    cmd: "pytest tests/api/test_order.py"
+    cmd: "pytest tests/api/test_order.py"      # 订单模块 API 测试
   - id: api_test_3
-    cmd: "pytest tests/api/test_payment.py"
+    cmd: "pytest tests/api/test_payment.py"    # 支付模块 API 测试
+
+  # 健康检查场景（用于 loop 并行执行示例）
   - id: health_check_a
-    cmd: "curl http://service-a/health"
+    cmd: "curl http://service-a/health"        # 服务 A 健康检查
   - id: health_check_b
-    cmd: "curl http://service-b/health"
+    cmd: "curl http://service-b/health"        # 服务 B 健康检查
   - id: health_check_c
-    cmd: "curl http://service-c/health"
+    cmd: "curl http://service-c/health"        # 服务 C 健康检查
 
 faults:
   - id: net_delay_3s
@@ -442,93 +449,102 @@ faults:
       duration: 3
 
 jobs:
+  # 基础作业：登录
   login:
     steps:
       - run: login
-        timeout: 30s
+        timeout: 30s                              # 登录超时 30 秒
 
+  # 基础作业：下单（含故障注入）
   order:
-    needs: [login]
+    needs: [login]                                # 依赖 login 完成
     strategy:
-      retry: 3
-      backoff: 2s
-      fail-fast: false
+      retry: 3                                   # 失败重试 3 次
+      backoff: 2s                                # 重试间隔 2 秒
+      fail-fast: false                           # 不立即终止
     steps:
-      - inject: [net_delay_3s]
-      - run: create_order
-      - cleanup: [net_delay_3s]
+      - inject: [net_delay_3s]                   # 注入 3 秒网络延迟
+      - run: create_order                        # 执行下单测试
+      - cleanup: [net_delay_3s]                  # 恢复网络
 
+  # 基础作业：退款
   refund:
-    needs: [login]
+    needs: [login]                                # 依赖 login 完成
     strategy:
-      fail-fast: false
+      fail-fast: false                           # 不立即终止
     steps:
-      - run: refund
+      - run: refund                              # 执行退款测试
 
+  # 基础作业：循环检查网络（含条件退出）
   check:
-    needs: [order, refund]
+    needs: [order, refund]                       # 依赖 order 和 refund 完成
     steps:
       - loop:
-          times: 3
+          times: 3                               # 最多循环 3 次
           steps:
-            - run: check_network
+            - run: check_network                 # 检查网络连通性
             - condition:
-                if: "${last_step.output.contains('0% loss')}"
+                if: "${last_step.output.contains('0% loss')}"  # 网络无丢包时退出
                 break: true
 
+  # 嵌套循环演示：外层循环调用内层 job
   nested_loop_demo:
     needs: [login]
     steps:
       - loop:
-          times: 2
+          times: 2                               # 外层循环 2 次
           steps:
-            - run: outer_iteration
-            - call: inner_loop_job
+            - run: outer_iteration               # 外层迭代标记
+            - call: inner_loop_job               # 调用内层循环 job
 
+  # 内层循环 job（被 nested_loop_demo 调用）
   inner_loop_job:
     steps:
       - loop:
-          times: 3
+          times: 3                               # 内层循环 3 次
           steps:
-            - run: inner_iteration
+            - run: inner_iteration               # 内层迭代标记
             - condition:
-                if: "${last_step.exit_code != 0}"
+                if: "${last_step.exit_code != 0}"  # 执行失败时退出
                 break: true
 
+  # loop 串行执行演示：每次循环依次执行多个场景
   loop_serial_demo:
     needs: [login]
     steps:
       - loop:
-          times: 3
+          times: 3                               # 循环 3 次
           steps:
-            - run: api_test_1
-            - run: api_test_2
-            - run: api_test_3
+            - run: api_test_1                    # 先执行用户模块测试
+            - run: api_test_2                    # 再执行订单模块测试
+            - run: api_test_3                    # 最后执行支付模块测试
 
+  # loop 并行执行演示：每次循环并发执行多个场景
   loop_parallel_demo:
     needs: [login]
     steps:
       - loop:
-          times: 5
+          times: 5                               # 循环 5 次
           steps:
             - parallel:
                 steps:
-                  - run: health_check_a
-                  - run: health_check_b
-                  - run: health_check_c
+                  - run: health_check_a          # 并发检查服务 A
+                  - run: health_check_b          # 并发检查服务 B
+                  - run: health_check_c          # 并发检查服务 C
 
+  # loop 混合执行演示：串行 + 并行 + 串行组合
   loop_mixed_demo:
     needs: [login]
     steps:
       - loop:
-          times: 2
+          times: 2                               # 循环 2 次
           steps:
-            - run: api_test_1
+            - run: api_test_1                    # 1. 串行执行用户模块测试
             - parallel:
                 steps:
-                  - run: health_check_a
+                  - run: health_check_a          # 2. 并行检查服务 A 和 B
                   - run: health_check_b
-            - run: api_test_2
+            - run: api_test_2                    # 3. 串行执行订单模块测试
 ```
 
 **嵌套循环说明**：由于 DSL 约束"循环内禁嵌套 loop"，嵌套循环通过 `call` 引用另一个 job 实现。外层循环每次迭代调用 `inner_loop_job`，内层 job 独立执行自己的循环逻辑。
