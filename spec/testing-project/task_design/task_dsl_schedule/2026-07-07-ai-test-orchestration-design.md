@@ -251,292 +251,81 @@ AIGC:
 
 资产树分为业务场景库和故障模式库两个独立模块。公共资产树是完整的资产集合，项目资产树是公共资产树的子集视图，两者树结构保持一致。
 
-**业务场景库数据模型（公共资产树）**：
+**资产树数据模型结构定义**：
 
 ```json
 {
-  "id": "scenario_library",
-  "name": "业务场景库",
-  "type": "library",
-  "children": [
-    {
-      "id": "common_scenarios",
-      "name": "通用场景",
-      "type": "category",
-      "visibility": "public",
-      "children": [
-        {
-          "id": "health_check",
-          "name": "健康检查",
-          "type": "scenario",
-          "data": {
-            "cmd": "curl http://localhost:8080/health",
-            "params": {},
-            "description": "服务健康检查",
-            "tags": ["common", "health"],
-            "owner": "platform"
-          }
-        }
-      ]
+  "$schema": "资产树数据结构定义",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "description": "节点唯一标识" },
+    "name": { "type": "string", "description": "节点显示名称" },
+    "type": {
+      "type": "string",
+      "enum": ["library", "category", "module", "scenario", "fault"],
+      "description": "节点类型"
     },
-    {
-      "id": "cross_project",
-      "name": "跨项目场景",
-      "type": "category",
-      "visibility": "public",
-      "children": [
-        {
-          "id": "login_common",
-          "name": "通用登录",
-          "type": "scenario",
-          "data": {
-            "cmd": "pytest tests/common/login.py",
-            "params": {},
-            "description": "跨项目通用登录场景",
-            "tags": ["common", "auth"],
-            "owner": "platform"
-          }
-        }
-      ]
+    "visibility": {
+      "type": "string",
+      "enum": ["public"],
+      "description": "可见性：public（公共可见）"
     },
-    {
-      "id": "module_a1",
-      "name": "模块A1",
-      "type": "module",
-      "visibility": "public",
-      "children": [
-        {
-          "id": "scenario_a1_1",
-          "name": "场景A1-1",
-          "type": "scenario",
-          "data": {
-            "cmd": "pytest tests/module_a1/scenario1.py",
-            "params": {},
-            "description": "模块A1场景1",
-            "tags": ["module_a1"],
-            "owner": "platform"
-          }
-        },
-        {
-          "id": "scenario_a1_2",
-          "name": "场景A1-2",
-          "type": "scenario",
-          "data": {
-            "cmd": "pytest tests/module_a1/scenario2.py",
-            "params": {},
-            "description": "模块A1场景2",
-            "tags": ["module_a1"],
-            "owner": "platform"
-          }
-        }
-      ]
+    "children": {
+      "type": "array",
+      "description": "子节点列表",
+      "items": { "$ref": "#" }
     },
-    {
-      "id": "module_a2",
-      "name": "模块A2",
-      "type": "module",
-      "visibility": "public",
-      "children": [
-        {
-          "id": "scenario_a2_1",
-          "name": "场景A2-1",
-          "type": "scenario",
-          "data": {
-            "cmd": "pytest tests/module_a2/scenario1.py",
-            "params": {},
-            "description": "模块A2场景1",
-            "tags": ["module_a2"],
-            "owner": "platform"
-          }
-        }
-      ]
-    },
-    {
-      "id": "module_b1",
-      "name": "模块B1",
-      "type": "module",
-      "visibility": "public",
-      "children": [
-        {
-          "id": "scenario_b1_1",
-          "name": "场景B1-1",
-          "type": "scenario",
-          "data": {
-            "cmd": "pytest tests/module_b1/scenario1.py",
-            "params": {},
-            "description": "模块B1场景1",
-            "tags": ["module_b1"],
-            "owner": "platform"
-          }
-        }
-      ]
-    },
-    {
-      "id": "module_b2",
-      "name": "模块B2",
-      "type": "module",
-      "visibility": "public",
-      "children": [
-        {
-          "id": "scenario_b2_1",
-          "name": "场景B2-1",
-          "type": "scenario",
-          "data": {
-            "cmd": "pytest tests/module_b2/scenario1.py",
-            "params": {},
-            "description": "模块B2场景1",
-            "tags": ["module_b2"],
-            "owner": "platform"
-          }
-        }
-      ]
+    "data": {
+      "type": "object",
+      "description": "资产数据（仅叶子节点）",
+      "properties": {
+        "cmd": { "type": "string", "description": "执行命令或脚本路径" },
+        "params": { "type": "object", "description": "命令参数（key-value）" },
+        "description": { "type": "string", "description": "资产描述" },
+        "tags": { "type": "array", "items": { "type": "string" }, "description": "标签列表" },
+        "owner": { "type": "string", "description": "资产归属：platform（平台公共）" }
+      },
+      "required": ["cmd", "description"]
     }
-  ]
+  },
+  "required": ["id", "name", "type"]
 }
 ```
 
-**故障模式库数据模型（公共资产树）**：
+**节点类型说明**：
 
-```json
-{
-  "id": "fault_library",
-  "name": "故障模式库",
-  "type": "library",
-  "children": [
-    {
-      "id": "common_faults",
-      "name": "通用故障",
-      "type": "category",
-      "visibility": "public",
-      "children": [
-        {
-          "id": "net_delay_3s",
-          "name": "网络延迟3秒",
-          "type": "fault",
-          "data": {
-            "cmd": "tc qdisc add dev eth0 root netem delay 3000ms",
-            "params": { "duration": 3 },
-            "description": "注入3秒网络延迟",
-            "tags": ["network", "chaos"],
-            "owner": "platform"
-          }
-        },
-        {
-          "id": "packet_loss",
-          "name": "网络丢包",
-          "type": "fault",
-          "data": {
-            "cmd": "tc qdisc add dev eth0 root netem loss 10%",
-            "params": { "duration": 5 },
-            "description": "注入10%网络丢包",
-            "tags": ["network", "chaos"],
-            "owner": "platform"
-          }
-        }
-      ]
-    },
-    {
-      "id": "cross_project_faults",
-      "name": "跨项目故障",
-      "type": "category",
-      "visibility": "public",
-      "children": [
-        {
-          "id": "db_failure",
-          "name": "数据库故障",
-          "type": "fault",
-          "data": {
-            "cmd": "systemctl stop mysql",
-            "params": { "duration": 30 },
-            "description": "停止数据库服务",
-            "tags": ["db", "chaos"],
-            "owner": "platform"
-          }
-        }
-      ]
-    },
-    {
-      "id": "module_a1",
-      "name": "模块A1",
-      "type": "module",
-      "visibility": "public",
-      "children": [
-        {
-          "id": "fault_a1_1",
-          "name": "故障A1-1",
-          "type": "fault",
-          "data": {
-            "cmd": "tc qdisc add dev lo root netem delay 500ms",
-            "params": { "duration": 5 },
-            "description": "数据库网络延迟",
-            "tags": ["db", "chaos"],
-            "owner": "platform"
-          }
-        }
-      ]
-    },
-    {
-      "id": "module_a2",
-      "name": "模块A2",
-      "type": "module",
-      "visibility": "public",
-      "children": [
-        {
-          "id": "fault_a2_1",
-          "name": "故障A2-1",
-          "type": "fault",
-          "data": {
-            "cmd": "tc qdisc add dev eth0 root netem delay 2000ms",
-            "params": { "duration": 10 },
-            "description": "模块A2网络延迟",
-            "tags": ["network", "chaos"],
-            "owner": "platform"
-          }
-        }
-      ]
-    },
-    {
-      "id": "module_b1",
-      "name": "模块B1",
-      "type": "module",
-      "visibility": "public",
-      "children": [
-        {
-          "id": "fault_b1_1",
-          "name": "故障B1-1",
-          "type": "fault",
-          "data": {
-            "cmd": "tc qdisc add dev eth0 root netem loss 20%",
-            "params": { "duration": 8 },
-            "description": "模块B1网络丢包",
-            "tags": ["network", "chaos"],
-            "owner": "platform"
-          }
-        }
-      ]
-    },
-    {
-      "id": "module_b2",
-      "name": "模块B2",
-      "type": "module",
-      "visibility": "public",
-      "children": [
-        {
-          "id": "fault_b2_1",
-          "name": "故障B2-1",
-          "type": "fault",
-          "data": {
-            "cmd": "systemctl stop redis",
-            "params": { "duration": 15 },
-            "description": "缓存服务故障",
-            "tags": ["cache", "chaos"],
-            "owner": "platform"
-          }
-        }
-      ]
-    }
-  ]
-}
+| 节点类型 | 说明 | 是否含 children | 是否含 data |
+|----------|------|----------------|-------------|
+| `library` | 根节点（业务场景库/故障模式库） | 是 | 否 |
+| `category` | 分类节点（通用场景/跨项目场景等） | 是 | 否 |
+| `module` | 模块节点（各业务模块） | 是 | 否 |
+| `scenario` | 场景叶子节点（业务场景库） | 否 | 是 |
+| `fault` | 故障叶子节点（故障模式库） | 否 | 是 |
+
+**业务场景库树结构**：
+
+```
+scenario_library (library)
+├── common_scenarios (category)
+│   └── <scenario>...
+├── cross_project (category)
+│   └── <scenario>...
+├── <module> (module)
+│   └── <scenario>...
+└── ...
+```
+
+**故障模式库树结构**：
+
+```
+fault_library (library)
+├── common_faults (category)
+│   └── <fault>...
+├── cross_project_faults (category)
+│   └── <fault>...
+├── <module> (module)
+│   └── <fault>...
+└── ...
 ```
 
 **项目资产树生成规则**：
@@ -545,15 +334,6 @@ AIGC:
 
 1. **公共资产自动继承**：`visibility: "public"` 的节点（通用场景/跨项目场景/各模块）自动包含到所有项目的资产树中
 2. **树结构一致**：项目资产树与公共资产树保持相同的层级结构，仅做子集过滤
-
-**字段说明**：
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `type` | string | 节点类型：`library` / `category` / `module` / `scenario` / `fault` |
-| `visibility` | string | 可见性：`public`（公共可见） |
-| `owner` | string | 资产归属：`platform`（平台公共） |
-| `tags` | array | 标签列表，用于搜索和筛选 |
 
 ### 2.1.4 与 DAG 画布的协作
 
@@ -610,8 +390,7 @@ AIGC:
 |------|------|
 | 可见性 | 资产树默认只显示当前项目的资产树（公共资产树的子集视图） |
 | 可操作性 | 只有当前项目资产树中的资产可双击插入或拖拽到画布 |
-| 公共资产继承 | 公共资产（`visibility: public`）自动继承到项目资产树，无需手动引用 |
-| 数据一致性 | 继承的公共资产与公共资产树保持同步，公共资产更新后自动生效 |
+| 数据一致性 | 项目资产与公共资产树保持同步，公共资产更新后自动同步到项目资产树，已引用到任务中使用的资产实例不自动更新，支持手动更新 |
 | 子集关系 | 项目资产树是公共资产树的子集，树结构保持一致 |
 
 ### 2.1.5 DSL 预览与编辑
@@ -680,7 +459,28 @@ jobs:
             - condition:
                 if: "${last_step.output.contains('0% loss')}"
                 break: true
+
+  nested_loop_demo:
+    needs: [login]
+    steps:
+      - loop:
+          times: 2
+          steps:
+            - run: outer_iteration
+            - call: inner_loop_job
+
+  inner_loop_job:
+    steps:
+      - loop:
+          times: 3
+          steps:
+            - run: inner_iteration
+            - condition:
+                if: "${last_step.exit_code != 0}"
+                break: true
 ```
+
+**嵌套循环说明**：由于 DSL 约束"循环内禁嵌套 loop"，嵌套循环通过 `call` 引用另一个 job 实现。外层循环每次迭代调用 `inner_loop_job`，内层 job 独立执行自己的循环逻辑。
 
 ### 3.2 关键词全表
 
@@ -708,7 +508,7 @@ jobs:
 | `inject` | 注入故障 | 故障 id 列表（引用 `faults`） | 按列表顺序注入 |
 | `cleanup` | 回收故障 | 故障 id 列表（引用 `faults`） | 按逆序回收；可选，引擎兜底 |
 | `parallel` | 并行执行 | `steps` 子步骤列表 | 至少 2 个子步骤 |
-| `loop` | 循环控制 | `times` + `steps` 子步骤列表 | 循环内禁嵌套 `loop` |
+| `loop` | 循环控制 | `times` + `steps` 子步骤列表 | 循环内禁嵌套 `loop`；需嵌套用 `call` 引用另一个 job |
 | `condition` | 条件分支 | `if` / `then` / `else` | `then` 必填，`else` 可选 |
 | `call` | 调用另一个 job | job id | 引用的 job 必须已定义在当前 plan 中 |
 
@@ -757,7 +557,7 @@ jobs:
 | 无环 | DAG 编译时通过 `needs` 检测循环依赖 |
 | 引用完整性 | `needs` 指向的 job id 必须存在；`run` 引用的场景 id 必须在 `scenarios` 中声明；`inject`/`cleanup` 中的故障 id 必须在 `faults` 中声明；`call` 引用的 job id 必须已定义 |
 | 嵌套深度上限 | `loop > parallel` 嵌套上限 5 层 |
-| `loop` 内禁嵌套 `loop` | 需嵌套循环用 `call` 引用另一个 job |
+| `loop` 内禁嵌套 `loop` | 需嵌套循环用 `call` 引用另一个 job，外层循环每次迭代调用包含内层循环的 job |
 | `needs` 缺省语义 | 无 `needs` 的 job 在 plan 启动时立即执行 |
 | `parallel` 至少 2 子步骤 | 单一 `run` 直接写在 `steps` 中即可 |
 | `fail-fast` 作用域 | `true` 时 job 内任一步骤失败立即终止整个 plan |
