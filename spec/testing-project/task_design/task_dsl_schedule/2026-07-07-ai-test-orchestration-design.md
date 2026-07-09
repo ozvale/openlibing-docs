@@ -508,30 +508,6 @@ jobs:
                 if: "${last_step.exit_code != 0}"  # 执行失败时退出
                 break: true
 
-  # loop 串行执行演示：每次循环依次执行多个场景
-  loop_serial_demo:
-    needs: [login]
-    steps:
-      - loop:
-          times: 3                               # 循环 3 次
-          steps:
-            - run: api_test_1                    # 先执行用户模块测试
-            - run: api_test_2                    # 再执行订单模块测试
-            - run: api_test_3                    # 最后执行支付模块测试
-
-  # loop 并行执行演示：每次循环并发执行多个场景
-  loop_parallel_demo:
-    needs: [login]
-    steps:
-      - loop:
-          times: 5                               # 循环 5 次
-          steps:
-            - parallel:
-                steps:
-                  - run: health_check_a          # 并发检查服务 A
-                  - run: health_check_b          # 并发检查服务 B
-                  - run: health_check_c          # 并发检查服务 C
-
   # loop 混合执行演示：串行 + 并行 + 串行组合
   loop_mixed_demo:
     needs: [login]
@@ -540,6 +516,7 @@ jobs:
           times: 2                               # 循环 2 次
           steps:
             - run: api_test_1                    # 1. 串行执行用户模块测试
+            - run: api_test_2                    # 再执行订单模块测试
             - parallel:
                 steps:
                   - run: health_check_a          # 2. 并行检查服务 A 和 B
@@ -725,7 +702,7 @@ class AdapterProtocol:
 
 ### 6.2 Prompt 策略
 
-三段式对话：
+三段式对话结构：
 
 | 阶段 | 作用 | 内容 |
 |------|------|------|
@@ -733,17 +710,162 @@ class AdapterProtocol:
 | Context | 环境信息 | 可用场景/故障列表（从 manifests 加载，向量检索裁剪） |
 | User | 用户意图 | 自然语言编排需求 |
 
-内置 3-5 个 few-shot 示例覆盖串行/并行/循环/条件/故障注入。
+**System Prompt 结构**：
+
+```
+你是一个专业的测试编排 DSL 生成器。请根据用户的自然语言需求，生成符合以下规范的 YAML 格式 DSL：
+
+【DSL 关键词约束】
+- 根节点必须是 plan
+- plan 下必须包含 name、scenarios、jobs
+- scenarios 和 faults 中的 id 必须唯一
+- jobs 中的 step 类型只能是：run、inject、cleanup、parallel、loop、condition、call
+- loop 内禁止嵌套 loop，需嵌套循环请使用 call 引用另一个 job
+- parallel 至少需要 2 个子步骤
+
+【输出格式要求】
+- 只输出 YAML 代码，不输出任何解释性文字
+- YAML 使用 2 空格缩进
+- 输出必须包裹在 <dsl_output> 和 </dsl_output> 标签内
+
+【示例格式】
+<dsl_output>
+yaml
+name: "示例计划"
+
+scenarios:
+  - id: login
+    cmd: "pytest tests/login.py"
+
+faults:
+  - id: net_delay
+    cmd: "tc qdisc add dev eth0 root netem delay 1000ms"
+
+jobs:
+  login_job:
+    steps:
+      - run: login
+</dsl_output>
+```
+
+**Context 信息**：从 manifests 加载可用的场景和故障列表，通过向量检索裁剪到与用户需求最相关的 20-50 项，避免 LLM 上下文过长。
+
+**Few-shot 示例**：内置 3-5 个示例覆盖典型模式：
+- 串行执行
+- 并行执行
+- 循环执行（含条件退出）
+- 条件分支
+- 故障注入与恢复
+- 嵌套循环（通过 call 实现）
 
 ### 6.3 校验规则
 
-| 校验层 | 内容 |
-|--------|------|
-| 语法校验 | YAML 合法性、缩进、关键词拼写 |
-| 引用校验 | 所有 `step_id`、`scenario id`、`fault id` 引用完整性 |
-| 拓扑校验 | DAG 无环、嵌套深度 ≤ 5、loop 无嵌套 |
+三层校验体系，逐层递进：
 
-### 6.4 旁路条件
+| 校验层 | 校验内容 | 失败处理 |
+|--------|----------|----------|
+| **语法校验** | YAML 合法性、缩进、关键词拼写 | 返回具体错误位置和原因 |
+| **引用校验** | `scenario id`、`fault id`、`job id` 引用完整性 | 提示缺失的引用项 |
+| **拓扑校验** | DAG 无环、嵌套深度 ≤ 5、loop 无嵌套 | 提示违反约束的位置 |
+
+**校验工具**：
+- 使用 Pydantic Schema 进行结构校验
+- 使用 YAML 解析器进行语法校验
+- 使用图算法进行拓扑约束校验
+
+### 6.4 自动修正机制
+
+当校验失败时，系统自动触发修正流程：
+
+```
+校验失败 → 自动修正（最多 2 次）→ 仍失败 → 返回用户
+              │
+              └── 将校验错误信息 + 当前 DSL 反馈给 LLM
+                  → LLM 根据错误提示修正
+```
+
+**修正策略**：
+1. 将校验失败的具体错误信息（如"loop 内禁止嵌套 loop"、"引用的 scenario id 不存在"）反馈给 LLM
+2. LLM 根据错误提示重新生成修正后的 DSL
+3. 设置最大修正次数（2 次），避免无限循环
+
+**修正 Prompt 示例**：
+
+```
+以下 DSL 生成失败，错误信息：
+<error>
+  错误类型：拓扑校验失败
+  错误位置：job 'nested_loop', step 0
+  错误原因：loop 内禁止嵌套 loop，请使用 call 引用另一个 job
+</error>
+
+请根据错误信息修正以下 DSL：
+<dsl>
+yaml
+...（当前 DSL 内容）
+</dsl>
+
+修正要求：
+1. 移除 loop 内的嵌套 loop
+2. 创建独立的 inner_loop job
+3. 在外层 loop 中使用 call 引用 inner_loop
+```
+
+### 6.5 额外约束手段（可选增强）
+
+如需更严格的约束，可启用以下增强手段：
+
+| 手段 | 说明 | 适用场景 |
+|------|------|----------|
+| **JSON Schema 强制** | 在 Prompt 中嵌入完整的 JSON Schema，使用 `strict` 模式校验 | 需要严格结构约束 |
+| **输出格式校验** | 使用正则表达式匹配输出格式，确保符合 `<dsl_output>` 标签规范 | 防止 LLM 输出额外内容 |
+| **关键词白名单** | 校验 DSL 中使用的关键词是否在预定义白名单内 | 防止使用非法关键词 |
+| **约束规则注入** | 将拓扑约束规则作为 System Prompt 的一部分 | 强化约束意识 |
+| **示例对比** | 生成后与 few-shot 示例对比结构相似度，差异过大则拒绝 | 保证输出质量 |
+
+### 6.6 约束流程图
+
+```
+用户自然语言输入
+        │
+        ▼
+┌─────────────────────────┐
+│ 1. Prompt 层约束        │
+│    - System Prompt      │
+│    - Context 资源列表   │
+│    - Few-shot 示例      │
+└─────────────────────────┘
+        │
+        ▼
+┌─────────────────────────┐
+│ 2. 输出格式约束         │
+│    - <dsl_output> 标签  │
+│    - 禁止额外内容       │
+└─────────────────────────┘
+        │
+        ▼
+┌─────────────────────────┐
+│ 3. 三重校验层           │
+│    - 语法校验           │
+│    - 引用校验           │
+│    - 拓扑校验           │
+└─────────────────────────┘
+        │
+   校验通过 │ 校验失败
+        │         │
+        ▼         ▼
+   交付引擎   ┌──────────────┐
+              │ 4. 自动修正  │
+              │ （最多 2 次） │
+              └──────────────┘
+                    │
+              修正成功 │ 仍失败
+                    │         │
+                    ▼         ▼
+               交付引擎   返回用户错误
+```
+
+### 6.7 旁路条件
 
 API 和可视化面板直接提交 DSL 时，跳过 LLM，仅走三重校验后交付引擎。
 
