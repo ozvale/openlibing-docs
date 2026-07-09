@@ -139,33 +139,34 @@ AIGC:
 │   └── health_check (scenario)
 ├── 跨项目场景
 │   └── login_common (scenario)
-├── 项目A
-│   ├── 模块A1
-│   │   ├── 场景A1-1 (scenario)
-│   │   └── 场景A1-2 (scenario)
-│   └── 模块A2
-│       └── 场景A2-1 (scenario)
-└── 项目B
-    ├── 模块B1
-    │   └── 场景B1-1 (scenario)
-    └── 模块B2
-        └── 场景B2-1 (scenario)
+├── 模块A1
+│   ├── 场景A1-1 (scenario)
+│   └── 场景A1-2 (scenario)
+├── 模块A2
+│   └── 场景A2-1 (scenario)
+├── 模块B1
+│   └── 场景B1-1 (scenario)
+└── 模块B2
+    └── 场景B2-1 (scenario)
 ```
 
-**项目A资产树（公共资产树的子集）**：
+**项目资产树（公共资产树的子集）**：
 
 ```
-项目A场景（公共资产树子集）
+项目场景（公共资产树子集）
 ├── 通用场景                    ← 继承自公共
 │   └── health_check (scenario)
 ├── 跨项目场景                  ← 继承自公共
 │   └── login_common (scenario)
-└── 项目A                       ← 项目专属
-    ├── 模块A1
-    │   ├── 场景A1-1 (scenario)
-    │   └── 场景A1-2 (scenario)
-    └── 模块A2
-        └── 场景A2-1 (scenario)
+├── 模块A1                      ← 项目可见
+│   ├── 场景A1-1 (scenario)
+│   └── 场景A1-2 (scenario)
+├── 模块A2                      ← 项目可见
+│   └── 场景A2-1 (scenario)
+├── 模块B1                      ← 项目可见
+│   └── 场景B1-1 (scenario)
+└── 模块B2                      ← 项目可见
+    └── 场景B2-1 (scenario)
 ```
 
 **故障模式库组织结构**：
@@ -177,16 +178,14 @@ AIGC:
 │   └── packet_loss (fault)
 ├── 跨项目故障
 │   └── db_failure (fault)
-├── 项目A
-│   ├── 模块A1
-│   │   └── 故障A1-1 (fault)
-│   └── 模块A2
-│       └── 故障A2-1 (fault)
-└── 项目B
-    ├── 模块B1
-    │   └── 故障B1-1 (fault)
-    └── 模块B2
-        └── 故障B2-1 (fault)
+├── 模块A1
+│   └── 故障A1-1 (fault)
+├── 模块A2
+│   └── 故障A2-1 (fault)
+├── 模块B1
+│   └── 故障B1-1 (fault)
+└── 模块B2
+    └── 故障B2-1 (fault)
 ```
 
 **项目资产树与公共资产树关系**：
@@ -194,10 +193,8 @@ AIGC:
 | 关系 | 说明 |
 |------|------|
 | 树结构一致 | 项目资产树与公共资产树的层级结构保持一致 |
-| 子集关系 | 项目资产树是公共资产树的子集，包含公共部分和项目专属部分 |
+| 子集关系 | 项目资产树是公共资产树的子集 |
 | 继承公共 | 项目资产树自动继承公共资产树中的通用场景/故障 |
-| 项目专属 | 项目创建的资产存储在公共资产树的项目节点下，仅对本项目可见 |
-| 合并到公共 | 项目专属资产可申请提升为公共资产，供所有项目使用 |
 | 使用隔离 | 编排时只从当前项目的资产树（子集）引用插入 |
 
 **交互方式**：
@@ -311,46 +308,96 @@ AIGC:
       ]
     },
     {
-      "id": "project_a",
-      "name": "项目A",
-      "type": "project",
-      "project_id": "projA",
-      "visibility": "private",
+      "id": "module_a1",
+      "name": "模块A1",
+      "type": "module",
+      "visibility": "public",
       "children": [
         {
-          "id": "module_a1",
-          "name": "模块A1",
-          "type": "module",
-          "children": [
-            {
-              "id": "projA_modA1_login",
-              "name": "登录场景",
-              "type": "scenario",
-              "data": {
-                "cmd": "pytest tests/login.py",
-                "params": { "env": "test" },
-                "description": "用户登录测试场景",
-                "tags": ["smoke", "auth"],
-                "owner": "project_a"
-              }
-            }
-          ]
+          "id": "scenario_a1_1",
+          "name": "场景A1-1",
+          "type": "scenario",
+          "data": {
+            "cmd": "pytest tests/module_a1/scenario1.py",
+            "params": {},
+            "description": "模块A1场景1",
+            "tags": ["module_a1"],
+            "owner": "platform"
+          }
         },
         {
-          "id": "module_a2",
-          "name": "模块A2",
-          "type": "module",
-          "children": []
+          "id": "scenario_a1_2",
+          "name": "场景A1-2",
+          "type": "scenario",
+          "data": {
+            "cmd": "pytest tests/module_a1/scenario2.py",
+            "params": {},
+            "description": "模块A1场景2",
+            "tags": ["module_a1"],
+            "owner": "platform"
+          }
         }
       ]
     },
     {
-      "id": "project_b",
-      "name": "项目B",
-      "type": "project",
-      "project_id": "projB",
-      "visibility": "private",
-      "children": []
+      "id": "module_a2",
+      "name": "模块A2",
+      "type": "module",
+      "visibility": "public",
+      "children": [
+        {
+          "id": "scenario_a2_1",
+          "name": "场景A2-1",
+          "type": "scenario",
+          "data": {
+            "cmd": "pytest tests/module_a2/scenario1.py",
+            "params": {},
+            "description": "模块A2场景1",
+            "tags": ["module_a2"],
+            "owner": "platform"
+          }
+        }
+      ]
+    },
+    {
+      "id": "module_b1",
+      "name": "模块B1",
+      "type": "module",
+      "visibility": "public",
+      "children": [
+        {
+          "id": "scenario_b1_1",
+          "name": "场景B1-1",
+          "type": "scenario",
+          "data": {
+            "cmd": "pytest tests/module_b1/scenario1.py",
+            "params": {},
+            "description": "模块B1场景1",
+            "tags": ["module_b1"],
+            "owner": "platform"
+          }
+        }
+      ]
+    },
+    {
+      "id": "module_b2",
+      "name": "模块B2",
+      "type": "module",
+      "visibility": "public",
+      "children": [
+        {
+          "id": "scenario_b2_1",
+          "name": "场景B2-1",
+          "type": "scenario",
+          "data": {
+            "cmd": "pytest tests/module_b2/scenario1.py",
+            "params": {},
+            "description": "模块B2场景1",
+            "tags": ["module_b2"],
+            "owner": "platform"
+          }
+        }
+      ]
     }
   ]
 }
@@ -417,40 +464,84 @@ AIGC:
       ]
     },
     {
-      "id": "project_a",
-      "name": "项目A",
-      "type": "project",
-      "project_id": "projA",
-      "visibility": "private",
+      "id": "module_a1",
+      "name": "模块A1",
+      "type": "module",
+      "visibility": "public",
       "children": [
         {
-          "id": "module_a1",
-          "name": "模块A1",
-          "type": "module",
-          "children": [
-            {
-              "id": "projA_modA1_db_delay",
-              "name": "数据库延迟",
-              "type": "fault",
-              "data": {
-                "cmd": "tc qdisc add dev lo root netem delay 500ms",
-                "params": { "duration": 5 },
-                "description": "数据库网络延迟",
-                "tags": ["db", "chaos"],
-                "owner": "project_a"
-              }
-            }
-          ]
+          "id": "fault_a1_1",
+          "name": "故障A1-1",
+          "type": "fault",
+          "data": {
+            "cmd": "tc qdisc add dev lo root netem delay 500ms",
+            "params": { "duration": 5 },
+            "description": "数据库网络延迟",
+            "tags": ["db", "chaos"],
+            "owner": "platform"
+          }
         }
       ]
     },
     {
-      "id": "project_b",
-      "name": "项目B",
-      "type": "project",
-      "project_id": "projB",
-      "visibility": "private",
-      "children": []
+      "id": "module_a2",
+      "name": "模块A2",
+      "type": "module",
+      "visibility": "public",
+      "children": [
+        {
+          "id": "fault_a2_1",
+          "name": "故障A2-1",
+          "type": "fault",
+          "data": {
+            "cmd": "tc qdisc add dev eth0 root netem delay 2000ms",
+            "params": { "duration": 10 },
+            "description": "模块A2网络延迟",
+            "tags": ["network", "chaos"],
+            "owner": "platform"
+          }
+        }
+      ]
+    },
+    {
+      "id": "module_b1",
+      "name": "模块B1",
+      "type": "module",
+      "visibility": "public",
+      "children": [
+        {
+          "id": "fault_b1_1",
+          "name": "故障B1-1",
+          "type": "fault",
+          "data": {
+            "cmd": "tc qdisc add dev eth0 root netem loss 20%",
+            "params": { "duration": 8 },
+            "description": "模块B1网络丢包",
+            "tags": ["network", "chaos"],
+            "owner": "platform"
+          }
+        }
+      ]
+    },
+    {
+      "id": "module_b2",
+      "name": "模块B2",
+      "type": "module",
+      "visibility": "public",
+      "children": [
+        {
+          "id": "fault_b2_1",
+          "name": "故障B2-1",
+          "type": "fault",
+          "data": {
+            "cmd": "systemctl stop redis",
+            "params": { "duration": 15 },
+            "description": "缓存服务故障",
+            "tags": ["cache", "chaos"],
+            "owner": "platform"
+          }
+        }
+      ]
     }
   ]
 }
@@ -460,18 +551,16 @@ AIGC:
 
 项目资产树是公共资产树的子集视图，生成规则如下：
 
-1. **公共资产自动继承**：`visibility: "public"` 的节点（通用场景/跨项目场景等）自动包含到所有项目的资产树中
-2. **项目专属资产**：`visibility: "private"` 且 `project_id` 匹配当前项目的节点包含到项目资产树中
-3. **其他项目资产排除**：`visibility: "private"` 且 `project_id` 不匹配当前项目的节点排除
+1. **公共资产自动继承**：`visibility: "public"` 的节点（通用场景/跨项目场景/各模块）自动包含到所有项目的资产树中
+2. **树结构一致**：项目资产树与公共资产树保持相同的层级结构，仅做子集过滤
 
 **字段说明**：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `type` | string | 节点类型：`library` / `project` / `category` / `module` / `scenario` / `fault` |
-| `project_id` | string | 项目唯一标识（仅项目节点） |
-| `visibility` | string | 可见性：`public`（公共可见）/ `private`（项目私有） |
-| `owner` | string | 资产归属：`platform`（平台公共）/ `<project_id>`（项目） |
+| `type` | string | 节点类型：`library` / `category` / `module` / `scenario` / `fault` |
+| `visibility` | string | 可见性：`public`（公共可见） |
+| `owner` | string | 资产归属：`platform`（平台公共） |
 | `tags` | array | 标签列表，用于搜索和筛选 |
 
 ### 2.1.4 与 DAG 画布的协作
@@ -488,7 +577,7 @@ AIGC:
 │  │             │         │             │            │
 │  │ 通用场景    │         │ 通用故障    │            │
 │  │ 跨项目场景  │         │ 跨项目故障  │            │
-│  │ 项目A/B/C   │         │ 项目A/B/C   │            │
+│  │ 模块A/B/C   │         │ 模块A/B/C   │            │
 │  └──────┬──────┘         └──────┬──────┘            │
 │         │                       │                    │
 │         └──────────┬────────────┘                    │
@@ -530,7 +619,6 @@ AIGC:
 | 可见性 | 资产树默认只显示当前项目的资产树（公共资产树的子集视图） |
 | 可操作性 | 只有当前项目资产树中的资产可双击插入或拖拽到画布 |
 | 公共资产继承 | 公共资产（`visibility: public`）自动继承到项目资产树，无需手动引用 |
-| 项目专属隔离 | 其他项目的专属资产（`visibility: private`）不可见、不可用 |
 | 数据一致性 | 继承的公共资产与公共资产树保持同步，公共资产更新后自动生效 |
 | 子集关系 | 项目资产树是公共资产树的子集，树结构保持一致 |
 
