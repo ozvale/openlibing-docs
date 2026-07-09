@@ -136,9 +136,7 @@ AIGC:
 ```
 业务场景库（公共资产树）
 ├── 通用场景
-│   └── health_check (scenario)
-├── 跨项目场景
-│   └── login_common (scenario)
+│   └── 场景1    (scenario)
 ├── 模块A1
 │   ├── 场景A1-1 (scenario)
 │   └── 场景A1-2 (scenario)
@@ -154,17 +152,11 @@ AIGC:
 
 ```
 项目场景（公共资产树子集）
-├── 通用场景                    ← 继承自公共
-│   └── health_check (scenario)
-├── 跨项目场景                  ← 继承自公共
-│   └── login_common (scenario)
+├── 通用场景                     ← 项目可见
+│   └── 场景1 (scenario)
 ├── 模块A1                      ← 项目可见
 │   ├── 场景A1-1 (scenario)
 │   └── 场景A1-2 (scenario)
-├── 模块A2                      ← 项目可见
-│   └── 场景A2-1 (scenario)
-├── 模块B1                      ← 项目可见
-│   └── 场景B1-1 (scenario)
 └── 模块B2                      ← 项目可见
     └── 场景B2-1 (scenario)
 ```
