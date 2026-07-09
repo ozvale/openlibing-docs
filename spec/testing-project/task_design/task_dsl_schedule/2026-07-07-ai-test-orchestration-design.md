@@ -418,6 +418,22 @@ scenarios:
     cmd: "pytest tests/create_order.py"
   - id: check_network
     cmd: "ping 10.0.0.1 -n 3"
+  - id: outer_iteration
+    cmd: "echo 'outer iteration'"
+  - id: inner_iteration
+    cmd: "echo 'inner iteration'"
+  - id: api_test_1
+    cmd: "pytest tests/api/test_user.py"
+  - id: api_test_2
+    cmd: "pytest tests/api/test_order.py"
+  - id: api_test_3
+    cmd: "pytest tests/api/test_payment.py"
+  - id: health_check_a
+    cmd: "curl http://service-a/health"
+  - id: health_check_b
+    cmd: "curl http://service-b/health"
+  - id: health_check_c
+    cmd: "curl http://service-c/health"
 
 faults:
   - id: net_delay_3s
@@ -478,9 +494,49 @@ jobs:
             - condition:
                 if: "${last_step.exit_code != 0}"
                 break: true
+
+  loop_serial_demo:
+    needs: [login]
+    steps:
+      - loop:
+          times: 3
+          steps:
+            - run: api_test_1
+            - run: api_test_2
+            - run: api_test_3
+
+  loop_parallel_demo:
+    needs: [login]
+    steps:
+      - loop:
+          times: 5
+          steps:
+            - parallel:
+                steps:
+                  - run: health_check_a
+                  - run: health_check_b
+                  - run: health_check_c
+
+  loop_mixed_demo:
+    needs: [login]
+    steps:
+      - loop:
+          times: 2
+          steps:
+            - run: api_test_1
+            - parallel:
+                steps:
+                  - run: health_check_a
+                  - run: health_check_b
+            - run: api_test_2
 ```
 
 **嵌套循环说明**：由于 DSL 约束"循环内禁嵌套 loop"，嵌套循环通过 `call` 引用另一个 job 实现。外层循环每次迭代调用 `inner_loop_job`，内层 job 独立执行自己的循环逻辑。
+
+**loop 内多场景执行说明**：`loop` 的 `steps` 支持多个场景的串行或并行执行：
+- **串行执行**：多个 `run` 步骤依次执行
+- **并行执行**：通过 `parallel` 封装多个场景并发执行
+- **混合执行**：串行与并行组合，如先串行执行一个场景，再并行执行多个场景，最后再串行执行
 
 ### 3.2 关键词全表
 
@@ -508,7 +564,7 @@ jobs:
 | `inject` | 注入故障 | 故障 id 列表（引用 `faults`） | 按列表顺序注入 |
 | `cleanup` | 回收故障 | 故障 id 列表（引用 `faults`） | 按逆序回收；可选，引擎兜底 |
 | `parallel` | 并行执行 | `steps` 子步骤列表 | 至少 2 个子步骤 |
-| `loop` | 循环控制 | `times` + `steps` 子步骤列表 | 循环内禁嵌套 `loop`；需嵌套用 `call` 引用另一个 job |
+| `loop` | 循环控制 | `times` + `steps` 子步骤列表 | 循环内禁嵌套 `loop`；需嵌套用 `call` 引用另一个 job；支持多场景串行/并行/混合执行 |
 | `condition` | 条件分支 | `if` / `then` / `else` | `then` 必填，`else` 可选 |
 | `call` | 调用另一个 job | job id | 引用的 job 必须已定义在当前 plan 中 |
 
