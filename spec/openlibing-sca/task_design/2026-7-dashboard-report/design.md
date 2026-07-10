@@ -12,15 +12,17 @@
 - 转换为 `java.util.Date` 传给 Mapper
 
 ### 2. 指标数据源
-| 指标 | 数据源 | 查询条件 |
+| 指标 | 数据源 | 查询条件（全部叠加昨日时间窗口） |
 |------|--------|---------|
-| 版本扫描次数 | MySQL `tbl_scan` JOIN `tbl_repo` | `r.community = ?` AND `s.created BETWEEN ? AND ?` |
-| PR 扫描次数 | MySQL `tbl_person_scan` JOIN `tbl_repo` | `r.community = ?` AND `s.created BETWEEN ? AND ?` |
-| 版本扫描告警总数 | MongoDB `ScanIssueVO` | `scanId IN (昨日版本扫描IDs)` AND `blockStatus != BLOCK` |
-| 社区扫描待处理告警总数 | MongoDB `ScanIssueVO` | `scanId IN (昨日版本扫描IDs)` AND `blockStatus != BLOCK` AND `reviewStatus != 40` |
-| PR 未通过数 | MySQL `tbl_person_scan` JOIN `tbl_repo` | `r.community = ?` AND `s.created BETWEEN ? AND ?` AND `s.scan_result != '1'` |
+| 版本扫描次数 | MySQL `tbl_scan` JOIN `repo_info` JOIN `project_info` | `p.project_name = ?` AND `s.created BETWEEN ? AND ?` AND `r.has_repo='1'` |
+| PR 扫描次数 | MySQL `tbl_person_scan` | `s.community = ?` AND `s.repo_id IS NOT NULL` AND `s.scan_result='1'` AND `s.un_confirmed_file_num IS NOT NULL` AND `s.created BETWEEN ? AND ?` |
+| 版本扫描告警总数 | MongoDB `ScanIssueVO` | `scanId IN (昨日版本扫描IDs)` AND `blockStatus != 'block'` |
+| 社区扫描待处理告警总数 | MongoDB `ScanIssueVO` | `scanId IN (昨日版本扫描IDs)` AND `blockStatus != 'block'` AND `reviewStatus != 40` |
+| PR 未通过数 | MySQL `tbl_person_scan` | 在 PR 扫描次数条件上叠加 `s.un_confirmed_file_num > 0` |
 
-> **注**：版本扫描告警总数和待处理告警总数按用户决策"5 个全部用昨日计数"——即只统计昨日版本扫描产生的告警，而非当前快照。这与 `PendingCountSchedule` 的 Redis 缓存口径不同，需独立查询。
+**算法对齐说明**（用户指定）：
+- PR 扫描次数 / PR 未通过数对齐 `/open/person/repos` 接口的 `totalPrNum` / `totalPrNoPassNum` 算法（`OpenPersonScanServiceImpl#getPersonScanByCommunity`）：基于 `scan_result='1'` 且 `unConfirmedFileNum` 非空的记录，未通过 = `unConfirmedFileNum > 0`。原接口无时间窗口且带分页缓存，本任务叠加昨日 `created` 窗口、直接 SQL COUNT。
+- 版本扫描告警总数对齐 `/open/scan/repos` 接口的 `totalCount` 算法（`OpenScanServiceImpl#getScanByCommunity` + `PendingCountSchedule#getTotalRisksNum`）：MongoDB `ScanIssueVO` 中 `scanId IN 版本扫描IDs AND blockStatus != 'block'` 的 count。原接口用社区全部最新扫描 IDs（去重），本任务用昨日版本扫描 IDs（不去重，昨日发生的全部计入）。
 
 ### 3. Feign 调用
 - `OpenlibingFrameworkClient` 现有 `@FeignClient(name = "https://openlibing-framework")` 配置直接复用
@@ -44,10 +46,10 @@
 | `common/feign/OpenlibingFrameworkClient.java` | 修改 | 新增 `reportDashboard` 方法 |
 | `common/domain/DashboardReportRequest.java` | 新增 | 上报请求 DTO（含 user_metrics、business_metrics 嵌套结构） |
 | `common/schedule/DashboardReportSchedule.java` | 新增 | 定时任务主类 |
-| `analysis/dao/TblScanMapper.java` | 修改 | 新增 `countByCommunityAndCreatedBetween` 方法 |
-| `analysis/dao/TblPersonScanMapper.java` | 修改 | 新增 `countByCommunityAndCreatedBetween` 和 `countFailedByCommunityAndCreatedBetween` 方法 |
-| `resources/mapper/analysis/TblScanMapper.xml` | 修改 | 新增昨日扫描计数 SQL |
-| `resources/mapper/analysis/TblPersonScanMapper.xml` | 修改 | 新增昨日扫描计数 + 失败计数 SQL |
+| `analysis/dao/TblScanMapper.java` | 修改 | 新增 `countByCommunityAndCreatedBetween` 和 `findIdsByCommunityAndCreatedBetween` 方法 |
+| `analysis/dao/TblPersonScanMapper.java` | 修改 | 新增 `countPrByCommunityAndCreatedBetween` 和 `countPrNoPassByCommunityAndCreatedBetween` 方法 |
+| `resources/mapper/analysis/TblScanMapper.xml` | 修改 | 新增昨日版本扫描计数 + ID 列表 SQL |
+| `resources/mapper/analysis/TblPersonScanMapper.xml` | 修改 | 新增昨日 PR 扫描计数 + 未通过计数 SQL |
 | `test/.../DashboardReportScheduleTest.java` | 新增 | 单元测试 |
 
 ## 风险 & 缓解
