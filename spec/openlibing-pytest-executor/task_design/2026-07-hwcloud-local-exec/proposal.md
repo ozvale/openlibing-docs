@@ -14,16 +14,18 @@
 
 | 配置项 | 值 | 描述 |
 |--------|-----|------|
-| `env_provider` | `hwcloud` | 通过流水线参数传入，标识华为云资源池场景 |
+| `env_deploy_model` | `Co-located` | 通过流水线参数传入，标识本地执行模式 |
+| `env_deploy_model` | `Dislocated` | 通过流水线参数传入，标识分布式执行模式（默认） |
+| `env_provider` | `k8s` | 硬编码，不再从外部传入 |
 
 ### 3.2 调度层行为
 
 | 行为 | 描述 |
 |------|------|
-| 跳过环境申请 | `env_provider=hwcloud` 时，不再调用 k8s API 申请被测设备 |
+| 跳过环境申请 | `env_deploy_model=Co-located` 时，不再调用 k8s API 申请被测设备 |
 | 设置执行标志 | 将 `exec_in_runner` 标志设置为 `True` |
 | 使用本机 IP | 设备信息中的 IP 地址替换为本机 IP |
-| 单机用例限制 | hwcloud 模式仅支持单机用例（单 device），多 device 用例将抛出 ValueError |
+| 单机用例限制 | Co-located 模式仅支持单机用例（单 device），多 device 用例将抛出 ValueError |
 
 ### 3.3 执行层行为
 
@@ -42,32 +44,25 @@
 | 跳过 SSH 登录 | `local_exec=True` 时，device 对象跳过 SSH 注册和登录 |
 | 本地执行命令 | 直接使用 subprocess 本地执行命令 |
 
-### 3.5 配置校验
-
-| 配置项 | 允许值 | 描述 |
-|--------|--------|------|
-| `env_provider` | `k8s`, `hidevlab`, `hwcloud` | 外部输入时进行名单校验 |
-
 ## 4. 验收标准
 
 ### 4.1 功能验收
 
-1. ✅ `env_provider=hwcloud` 时，调度框架跳过 k8s 环境申请
-2. ✅ `env_provider=hwcloud` 时，设备 IP 为本机 IP，`exec_in_runner=True`
+1. ✅ `env_deploy_model=Co-located` 时，调度框架跳过 k8s 环境申请
+2. ✅ `env_deploy_model=Co-located` 时，设备 IP 为本机 IP，`exec_in_runner=True`
 3. ✅ 执行器传递 `local_exec=True` 到 TESTBED_DEVICES 环境变量
 4. ✅ testkit 的 Device 对象 `local_exec=True` 时，跳过 SSH 登录
 5. ✅ testkit 的 Device 对象 `local_exec=True` 时，使用 subprocess 本地执行命令
 6. ✅ 用例代码仍然拷贝到 `/home/` 下
-7. ✅ `env_provider` 输入不在白名单时抛出错误
-8. ✅ hwcloud 模式下，设备数量不为 1 时抛出 ValueError 异常（多 device 或空列表）
+7. ✅ Co-located 模式下，设备数量不为 1 时抛出 ValueError 异常（多 device 或空列表）
 
 ### 4.2 接口验收
 
 ```bash
-# 启动命令 - 通过流水线参数传入 env_provider
+# 启动命令 - 通过流水线参数传入 env_deploy_model
 python main.py \
     --testcase_dir /path/to/testcases \
-    --env_provider hwcloud \
+    --env_deploy_model Co-located \
     ...
 ```
 
@@ -83,9 +78,9 @@ result = device.sendcmd("ls -l")  # 使用 subprocess 本地执行
 
 | 场景 | 行为 |
 |------|------|
-| `env_provider=k8s` | 原有行为，通过 k8s API 申请环境 |
-| `env_provider=hidevlab` | 原有行为，通过 hidevlab API 申请环境 |
-| 不传 `env_provider` | 默认 `k8s`，保持原有行为 |
+| `env_deploy_model=Dislocated` | 原有行为，通过 k8s API 申请环境 |
+| 不传 `env_deploy_model` | 默认 `Dislocated`，保持原有行为 |
+| `local_exec=False` | 原有行为，通过 SSH 执行命令 |
 
 ## 5. 非功能需求
 

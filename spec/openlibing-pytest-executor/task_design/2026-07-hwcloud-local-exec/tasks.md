@@ -4,75 +4,79 @@
 
 | 任务编号 | 任务描述 | 状态 | 备注 |
 |---------|---------|------|------|
-| T-01 | scheduler_config.py: 添加 exec_in_runner 配置和 set_env_provider 方法 | PENDING | |
-| T-02 | main.py: 添加 --env_provider 命令行参数 | PENDING | |
-| T-03 | start.sh: 添加 env_provider 参数传递 | PENDING | |
-| T-04 | env_manager.py: 添加 hwcloud 分支和 _get_local_ip 方法 | PENDING | |
+| T-01 | scheduler_config.py: 硬编码 env_provider 为 k8s，添加 env_deploy_model 配置 | PENDING | |
+| T-02 | main.py: 添加 --env_deploy_model 命令行参数 | PENDING | |
+| T-03 | start.sh: 添加 env_deploy_model 参数传递 | PENDING | |
+| T-04 | env_manager.py: 添加 Co-located 分支和 _get_local_ip 方法 | PENDING | |
 | T-05 | pytest_executor.py: 设置 local_exec 标志传递给 testkit | PENDING | |
 | T-06 | device.py: 添加 local_exec 属性和本地执行逻辑 | PENDING | |
 | T-07 | manager.py: 解析 local_exec 字段到 Device 对象 | PENDING | |
 | T-08 | 单元测试: 配置校验和 Device 本地执行 | PENDING | |
-| T-09 | 集成测试: hwcloud 模式完整流程 | PENDING | |
+| T-09 | 集成测试: Co-located 模式完整流程 | PENDING | |
 | T-10 | 验证测试: 用例代码拷贝和命令执行 | PENDING | |
 
 ## 任务详情
 
-### T-01: scheduler_config.py - 添加 exec_in_runner 配置和 set_env_provider 方法
+### T-01: scheduler_config.py - 硬编码 env_provider 为 k8s，添加 env_deploy_model 配置
 
 **文件**: `pytest-executor/src/scheduler/scheduler_config.py`
 
 **实现内容**:
+- `env_provider` 硬编码为 "k8s"，不再可配置
+- 添加 `env_deploy_model` 类属性，默认 "Dislocated"
 - 添加 `exec_in_runner` 类属性，默认 `False`
-- 添加 `_VALID_ENV_PROVIDERS` 白名单集合，包含 `{"k8s", "hidevlab", "hwcloud"}`
-- 添加 `set_env_provider()` 类方法，进行白名单校验并设置 `exec_in_runner`
+- 删除 `set_env_provider()` 方法（不再需要）
 
 **完成标准**:
+- [ ] `env_provider` 保持硬编码为 "k8s"
+- [ ] `env_deploy_model` 属性正确添加，默认 "Dislocated"
 - [ ] `exec_in_runner` 属性正确添加
-- [ ] `_VALID_ENV_PROVIDERS` 白名单正确定义
-- [ ] `set_env_provider()` 方法正确实现
-- [ ] 非法值抛出 ValueError
-- [ ] `env_provider=hwcloud` 时 `exec_in_runner=True`
+- [ ] `set_env_provider()` 方法已删除
 
-### T-02: main.py - 添加 --env_provider 命令行参数
+### T-02: main.py - 添加 --env_deploy_model 命令行参数
 
 **文件**: `pytest-executor/main.py`
 
 **实现内容**:
-- 在 `parse_args()` 中添加 `--env_provider` 参数，可选，默认 `k8s`
-- 在 `_init_config()` 中调用 `Config.set_env_provider()` 设置配置
+- 在 `parse_args()` 中添加 `--env_deploy_model` 参数，可选，默认 `Dislocated`
+- 删除 `--env_provider` 参数（不再需要）
+- 在 `_init_config()` 中调用 `Config.set("env_deploy_model", args.env_deploy_model)`
 
 **完成标准**:
-- [ ] `--env_provider` 参数正确添加
-- [ ] 默认值为 `k8s`
-- [ ] `_init_config()` 正确调用 `Config.set_env_provider()`
+- [ ] `--env_deploy_model` 参数正确添加
+- [ ] 默认值为 `Dislocated`
+- [ ] `--env_provider` 参数已删除
+- [ ] `_init_config()` 正确调用 `Config.set("env_deploy_model", ...)`
 
-### T-03: start.sh - 添加 env_provider 参数传递
+### T-03: start.sh - 添加 env_deploy_model 参数传递
 
 **文件**: `pytest-executor/start.sh`
 
 **实现内容**:
-- 在 python 命令中添加 `${env_provider:+--env_provider "${env_provider}"}`
+- 在 python 命令中添加 `${env_deploy_model:+--env_deploy_model "${env_deploy_model}"}`
 
 **完成标准**:
 - [ ] 参数传递正确添加
 
-### T-04: env_manager.py - 添加 hwcloud 分支和 _get_local_ip 方法
+### T-04: env_manager.py - 添加 Co-located 分支和 _get_local_ip 方法
 
 **文件**: `pytest-executor/src/scheduler/env_manager.py`
 
 **实现内容**:
-- 在 `allocate_environments()` 中添加 `hwcloud` 分支
-- `hwcloud` 模式下：跳过 API 调用，使用本机 IP，设置 `exec_in_runner=True`
+- 在 `allocate_environments()` 中添加 `Co-located` 分支
+- `Co-located` 模式下：跳过 API 调用，使用本机 IP，设置 `exec_in_runner=True`
 - 添加 `_get_local_ip()` 辅助方法获取本机 IP
 - 添加单机用例限制检查：多 device 用例抛出 ValueError
+- 将所有 `if Config.env_provider == "hwcloud"` 判断改为 `if Config.env_deploy_model == "Co-located"`
 
 **完成标准**:
-- [ ] `hwcloud` 分支正确添加
+- [ ] `Co-located` 分支正确添加
 - [ ] 跳过 API 调用
 - [ ] 设备 IP 设置为本机 IP
 - [ ] `exec_in_runner=True` 正确设置
 - [ ] `_get_local_ip()` 方法正确实现
 - [ ] 多 device 用例抛出 ValueError 异常
+- [ ] 所有 hwcloud 分支判断已改为 Co-located
 
 ### T-05: pytest_executor.py - 设置 local_exec 标志传递给 testkit
 
@@ -127,28 +131,25 @@
 **文件**: 待创建或修改现有测试文件
 
 **测试用例**:
-- [ ] `test_set_env_provider_valid_values` - 合法值测试
-- [ ] `test_set_env_provider_invalid_value` - 非法值抛出 ValueError
-- [ ] `test_exec_in_runner_hwcloud` - hwcloud 模式下 exec_in_runner=True
 - [ ] `test_get_local_ip` - 获取本机 IP
 - [ ] `test_device_local_exec_login` - local_exec=True 时 login() 直接返回成功
 - [ ] `test_device_local_exec_sendcmd` - local_exec=True 时 sendcmd() 使用 subprocess
+- [ ] `test_config_env_deploy_model_default` - env_deploy_model 默认值为 Dislocated
 
-### T-09: 集成测试 - hwcloud 模式完整流程
+### T-09: 集成测试 - Co-located 模式完整流程
 
 **文件**: 待创建
 
 **测试用例**:
-- [ ] `test_hwcloud_mode_full_flow` - hwcloud 模式完整流程测试
-- [ ] `test_k8s_mode_compatibility` - k8s 模式兼容性测试
-- [ ] `test_hidevlab_mode_compatibility` - hidevlab 模式兼容性测试
+- [ ] `test_co_located_mode_full_flow` - Co-located 模式完整流程测试
+- [ ] `test_dislocated_mode_compatibility` - Dislocated 模式兼容性测试
 
 ### T-10: 验证测试 - 用例代码拷贝和命令执行
 
 **执行命令**:
 ```bash
 cd pytest-executor
-python -m pytest tests/ -v -k "hwcloud"
+python -m pytest tests/ -v -k "co_located"
 ```
 
 **完成标准**:

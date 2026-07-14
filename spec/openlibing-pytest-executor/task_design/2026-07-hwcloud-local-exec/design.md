@@ -7,26 +7,26 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ 入口层 (main.py + start.sh)                                            │
-│   --env_provider=hwcloud (外部参数)                                     │
+│   --env_deploy_model=Co-located (外部参数, 默认 Dislocated)             │
 └─────────────────────────────────────────────────────────────────────────┘
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ 配置层 (scheduler_config.py)                                           │
-│   env_provider 校验: ["k8s", "hidevlab", "hwcloud"]                    │
-│   exec_in_runner = (env_provider == "hwcloud")                         │
+│   env_provider = "k8s" (硬编码, 不可配置)                              │
+│   env_deploy_model: Co-located / Dislocated                            │
 └─────────────────────────────────────────────────────────────────────────┘
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ 调度层 (run_scheduler.py)                                              │
-│   exec_in_runner=True → 跳过 SSH 密钥生成（仅 hidevlab 有此逻辑，不变） │
+│   env_deploy_model=Co-located → 跳过 SSH 密钥生成                       │
 └─────────────────────────────────────────────────────────────────────────┘
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ 环境管理 (env_manager.py)                                               │
-│   hwcloud 模式:                                                        │
+│   Co-located 模式:                                                      │
 │     - 跳过 API 申请环境                                                 │
 │     - 使用本机 IP 构建设备信息                                          │
 │     - 设置 exec_in_runner=True                                         │
@@ -51,13 +51,14 @@
 
 | 设计点 | 方案 | 说明 |
 |--------|------|------|
-| 场景标识 | `env_provider=hwcloud` | 通过命令行参数传入，配置层校验 |
+| 场景标识 | `env_deploy_model=Co-located` | 通过命令行参数传入 |
 | 执行标志 | `exec_in_runner` (调度层) / `local_exec` (设备层) | 区分调度层和设备层的本地执行标志 |
-| 环境申请 | 跳过 API 调用 | hwcloud 模式下直接使用本机环境 |
+| 环境申请 | 跳过 API 调用 | Co-located 模式下直接使用本机环境 |
 | 设备 IP | 使用本机 IP | 通过 `socket.gethostbyname(socket.gethostname())` 获取 |
 | SSH 登录 | 跳过 | `local_exec=True` 时 Device.login() 直接返回成功 |
 | 命令执行 | subprocess 本地执行 | `local_exec=True` 时 Device.sendcmd() 使用 subprocess |
 | 用例代码拷贝 | 保持原有逻辑 | 仍然拷贝到 `/home/` 下 |
+| env_provider | 硬编码为 k8s | 不再从外部传入 |
 
 ## 2. 关键类/方法设计
 
@@ -65,38 +66,13 @@
 
 **文件路径**: `pytest-executor/src/scheduler/scheduler_config.py`
 
-**新增配置项**:
+**配置项**:
 
 | 配置项 | 类型 | 默认值 | 描述 |
 |--------|------|--------|------|
+| `env_provider` | `str` | `"k8s"` | 环境提供者（硬编码，不可配置） |
+| `env_deploy_model` | `str` | `"Dislocated"` | 部署模式：Co-located 或 Dislocated |
 | `exec_in_runner` | `bool` | `False` | 是否在 runner 上执行用例 |
-| `_VALID_ENV_PROVIDERS` | `set` | `{"k8s", "hidevlab", "hwcloud"}` | 环境提供者白名单 |
-
-**新增方法**:
-
-| 方法名 | 功能 | 参数 | 返回值 |
-|--------|------|------|--------|
-| `set_env_provider()` | 设置环境提供者并校验，同时设置 `exec_in_runner` | `value: str` - 环境提供者 | `None` |
-
-**方法实现逻辑**:
-
-```python
-class Config:
-    env_provider = "k8s"
-    exec_in_runner = False
-    _VALID_ENV_PROVIDERS = {"k8s", "hidevlab", "hwcloud"}
-
-    @classmethod
-    def set_env_provider(cls, value: str):
-        value = value.strip().lower()
-        if value not in cls._VALID_ENV_PROVIDERS:
-            raise ValueError(
-                f"Invalid env_provider: '{value}'. "
-                f"Must be one of: {', '.join(cls._VALID_ENV_PROVIDERS)}"
-            )
-        cls.env_provider = value
-        cls.exec_in_runner = (value == "hwcloud")
-```
 
 ### 2.2 入口层 - main.py 修改
 
@@ -106,8 +82,8 @@ class Config:
 
 | 修改点 | 描述 |
 |--------|------|
-| 添加命令行参数 | `--env_provider` 参数，可选，默认 `k8s` |
-| 设置配置 | 在 `_init_config()` 中调用 `Config.set_env_provider()` |
+| 添加命令行参数 | `--env_deploy_model` 参数，可选，默认 `Dislocated` |
+| 设置配置 | 在 `_init_config()` 中调用 `Config.set("env_deploy_model", args.env_deploy_model)` |
 
 **修改后代码**:
 
@@ -115,12 +91,12 @@ class Config:
 def parse_args():
     parser = argparse.ArgumentParser()
     # ... 其他参数 ...
-    parser.add_argument("--env_provider", required=False, default="k8s")
+    parser.add_argument("--env_deploy_model", required=False, default="Dislocated")
     return parser.parse_args()
 
 def _init_config(args):
     # ... 其他配置 ...
-    Config.set_env_provider(args.env_provider)
+    Config.set("env_deploy_model", args.env_deploy_model)
 ```
 
 ### 2.3 启动脚本 - start.sh 修改
@@ -131,7 +107,7 @@ def _init_config(args):
 
 | 修改点 | 描述 |
 |--------|------|
-| 添加参数传递 | `${env_provider:+--env_provider "${env_provider}"}` |
+| 添加参数传递 | `${env_deploy_model:+--env_deploy_model "${env_deploy_model}"}` |
 
 ### 2.4 环境管理器 - env_manager.py 修改
 
@@ -143,13 +119,13 @@ def _init_config(args):
 
 ```python
 def allocate_environments(self, env_case_info):
-    env_provider = Config.env_provider
+    env_deploy_model = Config.env_deploy_model
 
-    if env_provider == "hwcloud":
+    if env_deploy_model == "Co-located":
         local_ip = self._get_local_ip()
         if len(all_devices) != 1:
             raise ValueError(
-                f"hwcloud mode requires exactly one device, "
+                f"Co-located mode requires exactly one device, "
                 f"but {len(all_devices)} devices were requested"
             )
         for device in env_case_info["device_list"]:
@@ -162,7 +138,7 @@ def allocate_environments(self, env_case_info):
     # ... 原有 k8s/hidevlab 逻辑
 ```
 
-**约束说明**: hwcloud 模式仅支持单机用例（单 device），设备数量不为 1 时将抛出 ValueError 异常。
+**约束说明**: Co-located 模式仅支持单机用例（单 device），设备数量不为 1 时将抛出 ValueError 异常。
 
 **新增辅助方法**:
 
@@ -192,7 +168,7 @@ def execute(self, case_list, env_case_info, env_var):
     success = True
     
     if exec_in_runner:
-        logger.info("Executing in runner mode (hwcloud)")
+        logger.info("Executing in runner mode (Co-located)")
         success &= self._execute_in_runner(case_list, env_case_info, env_var)
     else:
         # ... 原有 local/remote 分支逻辑 ...
@@ -319,27 +295,20 @@ def _parse_devices(self, devices_info):
 }
 ```
 
-### 3.2 配置校验白名单
-
-```python
-_VALID_ENV_PROVIDERS = {"k8s", "hidevlab", "hwcloud"}
-```
-
 ## 4. API 设计
 
 ### 4.1 对外接口
 
 | 接口 | 功能 | 调用方式 |
 |------|------|----------|
-| `--env_provider` | 设置环境提供者 | 命令行参数 |
-| `Config.set_env_provider()` | 设置并校验环境提供者 | 代码调用 |
+| `--env_deploy_model` | 设置部署模式 | 命令行参数 |
 | `Device.local_exec` | 设备本地执行标志 | 属性设置 |
 
 ### 4.2 内部接口
 
 | 方法 | 功能 | 调用时机 |
 |------|------|----------|
-| `env_manager._get_local_ip()` | 获取本机 IP | hwcloud 模式环境分配时 |
+| `env_manager._get_local_ip()` | 获取本机 IP | Co-located 模式环境分配时 |
 | `pytest_executor.run_tests_on_host()` | 设置 local_exec 标志 | 测试执行前 |
 
 ## 5. 部署与集成方案
@@ -356,18 +325,18 @@ _VALID_ENV_PROVIDERS = {"k8s", "hidevlab", "hwcloud"}
 ### 5.2 集成方式
 
 1. **修改文件**: `pytest-executor/src/scheduler/scheduler_config.py`
-   - 添加 `exec_in_runner` 配置项
-   - 添加 `set_env_provider()` 方法
+   - `env_provider` 硬编码为 "k8s"
+   - 添加 `env_deploy_model` 配置项，默认 "Dislocated"
 
 2. **修改文件**: `pytest-executor/main.py`
-   - 添加 `--env_provider` 命令行参数
-   - 在 `_init_config()` 中调用 `Config.set_env_provider()`
+   - 添加 `--env_deploy_model` 命令行参数
+   - 在 `_init_config()` 中调用 `Config.set("env_deploy_model", args.env_deploy_model)`
 
 3. **修改文件**: `pytest-executor/start.sh`
-   - 添加 `${env_provider:+--env_provider "${env_provider}"}` 参数传递
+   - 添加 `${env_deploy_model:+--env_deploy_model "${env_deploy_model}"}` 参数传递
 
 4. **修改文件**: `pytest-executor/src/scheduler/env_manager.py`
-   - 在 `allocate_environments()` 中添加 `hwcloud` 分支
+   - 在 `allocate_environments()` 中添加 `Co-located` 分支
    - 添加 `_get_local_ip()` 辅助方法
 
 5. **修改文件**: `pytest-executor/src/executor/pytest_executor.py`
@@ -382,13 +351,7 @@ _VALID_ENV_PROVIDERS = {"k8s", "hidevlab", "hwcloud"}
 
 ## 6. 安全性考虑
 
-### 6.1 配置校验
-
-| 风险点 | 防护措施 |
-|--------|----------|
-| 非法环境提供者 | `set_env_provider()` 方法进行白名单校验，非法值抛出 ValueError |
-
-### 6.2 本地执行安全
+### 6.1 本地执行安全
 
 | 风险点 | 防护措施 |
 |--------|----------|
@@ -401,10 +364,10 @@ _VALID_ENV_PROVIDERS = {"k8s", "hidevlab", "hwcloud"}
 
 | 文件 | 修改类型 | 影响 |
 |------|----------|------|
-| `scheduler_config.py` | 修改 + 新增 | 添加 `exec_in_runner` 配置和 `set_env_provider()` 方法 |
-| `main.py` | 修改 | 添加 `--env_provider` 参数 |
+| `scheduler_config.py` | 修改 | `env_provider` 硬编码为 "k8s"，添加 `env_deploy_model` 配置 |
+| `main.py` | 修改 | 添加 `--env_deploy_model` 参数，移除 `--env_provider` |
 | `start.sh` | 修改 | 添加参数传递 |
-| `env_manager.py` | 修改 + 新增 | 添加 `hwcloud` 分支和 `_get_local_ip()` 方法 |
+| `env_manager.py` | 修改 + 新增 | 添加 `Co-located` 分支和 `_get_local_ip()` 方法 |
 | `pytest_executor.py` | 修改 | 设置 `local_exec` 标志 |
 | `device.py` | 修改 + 新增 | 添加 `local_exec` 属性和本地执行逻辑 |
 | `manager.py` | 修改 | 解析 `local_exec` 字段 |
@@ -419,9 +382,9 @@ _VALID_ENV_PROVIDERS = {"k8s", "hidevlab", "hwcloud"}
 
 | 场景 | 行为 |
 |------|------|
-| `env_provider=k8s` | 原有行为，通过 k8s API 申请环境 |
-| `env_provider=hidevlab` | 原有行为，通过 hidevlab API 申请环境 |
-| 不传 `env_provider` | 默认 `k8s`，保持原有行为 |
+| `env_deploy_model=Dislocated` | 原有行为，通过 k8s API 申请环境 |
+| `env_deploy_model=Co-located` | 新行为，本地执行 |
+| 不传 `env_deploy_model` | 默认 `Dislocated`，保持原有行为 |
 | `local_exec=False` | 原有行为，通过 SSH 执行命令 |
 
 ## 8. 测试策略
@@ -430,7 +393,6 @@ _VALID_ENV_PROVIDERS = {"k8s", "hidevlab", "hwcloud"}
 
 | 测试场景 | 测试用例 |
 |----------|----------|
-| 配置校验 | 测试 `set_env_provider()` 对合法值和非法值的处理 |
 | 本机 IP 获取 | 测试 `_get_local_ip()` 返回正确的本机 IP |
 | Device 本地执行 | 测试 `local_exec=True` 时 `sendcmd()` 使用 subprocess |
 | Device SSH 跳过 | 测试 `local_exec=True` 时 `login()` 直接返回成功 |
@@ -440,9 +402,8 @@ _VALID_ENV_PROVIDERS = {"k8s", "hidevlab", "hwcloud"}
 
 | 测试场景 | 测试方法 |
 |----------|----------|
-| hwcloud 模式完整流程 | 设置 `env_provider=hwcloud`，验证跳过环境申请、本地执行 |
-| k8s 模式兼容性 | 设置 `env_provider=k8s`，验证原有行为不变 |
-| hidevlab 模式兼容性 | 设置 `env_provider=hidevlab`，验证原有行为不变 |
+| Co-located 模式完整流程 | 设置 `env_deploy_model=Co-located`，验证跳过环境申请、本地执行 |
+| Dislocated 模式兼容性 | 设置 `env_deploy_model=Dislocated`，验证原有行为不变 |
 
 ### 8.3 验证测试
 
