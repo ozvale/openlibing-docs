@@ -86,7 +86,7 @@
 * **测试结果**： Passed
 * **证明截图**: xxx
 
-### 3.2 集成测试专项
+### 2.2 集成测试专项
 
 **6. pre-commit.ci修复结果与本地pre-commit修复结果一致性**:
 * 前置条件:github开源仓已接入pre-commit.ci，本地环境已配置pre-commit
