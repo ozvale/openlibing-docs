@@ -1,15 +1,13 @@
 # pytest 测试套件环境请求与连接增强 — 实现任务
 
-## 进度: 5/8 complete
+## 进度: 6/6 complete
 
 - [x] Task 1: 环境状态判断优化（env_manager.py）
 - [x] Task 2: 软件部署状态检查（env_manager.py）
-- [ ] Task 3: SSH 连接自动重试（ssh.py + device.py）
-- [ ] Task 4: SCP 连接自动重试（sftp.py）
-- [x] Task 5: 共享存储挂载检查（env_manager.py）
-- [x] Task 6: TTL 参数优化（env_manager.py）
-- [x] Task 7: 环境名称统一（env_manager.py）
-- [x] Task 8: HTML 日志展示优化与日志模块重构
+- [x] Task 3: 共享存储挂载检查（env_manager.py）
+- [x] Task 4: TTL 参数优化（env_manager.py）
+- [x] Task 5: 环境名称统一（env_manager.py）
+- [x] Task 6: HTML 日志展示优化与日志模块重构
 
 ## 任务详情
 
@@ -42,29 +40,7 @@
 
 ---
 
-### Task 3: SSH 连接自动重试 ⏳
-
-**文件**: 
-- `pytest-testkit/pytest_testkit/lib/base/ssh.py`
-- `pytest-testkit/pytest_testkit/lib/common/environment/device.py`
-
-**待实现内容**:
-- 连接失败时自动重试
-- 支持配置重试次数
-
----
-
-### Task 4: SCP 连接自动重试 ⏳
-
-**文件**: `pytest-testkit/pytest_testkit/lib/base/sftp.py`
-
-**待实现内容**:
-- SCP 操作失败时自动重试
-- 支持配置重试次数
-
----
-
-### Task 5: 共享存储挂载检查 ✅
+### Task 3: 共享存储挂载检查 ✅
 
 **文件**: `pytest-executor/src/scheduler/env_manager.py`
 
@@ -79,7 +55,7 @@
 
 ---
 
-### Task 6: TTL 参数优化 ✅
+### Task 4: TTL 参数优化 ✅
 
 **文件**: `pytest-executor/src/scheduler/env_manager.py`
 
@@ -94,7 +70,7 @@
 
 ---
 
-### Task 7: 环境名称统一 ✅
+### Task 5: 环境名称统一 ✅
 
 **文件**: `pytest-executor/src/scheduler/env_manager.py`
 
@@ -108,7 +84,7 @@
 
 ---
 
-### Task 8: HTML 日志展示优化与日志模块重构 ✅
+### Task 6: HTML 日志展示优化与日志模块重构 ✅
 
 **文件**: `pytest-testkit/pytest_testkit/lib/common/log/`
 
@@ -135,9 +111,7 @@
 |------|-------------|-----------|------|
 | Task 1 | `pytest-executor/src/scheduler/env_manager.py` | 正确 | - |
 | Task 2 | `pytest-executor/src/scheduler/env_manager.py` | 正确 | - |
-| Task 3 | 待实现 | `pytest-testkit/.../ssh.py` | 待实现 |
-| Task 4 | 待实现 | `pytest-testkit/.../sftp.py` | 待实现 |
-| Task 5 | `pytest-executor/src/scheduler/env_manager.py` | `pytest-testkit/.../allocator.py` | 实现位置调整 |
-| Task 6 | `pytest-executor/src/scheduler/env_manager.py` | `pytest-testkit/.../allocator.py` | 实现位置调整 |
-| Task 7 | `pytest-executor/src/scheduler/env_manager.py` | 正确 | - |
-| Task 8 | `pytest-testkit/pytest_testkit/lib/common/log/` | 正确 | - |
+| Task 3 | `pytest-executor/src/scheduler/env_manager.py` | `pytest-testkit/.../allocator.py` | 实现位置调整 |
+| Task 4 | `pytest-executor/src/scheduler/env_manager.py` | `pytest-testkit/.../allocator.py` | 实现位置调整 |
+| Task 5 | `pytest-executor/src/scheduler/env_manager.py` | 正确 | - |
+| Task 6 | `pytest-testkit/pytest_testkit/lib/common/log/` | 正确 | - |
