@@ -18,11 +18,11 @@
 
 **原因**：调用方零改动即可切换。
 
-### 3. service 层落盘到 `service/passwd_expire.py`
+### 3. service 层合并到 `service/clab_agent.py`
 
-**决策**：新增 `service/passwd_expire.py`，仅含 `set_passwd_expire(ssh, os_name)` 函数。
+**决策**：`set_passwd_expire(ssh, os_name)` 函数追加到 `service/clab_agent.py` 末尾，不单独建文件。
 
-**原因**：遵循 transport-service 既有"一文件一关注点"约定（参考 `service/obs.py`、`service/clab_agent.py`）。
+**原因**：用户偏好精简文件数量。`clab_agent.py` 已 import 了 `Ssh / get_ssh_connection / sudo_exec_command`，新增函数直接复用，只需补 `security` 一个 import。
 
 ### 4. SSH 客户端用 transport-service 的 `Ssh` 类
 
@@ -54,8 +54,8 @@
 
 | 文件 | 操作 | 说明 |
 |------|------|------|
-| `service/passwd_expire.py` | 新增 | `set_passwd_expire(ssh, os_name)` 实现 |
-| `transport.py` | 修改 | 新增 `/passwd/expire` 路由 + import |
+| `service/clab_agent.py` | 修改 | 末尾追加 `set_passwd_expire(ssh, os_name)`，补 `security` import |
+| `transport.py` | 修改 | 新增 `/passwd/expire` 路由 + import `set_passwd_expire` from `clab_agent` |
 
 ### hidevlab-infra-manager-service（删除）
 

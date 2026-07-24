@@ -4,18 +4,19 @@
 
 ### hidevlab-transport-service（新增）
 
-- [ ] Task 1: 新增 `service/passwd_expire.py`，实现 `set_passwd_expire(ssh, os_name)`
+- [ ] Task 1: 在 `service/clab_agent.py` 末尾追加 `set_passwd_expire(ssh, os_name)`
   - 使用 `tools.ssh.Ssh` 与 `get_ssh_connection`
   - ubuntu 走 `sudo_exec_command`（3-tuple 返回），其他系统走 `exec_command`
   - 优先用 `exit_code` 判断成功，stderr 仅作错误信息
   - 日志脱敏：IP 走 `security.mask_ip_partial`，用户名走 `security.mask_chars`
+  - 补 `from utils import security`
 
 - [ ] Task 2: 在 `transport.py` 新增 `POST /passwd/expire` 路由
   - 首行 `auth_filter.auth_filter(headers)` 鉴权，失败返回 401
   - 入参解析：`host_ip / host_port / user_name / user_pwd / os_name`
   - 参数校验：`host_ip / os_name / user_name / user_pwd` 缺一返回 500 + "invalid parameters"
   - 调用 `set_passwd_expire`，按 `(flag, msg)` 返回 `{"code": 200/500, "msg": "...", "data": ""}`
-  - import `set_passwd_expire` 与 `Ssh`
+  - import `set_passwd_expire` from `service.clab_agent`（与 `install_agent` 合并到一行）
 
 ### hidevlab-infra-manager-service（删除）
 
