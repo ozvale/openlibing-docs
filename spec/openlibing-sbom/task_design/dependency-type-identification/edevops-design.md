@@ -298,41 +298,107 @@ ORDER BY ...
 
 ## 6. API 接口设计
 
-### 6.1 修改接口
+### 6.1 变更概述
 
-#### `GET /sbom-api/querySbomPackages`
+| 接口 | HTTP 方法 | 路径 | 变更类型 |
+|------|-----------|------|----------|
+| `querySbomPackagesDeprecated` | `POST` | `/sbom-api/querySbomPackageList` | 新增 1 个可选入参 + 响应新增 1 个字段 |
 
-- **功能**：查询 SBOM 软件包列表（分组模式），新增按依赖类型过滤
-- **变更类型**：新增可选请求参数
-- **新增参数**：
-  - `dependencyType`（`Integer`，可选）：`0` 仅返回直接依赖包，`1` 仅返回间接依赖包，`3` 仅返回直接/间接依赖包，不传返回全部
-- **响应变更**：`statistics` 字段新增 `dependencyType`（`Integer`）
-- **向后兼容**：是。不传 `dependencyType` 时行为与变更前完全一致
+### 6.2 `POST /sbom-api/querySbomPackageList` 详细变更
 
-### 6.2 请求参数变更明细
 
-| 参数 | 类型 | 必填 | 变更 | 说明 |
-|------|------|------|------|------|
-| `productName` | String | 是 | 无 | 社区名称 |
-| `packageName` | String | 否 | 无 | 包名（支持模糊搜索） |
-| `isExactly` | Boolean | 否 | 无 | 是否精确匹配 |
-| `vulSeverity` | String | 否 | 无 | 漏洞级别过滤 |
-| `noLicense` | Boolean | 否 | 无 | 无许可证过滤 |
-| `multiLicense` | Boolean | 否 | 无 | 多许可证过滤 |
-| `isLegalLicense` | Boolean | 否 | 无 | 合法许可证过滤 |
-| `licenseId` | String | 否 | 无 | 许可证 ID 过滤 |
-| `dependencyType` | Integer | 否 | **新增** | `0`=直接依赖，`1`=间接依赖，`null`=不过滤 |
-| `groupByPackage` | Boolean | 否 | 无 | 是否按包聚合 |
-| `page` | Integer | 否 | 无 | 页码 |
-| `size` | Integer | 否 | 无 | 每页数量 |
+#### 变更后入参（15 个，新增第 11 位 `dependencyType`）
 
-### 6.3 响应字段变更明细
+```
+POST /sbom-api/querySbomPackageList
 
-`PackageStatisticsVo` 新增字段：
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `dependencyType` | Integer | `0`=直接依赖，`1`=间接依赖，`3`=直接/间接依赖。存量数据可能为 `null` |
+productName=openEuler          (String, 必填)
+packageName=curl               (String, 可选)
+isExactly=false                (Boolean, 可选)
+vulSeverity=CRITICAL           (String, 可选)
+noLicense=false                (Boolean, 可选)
+multiLicense=false             (Boolean, 可选)
+isLegalLicense=true            (Boolean, 可选)
+legalLicense=true              (Boolean, 可选)
+ilegalLicense=false            (Boolean, 可选)
+licenseId=MIT                  (String, 可选)
+dependencyType=0               (Integer, 可选, 新增)  ← 0=直接依赖 | 1=间接依赖 | 2=直接/间接依赖 | 不传=全部
+groupByPackage=true            (Boolean, 可选)
+page=0                         (Integer, 可选, 默认 0)
+size=15                        (Integer, 可选, 默认 15, 最大 100)
+```
+
+#### 入参变更明细表
+
+| 序号 | 参数名 | 类型 | 必填 | 默认值 | 变更 | 说明 |
+|------|--------|------|------|--------|------|------|
+| **11** | **`dependencyType`** | **Integer** | **否** | **null（不过滤）** | **新增** | **`0`=仅直接依赖包，`1`=仅间接依赖包，`2`=仅直接/间接依赖包，`null`=返回全部** |
+
+
+
+### 6.3 完整请求/响应示例
+
+#### 请求：过滤直接依赖包
+
+```
+POST /sbom-api/querySbomPackageList
+Content-Type: application/x-www-form-urlencoded
+
+productName=openEuler&packageName=curl&dependencyType=0&page=0&size=15
+```
+
+#### 响应
+
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "content": [
+      {
+        "id": "a1b2c3d4-...",
+        "name": "curl",
+        "version": "7.88.1",
+        "spdxId": "SPDXRef-Package-curl",
+        "supplier": "curl project",
+        "homepage": "https://curl.se",
+        "description": "A command line tool for transferring data",
+        "isLegalLicense": true,
+        "copyright": "Copyright (c) ...",
+        "declaredLicense": "MIT",
+        "downloadLocation": "https://curl.se/download/...",
+        "purl": "pkg:generic/curl@7.88.1",
+        "externalPurlRefs": [...],
+        "statistics": {
+          "dependencyType": 0,
+          "criticalVulCount": 0,
+          "highVulCount": 1,
+          "mediumVulCount": 2,
+          "lowVulCount": 0,
+          "noneVulCount": 0,
+          "unknownVulCount": 0,
+          "depCount": 5,
+          "moduleCount": 0,
+          "runtimeDepCount": 2,
+          "licenseCount": 1
+        }
+      }
+    ],
+    "total": 3,
+    "page": 0,
+    "size": 15
+  }
+}
+```
+
+### 6.4 向后兼容性
+
+| 场景 | 行为 |
+|------|------|
+| 不传 `dependencyType` | 过滤条件 `(:dependencyType IS NULL OR ...)` 短路，返回全部包（与变更前一致） |
+| 前端未升级，不消费 `dependencyType` 字段 | JSON 反序列化忽略未知字段，不会崩溃（Jackson 默认行为） |
+| 存量数据 `dependency_type` 列为 NULL | `PackageStatisticsVo.fromPackage` 中 `statistics.getDependencyType()` 返回 `null` |
 
 ---
 
