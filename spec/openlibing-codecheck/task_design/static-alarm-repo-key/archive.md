@@ -36,7 +36,7 @@
 | 仓 | PR | 状态 |
 |------|------|------|
 | `openlibing-codecheck` | https://gitcode.com/openlibing/openlibing-codecheck/pull/282 | 已创建 |
-| `openlibing-docs` | <待填> | 待创建（Phase 5） |
+| `openlibing-docs` | https://gitcode.com/openlibing/openlibing-docs/pull/644 | 已创建 |
 
 ## 4. 关键决策记录
 

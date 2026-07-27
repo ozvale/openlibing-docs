@@ -48,8 +48,9 @@
 
 - [x] 生成 `proposal.md`（需求背景 + 验收标准）
 - [x] 生成 `tasks.md`（本文件）
-- [ ] 生成 `archive.md`（归档总结）
-- [ ] 创建 docs Issue + docs PR
+- [x] 生成 `archive.md`（归档总结）
+- [x] 创建 docs Issue（openlibing/openlibing-docs#112）
+- [x] 创建 docs PR（openlibing/openlibing-docs#644）
 
 ## 关联
 
