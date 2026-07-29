@@ -1,0 +1,46 @@
+name: codeql-java
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - master
+
+jobs:
+  codeql:
+    name: codeql
+    runs-on: [ "codearts-hosted", "ubuntu-latest", "x64", "large" ]
+    needs: [ ]
+    steps:
+      - name: checkout
+        uses: checkout
+        with:
+          token: ${{ secrets.ROBOT_TOKEN }}
+
+      - name: setup-jdk
+        uses: setup-jdk
+        with:
+          jdk-version: 21
+          maven-version: '3.8.9'
+
+      - name: codeql-analysis
+        identifier: codeql
+        uses: codeql-action
+        with:
+          language: "java"
+          query-suite: security-extended, security-experimental, security-and-quality
+          report-path: ./codeql-report.md
+          output-path: ./
+          build-mode: autobuild
+          ram: 4096
+          threads: 0
+          verbose: "true"
+
+      - name: upload sarif to openlibing
+        uses: openlibing-upload-sarif
+        with:
+          sarif_file: ./codeql-results-java.sarif
+          obs_ak: ${{ secrets.OPENLIBING_OBS_AK }}
+          obs_sk: ${{ secrets.OPENLIBING_OBS_SK }}
+          apig_app_key: ${{ secrets.OPENLIBING_KEY }}
+          apig_app_secret: ${{ secrets.OPENLIBING_SECRET }}
