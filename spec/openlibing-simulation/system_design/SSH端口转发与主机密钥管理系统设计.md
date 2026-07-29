@@ -217,25 +217,44 @@ HostKeyRepository repo = jSch.getHostKeyRepository();
 HostKey[] existing = repo.getHostKey(nodeIp, null);
 
 if (existing == null || existing.length == 0) {
-    // 未入库,调用 ssh-keyscan 抓取
-    ProcessBuilder pb = new ProcessBuilder(
-        "ssh-keyscan", "-H", "-t", "ed25519,rsa", nodeIp
-    );
-    pb.redirectErrorStream(false);
-    Process process = pb.start();
-    String output = readProcessOutput(process);  // 读取 stdout
-    
-    if (StringUtils.isBlank(output)) {
-        throw new ServiceException("Node " + nodeIp + " unreachable for ssh-keyscan");
+    // [并发保护] 使用 per-host 锁防止多线程同时触发 ssh-keyscan
+    // 方案: 使用 ConcurrentHashMap<String, Object> 以 nodeIp 为 key 做 putIfAbsent 去重
+    // 确保同一时刻只有一个线程执行 ssh-keyscan，其他线程等待后重读 known_hosts
+    Object lock = hostLockMap.putIfAbsent(nodeIp, new Object());
+    if (lock != null) {
+        synchronized (lock) {
+            // 二次检查(Double-Check): 防止等待期间其他线程已完成写入
+            existing = repo.getHostKey(nodeIp, null);
+            if (existing != null && existing.length > 0) {
+                hostLockMap.remove(nodeIp);
+                // 已有其他线程完成入库，跳过抓取
+            } else {
+                try {
+                    // 未入库,调用 ssh-keyscan 抓取
+                    ProcessBuilder pb = new ProcessBuilder(
+                        "ssh-keyscan", "-H", "-t", "ed25519,rsa", nodeIp
+                    );
+                    pb.redirectErrorStream(false);
+                    Process process = pb.start();
+                    String output = readProcessOutput(process);  // 读取 stdout
+                    
+                    if (StringUtils.isBlank(output)) {
+                        throw new ServiceException("Node " + nodeIp + " unreachable for ssh-keyscan");
+                    }
+                    
+                    // 追加写入 known_hosts 文件
+                    Files.write(Paths.get("/etc/openlibing/known_hosts"),
+                                output.getBytes(StandardCharsets.UTF_8),
+                                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                    
+                    // 重新加载
+                    jSch.setKnownHosts("/etc/openlibing/known_hosts");
+                } finally {
+                    hostLockMap.remove(nodeIp);
+                }
+            }
+        }
     }
-    
-    // 追加写入 known_hosts 文件
-    Files.write(Paths.get("/etc/openlibing/known_hosts"),
-                output.getBytes(StandardCharsets.UTF_8),
-                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-    
-    // 重新加载
-    jSch.setKnownHosts("/etc/openlibing/known_hosts");
 }
 
 // 严格校验模式连接
@@ -436,7 +455,7 @@ finally {
 ### 10.1 Dockerfile 要求
 
 ```dockerfile
-FROM openjdk:8-jre-slim
+FROM eclipse-temurin:8-jre
 
 WORKDIR /app
 COPY target/openlibing-simulation.jar app.jar
@@ -538,6 +557,7 @@ PubkeyAuthentication yes        # 必须:启用密钥认证
 | `ssh-keyscan` 不可达时无法连接 target | 业务约束：target 必须对 Java 容器网络可达，否则端口转发也无法进行（proxy 到 target 仍需可达） |
 | 节点重装后需运维手动清理 known_hosts | 安全设计：host key 变化必须人工确认，防止节点冒充 |
 | known_hosts 文件无签名保护 | 文件位于容器内受控路径，无外部写入路径；如需更强保护可挂载只读 ConfigMap |
+| **known_hosts 并发写入竞态（TOCTOU）** | 多线程并发连接新节点时，可能同时触发 ssh-keyscan 和文件 APPEND 写入，导致 known_hosts 出现重复条目或交叉写入。当前设计已补充 per-host ConcurrentHashMap 锁 + Double-Check 机制缓解，详见 5.3 节；若需进程级文件锁可后续升级 |
 
 ### 12.3 待安全团队确认事项
 
@@ -547,6 +567,7 @@ PubkeyAuthentication yes        # 必须:启用密钥认证
 4. **ssh-keyscan 命令**在容器内执行的权限边界是否需要进一步限制？
 5. **600 秒 socket 超时**是否过长？是否需要缩短以更快感知网络中断？
 6. **异步上传任务无状态查询接口**：当前上传结果仅记录日志，是否需要增加状态查询接口供调用方确认？
+7. **known_hosts 并发写入保护**：当前采用进程内 `ConcurrentHashMap` per-host 锁方案，是否需要升级为进程级文件锁（如 `FileChannel.lock()`）以应对多实例部署场景？
 
 ## 13. 历史演进
 
