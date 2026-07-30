@@ -94,7 +94,7 @@ SCA `el-table` 增加选择列，支持多选操作：
 
 ### 7. 样式
 
-新增 `.sca-batch-bar` 样式类，用于批量操作按钮区布局。
+新增 `.sca-batch-actions` 样式类，用于批量操作按钮区布局。
 
 ## API 变化
 
@@ -111,7 +111,7 @@ SCA `el-table` 增加选择列，支持多选操作：
 - [apps/web-openlibing/src/views/InspectionCenter/index.vue](file:///d:/openlibing/openlibing-web/apps/web-openlibing/src/views/InspectionCenter/index.vue)
   - 模板：SCA `el-table` 增加 selection 列、表格上方批量按钮区、操作列追加删除按钮
   - 脚本：新增 `scaSelection` / `batchScanLoading` / `batchDeleteLoading` 状态；新增 `handleScaSelectionChange` / `handleBatchScan` / `handleBatchDelete` / `handleSingleDelete`；改造 `startVersionScan` 参数为 list 数组形式；在筛选/分页切换函数中清空选中
-  - 样式：新增 `.sca-batch-bar`
+  - 样式：新增 `.sca-batch-actions`
 - [apps/web-openlibing/src/api/api.ts](file:///d:/openlibing/openlibing-web/apps/web-openlibing/src/api/api.ts)
   - 新增 `scaDeleteVersionScan`
 - [apps/web-openlibing/src/api/url.ts](file:///d:/openlibing/openlibing-web/apps/web-openlibing/src/api/url.ts)
@@ -146,10 +146,10 @@ SCA `el-table` 增加选择列，支持多选操作：
 
 - 选中 0/1/N 条记录时按钮禁用态与可点击态
 - 批量扫描：所选记录含「扫描中」时跳过并提示
-- 批量扫描：请求参数为 `{ list: [...] }` 数组形式
-- 单条扫描：请求参数为 `{ list: [singleRow] }` 数组形式
+- 批量扫描：请求参数为 `[{ repoId, branchId, branchName }]` 数组形式
+- 单条扫描：请求参数为 `[{ repoId, branchId, branchName }]` 数组形式（数组长度 1）
 - 批量删除：成功后列表刷新；当前页删空时回退上一页
-- 单条删除：扫描中按钮禁用；非扫描中删除成功
+- 单条删除：扫描中记录也支持删除；删除成功
 - 删除接口失败：展示后端错误信息
 - 切换 Tab / 筛选 / 分页后选中清空
 - 二次确认弹窗「取消」不触发请求

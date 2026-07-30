@@ -73,7 +73,7 @@ componentAnalysis/index.vue
 组件结构：
 
 - 标题：批量分析
-- 表单项：分析人（`form.clarifyAuthor`）、分析结果（`form.result`，2 项静态选项 `有风险` / `无风险`）、分析说明（wangEditor）
+- 表单项：分析人（`form.clarifyAuthor`）、分析结果（`form.manualRiskLevel`，2 项静态选项 `有风险` / `无风险`）、分析说明（wangEditor）
 - 不含审核人、不含红色 tip、不含「非片段引用」展开表单、不含「确认结果」二次弹窗与复制审批链接相关逻辑
 - 提交时调用 `softWareCompent.batchConfirmProject`（接口已按后端明确实现），成功后关闭弹窗并 `emit('closeBox', true)`
 - 根 dialog class：`batch-update-infor dialog-common project-compliance-confirm-box`（隔离样式作用域）
