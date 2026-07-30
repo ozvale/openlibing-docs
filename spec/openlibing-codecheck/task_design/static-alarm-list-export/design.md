@@ -57,7 +57,7 @@
 6. RabbitMQ 发送 `PERSISTENT` 消息（内容为 `recordId`）
 7. 返回 `recordId`
 
-#### 消费导出事件（MQ Consumer，concurrency = 2）
+#### 消费导出事件（MQ Consumer，concurrency = 5）
 
 1. 解析 `recordId` → `int id`
 2. CAS 抢占：`UPDATE SET message='导出文件生成中' WHERE id=? AND message='导出任务已创建'`，影响行 ≤ 0 则跳过（已被消费或已完成）
@@ -130,8 +130,7 @@
 1. 查询 `message IN ('导出任务已创建','导出文件生成中')` 且 `update_time < now - 2 小时` 的记录
 2. 对 `导出任务已创建` 的记录：重发 MQ 消息（给一次重试机会）
 3. 对 `导出文件生成中` 的记录（已被 CAS 抢占但未完成）：直接置 `导出失败：任务超时，已自动回收`
-4. 同一记录重试超过 2 次仍卡死，直接置失败
-5. 该任务仅消费异常记录，日志用于定位服务或消息队列异常
+4. 该任务仅消费异常记录，日志用于定位服务或消息队列异常
 
 ### 2.7 过期清理任务（xxl-job）
 
@@ -146,16 +145,16 @@
 
 ### 3.1 新增类
 
-| 类名 | 包路径 | 说明 |
-| ---- | ---- | ---- |
-| `StaticAlarmExportEntity` | `entity.alarm` | MySQL 实体（表 `static_alarm_export`） |
-| `StaticAlarmExportMapper` | `mapper` | MyBatis 映射接口 + XML |
-| `StaticAlarmExportProducer` | `service.producer` | RabbitMQ 生产者（PERSISTENT 消息） |
-| `StaticAlarmExportConsumer` | `service.consumer` | RabbitMQ 消费者（concurrency = 2，死信兜底 24h TTL） |
+| 类名 | 包路径 | 说明                                                                    |
+| ---- | ---- |-----------------------------------------------------------------------|
+| `StaticAlarmExportEntity` | `entity.alarm` | MySQL 实体（表 `static_alarm_export`）                                     |
+| `StaticAlarmExportMapper` | `mapper` | MyBatis 映射接口 + XML                                                    |
+| `StaticAlarmExportProducer` | `service.producer` | RabbitMQ 生产者（PERSISTENT 消息）                                           |
+| `StaticAlarmExportConsumer` | `service.consumer` | RabbitMQ 消费者（concurrency = 5，死信兜底 24h TTL）                            |
 | `StaticAlarmExportRecordVO` | `vo.alarm` | 导出结果查询返回 VO（id/taskName/url/message/totalCount/createTime/updateTime） |
-| `StaticAlarmIssueExportVO` | `vo.alarm` | Excel 导出专用 VO（`@ExcelProperty` 中文表头 + `@ColumnWidth` 列宽 + 字段过滤） |
-| `ObsBucketService` | `service` | OBS 桶操作接口（uploadFile / getSignedUrl） |
-| `ObsBucketServiceImpl` | `service.impl` | OBS 实现类 |
+| `StaticAlarmIssueExportVO` | `vo.alarm` | Excel 导出专用 VO（`@ExcelProperty` 中文表头 + `@ColumnWidth` 列宽 + 字段过滤）       |
+| `ObsBucketService` | `service` | OBS 桶操作接口（uploadFile / getSignedUrl）                                  |
+| `ObsBucketServiceImpl` | `service.impl` | OBS 实现类                                                               |
 
 ### 3.2 修改类
 
@@ -260,16 +259,16 @@
 
 ## 5. 性能设计
 
-| 场景 | 措施 |
-| ---- | ---- |
+| 场景 | 措施                                                                    |
+| ---- |-----------------------------------------------------------------------|
 | MongoDB 分批查询 | 用 `_id` 游标（`{_id: {$gt: lastId}}`）代替 `skip + limit`，避免大偏移量性能问题，每批耗时稳定 |
-| Excel 流式写入 | EasyExcel 逐批 `write()`，不要求内存中全量展开；单 Sheet 满 SHARD_SIZE 行自动切换新 Sheet |
-| 多 Sheet 支持 | 超过 SHARD_SIZE 行的数据写入新 Sheet（Sheet 名 "告警(1)"、"告警(2)"...），不截断丢弃 |
-| 临时文件 | 上传 OBS 后 `finally` 块立即删除 |
-| MQ 消费并发 | `concurrency = 2`，避免过多消费者同时查询 MongoDB |
-| 重复提交 | 同用户 + 同查询条件（queryDtoHash）近 5 分钟内有未完成记录才拒绝，不同查询条件不受限制 |
-| 签名 URL | 本地计算不请求远端，7 天有效；DB 记录 + OBS 对象 3 天清理 |
-| 典型耗时 | 5 万行（1 Sheet）：15-30 秒；20 万行（4 Sheet）：1-2 分钟；50 万行（10 Sheet）：3-5 分钟 |
+| Excel 流式写入 | EasyExcel 逐批 `write()`，不要求内存中全量展开；单 Sheet 满 SHARD_SIZE 行自动切换新 Sheet   |
+| 多 Sheet 支持 | 超过 SHARD_SIZE 行的数据写入新 Sheet（Sheet 名 "告警(1)"、"告警(2)"...），不截断丢弃         |
+| 临时文件 | 上传 OBS 后 `finally` 块立即删除                                              |
+| MQ 消费并发 | `concurrency = 5`，避免过多消费者同时查询 MongoDB                                 |
+| 重复提交 | 同用户 + 同查询条件（queryDtoHash）近 5 分钟内有未完成记录才拒绝，不同查询条件不受限制                  |
+| 签名 URL | 本地计算不请求远端，7 天有效；DB 记录 + OBS 对象 3 天清理                                  |
+| 典型耗时 | 5 万行（1 Sheet）：15-30 秒；20 万行（4 Sheet）：1-2 分钟；50 万行（10 Sheet）：3-5 分钟    |
 
 ---
 
