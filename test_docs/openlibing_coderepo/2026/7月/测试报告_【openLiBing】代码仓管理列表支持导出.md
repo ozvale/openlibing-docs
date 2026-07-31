@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104855039
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/
+* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/84
 * **需求名称**: 代码仓管理列表支持导出
 * **开发责任人**: 杨攀
 * **测试责任人**: 赵威

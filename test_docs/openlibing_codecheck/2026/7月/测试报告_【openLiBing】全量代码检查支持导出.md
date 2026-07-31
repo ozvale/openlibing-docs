@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2105995698
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/
+* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/148
 * **需求名称**: 全量代码检查支持导出
 * **开发责任人**: 闫兆鸿
 * **测试责任人**: 赵威

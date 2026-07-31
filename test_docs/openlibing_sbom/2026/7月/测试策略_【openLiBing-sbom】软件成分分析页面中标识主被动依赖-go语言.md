@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104869555
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/
+* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/51
 * **需求名称**: 软件成分分析页面中标识主被动依赖-go语言
 * **核心目标**:
   SBOM软件成分分析页面中标识软件的主被动依赖属性，从元数据层面解析go语言的直接依赖和间接依赖，server端能够解析spdx-json中的直接依赖和间接依赖。

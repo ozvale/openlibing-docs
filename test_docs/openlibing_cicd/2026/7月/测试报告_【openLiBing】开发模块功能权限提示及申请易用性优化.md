@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104899405
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/
+* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/73
 * **需求名称**: 开发模块功能权限提示及申请易用性优化
 * **开发责任人**: 陶获权
 * **测试责任人**: 赵威

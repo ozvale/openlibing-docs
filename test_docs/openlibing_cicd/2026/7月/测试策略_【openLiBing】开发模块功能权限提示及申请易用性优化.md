@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104899405
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/
+* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/73
 * **需求名称**: 开发模块功能权限提示及申请易用性优化
 * **核心目标**:
   开发/构建模块支持显示需要的权限角色，优化权限提示及申请流程，提升用户体验。

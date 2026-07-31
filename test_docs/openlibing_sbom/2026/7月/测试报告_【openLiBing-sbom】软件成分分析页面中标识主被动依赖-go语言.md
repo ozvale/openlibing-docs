@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104869555
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/
+* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/51
 * **需求名称**: 软件成分分析页面中标识主被动依赖-go语言
 * **开发责任人**: 陈洪亮
 * **测试责任人**: 赵威

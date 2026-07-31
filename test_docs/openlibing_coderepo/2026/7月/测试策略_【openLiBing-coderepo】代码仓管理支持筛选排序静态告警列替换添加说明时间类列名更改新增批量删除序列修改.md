@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2106360192
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/
+* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/85
 * **需求名称**: 代码仓管理支持筛选、排序、静态告警列替换、添加说明、时间类列名更改、新增批量删除，序列修改
 * **核心目标**:
   优化代码仓管理易用性：字段支持筛选排序、静态告警列替换为数字、列添加说明、时间类列名优化、新增批量删除、列顺序调整。
