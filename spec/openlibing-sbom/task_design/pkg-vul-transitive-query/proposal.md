@@ -2,7 +2,9 @@
 
 ## 业务 Issue
 
-待创建（用户后续可通过 `gitcode issue create` 在 `openlibing/openlibing-sbom` 仓创建并补回引用）
+- openlibing/openlibing-sbom#54 — 【openLiBing-Sbom】SBOM软件包详情下的CVE可展示当前组件依赖的开源组件的漏洞
+- https://gitcode.com/openlibing/openlibing-sbom/issues/54
+- Issue 状态：closed（创建者已关闭；spec 归档引用保留）
 
 ## 需求背景
 

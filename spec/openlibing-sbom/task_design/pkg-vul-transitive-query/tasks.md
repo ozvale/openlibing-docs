@@ -56,7 +56,7 @@
 
 - 业务仓: `openlibing-sbom`
 - 业务分支: `feat-query-pkg-vul-transitive-deps`
-- 业务 Issue: 待创建
+- 业务 Issue: openlibing/openlibing-sbom#54 (https://gitcode.com/openlibing/openlibing-sbom/issues/54)
 - 关联 commit:
   - `900a70b6` feat(sbom): support transitive deps query for package vulnerability（2026-07-28，核心交付，22 文件 +1822/-204）
   - `3c40ed82` refactor(sbom): use productName as dependency cache refresh param（2026-07-29，REST API 入参重构，3 文件 +36/-22）

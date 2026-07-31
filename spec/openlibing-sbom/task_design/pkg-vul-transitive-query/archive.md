@@ -4,9 +4,9 @@
 
 - 业务仓: `openlibing/openlibing-sbom`
 - 业务分支: `feat-query-pkg-vul-transitive-deps`
-- 业务 Issue: 待创建（用户后续可通过 `gitcode issue create` 在 `openlibing/openlibing-sbom` 仓创建并补回引用）
+- 业务 Issue: openlibing/openlibing-sbom#54 (https://gitcode.com/openlibing/openlibing-sbom/issues/54，已 closed)
 - 业务 PR: 待创建（用户自测确认后进入 Phase 4）
-- docs PR: 待创建（本归档提交后通过 `gitcode pr create` 发起）
+- docs PR: openlibing/openlibing-docs#701 (https://gitcode.com/openlibing/openlibing-docs/merge_requests/701)
 
 ## 交付历程
 
