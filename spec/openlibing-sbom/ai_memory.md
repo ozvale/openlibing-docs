@@ -114,3 +114,44 @@ Boolean 字段必须使用 `is` 或 `has` 前缀：
 ### 代码清理规范
 
 **G.OTH.03**：不用的代码行和 `import` 语句应直接删除，保持代码整洁，避免无用代码堆积。
+
+## 传递依赖与缓存预计算
+
+### 传递依赖闭包预计算优于在线递归 CTE
+
+SBOM 中包与依赖关系规模大、层级深时，递归 CTE 性能不可控（递归深度大、中间结果集膨胀、执行计划不稳定）。**预计算物化缓存**把成本前置到 SBOM 导入时一次性付出，在线查询降为单表主键查询。参考实现：`pkg-vul-transitive-query` 任务的 `DependencyCacheService` + `PackageDependencyCache` 表。
+
+### PostgreSQL `uuid[]` 数组列 + `= ANY(uuid[])` 替代长 `IN (...)`
+
+当 Repository 方法按 ID 集合过滤，且集合规模可能较大（数百到数千）时：
+- entity 字段用 PostgreSQL 原生 `uuid[]` 数组列存储集合
+- Repository 查询用 `= ANY(:packageIds)` 替代 JPA 默认的 `IN (?, ?, ...)`
+- 原因：长 `IN` list 会导致 SQL 解析与计划生成开销显著；`= ANY(uuid[])` 参数固定为单个数组，可被 planner 更稳定地优化
+
+项目示例：`ExternalVulRefRepository.findByPackageIdsInAndSeverityAndVulId`。
+
+### 图遍历用 projection 查询避免 N+1
+
+BFS/DFS 遍历关系表时，循环内查询关系数据必须用 projection DTO（如 `PackageIdAndSpdxId`）只 select 必要字段：
+- 避免加载大 TEXT 字段（如 `sbom_element_relationship` 的描述字段）
+- 避免 N+1 查询（projection 让 JPA 一次性拉取需要的列）
+- 配合 `visited` Set 防止重复访问
+
+### 图遍历排除反向边让其退化为 DAG
+
+当关系表中同时存在正向（`DEPENDS_ON`）与反向（`RUNTIME_DEPENDENCY_OF`）关系时，BFS/DFS **必须明确只遍历一种方向**，避免形成环导致死循环。排除反向边让图退化为 DAG，遍历可终止。
+
+### 缓存预计算的多触发入口模式
+
+缓存预计算服务提供 3 个触发入口，覆盖不同场景：
+1. **同步入口**：hook 在主流程末尾（如 `SpdxReader.readSbomFile` 末尾调 `precomputeForSbom`），让小数据量立即可查
+2. **异步 step**：spring-batch step 作为兜底，大数据量或同步失败时补算
+3. **REST API**：用于存量数据清洗 / 失败重试
+
+去重锁防止重复计算：进程内 `ConcurrentHashMap<业务主键, status>`，已在处理时立即返回 `already_in_progress`。
+
+### 进程内去重锁的适用边界
+
+- 单实例部署：`ConcurrentHashMap` 即可
+- 多实例部署：进程内锁失效，但若底层操作幂等（如 `upsert` / `INSERT IGNORE`），重复触发只会重复计算不会数据损坏，可接受
+- 需要严格去重时再引入 Redis 或 DB 行锁，避免过度设计
