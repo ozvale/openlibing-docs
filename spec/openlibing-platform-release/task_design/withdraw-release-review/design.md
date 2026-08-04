@@ -6,13 +6,13 @@
 
 复用既有 `ReleaseStatus` 枚举，不新增状态：
 
-| 枚举 | value | code | 说明 |
-|------|-------|------|------|
-| SAVE | save | -1 | 新建/编辑态 |
-| IN_REVIEW | submit | 0 | 评审中 |
-| IN_SIGNED | signed | 1 | 发布签发中 |
-| RELEASE_FAILED | release_failed | 2 | 发布失败 |
-| RELEASE_SUCCESS | release_success | 3 | 发布成功 |
+| 枚举            | value           | code | 说明        |
+| --------------- | --------------- | ---- | ----------- |
+| SAVE            | save            | -1   | 新建/编辑态 |
+| IN_REVIEW       | submit          | 0    | 评审中      |
+| IN_SIGNED       | signed          | 1    | 发布签发中  |
+| RELEASE_FAILED  | release_failed  | 2    | 发布失败    |
+| RELEASE_SUCCESS | release_success | 3    | 发布成功    |
 
 撤回操作：将 `reviewStatus` 设为 `SAVE.code (-1)`。
 
@@ -39,11 +39,11 @@ POST /base/withdrawReleaseReview
 
 ## 影响范围
 
-| 文件 | 改动 |
-|------|------|
-| ReleaseBaseController.java | 新增 withdrawReleaseReview 接口 |
-| ReleaseBaseService.java | 新增方法声明 |
-| ReleaseBaseServiceImpl.java | 新增方法实现 |
+| 文件                        | 改动                            |
+| --------------------------- | ------------------------------- |
+| ReleaseBaseController.java  | 新增 withdrawReleaseReview 接口 |
+| ReleaseBaseService.java     | 新增方法声明                    |
+| ReleaseBaseServiceImpl.java | 新增方法实现                    |
 
 不涉及：数据库 schema 变更、对外契约变更（新接口不破坏既有）、评审项表、发布流程。
 
