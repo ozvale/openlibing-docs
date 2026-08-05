@@ -1,6 +1,6 @@
 # 新增 /querySbomPackagesMultiFilter 多选过滤+排序查询接口 — 实现任务
 
-## 进度: N/M complete
+## 进度: 11/11 complete
 
 - [x] 新增 `LicenseFilterEnum` 枚举（model 模块）
 - [x] 新增 `PackageSortField` 枚举（model 模块）

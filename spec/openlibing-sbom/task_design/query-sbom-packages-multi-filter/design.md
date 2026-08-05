@@ -6,14 +6,14 @@
 
 ```
 POST /sbom-api/querySbomPackagesMultiFilter  (@RequestBody QuerySbomPackagesMultiFilterRequest)
-  └─ querySbomPackagesMultiFilter
-       └─ getPackageInfoByNameForPageMultiFilter / getPackageGroupByNameForPageMultiFilter
-            └─ getPackageInfoByNameForPageBatch / getPackagesByGroupPageBatch / countPackageGroupsBatch（新 DAO）
+   └─ querySbomPackagesMultiFilter
+        └─ getPackageInfoByNameForPageMultiFilter / getPackageGroupByNameForPageMultiFilter
+             └─ getPackageInfoByNameForPageBatch / getPackagesByGroupPageBatch / countPackageGroupsBatch（新 DAO）
 ```
 
 ## 架构决策
 
-### 决策 1：多值参数用逗号分隔字符串 + `string_to_array`/`unnest` 展开（不放 List 直接绑定）
+### 决策 1：多值参数用逗号分隔字符串 + `string_to_array`/`unnest` 展开（不绑 List）
 
 项目历史上踩过 **Hibernate 6 + PostgreSQL JDBC 对 `List<String>` / 数组参数绑定报 `malformed array literal`** 的坑。因此多选参数在 Service 层拼接为逗号分隔字符串，DAO 层用 `string_to_array` / `unnest` 在 SQL 内展开，规避 JDBC 数组绑定缺陷。
 
@@ -51,7 +51,7 @@ ORDER BY (CASE WHEN :sortField='critical' THEN ps.critical_vul_count
 - 外层查询按单个包漏洞数量排序返回，保证返回顺序即排序顺序。
 - service 用 `LinkedHashMap` 分组（保留插入顺序），**仅当未指定 `sortField` 时才按名称重排**，否则保留 DAO 排序结果。
 
-### 决策 4：`isExactly` 布尔字段用 `@JsonProperty("isExactly")` 修正 Jackson 绑定
+### 决策 4：`isExactly` 布尔字段用 `@JsonProperty("isExactly")` 修复 Jackson 绑定
 
 V2 DTO 字段名 `isExactly` 与 getter `getExactly()`（派生属性名 `exactly`）不一致，JSON 键 `isExactly` 无法被 Jackson 反序列化，导致精确匹配失效。在 getter 上加 `@JsonProperty("isExactly")` 强制映射。
 
@@ -77,6 +77,7 @@ V2 DTO 字段名 `isExactly` 与 getter `getExactly()`（派生属性名 `exactl
 | SQL 注入（排序字段） | `sortField` 白名单枚举 + CASE 表达式 |
 | 分组排序被 service 覆盖 | service 仅在 `sortField==null` 时按名称重排 |
 | 原 `noLicense`+`multiLicense` 同传为 AND 语义 | 新接口 `licenseFilters` 多选为 OR，前端不同时勾选，标注语义差异 |
+| 分组查询 `GROUP BY` 后引用未分组列 | 排序键用 `MAX(...)` 聚合函数包裹 |
 
 ## 跨仓影响
 
