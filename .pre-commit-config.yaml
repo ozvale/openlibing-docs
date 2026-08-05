@@ -23,6 +23,8 @@ repos:
     rev: v8.30.1
     hooks:
       - id: gitleaks
+        # 使用系统 Go（本地已安装），避免 pre-commit 从 go.dev 下载工具链
+        language_version: system
   # 格式化
   # 运行前请先本地安装：npm install --save-dev --save-exact prettier@3.9.5
   - repo: local
