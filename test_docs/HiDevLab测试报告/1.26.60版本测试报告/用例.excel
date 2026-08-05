@@ -1,0 +1,111 @@
+agent切换、自动化部署技术合作发放裸金属自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_001	Kappa	false	false	level 1	"1、测试环境稳定
+2、已申请技术合作裸金属并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功，
+agent切换、自动化部署技术合作发放虚拟机自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_002	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作虚拟机并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署技术合作发放容器自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_003	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作容器并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署技术合作发放推荐镜像容器自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_004	Kappa	false	false	level 1	"1、测试环境稳定
+2、已申请技术合作推荐镜像容器：CANN 910B quay.nju.edu.cn/ascend/cann:9.1.0-beta.3-910b-openeuler24.03-py3.12-devel 并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功，服务器时间在数据湖中展示正确
+agent切换、自动化部署科研合作发放推荐镜像容器自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_005	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作推荐镜像容器：ubuntu 910B docker.m.daocloud.io/ubuntu:22.04并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功，服务器时间在数据湖中展示正确
+agent切换、自动化部署公共服务发放推荐镜像容器自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_006	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作推荐镜像容器：openEuler 910B docker.m.daocloud.io/openeuler/openeuler:24.03 并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功，服务器时间在数据湖中展示正确
+agent切换、自动化部署在线开发发放推荐镜像容器自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_007	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作推荐镜像容器：CANN 910B m.daocloud.io/quay.io/ascend/cann:9.0.0-910b-ubuntu22.04-py3.12-devel 并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功，服务器时间在数据湖中展示正确
+agent切换、自动化部署技术合作发放自定义镜像容器自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_008	Kappa	false	false		"1、测试环境稳定
+2、已申请技术合作自定义镜像容器：ubuntu 24版本并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功，服务器时间在数据湖中展示正确
+agent切换、自动化部署科研合作发放自定义镜像容器自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_009	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作自定义镜像容器：openEuler 22版本并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功，服务器时间在数据湖中展示正确
+agent切换、自动化部署科研合作发放裸金属自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_010	Kappa	false	false	level 1	"1、测试环境稳定
+2、已申请科研合作裸金属并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署科研合作发放虚拟机自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_011	Kappa	false	false		"1、测试环境稳定
+2、已申请科研合作虚拟机并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署众测专区发放裸金属自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_012	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请众测专区裸金属并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署众测专区发放虚拟机自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_013	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请众测专区虚拟机并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署活动专区发放裸金属自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_014	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请活动专区裸金属并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署活动专区发放虚拟机自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_015	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请活动专区虚拟机并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署公共项目/活动专区发放裸金属自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_016	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请公共项目/活动裸金属并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署公共项目/活动专区发放虚拟机自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_017	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请公共项目/活动虚拟机并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署昇腾技术认证发放裸金属自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_018	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请昇腾技术认证裸金属并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署昇腾技术认证发放虚拟机自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_019	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请昇腾技术认证虚拟机并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署伙伴中心发放裸金属自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_020	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请伙伴中心裸金属并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署伙伴中心发放虚拟机自动安装agent成功	TC_HIDevLab_AgentGrand_20260722_021	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请伙伴中心虚拟机并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、在数据湖中查看前置步骤2申请机器是否已打点上报	1、数据库中正确打点上报前置步骤2中环境数据，agent发放成功
+agent切换、自动化部署agent管理界面前端展示与原型图一致验证成功	TC_HIDevLab_AgentGrand_20260722_022	Kappa	false	false	level 1	"1、测试环境稳定
+2、进入运维管理-Agent管理"	1、查看前端展示是否与原型图一致，原型图地址：https://octo.hdesign.huawei.com/developerPreview/developer/index.html#edit&uniqueId=web-41641&pageId=969303	1、前端展示与原型图字段、样式一致
+agent切换、自动化部署agent管理界面agent部署按钮验证成功	TC_HIDevLab_AgentGrand_20260722_023	Kappa	false	false	level 2	"1、测试环境稳定
+2、进入运维管理-Agent管理
+3、存在正常、异常agent资源单"	1、对前置步骤3中资源单点击一键部署	1、部署成功，对应agent状态进入安装中
+agent切换、自动化部署agent管理界面筛选、搜索、翻页功能验证成功	TC_HIDevLab_AgentGrand_20260722_024	Kappa	false	false	level 2	"1、测试环境稳定
+2、进入运维管理-Agent管理"	"1、筛选agent状态
+2、搜索关键字，单独+组合：资源名称、服务器ip、设备类型、所属实验室、状态备注
+3、上一页、下一页、跳转、搜索后翻页清空搜索内容"	"1、筛选成功，展示不同agent状态
+2、单独、组合筛选均正确筛选出想要数据
+3、翻页功能正常"
+agent切换、自动化部署agent管理界面容器无详情页验证成功	TC_HIDevLab_AgentGrand_20260722_025	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作容器并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m
+4、进入运维管理-Agent管理"	1、点击前置步骤2中agent资源名称进入对应详情页	1、无法点击，容器发放后无详情页
+agent切换、自动化部署agent管理界面agent安装失败重试验证成功	TC_HIDevLab_AgentGrand_20260722_026	Kappa	false	false	level 2	"1、测试环境稳定
+2、进入运维管理-Agent管理
+3、存在安装失败agent资源"	1、找开发创建一个agent安装失败（需蓝区配合）资源，查看其是否自动重试安装agent	1、安装agent失败资源会自动重试安装
+agent切换、自动化部署agent管理界面存量数据安装agent成功	TC_HIDevLab_AgentGrand_20260722_027	Kappa	false	false	level 2	"1、测试环境稳定
+2、进入运维管理-Agent管理
+3、存在旧数据且已安装agent，存在旧数据未安装agent（大概率部署失败，若更改了密码）"	1、点击前置步骤3中agent资源的一键重装	1、重装成功，前置步骤3中不同状态资源但均进入重装中
+agent切换、自动化部署agent管理界面agent安装失败仍然能访问机器验证成功	TC_HIDevLab_AgentGrand_20260722_028	Kappa	false	false	level 2	"1、测试环境稳定
+2、进入运维管理-Agent管理
+3、存在agent自动安装失败资源单"	1、访问前置步骤3中资源单相关联机器	1、可正常登录并访问对应机器
+agent切换、自动化部署裸金属服务器详情中新增重置运维账号信息按钮成功	TC_HIDevLab_AgentGrand_20260722_029	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作裸金属并发放"	1、进入前置步骤2中已发放裸金属详情，查看分配信息处是否新增【重置运维账号信息】按钮	1、对应裸金属服务器详情中新增新增【重置运维账号信息】按钮
+agent切换、自动化部署虚拟机详情中新增重置运维账号信息按钮成功	TC_HIDevLab_AgentGrand_20260722_030	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作虚拟机并发放"	1、进入前置步骤2中已发放虚拟机详情，查看分配信息处是否新增【重置运维账号信息】按钮	1、对应虚拟机详情中新增新增【重置运维账号信息】按钮
+agent切换、自动化部署裸金属服务器重置运维账号信息成功	TC_HIDevLab_AgentGrand_20260722_031	Kappa	false	false	level 1	"1、测试环境稳定
+2、已申请技术合作裸金属并发放成功
+3、进入运维管理-Agent管理"	1、进入前置步骤2中裸金属详情页面，点击分配信息的【重置运维账号信息】按钮，点击确定重置	1、进入重置中流程，稍后显示重置后运维账号及密码
+agent切换、自动化部署裸金属服务器重置运维账号信息失败	TC_HIDevLab_AgentGrand_20260722_032	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作裸金属并发放成功
+3、进入运维管理-Agent管理"	1、进入前置步骤2中裸金属详情页面（更改root密码后），点击分配信息的【重置运维账号信息】按钮，点击确定重置	1、进入重置中流程，显示重置失败，请点击重新重置
+agent切换、自动化部署虚拟机重置运维账号信息成功	TC_HIDevLab_AgentGrand_20260722_033	Kappa	false	false	level 1	"1、测试环境稳定
+2、已申请技术合作虚拟机并发放成功
+3、进入运维管理-Agent管理"	1、进入前置步骤2中虚拟机详情页面，点击分配信息的【重置运维账号信息】按钮，点击确定重置	1、进入重置中流程，稍后显示重置后运维账号及密码
+agent切换、自动化部署虚拟机重置运维账号信息失败	TC_HIDevLab_AgentGrand_20260722_034	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作虚拟机并发放成功
+3、进入运维管理-Agent管理"	1、进入前置步骤2中虚拟机详情页面，点击分配信息的【重置运维账号信息】按钮，点击确定重置	1、进入重置中流程，显示重置失败（需找开发配合），请点击重新重置
+agent切换、自动化部署上传数据湖中数据id、ip、上传时间正确验证成功	TC_HIDevLab_AgentGrand_20260722_035	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作裸金属、虚拟机、推荐容器并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	1、查看前置步骤2中发放的裸金属、虚拟机、推荐容器中机器id、ip、服务器时间是否与数据湖中上传数据一致	1、数据胡中机器id、ip、服务器时间与实际申请机器中的一致
+agent切换、自动化部署上传数据湖时间在五分钟内验证成功	TC_HIDevLab_AgentGrand_20260722_036	Kappa	false	false	level 2	"1、测试环境稳定
+2、已申请技术合作裸金属并发放
+3、数据胡地址：http://7.220.69.170:8481/select/0/vmui/#/?g0.range_input=15m&g0.end_input=2026-07-16T03%3A11%3A51&g0.relative_time=last_15_minutes&g0.tab=1&g0.tenantID=0&g0.expr=%7B__name__%3D%22node_entry_usage_rate%22%7D&g0.step_input=15m"	"1、查看五分钟内上传数据湖数据在agent管理处展示状态是否为正常
+2、查看超过五分钟上传数据湖数据在agent管理处展示状态是否为异常（找开发配合暂停数据湖采集操作）"	"1、申请机器agent上传数据湖时间在五分钟内的在agent管理处显示正常
+2、申请机器agent上传数据湖时间超过五分钟的在agent管理处显示异常"
