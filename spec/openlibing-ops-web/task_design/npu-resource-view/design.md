@@ -29,10 +29,10 @@
 ### 3. NPU 使用率与使用卡时列（回写修正）
 
 **`npuAllRate`**（number，0-1 比率）——接口文档原写"分配率"有误，实际语义为**使用率**；原设计的 `overallNpuUsageRate` 与之重复，已删除，统一用 `npuAllRate`
-**`npuAllUsage`**（回写修正）——原设计写"不展示"，实际**已作为整体资源列展示**：`{ prop: 'npuAllUsage', label: 'NPU使用(卡时)', minWidth: 104, sortable: true, defaultShow: true }`，位于 `overallNpuRate` 之后、`npuAllRate` 之前。理由：使用率是比值，缺少绝对量无法判断基数大小，两者互为参照
+**`npuAllUsage`**（回写修正）——原设计写"不展示"，实际**已作为整体资源列展示**：`{ prop: 'npuAllUsage', label: 'NPU使用(卡时)', minWidth: 104, sortable: true }`（未设 `defaultShow`，需列设置手动开启），位于 `overallNpuRate` 之后、`npuAllRate` 之前。理由：使用率是比值，缺少绝对量无法判断基数大小，两者互为参照
 **`npuAllRate` 列定义**：`{ prop: 'npuAllRate', label: 'NPU使用率', subLabel: '(>30%)', minWidth: 124, sortable: true, defaultShow: true, helpTip: resourceMetricTips.npuUsageRate }`
 **main-table.vue**：`resourceRateCols = ['overallNpuRate', 'npuAllRate']`，`getLightStatus` 纳入 `npuAllRate` 红绿灯逻辑
-**主表叶子列总数**：**25**（回写：非 24，`npuAllUsage` 为新增）
+**主表叶子列总数**：**25**（回写：非 24，`npuAllUsage` 为新增）。顶层分组 7 个；资源环境区叶子列由 24（3 区 × 8）降为 10（PR 2 + Nightly 2 + 整体 6），即实际删除 **16** 列。
 
 ### 3.1 NPU 消耗列抽取（回写新增）
 
@@ -46,11 +46,11 @@
 function npuUsageColumns(prefix: string): ColumnProps[] {
   const show = prefix === "pr"; // NPU 平均消耗仅 PR 区默认显示
   // NPU 消耗：三区一律不设 defaultShow
-  // NPU 平均消耗：defaultShow: show
+  // NPU 平均消耗：defaultShow: show（pr 为 true，nightly / overall 显式 false）
 }
 ```
 
-`overallNpuRate`（NPU分配率）的 `defaultShow` 在 `a58a01d` 中取消——分配率与使用率并列会造成误读，使用率是主指标。
+`overallNpuRate`（NPU分配率）的 `defaultShow` 在 `a58a01d` 中取消——分配率与使用率并列会造成误读，使用率是主指标。`npuAllUsage`（NPU使用(卡时)）同样未设 `defaultShow`。实际默认显示的资源环境区列仅 `prNpuAvg` 与 `npuAllRate` 两列。
 
 ### 3.3 P90 语义标注（回写新增）
 
@@ -104,7 +104,7 @@ function npuUsageColumns(prefix: string): ColumnProps[] {
 
 `column-setting` 组件按 prop 持久化勾选。新增列 `resourceQueueTime` / `npuAllRate` / `npuAllUsage` 的 `defaultShow` 见 3.2；删除列的 prop 在用户本地存储中失效后自动忽略。`prDetailColumns`（PR 明细）在 `prDuration` 后新增 `{ prop: 'resourceQueueTime', label: 'PR资源排队时长(min)-P90', minWidth: 134, sortable: true }`。
 
-**回写修正**：仅靠 prop diff **不足以**兼容。本次删除 18 列 + 三级表头结构变动后，历史缓存的树形勾选结构与新 `mainTableColumns` 不兼容，会导致列显隐异常。补充两步处理：
+**回写修正**：仅靠 prop diff **不足以**兼容。本次删除 16 列 + 三级表头结构变动后，历史缓存的树形勾选结构与新 `mainTableColumns` 不兼容，会导致列显隐异常。补充两步处理：
 
 1. `engineering-capability-view.vue` 的 `column-data-key` 由 `engineering-capability-columns` 改为 `engineeringCapabilityColumns`（换 key 等价于让老用户回到默认配置）
 2. `src/App.vue` 挂载时 `localStorage.removeItem('engineering-capability-columns')` 清理旧 key，避免僵尸数据长期占用存储
@@ -179,21 +179,21 @@ function resolveTabByColKey(colKey: string): DetailTab {
 | `src/App.vue`                                                                             | 修改 | 挂载时清理旧列设置 localStorage key                                                                                                                                                                                                                                                                                                                                |
 | `src/types/engineering-capability.ts`                                                     | 修改 | `ProjectRow` 加 `resourceQueueTime` / `npuAllRate` / `npuAllUsage`；新增 `NpuResourceRow`(resourcePoolId:string) / `NpuResourceServerRow` / summary 响应类型；`ResourcePipelineType` 扩展 'NPU'；`ECDetailParamsContext` 加 `dateParams`                                                                                                                           |
 | `src/api/dashboard/engineering-capability.ts`                                             | 修改 | `getOpsResourceSummary` 泛型化；`getOpsNpuAllSummary` 复用之（`type='All'`，接口文档 v3 合并到 `/resource-summary`）                                                                                                                                                                                                                                               |
-| `src/views/dashboard/engineering-capability/__tests__/columns.test.ts`                    | 修改 | 更新列数断言、新增列断言；**回写：`npuAllUsage` 加入后未同步，当前 2 用例失败（见 proposal 遗留问题）**                                                                                                                                                                                                                                                            |
+| `src/views/dashboard/engineering-capability/__tests__/columns.test.ts`                    | 修改 | 更新列数断言、新增列断言；回写：`npuAllUsage` 加入后断言滞后，已在 `225ea02` 同步（叶子列 25、`npuAllUsage` 改为正向断言）                                                                                                                                                                                                                                         |
 | `src/views/dashboard/engineering-capability/__tests__/time-range.test.ts`                 | 修改 | `DEFAULT_TIME_RANGE` 断言改 `'7'`                                                                                                                                                                                                                                                                                                                                  |
 | `src/views/dashboard/engineering-capability/__tests__/use-engineering-capability.test.ts` | 修改 | 默认时间范围断言改 `'7'`；资源页签解析用例由 `prCpuRate`（已删除）改为 `prNpuUsage`                                                                                                                                                                                                                                                                                |
 | `/mock/npu-all-detail.ts`                                                                 | 新增 | vite-plugin-mock 单文件，rawResponse 按 category/type 分发（summary + 资源池列表 + 服务器列表），不入库                                                                                                                                                                                                                                                            |
 
 ## 风险 & 缓解
 
-| 风险                                                         | 缓解                                                                                                   |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| 后端字段名与约定不一致（`resourceQueueTime` / `npuAllRate`） | 前端先 mock，字段名写入 ai_memory 与 archive，后端按约定对齐；接口文档 `npuAllRate` 语义修正为使用率   |
-| 列设置用户已有勾选失效                                       | 回写修正：prop diff **不足**，实际靠 localStorage key 迁移 + 旧 key 清理兜底（见决策 7）               |
-| 弹窗分页参数与 base-table 默认行为不一致                     | 复用 base-table 既有分页机制，initParams 传 resourcePoolId/startDate/endDate                           |
-| mock 数据被误提交                                            | mock 采用 vite-plugin-mock `.ts` 文件，`.gitignore` 已含 `/mock` 规则                                  |
-| 列增删后测试断言失效（回写新增）                             | **未缓解**：`npuAllUsage` 新增未同步 `columns.test.ts`，2 用例失败。硬编码列数断言对频繁增删列的表脆弱 |
-| 按列名字符串特征归组失效（回写新增）                         | 决策 8 改为从列结构反推分组，结构即真相                                                                |
+| 风险                                                         | 缓解                                                                                                 |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| 后端字段名与约定不一致（`resourceQueueTime` / `npuAllRate`） | 前端先 mock，字段名写入 ai_memory 与 archive，后端按约定对齐；接口文档 `npuAllRate` 语义修正为使用率 |
+| 列设置用户已有勾选失效                                       | 回写修正：prop diff **不足**，实际靠 localStorage key 迁移 + 旧 key 清理兜底（见决策 7）             |
+| 弹窗分页参数与 base-table 默认行为不一致                     | 复用 base-table 既有分页机制，initParams 传 resourcePoolId/startDate/endDate                         |
+| mock 数据被误提交                                            | mock 采用 vite-plugin-mock `.ts` 文件，`.gitignore` 已含 `/mock` 规则                                |
+| 列增删后测试断言失效（回写新增）                             | 已在 `225ea02` 同步断言。硬编码列数断言对频繁增删列的表脆弱，建议增删列与断言更新放同一 commit       |
+| 按列名字符串特征归组失效（回写新增）                         | 决策 8 改为从列结构反推分组，结构即真相                                                              |
 
 ## 跨仓影响
 

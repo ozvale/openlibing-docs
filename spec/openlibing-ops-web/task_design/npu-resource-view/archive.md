@@ -14,7 +14,7 @@
 
 ### 已实现范围
 
-1. **主表格资源列精简**：删除 18 列 CPU/NPU 冗余列，新增 `resourceQueueTime`（PR资源排队时长-P90，归入 `prPipeline` 分组）与 `npuAllRate` / `npuAllUsage`（整体资源 NPU 使用率 / 使用卡时），主表叶子列由 24 → **25** 列。
+1. **主表格资源列精简**：资源环境区删除 16 列 CPU/NPU 冗余列（PR 6 + Nightly 6 + 整体 4），该区叶子列由 24（3 区 × 8）降为 10；新增 `resourceQueueTime`（PR资源排队时长-P90，归入 `prPipeline` 分组）与 `npuAllUsage` / `npuAllRate`（整体资源 NPU 使用卡时 / 使用率）。主表叶子列合计由 24 → **25** 列，顶层分组 7 个。
 2. **NPU 资源视图**：资源 tab 新增 NPU 资源面板（category `ops-npu-all-detail`），5 张 KPI 卡片按「使用 → 总量 → 分配」顺序排列 + 资源池明细表；点击资源池下钻到服务器级弹窗（category `ops-npu-all-server-detail`）。
 3. **repo-tab KPI**：新增 `PR资源排队时长-P90` 卡片，kpi-row 由 4 列扩为 5 列。
 4. **P90 标签统一**：主表 / PR 明细 / repo-tab KPI 统一补 `-P90` 后缀，避免误读为均值。
@@ -34,7 +34,7 @@
 实现与初始设计的偏差已逐条记录在 `proposal.md` 的「实现偏差说明（回写）」与 `design.md` 的对应决策条目中，主要集中在三类：
 
 1. **字段名与分组归属**：后端实际字段为 `resourceQueueTime`（非 `prResourceQueueTime`），且该指标语义属流水线效率，落在 `prPipeline` 分组而非资源环境区。
-2. **列可见性收敛**：新增列并非一律 `defaultShow: true`；NPU 消耗全否、NPU 平均消耗仅 `pr` 为是、NPU 分配率转否，以控制默认信息密度。
+2. **列可见性收敛**：新增列并非一律 `defaultShow: true`。资源环境区实际默认显示的仅 `prNpuAvg`（NPU平均消耗，`prefix === 'pr'`）与 `npuAllRate`（NPU使用率）两列；NPU消耗三区均未声明 `defaultShow`，`overallNpuRate` 与 `npuAllUsage` 同样未声明，需由列设置手动开启。
 3. **缓存兼容策略**：列结构变动后靠 prop diff 无法兼容旧缓存，最终改为换 key + 清理旧 key。
 
 ## 遗留问题

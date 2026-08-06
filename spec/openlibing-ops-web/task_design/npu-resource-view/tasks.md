@@ -44,7 +44,7 @@
 
 - [x] Task 7: npu-resource-detail-modal.vue 新增
   - `el-dialog` + `base-table` 分页
-  - 表格 5 列（资源名称 / 资源ip / 使用卡时 / 资源总卡时 / NPU使用率）
+  - 表格 5 列（资源池名称 / 资源IP / 使用卡时 / 资源总卡时 / NPU使用率）
   - 调用 `getCommonDetail({category: 'ops-npu-all-server-detail', resourcePoolId(String)})`
   - 复用公共 `formatRate`
   - 验证：lint
@@ -80,7 +80,7 @@
   - 验证：lint + 手工验证列设置在旧缓存存在时不异常
 
 - [x] Task 13: 标签与指标说明修正（`4b1a07b` / `1326705` / `2da280f` / `a58a01d`）
-  - `columns.ts`：主表 / `prDetailColumns` P90 后缀标注；新增 `npuAllUsage` 列；`defaultShow` 收敛（NPU消耗全否、NPU平均消耗仅 pr、NPU分配率转否）；多列列宽微调
+  - `columns.ts`：主表 / `prDetailColumns` P90 后缀标注；新增 `npuAllUsage` 列（未设 `defaultShow`）；`defaultShow` 收敛（NPU消耗三区均未声明、NPU平均消耗仅 pr 为 true、NPU分配率取消声明）；多列列宽微调
   - `repo-tab.vue`：`PR执行时长-P90` / `PR资源排队时长-P90` 标签
   - `metric-tips.ts`：排队时长公式去 `/60`；分配率公式名修正 + 含义补充；NPU使用率含义补充
   - 验证：lint

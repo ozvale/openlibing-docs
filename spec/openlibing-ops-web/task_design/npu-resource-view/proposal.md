@@ -2,7 +2,7 @@
 
 ## 需求背景
 
-工程能力运营看板的资源环境模块当前展示 24 列（PR/Nightly/整体 各 8 列），信息密度过高且 CPU 维度占比过大；同时缺少 NPU 资源池级别的使用情况视图，难以观测 NPU 资源实际占用。需精简主表格列、突出 NPU 维度，并新增 NPU 资源专门视图。
+工程能力运营看板的资源环境模块当前展示 24 列（PR/Nightly/整体 各 8 列，其中 CPU 维度占 12 列），信息密度过高且 CPU 维度占比过大；同时缺少 NPU 资源池级别的使用情况视图，难以观测 NPU 资源实际占用。需精简主表格列、突出 NPU 维度，并新增 NPU 资源专门视图。
 
 关联业务 Issue: https://gitcode.com/openlibing/openlibing-ops-web/issues/31
 
@@ -12,34 +12,38 @@
 
 **新增**：
 
-- PR流水线资源 → `PR资源排队时长(min)`（prop: `resourceQueueTime`）
-- 流水线整体资源 → `NPU使用率`（prop: `npuAllRate`，复用后端全量资源字段）
+- PR流水线（`prPipeline` 分组，非资源环境区）→ `PR资源排队时长(min)-P90`（prop: `resourceQueueTime`）
+- 流水线整体资源 → `NPU使用(卡时)`（prop: `npuAllUsage`）、`NPU使用率`（prop: `npuAllRate`，复用后端全量资源字段）
 
-**删除**（共 18 列）：
+**删除**（共 16 列）：
 
-- PR流水线资源：CPU总量、NPU总量、CPU分配率、NPU分配率、CPU消耗、CPU平均消耗
-- Nightly流水线资源：CPU总量、NPU总量、CPU分配率、NPU分配率、CPU消耗、CPU平均消耗
-- 流水线整体资源：CPU分配率、CPU总量、CPU消耗、CPU平均消耗
+- PR流水线资源：CPU消耗、CPU平均消耗、CPU总量、CPU分配率、NPU总量、NPU分配率 → 6 列
+- Nightly流水线资源：CPU消耗、CPU平均消耗、CPU总量、CPU分配率、NPU总量、NPU分配率 → 6 列
+- 流水线整体资源：CPU消耗、CPU平均消耗、CPU总量、CPU分配率 → 4 列
 
 **调整后保留列**：
 
-- PR流水线资源：NPU消耗、NPU平均消耗 → 2 列（`PR资源排队时长` 归入 PR流水线区，非资源环境区）
+- PR流水线资源：NPU消耗、NPU平均消耗 → 2 列
 - Nightly流水线资源：NPU消耗、NPU平均消耗 → 2 列
 - 流水线整体资源：NPU消耗、NPU平均消耗、NPU总量、NPU分配率、NPU使用(卡时)(新)、NPU使用率(新) → 6 列
 
-> 回写：`PR资源排队时长(min)-P90` 实际落在 `prPipeline` 分组（PR执行时长之后），不在 `resourceEnv/prResource` 下；整体资源额外保留 `npuAllUsage`（NPU使用(卡时)），故主表叶子列共 **25 列**。
+> 回写：资源环境区叶子列由 24（3 区 × 8 列）降为 **10**（2 + 2 + 6）；`PR资源排队时长(min)-P90` 实际落在 `prPipeline` 分组（`prDurationP90` 之后），不在 `resourceEnv/prResource` 下。主表顶层分组 7 个，叶子列合计 **25 列**。
 
-**列默认显隐（回写）**：并非所有新增列都默认显示，`defaultShow` 已按信息密度收敛：
+**列默认显隐（回写）**：并非所有新增列都默认显示，`defaultShow` 已按信息密度收敛。以下为代码实测值（未显式声明 `defaultShow` 即 `undefined`，等同不默认显示）：
 
-| 列                                     | defaultShow  | 说明                                                |
-| -------------------------------------- | ------------ | --------------------------------------------------- |
-| `{prefix}NpuUsage`（NPU 消耗(卡时)）   | 否           | 三个资源区一致，需列设置手动开启                    |
-| `{prefix}NpuAvg`（NPU 平均消耗(卡时)） | 仅 `pr` 为是 | `npuUsageColumns` 内 `const show = prefix === 'pr'` |
-| `overallNpuTotal`（NPU 总量(卡时)）    | 否           | —                                                   |
-| `overallNpuRate`（NPU 分配率）         | 否           | 回写：初期为是，后收敛为否                          |
-| `npuAllUsage`（NPU使用(卡时)）         | 是           | 回写新增列                                          |
-| `npuAllRate`（NPU使用率）              | 是           | —                                                   |
-| `resourceQueueTime`（PR资源排队时长）  | 是           | 位于 prPipeline 分组                                |
+| 列                                    | defaultShow    | 说明                                                |
+| ------------------------------------- | -------------- | --------------------------------------------------- |
+| `prNpuUsage`（NPU 消耗(卡时)）        | 未声明         | `npuUsageColumns` 工厂未设该字段                    |
+| `prNpuAvg`（NPU 平均消耗(卡时)）      | **是**         | `npuUsageColumns` 内 `const show = prefix === 'pr'` |
+| `nightlyNpuUsage`（NPU 消耗(卡时)）   | 未声明         | —                                                   |
+| `nightlyNpuAvg`（NPU 平均消耗(卡时)） | **否**（显式） | `prefix !== 'pr'`，工厂显式赋 `false`               |
+| `overallNpuUsage`（NPU 消耗(卡时)）   | 未声明         | —                                                   |
+| `overallNpuAvg`（NPU 平均消耗(卡时)） | **否**（显式） | 同上                                                |
+| `overallNpuTotal`（NPU 总量(卡时)）   | 未声明         | —                                                   |
+| `overallNpuRate`（NPU 分配率）        | 未声明         | 回写：初期为是，后收敛为不默认显示                  |
+| `npuAllUsage`（NPU使用(卡时)）        | **未声明**     | 回写更正：该列未设 `defaultShow`，需列设置手动开启  |
+| `npuAllRate`（NPU使用率）             | **是**         | —                                                   |
+| `resourceQueueTime`（PR资源排队时长） | **是**         | 位于 `prPipeline` 分组                              |
 
 ### 2. 下钻页面（资源环境页签）调整
 
@@ -54,7 +58,7 @@
 
 - 5 个 KPI 卡片，回写后的顺序为「使用 → 总量 → 分配」：**NPU使用率 / NPU使用卡时 / NPU总量 / NPU分配率 / NPU分配卡时**
   - 字段依次为 `npuRate` / `totalNpuUsage` / `totalNpuHours` / `overallNpuRate` / `overallNpuUsage`
-  - 接口文档 v3：移除独立 `/ops-overview/npu-all-summary`，合并到 `/ops-overview/resource-summary`（type=`All`），返回上述 5 字段，卡片全部有实值（不再有 `--` 占位）
+  - 接口文档 v3：移除独立 `/ops-overview/npu-all-summary`，合并到 `/ops-overview/resource-summary`（type=`All`），返回上述 5 字段
 - 资源表格（4 列，资源池层级）：资源池名称、资源池使用卡时、资源池总卡时、NPU使用率
   - 接口：`common/detail` category=**`ops-npu-all-detail`**（回写：非 `ops-resource-detail` type=`All`）
   - 点击资源池名称下钻弹窗
@@ -107,7 +111,7 @@
 ## 影响范围
 
 - 业务仓：`openlibing-ops-web`
-- 分支：`feat/engineering-capability-npu-resource`（领先 `origin/main` 21 个 commit）
+- 分支：`feat/engineering-capability-npu-resource`（领先 `origin/main` 22 个 commit；已合入 `release_20260805`，发布 PR：https://gitcode.com/openlibing/openlibing-ops-web/merge_requests/103）
 - 模块：`src/views/dashboard/engineering-capability/`
 - 主要文件：
   - `config/columns.ts`（主表格列定义、`npuUsageColumns` 工厂、resourceDetailColumns、prDetailColumns、npuResourceColumns、npuResourceServerColumns）
@@ -154,21 +158,22 @@
 
 ### 第二轮回写（2026-08-06，覆盖 `1338009` 之后的 commit）
 
-| 维度                      | 先前文档说法                                     | 当前实现                                                        | 原因 / 来源 commit                                            |
-| ------------------------- | ------------------------------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------- |
-| `npuAllUsage` 列          | 明确"不展示"                                     | 已作为整体资源列展示（`NPU使用(卡时)`，`defaultShow: true`）    | `4b1a07b` 补充绝对值维度，与使用率互为参照                    |
-| 主表叶子列总数            | 24                                               | **25**                                                          | `npuAllUsage` 新增；`columns.test.ts` 断言已在 `225ea02` 同步 |
-| `PR资源排队时长` 所在分组 | 资源环境 → PR流水线资源                          | **PR流水线（prPipeline）分组**，PR执行时长之后                  | 该指标语义属流水线效率而非资源用量                            |
-| NPU 面板卡片顺序          | 使用卡时/总卡时/分配率/整体NPU消耗/整体NPU分配率 | **使用率/使用卡时/NPU总量/分配率/分配卡时**（"使用→总量→分配"） | `70c73cb` 按阅读顺序重排 + 图标调整                           |
-| NPU 面板表格列标签        | 资源池/资源使用卡时/资源总卡时                   | 资源池名称/资源池使用卡时/资源池总卡时                          | 明确层级归属                                                  |
-| `defaultShow` 收敛        | 新增列一律 `true`                                | NPU消耗全否；NPU平均消耗仅 `pr` 为是；NPU分配率转否             | `4b1a07b` / `a58a01d` 控制默认信息密度                        |
-| repo-tab KPI              | 未提及                                           | 新增 `PR资源排队时长-P90` 卡片，kpi-row 4→5                     | `6b35a75`                                                     |
-| P90 标签标注              | 未提及                                           | 主表/PR明细/repo-tab KPI 统一加 `-P90` 后缀                     | `4b1a07b` / `1326705` 防止误读为均值                          |
-| 排队时长计算公式          | `(P90构建 + P90测试) / 60`                       | `P90构建 + P90测试`（去掉 `/60`）                               | `4b1a07b` 修正：两分量已是分钟，除 60 是错误                  |
-| 分配率 tip                | 公式写"使用率 ="                                 | 公式写"分配率 ="，含义补充"资源池内NPU是否闲置"                 | `4b1a07b` 修正命名与语义                                      |
-| 列设置缓存 key            | 仅靠 prop diff 兼容                              | key 改 `engineeringCapabilityColumns` + App.vue 清理旧 key      | `70c73cb`：列结构变动后旧缓存不兼容，diff 不足以兼容          |
-| `resolveTabByColKey`      | 字符串前缀/`includes('Cpu')` 判断                | 声明式 `TAB_BY_GROUP` 映射 + 递归收集叶子列，构建期建 Map       | `6b35a75`：CPU 列已删除，前缀判断失效且重复遍历               |
-| `dateParams` 传递         | 各组件 props 逐层透传                            | 由 `E_C_DETAIL_PARAMS_KEY` 注入上下文统一提供                   | `fd9f0c7` 消除多层透传                                        |
-| `DEFAULT_TIME_RANGE`      | `'30'`                                           | `'7'`                                                           | `28380a9` 同步单测；默认窗口收窄                              |
-| `kpi-row` 样式            | 各组件内 `kpi-row-N` 局部定义                    | 上提到 `style.less`，`kpi-row--2` / `--5` 修饰类 + 响应式断点   | `8762ebf` 消除 4 个组件的重复网格定义                         |
-| 无 slot 单元格渲染        | 未提及                                           | 新增 `v-else-if="row[col.key]"` 渲染纯文本                      | `dfba8ab`：原逻辑让有值单元格误显"未配置数据"提示             |
+| 维度                      | 先前文档说法                                     | 当前实现                                                                   | 原因 / 来源 commit                                            |
+| ------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `npuAllUsage` 列          | 明确"不展示"                                     | 已作为整体资源列展示（`NPU使用(卡时)`，未设 `defaultShow`）                | `4b1a07b` 补充绝对值维度，与使用率互为参照                    |
+| 主表叶子列总数            | 24                                               | **25**（资源环境区 24 → 10，其余分组 15）                                  | `npuAllUsage` 新增；`columns.test.ts` 断言已在 `225ea02` 同步 |
+| 资源环境区删除列数        | 18                                               | **16**（PR 6 + Nightly 6 + 整体 4）                                        | 回写更正：原 24 列减至 10 列，实际删除 16 列                  |
+| `PR资源排队时长` 所在分组 | 资源环境 → PR流水线资源                          | **PR流水线（prPipeline）分组**，PR执行时长之后                             | 该指标语义属流水线效率而非资源用量                            |
+| NPU 面板卡片顺序          | 使用卡时/总卡时/分配率/整体NPU消耗/整体NPU分配率 | **使用率/使用卡时/NPU总量/分配率/分配卡时**（"使用→总量→分配"）            | `70c73cb` 按阅读顺序重排 + 图标调整                           |
+| NPU 面板表格列标签        | 资源池/资源使用卡时/资源总卡时                   | 资源池名称/资源池使用卡时/资源池总卡时                                     | 明确层级归属                                                  |
+| `defaultShow` 收敛        | 新增列一律 `true`                                | NPU消耗未声明；NPU平均消耗仅 `pr` 为是；NPU分配率与 `npuAllUsage` 均未声明 | `4b1a07b` / `a58a01d` 控制默认信息密度                        |
+| repo-tab KPI              | 未提及                                           | 新增 `PR资源排队时长-P90` 卡片，kpi-row 4→5                                | `6b35a75`                                                     |
+| P90 标签标注              | 未提及                                           | 主表/PR明细/repo-tab KPI 统一加 `-P90` 后缀                                | `4b1a07b` / `1326705` 防止误读为均值                          |
+| 排队时长计算公式          | `(P90构建 + P90测试) / 60`                       | `P90构建 + P90测试`（去掉 `/60`）                                          | `4b1a07b` 修正：两分量已是分钟，除 60 是错误                  |
+| 分配率 tip                | 公式写"使用率 ="                                 | 公式写"分配率 ="，含义补充"资源池内NPU是否闲置"                            | `4b1a07b` 修正命名与语义                                      |
+| 列设置缓存 key            | 仅靠 prop diff 兼容                              | key 改 `engineeringCapabilityColumns` + App.vue 清理旧 key                 | `70c73cb`：列结构变动后旧缓存不兼容，diff 不足以兼容          |
+| `resolveTabByColKey`      | 字符串前缀/`includes('Cpu')` 判断                | 声明式 `TAB_BY_GROUP` 映射 + 递归收集叶子列，构建期建 Map                  | `6b35a75`：CPU 列已删除，前缀判断失效且重复遍历               |
+| `dateParams` 传递         | 各组件 props 逐层透传                            | 由 `E_C_DETAIL_PARAMS_KEY` 注入上下文统一提供                              | `fd9f0c7` 消除多层透传                                        |
+| `DEFAULT_TIME_RANGE`      | `'30'`                                           | `'7'`                                                                      | `28380a9` 同步单测；默认窗口收窄                              |
+| `kpi-row` 样式            | 各组件内 `kpi-row-N` 局部定义                    | 上提到 `style.less`，`kpi-row--2` / `--5` 修饰类 + 响应式断点              | `8762ebf` 消除 4 个组件的重复网格定义                         |
+| 无 slot 单元格渲染        | 未提及                                           | 新增 `v-else-if="row[col.key]"` 渲染纯文本                                 | `dfba8ab`：原逻辑让有值单元格误显"未配置数据"提示             |
