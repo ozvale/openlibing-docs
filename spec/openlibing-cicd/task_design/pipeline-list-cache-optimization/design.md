@@ -30,10 +30,10 @@
 
 ## 涉及模块
 
-| 模块 | 改动范围 |
-|------|---------|
-| `PipelineServiceImpl` | 新增本地缓存字段、Redis 依赖、3 个私有方法；改造 `getPipelineList`、`updateWhitelistStatus`、`filterPipelineList` |
-| `PipelineServiceImplTest` | 修正 `testGetPipelineList_Exception` 断言以匹配 P0 修复 |
+| 模块                      | 改动范围                                                                                                          |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `PipelineServiceImpl`     | 新增本地缓存字段、Redis 依赖、3 个私有方法；改造 `getPipelineList`、`updateWhitelistStatus`、`filterPipelineList` |
+| `PipelineServiceImplTest` | 修正 `testGetPipelineList_Exception` 断言以匹配 P0 修复                                                           |
 
 ## 整体处理方式
 
@@ -121,23 +121,23 @@ sequenceDiagram
 
 `getPipelineList` 调用华为云 SDK 可能抛出的异常及对应处理：
 
-| 异常类型 | 含义 | 返回提示 |
-|---------|------|---------|
-| `ConnectionException` | 网络连接失败 | "网络连接超时" |
-| `RequestTimeoutException` | 请求超时 | "响应超时，请稍后重试" |
-| `ServiceResponseException` | 华为云返回业务错误（含 HttpStatusCode / RequestId / ErrorCode / ErrorMsg） | "获取流水线列表失败，请稍后重试" |
-| `Exception`（兜底） | 未预期异常 | "获取流水线列表异常，请稍后重试或联系管理员！" |
+| 异常类型                   | 含义                                                                       | 返回提示                                       |
+| -------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------- |
+| `ConnectionException`      | 网络连接失败                                                               | "网络连接超时"                                 |
+| `RequestTimeoutException`  | 请求超时                                                                   | "响应超时，请稍后重试"                         |
+| `ServiceResponseException` | 华为云返回业务错误（含 HttpStatusCode / RequestId / ErrorCode / ErrorMsg） | "获取流水线列表失败，请稍后重试"               |
+| `Exception`（兜底）        | 未预期异常                                                                 | "获取流水线列表异常，请稍后重试或联系管理员！" |
 
 所有异常分支均打印 ERROR 日志（含 projectId、请求体、华为云错误详情），便于问题定位。
 
 ## 缓存降级策略
 
-| 故障场景 | 降级行为 |
-|---------|---------|
+| 故障场景                                         | 降级行为                                       |
+| ------------------------------------------------ | ---------------------------------------------- |
 | Guava `Cache.get` loader 抛 `ExecutionException` | 捕获后直接查库 / 直接构建 client，记 WARN 日志 |
-| Redis 读失败（`openlibingRedis.get`） | 降级回源 DB，记 WARN 日志 |
-| Redis 写失败（`openlibingRedis.set`） | 跳过缓存写入，仅记 WARN 日志，下次 miss 再写 |
-| Redis 主动删失败（`openlibingRedis.del`） | 主流程已成功，走 30s TTL 兜底最终一致 |
+| Redis 读失败（`openlibingRedis.get`）            | 降级回源 DB，记 WARN 日志                      |
+| Redis 写失败（`openlibingRedis.set`）            | 跳过缓存写入，仅记 WARN 日志，下次 miss 再写   |
+| Redis 主动删失败（`openlibingRedis.del`）        | 主流程已成功，走 30s TTL 兜底最终一致          |
 
 # 3.类设计
 
@@ -145,19 +145,19 @@ sequenceDiagram
 
 ### 新增字段
 
-| 字段 | 类型 | 职责 |
-|------|------|------|
-| `pipelineClientCache` | `Cache<String, Optional<CodeArtsPipelineClient>>` | 华为云 SDK 客户端本地缓存，按 `projectId` 隔离，TTL 30 分钟。`Optional` 包装支持缓存"查不到"的 key，避免穿透 |
-| `hwProjectEntityCache` | `Cache<String, Optional<HwProjectInfoEntity>>` | 华为云项目映射本地缓存，按 `projectId` 隔离，TTL 30 分钟 |
-| `openlibingRedis` | `OpenlibingRedis` | Spring 注入，提供 Redis 读写删能力 |
+| 字段                   | 类型                                              | 职责                                                                                                         |
+| ---------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `pipelineClientCache`  | `Cache<String, Optional<CodeArtsPipelineClient>>` | 华为云 SDK 客户端本地缓存，按 `projectId` 隔离，TTL 30 分钟。`Optional` 包装支持缓存"查不到"的 key，避免穿透 |
+| `hwProjectEntityCache` | `Cache<String, Optional<HwProjectInfoEntity>>`    | 华为云项目映射本地缓存，按 `projectId` 隔离，TTL 30 分钟                                                     |
+| `openlibingRedis`      | `OpenlibingRedis`                                 | Spring 注入，提供 Redis 读写删能力                                                                           |
 
 ### 新增常量
 
-| 常量 | 值 | 说明 |
-|------|----|----|
-| `WHITELIST_CACHE_PREFIX` | `"pipeline:whitelist:"` | 白名单 Redis key 前缀，按 projectId 隔离 |
-| `WHITELIST_CACHE_TTL_SECONDS` | `30L` | 白名单 Redis 缓存 TTL，作为主动失效的兜底 |
-| `LOCAL_CACHE_TTL_MINUTES` | `30L` | 本地缓存 TTL，限制 AK/SK 轮转后旧凭据的有效期，避免永久缓存的安全审计隐患 |
+| 常量                          | 值                      | 说明                                                                      |
+| ----------------------------- | ----------------------- | ------------------------------------------------------------------------- |
+| `WHITELIST_CACHE_PREFIX`      | `"pipeline:whitelist:"` | 白名单 Redis key 前缀，按 projectId 隔离                                  |
+| `WHITELIST_CACHE_TTL_SECONDS` | `30L`                   | 白名单 Redis 缓存 TTL，作为主动失效的兜底                                 |
+| `LOCAL_CACHE_TTL_MINUTES`     | `30L`                   | 本地缓存 TTL，限制 AK/SK 轮转后旧凭据的有效期，避免永久缓存的安全审计隐患 |
 
 ### 新增方法
 
@@ -222,11 +222,11 @@ sequenceDiagram
 
 ## 缓存设计
 
-| 缓存对象 | 缓存层 | TTL | 隔离维度 | 失效方式 |
-|---------|-------|-----|---------|---------|
+| 缓存对象                 | 缓存层         | TTL     | 隔离维度    | 失效方式                                 |
+| ------------------------ | -------------- | ------- | ----------- | ---------------------------------------- |
 | `CodeArtsPipelineClient` | Guava 本地缓存 | 30 分钟 | `projectId` | TTL 兜底，AK/SK 轮转后 30 分钟内自动重建 |
-| `HwProjectInfoEntity` | Guava 本地缓存 | 30 分钟 | `projectId` | TTL 兜底 |
-| 白名单流水线 ID 集合 | Redis | 30 秒 | `projectId` | 主动 `del` + TTL 兜底 |
+| `HwProjectInfoEntity`    | Guava 本地缓存 | 30 分钟 | `projectId` | TTL 兜底                                 |
+| 白名单流水线 ID 集合     | Redis          | 30 秒   | `projectId` | 主动 `del` + TTL 兜底                    |
 
 ## 选型理由
 
@@ -263,8 +263,8 @@ sequenceDiagram
 
 唯一对外可见的变化是异常场景下的返回结构：
 
-| 场景 | 改造前 | 改造后 |
-|------|-------|-------|
+| 场景                         | 改造前                                        | 改造后                                             |
+| ---------------------------- | --------------------------------------------- | -------------------------------------------------- |
 | `getPipelineList` 抛任意异常 | `DataResult.success()`（无 data，无错误信息） | `DataResult.failureMessage(...)`（含中文错误提示） |
 
 该变化属于 **Bug 修复**，不属于接口契约变化。原行为违反接口语义（异常不应伪装成功），上游调用方按失败语义处理即可，无需适配。
@@ -308,9 +308,9 @@ sequenceDiagram
 
 ## 名词解释
 
-| 名词 | 含义 |
-|------|------|
-| `CodeArtsPipelineClient` | 华为云 CodeArts Pipeline SDK 客户端，封装对流水线服务的 API 调用 |
-| `HwProjectInfoEntity` | openlibing 项目与华为云项目的映射实体，存储 `hwProjectId` 与 AK/SK 加密凭据 |
-| `PipelineInfoEntity` | openlibing 流水线信息实体，`deleted=false` 即表示该流水线在白名单中 |
-| `Optional<T>` 包装缓存 | 使用 `Optional.empty()` 表示"已查过但不存在"，避免 null 不能进 Guava Cache 且避免缓存穿透 |
+| 名词                     | 含义                                                                                      |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| `CodeArtsPipelineClient` | 华为云 CodeArts Pipeline SDK 客户端，封装对流水线服务的 API 调用                          |
+| `HwProjectInfoEntity`    | openlibing 项目与华为云项目的映射实体，存储 `hwProjectId` 与 AK/SK 加密凭据               |
+| `PipelineInfoEntity`     | openlibing 流水线信息实体，`deleted=false` 即表示该流水线在白名单中                       |
+| `Optional<T>` 包装缓存   | 使用 `Optional.empty()` 表示"已查过但不存在"，避免 null 不能进 Guava Cache 且避免缓存穿透 |

@@ -11,11 +11,11 @@
 
 ### 性能瓶颈
 
-| 调用点 | 重复开销 | 频率 |
-|--------|---------|------|
-| `hwCloudClient.buildHuaweiCloudSdkClient` | AK/SK 非对称解密 + SSL 客户端初始化 | 每次请求 |
-| `hwProjectInfoMapper.selectOne` | DB 查询项目映射 | 每次请求 |
-| `pipelineInfoMapper.selectList`（白名单过滤） | DB 查询白名单流水线 | 每次请求 |
+| 调用点                                        | 重复开销                            | 频率     |
+| --------------------------------------------- | ----------------------------------- | -------- |
+| `hwCloudClient.buildHuaweiCloudSdkClient`     | AK/SK 非对称解密 + SSL 客户端初始化 | 每次请求 |
+| `hwProjectInfoMapper.selectOne`               | DB 查询项目映射                     | 每次请求 |
+| `pipelineInfoMapper.selectList`（白名单过滤） | DB 查询白名单流水线                 | 每次请求 |
 
 ### P0 异常处理缺陷
 
@@ -33,25 +33,25 @@ try {
 
 ## 优化清单
 
-| 优先级 | 项 | 类型 | 缓存方式 | 业务感知 |
-|--------|---|------|---------|---------|
-| P0 | 修复 `getPipelineList` 异常处理（参考 `getPipelineRunDetail` 模板） | 正确性 bug | — | 无（修复后明确报错而非伪装成功） |
-| P1 | 缓存 `CodeArtsPipelineClient` | 性能 | Guava `CacheBuilder`（30min TTL + 原子加载） | 无 |
-| P2 | 缓存 `HwProjectInfoEntity` | 性能 | Guava `CacheBuilder`（30min TTL + 原子加载） | 无 |
-| P3 | 白名单缓存 30s + 主动失效 | 性能 | Redis（`StringRedisTemplate` + JSON） | 无（主动失效保证零延迟） |
+| 优先级 | 项                                                                  | 类型       | 缓存方式                                     | 业务感知                         |
+| ------ | ------------------------------------------------------------------- | ---------- | -------------------------------------------- | -------------------------------- |
+| P0     | 修复 `getPipelineList` 异常处理（参考 `getPipelineRunDetail` 模板） | 正确性 bug | —                                            | 无（修复后明确报错而非伪装成功） |
+| P1     | 缓存 `CodeArtsPipelineClient`                                       | 性能       | Guava `CacheBuilder`（30min TTL + 原子加载） | 无                               |
+| P2     | 缓存 `HwProjectInfoEntity`                                          | 性能       | Guava `CacheBuilder`（30min TTL + 原子加载） | 无                               |
+| P3     | 白名单缓存 30s + 主动失效                                           | 性能       | Redis（`StringRedisTemplate` + JSON）        | 无（主动失效保证零延迟）         |
 
 ## 缓存实现选型
 
 ### P1 / P2：Guava CacheBuilder（本地，带 TTL + 原子加载）
 
-| 维度 | 旧方案（ConcurrentHashMap） | 新方案（Guava CacheBuilder） |
-|------|---------------------------|---------------------------|
-| TTL | 无，重启才生效 | 30min `expireAfterWrite` |
-| 竞态 | check-then-act，多线程重复构建 | `Cache.get(key, Callable)` 原子加载，同 key 互斥 |
-| AK/SK 轮转 | 旧凭据永久有效至重启（安全审计隐患） | 最多 30min 自动失效重建 |
-| null 处理 | 不缓存 null，可能穿透 | `Optional` 包装，缓存负查询结果 |
-| 异常降级 | 无 | `ExecutionException` 时 fallback 直接查库/构建 |
-| 参考实现 | `ImageServiceImpl` | `AuthInterceptor` |
+| 维度       | 旧方案（ConcurrentHashMap）          | 新方案（Guava CacheBuilder）                     |
+| ---------- | ------------------------------------ | ------------------------------------------------ |
+| TTL        | 无，重启才生效                       | 30min `expireAfterWrite`                         |
+| 竞态       | check-then-act，多线程重复构建       | `Cache.get(key, Callable)` 原子加载，同 key 互斥 |
+| AK/SK 轮转 | 旧凭据永久有效至重启（安全审计隐患） | 最多 30min 自动失效重建                          |
+| null 处理  | 不缓存 null，可能穿透                | `Optional` 包装，缓存负查询结果                  |
+| 异常降级   | 无                                   | `ExecutionException` 时 fallback 直接查库/构建   |
+| 参考实现   | `ImageServiceImpl`                   | `AuthInterceptor`                                |
 
 ### P3：Redis（StringRedisTemplate + JSON，主动失效）
 
@@ -69,16 +69,16 @@ try {
 
 ## 不做的事项（YAGNI 检查）
 
-| 候选增加项 | 是否需要 | 原因 |
-|-----------|---------|------|
-| 缓存流水线运行状态数据 | 否 | 5 秒轮询要求实时性，缓存破窗读语义 |
-| 缓存运行实例详情（终态缓存） | 否 | 回看频率不高，命中率低，收益有限 |
-| TTL 配置化（Apollo） | 否 | 业务已确认无需调整，写死常量更简单 |
-| 引入 Caffeine 本地缓存框架 | 否 | 项目已有 Guava（`AuthInterceptor` 在用） |
-| P3 加 Guava 二级本地缓存 | 否 | 当前 Redis 压力可忽略，二级缓存增加一致性复杂度 |
-| 管理接口主动清缓存 | 否 | 30min TTL 已覆盖 AK/SK 轮转场景 |
-| DB 变更通知（binlog/事件） | 否 | 复杂度过高，AK/SK 轮转极低频 |
-| 优化华为云 300 条拉取 | 否 | 外部依赖 + 白名单架构必要，代码层面无优化空间 |
+| 候选增加项                   | 是否需要 | 原因                                            |
+| ---------------------------- | -------- | ----------------------------------------------- |
+| 缓存流水线运行状态数据       | 否       | 5 秒轮询要求实时性，缓存破窗读语义              |
+| 缓存运行实例详情（终态缓存） | 否       | 回看频率不高，命中率低，收益有限                |
+| TTL 配置化（Apollo）         | 否       | 业务已确认无需调整，写死常量更简单              |
+| 引入 Caffeine 本地缓存框架   | 否       | 项目已有 Guava（`AuthInterceptor` 在用）        |
+| P3 加 Guava 二级本地缓存     | 否       | 当前 Redis 压力可忽略，二级缓存增加一致性复杂度 |
+| 管理接口主动清缓存           | 否       | 30min TTL 已覆盖 AK/SK 轮转场景                 |
+| DB 变更通知（binlog/事件）   | 否       | 复杂度过高，AK/SK 轮转极低频                    |
+| 优化华为云 300 条拉取        | 否       | 外部依赖 + 白名单架构必要，代码层面无优化空间   |
 
 ## 验收标准
 

@@ -2,16 +2,16 @@
 
 ## 归档信息
 
-| 项目 | 内容 |
-|------|------|
-| FE 需求名称 | 【openLiBing-cicd】流水线列表、详情接口优化并支持搜索条件缓存 |
-| 业务仓 Issue | openlibing/openlibing-cicd#185 |
-| 业务仓 PR | openlibing/openlibing-cicd#538 |
-| 业务仓开发分支 | `pipeline_cache` → `release_20260813_iter1` |
-| docs 仓 Issue | openlibing/openlibing-docs#125 |
-| docs 仓 PR | openlibing/openlibing-docs#728 |
-| docs 仓归档分支 | `spec-openlibing-cicd-pipeline-list-cache-optimization` |
-| 归档日期 | 2026-08-05 |
+| 项目            | 内容                                                          |
+| --------------- | ------------------------------------------------------------- |
+| FE 需求名称     | 【openLiBing-cicd】流水线列表、详情接口优化并支持搜索条件缓存 |
+| 业务仓 Issue    | openlibing/openlibing-cicd#185                                |
+| 业务仓 PR       | openlibing/openlibing-cicd#538                                |
+| 业务仓开发分支  | `pipeline_cache` → `release_20260813_iter1`                   |
+| docs 仓 Issue   | openlibing/openlibing-docs#125                                |
+| docs 仓 PR      | openlibing/openlibing-docs#728                                |
+| docs 仓归档分支 | `spec-openlibing-cicd-pipeline-list-cache-optimization`       |
+| 归档日期        | 2026-08-05                                                    |
 
 ## 实现总结
 
@@ -29,11 +29,11 @@
 
 ### 缓存设计
 
-| 缓存对象 | 缓存层 | TTL | 隔离维度 | 失效方式 |
-|---------|-------|-----|---------|---------|
+| 缓存对象                 | 缓存层         | TTL     | 隔离维度    | 失效方式                                 |
+| ------------------------ | -------------- | ------- | ----------- | ---------------------------------------- |
 | `CodeArtsPipelineClient` | Guava 本地缓存 | 30 分钟 | `projectId` | TTL 兜底，AK/SK 轮转后 30 分钟内自动重建 |
-| `HwProjectInfoEntity` | Guava 本地缓存 | 30 分钟 | `projectId` | TTL 兜底 |
-| 白名单流水线 ID 集合 | Redis | 30 秒 | `projectId` | 主动 `del` + TTL 兜底 |
+| `HwProjectInfoEntity`    | Guava 本地缓存 | 30 分钟 | `projectId` | TTL 兜底                                 |
+| 白名单流水线 ID 集合     | Redis          | 30 秒   | `projectId` | 主动 `del` + TTL 兜底                    |
 
 ### 容错设计
 
