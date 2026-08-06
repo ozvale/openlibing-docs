@@ -53,59 +53,130 @@ processBatchIssues:
 
 每个私有方法职责单一，便于测试与维护。
 
-### 决策 5：增量 diff 与 PR commits 双缓存
+### 决策 6：force push 场景下用两棵树直接 diff 代替三点 diff（commit `b7f2a8a5`）
 
-**背景**：同一次扫描可能处理多个 batch，每个 batch 都可能需要相同的 PR commits 集合与同 baseSha 的增量 diff。
+**背景**：PR #250 合入前，`baseSha` 不在当前 PR 提交链时（force push 抛弃旧 head），原实现回退到 PR 全量 diff。但 compare API 的 `base...head` 三点语法在 base 不是 head 祖先时会落在 merge_base 上，把整文件判为 `added`，导致 `isInModifiedRange` 恒为 true 错误跳过继承。
+
+**决策**：
+- 在 `resolveFileDiff` 中新增第四优先级：baseSha 不在提交链 → 调用 `getDirectFileDiff` 计算两棵树直接 diff
+- `getDirectFileDiff` 通过 contents API 分别取 `baseSha` 和 `headSha` 的文件内容，用 jgit `MyersDiff`（`RawTextComparator.DEFAULT`）本地计算行级差异
+- 直接 diff 结果的 `PrDiffDto.status` 固定为 `modified`，`modifiedLines` 仅包含真正改动的行
+- `findMatchingIssue` 中 `added` 状态文件跳过 `isInModifiedRange` 直接进 3b 字段匹配
+- `added` 文件无 base 侧行号可还原，`adjustedLines` 直接使用当前行号
+
+**代价**：引入 jgit 依赖（项目已有）；contents API 增量调用，但经 `directDiffCache` 缓存单次请求内只调一次。
+
+### 决策 7：`resolveFileDiff` 重构为按单文件返回（commit `b7f2a8a5`）
+
+**背景**：原 `resolveEffectiveDiffMap` 按 baseSha 缓存整个增量 diff map，force push 后 baseSha 与 headSha 之间需要逐文件做直接 diff，整 map 缓存不再适用。
+
+**决策**：重构为 `resolveFileDiff`，按单个文件解析 diff：
+1. baseSha 为空/等于 head → 返回 `prDiffFileMap.get(filePath)`
+2. baseSha 在提交链 → `getIncrementalDiffMap` 取三点 diff，命中返回
+3. baseSha 不在提交链 → `getDirectFileDiff` 取两树直接 diff，取到返回
+4. 以上均失败 → 返回 `prDiffFileMap.get(filePath)` 降级
+
+提取原内联三点 diff 逻辑为独立方法 `getIncrementalDiffMap`。
+
+### 决策 5：增量 diff、PR commits、直接 diff 三缓存（commit `b7f2a8a5` 补 directDiffCache）
+
+**背景**：同一次扫描可能处理多个 batch，每个 batch 都可能需要相同的 PR commits 集合与同 baseSha 的增量 diff。force push 修复新增 contents API 调用，同样需要缓存。
 
 **决策**：
 - `prCommitsCache`：`Map<String, Set<String>>`，key 为 mergeUrl，value 为 PR 全部提交 sha 集合
 - `incrementalDiffCache`：`Map<String, Map<String, PrDiffDto>>`，key 为 baseSha，value 为增量 diff 文件映射
+- `directDiffCache`：`Map<String, PrDiffDto>`，key 为 `baseSha|headSha|filePath`，value 为单文件直接 diff
 
 缓存生命周期限定在单次扫描请求内，避免跨请求污染。
+
+### 决策 8：`autoSubmitConfirmV2` 新增 huawei copyright-only 自动确认分支（commit `fad72408`）
+
+**背景**：版本扫描与 PR 扫描的 `autoSubmitConfirmV2` 中，现有自动确认规则仅覆盖 `license=SUCCESS + copyright=SUCCESS` 的 issue。大量华为自研开源组件的 remote copyright 被标记为 FAIL（如 `Copyright (c) Huawei Technologies Co., Ltd.`），这些 issue 本不需要人工审核，却在待审列表中堆积。
+
+**决策**：在 `autoSubmitConfirmV2` 的自动确认识别循环中，新增一条分支：`license=SUCCESS + copyright=FAIL` 且所有远程 copyright 条目的 `name` 字段均包含 `huawei`（不区分大小写，通过 `isRemoteCopyrightOnlyHuawei` 判定）。
+
+**`isRemoteCopyrightOnlyHuawei` 判定逻辑**：
+- 入参 `copyrights` 为空或 null → 返回 `false`
+- 遍历每条 copyright，用 `JSONObject.parseObject` 解析 `name` 字段
+- 任一条解析失败 → 返回 `false`（防御性：宁可不确认也不误确认）
+- 任一条 `name` 为空或不含 `huawei` → 返回 `false`
+- 全部通过 → 返回 `true`
+
+**安全考量**：
+- 大小写不敏感匹配（`toLowerCase(Locale.ENGLISH)`），覆盖 `Huawei`、`HUAWEI`、`huawei` 等变体
+- JSON 解析异常捕获：copyright 数据格式异常时退回不确认，不抛异常中断流程
+- 混合版权（如 huawei + acme）不会误确认，要求**全部**条目均含 huawei
+
+**代价**：无 schema 变更、无新依赖；仅 `ConfirmReviewServceImpl` 内新增 ~30 行代码 + 3 个测试。
 
 ## 涉及文件
 
 | 文件 | 操作 | 关键改动 |
 |------|------|---------|
-| `ScanCommonServiceImpl.java` | 修改 | 新增 `getPrCommitShas` / `buildPrCommitsApiUrl` / `getIncrementalPrDiff` / `buildCompareApiUrl`；`findMatchingIssue` 加入 `isExactHashMatch` 短路；`isInModifiedRange` 加 prDiff null 防护；`getTblIssueInfo` 写入 `prHeadSha(scan.getCommitId())` |
+| `ScanCommonServiceImpl.java` | 修改 | 新增 `getPrCommitShas` / `buildPrCommitsApiUrl` / `getIncrementalPrDiff` / `buildCompareApiUrl`；`findMatchingIssue` 加入 `isExactHashMatch` 短路；`isInModifiedRange` 加 prDiff null 防护；`getTblIssueInfo` 写入 `prHeadSha(scan.getCommitId())`；**`resolveFileDiff` 重构为按单文件返回，新增两树直接 diff 优先级；`getDirectFileDiff` / `fetchFileContent` / `buildFileContentApiUrl` / `parseOwnerAndRepo` / `computeDirectDiff` 实现 force push 直接 diff 链路** |
 | `IntegrationApiServiceImpl.java` | 修改 | `processBatchIssues` 拆分为 `extractScanFileList` / `backfillPrHeadCommitId` / `buildShieldRoleDto` / `filterAndMarkUnconfirmed` / `executeBatchAnalysisIfNeed` |
 | `TblIssue.java` | 修改 | 新增 `prHeadSha` 字段、Builder 方法、`build()` 与 `toBuilder()` 同步 |
 | `TblIssueMapper.xml` | 修改 | insert / update / select 加入 `pr_head_sha` 列与映射 |
 | `db.changelog.xml` | 修改 | include 新 changeset `20260715/add-tbl-issue-commit-id.xml` |
 | `add-tbl-issue-commit-id.xml` | 新增 | `addColumn tableName="tbl_issue"` 加 `pr_head_sha VARCHAR(64)`，含 `preConditions` 与 `rollback` |
-| `ScanCommonServiceImplTest.java` | 修改 | 新增 `testGetTblIssues_FallbackToFileHashOnly` / `testGetTblIssues_BothMatchAndFallback_BothMatchWins` / `testGetTblIssues_NoHashMatch_FilteredOut` / `testGetTblIssues_ExactHashMatch_Prioritized` 4 个用例 |
+| `ScanCommonServiceImplTest.java` | 修改 | 新增 4 个匹配优先级用例 + **5 个 force push / added 文件用例** |
+| `ConfirmReviewServceImpl.java` | 修改 | `autoSubmitConfirmV2` 新增 `license=SUCCESS + copyright=FAIL + 远程 copyright 全 huawei` 自动确认分支 + `isRemoteCopyrightOnlyHuawei` |
+| `ConfirmReviewServceImplTest.java` | 修改 | 新增 3 个自动确认测试（全 huawei 自动确认 / 非 huawei 不确认 / 混合不确认） |
 
 ## 关键流程
 
-### 增量 diff 获取流程
+### resolveFileDiff 四优先级流程（commit `b7f2a8a5` 重构）
 
 ```
-prResultInherit
+resolveFileDiff(baseSha, filePath, context, prDiffFileMap)
    │
-   ▼
-getPrDiffFileMap(mergeUrl, projectId, platform, baseSha, currentHeadSha)
+   ├── 1. baseSha 为空 || baseSha == headSha → 返回 prDiffFileMap.get(filePath)
    │
-   ├── 1. 查 incrementalDiffCache，命中直接返回
+   ├── 2. getPrCommitShas(mergeUrl) → prCommitShas
+   │      ├── prCommitShas.isEmpty() → 放行：API 故障容错，进入步骤 2b
+   │      └── prCommitShas.contains(baseSha) → 进入步骤 2b
    │
-   ├── 2. getPrCommitShas(mergeUrl, projectId, platform, prCommitsCache)
-   │      ├── 命中缓存 → 返回 sha 集合
-   │      └── 调用 PR commits API → 解析 → 缓存 → 返回
+   ├── 2b. getIncrementalDiffMap(baseSha, context)
+   │      ├── 查 incrementalDiffCache，命中返回 → 返回 incrementalMap.get(filePath)
+   │      └── 调 compare API (base...head) → 解析 → 缓存 → 返回 incrementalMap.get(filePath)
+   │      └── 失败 → 降级到步骤 4
    │
-   ├── 3. 校验 baseSha
-   │      ├── prCommitShas.isEmpty() → 放行到 compare API（API 故障容错）
-   │      └── !contains(baseSha) → 日志告警 + 回退 PR 全量 diff
+   ├── 3. baseSha 不在提交链（force push）→ getDirectFileDiff(baseSha, headSha, filePath, context)
+   │      ├── 查 directDiffCache，命中返回
+   │      ├── fetchFileContent(baseSha, filePath) + fetchFileContent(headSha, filePath)
+   │      │     └── 任一侧取不到内容（文件在另一侧不存在）→ 缓存 null，返回 empty
+   │      ├── computeDirectDiff(baseContent, headContent, filePath)
+   │      │     └── jgit MyersDiff + RawTextComparator.DEFAULT → PrDiffDto(status="modified")
+   │      └── 写入 directDiffCache，返回
+   │      └── 失败 → 降级到步骤 4
    │
-   ├── 4. getIncrementalPrDiff(baseSha, currentHeadSha, ...)
-   │      ├── 调用 compare API (base...head) → 解析为 PrDiffDto map
-   │      └── 失败 → 回退 PR 全量 diff
-   │
-   └── 5. 写入 incrementalDiffCache，返回
+   └── 4. 以上均失败 → 返回 prDiffFileMap.get(filePath) 降级（保留原有行为）
 ```
 
-### 历史匹配优先级
+### 直接 diff 内部流程
 
 ```
-findMatchingIssue(currentIssue, tblIssues, prDiffFileMap)
+getDirectFileDiff(baseSha, headSha, filePath, context)
+   │
+   ├── cacheKey = "baseSha|headSha|filePath"
+   ├── 查 directDiffCache，命中跳过
+   │
+   ├── fetchFileContent(baseSha, filePath)
+   │      └── 调 contents API (GET /repos/{o}/{r}/contents/{path}?ref=baseSha)
+   │      └── 解析 JSON: {content, encoding} → base64 MIME decode → UTF-8 text
+   │
+   ├── fetchFileContent(headSha, filePath) 同上
+   │
+   └── computeDirectDiff(baseText, headText, filePath)
+          ├── jgit MyersDiff.diff(RawTextComparator.DEFAULT, baseText, headText)
+          ├── EditList 为空 → PrDiffDto(status="modified", modifiedLines=[])
+          └── 遍历 Edit[] → 构建 unified diff hunk header + head 侧 modifiedLines（1-indexed）
+```
+
+### 历史匹配优先级（含 force push 修复）
+
+```
+findMatchingIssue(currentIssue, tblIssues, prDiff)
    │
    ▼ 遍历 tblIssues（已按 modified desc 排序）
    │
@@ -115,10 +186,13 @@ findMatchingIssue(currentIssue, tblIssues, prDiffFileMap)
    ├── isExactHashMatch (sourceHash + fileHash 全等)
    │      └── true → 直接返回（最高优先级）
    │
+   ├── isAddedFile (prDiff.status == "added")  ← Fix 2：跳过 3a 直接进 3b
+   │
    ├── isInModifiedRange(currentIssue.lines, prDiff)
    │      └── true → 跳过该历史（修改行命中范围，不继承）
    │
    └── isAllFieldsMatch (license / copyright / hash / lines / openLines)
+          ├── adjustedLines = isAddedFile ? currentIssue.lines : adjustLinesToOriginal(prDiff)
           └── true → 落库新 TblIssue + 返回（fallback 路径）
 ```
 
@@ -132,6 +206,11 @@ findMatchingIssue(currentIssue, tblIssues, prDiffFileMap)
 | `prCommitsCache` 跨 batch 失效导致重复调用 | 性能下降 | 缓存 key 为 mergeUrl，单次扫描请求内复用 |
 | sourceHash 变化但 fileHash 不变时误继承 | 合规盲区 | fallback 路径仍需通过 `isAllFieldsMatch` 全字段校验，不通过则不继承 |
 | baseSha 跨 PR 历史污染 | 错误继承 | `getPrCommitShas` 明确校验归属，不在 PR commits 即回退全量 diff |
+| force push 后 contents API 调用失败 | 直接 diff 不可用 | `getDirectFileDiff` 返回 empty → 降级到步骤 4 PR 全量 diff |
+| contents API 返回大文件内容消耗带宽 | 性能下降 | `directDiffCache` 按 `baseSha\|headSha\|filePath` 缓存，单次请求同文件只调一次 |
+| `computeDirectDiff` 内存敏感 | OOM（极大文件） | jgit `RawText` 逐行处理，MyersDiff 仅计算差异编辑列表不保留全文，与三点 diff 同等内存量级 |
+| huawei 版权判定过宽（如 `non-huawei` 误匹配） | 错误自动确认 | 用 `contains("huawei")` 而非精确匹配，`non-huawei` 等词会被匹配——需关注运营数据以确定是否需要收紧规则 |
+| copyright JSON 解析失败被静默忽略 | 本应确认的 issue 未确认 | 宁可不确认也不误确认，属保守策略；失败无日志，排查困难时可加 warn 日志 |
 
 ## 跨仓影响
 
