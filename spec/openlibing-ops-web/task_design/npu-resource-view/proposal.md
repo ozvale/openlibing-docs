@@ -111,7 +111,7 @@
 ## 影响范围
 
 - 业务仓：`openlibing-ops-web`
-- 分支：`feat/engineering-capability-npu-resource`（领先 `origin/main` 22 个 commit；已合入 `release_20260805`，发布 PR：https://gitcode.com/openlibing/openlibing-ops-web/merge_requests/103）
+- 分支：`feat/engineering-capability-npu-resource`（HEAD `d874e1f`，已推送，领先 `origin/main` 2 个 commit；`a58a01d` 及之前已合入 `release_20260805`，并经发布 PR https://gitcode.com/openlibing/openlibing-ops-web/merge_requests/103 合入 `main`）
 - 模块：`src/views/dashboard/engineering-capability/`
 - 主要文件：
   - `config/columns.ts`（主表格列定义、`npuUsageColumns` 工厂、resourceDetailColumns、prDetailColumns、npuResourceColumns、npuResourceServerColumns）

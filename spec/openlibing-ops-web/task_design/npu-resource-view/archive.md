@@ -1,14 +1,15 @@
 # NPU 资源视图与主表格资源列调整 — 归档
 
-| 项目           | 内容                                                                          |
-| -------------- | ----------------------------------------------------------------------------- |
-| 目标仓         | `openlibing-ops-web`                                                          |
-| 需求目录       | `spec/openlibing-ops-web/task_design/npu-resource-view/`                      |
-| 关联业务 Issue | https://gitcode.com/openlibing/openlibing-ops-web/issues/31                   |
-| 开发分支       | `feat/engineering-capability-npu-resource`（领先 `origin/main` 22 个 commit） |
-| 流程模式       | Light（spec 回写 + 归档）                                                     |
-| 归档日期       | 2026-08-06                                                                    |
-| 归档时 HEAD    | `225ea02`                                                                     |
+| 项目           | 内容                                                                                          |
+| -------------- | --------------------------------------------------------------------------------------------- |
+| 目标仓         | `openlibing-ops-web`                                                                          |
+| 需求目录       | `spec/openlibing-ops-web/task_design/npu-resource-view/`                                      |
+| 关联业务 Issue | https://gitcode.com/openlibing/openlibing-ops-web/issues/31                                   |
+| 开发分支       | `feat/engineering-capability-npu-resource`（已推送，领先 `origin/main` 2 个 commit）          |
+| 主线合入       | `a58a01d` 及之前经 PR !102 → PR !103 已合入 `main`（`edda9f1`）；`225ea02` / `d874e1f` 待合入 |
+| 流程模式       | Light（spec 回写 + 归档）                                                                     |
+| 归档日期       | 2026-08-06                                                                                    |
+| 归档时 HEAD    | `d874e1f`                                                                                     |
 
 ## 交付结果
 
@@ -22,12 +23,12 @@
 6. **列设置缓存 key 迁移**：缓存 key 改为 `engineeringCapabilityColumns`，并在 `App.vue` 清理旧 key（列结构变动后旧缓存不兼容，prop diff 不足以兼容）。
 7. **工程化改造**：抽取 `npuUsageColumns` 工厂；`dateParams` 改为 injection context 下发；`resolveTabByColKey` 改为声明式 `TAB_BY_GROUP` 映射 + 构建期 Map；抽取共享 `kpi-row` 栅格样式；表格单元格无 link/tooltip slot 时回退纯文本渲染；默认时间范围 30 → 7 天。
 
-### 验证结果（HEAD = `225ea02`）
+### 验证结果（HEAD = `d874e1f`，2026-08-06 实测）
 
-| 范围                                               | 命令                                                        | 结果                    |
-| -------------------------------------------------- | ----------------------------------------------------------- | ----------------------- |
-| 本需求单测                                         | `npx vitest run src/views/dashboard/engineering-capability` | 3 文件 / 29 用例全通过  |
-| 全量单测（排除本需求外的 `base-kpi-card.test.ts`） | `npx vitest run --exclude "**/base-kpi-card.test.ts"`       | 12 文件 / 99 用例全通过 |
+| 范围       | 命令                                                        | 结果                   |
+| ---------- | ----------------------------------------------------------- | ---------------------- |
+| 类型检查   | `npx vue-tsc --noEmit`                                      | 无错误                 |
+| 本需求单测 | `npx vitest run src/views/dashboard/engineering-capability` | 3 文件 / 29 用例全通过 |
 
 ## 关键偏差回顾
 
@@ -39,12 +40,22 @@
 
 ## 遗留问题
 
-无。原记录的 `columns.test.ts` 断言未同步问题已在 `225ea02` 修复（列数断言 24 → 25，过时的 `not.toContain('npuAllUsage')` 改为正向断言）。
+`225ea02` / `d874e1f` 已推送到 `origin/feat/engineering-capability-npu-resource`，但**尚未合入 `main`**。因此下列问题仍存在于 `origin/main`（`edda9f1`，PR !103 已合并）：
+
+| 位置                                         | `origin/main` 现状                                        | 修复 commit |
+| -------------------------------------------- | --------------------------------------------------------- | ----------- |
+| `columns.test.ts:35`                         | `expect(leaves).toHaveLength(24)`（实际 25，用例失败）    | `225ea02`   |
+| `columns.test.ts:47`                         | `expect(leaves).not.toContain('npuAllUsage')`（用例失败） | `225ea02`   |
+| `types/engineering-capability.ts:ProjectRow` | 无 `npuAllUsage` 字段                                     | `d874e1f`   |
+| `main-table.vue:resourceOtherCols`           | 无 `npuAllUsage`                                          | `d874e1f`   |
+
+> `.gitcode/workflows/` 仅执行 pre-commit 与 codeql，未跑 `test:unit`，因此上述 2 个失败断言不会被 PR 门禁拦截。
 
 ## 后续建议
 
-1. 分支上 `789e540`（code-check 卡片基类合并）不属于本需求范围，归属其自身需求目录，未纳入本 spec。
-2. 主表叶子列总数断言属于「结构性断言」，后续增删列时须同步；建议在新增列的同一 commit 内更新 `columns.test.ts`，避免再次出现断言滞后。
+1. 为 `225ea02` + `d874e1f` 提 PR 合入 `main`，消除上述遗留。
+2. 建议在 `.gitcode/workflows/` 的 PR 门禁中补 `npm run test:unit`，否则结构性断言滞后无法被自动发现。
+3. 主表叶子列总数断言属于「结构性断言」，后续增删列时须同步；建议在新增列的同一 commit 内更新 `columns.test.ts`，避免再次出现断言滞后。
 
 ## Artifact 索引
 
@@ -52,5 +63,5 @@
 | ------------- | ---------------------------------------------------- |
 | `proposal.md` | 需求背景、功能描述、验收标准、影响范围、实现偏差说明 |
 | `design.md`   | 技术方案与 12 项关键决策、涉及文件、风险             |
-| `tasks.md`    | 14 项实现任务（8 项主任务 + 6 项回写补记）与验证结果 |
+| `tasks.md`    | 15 项实现任务（8 项主任务 + 7 项回写补记）与验证结果 |
 | `archive.md`  | 本文件                                               |

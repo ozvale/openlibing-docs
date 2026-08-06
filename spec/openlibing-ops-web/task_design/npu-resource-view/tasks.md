@@ -1,11 +1,11 @@
 # NPU 资源视图与主表格资源列调整 — 实现任务
 
 关联 Issue: https://gitcode.com/openlibing/openlibing-ops-web/issues/31
-分支: `feat/engineering-capability-npu-resource`（领先 `origin/main` 22 个 commit）
+分支: `feat/engineering-capability-npu-resource`（HEAD `d874e1f`，已推送，领先 `origin/main` 2 个 commit）
 
-## 进度: 14/14 complete（8 项主任务 + 第二轮回写追加 6 项）
+## 进度: 15/15 complete（8 项主任务 + 第二轮回写追加 7 项）
 
-> 说明：以下勾选项为实际实现结果，字段名/结构以接口文档 v2/v3 与联调结果为准（回写）。Task 9-14 为第二轮回写（2026-08-06）补记的后续 commit。
+> 说明：以下勾选项为实际实现结果，字段名/结构以接口文档 v2/v3 与联调结果为准（回写）。Task 9-15 为第二轮回写（2026-08-06）补记的后续 commit。
 
 ### Phase 3 任务清单
 
@@ -91,6 +91,14 @@
     - `should include npuAllRate as NPU usage rate column`：过时的 `not.toContain('npuAllUsage')` 改为 `toContain('npuAllUsage')` 正向断言
   - 验证：`npx vitest run src/views/dashboard/engineering-capability` → 3 文件 / 29 用例全通过
 
+- [x] Task 15: `npuAllUsage` 关联位置补齐（`d874e1f`）
+  - `4b1a07b` 新增该列时只改了 `columns.ts`，两处关联位置未同步，本次补齐：
+    - `types/engineering-capability.ts`：`ProjectRow` 补 `npuAllUsage` 字段（原缺失，因 `row[col.key]` 走索引访问，typecheck 不报错，缺陷被静默）
+    - `main-table.vue`：`npuAllUsage` 加入 `resourceOtherCols`（原未列入导致空值时只显示裸 `--`，无 tooltip 且不可点击，与同区其他资源列行为不一致）
+  - 同时移除 `columns.ts` 中 overall 分组的列举式注释
+  - 该列的 `defaultShow` 与 `helpTip` 保持未设置（不在本次范围内）
+  - 验证：`npx vue-tsc --noEmit` 无错误；`npx vitest run src/views/dashboard/engineering-capability` → 3 文件 / 29 用例全通过
+
 ## 验证方式
 
 - 静态：`npm run lint:es`
@@ -98,11 +106,11 @@
 - 单测：`npm run test:unit`
 - 构建：`npm run build`
 
-### 最近一次实测结果（2026-08-06，HEAD = `225ea02`）
+### 最近一次实测结果（2026-08-06，HEAD = `d874e1f`）
 
-| 范围                                               | 命令                                                        | 结果                    |
-| -------------------------------------------------- | ----------------------------------------------------------- | ----------------------- |
-| 本需求单测                                         | `npx vitest run src/views/dashboard/engineering-capability` | 3 文件 / 29 用例全通过  |
-| 全量单测（排除本需求外的 `base-kpi-card.test.ts`） | `npx vitest run --exclude "**/base-kpi-card.test.ts"`       | 12 文件 / 99 用例全通过 |
+| 范围       | 命令                                                        | 结果                   |
+| ---------- | ----------------------------------------------------------- | ---------------------- |
+| 类型检查   | `npx vue-tsc --noEmit`                                      | 无错误                 |
+| 本需求单测 | `npx vitest run src/views/dashboard/engineering-capability` | 3 文件 / 29 用例全通过 |
 
 > 先前文档记载的「15/15 通过」为 `1338009` 时点结果，已随后续 commit 失效，此处更正。
