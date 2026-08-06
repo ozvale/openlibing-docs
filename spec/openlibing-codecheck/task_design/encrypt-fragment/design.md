@@ -24,41 +24,41 @@
 
 ### 入库编码点
 
-| 类 | 方法 | 集合 |
-|---|---|---|
-| FullDetailsOperation | saveInfo() | task_result_details |
-| IncDetailsOperation | insertList() | task_inc_result_details |
-| DatarecoveryOperation | insertList() | task_inc_result_details |
-| ProblemShieldOperation | saveInfo() | full_shield_detail / inc_shield_detail |
-| ProblemShieldOperation | saveShieldDetail() | full_shield_detail / inc_shield_detail |
+| 类                     | 方法                      | 集合                                   |
+| ---------------------- | ------------------------- | -------------------------------------- |
+| FullDetailsOperation   | saveInfo()                | task_result_details                    |
+| IncDetailsOperation    | insertList()              | task_inc_result_details                |
+| DatarecoveryOperation  | insertList()              | task_inc_result_details                |
+| ProblemShieldOperation | saveInfo()                | full_shield_detail / inc_shield_detail |
+| ProblemShieldOperation | saveShieldDetail()        | full_shield_detail / inc_shield_detail |
 | ProblemShieldOperation | getAddFullShieldDetails() | full_shield_detail / inc_shield_detail |
 
 ### 查询解码点
 
-| 类 | 方法 | 集合 |
-|---|---|---|
-| FullDetailsOperation | getFullMetricsDetail(), queryDetails(), getCmetricsDetail(), findDetailById(), queryDetailsUpload(), findNotSolutionDetails(), getDetailByPage() | task_result_details / full_shield_detail |
-| IncDetailsOperation | getIncMetrics(), getIncResultDetail(), getInvalidIncDefect(), getAllPrDefectVos() | task_inc_result_details / inc_shield_detail |
-| ProblemShieldOperation | getShieldDetailById(), getShieldDetailByUserId(), getInReviewAndUpdateStatu(), fullShieldDetail(), incShieldDetail() | full_shield_detail / inc_shield_detail |
-| ShieldDetailOperation | shieldDetail() | full_shield_detail / inc_shield_detail |
+| 类                     | 方法                                                                                                                                             | 集合                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| FullDetailsOperation   | getFullMetricsDetail(), queryDetails(), getCmetricsDetail(), findDetailById(), queryDetailsUpload(), findNotSolutionDetails(), getDetailByPage() | task_result_details / full_shield_detail    |
+| IncDetailsOperation    | getIncMetrics(), getIncResultDetail(), getInvalidIncDefect(), getAllPrDefectVos()                                                                | task_inc_result_details / inc_shield_detail |
+| ProblemShieldOperation | getShieldDetailById(), getShieldDetailByUserId(), getInReviewAndUpdateStatu(), fullShieldDetail(), incShieldDetail()                             | full_shield_detail / inc_shield_detail      |
+| ShieldDetailOperation  | shieldDetail()                                                                                                                                   | full_shield_detail / inc_shield_detail      |
 
 ### 日志泄露修复
 
-| 文件 | 修改 |
-|---|---|
+| 文件                     | 修改                                                  |
+| ------------------------ | ----------------------------------------------------- |
 | DatarecoveryDelegateImpl | `successDefects.toString()` → `successDefects.size()` |
-| CodeCheckIssueFragment | lineContent 添加 `@ToString.Exclude` |
+| CodeCheckIssueFragment   | lineContent 添加 `@ToString.Exclude`                  |
 
 ### 防御性措施
 
-| 类 | 字段 | 注解 |
-|---|---|---|
-| DefectVo | fragment | @ToString.Exclude |
-| CodeCheckIssueFragment | lineContent | @ToString.Exclude |
-| CodeCheckRuleVo | rightExample, errorExample | @ToString.Exclude |
-| CodeCheckRuleSheet | rightExample, errorExample | @ToString.Exclude |
-| CodeCheckRuleAccountVo | rightExample, errorExample | @ToString.Exclude |
-| CodeCheckRuleEntity | rightExample, errorExample | @ToString.Exclude |
+| 类                         | 字段                       | 注解              |
+| -------------------------- | -------------------------- | ----------------- |
+| DefectVo                   | fragment                   | @ToString.Exclude |
+| CodeCheckIssueFragment     | lineContent                | @ToString.Exclude |
+| CodeCheckRuleVo            | rightExample, errorExample | @ToString.Exclude |
+| CodeCheckRuleSheet         | rightExample, errorExample | @ToString.Exclude |
+| CodeCheckRuleAccountVo     | rightExample, errorExample | @ToString.Exclude |
+| CodeCheckRuleEntity        | rightExample, errorExample | @ToString.Exclude |
 | CodeCheckRuleAccountEntity | rightExample, errorExample | @ToString.Exclude |
 
 ## 影响范围
