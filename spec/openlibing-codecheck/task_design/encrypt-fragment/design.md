@@ -1,15 +1,17 @@
-# Design: fragment 代码片段加密存储及日志泄露防护
+# Design: fragment 代码片段编码存储及日志泄露防护
 
 ## 技术方案
 
-### 加密方案
+### 编码方案
 
-使用 Base64 编码对 `CodeCheckIssueFragment.lineContent` 进行加密存储，通过 `FragmentCryptoUtil` 工具类统一处理：
+使用 Base64 编码对 `CodeCheckIssueFragment.lineContent` 进行编码存储，通过 `FragmentCryptoUtil` 工具类统一处理：
 
-- **加密时机**：入库前，在 Operation 层的 insert/save 方法中调用
-- **解密时机**：查询后，在 Operation 层的 find/aggregate 方法返回结果前调用
-- **加密粒度**：仅加密 `CodeCheckIssueFragment.lineContent` 字段（实际代码内容），`lineNum`/`startOffset`/`endOffset` 等元数据不加密
-- **兼容性**：解密失败时保留原始值（兼容历史未加密数据），加密失败时使用占位提示词
+> 说明：本方案仅做 Base64 编解码（非密码学加密），目的是避免明文密钥等内容在数据库中被直接审计/检索。工具类名 `FragmentCryptoUtil`、方法名 `encryptFragments`/`decryptFragments` 沿用历史命名，实际行为是 Base64 编码与解码。
+
+- **编码时机**：入库前，在 Operation 层的 insert/save 方法中调用
+- **解码时机**：查询后，在 Operation 层的 find/aggregate 方法返回结果前调用
+- **编码粒度**：仅编码 `CodeCheckIssueFragment.lineContent` 字段（实际代码内容），`lineNum`/`startOffset`/`endOffset` 等元数据不编码
+- **兼容性**：解码失败时保留原始值（兼容历史未编码数据），编码失败时使用占位提示词
 
 ### 解码安全机制（两阶段验证）
 
@@ -20,7 +22,7 @@
 
 回检原理：真正的 Base64 编码数据经过 decode → re-encode 后结果与原始值一致；而纯字母明文 decode 后产生乱码，re-encode 后结果与原始值不同。
 
-### 入库加密点
+### 入库编码点
 
 | 类 | 方法 | 集合 |
 |---|---|---|
@@ -31,7 +33,7 @@
 | ProblemShieldOperation | saveShieldDetail() | full_shield_detail / inc_shield_detail |
 | ProblemShieldOperation | getAddFullShieldDetails() | full_shield_detail / inc_shield_detail |
 
-### 查询解密点
+### 查询解码点
 
 | 类 | 方法 | 集合 |
 |---|---|---|
@@ -62,6 +64,6 @@
 ## 影响范围
 
 - **数据模型**：无 schema 变更，MongoDB 动态集合
-- **API 接口**：无接口变更，加解密对调用方透明
+- **API 接口**：无接口变更，编解码对调用方透明
 - **历史数据**：兼容，两阶段验证确保历史明文不被误解码
-- **性能**：加解密操作在 Operation 层，回检验证增加一次 Base64 编解码，对查询性能影响极小
+- **性能**：编解码操作在 Operation 层，回检验证增加一次 Base64 编解码，对查询性能影响极小
