@@ -11,6 +11,17 @@ POST /sbom-api/querySbomPackagesMultiFilter  (@RequestBody QuerySbomPackagesMult
              └─ getPackageInfoByNameForPageBatch / getPackagesByGroupPageBatch / countPackageGroupsBatch（新 DAO）
 ```
 
+### 衍生接口：/querySbomPackagesVulCountSummary（V3 漏洞数量汇总）
+
+与 `querySbomPackagesMultiFilter` 同需求衍生，**入参与 V2 完全一致**（复用 `QuerySbomPackagesMultiFilterRequest`），但对多选过滤条件下匹配的**全部软件包**按各漏洞等级数量做 SUM 汇总求和，不返回包列表、不分页。
+
+```
+POST /sbom-api/querySbomPackagesVulCountSummary  (@RequestBody QuerySbomPackagesMultiFilterRequest)
+   └─ querySbomPackagesVulCountSummary
+        └─ getVulCountSummaryMultiFilter
+             └─ sumVulCountByMultiFilter（新 DAO，聚合 SUM）
+```
+
 ## 架构决策
 
 ### 决策 1：多值参数用逗号分隔字符串 + `string_to_array`/`unnest` 展开（不绑 List）
@@ -91,3 +102,65 @@ V2 DTO 字段名 `isExactly` 与 getter `getExactly()`（派生属性名 `exactl
 ## 跨仓影响
 
 无。仅业务仓 `openlibing-sbom` 内部新增接口，不涉及其他仓接口/契约变化。
+
+---
+
+## V3 接口 /querySbomPackagesVulCountSummary 设计
+
+### 接口定义
+
+`POST /sbom-api/querySbomPackagesVulCountSummary`，`@RequestBody QuerySbomPackagesMultiFilterRequest`（与 V2 同一 DTO）。
+
+### 入参
+
+与 V2 完全一致：`productName`、`packageName`、`isExactly`、`includeVulSeverities`、`excludeVulSeverities`、`licenseCount`、`licenseCompliance`、`licenseIds`、`dependencyTypes`、`groupByPackage`、`page`/`size`。过滤条件语义与 V2 完全等价（复用决策 1 的 SQL 片段），`groupByPackage` 与分页参数在本接口中**被忽略**（聚合不分页、不分组）。
+
+### 出参
+
+`VulCountSummaryVo`：对过滤后全部匹配软件包的各级别漏洞数量求和汇总。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `criticalVulCount` | Long | CRITICAL 级别漏洞数量汇总（默认 0） |
+| `highVulCount` | Long | HIGH 级别漏洞数量汇总（默认 0） |
+| `mediumVulCount` | Long | MEDIUM 级别漏洞数量汇总（默认 0） |
+| `lowVulCount` | Long | LOW 级别漏洞数量汇总（默认 0） |
+| `noneVulCount` | Long | NONE 级别漏洞数量汇总（默认 0） |
+| `unknownVulCount` | Long | UNKNOWN 级别漏洞数量汇总（默认 0） |
+
+### 聚合 SQL 设计
+
+新增 DAO `sumVulCountByMultiFilter`（[PackageRepository.java](file:///d:/projects/openlibing/openlibing-sbom/dao/src/main/java/org/opensourceway/sbom/dao/PackageRepository.java#L457-L503)）：
+
+```sql
+SELECT COALESCE(SUM(ps.critical_vul_count), 0),
+       COALESCE(SUM(ps.high_vul_count), 0),
+       COALESCE(SUM(ps.medium_vul_count), 0),
+       COALESCE(SUM(ps.low_vul_count), 0),
+       COALESCE(SUM(ps.none_vul_count), 0),
+       COALESCE(SUM(ps.unknown_vul_count), 0)
+FROM package p LEFT JOIN package_statistics ps ON p.id = ps.package_id
+WHERE <与 V2 完全等价的过滤条件>
+```
+
+- **全量聚合**：`SUM` + `COALESCE` 聚合全部匹配行，返回单行 6 个计数；SQL 无 `LIMIT/OFFSET`，DAO 无 `Pageable` 参数，因此**不受 V2 分页影响**，计算的是过滤条件下的全量漏洞总数。
+- **返回结构**：Spring Data 对原生查询返回"行数组"结构（`List<Object[]>`，每行一个 `Object[]` 含 6 列）；service 取 `rows.get(0)` 逐列转 Long。
+- **空结果**：`List` 为空时返回全 0 的 `VulCountSummaryVo`（字段默认 `0L`）。
+
+### 涉及文件
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `model/.../vo/sbom/VulCountSummaryVo.java` | 新增 | 出参 VO，6 个漏洞等级 count，默认 0L |
+| `dao/PackageRepository.java` | 修改 | 新增 `sumVulCountByMultiFilter` 聚合 DAO |
+| `api/sbom/SbomService.java` | 修改 | 新增 `getVulCountSummaryMultiFilter` |
+| `service/sbom/impl/SbomServiceImpl.java` | 修改 | 实现聚合 + `toLong` 工具方法 |
+| `controller/SbomController.java` | 修改 | 新增 `querySbomPackagesVulCountSummary` 端点 |
+| `test/.../SbomServiceImplTest.java` | 修改 | 补聚合用例（命中 / 空结果） |
+| `test/.../SbomControllerTest.java` | 修改 | 补新接口用例 |
+
+### 关键实现说明
+
+1. **返回类型为 `List<Object[]>` 而非 `Object[]`**：Spring Data JPA 对原生查询以"行数组"返回，声明 `Object[]` 会导致实际得到 `Object[][]`，service 中 `(Number) sums[i]` 强转时报 `class [Ljava.lang.Object; cannot be cast to class java.lang.Number`。改为 `List<Object[]>` 后取第一行逐列转换。
+2. **`toLong` 空值兜底**：`value == null ? 0L : ((Number) value).longValue()`，聚合列 null 转 0。
+3. **VO 字段默认 `0L`**：空结果（无匹配包）时直接返回默认全 0 VO，避免前端收到 null 字段。
