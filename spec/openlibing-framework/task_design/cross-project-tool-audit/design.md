@@ -12,11 +12,15 @@
 |------|------|------|
 | `src/main/resources/db/changelog/v1.0.1/tool/tool_apply.xml` | 修改 | 新增 `can_cross_project` 字段变更集 |
 | `src/main/resources/db/changelog/v1.0.1/tool/tool_version.xml` | 修改 | 新增 `can_cross_project` 字段变更集 |
-| `src/main/java/.../dto/tool/ToolApplyDTO.java` | 修改 | 新增 `canCrossProject` + 校验注解 |
+| `src/main/java/.../dto/tool/ToolApplyDTO.java` | 修改 | 新增 `canCrossProject` + `@NotBlank` + `@Pattern` 校验 |
+| `src/main/java/.../dto/tool/ToolVersionDTO.java` | 修改 | 新增 `canCrossProject` + `@Pattern` 校验（支持 `updateToolVersion` 修改） |
 | `src/main/java/.../entity/tool/ToolApplyEntity.java` | 修改 | 新增 `canCrossProject` 字段 |
 | `src/main/java/.../entity/tool/ToolVersionEntity.java` | 修改 | 新增 `canCrossProject` 字段 |
 | `src/main/java/.../service/impl/ToolApplyServiceImpl.java` | 修改 | ① `saveToolApply()` 写入字段；② `reviewToolInfo()` 写入版本表 + 自动授权本项目使用 |
+| `src/main/java/.../service/impl/ToolInfoServiceImpl.java` | 修改 | `updateToolVersion()` 新增 `canCrossProject` 设置 |
 | `src/main/java/.../service/impl/ToolProjectUseServiceImpl.java` | 修改 | `getToolUseApplyResultEntity()` 增加 `canCrossProject=="0"` 直接使用逻辑 |
+| `src/main/resources/mapper/ToolApplyMapper.xml` | 修改 | resultMap + 所有 SELECT + INSERT 同步 `can_cross_project` |
+| `src/main/resources/mapper/ToolVersionMapper.xml` | 修改 | resultMap + 所有 SELECT + INSERT + UPDATE 同步 `can_cross_project` |
 
 ## 核心逻辑
 
@@ -35,6 +39,12 @@
 5. 无审核人 → 无法申请
 6. 其余 → 走审核流程
 ```
+
+### 4. updateToolVersion() 修改 canCrossProject
+支持通过 `ToolInfoController.updateToolVersion()` 接口修改已存在的工具版本的 `canCrossProject` 标识。
+- `ToolVersionDTO` 新增 `canCrossProject` 可选字段（`@Pattern` 校验，null 时不更新）
+- `ToolInfoServiceImpl.updateToolVersion()` 设置 `toolVersion.setCanCrossProject()`
+- `ToolVersionMapper.xml` 的 `update` SQL 增加 `<if test="canCrossProject != null">` 条件更新
 
 ## 风险 & 缓解
 - 无显著风险，该变更为字段扩展 + 逻辑判断，不涉及外部接口变更或数据迁移
