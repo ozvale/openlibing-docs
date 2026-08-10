@@ -113,7 +113,7 @@ V2 DTO 字段名 `isExactly` 与 getter `getExactly()`（派生属性名 `exactl
 
 ### 入参
 
-与 V2 完全一致：`productName`、`packageName`、`isExactly`、`includeVulSeverities`、`excludeVulSeverities`、`licenseCount`、`licenseCompliance`、`licenseIds`、`dependencyTypes`、`groupByPackage`、`page`/`size`。过滤条件语义与 V2 完全等价（复用决策 1 的 SQL 片段），`groupByPackage` 与分页参数在本接口中**被忽略**（聚合不分页、不分组）。
+与 V2 使用同一 DTO：`productName`、`packageName`、`isExactly`、`includeVulSeverities`、`excludeVulSeverities`、`licenseCount`、`licenseCompliance`、`licenseIds`、`dependencyTypes`、`groupByPackage`、`page`/`size`。**但漏洞类型条件（`includeVulSeverities` / `excludeVulSeverities`）在本接口中被排除**——即使请求传入也不参与过滤；仅按其余过滤条件匹配软件包后汇总各级别漏洞数量。`groupByPackage` 与分页参数同样被忽略（聚合不分页、不分组）。
 
 ### 出参
 
@@ -140,7 +140,7 @@ SELECT COALESCE(SUM(ps.critical_vul_count), 0),
        COALESCE(SUM(ps.none_vul_count), 0),
        COALESCE(SUM(ps.unknown_vul_count), 0)
 FROM package p LEFT JOIN package_statistics ps ON p.id = ps.package_id
-WHERE <与 V2 完全等价的过滤条件>
+WHERE <过滤条件：与 V2 等价，但排除 include/excludeVulSeverities 漏洞类型片段>
 ```
 
 - **全量聚合**：`SUM` + `COALESCE` 聚合全部匹配行，返回单行 6 个计数；SQL 无 `LIMIT/OFFSET`，DAO 无 `Pageable` 参数，因此**不受 V2 分页影响**，计算的是过滤条件下的全量漏洞总数。
@@ -164,3 +164,4 @@ WHERE <与 V2 完全等价的过滤条件>
 1. **返回类型为 `List<Object[]>` 而非 `Object[]`**：Spring Data JPA 对原生查询以"行数组"返回，声明 `Object[]` 会导致实际得到 `Object[][]`，service 中 `(Number) sums[i]` 强转时报 `class [Ljava.lang.Object; cannot be cast to class java.lang.Number`。改为 `List<Object[]>` 后取第一行逐列转换。
 2. **`toLong` 空值兜底**：`value == null ? 0L : ((Number) value).longValue()`，聚合列 null 转 0。
 3. **VO 字段默认 `0L`**：空结果（无匹配包）时直接返回默认全 0 VO，避免前端收到 null 字段。
+4. **排除漏洞类型条件**：V3 只按 `productName`/`packageName`/`isExactly`/`licenseCount`/`licenseCompliance`/`licenseIds`/`dependencyTypes` 过滤匹配软件包，`includeVulSeverities`/`excludeVulSeverities` 不参与过滤（DAO 已移除对应 SQL 片段与参数）。
