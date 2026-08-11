@@ -47,10 +47,11 @@ AND (:excludeVulSeverities IS NULL OR :excludeVulSeverities = ''
       OR ps.unknown_vul_count > 0 AND 'UNKNOWN' = ANY(string_to_array(:excludeVulSeverities, ','))))
 -- licenseIds 多选：数组列 overlap
 AND (:licenseIds IS NULL OR :licenseIds = '' OR ps.licenses && string_to_array(:licenseIds, ','))
--- licenseCount 单选：数量（枚举名直接匹配）
-AND (:licenseCount IS NULL OR (:licenseCount = 'NO_LICENSE' AND ps.license_count = 0)
-  OR (:licenseCount = 'SINGLE_LICENSE' AND ps.license_count = 1)
-  OR (:licenseCount = 'MULTI_LICENSE' AND ps.license_count > 1))
+-- licenseCount 多选：数量（string_to_array 展开，组内 OR）
+AND (:licenseCount IS NULL OR :licenseCount = ''
+  OR ('NO_LICENSE' = ANY(string_to_array(:licenseCount, ',')) AND ps.license_count = 0)
+  OR ('SINGLE_LICENSE' = ANY(string_to_array(:licenseCount, ',')) AND ps.license_count = 1)
+  OR ('MULTI_LICENSE' = ANY(string_to_array(:licenseCount, ',')) AND ps.license_count > 1))
 -- licenseCompliance 单选：成分（枚举名直接匹配）
 AND (:licenseCompliance IS NULL OR (:licenseCompliance = 'LEGAL' AND ps.is_legal_license = TRUE)
   OR (:licenseCompliance = 'ILLEGAL' AND ps.is_legal_license = FALSE))

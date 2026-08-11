@@ -22,7 +22,7 @@
 | `isExactly` | Boolean | 精确/模糊匹配 |
 | `includeVulSeverities` | List&lt;String&gt; | 包含的漏洞级别多选，命中任一选中级别的包被筛选出（组内 OR） |
 | `excludeVulSeverities` | List&lt;String&gt; | 排除的漏洞级别多选，命中任一选中级别的包被排除（组内 OR） |
-| `licenseCount` | LicenseCountFilter | license 数量过滤（单选）：NO_LICENSE / SINGLE_LICENSE / MULTI_LICENSE |
+| `licenseCount` | List&lt;LicenseCountFilter&gt; | license 数量过滤（多选，组内 OR）：NO_LICENSE / SINGLE_LICENSE / MULTI_LICENSE |
 | `licenseCompliance` | LicenseComplianceFilter | license 成分过滤（单选）：LEGAL / ILLEGAL |
 | `licenseIds` | List&lt;String&gt; | license id 多选，组内 OR |
 | `dependencyTypes` | List&lt;Integer&gt; | 依赖类型多选，组内 OR（0=直接，1=间接） |
@@ -31,7 +31,7 @@
 
 ### 新增枚举
 
-- `LicenseCountFilter`：license 数量过滤（单选），拆分自原 `licenseFilters`：NO_LICENSE（count=0）/ SINGLE_LICENSE（count=1）/ MULTI_LICENSE（count>1）。
+- `LicenseCountFilter`：license 数量过滤（多选），拆分自原 `licenseFilters`：NO_LICENSE（count=0）/ SINGLE_LICENSE（count=1）/ MULTI_LICENSE（count>1）。
 - `LicenseComplianceFilter`：license 成分过滤（单选），拆分自原 `licenseFilters`：LEGAL（is_legal_license=TRUE）/ ILLEGAL（is_legal_license=FALSE）。
 
 ### 出参
@@ -49,7 +49,7 @@
 
 - [ ] 新增 `POST /sbom-api/querySbomPackagesMultiFilter` 接口，`@RequestBody` 入参
 - [ ] `includeVulSeverities` / `excludeVulSeverities`：包含组命中任一级别即筛选出，排除组命中任一级别即排除（均基于各级别漏洞数量字段判断）
-- [ ] `licenseIds` / `dependencyTypes` 多选过滤生效；`licenseCount` / `licenseCompliance` 单选过滤生效（组间 AND）
+- [ ] `licenseIds` / `dependencyTypes` / `licenseCount` 多选过滤生效；`licenseCompliance` 单选过滤生效（组间 AND）
 - [ ] 出参结构不变
 - [ ] 旧接口行为不受影响
 - [ ] 补充相关单元测试
