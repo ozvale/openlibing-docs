@@ -46,5 +46,5 @@
 ## 4. 遗留事项
 
 - `openlibing-web` 前端仓的改动在独立分支/PR 交付，本 spec 仅记录契约。
-- 插件仓 `code-metrics-scan` 的改动需同步到 `code-metrics-action` 仓（当前进行中）。
+- 插件仓 `code-metrics-scan` 的改动已同步到 `code-metrics-action` 仓（`duplication-rate-view` 分支，commit `472015c`），含"重复率有效代码行口径与 scc 完全一致"修复。
 - 后续如需清理历史数据，可按 `code_metrics_record.create_time` 统一清理过期 record 及其关联的 file_detail / duplication_block（本期不做，无 TTL）。
