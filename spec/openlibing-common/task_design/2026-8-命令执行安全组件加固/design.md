@@ -46,23 +46,23 @@ SecureCmdExecutor (单例入口)
 
 **正则**：`"(^-.*)|[\\\\<>|`&$;!(){}\\[\\]#~'\"\\s]"`
 
-| 拦截目标 | 字符 |
-|---------|------|
-| 路径遍历/转义 | `\` |
-| 重定向 | `<` `>` |
-| 管道 | `\|` |
-| 命令替换 | `` ` `` |
-| 后台执行/逻辑与 | `&` |
-| 变量展开 | `$` |
-| 历史展开/逻辑非 | `!` |
-| 子 shell | `(` `)` |
-| brace 展开 | `{` `}` |
-| 字符类展开 | `[` `]` |
-| shell 注释 | `#` |
-| home 展开 | `~` |
-| 引号 | `'` `"` |
-| 所有空白 | `\s` |
-| flag 注入 | 以 `-` 开头 |
+| 拦截目标        | 字符        |
+| --------------- | ----------- |
+| 路径遍历/转义   | `\`         |
+| 重定向          | `<` `>`     |
+| 管道            | `\|`        |
+| 命令替换        | `` ` ``     |
+| 后台执行/逻辑与 | `&`         |
+| 变量展开        | `$`         |
+| 历史展开/逻辑非 | `!`         |
+| 子 shell        | `(` `)`     |
+| brace 展开      | `{` `}`     |
+| 字符类展开      | `[` `]`     |
+| shell 注释      | `#`         |
+| home 展开       | `~`         |
+| 引号            | `'` `"`     |
+| 所有空白        | `\s`        |
+| flag 注入       | 以 `-` 开头 |
 
 **扩展**：支持业务通过 `extendBlock` 参数扩展黑名单正则片段。
 
@@ -103,6 +103,7 @@ SecureCmdExecutor (单例入口)
 ### D4: 环境变量 — key 黑名单 + 多值追加/单值覆盖
 
 **决策**：
+
 - 危险 key 黑名单：`LD_PRELOAD`、`BASH_ENV`、`ENV`、`IFS`、`PS1`、`PROMPT_COMMAND`、`SHELLOPTS`
 - 多值变量（`PATH`、`CLASSPATH`、`LD_LIBRARY_PATH` 等）追加而非覆盖
 - 单值变量（如 `JAVA_HOME`）覆盖/新增
@@ -119,6 +120,7 @@ SecureCmdExecutor (单例入口)
 ### D6: pipesExec / asyncExec API 设计
 
 **决策**：
+
 - `pipesExec`：只补充带 `env` + `dir` 的变体，不加 `isVerified`（管道场景风险最高，参数必须校验）
 - `asyncExec`：补充带 `env` + `dir` 的变体（无参数 + 有参数各一个），不加超时（异步场景由调用方管理生命周期）
 
@@ -135,6 +137,7 @@ SecureCmdExecutor (单例入口)
 **决策**：组件同时支持 Windows 和 Linux 平台。
 
 **实现**：
+
 - **管道执行**：`getShellCommand()` 根据平台返回 `["cmd", "/c"]`（Windows）或 `["/bin/sh", "-c"]`（Linux）
 - **禁止目录**：`BLOCKED_DIRS` 同时包含 Linux 系统目录（`/etc`、`/proc` 等）和 Windows 系统目录（`C:\Windows\System32` 等），`validateDir()` 对 Windows 路径做大小写不敏感比较
 - **测试**：所有测试命令通过 `IS_WINDOWS` 常量 + 辅助方法实现跨平台兼容（`echo`/`sleep`/`cat`/`ls` 等）
@@ -164,25 +167,25 @@ ProcessInfo 构造
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
+| 文件                                   | 操作 | 说明                                                                           |
+| -------------------------------------- | ---- | ------------------------------------------------------------------------------ |
 | `constants/CmdValidatorConstants.java` | 新增 | 黑名单正则、shell 常量、白名单上限、环境变量黑名单、多值变量集合、禁止目录集合 |
-| `exception/CmdValidatorException.java` | 新增 | 校验异常类（命令校验错误、参数校验错误、注册错误、超时错误） |
-| `validator/CmdValidator.java` | 新增 | 参数黑名单校验器（NFKC 归一化 + 正则匹配 + 扩展黑名单） |
-| `security/SecureCmdExecutor.java` | 新增 | 组件主入口（单例、白名单注册、多种 execute 变体、pipesExec、asyncExec） |
-| `process/ProcessInfo.java` | 新增 | 进程生命周期管理器（启动、等待、销毁、输出消费） |
-| `process/ProcessResult.java` | 新增 | 执行结果封装（Consumer<String>，收集输出行） |
-| `process/StreamGobbler.java` | 新增 | 输出流消费守护线程（BufferedReader + UTF-8） |
-| `security/SecureCmdExecutorTest.java` | 新增 | 完整测试类 |
-| `validator/CmdValidatorTest.java` | 新增 | 完整测试类 |
-| `process/ProcessInfoTest.java` | 新增 | 完整测试类 |
+| `exception/CmdValidatorException.java` | 新增 | 校验异常类（命令校验错误、参数校验错误、注册错误、超时错误）                   |
+| `validator/CmdValidator.java`          | 新增 | 参数黑名单校验器（NFKC 归一化 + 正则匹配 + 扩展黑名单）                        |
+| `security/SecureCmdExecutor.java`      | 新增 | 组件主入口（单例、白名单注册、多种 execute 变体、pipesExec、asyncExec）        |
+| `process/ProcessInfo.java`             | 新增 | 进程生命周期管理器（启动、等待、销毁、输出消费）                               |
+| `process/ProcessResult.java`           | 新增 | 执行结果封装（Consumer<String>，收集输出行）                                   |
+| `process/StreamGobbler.java`           | 新增 | 输出流消费守护线程（BufferedReader + UTF-8）                                   |
+| `security/SecureCmdExecutorTest.java`  | 新增 | 完整测试类                                                                     |
+| `validator/CmdValidatorTest.java`      | 新增 | 完整测试类                                                                     |
+| `process/ProcessInfoTest.java`         | 新增 | 完整测试类                                                                     |
 
 ## 风险 & 缓解
 
-| 风险 | 缓解 |
-|------|------|
-| 黑名单新增字符可能误杀合法参数 | 不加 `*` `?`（glob 场景常见），通过 `extendBlock` 按需扩展 |
-| 管道执行经过 shell 解释，风险最高 | L1 白名单匹配模板 + L2 参数黑名单校验双重防护 |
-| 异步执行无超时，进程可能泄漏 | Javadoc 明确标注调用方有责任管理进程生命周期，ProcessInfo 提供 ensureDestroyed |
-| 环境变量多值追加可能产生重复路径 | 追加前检查是否已包含该值 |
+| 风险                                 | 缓解                                                                                    |
+| ------------------------------------ | --------------------------------------------------------------------------------------- |
+| 黑名单新增字符可能误杀合法参数       | 不加 `*` `?`（glob 场景常见），通过 `extendBlock` 按需扩展                              |
+| 管道执行经过 shell 解释，风险最高    | L1 白名单匹配模板 + L2 参数黑名单校验双重防护                                           |
+| 异步执行无超时，进程可能泄漏         | Javadoc 明确标注调用方有责任管理进程生命周期，ProcessInfo 提供 ensureDestroyed          |
+| 环境变量多值追加可能产生重复路径     | 追加前检查是否已包含该值                                                                |
 | Windows `%VAR%` 变量展开未在黑名单中 | 管道场景参数经过 L2 校验，`%` 字符不影响命令结构安全；如需拦截可通过 `extendBlock` 扩展 |

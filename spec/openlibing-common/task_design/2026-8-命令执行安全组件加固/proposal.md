@@ -49,15 +49,15 @@ openlibing-common 需要提供一个**统一的命令执行安全组件**，为�
 
 ## 影响范围
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `constants/CmdValidatorConstants.java` | 新增 | 黑名单正则、常量定义 |
-| `exception/CmdValidatorException.java` | 新增 | 校验异常类 |
-| `validator/CmdValidator.java` | 新增 | 参数黑名单校验器 |
-| `security/SecureCmdExecutor.java` | 新增 | 命令执行安全组件主入口 |
-| `process/ProcessInfo.java` | 新增 | 进程生命周期管理器 |
-| `process/ProcessResult.java` | 新增 | 执行结果封装 |
-| `process/StreamGobbler.java` | 新增 | 输出流消费守护线程 |
-| `security/SecureCmdExecutorTest.java` | 新增 | 完整测试类 |
-| `validator/CmdValidatorTest.java` | 新增 | 完整测试类 |
-| `process/ProcessInfoTest.java` | 新增 | 完整测试类 |
+| 文件                                   | 操作 | 说明                   |
+| -------------------------------------- | ---- | ---------------------- |
+| `constants/CmdValidatorConstants.java` | 新增 | 黑名单正则、常量定义   |
+| `exception/CmdValidatorException.java` | 新增 | 校验异常类             |
+| `validator/CmdValidator.java`          | 新增 | 参数黑名单校验器       |
+| `security/SecureCmdExecutor.java`      | 新增 | 命令执行安全组件主入口 |
+| `process/ProcessInfo.java`             | 新增 | 进程生命周期管理器     |
+| `process/ProcessResult.java`           | 新增 | 执行结果封装           |
+| `process/StreamGobbler.java`           | 新增 | 输出流消费守护线程     |
+| `security/SecureCmdExecutorTest.java`  | 新增 | 完整测试类             |
+| `validator/CmdValidatorTest.java`      | 新增 | 完整测试类             |
+| `process/ProcessInfoTest.java`         | 新增 | 完整测试类             |
