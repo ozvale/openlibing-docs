@@ -13,6 +13,7 @@
 ### Task 1: DB changelog — tool_apply.xml 新增 can_cross_project 字段
 
 **Files:**
+
 - Modify: `src/main/resources/db/changelog/v1.0.1/tool/tool_apply.xml`
 
 **Step 1: 在 tool_apply.xml 末尾新增 changeset**
@@ -49,6 +50,7 @@
 ### Task 2: DB changelog — tool_version.xml 新增 can_cross_project 字段
 
 **Files:**
+
 - Modify: `src/main/resources/db/changelog/v1.0.1/tool/tool_version.xml`
 
 **Step 1: 在 tool_version.xml 末尾新增 changeset**
@@ -81,6 +83,7 @@
 ### Task 3: Entity 层 — ToolApplyEntity 和 ToolVersionEntity 新增字段
 
 **Files:**
+
 - Modify: `src/main/java/.../entity/tool/ToolApplyEntity.java`
 - Modify: `src/main/java/.../entity/tool/ToolVersionEntity.java`
 
@@ -109,6 +112,7 @@
 ### Task 4: DTO 层 — ToolApplyDTO 新增 canCrossProject 字段 + 校验
 
 **Files:**
+
 - Modify: `src/main/java/.../dto/tool/ToolApplyDTO.java`
 
 **Step 1: 修改 ToolApplyDTO.java**
@@ -135,6 +139,7 @@ mvn compile -pl openlibing-framework-business -am
 ### Task 5: ToolApplyServiceImpl — saveToolApply() 写入 canCrossProject
 
 **Files:**
+
 - Modify: `src/main/java/.../service/impl/ToolApplyServiceImpl.java`
 
 **Step 1: 在 getToolApplyInfo() 中写入 canCrossProject**
@@ -158,6 +163,7 @@ mvn compile -pl openlibing-framework-business -am
 ### Task 6: ToolApplyServiceImpl — reviewToolInfo() 写入版本 + 自动授权
 
 **Files:**
+
 - Modify: `src/main/java/.../service/impl/ToolApplyServiceImpl.java`
 
 **Step 1: 注入 ToolUseConfigMapper**
@@ -212,6 +218,7 @@ mvn compile -pl openlibing-framework-business -am
 ### Task 7: ToolProjectUseServiceImpl — getToolUseApplyResultEntity() 增加 canCrossProject 判断
 
 **Files:**
+
 - Modify: `src/main/java/.../service/impl/ToolProjectUseServiceImpl.java`
 
 **Step 1: 修改 getToolUseApplyResultEntity() 判断逻辑**
