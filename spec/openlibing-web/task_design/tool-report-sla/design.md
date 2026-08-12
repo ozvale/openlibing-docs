@@ -6,20 +6,20 @@
 
 ## 架构决策
 
-| 决策点 | 选择 | 原因 |
-|--------|------|------|
-| SLA 字段格式化位置 | 前端 map 转换 | 后端返回 `'1'`/`'0'` 字符串，前端展示「是」/「否」更符合中文交互习惯，无需后端额外加工 |
-| 列配置方式 | 复用既有 `applyTableColumn` / `reviewTableColumn` ref 数组 | 与同文件其他列配置风格一致，无新技术引入 |
-| 详情页状态判断 | 显式 `v-if` 替代 `v-else-if`/`v-else` | 状态值 `0/1/2` 是枚举封闭集合，显式判断可避免后端返回异常值时错误回退到「可举报」状态 |
-| `pendingReviewCount` 递减时机 | `submitReview` 成功后立即递减 | 与既有 `toolReportCount` 递减时机保持一致，避免计数滞后 |
+| 决策点                        | 选择                                                       | 原因                                                                                   |
+| ----------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| SLA 字段格式化位置            | 前端 map 转换                                              | 后端返回 `'1'`/`'0'` 字符串，前端展示「是」/「否」更符合中文交互习惯，无需后端额外加工 |
+| 列配置方式                    | 复用既有 `applyTableColumn` / `reviewTableColumn` ref 数组 | 与同文件其他列配置风格一致，无新技术引入                                               |
+| 详情页状态判断                | 显式 `v-if` 替代 `v-else-if`/`v-else`                      | 状态值 `0/1/2` 是枚举封闭集合，显式判断可避免后端返回异常值时错误回退到「可举报」状态  |
+| `pendingReviewCount` 递减时机 | `submitReview` 成功后立即递减                              | 与既有 `toolReportCount` 递减时机保持一致，避免计数滞后                                |
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `apps/web-openlibing/src/views/ToDoCenter/ToolReportApplication.vue` | 修改 | 新增 2 列配置 + 数据加载时格式化 `slaExpired` |
-| `apps/web-openlibing/src/views/ToDoCenter/ToolReportReview.vue` | 修改 | 新增 2 列配置 + 格式化 `slaExpired` + 递减 `pendingReviewCount` |
-| `apps/web-openlibing/src/views/ToolManagement/ToolMarket/details.vue` | 修改 | 修复举报状态显示逻辑（`v-else-if`/`v-else` → 显式 `v-if`） |
+| 文件                                                                  | 操作 | 说明                                                            |
+| --------------------------------------------------------------------- | ---- | --------------------------------------------------------------- |
+| `apps/web-openlibing/src/views/ToDoCenter/ToolReportApplication.vue`  | 修改 | 新增 2 列配置 + 数据加载时格式化 `slaExpired`                   |
+| `apps/web-openlibing/src/views/ToDoCenter/ToolReportReview.vue`       | 修改 | 新增 2 列配置 + 格式化 `slaExpired` + 递减 `pendingReviewCount` |
+| `apps/web-openlibing/src/views/ToolManagement/ToolMarket/details.vue` | 修改 | 修复举报状态显示逻辑（`v-else-if`/`v-else` → 显式 `v-if`）      |
 
 ## 关键代码
 
@@ -44,7 +44,7 @@
 applyTableData.value =
   list.map((item) => ({
     ...item,
-    slaExpired: item.slaExpired === '1' ? '是' : '否',
+    slaExpired: item.slaExpired === "1" ? "是" : "否",
   })) || [];
 ```
 
