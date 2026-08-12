@@ -7,6 +7,7 @@
 ## 功能描述
 
 ### 做什么
+
 - 新增 `queryRepoFilterMeta` 前端接口，与列表接口入参一致（剔除分页、排序字段），返回各筛选维度的选项及 `count`
 - 在首次加载、切换项目、筛选条件变化时拉取查询条件；翻页、排序时**不**重复拉取
 - 表头 ColumnFilter 与顶部搜索条基于返回的 `filterMeta` 拼接 `label(count)` 展示数量
@@ -17,6 +18,7 @@
 - 传参字段名统一为复数形式（如 `repoOwners`、`createBys`、`defaultBranchNames`）
 
 ### 不做什么
+
 - 不修改现有列表数据展示逻辑
 - 不实现跨页筛选状态持久化
 - 不处理 `queryRepoFilterMeta` 接口失败时的降级展示（仅回退到本地 options 不显示 count）
