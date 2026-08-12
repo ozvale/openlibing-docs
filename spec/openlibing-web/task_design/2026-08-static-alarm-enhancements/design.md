@@ -8,12 +8,14 @@ StaticAlarm 告警列表页面原有展示"待处理"和"已关闭"两个状态�
 - 已修复状态值从 `RESOLVED_AUTO` 改为 `RESOLVED`
 
 现有项目模式参考：
+
 - 其他页面（如漏洞公告）也使用类似的 `tab` 参数切换状态
 - `searchQualifiers` 模式在多个告警/漏洞页面通用
 
 ## Goals / Non-Goals
 
 **Goals:**
+
 - 适配后端接口字段重构，正确展示三态数量
 - 将已关闭标签拆分为已修复和已忽略，各态独立展示数量
 - 列表查询参数改为 `tab` 字段
@@ -22,6 +24,7 @@ StaticAlarm 告警列表页面原有展示"待处理"和"已关闭"两个状态�
 - 状态值 `RESOLVED_AUTO` 同步为 `RESOLVED`
 
 **Non-Goals:**
+
 - 不改变告警列表的表格行数据结构
 - 不改造其他告警类型页面（如 SCA/CodeCheck 的告警页面）
 - 不引入新的 UI 组件库
@@ -44,6 +47,7 @@ StaticAlarm 告警列表页面原有展示"待处理"和"已关闭"两个状态�
 **理由**: 忽略原因仅在已忽略状态下有意义，避免在其他状态下多此一举。切换状态时重置避免残留筛选条件导致接口报错。
 
 **实现**:
+
 ```typescript
 searchQualifiers() {
   const qualifiers = [

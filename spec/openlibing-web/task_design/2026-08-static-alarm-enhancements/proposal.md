@@ -14,9 +14,11 @@ StaticAlarm 告警列表页面的后端接口进行了重构，返回了新的�
 ## Capabilities
 
 ### New Capabilities
+
 - `shield-types-filter`: 忽略原因多选筛选，仅在已忽略状态下展示，下拉选项后显示对应数量（误报/测试使用/不修复）
 
 ### Modified Capabilities
+
 - `status-tab-switch`: 状态标签从"待处理/已关闭"二态改为"待处理/已修复/已忽略"三态
 - `data-source-filter`: 数据来源筛选从多选改为单选
 - `api-request-params`: 列表查询参数从 `closed`/`statuses` 改为 `tab` 字段
