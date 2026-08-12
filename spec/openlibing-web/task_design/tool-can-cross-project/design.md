@@ -6,23 +6,23 @@
 
 ## 架构决策
 
-| 决策点 | 选择 | 原因 |
-|--------|------|------|
-| 列渲染方式 | 复用 `toolTable.vue` 的 `column.prop` 分发机制 + `el-switch` 自定义渲染 | 与既有 `handleToolUsageStatus` 等列保持一致的渲染模式，无新技术引入 |
-| 切换前拦截 | `el-switch` 的 `before-change` 属性返回 Promise | Element Plus 原生支持，false 时阻止切换，无需手动回滚开关状态 |
-| 二次确认 | `ElMessageBox.confirm` | 与同文件 `toolUsageStatusChange` 风格一致 |
-| 字段类型 | 字符串 `'1'`/`'0'` | 与后端既有 `hasUse` 等字段类型一致，避免类型转换 |
-| 列宽 | 300px | 列标题较长（「跨项目使用该工具版本是否需审核」共 15 字），需较大宽度才能完整显示 |
-| 表单校验 | `canCrossProject` 设为 required | 与 `version`、`visitPath` 等字段保持一致的必填校验风格 |
+| 决策点     | 选择                                                                    | 原因                                                                             |
+| ---------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 列渲染方式 | 复用 `toolTable.vue` 的 `column.prop` 分发机制 + `el-switch` 自定义渲染 | 与既有 `handleToolUsageStatus` 等列保持一致的渲染模式，无新技术引入              |
+| 切换前拦截 | `el-switch` 的 `before-change` 属性返回 Promise                         | Element Plus 原生支持，false 时阻止切换，无需手动回滚开关状态                    |
+| 二次确认   | `ElMessageBox.confirm`                                                  | 与同文件 `toolUsageStatusChange` 风格一致                                        |
+| 字段类型   | 字符串 `'1'`/`'0'`                                                      | 与后端既有 `hasUse` 等字段类型一致，避免类型转换                                 |
+| 列宽       | 300px                                                                   | 列标题较长（「跨项目使用该工具版本是否需审核」共 15 字），需较大宽度才能完整显示 |
+| 表单校验   | `canCrossProject` 设为 required                                         | 与 `version`、`visitPath` 等字段保持一致的必填校验风格                           |
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `apps/web-openlibing/src/views/ToolManagement/config.ts` | 修改 | 两处列配置新增 `canCrossProject` 列；`updateTime` → `createTime`；操作列移除固定宽度 |
-| `apps/web-openlibing/src/views/ToolManagement/components/toolTable.vue` | 修改 | 新增 `canCrossProject` 列的 `el-switch` 自定义渲染 |
+| 文件                                                                              | 操作 | 说明                                                                                                |
+| --------------------------------------------------------------------------------- | ---- | --------------------------------------------------------------------------------------------------- |
+| `apps/web-openlibing/src/views/ToolManagement/config.ts`                          | 修改 | 两处列配置新增 `canCrossProject` 列；`updateTime` → `createTime`；操作列移除固定宽度                |
+| `apps/web-openlibing/src/views/ToolManagement/components/toolTable.vue`           | 修改 | 新增 `canCrossProject` 列的 `el-switch` 自定义渲染                                                  |
 | `apps/web-openlibing/src/views/ToolManagement/ToolManage/components/toolItem.vue` | 修改 | 新增 `handleToolCanCrossProject` 函数映射 + `toolCanCrossProject` 方法 + `canCrossProject` 校验规则 |
-| `apps/web-openlibing/src/views/ToolManagement/MyTool/components/toolItem.vue` | 修改 | 新增 `canCrossProject` 校验规则 |
+| `apps/web-openlibing/src/views/ToolManagement/MyTool/components/toolItem.vue`     | 修改 | 新增 `canCrossProject` 校验规则                                                                     |
 
 ## 关键代码
 
@@ -63,27 +63,27 @@
 ```js
 const toolCanCrossProject = (row) => {
   const { canCrossProject, version, id } = row;
-  const tip = canCrossProject === '0' ? '需审核' : '不审核';
-  ElMessageBox.confirm(`是否确定版本${version}跨项目使用时${tip}？`, '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
+  const tip = canCrossProject === "0" ? "需审核" : "不审核";
+  ElMessageBox.confirm(`是否确定版本${version}跨项目使用时${tip}？`, "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
   })
     .then(() => {
       updateToolManageItemVisitPath({
         data: {
           id,
-          canCrossProject: canCrossProject === '0' ? '1' : '0',
+          canCrossProject: canCrossProject === "0" ? "1" : "0",
         },
       }).then((res) => {
         if (res.code === 200) {
-          ElMessage({ type: 'success', message: res.msg });
+          ElMessage({ type: "success", message: res.msg });
           versionSearch();
         }
       });
     })
     .catch(() => {
-      ElMessage({ type: 'info', message: '已取消' });
+      ElMessage({ type: "info", message: "已取消" });
     });
 };
 ```
