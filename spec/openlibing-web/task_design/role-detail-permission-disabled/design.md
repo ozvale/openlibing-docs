@@ -6,16 +6,16 @@
 
 ## 架构决策
 
-| 决策点 | 选择 | 原因 |
-|--------|------|------|
-| 禁用方式 | 节点数据 `disabled` 字段 | Element Plus `el-tree` 原生支持，无需修改模板，无需侵入组件逻辑 |
+| 决策点     | 选择                            | 原因                                                                                       |
+| ---------- | ------------------------------- | ------------------------------------------------------------------------------------------ |
+| 禁用方式   | 节点数据 `disabled` 字段        | Element Plus `el-tree` 原生支持，无需修改模板，无需侵入组件逻辑                            |
 | 样式作用域 | 非 scoped `<style lang="less">` | 已存在的非 scoped 样式块已覆盖 `.el-tree` 内的 checkbox 自定义样式，复用同一作用域保持一致 |
-| 颜色取值 | `#4971ff`（品牌蓝） | 与同文件 `.subTitle .icons .blue` 一致，保持视觉统一 |
+| 颜色取值   | `#4971ff`（品牌蓝）             | 与同文件 `.subTitle .icons .blue` 一致，保持视觉统一                                       |
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
+| 文件                                                         | 操作 | 说明                                                       |
+| ------------------------------------------------------------ | ---- | ---------------------------------------------------------- |
 | `apps/web-openlibing/src/views/authorityManagement/role.vue` | 修改 | `fomatTree` 方法新增一行赋值；样式块新增 disabled 状态规则 |
 
 ## 关键代码
@@ -39,7 +39,10 @@ fomatTree(data) {
 
 ```less
 // disabled + checked：品牌蓝背景 + 白色勾
-.el-tree .el-checkbox.is-disabled .el-checkbox__input.is-checked .el-checkbox__inner {
+.el-tree
+  .el-checkbox.is-disabled
+  .el-checkbox__input.is-checked
+  .el-checkbox__inner {
   background-color: #4971ff;
   border-color: #4971ff;
   &::after {
@@ -47,7 +50,10 @@ fomatTree(data) {
   }
 }
 // disabled + unchecked：浅灰背景，与已勾选形成明显对比
-.el-tree .el-checkbox.is-disabled .el-checkbox__input:not(.is-checked) .el-checkbox__inner {
+.el-tree
+  .el-checkbox.is-disabled
+  .el-checkbox__input:not(.is-checked)
+  .el-checkbox__inner {
   background-color: #f5f7fa;
   border-color: #dcdfe6;
 }
