@@ -2,8 +2,8 @@
 
 ## 涉及文件
 
-| 文件 | 说明 |
-|------|------|
+| 文件                                       | 说明                       |
+| ------------------------------------------ | -------------------------- |
 | `src/views/pipeline/pipelineRunDialog.vue` | 流水线运行弹窗，单文件修改 |
 
 ## 数据流
@@ -12,14 +12,14 @@
 
 `getPipelineDetailAxios` 接口返回 `res.data.variables` 数组，每个元素包含：
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `name` | string | 参数名称 |
-| `value` | string | 参数默认值 |
-| `type` | string | 参数类型：enum/string/autoIncrement |
-| `is_runtime` | boolean | 是否运行时参数 |
-| `description` | string | 参数描述 |
-| `limits` | string[] | enum 类型时的可选值列表 |
+| 字段          | 类型     | 说明                                |
+| ------------- | -------- | ----------------------------------- |
+| `name`        | string   | 参数名称                            |
+| `value`       | string   | 参数默认值                          |
+| `type`        | string   | 参数类型：enum/string/autoIncrement |
+| `is_runtime`  | boolean  | 是否运行时参数                      |
+| `description` | string   | 参数描述                            |
+| `limits`      | string[] | enum 类型时的可选值列表             |
 
 ### 数据转换
 
@@ -31,7 +31,7 @@ const params = res.data.variables.map((item) => ({
   value: item.value,
   is_runtime: item.is_runtime,
   description: item.description,
-  limits: item.limits || []
+  limits: item.limits || [],
 }));
 
 // 运行时参数在前，非运行时参数在后
@@ -59,9 +59,9 @@ execution-content-row (v-for)
 
 ```javascript
 const typeLabelMap = {
-  enum: '枚举',
-  string: '字符串',
-  autoIncrement: '自增长'
+  enum: "枚举",
+  string: "字符串",
+  autoIncrement: "自增长",
 };
 ```
 
