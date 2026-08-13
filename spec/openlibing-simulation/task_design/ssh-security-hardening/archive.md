@@ -2,13 +2,13 @@
 
 ## 归档信息
 
-| 项目 | 内容 |
-|------|------|
-| FE 需求名称 | SSH链路安全加固 |
-| 业务 Issue | openlibing/openlibing-simulation#18 |
-| 业务 PR | openlibing/openlibing-simulation #139 |
-| 开发分支 | ligao_verfy_ssh（保留） |
-| 归档日期 | 2026-08-13 |
+| 项目        | 内容                                  |
+| ----------- | ------------------------------------- |
+| FE 需求名称 | SSH链路安全加固                       |
+| 业务 Issue  | openlibing/openlibing-simulation#18   |
+| 业务 PR     | openlibing/openlibing-simulation #139 |
+| 开发分支    | ligao_verfy_ssh（保留）               |
+| 归档日期    | 2026-08-13                            |
 
 ## 实现总结
 
