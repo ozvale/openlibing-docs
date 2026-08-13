@@ -73,33 +73,33 @@ openlibing-codecheck 的静态告警列表页当前只区分"待处理"与"已�
 
 ### 业务仓 `openlibing-codecheck`
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `business/entity/alarm/StaticAlarmIssueEntity.java` | 修改 | 新增 `list_state` 字段 |
-| `common/enums/alarm/StaticAlarmListStateEnum.java` | 新增 | list_state 枚举定义与映射方法 |
-| `business/operation/alarm/StaticAlarmOperation.java` | 修改 | 合并查询路径；buildStatusCriteria → buildListStateCriteria；6 个写入路径同步落 list_state；buildFacetCriteria 按 tab 收窄；buildSort 注释清理 |
-| `business/service/impl/alarm/StaticAlarmServiceImpl.java` | 修改 | 切换调用统一查询函数；countIssuesGroupByListState |
-| `business/entity/dto/alarm/StaticAlarmQueryDTO.java` | 修改 | 新增 tab 字段 |
-| `business/entity/dto/alarm/StaticAlarmFilterOptionsQueryDTO.java` | 修改 | 新增 tab 字段 |
-| `business/entity/vo/alarm/StaticAlarmIssueListVO.java` | 修改 | 新增 listState 字段返回前端 |
-| `business/vo/alarm/StaticAlarmIssueCountVO.java` | 修改 | 去掉 unresolvedCount / closedCount 旧字段，替换为 6 个 list_state 分组计数字段 |
-| `src/main/resources/db/changelog/mongo/v1.0.0/static_alarm_index_governance.xml` | 修改 | 新增 5 个索引 changeSet + 下线 10 个旧索引 changeSet + 历史回填 changeSet |
-| `src/test/java/.../StaticAlarmListStateEnumTest.java` | 新增 | 枚举映射方法单测 |
-| `src/test/java/.../StaticAlarmOperationTest.java` | 修改 | 适配 list_state 查询与写入逻辑 |
+| 文件                                                                             | 操作 | 说明                                                                                                                                          |
+| -------------------------------------------------------------------------------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `business/entity/alarm/StaticAlarmIssueEntity.java`                              | 修改 | 新增 `list_state` 字段                                                                                                                        |
+| `common/enums/alarm/StaticAlarmListStateEnum.java`                               | 新增 | list_state 枚举定义与映射方法                                                                                                                 |
+| `business/operation/alarm/StaticAlarmOperation.java`                             | 修改 | 合并查询路径；buildStatusCriteria → buildListStateCriteria；6 个写入路径同步落 list_state；buildFacetCriteria 按 tab 收窄；buildSort 注释清理 |
+| `business/service/impl/alarm/StaticAlarmServiceImpl.java`                        | 修改 | 切换调用统一查询函数；countIssuesGroupByListState                                                                                             |
+| `business/entity/dto/alarm/StaticAlarmQueryDTO.java`                             | 修改 | 新增 tab 字段                                                                                                                                 |
+| `business/entity/dto/alarm/StaticAlarmFilterOptionsQueryDTO.java`                | 修改 | 新增 tab 字段                                                                                                                                 |
+| `business/entity/vo/alarm/StaticAlarmIssueListVO.java`                           | 修改 | 新增 listState 字段返回前端                                                                                                                   |
+| `business/vo/alarm/StaticAlarmIssueCountVO.java`                                 | 修改 | 去掉 unresolvedCount / closedCount 旧字段，替换为 6 个 list_state 分组计数字段                                                                |
+| `src/main/resources/db/changelog/mongo/v1.0.0/static_alarm_index_governance.xml` | 修改 | 新增 5 个索引 changeSet + 下线 10 个旧索引 changeSet + 历史回填 changeSet                                                                     |
+| `src/test/java/.../StaticAlarmListStateEnumTest.java`                            | 新增 | 枚举映射方法单测                                                                                                                              |
+| `src/test/java/.../StaticAlarmOperationTest.java`                                | 修改 | 适配 list_state 查询与写入逻辑                                                                                                                |
 
 ### 业务仓 `openlibing-web`
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
+| 文件                                                  | 操作 | 说明                                                     |
+| ----------------------------------------------------- | ---- | -------------------------------------------------------- |
 | `apps/web-openlibing/src/views/StaticAlarm/index.vue` | 修改 | tab 拆分为 4 个；屏蔽类型二级筛选 UI；listState 字段对接 |
 
 ### docs 仓 `openlibing-docs`
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `spec/openlibing-codecheck/task_design/static-alarm-close-reason-filter/proposal.md` | 新增 | 本文件 |
-| `spec/openlibing-codecheck/task_design/static-alarm-close-reason-filter/design.md` | 新增 | 技术设计 |
-| `spec/openlibing-codecheck/task_design/static-alarm-close-reason-filter/tasks.md` | 新增 | 实现任务清单 |
+| 文件                                                                                 | 操作 | 说明         |
+| ------------------------------------------------------------------------------------ | ---- | ------------ |
+| `spec/openlibing-codecheck/task_design/static-alarm-close-reason-filter/proposal.md` | 新增 | 本文件       |
+| `spec/openlibing-codecheck/task_design/static-alarm-close-reason-filter/design.md`   | 新增 | 技术设计     |
+| `spec/openlibing-codecheck/task_design/static-alarm-close-reason-filter/tasks.md`    | 新增 | 实现任务清单 |
 
 ## 关联 Issue
 

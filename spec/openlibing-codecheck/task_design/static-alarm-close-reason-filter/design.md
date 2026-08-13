@@ -58,17 +58,17 @@ DTO 字段默认值为 "severity"，前端 importance 选项不传 sortBy 时，
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `StaticAlarmIssueEntity.java` | 修改 | 新增 list_state 字段 |
-| `StaticAlarmListStateEnum.java` | 新增 | 枚举定义与映射方法 |
-| `StaticAlarmOperation.java` | 修改 | 查询路径合并、写入路径同步、facet 收窄、buildSort 注释清理 |
-| `StaticAlarmServiceImpl.java` | 修改 | 切换调用统一查询函数 |
-| `StaticAlarmQueryDTO.java` | 修改 | 新增 tab 字段 |
-| `StaticAlarmFilterOptionsQueryDTO.java` | 修改 | 新增 tab 字段 |
-| `StaticAlarmIssueListVO.java` | 修改 | 新增 listState 字段返回前端 |
-| `StaticAlarmIssueCountVO.java` | 修改 | 去掉 unresolvedCount / closedCount 旧字段，替换为 6 个 list_state 分组计数字段 |
-| `static_alarm_index_governance.xml` | 修改 | 新增/下线索引 + 历史回填 changeSet |
+| 文件                                    | 操作 | 说明                                                                           |
+| --------------------------------------- | ---- | ------------------------------------------------------------------------------ |
+| `StaticAlarmIssueEntity.java`           | 修改 | 新增 list_state 字段                                                           |
+| `StaticAlarmListStateEnum.java`         | 新增 | 枚举定义与映射方法                                                             |
+| `StaticAlarmOperation.java`             | 修改 | 查询路径合并、写入路径同步、facet 收窄、buildSort 注释清理                     |
+| `StaticAlarmServiceImpl.java`           | 修改 | 切换调用统一查询函数                                                           |
+| `StaticAlarmQueryDTO.java`              | 修改 | 新增 tab 字段                                                                  |
+| `StaticAlarmFilterOptionsQueryDTO.java` | 修改 | 新增 tab 字段                                                                  |
+| `StaticAlarmIssueListVO.java`           | 修改 | 新增 listState 字段返回前端                                                    |
+| `StaticAlarmIssueCountVO.java`          | 修改 | 去掉 unresolvedCount / closedCount 旧字段，替换为 6 个 list_state 分组计数字段 |
+| `static_alarm_index_governance.xml`     | 修改 | 新增/下线索引 + 历史回填 changeSet                                             |
 
 ## 核心改动点
 
@@ -300,78 +300,101 @@ Liquibase changeSet 通过 MongoDB runCommand 执行 aggregation pipeline：
 
 ```javascript
 // 回填脚本伪代码
-db.static_alarm_issue.aggregate([
-  {
-    $addFields: {
-      list_state: {
-        $switch: {
-          branches: [
-            { case: { $eq: ["$status", "OPEN"] }, then: "OPEN" },
-            { case: { $eq: ["$status", "PENDING_REVIEW"] }, then: "PENDING_REVIEW" },
-            {
-              case: { $eq: ["$status", "IGNORED"] },
-              then: {
-                $let: {
-                  vars: {
-                    lastShield: {
-                      $arrayElemAt: [
-                        {
-                          $filter: {
-                            input: "$revisions",
-                            cond: { $eq: ["$$this.event_type", "SHIELD"] }
-                          }
-                        },
-                        -1
-                      ]
-                    }
-                  },
-                  in: {
-                    $switch: {
-                      branches: [
-                        { case: { $eq: ["$$lastShield.shield_type", "误报"] }, then: "IGNORED_FALSE_POSITIVE" },
-                        { case: { $eq: ["$$lastShield.shield_type", "测试使用"] }, then: "IGNORED_TEST_USAGE" },
-                        { case: { $eq: ["$$lastShield.shield_type", "不修复"] }, then: "IGNORED_WONT_FIX" }
-                      ],
-                      default: "IGNORED_WONT_FIX"
-                    }
-                  }
-                }
-              }
-            },
-            {
-              case: { $eq: ["$status", "RESOLVED"] },
-              then: {
-                $cond: {
-                  if: {
-                    $gt: [
-                      {
-                        $size: {
-                          $filter: {
-                            input: "$revisions",
-                            cond: { $eq: ["$$this.event_type", "SUPPRESSED_RESOLVED"] }
-                          }
-                        }
+db.static_alarm_issue
+  .aggregate([
+    {
+      $addFields: {
+        list_state: {
+          $switch: {
+            branches: [
+              { case: { $eq: ["$status", "OPEN"] }, then: "OPEN" },
+              {
+                case: { $eq: ["$status", "PENDING_REVIEW"] },
+                then: "PENDING_REVIEW",
+              },
+              {
+                case: { $eq: ["$status", "IGNORED"] },
+                then: {
+                  $let: {
+                    vars: {
+                      lastShield: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$revisions",
+                              cond: { $eq: ["$$this.event_type", "SHIELD"] },
+                            },
+                          },
+                          -1,
+                        ],
                       },
-                      0
-                    ]
+                    },
+                    in: {
+                      $switch: {
+                        branches: [
+                          {
+                            case: { $eq: ["$$lastShield.shield_type", "误报"] },
+                            then: "IGNORED_FALSE_POSITIVE",
+                          },
+                          {
+                            case: {
+                              $eq: ["$$lastShield.shield_type", "测试使用"],
+                            },
+                            then: "IGNORED_TEST_USAGE",
+                          },
+                          {
+                            case: {
+                              $eq: ["$$lastShield.shield_type", "不修复"],
+                            },
+                            then: "IGNORED_WONT_FIX",
+                          },
+                        ],
+                        default: "IGNORED_WONT_FIX",
+                      },
+                    },
                   },
-                  then: "SUPPRESSED_BY_COMMENT",
-                  else: "RESOLVED_AUTO"
-                }
-              }
-            }
-          ],
-          default: "OPEN"
-        }
-      }
-    }
-  }
-]).forEach(function(doc) {
-  db.static_alarm_issue.updateOne(
-    { _id: doc._id },
-    { $set: { list_state: doc.list_state } }
-  );
-});
+                },
+              },
+              {
+                case: { $eq: ["$status", "RESOLVED"] },
+                then: {
+                  $cond: {
+                    if: {
+                      $gt: [
+                        {
+                          $size: {
+                            $filter: {
+                              input: "$revisions",
+                              cond: {
+                                $eq: [
+                                  "$$this.event_type",
+                                  "SUPPRESSED_RESOLVED",
+                                ],
+                              },
+                            },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                    then: "SUPPRESSED_BY_COMMENT",
+                    else: "RESOLVED_AUTO",
+                  },
+                },
+              },
+            ],
+            default: "OPEN",
+          },
+        },
+      },
+    },
+  ])
+  .forEach(function (doc) {
+    db.static_alarm_issue.updateOne(
+      { _id: doc._id },
+      { $set: { list_state: doc.list_state } },
+    );
+  });
 ```
 
 **已知局限**：status=RESOLVED 且无 SUPPRESSED_RESOLVED 事件的存量记录会被判为 RESOLVED_AUTO。历史 suppressed 记录因 buildIssueEntity 原不写主表 revisions，会被误判。本次改造同步让 buildIssueEntity suppressed 路径写 SUPPRESSED_RESOLVED 事件，仅对新数据准确。
@@ -433,45 +456,45 @@ db.static_alarm_issue.aggregate([
 
 ### static_alarm_issue 集合新增字段
 
-| 字段名 | 类型 | 说明 |
-|---|---|---|
+| 字段名     | 类型   | 说明                                             |
+| ---------- | ------ | ------------------------------------------------ |
 | list_state | String | 派生状态枚举，写入时由 status + 关闭原因计算得出 |
 
 ### list_state 取值映射
 
-| list_state | 对应 status | 触发场景 | 写入代码位置 |
-|---|---|---|---|
-| OPEN | OPEN | 新建未抑制 / RESOLVED 翻回 | buildIssueEntity / updateExistingIssue / batchUnshieldIssues |
-| PENDING_REVIEW | PENDING_REVIEW | 预留（当前无自动写入路径） | — |
-| IGNORED_FALSE_POSITIVE | IGNORED | 屏蔽 + shieldType=误报 | batchShieldIssues |
-| IGNORED_TEST_USAGE | IGNORED | 屏蔽 + shieldType=测试使用 | batchShieldIssues |
-| IGNORED_WONT_FIX | IGNORED | 屏蔽 + shieldType=不修复 | batchShieldIssues |
-| RESOLVED_AUTO | RESOLVED | 扫描消失自动 RESOLVED | resolveDisappearedIssues |
-| SUPPRESSED_BY_COMMENT | RESOLVED | SARIF suppressions 标记 | buildIssueEntity / updateExistingIssue |
+| list_state             | 对应 status    | 触发场景                   | 写入代码位置                                                 |
+| ---------------------- | -------------- | -------------------------- | ------------------------------------------------------------ |
+| OPEN                   | OPEN           | 新建未抑制 / RESOLVED 翻回 | buildIssueEntity / updateExistingIssue / batchUnshieldIssues |
+| PENDING_REVIEW         | PENDING_REVIEW | 预留（当前无自动写入路径） | —                                                            |
+| IGNORED_FALSE_POSITIVE | IGNORED        | 屏蔽 + shieldType=误报     | batchShieldIssues                                            |
+| IGNORED_TEST_USAGE     | IGNORED        | 屏蔽 + shieldType=测试使用 | batchShieldIssues                                            |
+| IGNORED_WONT_FIX       | IGNORED        | 屏蔽 + shieldType=不修复   | batchShieldIssues                                            |
+| RESOLVED_AUTO          | RESOLVED       | 扫描消失自动 RESOLVED      | resolveDisappearedIssues                                     |
+| SUPPRESSED_BY_COMMENT  | RESOLVED       | SARIF suppressions 标记    | buildIssueEntity / updateExistingIssue                       |
 
 **注意**：upsertInstance 操作的是 instance 子表（`STATIC_ALARM_ISSUE_INSTANCE` 集合），不直接修改主表 status/list_state。主表 list_state 由 buildIssueEntity（新建）和 updateExistingIssue（已存在刷新）同步设置。upsertInstance 中的 suppressed 处理只影响 instance 子表的 scan_status 和 history，不影响主表 list_state。因此 upsertInstance 不出现在 SUPPRESSED_BY_COMMENT 触发代码位置中，也不需要同步刷新 list_state。
 
 ### 索引变化
 
-| 操作 | 索引名 | 字段 |
-|---|---|---|
-| 保留 | idx_issue_fingerprint (unique) | repo_type, owner, repo, branch, fingerprint_key |
-| 保留 | idx_issue_branch_status | repo_type, owner, repo, branch, status, severity |
-| 新增 | idx_issue_repo_key_state_first_seen | repo_key, list_state, first_seen_at:-1 |
-| 新增 | idx_issue_repo_key_state_updated_at | repo_key, list_state, updatedAt:-1 |
-| 新增 | idx_issue_repo_key_state_severity | repo_key, list_state, severity_rank:1 |
-| 新增 | idx_issue_repo_key_state_last_seen | repo_key, list_state, last_seen_at:-1 |
-| 新增 | idx_issue_repo_key_rule | repo_key, rule_id |
-| 下线 | idx_issue_list | 被新索引替代 |
-| 下线 | idx_issue_rule | 被 idx_issue_repo_key_rule 替代 |
-| 下线 | idx_issue_list_first_seen | 被新索引替代 |
-| 下线 | idx_issue_sort_last_seen | 与 idx_issue_list 前缀重叠 |
-| 下线 | idx_issue_sort_updated_at | 被新索引替代 |
-| 下线 | idx_issue_sort_severity | 被新索引替代 |
-| 下线 | idx_issue_repo_key_status_sort_last_seen | 字段升级为 list_state |
-| 下线 | idx_issue_repo_key_sort_severity | 字段升级为 list_state |
-| 下线 | idx_issue_repo_key_sort_updated_at | 字段升级为 list_state |
-| 下线 | idx_issue_repo_key_sort_first_seen | 字段升级为 list_state |
+| 操作 | 索引名                                   | 字段                                             |
+| ---- | ---------------------------------------- | ------------------------------------------------ |
+| 保留 | idx_issue_fingerprint (unique)           | repo_type, owner, repo, branch, fingerprint_key  |
+| 保留 | idx_issue_branch_status                  | repo_type, owner, repo, branch, status, severity |
+| 新增 | idx_issue_repo_key_state_first_seen      | repo_key, list_state, first_seen_at:-1           |
+| 新增 | idx_issue_repo_key_state_updated_at      | repo_key, list_state, updatedAt:-1               |
+| 新增 | idx_issue_repo_key_state_severity        | repo_key, list_state, severity_rank:1            |
+| 新增 | idx_issue_repo_key_state_last_seen       | repo_key, list_state, last_seen_at:-1            |
+| 新增 | idx_issue_repo_key_rule                  | repo_key, rule_id                                |
+| 下线 | idx_issue_list                           | 被新索引替代                                     |
+| 下线 | idx_issue_rule                           | 被 idx_issue_repo_key_rule 替代                  |
+| 下线 | idx_issue_list_first_seen                | 被新索引替代                                     |
+| 下线 | idx_issue_sort_last_seen                 | 与 idx_issue_list 前缀重叠                       |
+| 下线 | idx_issue_sort_updated_at                | 被新索引替代                                     |
+| 下线 | idx_issue_sort_severity                  | 被新索引替代                                     |
+| 下线 | idx_issue_repo_key_status_sort_last_seen | 字段升级为 list_state                            |
+| 下线 | idx_issue_repo_key_sort_severity         | 字段升级为 list_state                            |
+| 下线 | idx_issue_repo_key_sort_updated_at       | 字段升级为 list_state                            |
+| 下线 | idx_issue_repo_key_sort_first_seen       | 字段升级为 list_state                            |
 
 最终索引数：12 → 7。
 
@@ -479,29 +502,29 @@ db.static_alarm_issue.aggregate([
 
 ### 查询场景索引覆盖矩阵
 
-| 查询场景 | 走的索引 | 排序字段在索引 | 退化风险 |
-|---|---|---|---|
-| list 接口（firstSeenAt） | idx_issue_repo_key_state_first_seen | 是 | 无 |
-| list 接口（updatedAt） | idx_issue_repo_key_state_updated_at | 是 | 无 |
-| list 接口（severity_rank，importance 默认） | idx_issue_repo_key_state_severity | 是 | 无 |
-| list 接口（lastSeenAt） | idx_issue_repo_key_state_last_seen | 是 | 无 |
-| list 接口（深筛选 + 上述排序） | 同上，深筛选走 fetch | 是 | 无 |
-| count 接口 | repo_key + list_state 前缀 | 无排序 | 无 |
-| countIssuesGroupByListState | repo_key + list_state 前缀 | 无（聚合） | 无 |
-| findAllFilterOptions (facet) | repo_key + list_state 前缀，其他维度 fetch | 无（facet） | 性能风险但不失败 |
-| searchRepos | idx_issue_branch_status | 无（group by） | 无 |
-| resolveDisappearedIssues | idx_issue_branch_status | 无 | 无 |
-| 导出 _id 游标分页 | repo_key + list_state + 默认 _id 索引 | _id asc | 性能风险但不失败 |
-| findIssueById / findIssueStatusByIds | 默认 _id 索引 | 无 | 无 |
-| upsertIssue | idx_issue_fingerprint (unique) | 无 | 无 |
-| batchShield/Unshield/Assign/Cleanup | 默认 _id 索引 | 无 | 无 |
+| 查询场景                                    | 走的索引                                   | 排序字段在索引 | 退化风险         |
+| ------------------------------------------- | ------------------------------------------ | -------------- | ---------------- |
+| list 接口（firstSeenAt）                    | idx_issue_repo_key_state_first_seen        | 是             | 无               |
+| list 接口（updatedAt）                      | idx_issue_repo_key_state_updated_at        | 是             | 无               |
+| list 接口（severity_rank，importance 默认） | idx_issue_repo_key_state_severity          | 是             | 无               |
+| list 接口（lastSeenAt）                     | idx_issue_repo_key_state_last_seen         | 是             | 无               |
+| list 接口（深筛选 + 上述排序）              | 同上，深筛选走 fetch                       | 是             | 无               |
+| count 接口                                  | repo_key + list_state 前缀                 | 无排序         | 无               |
+| countIssuesGroupByListState                 | repo_key + list_state 前缀                 | 无（聚合）     | 无               |
+| findAllFilterOptions (facet)                | repo_key + list_state 前缀，其他维度 fetch | 无（facet）    | 性能风险但不失败 |
+| searchRepos                                 | idx_issue_branch_status                    | 无（group by） | 无               |
+| resolveDisappearedIssues                    | idx_issue_branch_status                    | 无             | 无               |
+| 导出 _id 游标分页                           | repo_key + list_state + 默认 _id 索引      | _id asc        | 性能风险但不失败 |
+| findIssueById / findIssueStatusByIds        | 默认 _id 索引                              | 无             | 无               |
+| upsertIssue                                 | idx_issue_fingerprint (unique)             | 无             | 无               |
+| batchShield/Unshield/Assign/Cleanup         | 默认 _id 索引                              | 无             | 无               |
 
 14 类查询场景中，12 类完全覆盖零退化，2 类有性能风险但不会查询失败。
 
 ### 性能风险点缓解
 
 1. **findAllFilterOptions 的 facet 聚合**：buildFacetCriteria 按 dto.tab 精确收窄 list_state，候选集收窄后 fetch 开销可控。
-2. **导出接口的 _id 游标分页**：导出是低频操作，单批数据量不会超过 32MB 内存排序限制。
+2. **导出接口的 \_id 游标分页**：导出是低频操作，单批数据量不会超过 32MB 内存排序限制。
 
 ### 入库开销
 
