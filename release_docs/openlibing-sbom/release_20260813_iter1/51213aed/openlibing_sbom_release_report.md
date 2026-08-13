@@ -2,4 +2,3 @@
 | ------- | -------- | ------ | -------- |
 | #60 | 【openlibing-sbom】页面查询支持多选License类型、成分、漏洞级别和依赖类型 | 陈明旭 | 通过 |
 | #61 | 【openlibing】【sbom】机机接口下线切换apig | chenhongliang | 通过 |
-| #159 | 【openlibing】机机接口下线切换apig | taohuoquan | 通过 |
