@@ -49,7 +49,7 @@
   - 导入 `loadHuaweiCS`
   - 在 `app.mount('#app')` 之后调用 `loadHuaweiCS()`
 
-### 第五组：_app.config.js 内联注入
+### 第五组：\_app.config.js 内联注入
 
 - [x] 5.1 改造 extra-app-config 插件为内联注入
   - 文件：`internal/vite-config/src/plugins/extra-app-config.ts`

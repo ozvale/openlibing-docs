@@ -84,7 +84,7 @@ OpenLibing Web 前端在长期迭代中积累了多项性能问题：首屏加�
   - `apps/web-openlibing/src/majun/src/assets/css/common.less`（font-display: swap）
   - `apps/web-openlibing/src/majun/src/theme/index.css`（修复 font-display）
   - `internal/vite-config/src/config/application.ts`（es2020 target）
-  - `internal/vite-config/src/plugins/extra-app-config.ts`（_app.config.js 内联）
+  - `internal/vite-config/src/plugins/extra-app-config.ts`（\_app.config.js 内联）
 - Nginx 配置：
   - `apps/web-openlibing/nginx/nginx_beta.conf`
   - `apps/web-openlibing/nginx/nginx_gamma.conf`
