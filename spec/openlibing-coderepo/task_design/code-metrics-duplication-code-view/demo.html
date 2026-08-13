@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代码重复率详情 - 交互示例</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; height: 100vh; overflow: hidden; }
+
+  /* ========== 全局布局：文件列表 + 侧边页 ========== */
+  #app { display: flex; height: 100vh; width: 100vw; }
+
+  /* 左侧：文件列表（始终可见，侧边页展开时被遮盖） */
+  #file-list-view {
+    flex: 1; display: flex; flex-direction: column; background: #fff;
+    min-width: 0; transition: all 0.3s ease;
+  }
+  #file-list-view .header {
+    display: flex; align-items: center; gap: 16px; padding: 16px 24px;
+    border-bottom: 1px solid #e8e8e8; background: #fafafa;
+  }
+  #file-list-view .header h2 { font-size: 16px; font-weight: 600; }
+  #file-list-view .header .meta { font-size: 13px; color: #666; }
+  #file-list-view table { width: 100%; border-collapse: collapse; }
+  #file-list-view th { padding: 10px 16px; text-align: left; font-size: 13px; font-weight: 600; color: #666; background: #fafafa; border-bottom: 1px solid #e8e8e8; }
+  #file-list-view td { padding: 10px 16px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+  #file-list-view tr:hover { background: #f5f8ff; cursor: pointer; }
+  .file-link { color: #1677ff; cursor: pointer; text-decoration: none; }
+  .file-link:hover { text-decoration: underline; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; background: #fff7e6; color: #d48806; }
+
+  /* ========== 右侧：侧边页（源文件 + Drawer） ========== */
+  #side-panel {
+    width: 0; overflow: hidden; display: flex; flex-direction: column;
+    background: #fff; border-left: 1px solid #e0e0e0;
+    transition: width 0.3s ease; box-shadow: -2px 0 8px rgba(0,0,0,0.06);
+  }
+  /* 半页模式：50% 宽度 */
+  #side-panel.half { width: 50%; }
+  /* 全页模式：100% 宽度 */
+  #side-panel.full { width: 100%; position: absolute; left: 0; top: 0; height: 100vh; z-index: 10; }
+
+  /* 顶部栏 */
+  .top-bar {
+    display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+    border-bottom: 1px solid #e8e8e8; background: #fafafa; font-size: 13px;
+  }
+  .top-bar .back-btn { cursor: pointer; color: #1677ff; font-size: 13px; border: none; background: none; padding: 0; }
+  .top-bar .back-btn:hover { text-decoration: underline; }
+  .top-bar .sep { color: #d9d9d9; }
+  .top-bar .meta-item { color: #666; }
+
+  /* 主体：源文件 + Drawer 并排 */
+  .main-body { display: flex; flex: 1; overflow: hidden; }
+
+  /* 左半：源文件代码视图 */
+  .source-panel {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    border-right: 1px solid #e8e8e8; min-width: 0;
+  }
+  .source-panel .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 16px; background: #fafafa; border-bottom: 1px solid #e8e8e8; font-size: 13px;
+  }
+  .source-panel .panel-header .file-name { font-weight: 600; }
+  .source-panel .panel-header .actions { display: flex; gap: 4px; }
+  .source-panel .panel-header .actions button {
+    border: 1px solid #d9d9d9; background: #fff; border-radius: 4px;
+    padding: 2px 8px; font-size: 12px; cursor: pointer; color: #666;
+  }
+  .source-panel .panel-header .actions button:hover { border-color: #1677ff; color: #1677ff; }
+  .source-panel .panel-header .actions button.active { background: #e6f4ff; border-color: #1677ff; color: #1677ff; }
+
+  /* 代码区 */
+  .code-container {
+    flex: 1; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px; line-height: 22px; background: #1e1e1e; color: #d4d4d4;
+  }
+  .code-line { display: flex; padding: 0 16px 0 0; min-height: 22px; }
+  .code-line .line-num {
+    display: inline-block; min-width: 50px; padding-right: 16px; text-align: right;
+    color: #6e7681; user-select: none; font-size: 12px;
+  }
+  .code-line .line-content { white-space: pre; flex: 1; }
+
+  /* 高亮行样式 */
+  .code-line.highlight-block { background: rgba(255, 235, 59, 0.15); }
+  .code-line.highlight-block .line-num { color: #ccc; }
+  .code-line.highlight-active { background: rgba(255, 152, 0, 0.30); border-left: 3px solid #ff9800; padding-left: 0; }
+  .code-line.highlight-active .line-num { color: #ff9800; font-weight: 600; }
+
+  /* 省略行 */
+  .code-line.omitted {
+    color: #6e7681; font-style: italic; cursor: default; background: transparent;
+  }
+  .code-line.omitted .line-content { font-size: 12px; }
+
+  /* 可点击的重复块提示 */
+  .dup-indicator {
+    display: inline-block; margin-left: 8px; padding: 0 6px; border-radius: 3px;
+    font-size: 11px; cursor: pointer; background: rgba(255, 152, 0, 0.2); color: #ffb74d;
+    font-style: normal; vertical-align: middle;
+  }
+  .dup-indicator:hover { background: rgba(255, 152, 0, 0.4); }
+
+  /* 右半：Drawer（重复代码块） */
+  .drawer-panel {
+    width: 0; overflow: hidden; display: flex; flex-direction: column;
+    background: #fff; border-left: 1px solid #e8e8e8;
+    transition: width 0.3s ease;
+  }
+  .drawer-panel.open { width: 50%; }
+
+  .drawer-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 16px; background: #fafafa; border-bottom: 1px solid #e8e8e8; font-size: 13px;
+  }
+  .drawer-header .drawer-title { font-weight: 600; }
+
+  /* Tabs */
+  .tab-bar {
+    display: flex; overflow-x: auto; border-bottom: 1px solid #e8e8e8; background: #fafafa;
+  }
+  .tab-item {
+    padding: 8px 16px; font-size: 13px; cursor: pointer; white-space: nowrap;
+    border-bottom: 2px solid transparent; color: #666; position: relative;
+    border-right: 1px solid #f0f0f0;
+  }
+  .tab-item:hover { color: #333; background: #f0f0f0; }
+  .tab-item.active { color: #1677ff; border-bottom-color: #1677ff; font-weight: 600; background: #fff; }
+  .tab-item .current-badge {
+    display: inline-block; margin-left: 4px; padding: 0 4px; border-radius: 2px;
+    font-size: 10px; background: #fff7e6; color: #d48806; font-weight: 600;
+  }
+  .tab-item .same-file-badge {
+    display: inline-block; margin-left: 4px; padding: 0 4px; border-radius: 2px;
+    font-size: 10px; background: #e6f4ff; color: #1677ff; font-weight: 600;
+  }
+
+  /* Drawer 代码区 */
+  .drawer-code-container {
+    flex: 1; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px; line-height: 22px; background: #1e1e1e; color: #d4d4d4;
+  }
+
+  /* Drawer 底部导航 */
+  .drawer-footer {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    padding: 8px 16px; border-top: 1px solid #e8e8e8; background: #fafafa; font-size: 13px;
+  }
+  .drawer-footer button {
+    border: 1px solid #d9d9d9; background: #fff; border-radius: 4px;
+    padding: 4px 12px; font-size: 13px; cursor: pointer;
+  }
+  .drawer-footer button:hover { border-color: #1677ff; color: #1677ff; }
+  .drawer-footer button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .drawer-footer .block-counter { color: #666; }
+
+  /* 语法高亮简化版 */
+  .kw { color: #569cd6; }
+  .str { color: #ce9178; }
+  .cmt { color: #6a9955; }
+  .type { color: #4ec9b0; }
+  .fn { color: #dcdcaa; }
+  .num { color: #b5cea8; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- 左侧：文件列表 -->
+  <div id="file-list-view">
+    <div class="header">
+      <h2>总代码重复率详情</h2>
+    </div>
+    <div class="header" style="padding-top: 8px; padding-bottom: 8px;">
+      <span class="meta">代码仓: <b>openlibing-coderepo</b></span>
+      <span class="sep">|</span>
+      <span class="meta">分支: <b>master</b></span>
+      <span class="sep">|</span>
+      <span class="meta">流水线: <b>#123</b></span>
+    </div>
+    <table>
+      <thead><tr><th>文件名称</th><th>重复率</th><th>重复行数</th><th>重复块数</th></tr></thead>
+      <tbody>
+        <tr onclick="openCodeView('Foo.java')">
+          <td><a class="file-link">src/main/Foo.java</a></td>
+          <td><span class="badge">35.5%</span></td>
+          <td>120</td><td>2</td>
+        </tr>
+        <tr onclick="openCodeView('Bar.java')">
+          <td><a class="file-link">src/main/Bar.java</a></td>
+          <td><span class="badge">28.2%</span></td>
+          <td>85</td><td>2</td>
+        </tr>
+        <tr onclick="openCodeView('Baz.java')">
+          <td><a class="file-link">src/main/Baz.java</a></td>
+          <td><span class="badge">15.0%</span></td>
+          <td>40</td><td>1</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 右侧：侧边页（源文件 + Drawer） -->
+  <div id="side-panel">
+    <!-- 顶部栏 -->
+    <div class="top-bar">
+      <button class="back-btn" onclick="closeSidePanel()">← 返回列表</button>
+      <span class="sep">|</span>
+      <span class="meta-item">代码仓: <b>openlibing-coderepo</b></span>
+      <span class="meta-item">分支: <b>master</b></span>
+      <span class="meta-item">流水线: <b>#123</b></span>
+      <span style="flex:1"></span>
+      <span id="current-file-name" style="font-weight:600; color:#1677ff;"></span>
+    </div>
+
+    <!-- 主体：源文件 + Drawer -->
+    <div class="main-body">
+      <!-- 左半：源文件代码 -->
+      <div class="source-panel" id="source-panel">
+        <div class="panel-header">
+          <span class="file-name" id="source-file-name"></span>
+          <div class="actions">
+            <button onclick="navigateBlock(-1)" title="上一个重复块">↑ 上一个</button>
+            <button onclick="navigateBlock(1)" title="下一个重复块">↓ 下一个</button>
+            <button onclick="toggleSize()" id="size-btn" title="放大">⤢ 放大</button>
+          </div>
+        </div>
+        <div class="code-container" id="source-code"></div>
+      </div>
+
+      <!-- 右半：Drawer（重复代码块，点击代码块后展开） -->
+      <div class="drawer-panel" id="drawer-panel">
+        <div class="drawer-header">
+          <span class="drawer-title" id="drawer-title">重复代码块</span>
+        </div>
+        <div class="tab-bar" id="tab-bar"></div>
+        <div class="drawer-code-container" id="drawer-code"></div>
+        <div class="drawer-footer">
+          <button onclick="navigateTab(-1)" id="prev-tab-btn">← 上一个</button>
+          <span class="block-counter" id="block-counter">1/2</span>
+          <button onclick="navigateTab(1)" id="next-tab-btn">下一个 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======================== 模拟数据 ========================
+
+// Foo.java 源代码（模拟 135 行）
+const fooLines = [
+  'package com.openlibing.coderepo.service;',           // 1
+  '',                                                    // 2
+  'import java.util.List;',                              // 3
+  'import java.util.ArrayList;',                         // 4
+  'import java.util.Map;',                               // 5
+  'import java.util.HashMap;',                           // 6
+  '',                                                    // 7
+  '/**',                                                 // 8
+  ' * 代码度量服务实现',                                   // 9
+  ' */',                                                 // 10
+  'public class CodeMetricsService {',                   // 11
+  '',                                                    // 12
+  '    private final MetricsRepository repo;',           // 13
+  '    private final ReportGenerator generator;',        // 14
+  '    private static final int MAX_FILES = 1000;',      // 15
+  '',                                                    // 16
+  '    public CodeMetricsService(MetricsRepository repo, ReportGenerator generator) {', // 17
+  '        this.repo = repo;',                           // 18
+  '        this.generator = generator;',                 // 19
+  '    }',                                               // 20
+  '',                                                    // 21
+  '    /**',                                             // 22
+  '     * 计算代码重复率',                                 // 23
+  '     */',                                             // 24
+  '    public DuplicationResult calculateDuplication(ScanContext ctx) {', // 25
+  '        List<FileDetail> files = ctx.getFiles();',    // 26
+  '        DuplicationResult result = new DuplicationResult();', // 27
+  '        for (FileDetail file : files) {',             // 28
+  '            if (file.getLines() < 10) continue;',     // 29
+  '            double rate = computeRate(file);',         // 30
+  '            result.addFileRate(file.getPath(), rate);', // 31
+  '        }',                                           // 32
+  '        return result;',                              // 33
+  '    }',                                               // 34
+  '',                                                    // 35
+  '    private double computeRate(FileDetail file) {',   // 36
+  '        int totalLines = file.getLines();',           // 37
+  '        int dupLines = file.getDuplicationLines();',  // 38
+  '        return totalLines > 0 ? (double) dupLines / totalLines : 0.0;', // 39
+  '    }',                                               // 40
+  '',                                                    // 41
+  '    /**',                                             // 42
+  '     * 获取文件详细指标',                               // 43
+  '     */',                                             // 44
+  '    public FileMetricDetail getFileDetail(String path) {', // 45
+  '        return repo.findByPath(path);',               // 46
+  '    }',                                               // 47
+  '',                                                    // 48
+  '    public void saveReport(ScanReport report) {',     // 49
+  '        repo.save(report);',                           // 50
+  '        generator.notify(report.getId());',            // 51
+  '    }',                                               // 52
+  '',                                                    // 53
+  '    // ===== 以下为重复代码区域（块1: 行58-70）=====',   // 54
+  '',                                                    // 55
+  '    /**',                                             // 56
+  '     * 扫描并分析代码重复',                             // 57
+  '     */',                                             // 58
+  '    public ScanResult scanAndAnalyze(ScanConfig config) {', // 59
+  '        List<String> paths = config.getTargetPaths();', // 60
+  '        ScanResult result = new ScanResult();',        // 61
+  '        for (String path : paths) {',                 // 62
+  '            FileDetail detail = parseFile(path);',     // 63
+  '            if (detail == null) continue;',            // 64
+  '            double rate = computeRate(detail);',       // 65
+  '            result.addEntry(path, rate, detail.getLines());', // 66
+  '        }',                                           // 67
+  '        result.setTimestamp(System.currentTimeMillis());', // 68
+  '        return result;',                              // 69
+  '    }',                                               // 70
+  '',                                                    // 71
+  '    private FileDetail parseFile(String path) {',     // 72
+  '        try {',                                       // 73
+  '            return FileParser.parse(path);',           // 74
+  '        } catch (IOException e) {',                   // 75
+  '            logger.warn("Parse failed: " + path, e);', // 76
+  '            return null;',                            // 77
+  '        }',                                           // 78
+  '    }',                                               // 79
+  '',                                                    // 80
+  '    /**',                                             // 81
+  '     * 扫描并分析代码重复',                             // 82
+  '     */',                                             // 83
+  '    public ScanResult scanAndAnalyze(ScanConfig config) {', // 84
+  '        List<String> paths = config.getTargetPaths();', // 85
+  '        ScanResult result = new ScanResult();',        // 86
+  '        for (String path : paths) {',                 // 87
+  '            FileDetail detail = parseFile(path);',     // 88
+  '            if (detail == null) continue;',            // 89
+  '            double rate = computeRate(detail);',       // 90
+  '            result.addEntry(path, rate, detail.getLines());', // 91
+  '        }',                                           // 92
+  '        result.setTimestamp(System.currentTimeMillis());', // 93
+  '        return result;',                              // 94
+  '    }',                                               // 95
+  '',                                                    // 96
+  '    public void cleanup() {',                          // 97
+  '        repo.clearCache();',                           // 98
+  '    }',                                               // 99
+  '',                                                    // 100
+  '    private static final Logger logger = LoggerFactory.getLogger(CodeMetricsService.class);', // 103
+  '',                                                    // 102
+  '    /**',                                             // 105
+  '     * 生成度量报告',                                   // 106
+  '     */',                                             // 107
+  '    public Report generateReport(ScanResult result, ReportFormat format) {', // 108
+  '        ReportBuilder builder = new ReportBuilder(format);', // 109
+  '        builder.setHeader(result.getTimestamp());',    // 110
+  '        for (ScanEntry entry : result.getEntries()) {', // 111
+  '            builder.addRow(entry.getPath(), entry.getRate(), entry.getLines());', // 112
+  '        }',                                           // 113
+  '        builder.setSummary(result.getTotalRate());',   // 114
+  '        return builder.build();',                      // 115
+  '    }',                                               // 116
+  '',                                                    // 117
+  '    public List<String> listDuplicatedFiles(String repoUrl) {', // 120
+  '        return repo.findDuplicatedFiles(repoUrl);',    // 121
+  '    }',                                               // 122
+  '',                                                    // 123
+  '    @Override',                                       // 128
+  '    public String toString() {',                       // 129
+  '        return "CodeMetricsService{" +',               // 130
+  '            "repo=" + repo +',                         // 131
+  '            \'", generator=" + generator +',           // 132
+  '            \'}\';',                                   // 133
+  '    }',                                               // 134
+  '}',                                                   // 135
+];
+
+// Bar.java 源代码（部分）
+const barLines = [
+  'package com.openlibing.coderepo.controller;',         // 1
+  '',                                                    // 2
+  'import org.springframework.web.bind.annotation.*;',   // 3
+  'import java.util.List;',                              // 4
+  '',                                                    // 5
+  '/**',                                                 // 6
+  ' * 扫描并分析代码重复',                                 // 7
+  ' */',                                                 // 8
+  'public class ScanController {',                       // 9
+  '',                                                    // 10
+  '    public ScanResult scanAndAnalyze(ScanConfig config) {', // 11
+  '        List<String> paths = config.getTargetPaths();', // 12
+  '        ScanResult result = new ScanResult();',        // 13
+  '        for (String path : paths) {',                 // 14
+  '            FileDetail detail = parseFile(path);',     // 15
+  '            if (detail == null) continue;',            // 16
+  '            double rate = computeRate(detail);',       // 17
+  '            result.addEntry(path, rate, detail.getLines());', // 18
+  '        }',                                           // 19
+  '        result.setTimestamp(System.currentTimeMillis());', // 20
+  '        return result;',                              // 21
+  '    }',                                               // 22
+  '',                                                    // 23
+  '    private ScanResult computeRate(FileDetail f) {',   // 24
+  '        return null;',                                // 25
+  '    }',                                               // 26
+  '',                                                    // 28
+  '    /**',                                             // 29
+  '     * 生成度量报告',                                   // 30
+  '     */',                                             // 31
+  '    public Report generateReport(ScanResult result, ReportFormat format) {', // 32
+  '        ReportBuilder builder = new ReportBuilder(format);', // 33
+  '        builder.setHeader(result.getTimestamp());',    // 34
+  '        for (ScanEntry entry : result.getEntries()) {', // 35
+  '            builder.addRow(entry.getPath(), entry.getRate(), entry.getLines());', // 36
+  '        }',                                           // 37
+  '        builder.setSummary(result.getTotalRate());',   // 38
+  '        return builder.build();',                      // 39
+  '    }',                                               // 40
+  '',                                                    // 41
+  '}',                                                   // 42
+];
+
+// 重复块数据
+// occurrences 包含所有出现位置，但 drawer 只展示非来源的其他位置
+// isSameFile=true 表示与源文件相同的其他位置（同文件内重复）
+const duplicationBlocks = {
+  'Foo.java': [
+    {
+      groupId: 'g1',
+      currentFile: 'Foo.java',
+      startLine: 58,
+      endLine: 70,
+      occurrences: [
+        { filePath: 'Foo.java', startLine: 58, endLine: 70, lines: fooLines, label: 'Foo:58-70', isSource: true, isSameFile: false },
+        { filePath: 'Foo.java', startLine: 80, endLine: 95, lines: fooLines, label: 'Foo:80-95', isSource: false, isSameFile: true },
+        { filePath: 'Bar.java', startLine: 5, endLine: 22, lines: barLines, label: 'Bar:5-22', isSource: false, isSameFile: false },
+      ]
+    },
+    {
+      groupId: 'g2',
+      currentFile: 'Foo.java',
+      startLine: 105,
+      endLine: 116,
+      occurrences: [
+        { filePath: 'Foo.java', startLine: 105, endLine: 116, lines: fooLines, label: 'Foo:105-116', isSource: true, isSameFile: false },
+        { filePath: 'Bar.java', startLine: 29, endLine: 40, lines: barLines, label: 'Bar:29-40', isSource: false, isSameFile: false },
+      ]
+    }
+  ]
+};
+
+// ======================== 状态管理 ========================
+
+let currentFile = 'Foo.java';
+let currentBlockIndex = 0;
+let panelMode = 'closed';     // 'closed' | 'half' | 'full'
+let activeTabIndex = 0;
+const CONTEXT_LINES = 5;
+
+// ======================== 页面导航 ========================
+
+function openCodeView(fileName) {
+  currentFile = fileName;
+  currentBlockIndex = 0;
+  activeTabIndex = 0;
+  panelMode = 'half';
+
+  updateSidePanel();
+  renderSourceView();
+  closeDrawer();
+}
+
+function closeSidePanel() {
+  panelMode = 'closed';
+  updateSidePanel();
+}
+
+// ======================== 侧边页尺寸控制 ========================
+
+function toggleSize() {
+  if (panelMode === 'half') {
+    panelMode = 'full';
+  } else if (panelMode === 'full') {
+    panelMode = 'half';
+  }
+  // 放大/缩小只切换面板宽度，不改变 drawer 的开关状态
+  updateSidePanel();
+}
+
+function updateSidePanel() {
+  var sp = document.getElementById('side-panel');
+  sp.classList.remove('half', 'full');
+  if (panelMode === 'half') sp.classList.add('half');
+  else if (panelMode === 'full') sp.classList.add('full');
+
+  // 更新按钮文字
+  var btn = document.getElementById('size-btn');
+  if (panelMode === 'half') {
+    btn.textContent = '⤢ 放大';
+    btn.title = '放大';
+  } else if (panelMode === 'full') {
+    btn.textContent = '⤈ 缩小';
+    btn.title = '缩小';
+  }
+}
+
+// ======================== Drawer 控制 ========================
+
+function openDrawer() {
+  document.getElementById('drawer-panel').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawer-panel').classList.remove('open');
+}
+
+// ======================== 渲染源文件代码视图 ========================
+
+function renderSourceView() {
+  var blocks = duplicationBlocks[currentFile] || [];
+  var fileNameEl = document.getElementById('source-file-name');
+  var topFileNameEl = document.getElementById('current-file-name');
+  var codeEl = document.getElementById('source-code');
+
+  fileNameEl.textContent = 'src/main/' + currentFile;
+  topFileNameEl.textContent = 'src/main/' + currentFile;
+
+  var allLines;
+  if (currentFile === 'Foo.java') allLines = fooLines;
+  else if (currentFile === 'Bar.java') allLines = barLines;
+  else allLines = [];
+
+  // 收集需要展示的行号区间（重复块 ± 5行上下文）
+  var segments = [];
+  blocks.forEach(function(block, idx) {
+    var ctxStart = Math.max(1, block.startLine - CONTEXT_LINES);
+    var ctxEnd = Math.min(allLines.length, block.endLine + CONTEXT_LINES);
+    segments.push({ start: ctxStart, end: ctxEnd, blockIdx: idx });
+  });
+
+  // 合并重叠/相邻区间
+  segments.sort(function(a, b) { return a.start - b.start; });
+  var merged = [];
+  for (var i = 0; i < segments.length; i++) {
+    var seg = segments[i];
+    if (merged.length > 0 && seg.start <= merged[merged.length - 1].end + 1) {
+      var last = merged[merged.length - 1];
+      last.end = Math.max(last.end, seg.end);
+    } else {
+      merged.push({ start: seg.start, end: seg.end });
+    }
+  }
+
+  // 渲染
+  var html = '';
+  var prevEnd = 0;
+
+  for (var mi = 0; mi < merged.length; mi++) {
+    var seg = merged[mi];
+    if (seg.start > prevEnd + 1) {
+      var omitted = seg.start - prevEnd - 1;
+      html += '<div class="code-line omitted"><span class="line-num">...</span><span class="line-content">... ' + omitted + ' lines omitted ...</span></div>';
+    }
+
+    for (var li = seg.start; li <= seg.end; li++) {
+      var lineText = li <= allLines.length ? escapeHtml(allLines[li - 1]) : '';
+      var isDuplicate = blocks.some(function(b) { return li >= b.startLine && li <= b.endLine; });
+      var isActiveBlock = blocks[currentBlockIndex] && li >= blocks[currentBlockIndex].startLine && li <= blocks[currentBlockIndex].endLine;
+
+      var lineClass = 'code-line';
+      if (isActiveBlock) lineClass += ' highlight-active';
+      else if (isDuplicate) lineClass += ' highlight-block';
+
+      // 重复块起始行添加可点击指示器（展示该组所有非当前点击位置的出现数，含同文件其他位置）
+      var indicator = '';
+      blocks.forEach(function(b, idx) {
+        if (li === b.startLine) {
+          var nonSourceCount = getNonSourceOccurrences(b).length;
+          indicator = '<span class="dup-indicator" onclick="selectBlock(' + idx + ')">&#9654; ' + nonSourceCount + ' 个位置</span>';
+        }
+      });
+
+      html += '<div class="' + lineClass + '" data-orig-line="' + li + '" onclick="onLineClick(' + li + ')"><span class="line-num">' + li + '</span><span class="line-content">' + lineText + indicator + '</span></div>';
+    }
+
+    prevEnd = seg.end;
+  }
+
+  if (prevEnd < allLines.length) {
+    var omitted = allLines.length - prevEnd;
+    html += '<div class="code-line omitted"><span class="line-num">...</span><span class="line-content">... ' + omitted + ' lines omitted ...</span></div>';
+  }
+
+  codeEl.innerHTML = html;
+  updateBlockCounter();
+}
+
+// ======================== 点击行处理 ========================
+
+function onLineClick(lineNum) {
+  var blocks = duplicationBlocks[currentFile] || [];
+  var blockIdx = blocks.findIndex(function(b) { return lineNum >= b.startLine && lineNum <= b.endLine; });
+  if (blockIdx >= 0) {
+    selectBlock(blockIdx);
+  }
+}
+
+// ======================== 选中重复块 ========================
+
+function selectBlock(idx) {
+  var blocks = duplicationBlocks[currentFile] || [];
+  if (idx < 0 || idx >= blocks.length) return;
+
+  currentBlockIndex = idx;
+
+  // 默认选中第一个非来源 tab
+  activeTabIndex = 0;
+
+  // 打开 Drawer + 展开为全页（点击代码块时自动全页）
+  openDrawer();
+  panelMode = 'full';
+  updateSidePanel();
+
+  // 重新渲染源文件（更新高亮）
+  renderSourceView();
+
+  // 渲染 Drawer
+  renderDrawer();
+
+  // 滚动到当前高亮块
+  scrollToActiveBlock();
+}
+
+// 获取非来源的出现位置（drawer 只展示这些）
+function getNonSourceOccurrences(block) {
+  return block.occurrences.filter(function(o) { return !o.isSource; });
+}
+
+// ======================== 渲染 Drawer ========================
+
+function renderDrawer() {
+  var blocks = duplicationBlocks[currentFile] || [];
+  var block = blocks[currentBlockIndex];
+  if (!block) return;
+
+  // 只展示非来源的出现位置
+  var nonSourceOccs = getNonSourceOccurrences(block);
+
+  // 标题
+  var titleEl = document.getElementById('drawer-title');
+  titleEl.textContent = '重复代码块 (' + nonSourceOccs.length + ' 个位置)';
+
+  // Tab 栏（不含来源 tab，同文件其他位置标注"同文件"标识）
+  var tabBar = document.getElementById('tab-bar');
+  var tabHtml = '';
+  nonSourceOccs.forEach(function(occ, idx) {
+    var isActive = idx === activeTabIndex;
+    var tabClass = 'tab-item' + (isActive ? ' active' : '');
+    var badges = '';
+    if (occ.isSameFile) badges += '<span class="same-file-badge">同文件</span>';
+    if (isActive) badges += '<span class="current-badge">当前</span>';
+    tabHtml += '<div class="' + tabClass + '" onclick="switchTab(' + idx + ')">' + occ.label + badges + '</div>';
+  });
+  tabBar.innerHTML = tabHtml;
+
+  // 代码内容
+  renderDrawerCode();
+
+  // 更新计数
+  updateBlockCounter();
+}
+
+function renderDrawerCode() {
+  var blocks = duplicationBlocks[currentFile] || [];
+  var block = blocks[currentBlockIndex];
+  if (!block) return;
+
+  var nonSourceOccs = getNonSourceOccurrences(block);
+  var occ = nonSourceOccs[activeTabIndex];
+  if (!occ) return;
+
+  var codeEl = document.getElementById('drawer-code');
+  var allLines = occ.lines;
+
+  // 计算上下文范围
+  var ctxStart = Math.max(1, occ.startLine - CONTEXT_LINES);
+  var ctxEnd = Math.min(allLines.length, occ.endLine + CONTEXT_LINES);
+
+  var html = '';
+
+  // 上方省略
+  if (ctxStart > 1) {
+    html += '<div class="code-line omitted"><span class="line-num">...</span><span class="line-content">... ' + (ctxStart - 1) + ' lines omitted ...</span></div>';
+  }
+
+  // 渲染上下文 + 重复块 + 上下文
+  for (var i = ctxStart; i <= ctxEnd; i++) {
+    var lineText = i <= allLines.length ? escapeHtml(allLines[i - 1]) : '';
+    var isDuplicate = i >= occ.startLine && i <= occ.endLine;
+
+    var lineClass = 'code-line';
+    if (isDuplicate) lineClass += ' highlight-active';
+
+    html += '<div class="' + lineClass + '"><span class="line-num">' + i + '</span><span class="line-content">' + lineText + '</span></div>';
+  }
+
+  // 下方省略
+  if (ctxEnd < allLines.length) {
+    html += '<div class="code-line omitted"><span class="line-num">...</span><span class="line-content">... ' + (allLines.length - ctxEnd) + ' lines omitted ...</span></div>';
+  }
+
+  codeEl.innerHTML = html;
+}
+
+// ======================== Tab 切换 ========================
+
+function switchTab(idx) {
+  activeTabIndex = idx;
+  renderDrawer();
+}
+
+// ======================== 块导航（上一个/下一个） ========================
+
+function navigateBlock(direction) {
+  var blocks = duplicationBlocks[currentFile] || [];
+  if (blocks.length === 0) return;
+
+  var newIdx = currentBlockIndex + direction;
+  if (newIdx < 0) newIdx = blocks.length - 1;
+  if (newIdx >= blocks.length) newIdx = 0;
+
+  selectBlock(newIdx);
+}
+
+// ======================== 滚动到当前高亮块 ========================
+
+function scrollToActiveBlock() {
+  var codeEl = document.getElementById('source-code');
+  var activeLine = codeEl.querySelector('.highlight-active');
+  if (activeLine) {
+    activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+// ======================== 更新计数器（显示 tab 计数） ========================
+
+function updateBlockCounter() {
+  var blocks = duplicationBlocks[currentFile] || [];
+  var block = blocks[currentBlockIndex];
+  var counter = document.getElementById('block-counter');
+  var prevBtn = document.getElementById('prev-tab-btn');
+  var nextBtn = document.getElementById('next-tab-btn');
+
+  if (!block) {
+    counter.textContent = '0/0';
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
+    return;
+  }
+
+  var nonSourceOccs = getNonSourceOccurrences(block);
+  var total = nonSourceOccs.length;
+  counter.textContent = total > 0 ? (activeTabIndex + 1) + '/' + total : '0/0';
+
+  // 只有一个 tab 时按钮置灰
+  prevBtn.disabled = (total <= 1);
+  nextBtn.disabled = (total <= 1);
+}
+
+// ======================== Tab 导航（drawer 内上一个/下一个 tab） ========================
+
+function navigateTab(direction) {
+  var blocks = duplicationBlocks[currentFile] || [];
+  var block = blocks[currentBlockIndex];
+  if (!block) return;
+
+  var nonSourceOccs = getNonSourceOccurrences(block);
+  if (nonSourceOccs.length <= 1) return;
+
+  var newIdx = activeTabIndex + direction;
+  if (newIdx < 0) newIdx = nonSourceOccs.length - 1;
+  if (newIdx >= nonSourceOccs.length) newIdx = 0;
+
+  activeTabIndex = newIdx;
+  renderDrawer();
+}
+
+// ======================== 工具函数 ========================
+
+function escapeHtml(text) {
+  var div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-07-14
+source-commit: de45402cf4237f9c12a0f7f76098ef379ddeaae5
+source-branch: feature-sca-wt
+source-file: apps/web-openlibing/src/views/sca/softInformation/gitUrlList.vue
