@@ -22,6 +22,7 @@
   - 新增 `triggerStaticCheckList()` 辅助方法，immediate watch 首次触发时用 `$nextTick` 兜底 refs 未挂载
 
 ## 验证方式
+
 - 人工验证：切换项目时观察列表是否立即刷新（不等下拉）；首次进入页面列表是否正常加载
 - 人工验证：StaticDetail fulltask 首屏三个图表是否正常展示
 - 无单元测试（纯页面交互逻辑，行为变化通过人工验证）
