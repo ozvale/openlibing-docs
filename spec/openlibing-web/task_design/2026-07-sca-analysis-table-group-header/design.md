@@ -8,13 +8,40 @@
 
 ```js
 export const columnGroups = [
-  { label: '源代码', ids: ['fileName', 'detail', 'type', 'lines'] },
-  { label: '开源软件代码', ids: ['ossLines', 'vendor', 'component', 'version', 'purl', 'file', 'licenses', 'clarifyConfirmType'] },
-  { label: '分析及审核结果', ids: ['clarifyType', 'matched', 'reviewStatus', 'riskLevel', 'committerType', 'vulnerLeveList', 'clarifyAuthor', 'applyTime', 'reviewUserName', 'reviewTime'] },
+  { label: "源代码", ids: ["fileName", "detail", "type", "lines"] },
+  {
+    label: "开源软件代码",
+    ids: [
+      "ossLines",
+      "vendor",
+      "component",
+      "version",
+      "purl",
+      "file",
+      "licenses",
+      "clarifyConfirmType",
+    ],
+  },
+  {
+    label: "分析及审核结果",
+    ids: [
+      "clarifyType",
+      "matched",
+      "reviewStatus",
+      "riskLevel",
+      "committerType",
+      "vulnerLeveList",
+      "clarifyAuthor",
+      "applyTime",
+      "reviewUserName",
+      "reviewTime",
+    ],
+  },
 ];
 ```
 
 分组依据用户语义划分：
+
 - 源代码：含「代码行」，到 `lines` 为止
 - 开源软件代码：从「开源软件代码行」开始，到「分析结果」之前
 - 分析及审核结果：含「分析结果」到末尾
@@ -41,6 +68,7 @@ export const columnGroups = [
 ```
 
 要点：
+
 - 父列只给 `label`，不渲染内容；子列继承原所有属性与 slot
 - 子列过滤条件在原 `it.show` 基础上加 `group.ids.includes(it.id)`，保证列设置弹框勾选/取消仍生效（`show` 字段控制显隐，分组只决定归属）
 - `columnGroups` 通过 `table.columnGroups` 暴露给模板（与 `table.column` 同级挂载）

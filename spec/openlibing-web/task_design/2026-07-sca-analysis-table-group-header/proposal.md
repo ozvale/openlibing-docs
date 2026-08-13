@@ -28,13 +28,13 @@ SCA 模块下的"合法合规分析表"（`analysisTable.config.js` 的 `column`
 
 ## 影响范围
 
-| 文件 | 变更类型 | 说明 |
-|------|---------|------|
-| `apps/web-openlibing/src/views/sca/analysisTable.config.js` | 功能新增 | 新增 `columnGroups` 导出 |
-| `apps/web-openlibing/src/views/sca/softInformation/gitUrlList.vue` | 功能新增 | import columnGroups；table 挂载 columnGroups；template 外层加父 el-table-column 包裹 |
-| `apps/web-openlibing/src/views/sca/PRComponentAnalysis/components/openSourceCompliance/analysisTable.vue` | 功能新增 | 同上 |
-| `apps/web-openlibing/src/views/sca/personalScandTaskInfor/analysisTable.vue` | 功能新增 | 同上 |
-| `apps/web-openlibing/nginx/nginx_gamma.conf` | 格式调整 | `/argus` 块缩进统一为 18 空格 |
+| 文件                                                                                                      | 变更类型 | 说明                                                                                 |
+| --------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------ |
+| `apps/web-openlibing/src/views/sca/analysisTable.config.js`                                               | 功能新增 | 新增 `columnGroups` 导出                                                             |
+| `apps/web-openlibing/src/views/sca/softInformation/gitUrlList.vue`                                        | 功能新增 | import columnGroups；table 挂载 columnGroups；template 外层加父 el-table-column 包裹 |
+| `apps/web-openlibing/src/views/sca/PRComponentAnalysis/components/openSourceCompliance/analysisTable.vue` | 功能新增 | 同上                                                                                 |
+| `apps/web-openlibing/src/views/sca/personalScandTaskInfor/analysisTable.vue`                              | 功能新增 | 同上                                                                                 |
+| `apps/web-openlibing/nginx/nginx_gamma.conf`                                                              | 格式调整 | `/argus` 块缩进统一为 18 空格                                                        |
 
 单仓前端改动，无接口/数据模型/鉴权变化。
 
