@@ -21,6 +21,7 @@
 ### 1.1 问题域
 
 代码重复率指标当前只能下钻到「文件粒度」（文件路径 + 重复率 + 重复行数），用户无法看到：
+
 - 重复代码在源文件中的具体行号区间
 - 与之重复的配对文件路径与行号区间
 - 重复代码的具体内容
@@ -33,12 +34,12 @@
 
 代码缓存策略是本需求最关键的架构决策。围绕"用户代码是否缓存到数据库、缓存多少"，给出 4 个候选方案：
 
-| 方案 | 完整文件来源 | 重复块存储 | 优点 | 缺点 |
-|------|------|------|------|------|
-| **A. 实时拉取 + 不存代码** | Git 平台 API 实时拉取 | 只存行号区间 | DB 零增长、代码永远最新 | 慢、依赖 Git 平台可用性、API 限流、历史扫描时点代码无法复现、行号会因代码变更而错位 |
-| **B. 全量缓存** | 编码入库（全文件） | 编码入库 | 完整可追溯、行号严格对齐 | DB 膨胀严重、隐私风险大、上报体量大、同一文件未变更时多次冗余存储 |
-| **C. 只存重复块 + 完整文件实时拉取** | Git 平台 API 拉取（带短缓存） | 编码入库 | DB 体积可控、隐私风险低 | 完整文件查看仍依赖 Git 平台、历史代码可能错位（用户看 N 天前扫描结果，代码已变更） |
-| **D. 只存重复块 + 上下文片段快照（无 TTL，长期保留）** ✅ | 编码入库（仅重复块±5行上下文，长期保留），其他部分以 `...` 占位 | 编码入库 | 可追溯、行号严格对齐（通过 lineMapping 映射）、DB 体积大幅压缩（大文件省 90%+）、隐私风险低、历史记录完整可查 | 实现复杂度增加（需拼接展示代码 + 行号映射）、DB 有一定膨胀（用上下文 ±5 行 + 片段合并控制） |
+| 方案                                                      | 完整文件来源                                                    | 重复块存储   | 优点                                                                                                          | 缺点                                                                                        |
+| --------------------------------------------------------- | --------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **A. 实时拉取 + 不存代码**                                | Git 平台 API 实时拉取                                           | 只存行号区间 | DB 零增长、代码永远最新                                                                                       | 慢、依赖 Git 平台可用性、API 限流、历史扫描时点代码无法复现、行号会因代码变更而错位         |
+| **B. 全量缓存**                                           | 编码入库（全文件）                                              | 编码入库     | 完整可追溯、行号严格对齐                                                                                      | DB 膨胀严重、隐私风险大、上报体量大、同一文件未变更时多次冗余存储                           |
+| **C. 只存重复块 + 完整文件实时拉取**                      | Git 平台 API 拉取（带短缓存）                                   | 编码入库     | DB 体积可控、隐私风险低                                                                                       | 完整文件查看仍依赖 Git 平台、历史代码可能错位（用户看 N 天前扫描结果，代码已变更）          |
+| **D. 只存重复块 + 上下文片段快照（无 TTL，长期保留）** ✅ | 编码入库（仅重复块±5行上下文，长期保留），其他部分以 `...` 占位 | 编码入库     | 可追溯、行号严格对齐（通过 lineMapping 映射）、DB 体积大幅压缩（大文件省 90%+）、隐私风险低、历史记录完整可查 | 实现复杂度增加（需拼接展示代码 + 行号映射）、DB 有一定膨胀（用上下文 ±5 行 + 片段合并控制） |
 
 ### 1.3 推荐方案：D
 
@@ -78,27 +79,28 @@
 ```
 
 核心流程：
+
 1. **采集**：插件扫描时，对每个"重复块组"（同一代码内容在多个位置出现）记录所有出现位置（file + startLine + endLine + 代码内容），Base64 编码后上报；同时对有重复的文件提取"重复块 ±5 行上下文片段"（合并重叠区间），Base64 编码为 JSON，**随该文件的 `fileDetail` 一起上报**（存入 `fileDetail.snapshotData` 字段）。
 2. **存储**：后端把每个出现位置存为一行到 `code_metrics_duplication_block`（长期，按 group_id 关联同一组，group_id = content 的 SHA-256）；上下文片段 JSON 存入 `code_metrics_file_detail.snapshot_data` 字段（长期保留，不存完整文件）。**不再单独建 `code_metrics_file_snapshot` 表**——快照数据直接挂在 file_detail 上，一对一关系更简洁，且无需 `content_hash` 去重（每个 file_detail 只对应自身一份快照）。
 3. **展示**：前端点击文件路径 → 调 `file-content` 接口拿到上下文片段拼接的展示代码 + lineMapping 行号映射 + 该文件所有重复块元信息 → monaco-editor 渲染 + 用 lineMapping 转换行号后高亮；点击高亮块 → 调 `duplication-block/detail`（按 groupId）拿到该组所有出现位置 → drawer 以多页签展示，每个 tab 对应一个出现位置。
 
 ### 1.5 关键决策汇总
 
-| 决策点 | 选择 | 理由 |
-|--------|------|------|
-| 缓存策略 | 方案 D（重复块长期 + 文件快照存 file_detail，无 TTL） | 上下文片段 ±5 行已大幅压缩体积，无需 TTL；优先保证用户能看到完整的历史记录 |
-| 编码方式 | Base64 + 两阶段回检验证 | 与 codecheck 平台一致，防日志明文泄露 |
-| hash 算法 | SHA-256（hex 编码，64 字符） | 用于 `code_metrics_duplication_block.group_id` 分组（非安全用途），SHA-256 消除"已知不安全算法"的 review 争议，字段长度 VARCHAR(64) 刚好适配 |
-| 快照范围 | 仅缓存"有重复文件"的**上下文片段**（重复块 ±5 行，其他部分 `...` 占位） | 节省存储（大文件节省 90%+）；安全提升（DBA 解码后只能看片段，无法还原完整文件）；前端通过 lineMapping 转换行号实现高亮和跳转 |
-| 快照存储位置 | `code_metrics_file_detail.snapshot_data` 字段（不单独建表） | 快照与文件明细一对一，直接挂载更简洁；无需 `content_hash` 去重；减少一张表和 JOIN 开销 |
-| 重复块存储模型 | "出现位置"表 `code_metrics_duplication_block`，按 group_id 关联 | 干净支撑"一块对多位置"（含同文件多位置），前端多页签直接映射 |
-| 上报分批 | 单批 ≤ 5000 块 / ≤ 10MB，**实际实现为独立接口 `/metrics/code/duplication-blocks`**（超过单批时首批随 `/report` 上报，后续批次走该接口） | 与 APIG 网关限制对齐；独立接口避免重复解析主报告体 |
-| 降级策略 | 快照未命中（旧 record 无 snapshot_data）即提示"该记录无代码快照"（不做 Git API 降级） | 避免行号错位误导用户；重复块代码片段（长期保留）仍可在 drawer 查看 |
-| 文件代码视图 | **实际实现返回 `segments` 片段列表**（前端用 `originalStartLine` 直接渲染行号，省略行数由前端按相邻片段差计算），**不再返回 content + lineMapping** | 结构更简单，行号天然对齐，前端控制省略占位 |
-| 重复块详情定位 | `DuplicationBlockQueryDTO` **实际新增 `branchName`、`pipelineRunId`、`sourceBlockId`**；`sourceBlockId` 用于**交集定位**（同组各 occurrence 行数可能不同，以其代码块内容为基准在其他 occurrence 中取交集匹配子区间，返回交集行号 ±5 行上下文，精确高亮"真正重复"部分） | 避免同 group_id 跨多次扫描混淆；解决 union-find 分组导致的行数不一致，精确高亮 |
-| drawer 交互 | 多页签 tabs（每个 tab 一个出现位置） | 用户在所有重复位置间切换查看 |
-| `repository` 字段 | **DTO/Entity 移除 `repository` 字段，DB 层 `code_metrics_record.repository` 列保留不 drop（便于回滚）** | 写死 source-dir 后插件只能扫描工作流所在仓，git_url 即扫描仓，`repository`（owner/repo）字段冗余无用；DB 列保留以降低回滚成本 |
-| 上报返回值 | `reportMetrics` **返回 `String` 类型的 recordId**（实际实现） | 雪花 ID 超过 JS Number 安全整数范围（2^53-1），用 String 避免前端/插件精度溢出 |
+| 决策点            | 选择                                                                                                                                                                                                                                                                   | 理由                                                                                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 缓存策略          | 方案 D（重复块长期 + 文件快照存 file_detail，无 TTL）                                                                                                                                                                                                                  | 上下文片段 ±5 行已大幅压缩体积，无需 TTL；优先保证用户能看到完整的历史记录                                                                   |
+| 编码方式          | Base64 + 两阶段回检验证                                                                                                                                                                                                                                                | 与 codecheck 平台一致，防日志明文泄露                                                                                                        |
+| hash 算法         | SHA-256（hex 编码，64 字符）                                                                                                                                                                                                                                           | 用于 `code_metrics_duplication_block.group_id` 分组（非安全用途），SHA-256 消除"已知不安全算法"的 review 争议，字段长度 VARCHAR(64) 刚好适配 |
+| 快照范围          | 仅缓存"有重复文件"的**上下文片段**（重复块 ±5 行，其他部分 `...` 占位）                                                                                                                                                                                                | 节省存储（大文件节省 90%+）；安全提升（DBA 解码后只能看片段，无法还原完整文件）；前端通过 lineMapping 转换行号实现高亮和跳转                 |
+| 快照存储位置      | `code_metrics_file_detail.snapshot_data` 字段（不单独建表）                                                                                                                                                                                                            | 快照与文件明细一对一，直接挂载更简洁；无需 `content_hash` 去重；减少一张表和 JOIN 开销                                                       |
+| 重复块存储模型    | "出现位置"表 `code_metrics_duplication_block`，按 group_id 关联                                                                                                                                                                                                        | 干净支撑"一块对多位置"（含同文件多位置），前端多页签直接映射                                                                                 |
+| 上报分批          | 单批 ≤ 5000 块 / ≤ 10MB，**实际实现为独立接口 `/metrics/code/duplication-blocks`**（超过单批时首批随 `/report` 上报，后续批次走该接口）                                                                                                                                | 与 APIG 网关限制对齐；独立接口避免重复解析主报告体                                                                                           |
+| 降级策略          | 快照未命中（旧 record 无 snapshot_data）即提示"该记录无代码快照"（不做 Git API 降级）                                                                                                                                                                                  | 避免行号错位误导用户；重复块代码片段（长期保留）仍可在 drawer 查看                                                                           |
+| 文件代码视图      | **实际实现返回 `segments` 片段列表**（前端用 `originalStartLine` 直接渲染行号，省略行数由前端按相邻片段差计算），**不再返回 content + lineMapping**                                                                                                                    | 结构更简单，行号天然对齐，前端控制省略占位                                                                                                   |
+| 重复块详情定位    | `DuplicationBlockQueryDTO` **实际新增 `branchName`、`pipelineRunId`、`sourceBlockId`**；`sourceBlockId` 用于**交集定位**（同组各 occurrence 行数可能不同，以其代码块内容为基准在其他 occurrence 中取交集匹配子区间，返回交集行号 ±5 行上下文，精确高亮"真正重复"部分） | 避免同 group_id 跨多次扫描混淆；解决 union-find 分组导致的行数不一致，精确高亮                                                               |
+| drawer 交互       | 多页签 tabs（每个 tab 一个出现位置）                                                                                                                                                                                                                                   | 用户在所有重复位置间切换查看                                                                                                                 |
+| `repository` 字段 | **DTO/Entity 移除 `repository` 字段，DB 层 `code_metrics_record.repository` 列保留不 drop（便于回滚）**                                                                                                                                                                | 写死 source-dir 后插件只能扫描工作流所在仓，git_url 即扫描仓，`repository`（owner/repo）字段冗余无用；DB 列保留以降低回滚成本                |
+| 上报返回值        | `reportMetrics` **返回 `String` 类型的 recordId**（实际实现）                                                                                                                                                                                                          | 雪花 ID 超过 JS Number 安全整数范围（2^53-1），用 String 避免前端/插件精度溢出                                                               |
 
 ## 2. 实现逻辑设计
 
@@ -109,6 +111,7 @@
 现状：[DuplicationDetector.js](file:///d:/Develop/Java/openlibing-cicd-test-new/.gitcode/actions/code-metrics-action/dist/detectors/DuplicationDetector.js) 的 `detectWithTokenLevel` 只产出"文件 → 重复行号集合"，没有显式的"重复块"概念。**原插件只检测跨文件重复**（同一 hash 在 2+ 个不同文件出现才计入，同文件内重复不算），**本次需求同步修复该逻辑，改为同文件中发现重复代码块也算**（`if (locations.length < 2) continue`，2+ 个出现位置即计为重复，含同文件内重复）。
 
 改造后流程：
+
 ```
 detectWithTokenLevel(files):
   Step 1: 分词 + 滑动窗口哈希（不变）
@@ -139,6 +142,7 @@ jscpd 的 `clone.duplicationA / duplicationB` 已有显式 `start.line / end.lin
 #### 2.1.4 上报逻辑
 
 [CoderepoUploader.js](file:///d:/Develop/Java/openlibing-cicd-test-new/.gitcode/actions/code-metrics-action/dist/uploaders/CoderepoUploader.js) 改造：
+
 - 上报前对出现位置代码内容 / 快照内容做 Base64 编码
 - 单批 `duplicationOccurrences` ≤ 5000 条，超过递归分批
 - **快照数据随 `fileDetails` 一起上报**（每个 fileDetail 携带自身的 `snapshotData`），不再单独上报文件快照，避免混批
@@ -250,11 +254,18 @@ DuplicationCodeView.vue onMounted:
 ```
 
 **行号映射转换工具函数**（前端）：
+
 ```typescript
 // originalLine → displayLine，用 lineMapping 查找所属 segment
-function toDisplayLine(originalLine: number, lineMapping: LineMapping[]): number | null {
+function toDisplayLine(
+  originalLine: number,
+  lineMapping: LineMapping[],
+): number | null {
   for (const seg of lineMapping) {
-    if (originalLine >= seg.originalStartLine && originalLine <= seg.originalEndLine) {
+    if (
+      originalLine >= seg.originalStartLine &&
+      originalLine <= seg.originalEndLine
+    ) {
       return seg.displayStartLine + (originalLine - seg.originalStartLine);
     }
   }
@@ -283,6 +294,7 @@ DuplicationBlockDrawer.vue:
 ```
 
 **多页签设计要点**：
+
 - 一个重复块组有 N 个出现位置 → drawer 只展示 N-1 个 tab（排除来源位置，因为主视图已展示）
 - 每个 tab 标签：`basename(filePath) + ':' + startLine + '-' + endLine`（如 `Foo.java:80-95`）
 - **同文件其他位置**的 tab 额外显示"同文件"蓝色 badge（如 `Foo:80-95 [同文件]`），便于用户区分同文件内重复和跨文件重复
@@ -564,16 +576,16 @@ public class DuplicationBlockVO {
 
 #### 3.1.6 现有类扩展
 
-| 类 | 改动 |
-|------|------|
-| [CodeMetricsReportDTO](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/dto/metrics/CodeMetricsReportDTO.java) | 新增 `DuplicationOccurrenceDTO` 内部类 + `duplicationOccurrences` 字段；**移除 `repository` 字段**（写死 source-dir 后冗余）；`FileDetailDTO` 新增 `snapshotData` 字段（随文件明细上报上下文片段）；`IdenticalFileDetailDTO` **移除 `filePath` 字段**（每组只保留 `duplicatedFiles` 数组，含组内所有文件）；**移除 `FileSnapshotDTO` 内部类和 `fileSnapshots` 字段**（快照随 fileDetails 上报） |
-| [CodeMetricsFileDetailEntity](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/entity/metrics/CodeMetricsFileDetailEntity.java) | 新增 `snapshotData` 字段（`@TableField("snapshot_data")`），存储上下文片段 JSON |
-| [CodeMetricsRecordEntity](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/entity/metrics/CodeMetricsRecordEntity.java) | **移除 `repository` 字段** |
-| [CodeMetricsRecordMapper.xml](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/resources/mapper/CodeMetricsRecordMapper.xml) | resultMap 和 SELECT 语句移除 `repository` 列 |
-| [FileMetricDetailVO.DuplicationRateItem](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/vo/FileMetricDetailVO.java#L107-L121) | 新增 `duplicationBlockCount`、`hasSnapshot` 字段 |
-| [CodeMetricsService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/CodeMetricsService.java) | 新增 `getFileContent(query)`、`getDuplicationBlockDetail(query)` 方法 |
-| [CodeMetricsServiceImpl](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/impl/CodeMetricsServiceImpl.java) | 实现新方法 + `saveDuplicationBlocks`；**不再实现 `saveFileSnapshots`**（快照随 `saveFileDetails` 入库）；`appendMetricItems` TOTAL_CODE_DUPLICATION_RATE 分支补充查询；`saveIdenticalFileDetails` 适配新结构（无 filePath） |
-| [CodeMetricsController](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/CodeMetricsController.java) | 新增 `POST /metrics/code/file-content`、`POST /metrics/code/duplication-block/detail` |
+| 类                                                                                                                                                                             | 改动                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [CodeMetricsReportDTO](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/dto/metrics/CodeMetricsReportDTO.java)                  | 新增 `DuplicationOccurrenceDTO` 内部类 + `duplicationOccurrences` 字段；**移除 `repository` 字段**（写死 source-dir 后冗余）；`FileDetailDTO` 新增 `snapshotData` 字段（随文件明细上报上下文片段）；`IdenticalFileDetailDTO` **移除 `filePath` 字段**（每组只保留 `duplicatedFiles` 数组，含组内所有文件）；**移除 `FileSnapshotDTO` 内部类和 `fileSnapshots` 字段**（快照随 fileDetails 上报） |
+| [CodeMetricsFileDetailEntity](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/entity/metrics/CodeMetricsFileDetailEntity.java) | 新增 `snapshotData` 字段（`@TableField("snapshot_data")`），存储上下文片段 JSON                                                                                                                                                                                                                                                                                                                 |
+| [CodeMetricsRecordEntity](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/entity/metrics/CodeMetricsRecordEntity.java)         | **移除 `repository` 字段**                                                                                                                                                                                                                                                                                                                                                                      |
+| [CodeMetricsRecordMapper.xml](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/resources/mapper/CodeMetricsRecordMapper.xml)                                          | resultMap 和 SELECT 语句移除 `repository` 列                                                                                                                                                                                                                                                                                                                                                    |
+| [FileMetricDetailVO.DuplicationRateItem](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/vo/FileMetricDetailVO.java#L107-L121) | 新增 `duplicationBlockCount`、`hasSnapshot` 字段                                                                                                                                                                                                                                                                                                                                                |
+| [CodeMetricsService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/CodeMetricsService.java)                          | 新增 `getFileContent(query)`、`getDuplicationBlockDetail(query)` 方法                                                                                                                                                                                                                                                                                                                           |
+| [CodeMetricsServiceImpl](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/impl/CodeMetricsServiceImpl.java)             | 实现新方法 + `saveDuplicationBlocks`；**不再实现 `saveFileSnapshots`**（快照随 `saveFileDetails` 入库）；`appendMetricItems` TOTAL_CODE_DUPLICATION_RATE 分支补充查询；`saveIdenticalFileDetails` 适配新结构（无 filePath）                                                                                                                                                                     |
+| [CodeMetricsController](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/CodeMetricsController.java)                 | 新增 `POST /metrics/code/file-content`、`POST /metrics/code/duplication-block/detail`                                                                                                                                                                                                                                                                                                           |
 
 > **不再修改 [XxlJobHandler](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/job/XxlJobHandler.java)**：本需求移除 TTL 清理逻辑，不新增定时任务。
 
@@ -623,6 +635,7 @@ methods:
 ```
 
 **多页签渲染要点**：
+
 - tab 列表来自 `detail.occurrences`
 - tab 标签：`basename(filePath) + ':' + startLine + '-' + endLine`
 - 当前点击位置（`currentBlockId` 匹配的 occurrence）标记"来源"图标
@@ -633,12 +646,15 @@ methods:
 
 ```typescript
 // url.ts 新增
-export const FILE_CONTENT = CODE_REPO + '/metrics/code/file-content';
-export const DUPLICATION_BLOCK_DETAIL = CODE_REPO + '/metrics/code/duplication-block/detail';
+export const FILE_CONTENT = CODE_REPO + "/metrics/code/file-content";
+export const DUPLICATION_BLOCK_DETAIL =
+  CODE_REPO + "/metrics/code/duplication-block/detail";
 
 // api.ts 新增
-export const fileContent: RequestFunc = (a, s) => apiClient.post(urls.FILE_CONTENT, a, s);
-export const duplicationBlockDetail: RequestFunc = (a, s) => apiClient.post(urls.DUPLICATION_BLOCK_DETAIL, a, s);
+export const fileContent: RequestFunc = (a, s) =>
+  apiClient.post(urls.FILE_CONTENT, a, s);
+export const duplicationBlockDetail: RequestFunc = (a, s) =>
+  apiClient.post(urls.DUPLICATION_BLOCK_DETAIL, a, s);
 ```
 
 ### 3.3 插件端类设计（openlibing-cicd-test-new）
@@ -687,22 +703,24 @@ CREATE TABLE code_metrics_duplication_block (
 
 **字段设计说明**：
 
-| 字段 | 设计考量 |
-|------|---------|
-| `id` | 雪花算法生成，避免自增主键在分批插入时的锁竞争 |
-| `record_id` | 关联主表，用于按扫描批次查询/删除 |
-| `group_id` | 重复块组ID，同一代码内容的所有出现位置归为同一组。一个组对应一个"重复块"，组内有 N 个出现位置 |
-| `content_hash` | SHA-256（hex 编码，64 字符），与 group_id 一一对应（本期 group_id 即取 content_hash）。选 SHA-256 而非 MD5：虽本场景 hash 仅用于分组（非安全用途），但 SHA-256 消除"已知不安全算法"的 review 争议，字段长度 VARCHAR(64) 刚好适配 |
-| `occurrence_index` | 组内出现位置序号，按 (filePath, startLine) 排序后从 0 递增。前端 drawer 多页签按此排序 |
-| `file_path` | 出现位置文件路径。同一文件可能有多个出现位置（同文件内重复） |
-| `content_b64` | MEDIUMTEXT（最大 16MB），单块代码通常 < 1KB，足够 |
+| 字段               | 设计考量                                                                                                                                                                                                                         |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`               | 雪花算法生成，避免自增主键在分批插入时的锁竞争                                                                                                                                                                                   |
+| `record_id`        | 关联主表，用于按扫描批次查询/删除                                                                                                                                                                                                |
+| `group_id`         | 重复块组ID，同一代码内容的所有出现位置归为同一组。一个组对应一个"重复块"，组内有 N 个出现位置                                                                                                                                    |
+| `content_hash`     | SHA-256（hex 编码，64 字符），与 group_id 一一对应（本期 group_id 即取 content_hash）。选 SHA-256 而非 MD5：虽本场景 hash 仅用于分组（非安全用途），但 SHA-256 消除"已知不安全算法"的 review 争议，字段长度 VARCHAR(64) 刚好适配 |
+| `occurrence_index` | 组内出现位置序号，按 (filePath, startLine) 排序后从 0 递增。前端 drawer 多页签按此排序                                                                                                                                           |
+| `file_path`        | 出现位置文件路径。同一文件可能有多个出现位置（同文件内重复）                                                                                                                                                                     |
+| `content_b64`      | MEDIUMTEXT（最大 16MB），单块代码通常 < 1KB，足够                                                                                                                                                                                |
 
 **索引设计说明**：
+
 - `idx_record_group`：drawer 查询主路径，按 group_id 查所有出现位置；同时覆盖 `deleteByRecordId`（record_id 最左前缀）
 - `idx_record_file`：文件代码视图查询，按 record + file 查该文件所有出现位置
 - `uk_record_group_file_start`：**唯一索引，保证幂等**，防止插件端网络重试导致同一出现位置（同 record 内同组同文件同起点）重复入库
 
 **关键设计变化**：从"source + target 对存储"改为"出现位置"表。优势：
+
 1. 干净支撑"一块对多位置"（含同文件多位置），无需 pair_index 概念
 2. 一个 N 位置重复块存 N 行（而非 N×(N-1)/2 对），存储更省
 3. 前端多页签直接映射 occurrence_index，无需二次组装
@@ -720,27 +738,28 @@ ADD COLUMN snapshot_data LONGTEXT NULL COMMENT '上下文片段JSON(Base64编码
 
 ```jsonc
 {
-  "totalLines": 200,           // 文件原始总行数
-  "contextLines": 5,           // 上下文行数（重复块上下各取 5 行）
-  "segments": [                // 合并后的上下文片段列表（按 originalStartLine 排序）
+  "totalLines": 200, // 文件原始总行数
+  "contextLines": 5, // 上下文行数（重复块上下各取 5 行）
+  "segments": [
+    // 合并后的上下文片段列表（按 originalStartLine 排序）
     {
-      "originalStartLine": 1,   // 该片段对应的原始文件起始行号(1-based)
-      "originalEndLine": 45,    // 该片段对应的原始文件结束行号(1-based, 包含)
-      "contentB64": "Base64..." // 该区间代码内容(Base64编码)
+      "originalStartLine": 1, // 该片段对应的原始文件起始行号(1-based)
+      "originalEndLine": 45, // 该片段对应的原始文件结束行号(1-based, 包含)
+      "contentB64": "Base64...", // 该区间代码内容(Base64编码)
     },
     {
       "originalStartLine": 65,
       "originalEndLine": 115,
-      "contentB64": "Base64..."
-    }
-  ]
+      "contentB64": "Base64...",
+    },
+  ],
 }
 ```
 
 **字段设计说明**：
 
-| 字段 | 设计考量 |
-|------|---------|
+| 字段            | 设计考量                                                                                                                                                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `snapshot_data` | LONGTEXT（最大 4GB）， nullable。存 Base64 编码的 JSON，JSON 内每个 segment 的 `contentB64` 也是 Base64（防 DBA 解码外层后代码明文可见）。**不存完整文件**，只存重复块上下文 ±5 行的片段，其他部分前端用 `... N lines omitted ...` 占位。无重复的文件该字段为 NULL |
 
 > **不再有 `content_hash` / `line_count` / `context_lines` / `segment_count` / `file_size_bytes` / `created_at` 等独立字段**：这些原属 `code_metrics_file_snapshot` 表的字段不再需要。`content_hash` 去重逻辑取消（每个 file_detail 只对应自身一份快照，无需去重）；`totalLines` / `contextLines` 已内含在 `snapshot_data` JSON 中；监控字段非必要。
@@ -754,6 +773,7 @@ ADD COLUMN snapshot_data LONGTEXT NULL COMMENT '上下文片段JSON(Base64编码
 5. 每个合并后的片段提取一次代码内容，Base64 编码
 
 **收益**：
+
 - **存储节省**：2000 行文件只有 3 个块（各 30 行）时，存 `3 × (30+10) = 120` 行而非 2000 行，节省 94%
 - **安全提升**：DBA 解码后只能看到重复块附近的片段，无法还原完整文件
 - **架构简化**：少一张表、少一个 Entity/Mapper、少一个 JOIN，快照与文件明细同生命周期
@@ -767,12 +787,12 @@ ADD COLUMN snapshot_data LONGTEXT NULL COMMENT '上下文片段JSON(Base64编码
 
 假设一个 10 万行代码仓（5000 文件，平均 200 行/文件）：
 
-| 维度 | 估算 |
-|------|------|
-| 出现位置 | 5% 文件有重复 × 每文件 2 块 × 平均 2.5 个位置/块 × 30 行 ≈ 3.75 万行 ≈ 1.5 MB 原文 / 2 MB Base64 |
+| 维度                                                   | 估算                                                                                                              |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| 出现位置                                               | 5% 文件有重复 × 每文件 2 块 × 平均 2.5 个位置/块 × 30 行 ≈ 3.75 万行 ≈ 1.5 MB 原文 / 2 MB Base64                  |
 | 文件快照（上下文片段，存于 file_detail.snapshot_data） | 250 文件 × 平均 1.5 个合并片段 × (30 行块 + 10 行上下文) ≈ 1.5 万行 ≈ 0.6 MB 原文 / 0.8 MB Base64（含 JSON 开销） |
-| 单仓单次扫描 | ≈ 2.8 MB 入库 |
-| 100 仓 × 每周扫描 × 长期保留（无 TTL） | ≈ 14.5 GB / 年（可接受；如需清理可按 record.create_time 统一清理过期 record） |
+| 单仓单次扫描                                           | ≈ 2.8 MB 入库                                                                                                     |
+| 100 仓 × 每周扫描 × 长期保留（无 TTL）                 | ≈ 14.5 GB / 年（可接受；如需清理可按 record.create_time 统一清理过期 record）                                     |
 
 比存完整文件（~700 MB / 单次）节省约 99.6%；大文件场景节省更显著（2000 行文件只存 ~120 行，节省 94%）。无 TTL 意味着数据长期累积，但单次扫描仅 ~2.8 MB，年增量可控。
 
@@ -795,13 +815,13 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
 
 #### 5.1.1 索引策略
 
-| 表 | 索引 | 服务场景 |
-|------|------|---------|
-| `code_metrics_duplication_block` | `idx_record_group (record_id, group_id)` | drawer 查询：按 group_id 查所有出现位置；同时覆盖 deleteByRecordId（record_id 最左前缀） |
-| | `idx_record_file (record_id, file_path(255))` | 文件代码视图：按 record + file 查该文件所有出现位置 |
-| | `uk_record_group_file_start (record_id, group_id, file_path(255), start_line)` | 唯一索引，保证幂等，防插件网络重试重复入库 |
-| `code_metrics_file_detail` | `idx_record_file (record_id, file_path(255))`（实际实现**新增**） | 文件代码视图：按 record + file 查 file_detail（含 snapshot_data），避免 N+1 回表过滤 |
-| `code_metrics_record` | `uk_git_branch_run (git_url(255), branch_name, pipeline_run_id(255))`（实际实现**新增唯一索引**） | 保证幂等，防并发上报重复 record；创建前先清理历史重复记录 |
+| 表                               | 索引                                                                                              | 服务场景                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `code_metrics_duplication_block` | `idx_record_group (record_id, group_id)`                                                          | drawer 查询：按 group_id 查所有出现位置；同时覆盖 deleteByRecordId（record_id 最左前缀） |
+|                                  | `idx_record_file (record_id, file_path(255))`                                                     | 文件代码视图：按 record + file 查该文件所有出现位置                                      |
+|                                  | `uk_record_group_file_start (record_id, group_id, file_path(255), start_line)`                    | 唯一索引，保证幂等，防插件网络重试重复入库                                               |
+| `code_metrics_file_detail`       | `idx_record_file (record_id, file_path(255))`（实际实现**新增**）                                 | 文件代码视图：按 record + file 查 file_detail（含 snapshot_data），避免 N+1 回表过滤     |
+| `code_metrics_record`            | `uk_git_branch_run (git_url(255), branch_name, pipeline_run_id(255))`（实际实现**新增唯一索引**） | 保证幂等，防并发上报重复 record；创建前先清理历史重复记录                                |
 
 > **不再有 `code_metrics_file_snapshot` 表及其索引**：快照数据存入 file_detail.snapshot_data，复用 file_detail 的 `idx_record_file` 索引即可。
 >
@@ -835,33 +855,33 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
 
 ### 5.3 上报体量控制
 
-| 维度 | 限制 | 超限处理 |
-|------|------|---------|
-| 单次 HTTP 请求体 | ≤ 10MB（与 APIG 网关对齐） | 分批上报 |
-| 单批 duplicationOccurrences | ≤ 5000 条 | 递归分批 |
-| 单文件 snapshotData | ≤ 1MB（编码前） | 跳过该文件快照 + warn 日志，前端 hasSnapshot=false 降级展示重复块列表 |
-| 单块代码 | 无硬限制（MEDIUMTEXT 16MB） | 实际 < 1KB，无需限制 |
+| 维度                        | 限制                        | 超限处理                                                              |
+| --------------------------- | --------------------------- | --------------------------------------------------------------------- |
+| 单次 HTTP 请求体            | ≤ 10MB（与 APIG 网关对齐）  | 分批上报                                                              |
+| 单批 duplicationOccurrences | ≤ 5000 条                   | 递归分批                                                              |
+| 单文件 snapshotData         | ≤ 1MB（编码前）             | 跳过该文件快照 + warn 日志，前端 hasSnapshot=false 降级展示重复块列表 |
+| 单块代码                    | 无硬限制（MEDIUMTEXT 16MB） | 实际 < 1KB，无需限制                                                  |
 
 ### 5.4 前端性能
 
-| 维度 | 策略 |
-|------|------|
-| monaco-editor 加载 | 懒加载（已有） |
-| 大文件渲染 | > 5000 行提示"文件过大，建议本地查看" |
-| 高亮更新 | `deltaDecorations` 增量更新，避免全量重渲染 |
+| 维度                    | 策略                                               |
+| ----------------------- | -------------------------------------------------- |
+| monaco-editor 加载      | 懒加载（已有）                                     |
+| 大文件渲染              | > 5000 行提示"文件过大，建议本地查看"              |
+| 高亮更新                | `deltaDecorations` 增量更新，避免全量重渲染        |
 | drawer 内 monaco-editor | 只渲染出现位置代码片段（不加载完整文件），性能可控 |
-| tab 数量过多 | > 8 个 tab 横向滚动，避免布局挤压 |
-| 路由切换 | keep-alive 缓存列表页，避免重复请求 |
+| tab 数量过多            | > 8 个 tab 横向滚动，避免布局挤压                  |
+| 路由切换                | keep-alive 缓存列表页，避免重复请求                |
 
 ### 5.5 性能验收指标
 
-| 指标 | 目标 |
-|------|------|
-| 单文件代码视图接口响应（快照命中） | < 500ms |
-| 单重复块详情接口响应 | < 200ms |
-| 插件单次上报体量 | < 10MB（超过分批） |
-| 前端代码视图首屏渲染 | < 1s（含 monaco-editor 加载） |
-| drawer 多页签切换响应 | < 100ms（本地 monaco-editor 重渲染） |
+| 指标                               | 目标                                 |
+| ---------------------------------- | ------------------------------------ |
+| 单文件代码视图接口响应（快照命中） | < 500ms                              |
+| 单重复块详情接口响应               | < 200ms                              |
+| 插件单次上报体量                   | < 10MB（超过分批）                   |
+| 前端代码视图首屏渲染               | < 1s（含 monaco-editor 加载）        |
+| drawer 多页签切换响应              | < 100ms（本地 monaco-editor 重渲染） |
 
 ## 6. API 接口设计
 
@@ -874,6 +894,7 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
 **返回类型**：`DataResult<String>`（recordId 用 String 返回，避免雪花 ID 在 JS 侧 Number 精度溢出 2^53）。
 
 **移除字段**：
+
 - `repository`：写死 source-dir 后冗余，**DTO/Entity 移除**（DB 层 `code_metrics_record.repository` 列**保留不 drop**，便于回滚）
 - `fileSnapshots`：不再独立上报，快照数据随 `fileDetails` 一起上报
 
@@ -935,8 +956,9 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
 ```
 
 **响应**（`recordId` 为 String 类型）：
+
 ```jsonc
-{ "code": 200, "msg": "success", "data": "1234567890123456789" }  // recordId（String，雪花ID，防 JS 精度溢出）
+{ "code": 200, "msg": "success", "data": "1234567890123456789" } // recordId（String，雪花ID，防 JS 精度溢出）
 ```
 
 **兼容性**：旧插件不传 `duplicationOccurrences` / `snapshotData` 时，后端正常处理其他字段，不报错（`hasSnapshot` 返回 false）。
@@ -946,12 +968,22 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
 **用途**：插件端 `duplicationOccurrences` 超过单批上限（5000 条）时，首批随主报告 `/metrics/code/report` 上报并拿到 `recordId`，后续批次走此接口分批入库。
 
 **请求体 `DuplicationBlockBatchDTO`**：
+
 ```jsonc
 {
-  "recordId": "1234567890123456789",  // 主报告接口返回的 recordId（String）
-  "blocks": [                          // 本批重复块出现位置（结构同 duplicationOccurrences）
-    { "groupId": "a1b2c3d4e5f6", "contentHash": "a1b2c3d4e5f6", "occurrenceIndex": 0, "filePath": "src/main/Foo.java", "startLine": 10, "endLine": 40, "contentB64": "cHVibGljIGNsYXNz..." }
-  ]
+  "recordId": "1234567890123456789", // 主报告接口返回的 recordId（String）
+  "blocks": [
+    // 本批重复块出现位置（结构同 duplicationOccurrences）
+    {
+      "groupId": "a1b2c3d4e5f6",
+      "contentHash": "a1b2c3d4e5f6",
+      "occurrenceIndex": 0,
+      "filePath": "src/main/Foo.java",
+      "startLine": 10,
+      "endLine": 40,
+      "contentB64": "cHVibGljIGNsYXNz...",
+    },
+  ],
 }
 ```
 
@@ -964,25 +996,35 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
 **位置**：[CodeMetricsController.getFileMetricDetail](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/CodeMetricsController.java#L56-L66)
 
 **请求体**（不变）：
+
 ```jsonc
-{ "repoId": 1, "branchName": "master", "pipelineRunId": "12345", "metricType": "3", "pageNum": 1, "pageSize": 20 }
+{
+  "repoId": 1,
+  "branchName": "master",
+  "pipelineRunId": "12345",
+  "metricType": "3",
+  "pageNum": 1,
+  "pageSize": 20,
+}
 ```
 
 **响应** metricType=3 时 `DuplicationRateItem` 新增字段：
+
 ```jsonc
 {
   "fileDetails": [
     {
       "filePath": "src/main/Foo.java",
-      "totalLines": 200,              // 新增：文件代码行总数（便于用户验证 重复率 = 重复行数 / 代码行总数）
+      "totalLines": 200, // 新增：文件代码行总数（便于用户验证 重复率 = 重复行数 / 代码行总数）
       "duplicationRate": 35.5,
       "duplicationLineCount": 120,
-      "duplicationBlockCount": 2,     // 新增：该文件的重复块数量（含同文件内重复组，按 group_id 去重）
-      "hasSnapshot": true             // 新增：是否有上下文片段快照（file_detail.snapshot_data 是否非空）
-    }
-  ]
+      "duplicationBlockCount": 2, // 新增：该文件的重复块数量（含同文件内重复组，按 group_id 去重）
+      "hasSnapshot": true, // 新增：是否有上下文片段快照（file_detail.snapshot_data 是否非空）
+    },
+  ],
 }
 ```
+
 > **说明**：`duplicatedFiles` 属 metricType=4 的 `FileDuplicationItem`（每组一条，含组内所有文件），不属于 `DuplicationRateItem`。
 
 ### 6.3 新增接口 1：`POST /metrics/code/file-content`
@@ -990,16 +1032,18 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
 **用途**：前端点击文件路径时调用，返回上下文片段拼接的展示代码（`segments` 片段列表）+ 该文件所有重复块元信息。
 
 **请求**：
+
 ```jsonc
 {
   "repoId": 1,
   "branchName": "master",
   "pipelineRunId": "12345",
-  "filePath": "src/main/Foo.java"
+  "filePath": "src/main/Foo.java",
 }
 ```
 
 **响应（快照命中，hasSnapshot=true）**（实际实现为 `segments` 结构，**不再返回 `content` + `lineMapping`**）：
+
 ```jsonc
 {
   "code": 200,
@@ -1012,19 +1056,41 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
     "totalOriginalLines": 200,
     "hasSnapshot": true,
     "segments": [
-      { "originalStartLine": 1, "originalEndLine": 50, "content": "package com.example;\npublic class Foo {\n  ..." },
-      { "originalStartLine": 70, "originalEndLine": 120, "content": "  void methodB() {\n  ..." }
+      {
+        "originalStartLine": 1,
+        "originalEndLine": 50,
+        "content": "package com.example;\npublic class Foo {\n  ...",
+      },
+      {
+        "originalStartLine": 70,
+        "originalEndLine": 120,
+        "content": "  void methodB() {\n  ...",
+      },
     ],
     "duplicationBlocks": [
-      { "blockId": "1001", "groupId": "a1b2c3d4e5f6", "startLine": 10, "endLine": 40, "occurrenceCount": 3 },
-      { "blockId": "1002", "groupId": "b2c3d4e5f6a1", "startLine": 80, "endLine": 110, "occurrenceCount": 3 }
-    ]
-  }
+      {
+        "blockId": "1001",
+        "groupId": "a1b2c3d4e5f6",
+        "startLine": 10,
+        "endLine": 40,
+        "occurrenceCount": 3,
+      },
+      {
+        "blockId": "1002",
+        "groupId": "b2c3d4e5f6a1",
+        "startLine": 80,
+        "endLine": 110,
+        "occurrenceCount": 3,
+      },
+    ],
+  },
 }
 ```
+
 前端按 `segments` 片段渲染，行号直接用 `originalStartLine` 递增；片段间省略行数由前端按相邻片段行号差计算并插入 `... N lines omitted ...` 占位（不再需要后端 lineMapping）。
 
 **响应（快照未命中，hasSnapshot=false）**：
+
 ```jsonc
 {
   "code": 200,
@@ -1038,17 +1104,31 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
     "hasSnapshot": false,
     "segments": null,
     "duplicationBlocks": [
-      { "blockId": "1001", "groupId": "a1b2c3d4e5f6", "startLine": 10, "endLine": 40, "occurrenceCount": 3 },
-      { "blockId": "1002", "groupId": "b2c3d4e5f6a1", "startLine": 80, "endLine": 110, "occurrenceCount": 3 }
-    ]
-  }
+      {
+        "blockId": "1001",
+        "groupId": "a1b2c3d4e5f6",
+        "startLine": 10,
+        "endLine": 40,
+        "occurrenceCount": 3,
+      },
+      {
+        "blockId": "1002",
+        "groupId": "b2c3d4e5f6a1",
+        "startLine": 80,
+        "endLine": 110,
+        "occurrenceCount": 3,
+      },
+    ],
+  },
 }
 ```
+
 快照未命中时（旧 record 无 `snapshot_data`），前端左侧展示"该记录无代码快照"占位 + 重复块列表（`duplicationBlocks` 仍返回，用户可点击列表项打开 drawer 查看代码片段）。
 
 **说明**：`duplicationBlocks` 列出该文件作为出现位置的所有重复块（每个块对应一个 group）。`blockId` 是该文件此出现位置的 blockId（String，前端用于标记"来源"tab）。`occurrenceCount` 是该组出现位置总数（前端判断是否显示多页签）。`duplicationBlocks` 无论快照是否命中都返回（来自 `code_metrics_duplication_block` 表，长期保留）。
 
 **错误响应**：
+
 ```jsonc
 { "code": 500, "msg": "未找到对应的仓库信息，repoId: {id}" }
 { "code": 500, "msg": "未找到对应的指标记录" }
@@ -1060,11 +1140,13 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
 **用途**：前端点击高亮块时调用，按 groupId 返回该组所有出现位置（前端渲染为多页签）。
 
 **请求**：
+
 ```jsonc
 { "groupId": "a1b2c3d4e5f6", "repoId": 1 }
 ```
 
 **响应**（3 个出现位置的示例）：
+
 ```jsonc
 {
   "code": 200,
@@ -1079,7 +1161,7 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
         "filePath": "src/main/Foo.java",
         "startLine": 10,
         "endLine": 40,
-        "content": "public void methodA() {\n  System.out.println(\"hello\");\n  ..."
+        "content": "public void methodA() {\n  System.out.println(\"hello\");\n  ...",
       },
       {
         "blockId": 1002,
@@ -1087,7 +1169,7 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
         "filePath": "src/main/Foo.java",
         "startLine": 80,
         "endLine": 110,
-        "content": "public void methodB() {\n  System.out.println(\"hello\");\n  ..."
+        "content": "public void methodB() {\n  System.out.println(\"hello\");\n  ...",
       },
       {
         "blockId": 1005,
@@ -1095,10 +1177,10 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
         "filePath": "src/main/Bar.java",
         "startLine": 5,
         "endLine": 35,
-        "content": "public class Bar {\n  public void methodA() {\n  ..."
-      }
-    ]
-  }
+        "content": "public class Bar {\n  public void methodA() {\n  ...",
+      },
+    ],
+  },
 }
 ```
 
@@ -1106,22 +1188,22 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
 
 ### 6.5 接口契约汇总
 
-| 接口 | 方法 | 路径 | 鉴权 | 请求体 | 响应体 |
-|------|------|------|------|--------|--------|
-| 上报 | POST | `/metrics/code/report` | APIG 签名 | CodeMetricsReportDTO（含新字段） | `DataResult<Long>` |
-| 文件详情 | POST | `/metrics/code/file-detail` | 网关 token + repoId 校验 | FileMetricDetailQueryDTO | `DataResult<FileMetricDetailVO>` |
-| 文件代码视图 | POST | `/metrics/code/file-content` | 网关 token + repoId 校验 | FileContentViewQueryDTO | `DataResult<FileContentViewVO>` |
-| 重复块详情 | POST | `/metrics/code/duplication-block/detail` | 网关 token + repoId 校验 | DuplicationBlockQueryDTO | `DataResult<DuplicationBlockVO>` |
+| 接口         | 方法 | 路径                                     | 鉴权                     | 请求体                           | 响应体                           |
+| ------------ | ---- | ---------------------------------------- | ------------------------ | -------------------------------- | -------------------------------- |
+| 上报         | POST | `/metrics/code/report`                   | APIG 签名                | CodeMetricsReportDTO（含新字段） | `DataResult<Long>`               |
+| 文件详情     | POST | `/metrics/code/file-detail`              | 网关 token + repoId 校验 | FileMetricDetailQueryDTO         | `DataResult<FileMetricDetailVO>` |
+| 文件代码视图 | POST | `/metrics/code/file-content`             | 网关 token + repoId 校验 | FileContentViewQueryDTO          | `DataResult<FileContentViewVO>`  |
+| 重复块详情   | POST | `/metrics/code/duplication-block/detail` | 网关 token + repoId 校验 | DuplicationBlockQueryDTO         | `DataResult<DuplicationBlockVO>` |
 
 ### 6.6 错误码约定
 
-| code | msg | 场景 |
-|------|------|------|
-| 200 | success | 成功 |
-| 500 | 未找到对应的仓库信息，repoId: {id} | repoId 无效 |
-| 500 | 未找到对应的指标记录 | pipelineRunId 不存在 |
-| 500 | 未找到对应的重复块组，groupId: {id} | groupId 无效 |
-| 500 | 参数错误：{detail} | 校验失败 |
+| code | msg                                 | 场景                 |
+| ---- | ----------------------------------- | -------------------- |
+| 200  | success                             | 成功                 |
+| 500  | 未找到对应的仓库信息，repoId: {id}  | repoId 无效          |
+| 500  | 未找到对应的指标记录                | pipelineRunId 不存在 |
+| 500  | 未找到对应的重复块组，groupId: {id} | groupId 无效         |
+| 500  | 参数错误：{detail}                  | 校验失败             |
 
 > **说明**：快照未命中（旧 record 无 `snapshot_data`）**不是错误**，返回 `code=200` + `hasSnapshot=false`，前端展示"该记录无代码快照"占位。前端仍展示该文件的重复块列表（来自 `code_metrics_duplication_block` 表，长期保留），不报错。
 
@@ -1142,6 +1224,7 @@ code_metrics_file_detail.snapshot_data    → 上下文片段 JSON（一对一, 
 #### 7.2.1 禁止打印的字段
 
 service 层禁止 `logger.info` / `logger.debug` 打印以下字段值：
+
 - `content_b64`（出现位置代码内容，Base64 编码后的字符串）
 - `snapshot_data`（文件上下文片段 JSON，Base64 编码后的字符串）
 - `content`（解码后的明文）

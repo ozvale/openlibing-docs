@@ -12,11 +12,11 @@
 
 ### Push 事件 payload 跨平台差异
 
-| 平台 | 事件类型（请求头值） | 仓库 URL 字段 | 分支新增判定 | 分支删除判定 |
-|------|-------------------|--------------|------------|------------|
-| gitcode | `Push Hook`（`X-GitCode-Event`） | `repository.git_http_url` | `before` 全 0 | `after` 全 0 |
-| gitee | `Push Hook`（`X-Gitee-Event`） | `repository.git_http_url` | `created=true`，缺失回退 `before` 全 0 | `deleted=true`，缺失回退 `after` 全 0 |
-| github | `push`（`X-GitHub-Event`） | `repository.clone_url`（带 `.git`）/ `repository.html_url`（无后缀） | `created=true` | `deleted=true` |
+| 平台    | 事件类型（请求头值）             | 仓库 URL 字段                                                        | 分支新增判定                           | 分支删除判定                          |
+| ------- | -------------------------------- | -------------------------------------------------------------------- | -------------------------------------- | ------------------------------------- |
+| gitcode | `Push Hook`（`X-GitCode-Event`） | `repository.git_http_url`                                            | `before` 全 0                          | `after` 全 0                          |
+| gitee   | `Push Hook`（`X-Gitee-Event`）   | `repository.git_http_url`                                            | `created=true`，缺失回退 `before` 全 0 | `deleted=true`，缺失回退 `after` 全 0 |
+| github  | `push`（`X-GitHub-Event`）       | `repository.clone_url`（带 `.git`）/ `repository.html_url`（无后缀） | `created=true`                         | `deleted=true`                        |
 
 - 覆写 `WebHookEventHandler#supportedEventTypes()` 返回多值集合（如 `{Push Hook, push}`）即可让单 handler 处理多平台事件类型，无需改 dispatcher。
 - 本地 `repo_info.repo_url` 由用户录入，格式可能带/不带 `.git`，github 需用 `clone_url` 和 `html_url` 双候选依次反查。
