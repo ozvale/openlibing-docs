@@ -68,19 +68,19 @@
 
 ## 影响范围
 
-| 文件 | 仓库 | 变更类型 |
-|------|------|----------|
-| `apps/web-openlibing/src/api/Repos/api.ts` | openlibing-web | 新增 3 个 API 函数 |
-| `apps/web-openlibing/src/api/Repos/url.ts` | openlibing-web | 新增 3 个 URL 常量 |
-| `apps/web-openlibing/src/views/Repos/dialog/DuplicationCodeDrawer.vue` | openlibing-web | 新增组件 |
-| `apps/web-openlibing/src/views/Repos/dialog/MetricsDetailDialog.vue` | openlibing-web | 重构 |
-| `apps/web-openlibing/src/views/Repos/branches.vue` | openlibing-web | 重构 |
-| `apps/web-openlibing/src/views/Repos/index.vue` | openlibing-web | 重构 |
+| 文件                                                                   | 仓库           | 变更类型           |
+| ---------------------------------------------------------------------- | -------------- | ------------------ |
+| `apps/web-openlibing/src/api/Repos/api.ts`                             | openlibing-web | 新增 3 个 API 函数 |
+| `apps/web-openlibing/src/api/Repos/url.ts`                             | openlibing-web | 新增 3 个 URL 常量 |
+| `apps/web-openlibing/src/views/Repos/dialog/DuplicationCodeDrawer.vue` | openlibing-web | 新增组件           |
+| `apps/web-openlibing/src/views/Repos/dialog/MetricsDetailDialog.vue`   | openlibing-web | 重构               |
+| `apps/web-openlibing/src/views/Repos/branches.vue`                     | openlibing-web | 重构               |
+| `apps/web-openlibing/src/views/Repos/index.vue`                        | openlibing-web | 重构               |
 
 ## 关联后端接口
 
-| 接口 | 用途 |
-|------|------|
-| `/code-repo/metrics/code/file-content` | 获取文件内容（用于 CodeMirror 渲染） |
-| `/code-repo/metrics/code/duplication-block/detail` | 获取文件重复代码块明细 |
-| `/code-repo/project-repo/query-repo-filter-meta` | 获取仓库筛选元数据 |
+| 接口                                               | 用途                                 |
+| -------------------------------------------------- | ------------------------------------ |
+| `/code-repo/metrics/code/file-content`             | 获取文件内容（用于 CodeMirror 渲染） |
+| `/code-repo/metrics/code/duplication-block/detail` | 获取文件重复代码块明细               |
+| `/code-repo/project-repo/query-repo-filter-meta`   | 获取仓库筛选元数据                   |

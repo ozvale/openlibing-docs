@@ -39,25 +39,25 @@ blockLanes: 每个块分配的轨道（用于重叠块的颜色条纹分层）
 
 ### 2.4 交互功能
 
-| 功能 | 实现方式 |
-|------|----------|
+| 功能            | 实现方式                                     |
+| --------------- | -------------------------------------------- |
 | 上一个/下一个块 | `currentBlockIndex` 索引切换，scrollIntoView |
-| 跳转到顶部/底部 | 编辑器 scrollDOM 操作 |
-| 全屏模式 | `isFullscreen` 状态 + CSS fixed 定位 |
-| 省略中间行 | 距离 > 10 行的块之间插入省略占位行 |
+| 跳转到顶部/底部 | 编辑器 scrollDOM 操作                        |
+| 全屏模式        | `isFullscreen` 状态 + CSS fixed 定位         |
+| 省略中间行      | 距离 > 10 行的块之间插入省略占位行           |
 
 ### 2.5 Props / Emits
 
 ```typescript
 // Props
-visible: boolean       // 抽屉可见性
-repoId: string|number  // 仓库 ID
-branchName: string     // 分支名
-pipelineRunId: string|number  // 流水线运行 ID
-filePath: string       // 文件路径
+visible: boolean; // 抽屉可见性
+repoId: string | number; // 仓库 ID
+branchName: string; // 分支名
+pipelineRunId: string | number; // 流水线运行 ID
+filePath: string; // 文件路径
 
 // Emits
-update:visible         // 双向绑定可见性
+update: visible; // 双向绑定可见性
 ```
 
 ## 3. MetricsDetailDialog 重构
@@ -79,13 +79,13 @@ update:visible         // 双向绑定可见性
 
 ### 3.2 新增列（metricType=3）
 
-| 列名 | prop | 排序 | 说明 |
-|------|------|------|------|
-| 文件名称 | filePath | - | 改为可点击链接（蓝色 + hover 下划线） |
-| 重复代码行数 | duplicationLineCount | 支持 | 非空非注释行连续 10 行相同 |
-| 有效代码行数 | totalLines | 支持 | - |
-| 重复率 | duplicationRate | 支持（默认降序） | 重复行数 ÷ 有效行数 × 100% |
-| 重复代码块数量 | duplicationBlockCount | 支持 | 该文件中的重复代码块总数 |
+| 列名           | prop                  | 排序             | 说明                                  |
+| -------------- | --------------------- | ---------------- | ------------------------------------- |
+| 文件名称       | filePath              | -                | 改为可点击链接（蓝色 + hover 下划线） |
+| 重复代码行数   | duplicationLineCount  | 支持             | 非空非注释行连续 10 行相同            |
+| 有效代码行数   | totalLines            | 支持             | -                                     |
+| 重复率         | duplicationRate       | 支持（默认降序） | 重复行数 ÷ 有效行数 × 100%            |
+| 重复代码块数量 | duplicationBlockCount | 支持             | 该文件中的重复代码块总数              |
 
 ### 3.3 表头 Tooltip 系统
 
@@ -118,9 +118,9 @@ update:visible         // 双向绑定可见性
 仅在 metricType=3 时文件名称可点击：
 
 ```typescript
-const isFilePathClickable = computed(() => props.metricType === '3');
+const isFilePathClickable = computed(() => props.metricType === "3");
 const onFilePathClick = (row) => {
-  currentFilePath.value = row?.filePath || '';
+  currentFilePath.value = row?.filePath || "";
   dupDrawerVisible.value = true;
 };
 ```
@@ -131,11 +131,20 @@ const onFilePathClick = (row) => {
 
 ```typescript
 // branches.vue
-const emits = defineEmits(['freshData', 'toUpdate', 'goMetricsDetail', 'update:modelValue']);
+const emits = defineEmits([
+  "freshData",
+  "toUpdate",
+  "goMetricsDetail",
+  "update:modelValue",
+]);
 
 const openMetricsDetail = (col, row) => {
-  emits('goMetricsDetail', {
-    repoId, repoName, pipelineRunId, metricType, branchName
+  emits("goMetricsDetail", {
+    repoId,
+    repoName,
+    pipelineRunId,
+    metricType,
+    branchName,
   });
 };
 
@@ -193,21 +202,24 @@ onActivated(() => {
 ### autoGoBranch 仅首次触发
 
 ```typescript
-watch(() => useApp.projectInfo, (newValue, oldValue) => {
-  // ...
-  if (!oldValue && route.query.repoId) {
-    autoGoBranch(String(route.query.repoId));  // 仅首次进入
-  }
-});
+watch(
+  () => useApp.projectInfo,
+  (newValue, oldValue) => {
+    // ...
+    if (!oldValue && route.query.repoId) {
+      autoGoBranch(String(route.query.repoId)); // 仅首次进入
+    }
+  },
+);
 ```
 
 ## 6. 新增 API 接口
 
-| 接口函数 | URL | 入参 | 出参 |
-|----------|-----|------|------|
-| `fileContent` | `/code-repo/metrics/code/file-content` | repoId, branchName, pipelineRunId, filePath | 文件内容字符串 |
+| 接口函数                 | URL                                                | 入参                                        | 出参                                    |
+| ------------------------ | -------------------------------------------------- | ------------------------------------------- | --------------------------------------- |
+| `fileContent`            | `/code-repo/metrics/code/file-content`             | repoId, branchName, pipelineRunId, filePath | 文件内容字符串                          |
 | `duplicationBlockDetail` | `/code-repo/metrics/code/duplication-block/detail` | repoId, branchName, pipelineRunId, filePath | 重复代码块列表（含 startLine, endLine） |
-| `queryRepoFilterMeta` | `/code-repo/project-repo/query-repo-filter-meta` | projectId | 仓库筛选元数据 |
+| `queryRepoFilterMeta`    | `/code-repo/project-repo/query-repo-filter-meta`   | projectId                                   | 仓库筛选元数据                          |
 
 ## 7. 风险与注意事项
 
