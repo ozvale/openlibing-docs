@@ -54,16 +54,16 @@
 
 ### 1. 变更文件清单
 
-| 文件 | 变更类型 | 职责 |
-| ---- | -------- | ---- |
-| `ManualVersionScanController.java` | 修改 + 新增 | startScan 入参改为 List；新增 deleteByIds 端点 |
-| `ManualVersionScanService.java` | 修改 + 新增 | startScan 签名改为批量；新增 deleteByIds 方法声明 |
-| `ManualVersionScanServiceImpl.java` | 修改 + 新增 | 批量 startScan 逐条执行+异常隔离；提取 startSingleScan；新增 deleteByIds |
-| `ManualVersionScanStartResultVO.java` | 新增 | 批量触发单条结果 VO（repoId, branchId, scanId, success, errorMsg） |
-| `TblManualVersionScanMapper.java` | 新增 | 新增 deleteByIds 方法 |
-| `TblManualVersionScanMapper.xml` | 新增 | 新增 deleteByIds SQL（MyBatis foreach IN） |
-| `ManualVersionScanControllerTest.java` | 修改 + 新增 | 批量/空列表/异常测试；新增 deleteByIds 测试 |
-| `ManualVersionScanServiceImplTest.java` | 修改 + 新增 | 批量部分失败；空/null 列表；deleteByIds 测试 |
+| 文件                                    | 变更类型    | 职责                                                                     |
+| --------------------------------------- | ----------- | ------------------------------------------------------------------------ |
+| `ManualVersionScanController.java`      | 修改 + 新增 | startScan 入参改为 List；新增 deleteByIds 端点                           |
+| `ManualVersionScanService.java`         | 修改 + 新增 | startScan 签名改为批量；新增 deleteByIds 方法声明                        |
+| `ManualVersionScanServiceImpl.java`     | 修改 + 新增 | 批量 startScan 逐条执行+异常隔离；提取 startSingleScan；新增 deleteByIds |
+| `ManualVersionScanStartResultVO.java`   | 新增        | 批量触发单条结果 VO（repoId, branchId, scanId, success, errorMsg）       |
+| `TblManualVersionScanMapper.java`       | 新增        | 新增 deleteByIds 方法                                                    |
+| `TblManualVersionScanMapper.xml`        | 新增        | 新增 deleteByIds SQL（MyBatis foreach IN）                               |
+| `ManualVersionScanControllerTest.java`  | 修改 + 新增 | 批量/空列表/异常测试；新增 deleteByIds 测试                              |
+| `ManualVersionScanServiceImplTest.java` | 修改 + 新增 | 批量部分失败；空/null 列表；deleteByIds 测试                             |
 
 ### 2. ManualVersionScanStartResultVO
 
@@ -143,13 +143,13 @@ deleteByIds(List<String> ids):
 
 ## 关键设计决策
 
-| 决策点 | 方案 | 原因 |
-| ------ | ---- | ---- |
-| 批量失败隔离 | 单条 catch 异常后继续，不抛全局异常 | 批量操作中单条失败不应阻断其他条 |
-| 单条逻辑复用 | 提取 `startSingleScan` 私有方法 | 避免重复代码，单条逻辑仍是异常抛出语义，批量层做异常转 Result |
-| 错误信息拼接 | ScaException 时拼接 `errorMsg + ": " + adviceMsg` | 给调用方提供完整的失败原因和修复建议 |
-| 空/null 列表处理 | 空/null 直接返回空结果/0，不抛异常 | 前端可能传入空选择，应静默处理 |
-| 接口入参从单对象改为 List | 不新开批量端点，直接改造原端点 | 保持接口简洁，前端传单对象时包装为单元素 List 即可 |
+| 决策点                    | 方案                                              | 原因                                                          |
+| ------------------------- | ------------------------------------------------- | ------------------------------------------------------------- |
+| 批量失败隔离              | 单条 catch 异常后继续，不抛全局异常               | 批量操作中单条失败不应阻断其他条                              |
+| 单条逻辑复用              | 提取 `startSingleScan` 私有方法                   | 避免重复代码，单条逻辑仍是异常抛出语义，批量层做异常转 Result |
+| 错误信息拼接              | ScaException 时拼接 `errorMsg + ": " + adviceMsg` | 给调用方提供完整的失败原因和修复建议                          |
+| 空/null 列表处理          | 空/null 直接返回空结果/0，不抛异常                | 前端可能传入空选择，应静默处理                                |
+| 接口入参从单对象改为 List | 不新开批量端点，直接改造原端点                    | 保持接口简洁，前端传单对象时包装为单元素 List 即可            |
 
 ## 影响范围
 

@@ -24,16 +24,16 @@ openlibing-sca 接入 CodeQL 静态安全扫描后，扫描报告发现 **81 处
 
 ## 3. 验收标准
 
-| # | 验收项 | 预期结果 |
-|---|--------|----------|
-| AC-1 | SSRF 防护覆盖 | 所有 HTTP 出站入口调用 `SsrfsafeUrlUtil.validateUrl`；访问 localhost / 127.0.0.1 / 0.0.0.0 / 私网段 / 链路本地地址 / 非 http(s) 协议时请求被拒绝，服务不抛未捕获异常 |
-| AC-2 | 日志注入防御 | 用户可控字段（URI、UA、Referer、repoUrl、prUrl、flag 等）写入日志前均经过净化；`DefaultExceptionHandler` 异常日志含请求上下文（URI / Method / ClientIP / UA / Referer）且为参数化日志 |
-| AC-3 | 日志格式修复 | 全部 `append.toString()` 拼接日志改为参数化占位符；缺失参数补齐（如 OpenPersonScanServiceImpl 日志缺 repoName） |
-| AC-4 | 正则修复 | `OpenScanDMServiceImpl.wildCard2RegEx` 与 `ShieldRoleServiceImpl.wildCard2RegEx` 行为一致，`*`→`.*`、`?`→`.?`、正则元字符转义正确 |
-| AC-5 | JWT 修复 | `getAccessToken` 返回 map 含 `sub`；`scanPathConfirmParseV2` 中 gitee 用户不加 `gitcode-` 前缀，gitcode 用户保留前缀 |
-| AC-6 | 接口方法调整 | 导出类、刷新类、触发类接口全部改为 POST；调用方同步适配 |
-| AC-7 | 无回归 | 修改涉及的模块相关单元测试全部通过；Maven 编译 + pre-commit 检查通过 |
-| AC-8 | CodeQL 复扫 | 修复后重新运行 CodeQL 扫描，原 81 处告警清零（或已逐条确认处理） |
+| #    | 验收项        | 预期结果                                                                                                                                                                              |
+| ---- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AC-1 | SSRF 防护覆盖 | 所有 HTTP 出站入口调用 `SsrfsafeUrlUtil.validateUrl`；访问 localhost / 127.0.0.1 / 0.0.0.0 / 私网段 / 链路本地地址 / 非 http(s) 协议时请求被拒绝，服务不抛未捕获异常                  |
+| AC-2 | 日志注入防御  | 用户可控字段（URI、UA、Referer、repoUrl、prUrl、flag 等）写入日志前均经过净化；`DefaultExceptionHandler` 异常日志含请求上下文（URI / Method / ClientIP / UA / Referer）且为参数化日志 |
+| AC-3 | 日志格式修复  | 全部 `append.toString()` 拼接日志改为参数化占位符；缺失参数补齐（如 OpenPersonScanServiceImpl 日志缺 repoName）                                                                       |
+| AC-4 | 正则修复      | `OpenScanDMServiceImpl.wildCard2RegEx` 与 `ShieldRoleServiceImpl.wildCard2RegEx` 行为一致，`*`→`.*`、`?`→`.?`、正则元字符转义正确                                                     |
+| AC-5 | JWT 修复      | `getAccessToken` 返回 map 含 `sub`；`scanPathConfirmParseV2` 中 gitee 用户不加 `gitcode-` 前缀，gitcode 用户保留前缀                                                                  |
+| AC-6 | 接口方法调整  | 导出类、刷新类、触发类接口全部改为 POST；调用方同步适配                                                                                                                               |
+| AC-7 | 无回归        | 修改涉及的模块相关单元测试全部通过；Maven 编译 + pre-commit 检查通过                                                                                                                  |
+| AC-8 | CodeQL 复扫   | 修复后重新运行 CodeQL 扫描，原 81 处告警清零（或已逐条确认处理）                                                                                                                      |
 
 ## 4. 影响范围
 

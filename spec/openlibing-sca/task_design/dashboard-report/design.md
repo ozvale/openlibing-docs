@@ -45,16 +45,16 @@
 
 ### 1. 新增文件清单
 
-| 文件 | 类型 | 职责 |
-| ---- | ---- | ---- |
-| `DashboardReportController.java` | Controller | 补录接口入口，鉴权与参数校验 |
-| `DashboardReportSchedule.java` | Component | 定时任务，核心计算与上报逻辑 |
-| `DashboardBackfillService.java` | Service | 补录任务管理（创建/查询/异步执行） |
-| `DashboardReportRequest.java` | Domain | 上报请求体（含手写 Builder） |
-| `DashboardBackfillRequest.java` | Domain | 补录请求体 |
-| `DashboardBackfillTaskStatus.java` | Domain | 补录任务状态（内存存储） |
-| `OpenlibingFrameworkClient.java` | Feign Client | 新增 reportDashboard 方法 |
-| `DashboardReportScheduleTest.java` | Test | 单元测试 |
+| 文件                               | 类型         | 职责                               |
+| ---------------------------------- | ------------ | ---------------------------------- |
+| `DashboardReportController.java`   | Controller   | 补录接口入口，鉴权与参数校验       |
+| `DashboardReportSchedule.java`     | Component    | 定时任务，核心计算与上报逻辑       |
+| `DashboardBackfillService.java`    | Service      | 补录任务管理（创建/查询/异步执行） |
+| `DashboardReportRequest.java`      | Domain       | 上报请求体（含手写 Builder）       |
+| `DashboardBackfillRequest.java`    | Domain       | 补录请求体                         |
+| `DashboardBackfillTaskStatus.java` | Domain       | 补录任务状态（内存存储）           |
+| `OpenlibingFrameworkClient.java`   | Feign Client | 新增 reportDashboard 方法          |
+| `DashboardReportScheduleTest.java` | Test         | 单元测试                           |
 
 ### 2. DashboardReportSchedule 核心逻辑
 
@@ -189,6 +189,7 @@ OpenlibingFrameworkClient.reportDashboard():
 ### 6. SQL 关键查询
 
 #### getAllDistinctCommunities
+
 ```sql
 -- 版本扫描社区
 SELECT DISTINCT p.project_name AS community
@@ -205,6 +206,7 @@ WHERE r.has_repo = '1' AND s.community IS NOT NULL AND s.community != ''
 ```
 
 #### findIdsByCommunityAndCreatedBetween（取每仓库每分支最新扫描记录）
+
 ```sql
 SELECT t.id FROM (
   SELECT s.id,
@@ -221,17 +223,17 @@ SELECT t.id FROM (
 
 ### 7. 关键设计决策
 
-| 决策点 | 方案 | 原因 |
-| ------ | ---- | ---- |
-| 上报时间戳 | 固定报表日 23:50:00 | 规避 MySQL DATETIME 对 23:59:59.x 的四舍五入越界风险 |
-| scanIds 查询上界 | 使用 endTime（次日 00:00:00）| 与 versionScanCount 窗口一致，避免最后一刻扫描漏算告警 |
-| 日期窗口 | 左闭右开 [startTime, endTime) | SQL 用 `>=` 和 `<` 确保不重不漏 |
-| 扫描去重 | ROW_NUMBER() OVER (PARTITION BY repo_id, branch) | 多分支仓库只取最新扫描 |
-| 分布式锁 | Redisson tryLock(5s, -1) + 看门狗 | 防任务执行中锁释放；多实例互斥 |
-| 补录任务状态 | 内存 ConcurrentHashMap | 低频运维场景，重启丢失可接受 |
-| 补录任务并发控制 | synchronized(status 对象) | 同一 taskId 的 status 是同一引用，天然唯一锁 |
-| 单社区异常处理 | catch 日志 + 继续 | 单社区失败不影响其他社区 |
-| SpotBugs EI_EXPOSE_REP2 | 手写 Builder + 防御性拷贝 | 替换 Lombok @Builder，避免可变 Map 引用泄露 |
+| 决策点                  | 方案                                             | 原因                                                   |
+| ----------------------- | ------------------------------------------------ | ------------------------------------------------------ |
+| 上报时间戳              | 固定报表日 23:50:00                              | 规避 MySQL DATETIME 对 23:59:59.x 的四舍五入越界风险   |
+| scanIds 查询上界        | 使用 endTime（次日 00:00:00）                    | 与 versionScanCount 窗口一致，避免最后一刻扫描漏算告警 |
+| 日期窗口                | 左闭右开 [startTime, endTime)                    | SQL 用 `>=` 和 `<` 确保不重不漏                        |
+| 扫描去重                | ROW_NUMBER() OVER (PARTITION BY repo_id, branch) | 多分支仓库只取最新扫描                                 |
+| 分布式锁                | Redisson tryLock(5s, -1) + 看门狗                | 防任务执行中锁释放；多实例互斥                         |
+| 补录任务状态            | 内存 ConcurrentHashMap                           | 低频运维场景，重启丢失可接受                           |
+| 补录任务并发控制        | synchronized(status 对象)                        | 同一 taskId 的 status 是同一引用，天然唯一锁           |
+| 单社区异常处理          | catch 日志 + 继续                                | 单社区失败不影响其他社区                               |
+| SpotBugs EI_EXPOSE_REP2 | 手写 Builder + 防御性拷贝                        | 替换 Lombok @Builder，避免可变 Map 引用泄露            |
 
 ## 影响范围
 

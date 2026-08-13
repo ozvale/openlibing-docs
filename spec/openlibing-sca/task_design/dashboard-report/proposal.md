@@ -14,12 +14,12 @@ SCA（软件成分分析）系统是开源合规门禁的核心服务，承载�
 
 ## 4 项统计指标
 
-| 指标 Key              | 指标含义                 | 数据来源                                                    |
-| --------------------- | ------------------------ | ----------------------------------------------------------- |
-| version_scan_count    | 版本扫描次数             | tbl_scan 表昨日 created 记录数                              |
-| pr_scan_count         | PR 扫描次数              | tbl_person_scan 表昨日 created 且 scan_result='1'、un_confirmed_file_num 非空记录数 |
-| version_alert_total   | 版本扫描告警总数         | 昨日版本扫描 scanIds 在 MongoDB ScanIssueVO 中 blockStatus != 'block' 的数量 |
-| pending_alert_total   | 社区扫描待处理告警总数   | 在 version_alert_total 条件上叠加 reviewStatus != 40 的数量 |
+| 指标 Key            | 指标含义               | 数据来源                                                                            |
+| ------------------- | ---------------------- | ----------------------------------------------------------------------------------- |
+| version_scan_count  | 版本扫描次数           | tbl_scan 表昨日 created 记录数                                                      |
+| pr_scan_count       | PR 扫描次数            | tbl_person_scan 表昨日 created 且 scan_result='1'、un_confirmed_file_num 非空记录数 |
+| version_alert_total | 版本扫描告警总数       | 昨日版本扫描 scanIds 在 MongoDB ScanIssueVO 中 blockStatus != 'block' 的数量        |
+| pending_alert_total | 社区扫描待处理告警总数 | 在 version_alert_total 条件上叠加 reviewStatus != 40 的数量                         |
 
 ## 验收标准
 

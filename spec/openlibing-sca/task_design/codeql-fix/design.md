@@ -16,21 +16,21 @@ openlibing-sca 通过 CodeQL 静态扫描发现 81 处安全 / 代码质量问�
 
 **新增 `SsrfsafeUrlUtil.validateUrl(String url)`**（`com.openlibing.sca.analysis.utils`）：
 
-| 校验维度 | 规则 |
-|---------|------|
-| 协议白名单 | 仅允许 `http` / `https`，否则抛 `IllegalArgumentException` |
-| 主机名黑名单 | `localhost` / `127.0.0.1` / `0.0.0.0` 直接拒绝 |
+| 校验维度     | 规则                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 协议白名单   | 仅允许 `http` / `https`，否则抛 `IllegalArgumentException`                                                                                 |
+| 主机名黑名单 | `localhost` / `127.0.0.1` / `0.0.0.0` 直接拒绝                                                                                             |
 | DNS 解析校验 | `InetAddress.getAllByName(host)` 逐地址检查：site-local / loopback / link-local 拒绝；解析失败（IOException）抛 `IllegalArgumentException` |
-| 私网段校验 | 手写 IPv4 判定：`10.x` / `172.16-31.x` / `192.168.x` / `169.254.x`（链路本地）拒绝 |
+| 私网段校验   | 手写 IPv4 判定：`10.x` / `172.16-31.x` / `192.168.x` / `169.254.x`（链路本地）拒绝                                                         |
 
 接入点（4 种 HTTP 客户端全部覆盖）：
 
-| 客户端 | 接入位置 | 行为 |
-|-------|---------|------|
-| OkHttp | `HttpClientUtil.sendPost` / `get` / `getResponse` | `sendPost` 捕获 `IllegalArgumentException` → warn 日志返回 null；`get`/`getResponse` 抛 IO 风格异常由调用方处理 |
-| Apache HttpClient | `HttpUtil.doGet` | 捕获 `IllegalArgumentException` → error 日志返回空 body |
-| RestTemplate | `OpenScanServiceImpl.showFileHash`（OSS 文件读取） | 先对 `fileHash` 做非法字符净化（`[\\/:*?"<>|\x00-\x1F\x7F]` → `_`），再 `validateUrl`，防止路径拼接注入 |
-| URLConnection / Apache | `IntegrationApiServiceImpl`：`getRemoteBranch` / `checkoutBranch` / `checkRepoSizeAndSendToMq` / 其余 URL 请求 | 捕获 `IllegalArgumentException` → warn/error 日志，抛既有 `ScaException(500, ...)` 或返回既有降级值 |
+| 客户端                 | 接入位置                                                                                                       | 行为                                                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| OkHttp                 | `HttpClientUtil.sendPost` / `get` / `getResponse`                                                              | `sendPost` 捕获 `IllegalArgumentException` → warn 日志返回 null；`get`/`getResponse` 抛 IO 风格异常由调用方处理 |
+| Apache HttpClient      | `HttpUtil.doGet`                                                                                               | 捕获 `IllegalArgumentException` → error 日志返回空 body                                                         |
+| RestTemplate           | `OpenScanServiceImpl.showFileHash`（OSS 文件读取）                                                             | 先对 `fileHash` 做非法字符净化（`[\\/:*?"<>                                                                     | \x00-\x1F\x7F]`→`_`），再 `validateUrl`，防止路径拼接注入 |
+| URLConnection / Apache | `IntegrationApiServiceImpl`：`getRemoteBranch` / `checkoutBranch` / `checkRepoSizeAndSendToMq` / 其余 URL 请求 | 捕获 `IllegalArgumentException` → warn/error 日志，抛既有 `ScaException(500, ...)` 或返回既有降级值             |
 
 **配套容错**（`GitCodeUtil.getUbmcToken` / `getUbmcUserInfo`）：`sendPost` 返回 null 时不再 NPE，warn 日志后返回空 `HashMap`。
 
@@ -88,14 +88,14 @@ return "^" + sb + "$";
 
 避免敏感参数出现在 URL / 访问日志，且 GET 不应产生副作用：
 
-| Controller | 接口路径 | 调整 |
-|-----------|---------|------|
-| `BinaryLicenseController` | `/export/notice`、`/export/license/check` | GET → POST |
-| `LicenseController` | `/export/community` | GET → POST |
-| `OpenPersonScanController` | `/refreshVersionData`、`/refreshPersonData` | GET → POST |
-| `OpenScanController` | `/putExportXLS`、`/export/community/count`、`/versionSchedule` | GET → POST |
-| `TblScancodeInfoController` | `/getScanCodeInfo` | GET → POST |
-| `OpenScanDMController` | `/refresh/confirmNum`、`/refresh/repoid-community-repo` | GET → POST |
+| Controller                  | 接口路径                                                       | 调整       |
+| --------------------------- | -------------------------------------------------------------- | ---------- |
+| `BinaryLicenseController`   | `/export/notice`、`/export/license/check`                      | GET → POST |
+| `LicenseController`         | `/export/community`                                            | GET → POST |
+| `OpenPersonScanController`  | `/refreshVersionData`、`/refreshPersonData`                    | GET → POST |
+| `OpenScanController`        | `/putExportXLS`、`/export/community/count`、`/versionSchedule` | GET → POST |
+| `TblScancodeInfoController` | `/getScanCodeInfo`                                             | GET → POST |
+| `OpenScanDMController`      | `/refresh/confirmNum`、`/refresh/repoid-community-repo`        | GET → POST |
 
 ### 2.7 工程配置
 
@@ -104,43 +104,43 @@ return "^" + sb + "$";
 
 ## 3. 涉及文件清单
 
-| 文件 | 改动 |
-|------|------|
-| `analysis/utils/SsrfsafeUrlUtil.java` | **新增**：SSRF 校验工具 |
-| `common/utils/LogSanitizer.java` | **新增**：日志注入转义工具 |
-| `common/exception/DefaultExceptionHandler.java` | 异常日志参数化 + 请求上下文 + 日志净化 + null 分支修复 |
-| `analysis/utils/HttpClientUtil.java` | sendPost / get / getResponse 接入 SSRF 校验 |
-| `analysis/utils/HttpUtil.java` | doGet 接入 SSRF 校验 |
-| `analysis/utils/GitCodeUtil.java` | sendPost null 容错 |
-| `analysis/utils/JwtUtils.java` | 返回 map 增加 sub claim |
-| `analysis/service/impl/OpenScanServiceImpl.java` | showFileHash 净化 + SSRF 校验；flag 日志净化 |
-| `analysis/service/impl/OpenPersonScanServiceImpl.java` | 日志参数补齐 + 参数化 |
-| `analysis/service/impl/ShieldRoleServiceImpl.java` | wildCard2RegEx 重写 |
-| `dm/service/impl/IntegrationApiServiceImpl.java` | SSRF 接入 + 异常兜底 + 日志净化 |
-| `dm/service/impl/OpenScanDMServiceImpl.java` | wildCard2RegEx 对齐 + scanPathConfirmParseV2 取 sub |
-| `analysis/controller/BinaryLicenseController.java` | 2 个接口 GET→POST |
-| `analysis/controller/LicenseController.java` | 1 个接口 GET→POST |
-| `analysis/controller/OpenPersonScanController.java` | 2 个接口 GET→POST |
-| `analysis/controller/OpenScanController.java` | 3 个接口 GET→POST |
-| `analysis/controller/TblScancodeInfoController.java` | 1 个接口 GET→POST |
-| `dm/controller/OpenScanDMController.java` | 2 个接口 GET→POST |
-| `test/.../JwtUtilsTest.java` | sub claim 断言 |
-| `test/.../DefaultExceptionHandlerTest.java` | 移除 append.toString() mock |
-| `test/.../OpenScanDMServiceImplTest.java` | mockStatic JwtUtils + sub 断言 |
-| `.gitignore` | **新增**：排除 target 等产物 |
-| `.pre-commit-config.yaml` | hook exclude target |
+| 文件                                                   | 改动                                                   |
+| ------------------------------------------------------ | ------------------------------------------------------ |
+| `analysis/utils/SsrfsafeUrlUtil.java`                  | **新增**：SSRF 校验工具                                |
+| `common/utils/LogSanitizer.java`                       | **新增**：日志注入转义工具                             |
+| `common/exception/DefaultExceptionHandler.java`        | 异常日志参数化 + 请求上下文 + 日志净化 + null 分支修复 |
+| `analysis/utils/HttpClientUtil.java`                   | sendPost / get / getResponse 接入 SSRF 校验            |
+| `analysis/utils/HttpUtil.java`                         | doGet 接入 SSRF 校验                                   |
+| `analysis/utils/GitCodeUtil.java`                      | sendPost null 容错                                     |
+| `analysis/utils/JwtUtils.java`                         | 返回 map 增加 sub claim                                |
+| `analysis/service/impl/OpenScanServiceImpl.java`       | showFileHash 净化 + SSRF 校验；flag 日志净化           |
+| `analysis/service/impl/OpenPersonScanServiceImpl.java` | 日志参数补齐 + 参数化                                  |
+| `analysis/service/impl/ShieldRoleServiceImpl.java`     | wildCard2RegEx 重写                                    |
+| `dm/service/impl/IntegrationApiServiceImpl.java`       | SSRF 接入 + 异常兜底 + 日志净化                        |
+| `dm/service/impl/OpenScanDMServiceImpl.java`           | wildCard2RegEx 对齐 + scanPathConfirmParseV2 取 sub    |
+| `analysis/controller/BinaryLicenseController.java`     | 2 个接口 GET→POST                                      |
+| `analysis/controller/LicenseController.java`           | 1 个接口 GET→POST                                      |
+| `analysis/controller/OpenPersonScanController.java`    | 2 个接口 GET→POST                                      |
+| `analysis/controller/OpenScanController.java`          | 3 个接口 GET→POST                                      |
+| `analysis/controller/TblScancodeInfoController.java`   | 1 个接口 GET→POST                                      |
+| `dm/controller/OpenScanDMController.java`              | 2 个接口 GET→POST                                      |
+| `test/.../JwtUtilsTest.java`                           | sub claim 断言                                         |
+| `test/.../DefaultExceptionHandlerTest.java`            | 移除 append.toString() mock                            |
+| `test/.../OpenScanDMServiceImplTest.java`              | mockStatic JwtUtils + sub 断言                         |
+| `.gitignore`                                           | **新增**：排除 target 等产物                           |
+| `.pre-commit-config.yaml`                              | hook exclude target                                    |
 
 ## 4. 设计决策
 
-| 决策 | 理由 |
-|------|------|
-| SSRF 校验收敛为独立工具类 | 4 种 HTTP 客户端复用同一套校验规则，避免各自实现不一致 |
-| 私网段判定用手写 IPv4 解析而非 `InetAddress.isSiteLocalAddress` 单独判断 | 两者结合：`isSiteLocalAddress` 覆盖 A/B/C 类私网与链路本地，手写规则补充明确拒绝 `169.254.x` 并便于测试 |
-| SSRF 拒绝抛 `IllegalArgumentException` 而非 checked exception | 与既有 `HttpClientUtil.sendPost` 吞 IOException 的降级风格一致，调用方按 `IOException` 同路径处理即可 |
-| 日志净化双策略（转义 / 剥离） | 业务日志保留可读信息用转义（`LogSanitizer`），异常日志强调安全性用剥离（`DefaultExceptionHandler` 内联） |
-| `wildCard2RegEx` 逐字符单遍扫描 | 消除 replace 链的顺序依赖，`\`、`.` 等元字符显式转义，行为确定 |
-| GET→POST 一次性调整 9 个接口 | 均为导出 / 刷新 / 触发类接口，不承载查询语义，调整后副作用语义清晰 |
-| `.gitignore` 排除 `.trae/` 与修复脚本产物 | CodeQL 修复过程生成 `findings.json` / `fix_results.json` 等临时文件，不应入库 |
+| 决策                                                                     | 理由                                                                                                     |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| SSRF 校验收敛为独立工具类                                                | 4 种 HTTP 客户端复用同一套校验规则，避免各自实现不一致                                                   |
+| 私网段判定用手写 IPv4 解析而非 `InetAddress.isSiteLocalAddress` 单独判断 | 两者结合：`isSiteLocalAddress` 覆盖 A/B/C 类私网与链路本地，手写规则补充明确拒绝 `169.254.x` 并便于测试  |
+| SSRF 拒绝抛 `IllegalArgumentException` 而非 checked exception            | 与既有 `HttpClientUtil.sendPost` 吞 IOException 的降级风格一致，调用方按 `IOException` 同路径处理即可    |
+| 日志净化双策略（转义 / 剥离）                                            | 业务日志保留可读信息用转义（`LogSanitizer`），异常日志强调安全性用剥离（`DefaultExceptionHandler` 内联） |
+| `wildCard2RegEx` 逐字符单遍扫描                                          | 消除 replace 链的顺序依赖，`\`、`.` 等元字符显式转义，行为确定                                           |
+| GET→POST 一次性调整 9 个接口                                             | 均为导出 / 刷新 / 触发类接口，不承载查询语义，调整后副作用语义清晰                                       |
+| `.gitignore` 排除 `.trae/` 与修复脚本产物                                | CodeQL 修复过程生成 `findings.json` / `fix_results.json` 等临时文件，不应入库                            |
 
 ## 5. 风险与注意事项
 

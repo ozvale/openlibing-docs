@@ -5,6 +5,7 @@
 本次变更对 `openlibing-sca` 的 PR 扫描结果继承链路进行优化，目标是让 PR 重复扫描时能够更精确地从历史审核记录中继承评审结论，同时避免跨 PR 历史污染增量 diff 基线。优化点集中在 `ScanCommonServiceImpl` 的历史匹配算法、`IntegrationApiServiceImpl.processBatchIssues` 的执行顺序、`TblIssue` 实体与 `tbl_issue` 表的 `pr_head_sha` 字段扩展，以及配套的 Liquibase 迁移与单元测试。
 
 关联业务 PR：
+
 - [openlibing/openlibing-sca#214](https://gitcode.com/openlibing/openlibing-sca/merge_requests/214)（合入 `release_20260715`）— 继承逻辑优化主变更
 - [openlibing/openlibing-sca#250](https://gitcode.com/openlibing/openlibing-sca/merge_requests/250)（合入 `release_fix_20260723`）— force push 两树直接 diff 修复
 - commit `fad72408`（`ms_alert` 分支，待 PR）— copyright-only 告警自动确认
@@ -26,10 +27,12 @@
 合入 `release_20260715` 后，生产环境出现继承逻辑在 force push 场景下失效的问题。典型案例：PR `cann/ops-cv#1126` 中 `to_absolute_b_box_tiling_arch35.cpp` 在 commit `865b0843` 审核通过后，`c98e20e3` force push 后扫描未继承审核结论。
 
 根因分析：
+
 1. **三点 diff 落到 merge_base**：force push 后 `baseSha`（旧审核时的 head）不在当前 PR 提交链中，原实现回退到 PR 全量 diff。而 compare API 的 `base...head` 三点语法在 base 不是 head 祖先时会落在 merge_base 上，把整文件判为 `added`。
 2. **added 文件被 isInModifiedRange 误判跳过**：`added` 文件的 `modifiedLines` 是全行合集，`isInModifiedRange` 恒为 true，导致 3a 阶段错误跳过继承。
 
 修复方案：
+
 - 在 `resolveFileDiff` 中新增第四优先级：当 baseSha 不在提交链时，改用 `baseSha` 与 `currentHeadSha` 两棵树的**直接 diff**（contents API 逐文件取内容 + jgit `MyersDiff` 本地计算），仅报出真正改动的行。
 - `findMatchingIssue` 中 `added` 文件跳过 `isInModifiedRange` 检查，直接进 3b 字段匹配；`added` 文件无 base 侧行号可还原，`adjustedLines` 直接使用当前行号。
 
@@ -38,6 +41,7 @@
 版本扫描与 PR 扫描的 `autoSubmitConfirmV2` 自动确认流程中，原有规则仅自动确认 `license=SUCCESS + copyright=SUCCESS` 的问题。在实际运营中发现：大量开源组件的 copyright 被标记为 FAIL（如 `Copyright (c) Huawei Technologies Co., Ltd.`），但这些组件实际是华为自研代码，不需要人工审核，造成了审核人重复劳动。
 
 修复方案：
+
 - 在 `autoSubmitConfirmV2` 中新增一条自动确认分支：`license=SUCCESS + copyright=FAIL` 且远程（开源软件）copyright 全部包含 "huawei" 时，自动确认
 - 新增 `isRemoteCopyrightOnlyHuawei` 私有方法：遍历远程 copyright 列表，逐条解析 JSON `name` 字段，全部包含 `huawei`（不区分大小写）时返回 true；任一条解析失败或 name 为空或不含 huawei 则返回 false
 
@@ -45,17 +49,17 @@
 
 ### 涉及文件
 
-| 文件 | 操作 | 角色 |
-|------|------|------|
-| `src/main/java/com/openlibing/sca/dm/service/impl/ScanCommonServiceImpl.java` | 修改 | 继承核心逻辑：历史匹配、增量 diff、baseSha 校验、**两树直接 diff（force push 修复）** |
-| `src/main/java/com/openlibing/sca/dm/service/impl/IntegrationApiServiceImpl.java` | 修改 | `processBatchIssues` 流程重构与 `backfillPrHeadCommitId` |
-| `src/main/java/com/openlibing/sca/analysis/entity/TblIssue.java` | 修改 | 新增 `prHeadSha` 字段及 Builder |
-| `src/main/resources/mapper/dm/TblIssueMapper.xml` | 修改 | insert/update/select 加入 `pr_head_sha` |
-| `src/main/resources/db/changelog/db.changelog.xml` | 修改 | 注册新 changeset |
-| `src/main/resources/db/changelog/mysql/20260715/add-tbl-issue-commit-id.xml` | 新增 | `tbl_issue.pr_head_sha` 列迁移 |
-| `src/test/java/com/openlibing/sca/dm/service/impl/ScanCommonServiceImplTest.java` | 修改 | 新增 4 个匹配优先级测试 + **5 个 force push / added 文件测试** |
-| `src/main/java/com/openlibing/sca/analysis/service/impl/ConfirmReviewServceImpl.java` | 修改 | `autoSubmitConfirmV2` 新增 copyright-only huawei 自动确认分支 + `isRemoteCopyrightOnlyHuawei` |
-| `src/test/java/com/openlibing/sca/analysis/service/impl/ConfirmReviewServceImplTest.java` | 修改 | 新增 3 个自动确认测试（全 huawei / 非 huawei / 混合） |
+| 文件                                                                                      | 操作 | 角色                                                                                          |
+| ----------------------------------------------------------------------------------------- | ---- | --------------------------------------------------------------------------------------------- |
+| `src/main/java/com/openlibing/sca/dm/service/impl/ScanCommonServiceImpl.java`             | 修改 | 继承核心逻辑：历史匹配、增量 diff、baseSha 校验、**两树直接 diff（force push 修复）**         |
+| `src/main/java/com/openlibing/sca/dm/service/impl/IntegrationApiServiceImpl.java`         | 修改 | `processBatchIssues` 流程重构与 `backfillPrHeadCommitId`                                      |
+| `src/main/java/com/openlibing/sca/analysis/entity/TblIssue.java`                          | 修改 | 新增 `prHeadSha` 字段及 Builder                                                               |
+| `src/main/resources/mapper/dm/TblIssueMapper.xml`                                         | 修改 | insert/update/select 加入 `pr_head_sha`                                                       |
+| `src/main/resources/db/changelog/db.changelog.xml`                                        | 修改 | 注册新 changeset                                                                              |
+| `src/main/resources/db/changelog/mysql/20260715/add-tbl-issue-commit-id.xml`              | 新增 | `tbl_issue.pr_head_sha` 列迁移                                                                |
+| `src/test/java/com/openlibing/sca/dm/service/impl/ScanCommonServiceImplTest.java`         | 修改 | 新增 4 个匹配优先级测试 + **5 个 force push / added 文件测试**                                |
+| `src/main/java/com/openlibing/sca/analysis/service/impl/ConfirmReviewServceImpl.java`     | 修改 | `autoSubmitConfirmV2` 新增 copyright-only huawei 自动确认分支 + `isRemoteCopyrightOnlyHuawei` |
+| `src/test/java/com/openlibing/sca/analysis/service/impl/ConfirmReviewServceImplTest.java` | 修改 | 新增 3 个自动确认测试（全 huawei / 非 huawei / 混合）                                         |
 
 ### 核心方法
 
