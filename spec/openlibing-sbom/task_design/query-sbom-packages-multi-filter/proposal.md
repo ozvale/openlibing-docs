@@ -15,19 +15,19 @@
 
 新增 `POST /sbom-api/querySbomPackagesMultiFilter`（`@RequestBody`），在现有 `querySbomPackages` 基础上扩展多选能力：
 
-| 入参 | 类型 | 说明 |
-|------|------|------|
-| `productName` | String | 必填 |
-| `packageName` | String | 可选 |
-| `isExactly` | Boolean | 精确/模糊匹配 |
-| `includeVulSeverities` | List&lt;String&gt; | 包含的漏洞级别多选，命中任一选中级别的包被筛选出（组内 OR） |
-| `excludeVulSeverities` | List&lt;String&gt; | 排除的漏洞级别多选，命中任一选中级别的包被排除（组内 OR） |
-| `licenseCount` | List&lt;LicenseCountFilter&gt; | license 数量过滤（多选，组内 OR）：NO_LICENSE / SINGLE_LICENSE / MULTI_LICENSE |
-| `licenseCompliance` | LicenseComplianceFilter | license 成分过滤（单选）：LEGAL / ILLEGAL |
-| `licenseIds` | List&lt;String&gt; | license id 多选，组内 OR |
-| `dependencyTypes` | List&lt;Integer&gt; | 依赖类型多选，组内 OR（0=直接，1=间接） |
-| `groupByPackage` | Boolean | 是否按包分组 |
-| `page` / `size` | Integer | 分页 |
+| 入参                   | 类型                           | 说明                                                                           |
+| ---------------------- | ------------------------------ | ------------------------------------------------------------------------------ |
+| `productName`          | String                         | 必填                                                                           |
+| `packageName`          | String                         | 可选                                                                           |
+| `isExactly`            | Boolean                        | 精确/模糊匹配                                                                  |
+| `includeVulSeverities` | List&lt;String&gt;             | 包含的漏洞级别多选，命中任一选中级别的包被筛选出（组内 OR）                    |
+| `excludeVulSeverities` | List&lt;String&gt;             | 排除的漏洞级别多选，命中任一选中级别的包被排除（组内 OR）                      |
+| `licenseCount`         | List&lt;LicenseCountFilter&gt; | license 数量过滤（多选，组内 OR）：NO_LICENSE / SINGLE_LICENSE / MULTI_LICENSE |
+| `licenseCompliance`    | LicenseComplianceFilter        | license 成分过滤（单选）：LEGAL / ILLEGAL                                      |
+| `licenseIds`           | List&lt;String&gt;             | license id 多选，组内 OR                                                       |
+| `dependencyTypes`      | List&lt;Integer&gt;            | 依赖类型多选，组内 OR（0=直接，1=间接）                                        |
+| `groupByPackage`       | Boolean                        | 是否按包分组                                                                   |
+| `page` / `size`        | Integer                        | 分页                                                                           |
 
 ### 新增枚举
 
@@ -56,17 +56,17 @@
 
 ## 影响范围
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `model/.../enums/LicenseCountFilter.java` | 新增 | license 数量过滤枚举 |
-| `model/.../enums/LicenseComplianceFilter.java` | 新增 | license 成分过滤枚举 |
-| `model/.../request/sbom/QuerySbomPackagesMultiFilterRequest.java` | 新增 | 多选请求 DTO |
-| `dao/PackageRepository.java` | 修改 | 新增批量 DAO 方法 |
-| `api/sbom/SbomService.java` | 修改 | 新增 MultiFilter 服务方法 |
-| `service/sbom/impl/SbomServiceImpl.java` | 修改 | 实现多选过滤 |
-| `controller/SbomController.java` | 修改 | 新增 MultiFilter 端点 |
-| `test/.../SbomServiceImplTest.java` | 修改 | 补充多选用例 |
-| `test/.../SbomControllerTest.java` | 修改 | 补充新接口用例 |
+| 文件                                                              | 操作 | 说明                      |
+| ----------------------------------------------------------------- | ---- | ------------------------- |
+| `model/.../enums/LicenseCountFilter.java`                         | 新增 | license 数量过滤枚举      |
+| `model/.../enums/LicenseComplianceFilter.java`                    | 新增 | license 成分过滤枚举      |
+| `model/.../request/sbom/QuerySbomPackagesMultiFilterRequest.java` | 新增 | 多选请求 DTO              |
+| `dao/PackageRepository.java`                                      | 修改 | 新增批量 DAO 方法         |
+| `api/sbom/SbomService.java`                                       | 修改 | 新增 MultiFilter 服务方法 |
+| `service/sbom/impl/SbomServiceImpl.java`                          | 修改 | 实现多选过滤              |
+| `controller/SbomController.java`                                  | 修改 | 新增 MultiFilter 端点     |
+| `test/.../SbomServiceImplTest.java`                               | 修改 | 补充多选用例              |
+| `test/.../SbomControllerTest.java`                                | 修改 | 补充新接口用例            |
 
 - 业务仓：`openlibing-sbom`
 - 不涉及数据模型变更

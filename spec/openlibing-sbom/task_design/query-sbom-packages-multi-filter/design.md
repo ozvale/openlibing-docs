@@ -80,25 +80,25 @@ V2 DTO 字段名 `isExactly` 与 getter `getExactly()`（派生属性名 `exactl
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `model/.../enums/LicenseCountFilter.java` | 新增 | NO_LICENSE/SINGLE_LICENSE/MULTI_LICENSE |
-| `model/.../enums/LicenseComplianceFilter.java` | 新增 | LEGAL/ILLEGAL |
-| `model/.../request/sbom/QuerySbomPackagesMultiFilterRequest.java` | 新增 | 多选请求 DTO |
-| `dao/PackageRepository.java` | 修改 | 新增 3 个批量方法（query/count/groupPage） |
-| `api/sbom/SbomService.java` | 修改 | 新增 2 个 MultiFilter 接口方法 |
-| `service/sbom/impl/SbomServiceImpl.java` | 修改 | 实现多选过滤 + join 辅助方法 |
-| `controller/SbomController.java` | 修改 | 新增端点 |
-| `test/.../SbomServiceImplTest.java` | 修改 | 补多选用例 |
-| `test/.../SbomControllerTest.java` | 修改 | 补新接口用例 |
+| 文件                                                              | 操作 | 说明                                       |
+| ----------------------------------------------------------------- | ---- | ------------------------------------------ |
+| `model/.../enums/LicenseCountFilter.java`                         | 新增 | NO_LICENSE/SINGLE_LICENSE/MULTI_LICENSE    |
+| `model/.../enums/LicenseComplianceFilter.java`                    | 新增 | LEGAL/ILLEGAL                              |
+| `model/.../request/sbom/QuerySbomPackagesMultiFilterRequest.java` | 新增 | 多选请求 DTO                               |
+| `dao/PackageRepository.java`                                      | 修改 | 新增 3 个批量方法（query/count/groupPage） |
+| `api/sbom/SbomService.java`                                       | 修改 | 新增 2 个 MultiFilter 接口方法             |
+| `service/sbom/impl/SbomServiceImpl.java`                          | 修改 | 实现多选过滤 + join 辅助方法               |
+| `controller/SbomController.java`                                  | 修改 | 新增端点                                   |
+| `test/.../SbomServiceImplTest.java`                               | 修改 | 补多选用例                                 |
+| `test/.../SbomControllerTest.java`                                | 修改 | 补新接口用例                               |
 
 ## 风险 & 缓解
 
-| 风险 | 缓解 |
-|------|------|
+| 风险                                   | 缓解                                                       |
+| -------------------------------------- | ---------------------------------------------------------- |
 | 数组参数绑定 `malformed array literal` | 多值用逗号字符串 + `string_to_array`/`unnest`，不绑定 List |
-| 排除组多选语义易错 | 排除组用 `NOT(组内 OR)` 包裹，单选/多选下均正确 |
-| 分组查询 `GROUP BY` 后引用未分组列 | 分组查询中漏洞计数用 `MAX(...)` 聚合函数包裹 |
+| 排除组多选语义易错                     | 排除组用 `NOT(组内 OR)` 包裹，单选/多选下均正确            |
+| 分组查询 `GROUP BY` 后引用未分组列     | 分组查询中漏洞计数用 `MAX(...)` 聚合函数包裹               |
 
 ## 跨仓影响
 
@@ -120,14 +120,14 @@ V2 DTO 字段名 `isExactly` 与 getter `getExactly()`（派生属性名 `exactl
 
 `VulCountSummaryVo`：对过滤后全部匹配软件包的各级别漏洞数量求和汇总。
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
+| 字段               | 类型 | 说明                                |
+| ------------------ | ---- | ----------------------------------- |
 | `criticalVulCount` | Long | CRITICAL 级别漏洞数量汇总（默认 0） |
-| `highVulCount` | Long | HIGH 级别漏洞数量汇总（默认 0） |
-| `mediumVulCount` | Long | MEDIUM 级别漏洞数量汇总（默认 0） |
-| `lowVulCount` | Long | LOW 级别漏洞数量汇总（默认 0） |
-| `noneVulCount` | Long | NONE 级别漏洞数量汇总（默认 0） |
-| `unknownVulCount` | Long | UNKNOWN 级别漏洞数量汇总（默认 0） |
+| `highVulCount`     | Long | HIGH 级别漏洞数量汇总（默认 0）     |
+| `mediumVulCount`   | Long | MEDIUM 级别漏洞数量汇总（默认 0）   |
+| `lowVulCount`      | Long | LOW 级别漏洞数量汇总（默认 0）      |
+| `noneVulCount`     | Long | NONE 级别漏洞数量汇总（默认 0）     |
+| `unknownVulCount`  | Long | UNKNOWN 级别漏洞数量汇总（默认 0）  |
 
 ### 聚合 SQL 设计
 
@@ -150,15 +150,15 @@ WHERE <过滤条件：与 V2 等价，但排除 include/excludeVulSeverities 漏
 
 ### 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `model/.../vo/sbom/VulCountSummaryVo.java` | 新增 | 出参 VO，6 个漏洞等级 count，默认 0L |
-| `dao/PackageRepository.java` | 修改 | 新增 `sumVulCountByMultiFilter` 聚合 DAO |
-| `api/sbom/SbomService.java` | 修改 | 新增 `getVulCountSummaryMultiFilter` |
-| `service/sbom/impl/SbomServiceImpl.java` | 修改 | 实现聚合 + `toLong` 工具方法 |
-| `controller/SbomController.java` | 修改 | 新增 `querySbomPackagesVulCountSummary` 端点 |
-| `test/.../SbomServiceImplTest.java` | 修改 | 补聚合用例（命中 / 空结果） |
-| `test/.../SbomControllerTest.java` | 修改 | 补新接口用例 |
+| 文件                                       | 操作 | 说明                                         |
+| ------------------------------------------ | ---- | -------------------------------------------- |
+| `model/.../vo/sbom/VulCountSummaryVo.java` | 新增 | 出参 VO，6 个漏洞等级 count，默认 0L         |
+| `dao/PackageRepository.java`               | 修改 | 新增 `sumVulCountByMultiFilter` 聚合 DAO     |
+| `api/sbom/SbomService.java`                | 修改 | 新增 `getVulCountSummaryMultiFilter`         |
+| `service/sbom/impl/SbomServiceImpl.java`   | 修改 | 实现聚合 + `toLong` 工具方法                 |
+| `controller/SbomController.java`           | 修改 | 新增 `querySbomPackagesVulCountSummary` 端点 |
+| `test/.../SbomServiceImplTest.java`        | 修改 | 补聚合用例（命中 / 空结果）                  |
+| `test/.../SbomControllerTest.java`         | 修改 | 补新接口用例                                 |
 
 ### 关键实现说明
 
