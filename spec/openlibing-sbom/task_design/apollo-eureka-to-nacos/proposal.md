@@ -41,17 +41,17 @@ Issue 62 的迁移指南以 `openlibing-platform-release` 为示例项目，本�
 
 ## 影响范围
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `pom.xml`（根） | 修改 | 升级 openlibing-common 到 1.0.20.0；清理 apollo/eureka 版本声明 |
-| `sbom-web/pom.xml` | 修改 | 移除 spring-cloud-starter-netflix-eureka-client 依赖 |
-| `sbom-web/src/main/java/org/opensourceway/sbom/SbomManagerApplication.java` | 修改 | 新增 SnapShotSwitch 静态块；移除 ConfigContextInitializer import 与调用 |
-| `sbom-web/src/main/resources/application.properties` | 修改 | 删除 apollo app.id 配置项 |
-| `sbom-web/src/main/resources/application-dev.properties` | 修改 | eureka → nacos（beta + 本地地址，无 secure） |
-| `sbom-web/src/main/resources/application-prod.properties` | 修改 | eureka + apollo → nacos（prod + 华为云，secure=true） |
-| `sbom-web/src/main/resources/application-gama.properties` | 修改 | eureka + apollo → nacos（gamma + 华为云，secure=true） |
-| `start-openlibing-sbom.sh` | 修改 | 删除 apollo cache JVM 参数 |
-| `cache/src/main/java/org/opensourceway/sbom/cache/config/ConfigContextInitializer.java` | 删除 | 原 trustStore 加载类，迁移后不再需要 |
+| 文件                                                                                    | 操作 | 说明                                                                    |
+| --------------------------------------------------------------------------------------- | ---- | ----------------------------------------------------------------------- |
+| `pom.xml`（根）                                                                         | 修改 | 升级 openlibing-common 到 1.0.20.0；清理 apollo/eureka 版本声明         |
+| `sbom-web/pom.xml`                                                                      | 修改 | 移除 spring-cloud-starter-netflix-eureka-client 依赖                    |
+| `sbom-web/src/main/java/org/opensourceway/sbom/SbomManagerApplication.java`             | 修改 | 新增 SnapShotSwitch 静态块；移除 ConfigContextInitializer import 与调用 |
+| `sbom-web/src/main/resources/application.properties`                                    | 修改 | 删除 apollo app.id 配置项                                               |
+| `sbom-web/src/main/resources/application-dev.properties`                                | 修改 | eureka → nacos（beta + 本地地址，无 secure）                            |
+| `sbom-web/src/main/resources/application-prod.properties`                               | 修改 | eureka + apollo → nacos（prod + 华为云，secure=true）                   |
+| `sbom-web/src/main/resources/application-gama.properties`                               | 修改 | eureka + apollo → nacos（gamma + 华为云，secure=true）                  |
+| `start-openlibing-sbom.sh`                                                              | 修改 | 删除 apollo cache JVM 参数                                              |
+| `cache/src/main/java/org/opensourceway/sbom/cache/config/ConfigContextInitializer.java` | 删除 | 原 trustStore 加载类，迁移后不再需要                                    |
 
 ## 跨仓影响
 
