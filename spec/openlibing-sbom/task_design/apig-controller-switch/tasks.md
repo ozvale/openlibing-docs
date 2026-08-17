@@ -10,6 +10,7 @@
 - [ ] Task 6: 编译验证 `mvn compile -pl sbom-web` 通过；Phase 4 阶段补充 `ApigControllerTest`（参考 SbomControllerTest 风格），运行 `mvn test -pl sbom-web -Dtest=ApigControllerTest` 通过
 
 ## 备注
+
 - `publishSbomFile` 接口不在本次 ApigController 复制范围（用户决策移除，原 SbomController 中的对应接口保留不变）
 - 按 `openlibing-docs/spec/openlibing-sbom/ai_memory.md` 规则：Phase 3 编码阶段不生成 UT，Phase 4 业务 PR 交付前再补充 ApigControllerTest
 - ApigController 中的 `querySbomPackagesDeprecated` 方法内部调用了同类中的 `querySbomPackages` 方法，两者必须一起复制

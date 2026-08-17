@@ -2,38 +2,38 @@
 
 ## 需求信息
 
-| 项 | 值 |
-|------|------|
-| FE 需求名称 | 【openlibing】【sbom】机机接口下线切换apig |
-| 业务仓 | openlibing/openlibing-sbom |
-| 业务 Issue | https://gitcode.com/openlibing/openlibing-sbom/issues/61 |
-| 业务 PR | https://gitcode.com/openlibing/openlibing-sbom/merge_requests/123 |
-| 业务 PR 目标分支 | release_20260813_iter1 |
-| 业务 PR head 分支 | feat/apig-controller |
-| 流程模式 | Standard |
+| 项                | 值                                                                |
+| ----------------- | ----------------------------------------------------------------- |
+| FE 需求名称       | 【openlibing】【sbom】机机接口下线切换apig                        |
+| 业务仓            | openlibing/openlibing-sbom                                        |
+| 业务 Issue        | https://gitcode.com/openlibing/openlibing-sbom/issues/61          |
+| 业务 PR           | https://gitcode.com/openlibing/openlibing-sbom/merge_requests/123 |
+| 业务 PR 目标分支  | release_20260813_iter1                                            |
+| 业务 PR head 分支 | feat/apig-controller                                              |
+| 流程模式          | Standard                                                          |
 
 ## 交付物
 
 ### 代码变更（业务仓 openlibing-sbom）
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
+| 文件                                                                           | 操作 | 说明                                                                                       |
+| ------------------------------------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------ |
 | `sbom-web/src/main/java/org/opensourceway/sbom/controller/ApigController.java` | 新增 | 复制 SbomController 中 8 个机机接口方法，路径前缀改为 `/apig-api`，注入 `SbomService` 依赖 |
 
 ### 文档变更（openlibing-docs 仓）
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
+| 文件                                                                  | 操作 | 说明                |
+| --------------------------------------------------------------------- | ---- | ------------------- |
 | `spec/openlibing-sbom/task_design/apig-controller-switch/proposal.md` | 新增 | 需求背景 + 验收标准 |
-| `spec/openlibing-sbom/task_design/apig-controller-switch/tasks.md` | 新增 | 实现任务清单 |
-| `spec/openlibing-sbom/task_design/apig-controller-switch/archive.md` | 新增 | 本归档文件 |
+| `spec/openlibing-sbom/task_design/apig-controller-switch/tasks.md`    | 新增 | 实现任务清单        |
+| `spec/openlibing-sbom/task_design/apig-controller-switch/archive.md`  | 新增 | 本归档文件          |
 
 ### 业务仓 commit 列表
 
-| commit | 类型 | 说明 |
-|--------|------|------|
-| `f30288aa` | feat | add ApigController for apig gateway migration |
-| `95243251` | fix | fix CORS header and log typo（codecheck 修复） |
+| commit     | 类型 | 说明                                           |
+| ---------- | ---- | ---------------------------------------------- |
+| `f30288aa` | feat | add ApigController for apig gateway migration  |
+| `95243251` | fix  | fix CORS header and log typo（codecheck 修复） |
 
 ## 实现摘要
 
@@ -41,16 +41,16 @@
 
 ### 复制的 8 个接口
 
-| # | HTTP 方法 | 路径 | 说明 |
-|---|----------|------|------|
-| 1 | GET  | `/apig-api/querySbomPublishResult` | 查询推送结果 |
-| 2 | POST | `/apig-api/exportSbom` | 导出 sbom |
-| 3 | POST | `/apig-api/querySbomPackageList` | 查询 packages 列表 |
-| 4 | GET  | `/apig-api/querySbomPackages` | 查询 package |
-| 5 | GET  | `/apig-api/queryLicenseUniversalApi` | 查询 license |
-| 6 | GET  | `/apig-api/queryProductStatistics` | 查询单个产物总览数据 |
-| 7 | POST | `/apig-api/addProduct` | sbom 新增 product（已在 apig 平台配置） |
-| 8 | POST | `/apig-api/exportAllPackageSbom` | 导出 sbom 的 package |
+| #   | HTTP 方法 | 路径                                 | 说明                                    |
+| --- | --------- | ------------------------------------ | --------------------------------------- |
+| 1   | GET       | `/apig-api/querySbomPublishResult`   | 查询推送结果                            |
+| 2   | POST      | `/apig-api/exportSbom`               | 导出 sbom                               |
+| 3   | POST      | `/apig-api/querySbomPackageList`     | 查询 packages 列表                      |
+| 4   | GET       | `/apig-api/querySbomPackages`        | 查询 package                            |
+| 5   | GET       | `/apig-api/queryLicenseUniversalApi` | 查询 license                            |
+| 6   | GET       | `/apig-api/queryProductStatistics`   | 查询单个产物总览数据                    |
+| 7   | POST      | `/apig-api/addProduct`               | sbom 新增 product（已在 apig 平台配置） |
+| 8   | POST      | `/apig-api/exportAllPackageSbom`     | 导出 sbom 的 package                    |
 
 ### 范围调整说明
 
@@ -64,13 +64,13 @@
 
 ## 验证结果
 
-| 项 | 结果 |
-|------|------|
-| 编译验证 `mvn compile -pl sbom-web -am` | ✅ BUILD SUCCESS（11 模块全部通过） |
-| IDE 诊断 | ✅ 0 错误 0 警告 |
-| 原 SbomController 回归 | ✅ 一行未改，无回归风险 |
-| 业务 PR Git Hooks | ✅ PASSED |
-| sbom-dev 分支同步 | ✅ 已 merge 并 push 到 origin/sbom-dev（08e439c3） |
+| 项                                      | 结果                                               |
+| --------------------------------------- | -------------------------------------------------- |
+| 编译验证 `mvn compile -pl sbom-web -am` | ✅ BUILD SUCCESS（11 模块全部通过）                |
+| IDE 诊断                                | ✅ 0 错误 0 警告                                   |
+| 原 SbomController 回归                  | ✅ 一行未改，无回归风险                            |
+| 业务 PR Git Hooks                       | ✅ PASSED                                          |
+| sbom-dev 分支同步                       | ✅ 已 merge 并 push 到 origin/sbom-dev（08e439c3） |
 
 ## 经验沉淀
 
