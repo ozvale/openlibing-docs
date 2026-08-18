@@ -13,11 +13,11 @@
 
 沿用既有 `amq_version_<size>_direct` / `<size>_queue` / `<size>_rout_key` 约定，以 `manual_big` / `manual_small` 作为区分标识：
 
-| 资源类型 | 大队列 | 小队列 |
-|---|---|---|
-| Exchange | `amq_version_manual_big_direct` | `amq_version_manual_small_direct` |
-| Queue | `version_manual_big_queue` | `version_manual_small_queue` |
-| Routing Key | `version_manual_big_rout_key` | `version_manual_small_rout_key` |
+| 资源类型    | 大队列                          | 小队列                            |
+| ----------- | ------------------------------- | --------------------------------- |
+| Exchange    | `amq_version_manual_big_direct` | `amq_version_manual_small_direct` |
+| Queue       | `version_manual_big_queue`      | `version_manual_small_queue`      |
+| Routing Key | `version_manual_big_rout_key`   | `version_manual_small_rout_key`   |
 
 命名与已回退的 `amq_manual_version_scan_dispatch_direct`（commit `f2f46590`）以及第一版单一 `amq_version_manual_direct` / `version_manual_queue` 都刻意不同，避免历史 broker 上残留同名资源造成混淆。
 
@@ -153,13 +153,13 @@ IntegrationApiListener.receivedVersionManualSmallMessage  (行为同上)
 
 ## 6. 风险与缓解
 
-| 风险 | 缓解 |
-|---|---|
-| RabbitMQ broker 上未声明新 exchange/queue 导致首次发送失败 | Spring `@QueueBinding` 注解自动声明，与应用启动同步 |
-| 消费者 `concurrency` 未指定，默认与 `receivedVersionBigMessage` 不同 | 不显式指定 `concurrency`，使用 Spring AMQP 默认值（与 `version_big_queue` 一致） |
+| 风险                                                                                      | 缓解                                                                                                                  |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| RabbitMQ broker 上未声明新 exchange/queue 导致首次发送失败                                | Spring `@QueueBinding` 注解自动声明，与应用启动同步                                                                   |
+| 消费者 `concurrency` 未指定，默认与 `receivedVersionBigMessage` 不同                      | 不显式指定 `concurrency`，使用 Spring AMQP 默认值（与 `version_big_queue` 一致）                                      |
 | 历史 broker 上残留 `amq_version_manual_direct` / `version_manual_queue`（第一版单一队列） | 新命名 `amq_version_manual_big_direct` / `amq_version_manual_small_direct` 与第一版刻意不同，无冲突；旧队列由运维清理 |
-| HTTP 探测仓库 size 接口慢导致手动扫描响应时延增加 | 与自动扫描侧行为对齐，无可避免的额外 HTTP 一次往返；后续可考虑缓存 repo size |
-| 仓库 metadata 接口非 200 或异常时全部兜底到 manual_big，可能让小仓库也被丢到大队列 | 与自动扫描侧兜底策略一致，先求稳再优化；后续可加更精细的兜底（如重试） |
+| HTTP 探测仓库 size 接口慢导致手动扫描响应时延增加                                         | 与自动扫描侧行为对齐，无可避免的额外 HTTP 一次往返；后续可考虑缓存 repo size                                          |
+| 仓库 metadata 接口非 200 或异常时全部兜底到 manual_big，可能让小仓库也被丢到大队列        | 与自动扫描侧兜底策略一致，先求稳再优化；后续可加更精细的兜底（如重试）                                                |
 
 ## 7. 测试策略
 
