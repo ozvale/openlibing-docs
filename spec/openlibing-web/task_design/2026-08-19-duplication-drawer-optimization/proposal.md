@@ -50,11 +50,11 @@
 
 ## 影响范围
 
-| 文件 | 仓库 | 变更类型 |
-| ---- | ---- | -------- |
-| `apps/web-openlibing/src/views/Repos/dialog/DuplicationCodeDrawer.vue` | openlibing-web | 修改 |
-| `apps/web-openlibing/src/views/Repos/branches.vue` | openlibing-web | 修改 |
-| `apps/web-openlibing/src/views/Repos/index.vue` | openlibing-web | 修改 |
-| `apps/web-openlibing/package.json` | openlibing-web | 修改 |
-| `pnpm-workspace.yaml` | openlibing-web | 修改 |
-| `pnpm-lock.yaml` | openlibing-web | 修改 |
+| 文件                                                                   | 仓库           | 变更类型 |
+| ---------------------------------------------------------------------- | -------------- | -------- |
+| `apps/web-openlibing/src/views/Repos/dialog/DuplicationCodeDrawer.vue` | openlibing-web | 修改     |
+| `apps/web-openlibing/src/views/Repos/branches.vue`                     | openlibing-web | 修改     |
+| `apps/web-openlibing/src/views/Repos/index.vue`                        | openlibing-web | 修改     |
+| `apps/web-openlibing/package.json`                                     | openlibing-web | 修改     |
+| `pnpm-workspace.yaml`                                                  | openlibing-web | 修改     |
+| `pnpm-lock.yaml`                                                       | openlibing-web | 修改     |

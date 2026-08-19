@@ -40,23 +40,23 @@
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-| ---- | ---- | ---- |
+| 文件                                                                   | 操作 | 说明                                                                           |
+| ---------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------ |
 | `apps/web-openlibing/src/views/Repos/dialog/DuplicationCodeDrawer.vue` | 修改 | 高亮 StateField 化、省略行占位、页签自动滚动、性能优化、色条宽度、修复高亮回归 |
-| `apps/web-openlibing/src/views/Repos/branches.vue` | 修改 | 筛选输入框回车确认 |
-| `apps/web-openlibing/src/views/Repos/index.vue` | 修改 | 切项目清空 branchSearchCache、autoGoBranch 判断修复 |
-| `apps/web-openlibing/package.json` | 修改 | 移除未使用的 nanoid 直接依赖 |
-| `pnpm-workspace.yaml` | 修改 | overrides `nanoid@3` 3.3.17 → 3.3.18 |
-| `pnpm-lock.yaml` | 修改 | 依赖解析更新 |
+| `apps/web-openlibing/src/views/Repos/branches.vue`                     | 修改 | 筛选输入框回车确认                                                             |
+| `apps/web-openlibing/src/views/Repos/index.vue`                        | 修改 | 切项目清空 branchSearchCache、autoGoBranch 判断修复                            |
+| `apps/web-openlibing/package.json`                                     | 修改 | 移除未使用的 nanoid 直接依赖                                                   |
+| `pnpm-workspace.yaml`                                                  | 修改 | overrides `nanoid@3` 3.3.17 → 3.3.18                                           |
+| `pnpm-lock.yaml`                                                       | 修改 | 依赖解析更新                                                                   |
 
 ## 风险 & 缓解
 
-| 风险 | 缓解 |
-| ---- | ---- |
-| StateField 漏注册导致高亮丢失（已发生过） | 扩展注册时 field 与 plugin 成对校验；本次已通过临时 vitest 复现并验证修复 |
-| 切块后视口内色条颜色不刷新 | 统一走 `refreshBlockStripeColors()` 遍历已渲染 DOM，切块后立即调用 |
-| postcss 构建受 nanoid 版本影响 | 用 3.3.18（CJS 兼容、3.x 修复版），node 实测 `require('postcss')` 成功、解析到 nanoid@3.3.18/index.cjs |
-| 页签滚动测量不准确 | `nextTick` 后测量，确保 DOM 更新完成 |
+| 风险                                      | 缓解                                                                                                   |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| StateField 漏注册导致高亮丢失（已发生过） | 扩展注册时 field 与 plugin 成对校验；本次已通过临时 vitest 复现并验证修复                              |
+| 切块后视口内色条颜色不刷新                | 统一走 `refreshBlockStripeColors()` 遍历已渲染 DOM，切块后立即调用                                     |
+| postcss 构建受 nanoid 版本影响            | 用 3.3.18（CJS 兼容、3.x 修复版），node 实测 `require('postcss')` 成功、解析到 nanoid@3.3.18/index.cjs |
+| 页签滚动测量不准确                        | `nextTick` 后测量，确保 DOM 更新完成                                                                   |
 
 ## 跨仓影响
 
