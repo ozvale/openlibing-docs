@@ -33,7 +33,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 | 序号 | 变化点 | 类型 | 说明 |
 |------|--------|------|------|
 | 1 | `repo_info.project_id` **暂不删除**，作为过渡期冗余回填为最早关联记录的 `project_id` | 数据模型 | 项目关联拆到 `repo_project_ref`；`project_id` 先保留保证未改造仓不中断，四仓切换 + 其余仓改造完成后择期删除字段 |
-| 2 | `repo_info` 新增 `source`、`sig_config_file`、`repo_url_normalized` 字段 | 数据模型 | source=manual/sig；repo_url_normalized 加普通索引用于查重（暂不加唯一索引，存量清理完成后择期升级） |
+| 2 | `repo_info` 新增 `source`、`sig_config_file`、`is_participate_operation`、`repo_url_normalized` 字段 | 数据模型 | source=manual/sig；is_participate_operation=是否参与运营（默认是）；repo_url_normalized 加普通索引用于查重（暂不加唯一索引，存量清理完成后择期升级） |
 | 3 | 新增 `repo_project_ref` 表 | 数据模型 | 仓库-项目多对多关联，含 source/sig_config_file；source 标记关联建立来源（manual/sig），支撑 SIG 录入仅展示未录入当前项目的仓库、列表按来源筛选 |
 | 4 | `repo_url` 新录入不重复（代码层保证） | 数据模型 | 应用层 normalize + 事务内查重保证新录入不重复；暂不加 DB 唯一约束（避免上线窗口并发/存量未清理）；存量不同项目下重复仓库上线后统一清理 |
 | 5 | `/project-repo/add-repo` 增加「命中已存在」分支 | 接口 | 输入 repo_url 后前端 blur 自动检测（check-repo-url），命中已存在仓库时自动同步其配置到表单；提交时按表单更新配置（可选按 `deleteProjectIds` 选择性删除之前项目关联） |
@@ -49,7 +49,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 | 15 | 列表页新增「来源」列、「关联项目数」列 | 前端 | 见页面原型列表页 |
 | 16 | 新增 `SigInfoClient` 工具类 | 后端 | 实时调 gitcode 读取指定位置 sig-info.yaml 并解析（参考 framework GitCode.getYaml，header 传 token） |
 | 17 | 新增 `RepoUrlNormalizer` 工具类 | 后端 | repo_url 归一化 |
-| 18 | 新增 `SigDefaultParamBuilder` 工具类 | 后端 | 生成 SIG 录入默认参数（别名/责任人/用途/各开关默认值） |
+| 18 | 新增 `SigDefaultParamBuilder` 工具类 | 后端 | 生成 SIG 录入默认参数（别名/责任人/用途/是否参与运营/各开关默认值） |
 | 19 | 改造 `project_gitcode_role_mapping` 为 `project_global_config` 表 | 数据模型 | 项目级通用配置表：gitcode 角色映射 + 各平台 sig-info.yaml 位置，统一以 JSON 存 `config_json`，后续新增配置项无需改表 |
 | 20 | 去除 webhook 推送 / 定时兜底同步 / 配置入库缓存 | 后端 | sig-info.yaml 由各接口实时调对应平台读取解析，不落库不缓存 |
 | 21 | SIG 配置读取改实时调对应平台 | 后端 | 清单/导入均实时读取指定位置 sig-info.yaml（见 requirement-design.md §2.2） |
@@ -103,11 +103,11 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 
 **场景二：SIG 组一键录入**
 - 切换到「SIG 组一键录入」模式后隐藏手动表单
-- 顶部蓝色提示条：「下拉仅展示尚未录入当前项目的 SIG 仓库，已录入的不展示，不会覆盖已有配置；默认使用默认配置，可单条/批量编辑或直接使用默认值」
+- 顶部蓝色提示条：「下拉仅展示尚未录入当前项目的 SIG 仓库，已录入的不展示，不会覆盖已有配置；默认使用默认配置（含是否参与运营=是），可单条/批量编辑或直接使用默认值」
 - 「sig-info.yaml 位置配置」入口：位于「全局配置」弹窗对应平台页签，维护**一个**完整链接（每平台唯一，形如 `https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private/sig-info.yaml`；用户在代码托管平台对应代码仓、对应分支中找到该文件，复制此时的完整链接即可），保存时实时校验文件可用性
 - 「平台」下拉：每平台位置唯一且已在「全局配置」中配置，SIG 录入弹窗**不展示配置文件**；选择平台后实时读取该平台 sig-info.yaml 的仓库清单（读取失败标记不可达）
 - **「选择仓库」下拉多选框**：仅展示**尚未录入当前项目**的仓库（已录入的不展示），多选后**表格才展示所选仓库列表**（**无「录入状态」列**）
-- 表格列：选择 / 代码仓 / 代码仓别名 / 平台 / 默认分支 / 仓库责任人 / 开源类型 / 用途 / 代码风格自动修复 / 告警抑制自动检视 / 操作（`编辑配置` / `删除`）
+- 表格列：选择 / 代码仓 / 代码仓别名 / 平台 / 默认分支 / 仓库责任人 / 开源类型 / 用途 / 代码风格自动修复 / 告警抑制自动检视 / 是否参与运营 / 操作（`编辑配置` / `删除`）
 - 顶部批量操作条：「批量编辑配置」（作用于勾选仓库）/「批量删除」；单条行内「编辑配置」「删除」用于移除选错、不想录入的仓库
 - 底部「一键录入 (N)」按钮，N 为表格内仓库数
 
@@ -125,6 +125,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 #### 5.1.1 录入流程
 
 1. 用户在录入对话框填入 `repoUrl`，blur 触发检测预查
+   - 表单新增配置项「是否参与运营」（Boolean，默认**是**，录入/修改均可编辑），随 `RepoDTO` 一并提交
 2. **repo_url 全局不存在**（首次录入）：
    - 校验必填字段（沿用 [RepoDTO](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/dto/space/RepoDTO.java) 现有规则）
    - 新建 `repo_info`（source=manual）+ 新建 `repo_project_ref`（source=manual）
@@ -155,7 +156,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 - 接口：`POST /project-repo/sig/repos`
 - 后端**实时调对应平台读取指定位置 sig-info.yaml**，解析 `repositories` 为仓库清单
 - **过滤**：仅返回**尚未录入当前项目**的仓库（查 `repo_project_ref where project_id=?`，已录入的不展示，避免覆盖已有配置）——**无「录入状态」字段**
-- 每条返回附 `defaultConfig`（默认分支/仓库责任人/开源类型/代码风格自动修复/告警抑制自动检视 等默认参数，供表格展示与编辑）
+- 每条返回附 `defaultConfig`（默认分支/仓库责任人/开源类型/代码风格自动修复/告警抑制自动检视/是否参与运营 等默认参数，供表格展示与编辑）
 - 前端「选择仓库」下拉多选展示，**选出后表格才展示所选仓库列表**
 
 #### 5.2.2 一键录入（默认参数或用户编辑配置）
@@ -165,6 +166,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
   - 别名：先 repo 名，当前项目已存在同名 → `repo名-平台名`（如 `openlibing-cicd-web` → `openlibing-cicd-web-gitcode`）
   - 责任人：gitcode 该仓库**建仓人账号名**（实时获取）
   - 用途：自研源码；语言：不选；开源类型：主导开源；公共账号令牌：不填
+  - 是否参与运营：**是**
   - 接管 PR 管理 / 自动触发门禁流水线 / 自动触发接口扫描 / 代码风格自动修复 / 告警抑制自动检视：均为**否**
   - 仓库规则集配置：不配置
 - 后端校验 `platform` 属于该项目（`project_global_config.config_json` 白名单）、`repoConfigs[].repoUrl` 均在实时解析结果内且**尚未录入当前项目**，事务内对每个仓库：
@@ -321,7 +323,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 | 4b | SIG 一键录入：下拉仅展示尚未录入当前项目的仓库，选出后表格展示；单条/批量编辑配置、单条/批量删除后录入 | UI 操作 + DB 验证 source=sig |
 | 5 | SIG 录入的仓库同样允许手动编辑，调 update-repo 成功（不做来源拦截） | UI + 接口验证 |
 | 6 | SIG 录入不会覆盖已有配置：已录入当前项目的仓库不在 sig/repos 返回中；全局已存在仓库 SIG 录入后其配置不变 | 接口 + DB 验证 |
-| 7 | SIG 表格列展示：默认分支、仓库责任人、开源类型、代码风格自动修复、告警抑制自动检视 | UI 验证 |
+| 7 | SIG 表格列展示：默认分支、仓库责任人、开源类型、代码风格自动修复、告警抑制自动检视、是否参与运营（默认是） | UI 验证 |
 | 8 | 编辑已录入仓库不做多项目影响提示与二次确认，提交直接生效 | UI 操作验证 |
 | 9 | 删除多项目关联仓库仅解除当前项目关联，其他项目仍可见 | UI + DB 验证 |
 | 10 | 列表页显示来源列、关联项目数列 | UI 验证 |

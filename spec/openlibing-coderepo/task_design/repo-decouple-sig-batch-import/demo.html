@@ -453,6 +453,10 @@
             <label>告警抑制自动检视</label>
             <div class="select">否</div>
           </div>
+          <div class="form-item">
+            <label>是否参与运营</label>
+            <div class="select">是</div>
+          </div>
         </div>
         <div class="form-hint" style="margin-top:10px;">表单已自动同步其他项目中的已有配置（可修改）；未删除之前项目时修改会同步影响其他项目，请确认后提交。</div>
       </div>
@@ -483,7 +487,7 @@
 
         <div class="alert alert-info">
           <span class="alert-icon">ℹ</span>
-          <div>SIG 组录入默认使用默认配置（别名=仓库名、责任人=建仓人、开源类型=主导开源、各开关=否）。下拉仅展示<b>尚未录入当前项目</b>的 SIG 仓库，已录入的不展示，因此不会覆盖已有配置。</div>
+          <div>SIG 组录入默认使用默认配置（别名=仓库名、责任人=建仓人、开源类型=主导开源、是否参与运营=是、其余各开关=否）。下拉仅展示<b>尚未录入当前项目</b>的 SIG 仓库，已录入的不展示，因此不会覆盖已有配置。</div>
         </div>
 
         <div class="config-file-row">
@@ -519,6 +523,7 @@
               <th>用途</th>
               <th>代码风格自动修复</th>
               <th>告警抑制自动检视</th>
+              <th>是否参与运营</th>
               <th style="width:130px;">操作</th>
             </tr>
           </thead>
@@ -534,6 +539,7 @@
               <td>自研源码</td>
               <td>否</td>
               <td>否</td>
+              <td>是</td>
               <td><button class="btn-text">编辑配置</button> <button class="btn-text danger">删除</button></td>
             </tr>
             <tr>
@@ -547,6 +553,7 @@
               <td>自研源码</td>
               <td>否</td>
               <td>否</td>
+              <td>是</td>
               <td><button class="btn-text">编辑配置</button> <button class="btn-text danger">删除</button></td>
             </tr>
             <tr>
@@ -560,6 +567,7 @@
               <td>自研源码</td>
               <td>否</td>
               <td>否</td>
+              <td>是</td>
               <td><button class="btn-text">编辑配置</button> <button class="btn-text danger">删除</button></td>
             </tr>
             <tr>
@@ -573,6 +581,7 @@
               <td>自研源码</td>
               <td>是</td>
               <td>否</td>
+              <td>是</td>
               <td><button class="btn-text">编辑配置</button> <button class="btn-text danger">删除</button></td>
             </tr>
           </tbody>
@@ -606,6 +615,7 @@
           <div class="form-item"><label>自动触发接口扫描</label><div class="select">否</div></div>
           <div class="form-item"><label>代码风格自动修复</label><div class="select">否</div></div>
           <div class="form-item"><label>告警抑制自动检视</label><div class="select">否</div></div>
+          <div class="form-item"><label>是否参与运营</label><div class="select">是</div></div>
         </div>
       </div>
       <div class="dialog-footer">

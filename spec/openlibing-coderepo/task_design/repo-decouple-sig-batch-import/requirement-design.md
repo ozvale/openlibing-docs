@@ -142,7 +142,8 @@ checkRepoUrl(userId, projectId, repoUrl):
        exists: true,
        repoId,
        currentConfig: { repoName, repoOwner, purpose, openSource, assumePr,
-                        defaultBranchName, isAutoFormat, isSuppressionEnabled, ... },
+                       defaultBranchName, isAutoFormat, isSuppressionEnabled,
+                       isParticipateOperation, ... },
        associatedProjects: [            // 该 repo 已关联的项目列表
          { projectId, projectName }
        ]
@@ -216,9 +217,9 @@ listSigReposInConfig(userId, projectId, platform):
   3. 过滤：查 repo_project_ref where project_id=? → 得到当前项目已录入的 repo_url 集合
      - 仅保留**未录入当前项目**的仓库（已录入的不展示，避免覆盖已有配置）
   4. 按平台组装完整 repoUrl + 默认别名（repo 名，见 §2.2.3 别名规则）
-     + 默认配置（默认分支/仓库责任人/开源类型/代码风格自动修复/告警抑制自动检视 等，见 §2.2.3 默认参数表）
+     + 默认配置（默认分支/仓库责任人/开源类型/代码风格自动修复/告警抑制自动检视/是否参与运营 等，见 §2.2.3 默认参数表）
   5. 返回 [{ owner, repo, repoUrl, platform, defaultConfig: { alias, defaultBranchName,
-           repoOwner, openSource, isAutoFormat, isSuppressionEnabled, ... } }]
+           repoOwner, openSource, isAutoFormat, isSuppressionEnabled, isParticipateOperation, ... } }]
 ```
 
 #### 2.2.3 一键录入（默认参数 + 别名规则，可单条/批量编辑配置）
@@ -239,12 +240,13 @@ listSigReposInConfig(userId, projectId, platform):
 | 自动触发接口扫描 | 否 | 固定默认，可编辑 |
 | 代码风格自动修复 | 否 | 固定默认，可编辑 |
 | 告警抑制自动检视 | 否 | 固定默认，可编辑 |
+| 是否参与运营 | 是 | 固定默认，可编辑 |
 | 仓库规则集配置 | 不配置 | 固定默认 |
 
 ```
 sigImport(userId, userName, projectId, platform, repoConfigs):
   - repoConfigs: [{ repoUrl, config: { alias, defaultBranchName, repoOwner, purpose,
-                  openSource, isAutoFormat, isSuppressionEnabled, ... } }]  // 用户编辑后或默认值
+                  openSource, isAutoFormat, isSuppressionEnabled, isParticipateOperation, ... } }]  // 用户编辑后或默认值
   1. 从 project_global_config.config_json 取位置 → 实时调对应平台读取 sig-info.yaml → 解析 repositories
      → 校验每个 repoUrl 都在本次解析结果中（防止前端伪造 / 过期数据）
   2. 事务内对每个 repoConfigs（owner/repo）:
@@ -339,10 +341,10 @@ migrateRepoProjectRef():
 - `手动录入` 模式：沿用现有表单，新增 `repoUrl` blur 时调检测接口（`checkRepoUrl`），命中时按 §2.1.3 自动同步配置 + 选择性删除 + 修改同步提示（**无「一键同步」按钮**）
 - `SIG 组一键录入` 模式：
   - 隐藏现有表单字段
-  - 顶部提示条：「SIG 组录入默认使用默认配置（别名=仓库名、责任人=建仓人、开源类型=主导开源、各开关=否）；下拉仅展示尚未录入当前项目的 SIG 仓库，已录入的不展示，不会覆盖已有配置；sig-info.yaml 链接在「全局配置」中维护」
+  - 顶部提示条：「SIG 组录入默认使用默认配置（别名=仓库名、责任人=建仓人、开源类型=主导开源、是否参与运营=是、其余各开关=否）；下拉仅展示尚未录入当前项目的 SIG 仓库，已录入的不展示，不会覆盖已有配置；sig-info.yaml 链接在「全局配置」中维护」
   - 新增「平台」下拉（gitcode/gitee/github），**不单独展示配置文件**（每平台位置唯一，在「全局配置」中维护）
   - **「选择仓库」下拉多选框**（调 `listSigReposInConfig`）：仅展示**尚未录入当前项目**的仓库（已录入的不展示），多选后**表格才展示所选仓库列表**
-  - 表格列：`选择`、`代码仓`、`代码仓别名`、`平台`、`默认分支`、`仓库责任人`、`开源类型`、`用途`、`代码风格自动修复`、`告警抑制自动检视`、`操作`（`编辑配置` / `删除`）——**无「录入状态」列**
+  - 表格列：`选择`、`代码仓`、`代码仓别名`、`平台`、`默认分支`、`仓库责任人`、`开源类型`、`用途`、`代码风格自动修复`、`告警抑制自动检视`、`是否参与运营`、`操作`（`编辑配置` / `删除`）——**无「录入状态」列**
   - 顶部批量操作条：「批量编辑配置」（作用于勾选仓库）/「批量删除」；单条行内「编辑配置」「删除」
   - 底部「一键录入 (N)」按钮 → 调 `sigImport`（N 为表格内仓库数）
 
@@ -421,11 +423,11 @@ migrateRepoProjectRef():
 │  选择仓库: [ ☑ repo-a ☑ repo-b ☑ repo-d ▾ ](多选，选后表格展示)│
 ├──────────────────────────────────────────────────────────┤
 │  已选 3 个   [批量编辑配置] [批量删除]                     │
-│  ☑│ 代码仓      │ 别名   │ 默认分支│ 责任人 │ 开源类型│ 代码风格修复│ 告警抑制 │ 操作            │
-│ ──┼────────────┼────────┼─────────┼────────┼────────┼──────────┼─────────┼─────────────────│
-│  ☑│ org/repo-a  │ repo-a │ master  │ u-a    │ 主导开源│ 否       │ 否      │ 编辑配置 删除   │
-│  ☑│ org/repo-b  │ repo-b │ master  │ u-b    │ 主导开源│ 否       │ 否      │ 编辑配置 删除   │
-│  ☑│ org/repo-d  │ repo-d │ main    │ u-d    │ 主导开源│ 是       │ 否      │ 编辑配置 删除   │
+│  ☑│ 代码仓      │ 别名   │ 默认分支│ 责任人 │ 开源类型│ 代码风格修复│ 告警抑制 │ 是否运营 │ 操作            │
+│ ──┼────────────┼────────┼─────────┼────────┼────────┼──────────┼─────────┼─────────┼─────────────────│
+│  ☑│ org/repo-a  │ repo-a │ master  │ u-a    │ 主导开源│ 否       │ 否      │ 是      │ 编辑配置 删除   │
+│  ☑│ org/repo-b  │ repo-b │ master  │ u-b    │ 主导开源│ 否       │ 否      │ 是      │ 编辑配置 删除   │
+│  ☑│ org/repo-d  │ repo-d │ main    │ u-d    │ 主导开源│ 是       │ 否      │ 是      │ 编辑配置 删除   │
 ├──────────────────────────────────────────────────────────┤
 │                          [一键录入 (3)]                   │
 └──────────────────────────────────────────────────────────┘
@@ -564,7 +566,7 @@ public class SigInfoClient {
 public class SigDefaultParamBuilder {
   /** 生成代码仓别名：先 repo 名；当前项目已存在同名 → repo名-平台名、repo名-平台名2... 递增 */
   public String buildAlias(Integer projectId, String repoName);
-  /** 构造 RepoDTO 默认参数（用途=自研源码/语言=不选/开源类型=主导开源/令牌=不填/各开关=否/规则集=不配置） */
+  /** 构造 RepoDTO 默认参数（用途=自研源码/语言=不选/开源类型=主导开源/令牌=不填/是否参与运营=是/各开关=否/规则集=不配置） */
   public RepoDTO buildDefault(Integer projectId, String owner, String repo, String creator);
 }
 
@@ -723,6 +725,7 @@ public class SigRepoConfigItemDTO {
   private String repoLanguage;                   // 语言（默认不选）
   private Boolean isAutoFormat;                  // 代码风格自动修复（默认否）
   private Boolean isSuppressionEnabled;          // 告警抑制自动检视（默认否）
+  private Boolean isParticipateOperation;        // 是否参与运营（默认是）
   // ... 其余录入参数与手动录入表单一致
 }
 
@@ -888,6 +891,8 @@ ALTER TABLE repo_info ADD COLUMN source VARCHAR(16) NOT NULL DEFAULT 'manual'
   COMMENT '仓库配置来源: manual-手动录入, sig-SIG一键录入' AFTER default_branch_name;
 ALTER TABLE repo_info ADD COLUMN sig_config_file VARCHAR(512) NULL
   COMMENT 'SIG来源时记录的配置文件链接' AFTER source;
+ALTER TABLE repo_info ADD COLUMN is_participate_operation TINYINT(1) NOT NULL DEFAULT 1
+  COMMENT '是否参与运营（默认是）' AFTER sig_config_file;
 
 -- 2. 数据迁移（见 §2.5）中，对 repo_url 归一化（暂不加唯一索引）
 ALTER TABLE repo_info ADD COLUMN repo_url_normalized VARCHAR(512) NULL
@@ -1127,6 +1132,7 @@ project (1) ──── (1) project_global_config ──实时读取──▶ S
 ```jsonc
 {
   // ... 现有字段不变（含表单配置） ...
+  "isParticipateOperation": true,   // 新增, 可选: 是否参与运营（默认是）
   "deleteProjectIds": [3]   // 新增, 可选: 手动录入命中已存在仓库时，勾选「是否删除之前项目中的代码仓」的项目 ID 列表；
                             // 空数组/不传表示不删除，修改配置同步影响所有仍关联项目（前端已提示）
 }
@@ -1180,7 +1186,7 @@ POST /project-repo/delete-repo?userId=xxx&userName=xxx&id={repoId}&projectId={pr
       "repoName": "repo", "repoOwner": "sig-owner", "purpose": "自研源码",
       "openSource": "lead", "assumePr": "1", "autoTrigger": "1",
       "autoTriggerDesignScan": "0", "isAutoFormat": false,
-      "isSuppressionEnabled": true, "disallowSelfMerge": 1,
+      "isSuppressionEnabled": true, "isParticipateOperation": true, "disallowSelfMerge": 1,
       "disallowUnresolvedDiscussionsMerge": 0, "repoLanguage": "java"
     },
     "associatedProjects": [
@@ -1371,7 +1377,7 @@ POST /project-repo/delete-repo?userId=xxx&userName=xxx&id={repoId}&projectId={pr
         "defaultConfig": {
           "alias": "repo-a", "defaultBranchName": "master", "repoOwner": "u-a",
           "openSource": "主导开源", "purpose": "自研源码",
-          "isAutoFormat": false, "isSuppressionEnabled": false
+          "isAutoFormat": false, "isSuppressionEnabled": false, "isParticipateOperation": true
         }
       },
       {
@@ -1380,7 +1386,7 @@ POST /project-repo/delete-repo?userId=xxx&userName=xxx&id={repoId}&projectId={pr
         "defaultConfig": {
           "alias": "repo-b", "defaultBranchName": "master", "repoOwner": "u-b",
           "openSource": "主导开源", "purpose": "自研源码",
-          "isAutoFormat": false, "isSuppressionEnabled": false
+          "isAutoFormat": false, "isSuppressionEnabled": false, "isParticipateOperation": true
         }
       }
     ]
@@ -1405,13 +1411,13 @@ POST /project-repo/delete-repo?userId=xxx&userName=xxx&id={repoId}&projectId={pr
       "repoUrl": "https://gitcode.com/openlibing/repo-a.git",
       "config": { "alias": "repo-a", "defaultBranchName": "master", "repoOwner": "u-a",
                   "openSource": "主导开源", "purpose": "自研源码",
-                  "isAutoFormat": false, "isSuppressionEnabled": false }
+                  "isAutoFormat": false, "isSuppressionEnabled": false, "isParticipateOperation": true }
     },
     {
       "repoUrl": "https://gitcode.com/openlibing/repo-b.git",
       "config": { "alias": "repo-b", "defaultBranchName": "master", "repoOwner": "u-b",
                   "openSource": "主导开源", "purpose": "自研源码",
-                  "isAutoFormat": true, "isSuppressionEnabled": false }
+                  "isAutoFormat": true, "isSuppressionEnabled": false, "isParticipateOperation": true }
     }
   ]
 }
