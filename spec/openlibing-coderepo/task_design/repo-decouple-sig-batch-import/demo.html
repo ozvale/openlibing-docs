@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>代码仓管理与需求解耦 - 页面原型</title>
+<style>
+  /* 对齐 openlibing-web Element Plus 风格：主色 #006be6 */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f4f6fa;
+    color: #191919;
+    font-size: 13px;
+    padding: 24px;
+  }
+  .page-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #191919;
+  }
+  .page-desc {
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+  .section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .section-label {
+    display: inline-block;
+    background: #006be6;
+    color: #fff;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 14px;
+    color: #191919;
+  }
+
+  /* 通用按钮 */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 32px;
+    padding: 0 16px;
+    border-radius: 4px;
+    border: 1px solid #006be6;
+    background: #006be6;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 400;
+  }
+  .btn-default { background: #fff; color: #333; border-color: #dcdfe6; }
+  .btn-text { background: transparent; border: none; color: #006be6; padding: 0 4px; height: auto; }
+  .btn-danger { background: #f56c6c; border-color: #f56c6c; }
+  .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+  /* 工具条 */
+  .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+
+  /* 表格 */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td {
+    border: 1px solid #ebeef5;
+    padding: 8px 12px;
+    text-align: left;
+    height: 40px;
+  }
+  th { background: #f4f6fa; font-weight: 600; color: #191919; }
+  td a { color: #006be6; cursor: pointer; text-decoration: none; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; line-height: 18px; }
+  .tag-success { background: #f0f9eb; color: #67c23a; border: 1px solid #c2e7b0; }
+  .tag-info { background: #f4f4f5; color: #909399; border: 1px solid #d3d4d6; }
+  .tag-warning { background: #fdf6ec; color: #e6a23c; border: 1px solid #f5dab1; }
+  .tag-primary { background: #ecf5ff; color: #006be6; border: 1px solid #b3d8ff; }
+  .tag-sig { background: #fef0f6; color: #d63384; border: 1px solid #f5b8d8; }
+
+  /* 对话框 */
+  .dialog-mask {
+    position: relative;
+    background: rgba(0,0,0,0.05);
+    padding: 40px 0;
+    border-radius: 6px;
+    margin-top: 12px;
+  }
+  .dialog {
+    width: 880px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    overflow: hidden;
+  }
+  .dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #ebeef5;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .dialog-close { cursor: pointer; color: #909399; font-size: 18px; }
+  .dialog-body { padding: 20px; }
+  .dialog-footer {
+    padding: 12px 20px 20px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  /* 录入方式切换 */
+  .mode-switch {
+    display: flex;
+    gap: 20px;
+    padding: 10px 14px;
+    background: #f4f6fa;
+    border-radius: 4px;
+    margin-bottom: 16px;
+  }
+  .mode-switch label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 14px; }
+  .mode-switch input[type=radio] { accent-color: #006be6; }
+
+  /* 提示条 */
+  .alert {
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .alert-warning { background: #fdf6ec; color: #e6a23c; border: 1px solid #f5dab1; }
+  .alert-info { background: #ecf5ff; color: #006be6; border: 1px solid #b3d8ff; }
+  .alert-error { background: #fef0f0; color: #f56c6c; border: 1px solid #fbc4c4; }
+  .alert-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .alert .alert-actions { margin-left: auto; display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* 表单 */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px 16px; }
+  .form-item { display: flex; flex-direction: column; gap: 4px; }
+  .form-item.full { grid-column: 1 / -1; }
+  .form-item label { font-size: 13px; color: #606266; }
+  .form-item label .req { color: #f56c6c; margin-right: 2px; }
+  .form-item .input, .form-item .select {
+    height: 32px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    padding: 0 10px;
+    font-size: 13px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+  }
+  .form-item .input.disabled, .form-item .select.disabled {
+    background: #f5f7fa;
+    color: #909399;
+    cursor: not-allowed;
+  }
+  .form-item .select::after { content: "▾"; margin-left: auto; color: #909399; }
+  .form-hint { font-size: 12px; color: #909399; }
+
+  /* SIG 仓库清单表 */
+  .sig-table th, .sig-table td { text-align: center; }
+  .sig-table th:first-child, .sig-table td:first-child { width: 40px; }
+  .checkbox { width: 16px; height: 16px; accent-color: #006be6; cursor: pointer; }
+
+  .config-file-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .config-file-row label { font-size: 13px; color: #606266; min-width: 80px; }
+  .select-box {
+    min-width: 320px; height: 32px; border: 1px solid #dcdfe6; border-radius: 4px;
+    padding: 0 10px; display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; background: #fff;
+  }
+  .select-box::after { content: "▾"; color: #909399; }
+
+  /* 全局配置弹窗：三页签 */
+  .dialog-global { width: 960px; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid #e4e7ed; padding: 0 20px; }
+  .tab {
+    padding: 12px 18px;
+    font-size: 14px;
+    color: #606266;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab.active { color: #006be6; border-bottom-color: #006be6; font-weight: 600; }
+  .gc-section { padding: 18px 0; border-bottom: 1px solid #f0f2f5; }
+  .gc-section:last-of-type { border-bottom: none; }
+  .gc-section-title {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 14px; font-weight: 600; color: #191919; margin-bottom: 12px;
+  }
+  .gc-account-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .gc-account-row .form-item { flex: 1; min-width: 220px; }
+  .gc-loc-card {
+    display: flex; align-items: center; gap: 10px;
+    border: 1px solid #e4e7ed; border-radius: 4px; padding: 8px 10px; margin-bottom: 10px;
+    background: #fafbfc;
+  }
+  .gc-loc-card .loc-info { flex: 1; font-size: 13px; color: #191919; min-width: 0; }
+  .gc-loc-card .loc-info .loc-path { color: #606266; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gc-loc-card .loc-info input {
+    height: 28px; border: 1px solid #dcdfe6; border-radius: 4px; padding: 0 8px;
+    font-size: 12px; vertical-align: middle; margin: 0 4px;
+  }
+  .gc-loc-status { font-size: 12px; flex-shrink: 0; }
+  .ok-tag { color: #67c23a; }
+  .err-tag { color: #f56c6c; }
+  .role-map-table th, .role-map-table td { text-align: center; padding: 6px 12px; height: 34px; }
+  .role-map-table .mini-select {
+    width: 140px; height: 28px; border: 1px solid #dcdfe6; border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: space-between; padding: 0 8px;
+    background: #fff; font-size: 12px;
+  }
+  .role-map-table .mini-select::after { content: "▾"; color: #909399; }
+  .icon-btn { cursor: pointer; color: #909399; font-size: 15px; padding: 0 4px; }
+  .icon-btn:hover { color: #006be6; }
+  .icon-btn.danger:hover { color: #f56c6c; }
+  .btn-text.danger { color: #f56c6c; }
+
+  /* SIG 录入：宽表格 + 批量操作条 + 选择性删除 */
+  .dialog-sig { width: 1140px; }
+  .sig-toolbar { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; flex-wrap: wrap; }
+  .delete-projects {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    background: #f4f6fa; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px;
+  }
+  .delete-projects .dp-title { font-size: 13px; color: #191919; font-weight: 500; width: 100%; margin-bottom: 4px; }
+  .delete-projects label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; }
+  .delete-projects .checkbox { width: 14px; height: 14px; }
+</style>
+</head>
+<body>
+
+<div class="page-title">代码仓管理与需求解耦 + SIG 组一键批量录入 · 页面原型</div>
+<div class="page-desc">本原型展示关键交互：①项目级「全局配置」弹窗（三页签，集中管理公共账号 / 代码仓录入配置（sig-info.yaml 链接） / GitCode 角色映射）；②手动录入（输入链接自动检测 → 已存在则自动同步配置，可选择性删除 / 修改配置同步提示）；③SIG 组一键录入（先多选尚未录入当前项目的仓库 → 表格核对/编辑/删除 → 批量录入）；④代码仓列表（来源列 + 关联项目数列）。样式对齐 openlibing-web Element Plus 主色 #006be6。</div>
+
+<!-- ========== 场景一：项目级全局配置（三页签弹窗） ========== -->
+<div class="section">
+  <span class="section-label">场景一</span>
+  <div class="section-title">项目级「全局配置」：三页签集中管理项目公共账号 / 代码仓录入配置 / GitCode 角色映射</div>
+
+  <div class="toolbar">
+    <button class="btn">+ 录入仓库</button>
+    <button class="btn btn-default">↻ 同步仓库</button>
+    <button class="btn btn-default">⭳ 导出仓库</button>
+    <button class="btn" style="background:#ff7d00; border-color:#ff7d00;">⚙ 全局配置</button>
+  </div>
+  <div class="form-hint" style="margin-bottom:6px;">工具栏「导出仓库」右侧新增「全局配置」按钮，对当前项目下所有代码仓生效；原「gitcode 角色映射」「项目公共账号」两个按钮的能力并入本弹窗。</div>
+
+  <div class="dialog-mask">
+    <div class="dialog dialog-global">
+      <div class="dialog-header">
+        <span>全局配置（对项目下所有代码仓生效）</span>
+        <span class="dialog-close">✕</span>
+      </div>
+
+      <!-- 三页签 -->
+      <div class="tabs">
+        <span class="tab active">GitCode</span>
+        <span class="tab">Gitee</span>
+        <span class="tab">GitHub</span>
+      </div>
+
+      <div class="dialog-body">
+        <!-- ① 项目公共账号（可直接配置） -->
+        <div class="gc-section">
+          <div class="gc-section-title">
+            <span>项目公共账号（GitCode）</span>
+            <span class="form-hint">用于仓库私有性判断、同步仓库成员、执行门禁/版本级扫描等；令牌留空则不修改原值</span>
+          </div>
+          <div class="gc-account-row">
+            <div class="form-item">
+              <label>登录名</label>
+              <div class="input">openlibing-gitcode</div>
+            </div>
+            <div class="form-item">
+              <label>令牌</label>
+              <div class="input">••••••••••••</div>
+              <div class="form-hint">留空表示不修改原令牌</div>
+            </div>
+            <button class="btn btn-default" style="height:32px;">保存</button>
+          </div>
+        </div>
+
+        <!-- ② 代码仓录入配置（sig-info.yaml 位置） -->
+        <div class="gc-section">
+          <div class="gc-section-title">
+            <span>代码仓录入配置（sig-info.yaml 位置）</span>
+            <span class="form-hint">每平台仅允许配置一个位置</span>
+          </div>
+          <div class="gc-loc-card" style="align-items:flex-start;">
+            <div class="loc-info" style="flex:1;">
+              <div style="margin-bottom:6px;">sig-info.yaml 链接：</div>
+              <input type="text" value="https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private/sig-info.yaml" style="width:100%;">
+            </div>
+            <span class="gc-loc-status ok-tag">● 可用</span>
+            <button class="btn btn-default" style="height:28px;padding:0 12px;">保存</button>
+          </div>
+          <div class="form-hint">在代码托管平台（gitcode / gitee / github）对应代码仓、对应分支中找到 sig-info.yaml 文件，复制此时的完整链接填入即可（示例：https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private/sig-info.yaml）；保存时实时校验文件可用性。</div>
+        </div>
+
+        <!-- ③ 角色映射（仅 GitCode 页签） -->
+        <div class="gc-section">
+          <div class="gc-section-title">
+            <span>角色映射（GitCode 角色 ↔ openLiBing 角色）</span>
+            <span class="form-hint">根据映射关系同步 gitcode 仓库成员，用于功能鉴权</span>
+          </div>
+          <table class="role-map-table" style="max-width:520px;">
+            <thead>
+              <tr><th>GitCode 角色</th><th>openLiBing 角色</th><th style="width:70px;">操作</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>owner</td>
+                <td><span class="mini-select">项目管理员</span></td>
+                <td><span class="icon-btn">＋</span><span class="icon-btn danger">－</span></td>
+              </tr>
+              <tr>
+                <td>master</td>
+                <td><span class="mini-select">仓库管理员</span></td>
+                <td><span class="icon-btn">＋</span><span class="icon-btn danger">－</span></td>
+              </tr>
+              <tr>
+                <td>developer</td>
+                <td><span class="mini-select">开发者</span></td>
+                <td><span class="icon-btn">＋</span><span class="icon-btn danger">－</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn">保存</button>
+        <button class="btn btn-default">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px; font-size:13px; color:#666; line-height:1.8;">
+    <b>Gitee / GitHub 页签</b>：同样支持「项目公共账号」（可直接配置）与「代码仓录入配置」，但不含「角色映射」。
+  </div>
+</div>
+
+<!-- ========== 场景二：手动录入 - 已存在仓库的配置同步与选择性删除 ========== -->
+<div class="section">
+  <span class="section-label">场景二</span>
+  <div class="section-title">手动录入：输入仓库链接自动检测；已录入其他项目则自动同步其配置，可选择性删除 / 修改配置同步提示</div>
+  <div class="toolbar">
+    <button class="btn">+ 录入仓库</button>
+    <button class="btn btn-default">↻ 同步仓库</button>
+    <button class="btn btn-default">⭳ 导出仓库</button>
+    <button class="btn btn-default">⚙ 全局配置</button>
+  </div>
+
+  <div class="dialog-mask">
+    <div class="dialog">
+      <div class="dialog-header">
+        <span>录入代码仓</span>
+        <span class="dialog-close">✕</span>
+      </div>
+      <div class="dialog-body">
+        <div class="mode-switch">
+          <label><input type="radio" name="m1" checked> 手动录入</label>
+          <label><input type="radio" name="m1"> SIG 组一键录入</label>
+        </div>
+
+        <div class="form-item" style="margin-bottom:14px;">
+          <label><span class="req">*</span>仓库链接</label>
+          <div class="input">https://gitcode.com/openlibing/openlibing-coderepo.git</div>
+          <div class="form-hint">输入链接失焦后自动发起检测请求，判断该代码仓是否已在其他项目录入</div>
+        </div>
+
+        <!-- 已存在于其他项目：配置自动同步（无需「一键同步」按钮） -->
+        <div class="alert alert-info">
+          <span class="alert-icon">ℹ</span>
+          <div>检测到该代码仓已在 <b>项目A</b>、<b>项目B</b> 录入，已将已有配置自动同步到下方表单，可直接修改后提交。</div>
+        </div>
+
+        <!-- 选择性删除之前项目中的代码仓（支持多选，非一次删除所有） -->
+        <div class="delete-projects">
+          <div class="dp-title">是否删除之前项目中的代码仓？（可多选，仅取消该代码仓与所选项目的关联）</div>
+          <label><input type="checkbox" class="checkbox"> 项目A</label>
+          <label><input type="checkbox" class="checkbox"> 项目B</label>
+          <span class="form-hint">删除支持选择性、而非一次删除所有；不勾选则不删除该项目下的该代码仓</span>
+        </div>
+
+        <!-- 未删除时修改配置的同步提示 -->
+        <div class="alert alert-warning">
+          <span class="alert-icon">⚠</span>
+          <div>您未删除之前项目中的代码仓，修改下方配置将<b>同步修改项目A、项目B中的该代码仓配置</b>（代码仓配置全局唯一）。</div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-item">
+            <label>托管平台</label>
+            <div class="select">gitcode</div>
+          </div>
+          <div class="form-item">
+            <label>代码仓别名</label>
+            <div class="input">openlibing-coderepo</div>
+          </div>
+          <div class="form-item">
+            <label><span class="req">*</span>仓库责任人</label>
+            <div class="input">sig-owner</div>
+          </div>
+          <div class="form-item">
+            <label><span class="req">*</span>用途</label>
+            <div class="select">自研源码</div>
+          </div>
+          <div class="form-item">
+            <label>语言</label>
+            <div class="select">java</div>
+          </div>
+          <div class="form-item">
+            <label><span class="req">*</span>开源类型</label>
+            <div class="select">主导开源</div>
+          </div>
+          <div class="form-item">
+            <label>接管PR管理</label>
+            <div class="select">是</div>
+          </div>
+          <div class="form-item">
+            <label>自动触发门禁流水线</label>
+            <div class="select">是</div>
+          </div>
+          <div class="form-item">
+            <label>自动触发接口扫描</label>
+            <div class="select">否</div>
+          </div>
+          <div class="form-item">
+            <label>代码风格自动修复</label>
+            <div class="select">否</div>
+          </div>
+          <div class="form-item">
+            <label>告警抑制自动检视</label>
+            <div class="select">否</div>
+          </div>
+        </div>
+        <div class="form-hint" style="margin-top:10px;">表单已自动同步其他项目中的已有配置（可修改）；未删除之前项目时修改会同步影响其他项目，请确认后提交。</div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn">确定</button>
+        <button class="btn btn-default">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 场景三：SIG 组一键录入（多选未录入仓库 → 表格核对/编辑/删除 → 批量录入） ========== -->
+<div class="section">
+  <span class="section-label">场景三</span>
+  <div class="section-title">SIG 组一键录入：先多选尚未录入当前项目的 SIG 仓库，再在表格中核对 / 单条或批量编辑、删除后录入</div>
+
+  <div class="dialog-mask">
+    <div class="dialog dialog-sig">
+      <div class="dialog-header">
+        <span>录入代码仓</span>
+        <span class="dialog-close">✕</span>
+      </div>
+      <div class="dialog-body">
+        <div class="mode-switch">
+          <label><input type="radio" name="m2"> 手动录入</label>
+          <label><input type="radio" name="m2" checked> SIG 组一键录入</label>
+        </div>
+
+        <div class="alert alert-info">
+          <span class="alert-icon">ℹ</span>
+          <div>SIG 组录入默认使用默认配置（别名=仓库名、责任人=建仓人、开源类型=主导开源、各开关=否）。下拉仅展示<b>尚未录入当前项目</b>的 SIG 仓库，已录入的不展示，因此不会覆盖已有配置。</div>
+        </div>
+
+        <div class="config-file-row">
+          <label>平台</label>
+          <div class="select-box" style="min-width:120px;">gitcode</div>
+          <span class="form-hint">该平台 sig-info.yaml 位置在「全局配置」中配置（每平台仅一个链接），此处实时读取解析</span>
+        </div>
+
+        <!-- 未录入仓库多选下拉 -->
+        <div class="config-file-row">
+          <label>选择仓库</label>
+          <div class="select-box" style="min-width:380px;">已选 4 个：openlibing-coderepo、openlibing-web、openlibing-framework、openlibing-codecheck…</div>
+          <span class="form-hint">下拉多选框仅展示尚未录入当前项目的 SIG 仓库，选出后表格展示所选仓库列表</span>
+        </div>
+
+        <div class="sig-toolbar">
+          <span>已选 <b>4</b> 个仓库</span>
+          <button class="btn btn-default" style="height:28px;padding:0 12px;">批量编辑配置</button>
+          <button class="btn btn-default" style="height:28px;padding:0 12px;">批量删除</button>
+          <span class="form-hint">默认使用默认配置；可单条 / 批量编辑，或直接使用默认值</span>
+        </div>
+
+        <table class="sig-table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" class="checkbox" checked></th>
+              <th>代码仓</th>
+              <th>代码仓别名</th>
+              <th>平台</th>
+              <th>默认分支</th>
+              <th>仓库责任人</th>
+              <th>开源类型</th>
+              <th>用途</th>
+              <th>代码风格自动修复</th>
+              <th>告警抑制自动检视</th>
+              <th style="width:130px;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><input type="checkbox" class="checkbox" checked></td>
+              <td>openlibing/openlibing-coderepo</td>
+              <td>openlibing-coderepo</td>
+              <td>gitcode</td>
+              <td>master</td>
+              <td>openlibing</td>
+              <td>主导开源</td>
+              <td>自研源码</td>
+              <td>否</td>
+              <td>否</td>
+              <td><button class="btn-text">编辑配置</button> <button class="btn-text danger">删除</button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="checkbox" checked></td>
+              <td>openlibing/openlibing-web</td>
+              <td>openlibing-web</td>
+              <td>gitcode</td>
+              <td>master</td>
+              <td>openlibing</td>
+              <td>主导开源</td>
+              <td>自研源码</td>
+              <td>否</td>
+              <td>否</td>
+              <td><button class="btn-text">编辑配置</button> <button class="btn-text danger">删除</button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="checkbox" checked></td>
+              <td>openlibing/openlibing-framework</td>
+              <td>openlibing-framework</td>
+              <td>gitcode</td>
+              <td>master</td>
+              <td>openlibing</td>
+              <td>主导开源</td>
+              <td>自研源码</td>
+              <td>否</td>
+              <td>否</td>
+              <td><button class="btn-text">编辑配置</button> <button class="btn-text danger">删除</button></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="checkbox" checked></td>
+              <td>openlibing/openlibing-codecheck</td>
+              <td>openlibing-codecheck</td>
+              <td>gitcode</td>
+              <td>master</td>
+              <td>openlibing</td>
+              <td>主导开源</td>
+              <td>自研源码</td>
+              <td>是</td>
+              <td>否</td>
+              <td><button class="btn-text">编辑配置</button> <button class="btn-text danger">删除</button></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="form-hint" style="margin-top:10px;">「编辑配置」/「批量编辑配置」复用与手动录入一致的配置表单（默认值见上表，可修改后保存，或恢复默认）；单条 / 批量「删除」用于移除选错、不想录入的仓库。</div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn">一键录入 (4)</button>
+        <button class="btn btn-default">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑配置示例（单条 / 批量共用同一表单） -->
+  <div class="dialog-mask" style="margin-top:10px;">
+    <div class="dialog" style="width:760px;">
+      <div class="dialog-header">
+        <span>编辑配置：openlibing/openlibing-coderepo（批量编辑作用于所有勾选仓库）</span>
+        <span class="dialog-close">✕</span>
+      </div>
+      <div class="dialog-body">
+        <div class="form-grid">
+          <div class="form-item"><label>代码仓别名</label><div class="input">openlibing-coderepo</div></div>
+          <div class="form-item"><label>仓库责任人</label><div class="input">openlibing</div></div>
+          <div class="form-item"><label>用途</label><div class="select">自研源码</div></div>
+          <div class="form-item"><label>语言</label><div class="select">java</div></div>
+          <div class="form-item"><label>开源类型</label><div class="select">主导开源</div></div>
+          <div class="form-item"><label>接管PR管理</label><div class="select">否</div></div>
+          <div class="form-item"><label>自动触发门禁流水线</label><div class="select">否</div></div>
+          <div class="form-item"><label>自动触发接口扫描</label><div class="select">否</div></div>
+          <div class="form-item"><label>代码风格自动修复</label><div class="select">否</div></div>
+          <div class="form-item"><label>告警抑制自动检视</label><div class="select">否</div></div>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn">保存</button>
+        <button class="btn btn-default">恢复默认</button>
+        <button class="btn btn-default">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 列表页：来源列 + 关联项目数列 ========== -->
+<div class="section">
+  <span class="section-label">列表页</span>
+  <div class="section-title">代码仓列表：新增「来源」列与「关联项目数」列</div>
+  <div class="toolbar">
+    <button class="btn">+ 录入仓库</button>
+    <button class="btn btn-default">↻ 同步仓库</button>
+    <button class="btn btn-default">⚙ 全局配置</button>
+    <button class="btn btn-default">列配置</button>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40px;"><input type="checkbox" class="checkbox"></th>
+        <th>代码托管平台</th>
+        <th>代码仓</th>
+        <th>代码仓别名</th>
+        <th>用途</th>
+        <th>语言</th>
+        <th>来源</th>
+        <th>关联项目数</th>
+        <th>状态</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><input type="checkbox" class="checkbox"></td>
+        <td>gitcode</td>
+        <td><a>openlibing/openlibing-coderepo</a></td>
+        <td>openlibing-coderepo</td>
+        <td>自研源码</td>
+        <td>java</td>
+        <td><span class="tag tag-primary">手动</span></td>
+        <td>3</td>
+        <td><span class="tag tag-success">正常</span></td>
+        <td>
+          <button class="btn-text">✎</button>
+          <button class="btn-text">🗑</button>
+          <button class="btn-text">👥</button>
+          <button class="btn-text">🔗</button>
+        </td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" class="checkbox"></td>
+        <td>gitcode</td>
+        <td><a>openlibing/openlibing-web</a></td>
+        <td>openlibing-web</td>
+        <td>自研源码</td>
+        <td>typescript</td>
+        <td><span class="tag tag-sig">SIG</span></td>
+        <td>2</td>
+        <td><span class="tag tag-success">正常</span></td>
+        <td>
+          <button class="btn-text">✎</button>
+          <button class="btn-text">🗑</button>
+          <button class="btn-text">👥</button>
+          <button class="btn-text">🔗</button>
+        </td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" class="checkbox"></td>
+        <td>gitcode</td>
+        <td><a>openlibing/openlibing-framework</a></td>
+        <td>openlibing-framework</td>
+        <td>自研源码</td>
+        <td>java</td>
+        <td><span class="tag tag-sig">SIG</span></td>
+        <td>1</td>
+        <td><span class="tag tag-success">正常</span></td>
+        <td>
+          <button class="btn-text">✎</button>
+          <button class="btn-text">🗑</button>
+          <button class="btn-text">👥</button>
+          <button class="btn-text">🔗</button>
+        </td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" class="checkbox"></td>
+        <td>gitcode</td>
+        <td><a>openlibing/openlibing-codecheck</a></td>
+        <td>openlibing-codecheck</td>
+        <td>自研源码</td>
+        <td>java</td>
+        <td><span class="tag tag-primary">手动</span></td>
+        <td>1</td>
+        <td><span class="tag tag-success">正常</span></td>
+        <td>
+          <button class="btn-text">✎</button>
+          <button class="btn-text">🗑</button>
+          <button class="btn-text">👥</button>
+          <button class="btn-text">🔗</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
