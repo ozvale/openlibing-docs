@@ -1,4 +1,4 @@
-# OpenLibing 运营域四仓安全威胁建模分析报告（STRIDE-A）——远程主干基线（合并版）
+# [openlibing-ops、ops-web、metric、sync]安全威胁建模分析报告（STRIDE-A）——远程主干基线（合并版）
 
 > 分析对象：`openlibing-ops`、`openlibing-metric`、`openlibing-sync`、`openlibing-ops-web` 四个代码仓库（含其与 `openlibing-gateway`、`openlibing-common`、`openlibing-framework` 及外部服务的信任关系）。
 > 分析方法：STRIDE-A（欺骗 Spoofing / 篡改 Tampering / 否认 Repudiation / 信息泄露 Information Disclosure / 拒绝服务 Denial of Service / 权限提升 Elevation of Privilege / 滥用 Abuse），零信任视角 + 纵深防御。
@@ -19,7 +19,7 @@
 | 仓库 4 | `openlibing-ops-web`，远程主干 `origin/main`，HEAD `7ca9554` |
 | 与本地开发分支的基线差异 | 本地 `feat-apollo-eureka-nacos`（Nacos 迁移分支）vs 远程主干（Apollo）：差异集中在 CI 工作流（主干移除 nightly-schedule-scan）、RateLimitConfig（主干为 Apollo 版纯配置类）、配置文件与 sync `TestCaseDataServiceImpl`（ListUtils→Lists 无安全影响）；业务代码（Controller/Service/Mapper）几乎一致 |
 | 分析范围 | 4 仓源码 + 配置 + 部署脚本 + CI 工作流；信任边界证据来自 `openlibing-gateway`/`openlibing-common` 相关代码与 docs 记录 |
-| 输出位置（归档） | `openlibing-docs/architecture_desgin/OpenLibing_四仓安全威胁建模分析报告.md`（PR 合入主仓 master 后生效）；原始副本 `C:\w30060144\etransUpload\OpenLibing_四仓安全威胁建模分析报告_main_dsf.md` |
+| 输出位置（归档） | `openlibing-docs/architecture_desgin/[openlibing-ops、ops-web、metric、sync]安全威胁建模分析报告.md`（PR 合入主仓 master 后生效）；原始副本 `C:\w30060144\etransUpload\OpenLibing_四仓安全威胁建模分析报告_main_dsf.md` |
 
 ---
 
