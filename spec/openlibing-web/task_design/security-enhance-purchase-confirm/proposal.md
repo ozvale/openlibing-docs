@@ -54,4 +54,3 @@
 - 仓：openlibing-web（单文件）+ openlibing-codecheck（2 个文件 + 测试）
 - web：`apps/web-openlibing/src/views/RuleSetDirectory/CodeCheckRule/children/CustomRuleConfig.vue`
 - codecheck：`src/main/java/com/openlibing/codecheck/common/utils/codecheck/RestCodeCheckUtil.java`、`src/main/java/com/openlibing/codecheck/business/impl/RuleDelegateImpl.java` 及对应测试
-
