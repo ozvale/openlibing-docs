@@ -28,28 +28,37 @@
 
 | 阶段 | 范围 | 交付 |
 |------|------|------|
-| **Phase 1（本需求）** | 仅 `coderepo`（本项目可控） | 新建 `repo_project_ref` 表达仓库↔项目多对多；**新录入仓库全局唯一**（同一 `repo_url` 不再产生第二行，代码层查重）；coderepo 自身读写切新模型；**下游 8 仓零改动**，仍读 `repo_info.project_id`（值=该行所属项目；53 个共享仓多行保留、各自项目照常可见）；归并与唯一索引**推迟** |
+| **Phase 1（本需求）** | `coderepo`（本项目可控）+ `framework`（必要例外） | 新建 `repo_project_ref` 表达仓库↔项目多对多；**新录入仓库全局唯一**（同一 `repo_url` 不再产生第二行，代码层查重）；coderepo 自身读写切新模型；framework 做**副仓拦截改造**（§7.1.4）；**其余 7 仓零改动**，仍读 `repo_info.project_id`（值=该行所属项目；53 个共享仓多行保留、各自项目照常可见）；归并与唯一索引**推迟** |
 | **Phase 2（8 仓逐个可控后）** | 8 个下游仓 | 逐个切换为从 `repo_project_ref` 取 `project_id` → 按 `repo_url` 归并 53 个共享仓（保留最早行为基准，其余行删除前重映射其子表 FK，如 sca `tbl_scan.repo_id`）→ 全部完成后 `DROP COLUMN project_id` + 加 `repo_url` 唯一索引 |
 
 ### 1.2 解耦方案
 
-`repo_url` 全局唯一 → 单一 `repo_id`；新建 `repo_project_ref` 作为仓库↔项目多对多关联表；`repo_info.project_id` **暂时保留**（该行所属项目；新录入仓库回填为 `repo_project_ref` 中该 repo 最早关联记录的 `project_id`，作为过渡期冗余字段），后续择期移除。
+`repo_url` 全局唯一 → 单一 `repo_id`；新建 `repo_project_ref` 作为仓库↔项目多对多关联表；`repo_info.project_id` **暂时保留**（该 repo 的**主仓项目**的 `project_id`，作为过渡期冗余字段，也是 8 个下游仓唯一能读到的项目归属），后续择期移除。
 
 1. **新录入全局唯一是核心目标**：需求明确「每个 `repo_url` 全局唯一对应一个 `repo_id`」。**先不在 DB 层对 `repo_url` 加唯一约束**（存量 53 个共享仓多行未清理会阻塞加唯一索引、上线窗口并发录入会触发唯一键冲突），先在**代码层保证新录入仓库不重复**（`addRepoInfo` / `sigImport` 在事务内按归一化 `repo_url_normalized` 查重 + 锁，见 §5.3），同一仓库不再新增第二行；**存量 53 个共享仓多行保留（遗留现状，不阻塞新录入），列入待归并清单，Phase 2 统一归并**。
 2. **配置单一来源**：新模型下同一 `repo_id` 只有一份配置（用途/开源类型/接管 PR/规则集等），从根上消除新产生配置漂移，多个项目关联同一仓库时共享这份配置；**存量 53 个共享仓在归并前暂按各自行维护配置（与现状一致，不强制收敛），归并后自然达成单一来源**。
 3. **关联表表达多对多**：`repo_project_ref` 干净支撑「一个 repo 关联 N 个 project」「一个 project 关联 N 个 repo」的多对多语义，且可在关联上记录「该关联是手动建立还是 SIG 建立」（`source` 字段），支撑 SIG 优先级判定。
 4. **过渡期双轨兼容**：`repo_info.project_id` 不立即删除（该行所属项目），保证 8 个未改造仓继续按旧方式读取不中断；**Phase 1 不做存量归并**——仅新增 `repo_project_ref` 并为存量行做 1:1 回填（无副作用），归并整体推迟到 Phase 2。
-5. **分阶段改造（影响面收敛，Phase 1 仅 coderepo）**：本项目只可控 `coderepo`，Phase 1 仅让 coderepo 全面切换为从 `repo_project_ref` 取 `project_id`；其余 `codecheck`/`cicd`/`sbom`/`framework`/`anti-poison`/`sca`/`gateway`/`vulnerability` **8 仓本需求一律不动**，仍从 `repo_info.project_id` 读取，后续 8 仓逐个可控后再切换（见 §2.5 迁移策略与 §4.4 过渡期策略）。
+5. **分阶段改造（影响面收敛，Phase 1 仅 coderepo + framework 必要例外）**：本项目只可控 `coderepo`，Phase 1 让 coderepo 全面切换为从 `repo_project_ref` 取 `project_id`；`framework` 因主仓/副仓模型下存在「副仓用户被静默登记为主仓项目成员」的污染风险，需同步做**副仓拦截改造**（见 §7.1.4）；其余 `codecheck`/`cicd`/`sbom`/`anti-poison`/`sca`/`gateway`/`vulnerability` **7 仓本需求一律不动**，仍从 `repo_info.project_id` 读取，后续逐个可控后再切换（见 §2.5 迁移策略与 §4.4 过渡期策略）。
+6. **主仓/副仓语义（Phase 1 关键决策）**：`repo_info.project_id` = 用户选择的**主仓项目**（唯一参与下游 8 仓扫描/检查/权限/漏洞的项目，默认=首个录入项目，可迁移）；其他项目对同一仓库的关联为**副仓**——仅在 coderepo 侧 `repo_project_ref` 记录（管理/展示用），**不参与任何下游任务**，下游 8 仓对副仓不可见。该语义保证 Phase 1 `repo_info.project_id` 始终是「真实单归属」，消除「新多项目关联在下游静默丢失」的风险（决策细节见 §1.5，录入流程见 §2.1）。
 
 **分阶段改造范围与影响仓**（基于全量代码检索 `repo_info` 表 `repo_id ↔ project_id` 互查使用情况 + 存量体检 53 个共享仓）：
 
 | 阶段 | 仓 | 改造方式 |
 |------|-----|---------|
 | **Phase 1（本需求）** | `coderepo`（本项目可控） | 新建 `repo_project_ref` + 存量 1:1 回填；新录入全局唯一（代码层查重）；coderepo 自身读写切关联表；`repo_info.project_id` 保留 |
-| **暂不修改（8 仓零改动）** | `codecheck` / `cicd` / `sbom` / `framework` / `anti-poison` / `sca` / `gateway` / `vulnerability` | 仍从 `repo_info.project_id` 读取（该行所属项目；53 个共享仓多行保留、各自项目照常可见），Phase 1 不做任何修改 |
+| **Phase 1 必要例外（需改造）** | `framework` | 主仓/副仓模型下，framework 仓库级/git 成员权限路径不校验访问者项目，副仓用户会被静默登记为主仓项目成员 → 需同步做**副仓拦截改造**（`checkRepoUserNamePermission`/`saveRepoUserInfo`/`verifyPermissions`/`getSpaceId`/`getBySca`，见 §7.1.4）；`repo_info.project_id` 读取语义不变 |
+| **暂不修改（其余 7 仓零改动）** | `codecheck` / `cicd` / `sbom` / `anti-poison` / `sca` / `gateway` / `vulnerability` | 仍从 `repo_info.project_id` 读取（该行所属项目；53 个共享仓多行保留、各自项目照常可见），Phase 1 不做任何修改 |
 | **Phase 2（8 仓逐个可控后）** | 上述 8 仓 | 逐个切换为从 `repo_project_ref` 取 `project_id`；全部切换完成后按 `repo_url` 归并 53 个共享仓（保留最早行为基准、其余行删除前重映射其子表 FK）、`DROP COLUMN project_id`、加 `repo_url` 唯一索引 |
 
-> **过渡期语义说明**：`repo_info.project_id` 仅能冗余单个 `project_id`。存量 53 个共享仓多行保留，每行 `project_id`=该行所属项目（与现状一致，8 仓读取零变化）；新模型下新产生的多项目关联（同一新仓库被多个项目关联），未改造仓只能读到最早关联项目的归属（可接受，待 8 仓逐个切换后补齐多对多语义）。**归并（含子表 FK 重映射，如 sca `tbl_scan.repo_id`、anti-poison 相关表）必须等对应仓可控后执行**，Phase 1 不归并。
+> **过渡期语义说明（主仓/副仓模型）**：`repo_info.project_id` 仅能冗余单个 `project_id` = 该仓库的**主仓项目**。存量 53 个共享仓多行保留，每行 `project_id`=该行所属项目（与现状一致，8 仓读取零变化）；**新模型下同一仓库被多个项目关联时，仅「主仓」参与 8 个下游仓的扫描/检查/权限/漏洞，其余项目为「副仓」——副仓仅在 coderepo 侧有 `repo_project_ref` 记录，下游 8 仓对副仓不可见**（决策见 §1.5）。代码审计确认（sca/anti-poison/framework/gateway/vulnerability 四仓逐一核查）：
+> - sca：扫描结果 `tbl_scan`/`tbl_person_scan` **按 `repo_id` 存储、无 project_id**；展示/触发经 `repo_info.project_id JOIN project_info` 现算——副仓触发扫描在入口抛 41003 干净失败，**不会「在副仓扫、结果串到主仓」**；
+> - anti-poison：按 `(project_id, repo_url)` 反查 `repo_info`，副仓查不到 → 返回 400 错误，不崩溃、不串结果；
+> - framework：**项目级**权限判定（`checkRepoUserNamePermission` 项目管理员/内部开源仓分支）按 `repo_info.getProjectId()`=主仓 → 副仓项目角色对该仓**无权限**（符合副仓不参与预期）；但**仓库级成员判定（`repoId.equals(entity.getRepoId())`）与 git 平台成员校验（`queryRepoUser` / git API）不校验访问者项目**，副仓用户一旦通过该路径会被 `saveRepoUserInfo` 静默登记为主仓项目 `REPO_DEVELOPER` 并补插 `PROJECT_MEMBER`（污染主仓成员数据）→ 需做**副仓拦截改造**（见 §7.1.4）；`deleteByProjectId` 项目删除级联会**连坐删除副仓引用的 repo_info**（隐患，处理见 §1.5/§2.4）；
+> - gateway：`getRepoIdByRepoUrl` 为**死代码**（无调用方），无影响；
+> - vulnerability：CVE 漏洞看板按「项目名」分桶（Mongo `<org>_cve_details`）、漏洞管理按各自 project_id 存取 → 主链路不受影响、**不串项目**；仅昇腾链路 `queryRepoInfoByUrl` 按 `(project_name, repo_url)` join `repo_info` → 副仓项目查不到即跳过（昇腾看板为空，不报错、不串项目），**接受该行为并在方案说明**（昇腾项目一般无副仓场景；若出现需改造该查询支持 `repo_project_ref`，见 §4.4）。
+>
+> **归并（含子表 FK 重映射，如 sca `tbl_scan.repo_id`、anti-poison 相关表）必须等对应仓可控后执行**，Phase 1 不归并。
 
 ### 1.3 整体架构
 
@@ -95,9 +104,14 @@
 
 | 决策点 | 选择 | 理由 |
 |--------|------|------|
-| 表结构 | 新建 `repo_project_ref`（多对多）；`repo_info.project_id` **暂不删除**，作为过渡期冗余（值=该行所属项目；新录入仓库回填为最早关联记录的 `project_id`），后续择期移除 | 全局唯一 + 多对多关联；Phase 1 仅 coderepo 切换，8 个下游仓零改动仍从 `repo_info.project_id` 读取，过渡期双轨兼容 |
+| 表结构 | 新建 `repo_project_ref`（多对多）；`repo_info.project_id` **暂不删除**，作为过渡期冗余（值=该 repo 的**主仓项目**的 `project_id`；新录入仓库默认主仓=首个录入项目，可迁移，见「多项目归属（主仓/副仓）」决策），后续择期移除 | 全局唯一 + 多对多关联；Phase 1 仅 coderepo 切换，8 个下游仓零改动仍从 `repo_info.project_id` 读取，过渡期双轨兼容 |
 | `repo_url` 唯一性 | **暂不加 DB 唯一约束**；应用层 normalize（`.git` 后缀、大小写、末尾斜杠归一）+ 代码层事务内查重保证**新录入**不重复；存量 53 个共享仓多行保留、Phase 2 归并完成后择期加唯一索引 | 避免上线窗口并发录入触发唯一键冲突、存量 53 个共享仓多行未清理导致加唯一索引失败；新录入不新增多行，存量归并推迟 |
 | `repo_name`（代码仓别名）唯一性范围 | **项目内唯一，不做全局唯一**：`repo_url` 才是全局唯一维度；`repo_name` 用于当前项目内列表展示 / 成员与角色映射 / 别名冲突判定（同名不同仓按 `repo名-平台名`、`repo名-平台名2`… 递增区分，见 §2.2.3）。别名沿用 `repo_info.repo_name`（配置单一来源决定别名全局单一：同一仓在多个项目共享同一别名），**本期不支撑「不同项目对同一仓起不同别名」**；若 Phase 2 有该诉求再迁 `repo_project_ref` 扩展字段 | 避免把 `repo_name` 误当作全局唯一键导致跨项目撞名拒绝录入；与「repo_url 全局唯一 + 配置单一来源」目标一致 |
+| 多项目归属（主仓/副仓） | Phase 1 同一仓库仅一个**主仓**参与下游扫描/检查/权限/漏洞（`repo_info.project_id`=主仓项目 id，用户可选择/迁移）；其他项目关联为**副仓**，仅作 coderepo 侧 `repo_project_ref` 记录，**不参与 sca/anti-poison/cicd-fork/framework/vulnerability 等任何下游任务** | 下游仓全部按 `repo_info.project_id` 单值读取（代码审计逐一确认：sca 结果按 repo_id 存储、展示/触发按 project_id 现算；anti-poison 按 `(project_id, repo_url)` 反查副仓干净报错；framework 项目级判定按 project_id 但**仓库级/git 成员路径不校验访问者项目 → 需副仓拦截改造（§7.1.4）**；vulnerability 按项目名分桶主链路不受影响、仅昇腾链路副仓静默缺失；gateway 无调用）。主仓/副仓模型保证副仓在这些服务中**不可见或干净报错**，杜绝「结果串项目」与「副仓静默丢失扫描」 |
+| 副仓边界与前端提示 | 副仓在 **coderepo** 内可见（管理/记录），在 **sca/anti-poison 等下游仓不可见、不可扫**；录入/编辑时前端明确提示「该项目为副仓，仅作记录，不参与 SCA 扫描/防投毒/漏洞等检测」 | 避免副仓用户「录入了却看不到扫描结果」的困惑；与「Phase 1 下游 8 仓零改动」完全一致 |
+| 迁移归属副作用 | 把主仓从 A 迁移到 B（`repo_info.project_id` A→B）会使该仓**全部历史扫描/检查/漏洞结果整体从 A 项目消失、出现在 B 项目**（结果按 repo_id 存储、归属经 project_id 现算），framework 权限同步切到 B；前端迁移前需强提示 | 代码审计确认 sca 展示经 `repo_info.project_id` 现算，改主仓即整体「搬家」；避免用户误操作后以为数据丢失 |
+| 主仓项目删除对副仓 | 删除主仓项目时若该仓被其他项目关联（副仓存在），**禁止直接级联删 `repo_info`**（framework `ProjectServiceImpl.deleteProject` → `queryByProjectId` + `deleteByProjectId` + `deleteByRepoIds` 会连坐删除副仓引用的 repo_info，[证据 L424-433](file:///d:/Develop/Java/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/ProjectServiceImpl.java#L418-L443)）；应先**迁移主仓给任一副仓**，或先删除该仓全部 ref 再删 repo_info | 防止副仓 `repo_project_ref` 悬空；该规则同时写进 coderepo 自身删除链路（§2.4）与 framework 后续切换时的改造点（§2.5） |
+| framework 副仓拦截（Phase 1 必要例外） | framework 随本需求同步改造：`checkRepoUserNamePermission`/`saveRepoUserInfo`/`verifyPermissions`/`getSpaceId`/`getBySca` 等按 repoId 直入的权限/成员路径，先校验访问者项目 ∈ 该 repo 的 `repo_project_ref` 关联集合，副仓访问**拒绝且禁止写入主仓成员表**（`saveRepoUserInfo` 对副仓用户跳过、不补插 PROJECT_MEMBER） | 防止副仓用户被静默登记为主仓 `REPO_DEVELOPER`/`PROJECT_MEMBER`，污染主仓成员数据（代码审计确认 [InternalServerImpl.java](file:///d:/Develop/Java/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/InternalServerImpl.java#L138-L189) L153/L177/L185/L231-277）；是「下游仓零改动」的唯一必要例外，其余 7 仓副仓场景干净报错/不可见 |
 | source 字段 | `repo_info.source`（manual/sig）+ `repo_project_ref.source`（manual/sig） | repo 级标记「当前配置来源」+ 关联级标记「该关联建立方式」，双粒度支撑优先级判定 |
 | SIG 优先级 | sig 与 manual 录入**互不覆盖**：SIG 录入只针对**尚未录入当前项目**的仓库，已录入的不展示、不覆盖；手动录入命中已存在仓库时自动同步其配置，支持选择性删除之前项目关联 | 避免配置被覆盖/漂移；SIG 仓库配置允许后续手动编辑（不做来源拦截） |
 | 配置文件读取 | 复用 framework `GitCode.getYaml` 模式（coderepo 服务内独立实现 `SigInfoClient`），**接口实时调 gitcode 读取并解析** | coderepo 与 framework 是独立微服务，不跨仓引 jar；逻辑简单（≈120 行）独立维护 |
@@ -128,15 +142,21 @@ addRepoInfo(userId, userName, projectId, RepoDTO, deleteProjectIds):
       - insert repo_project_ref (repo_id, project_id, source=manual)
       - 同步仓库信息（调 GitCodeUtil 拉平台元数据回填，沿用现有 syncRepoInfo 逻辑）
       - 配置 webhook（沿用现有 autoSetWebHook 逻辑）
-  3b. 命中（已存在）:
-      - 前端 blur 时已触发检测、表单已自动同步现有配置，用户已勾选
-        「是否删除之前项目中的代码仓」（deleteProjectIds 为勾选的项目 ID 列表）
-      - 若 deleteProjectIds 非空 → 逐个删除所选项目关联：
-        · 单行 repo_url（新模型）→ 删除 repo_project_ref (repo_id, deleteProjectId)
+  3b. 命中（已存在，用户需在表单中二选一「主仓 / 副仓」，见下方说明）:
+      - 前端 blur 时已触发检测、表单已自动同步现有配置；用户明确选择：
+        · **设为本项目为主仓（迁移归属）** → 将该 repo 主仓从原项目迁移到当前项目
+          （repo_info.project_id 改为当前项目）。前端强提示：「该仓库全部历史扫描/检查/漏洞
+          结果将整体迁移到本项目（结果按仓库存储、归属随主仓项目变化），原主仓项目的相关结果
+          将不再展示」；原主仓降为普通关联（或按 deleteProjectIds 删除）。
+        · **作为副仓关联（仅记录）** → 仅新建 repo_project_ref (repo_id, project_id, source=manual)，
+          不修改 repo_info.project_id、不参与任何下游任务。前端提示：「该项目为副仓，仅作记录，
+          不参与 SCA 扫描/防投毒/漏洞等检测，相关结果请在主仓项目查看」。
+      - 若 deleteProjectIds 非空（删除之前项目关联）→ 逐个删除所选项目关联：
+        · 删「非主仓」项目关联 → 删除 repo_project_ref (repo_id, deleteProjectId)
           （仅取消所选项目与该代码仓的关联，repo_info 保留，其余项目不受影响）
-        · 多行 repo_url（存量 53 共享仓）→ 删除其他项目对应的 repo_info 行（现状行级语义，
-          8 仓按行读取不受影响），见下方分流说明
-      - 若未勾选任何删除项 → 按表单更新 repo_info 配置（同步影响所有仍关联项目），
+        · 删「主仓」项目关联 → 必须同时指定**新主仓**（迁移给另一关联项目）或允许该仓进入
+          「无主仓」状态（repo_info.project_id 置空，仅剩副仓 ref；下游 8 仓将看不到该仓，需提示）
+      - 若未勾选任何删除项且选择副仓 → 按表单更新 repo_info 配置（同步影响所有仍关联项目），
         前端已提示「修改会同步修改之前项目中的代码仓配置」
       - upsert repo_project_ref (repo_id, project_id, source=manual)
   4. 返回 repoId
@@ -1106,7 +1126,7 @@ repositories:
 
 过渡期 `repo_info.project_id` **保留不删**（值=该行所属项目；新录入仓库回填为 `repo_project_ref` 中该 repo 最早关联记录的 `project_id`），双轨兼容：
 
-- **Phase 1（本需求）**：仅 `coderepo` 全面切换为从 `repo_project_ref` 取 `project_id`（查询 JOIN 关联表，写入同时维护两表），不再依赖 `repo_info.project_id`；**8 个下游仓（codecheck/cicd/sbom/framework/anti-poison/sca/gateway/vulnerability）一律不改**，仍从 `repo_info.project_id` 读取（该行所属项目；53 个共享仓多行保留、各自项目照常可见，过渡期单项目语义可接受，见 §1.2 说明）
+- **Phase 1（本需求）**：仅 `coderepo` 全面切换为从 `repo_project_ref` 取 `project_id`（查询 JOIN 关联表，写入同时维护两表），不再依赖 `repo_info.project_id`；**framework 做副仓拦截改造（§7.1.4），其余 7 仓（codecheck/cicd/sbom/anti-poison/sca/gateway/vulnerability）一律不改**，仍从 `repo_info.project_id` 读取（该行所属项目；53 个共享仓多行保留、各自项目照常可见，过渡期单项目语义可接受，见 §1.2 说明）
 - `addRepoInfo`：写 `repo_info`（保留 `project_id` 写入，首次录入即最早关联）+ 写 `repo_project_ref`
 - `queryRepoInfo`（coderepo）：JOIN `repo_project_ref` 取 `project_id`
 - **Phase 2（8 仓逐个可控后）**：8 仓逐个切换为从 `repo_project_ref` 取 `project_id`，灰度开关 `coderepo.repo-decouple.enabled=true` 仅走新模型；全部切换完成后归并 53 个共享仓、校验 0 行后加唯一索引，最后 `DROP COLUMN project_id`（见 §2.5 Phase 2）
@@ -1593,6 +1613,22 @@ POST /project-repo/delete-repo?userId=xxx&userName=xxx&id={repoId}&projectId={pr
 3. `delete-repo` / `batch-delete-repo` 增加 `projectId` 入参后，删除前先校验「请求 projectId ∈ ref 关联集合」，再删对应 ref（见 §2.4）。
 4. SIG 与全局配置接口的跨项目越权校验（§7.1.2）不变：基于入参 `projectId` 直接校验 `userId` 项目权限。
 
+#### 7.1.4 framework 仓副仓拦截改造（Phase 1 必要例外）
+
+> **背景（代码审计确认）**：framework 对 `repo_info` 为「只读 + 删除级联」，但把 `repo_info.project_id` 当作「仓库唯一归属项目」，贯穿鉴权/授权落库/SCA 归属/审计日志/社区指标/成员同步六条链路。其中**仓库级成员判定与 git 平台成员校验不校验访问者项目**，副仓用户一旦通过该路径会被静默登记为主仓项目成员，污染主仓数据。本需求对该风险做副仓拦截（「下游仓零改动」的唯一必要例外，见 §1.2/§1.5）。
+
+**改造点**（framework 仓，随本需求 Phase 1 同步上线）：
+1. `checkRepoUserNamePermission`（[InternalServerImpl.java](file:///d:/Develop/Java/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/InternalServerImpl.java#L138-L189)）：入参加强访问者项目上下文 `accessProjectId`。先查 `repo_project_ref where repo_id=? and is_deleted=0` 得到关联项目集合 `refProjectIds`：
+   - `accessProjectId` 非空且 `∉ refProjectIds`（副仓访问）→ **直接返回无权限**，不进入仓库成员/git 成员校验；
+   - `accessProjectId` 为空（webhook/机机调用，无项目上下文）→ 保留现有 repoId 级判定（兼容存量 53 个共享仓多行语义）。
+2. `saveRepoUserInfo`（L231-277）：仅当访问者为该 repo 关联项目成员时写入 `user_role_info`（`projectId`=主仓）；**副仓访问不写、不补插 `PROJECT_MEMBER`**。
+3. `verifyPermissions` / `checkPermissions`（[CommonServiceImpl.java](file:///d:/Develop/Java/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/CommonServiceImpl.java#L145-L169) L154 / [InternalServerImpl.java](file:///d:/Develop/Java/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/InternalServerImpl.java#L524-L657)）：传 `repoId` 时不再无条件用 `repo_info.project_id` 覆盖入参项目，改为按 §7.1.3 同款规则（请求带 projectId → 校验 `projectId ∈ refProjectIds`；不带且多关联 → 拒绝）。
+4. `getSpaceId`（[ApplyPermissionServiceImpl.java](file:///d:/Develop/Java/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/ApplyPermissionServiceImpl.java#L832-L853) L843）：权限申请/审核归属不再强制取 `repo_info.project_id`，改为请求项目或唯一关联项目。
+5. `getBySca` / `SpaceUserLogHandler` / `inferCommunity` 等归属展示类：归属跟随 `repo_project_ref`（副仓不可见；主仓迁移后归属跟随新主仓）。
+6. 删除级联（`ProjectServiceImpl.deleteProject` / `ProductServiceImpl.deleteProduct`）：删主仓项目前检查 `repo_project_ref` 关联项目数，>1 时禁止级联删 `repo_info`（见 §1.5「主仓项目删除对副仓」）。
+
+> **Phase 2**：8 仓统一切换为从 `repo_project_ref` 取 `project_id` 时，以上改造点收敛为「按 ref 关联项目集合鉴权」，删除过渡期特判。
+
 ### 7.2 SIG 仓（sig-info.yaml 位置）访问安全
 
 #### 7.2.1 token 传递
@@ -1691,7 +1727,8 @@ logger.info("Global config: {}", globalConfigVO);  // 含 commonAccount 令牌�
 - [ ] global-config 传非 gitcode/gitee/github 的 `platform` 返回 403
 - [ ] YAML 含 `!!java/object` 等危险标签时解析被拒绝
 - [ ] 跨项目访问 SIG / 全局配置接口返回 403（无该 project 权限）
-- [ ] **Phase 1** 迁移后 `repo_project_ref` 未删除记录数 = `repo_info` 未删除记录数（1:1 回填完整）；53 个共享仓多行保留、8 仓读取零变化
+- [ ] **Phase 1** 迁移后 `repo_project_ref` 未删除记录数 = `repo_info` 未删除记录数（1:1 回填完整）；53 个共享仓多行保留、其余 7 仓读取零变化（framework 仅做副仓拦截改造 §7.1.4）
 - [ ] **Phase 2**（8 仓可控后）归并完成：`SELECT repo_url_normalized, COUNT(*) FROM repo_info WHERE is_deleted=0 GROUP BY repo_url_normalized HAVING COUNT(*)>1` 返回 0 行，且下游子表 FK 已重映射（无悬空 repo_id）
 - [ ] 新录入重复仓库被代码层查重拦截：`add-repo` / `sig/import` 并发重复 `repo_url` 不产生第二条 `repo_info`（并发用例）
 - [ ] 单元测试覆盖：手动录入冲突（自动同步配置 + 选择性删除）、SIG 录入仅未录入仓库 + 不覆盖已有配置、SIG 来源仓库手动编辑、全局配置 config_json 读写（含 roleMapping 迁移）、迁移幂等、sig-info.yaml 解析与位置白名单
+- [ ] framework 副仓拦截（§7.1.4）：副仓项目用户对主仓仓库的 `checkRepoUserNamePermission` 返回无权限、`saveRepoUserInfo` 不写入主仓成员表（主仓成员集合未被副仓用户污染）
