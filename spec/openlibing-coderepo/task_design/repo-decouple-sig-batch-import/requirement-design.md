@@ -24,7 +24,7 @@
 
 ### 1.3 改造边界（重要）
 
-- 本次改造**仅涉及 `repo_info` 表**（新增 `source` / `sig_config_file` / `is_participate_operation` / `is_main_repo` 等字段）与 `project_repo_global_config`（全局配置表泛化）。
+- 本次改造**仅涉及 `repo_info` 表**（新增 `source` / `is_participate_operation` / `is_main_repo` 等字段）与 `project_repo_global_config`（全局配置表泛化）。
 - 代码仓相关配置表还包括 `codecheck` 下的 Mongo 表（如 `sig_rule_set` 规则集表），**本次不改动**——仍允许不同项目对同一代码仓存在不同配置（规则集、告警抑制等项仍按各项目在 codecheck 侧各自配置，不在本期收敛范围内）。
 - **不新建 `repo_project_ref` 表**；不归并存量多行；不删 `project_id`（每行 `project_id` 语义=该行所属项目，与现状一致）。
 
@@ -38,7 +38,7 @@
 | 主仓语义 | 主仓行=组内配置权威源 + Phase 2 归并保留行；**所有项目行均参与下游扫描/检查**（无「副仓不可见」概念） | 与 SCA 反查方式兼容；迁移主仓即切换配置基准与归并保留行 |
 | 查重 | `(repo_url, project_id)` 唯一（一项目一行）；不做 repo_url 全局唯一 | 保证同项目不重复录入；不同项目各自建行以支撑各自扫描 |
 | 组 key | 直接用 `repo_url`（录入已保证协议/https/平台/`.git` 结尾格式统一，无需额外归一化字段）；repo_url 加普通索引用于组查询 | 用于「同 repo_url 组」判定（主仓同步、录入检测、列表去重） |
-| source / sig_config_file | `repo_info.source`（manual/sig）标记配置来源；SIG 来源记录 `sig_config_file` 链接 | SIG 与手动互不覆盖、无优先级判定场景，无需额外表记录来源 |
+| source | `repo_info.source`（manual/sig）标记配置来源；**来源链接不冗余到行级**，SIG 仓库按项目从 `config_json[platform].sigInfoLocation` 实时读取 | SIG 与手动互不覆盖、无优先级判定场景，无需额外表/字段记录来源 |
 | 跨项目录入 | 仓库已在其他项目存在 → 当前项目**新建一行**并复制主仓配置；不删除其他项目行 | SCA 兼容 + 避免重复手填；配置靠同步保持全组一致 |
 | 选择性删除 | 手动录入/编辑时可勾选「删除之前项目的关联」=删除其他项目对应行 | 支持用户回收误关联；删除主仓行需先迁移主仓（§2.4） |
 | 下游仓改造 | **7 仓零改动**（framework 亦无需副仓拦截改造） | 多行模型下每项目都有行，权限/归属按行内 project_id 语义与现状一致 |
@@ -255,8 +255,7 @@ migrateRepoInfoPhase1():
 
 | 字段 | 说明 |
 |------|------|
-| `source` | `manual` / `sig`，仓库配置来源 |
-| `sigConfigFile` | SIG 来源时记录配置文件链接 |
+| `source` | `manual` / `sig`，仓库配置来源（SIG 来源链接按项目从 `config_json` 读，不冗余存储） |
 | `isMainRepo` | 该 repo_url 组内是否主仓（0/1） |
 | `isParticipateOperation` | 是否参与运营（默认是，已存在） |
 
@@ -307,10 +306,8 @@ migrateRepoInfoPhase1():
 -- 1. 新增字段
 ALTER TABLE repo_info ADD COLUMN source VARCHAR(16) NOT NULL DEFAULT 'manual'
   COMMENT '仓库配置来源: manual-手动录入, sig-SIG一键录入' AFTER default_branch_name;
-ALTER TABLE repo_info ADD COLUMN sig_config_file VARCHAR(512) NULL
-  COMMENT 'SIG来源时记录的配置文件链接' AFTER source;
 ALTER TABLE repo_info ADD COLUMN is_participate_operation TINYINT(1) NOT NULL DEFAULT 1
-  COMMENT '是否参与运营（默认是）' AFTER sig_config_file;
+  COMMENT '是否参与运营（默认是）' AFTER source;
 ALTER TABLE repo_info ADD COLUMN is_main_repo TINYINT(1) NOT NULL DEFAULT 0
   COMMENT '同repo_url组内是否主仓(0-否,1-是)，组内恰一行=1' AFTER repo_url;
 
@@ -368,7 +365,7 @@ project (1) ──── (N) repo_info (每行=该项目下的一条代码仓；
                      ├─ project_id       = 该行所属项目（7 仓反查键）
                      ├─ repo_url         = 组 key（同 repo_url 为一组，主仓同步按此分组）
                      ├─ is_main_repo     = 组内主仓标记（恰一行=1）
-                     └─ source / sig_config_file / is_participate_operation
+                     └─ source / is_participate_operation
 
 project (1) ──── (1) project_repo_global_config ──实时读取──▶ SIG 仓 sig-info.yaml
                       config_json[平台].sigInfoLocation                 │ 解析 repositories

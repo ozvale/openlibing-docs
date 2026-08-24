@@ -35,7 +35,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 
 | 序号 | 变化点 | 类型 | 说明 |
 |------|--------|------|------|
-| 1 | `repo_info` 新增 `source`、`sig_config_file`、`is_participate_operation`、`is_main_repo` 字段 | 数据模型 | source=manual/sig；组 key 直接用 repo_url（录入已保证格式统一，无需归一化字段）；is_main_repo 标记组内主仓行（组内恰一行=1） |
+| 1 | `repo_info` 新增 `source`、`is_participate_operation`、`is_main_repo` 字段 | 数据模型 | source=manual/sig（SIG 来源链接按项目从 `config_json` 读，不冗余存储）；组 key 直接用 repo_url（录入已保证格式统一，无需归一化字段）；is_main_repo 标记组内主仓行（组内恰一行=1） |
 | 2 | Phase 1 新增 `(repo_url, project_id)` 唯一索引 | 数据模型 | 保证一项目一行；`project_id` **保留不删**（每行=该行所属项目，7 仓按现状读取） |
 | 3 | `/project-repo/add-repo` 增加「命中多行」分支 | 接口 | blur 检测命中其他项目已录入 → 复制主仓配置进表单；提交可选 `setMainRepo`（设为本项目主仓）与 `deleteProjectIds`（选择性删除其他项目行） |
 | 4 | `/project-repo/update-repo` 直接编辑 + `setMainRepo` | 接口 | 不做 SIG 来源拦截；主仓行变更自动同步全组 |
