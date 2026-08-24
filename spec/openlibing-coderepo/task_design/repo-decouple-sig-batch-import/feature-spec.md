@@ -26,7 +26,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
    - 手动录入：保留现有方式，输入 `repo_url` 后自动检测；若该仓库已在其他项目录入，则自动按**主仓配置**同步进表单（可修改），支持「设为本项目为主仓」与「选择性删除其他项目行」；未删除时修改配置将同步全组。
    - SIG 组一键录入：用户在「全局配置」弹窗配置 sig-info.yaml 所在位置（**一个完整链接，每平台唯一**），各接口**实时调对应平台读取并解析**该位置 sig-info.yaml 的仓库清单批量导入；下拉仅展示**尚未录入当前项目**的 SIG 仓库（已录入的不展示，避免覆盖已有配置）。
 3. **SIG 与手动录入互不覆盖**：SIG 录入只针对尚未录入当前项目的仓库，不覆盖已有配置；SIG 来源仓库同样允许手动编辑（不做来源拦截）。
-4. **历史收敛（分两阶段，归并推迟）**：下游 7 仓（codecheck/cicd/framework/anti-poison/sca/gateway/vulnerability）不归属本项目、改造进度不可控，存量同一 repo_url 多条记录（体检发现 **53 个共享仓**）**不在本需求归并**——Phase 1 仅回填 `repo_url_normalized`、标记主仓、清洗同项目重复行后加唯一索引；待 7 仓逐个可控后 Phase 2 再评估全局唯一单行 + 关联表（见 requirement-design.md §2.6）。
+4. **历史收敛（分两阶段，归并推迟）**：下游 7 仓（codecheck/cicd/framework/anti-poison/sca/gateway/vulnerability）不归属本项目、改造进度不可控，存量同一 repo_url 多条记录（体检发现 **53 个共享仓**）**不在本需求归并**——Phase 1 仅清洗同项目重复行、标记主仓、加 `(repo_url, project_id)` 唯一索引（组 key 直接用 repo_url，无需归一化字段）；待 7 仓逐个可控后 Phase 2 再评估全局唯一单行 + 关联表（见 requirement-design.md §2.6）。
 5. **改造边界**：本次改造**仅涉及 `repo_info` 表**与 `project_repo_global_config` 表；代码仓相关配置表还包括 `codecheck` 下的 Mongo 表（如 `sig_rule_set` 规则集表），**本次不改动**——仍允许不同项目对同一代码仓在 codecheck 侧存在不同配置（规则集、告警抑制等项不在本次收敛范围）。
 
 ## 2. 版本变化点清单
@@ -35,8 +35,8 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 
 | 序号 | 变化点 | 类型 | 说明 |
 |------|--------|------|------|
-| 1 | `repo_info` 新增 `source`、`sig_config_file`、`is_participate_operation`、`repo_url_normalized`、`is_main_repo` 字段 | 数据模型 | source=manual/sig；repo_url_normalized 为同 repo_url 组 key；is_main_repo 标记组内主仓行（组内恰一行=1） |
-| 2 | Phase 1 新增 `(repo_url_normalized, project_id)` 唯一索引 | 数据模型 | 保证一项目一行；`project_id` **保留不删**（每行=该行所属项目，7 仓按现状读取） |
+| 1 | `repo_info` 新增 `source`、`sig_config_file`、`is_participate_operation`、`is_main_repo` 字段 | 数据模型 | source=manual/sig；组 key 直接用 repo_url（录入已保证格式统一，无需归一化字段）；is_main_repo 标记组内主仓行（组内恰一行=1） |
+| 2 | Phase 1 新增 `(repo_url, project_id)` 唯一索引 | 数据模型 | 保证一项目一行；`project_id` **保留不删**（每行=该行所属项目，7 仓按现状读取） |
 | 3 | `/project-repo/add-repo` 增加「命中多行」分支 | 接口 | blur 检测命中其他项目已录入 → 复制主仓配置进表单；提交可选 `setMainRepo`（设为本项目主仓）与 `deleteProjectIds`（选择性删除其他项目行） |
 | 4 | `/project-repo/update-repo` 直接编辑 + `setMainRepo` | 接口 | 不做 SIG 来源拦截；主仓行变更自动同步全组 |
 | 5 | `/project-repo/delete-repo` / `batch-delete-repo` 增加 `projectId` 入参 | 接口 | 按行删除；主仓行且组内还有其他行时需先迁移主仓 |
@@ -48,10 +48,10 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 | 11 | 手动录入：blur 自动检测 + 主仓提示 + 选择性删除 + 修改同步提示 | 前端 | 见页面原型场景二；无「一键同步」按钮 |
 | 12 | 编辑对话框：多项目已录入时主仓设置 + 不做 SIG 来源拦截 | 前端 | 见页面原型场景三 |
 | 13 | 列表页新增「来源」列、「关联项目数」列 | 前端 | 见页面原型列表页 |
-| 14 | 新增 `SigInfoClient` / `RepoUrlNormalizer` / `SigDefaultParamBuilder` 工具类 | 后端 | 实时读 sig-info.yaml、repo_url 归一化、SIG 默认参数 |
+| 14 | 新增 `SigInfoClient` / `SigDefaultParamBuilder` 工具类 | 后端 | 实时读 sig-info.yaml、SIG 默认参数 |
 | 15 | `project_gitcode_role_mapping` 泛化为 `project_repo_global_config` | 数据模型 | 公共账号 / sig-info 位置 / 角色映射统一存 `config_json`，按平台分键 |
 | 16 | 去除 webhook 推送 / 定时兜底同步 / 配置入库缓存 | 后端 | sig-info.yaml 由各接口实时调对应平台读取解析，不落库不缓存 |
-| 17 | 历史数据迁移 Phase 1（回填 + 标主仓 + 清洗 + 唯一索引） | 数据 | 见 requirement-design.md §2.6；不建关联表、不归并存量多行 |
+| 17 | 历史数据迁移 Phase 1（清洗 + 标主仓 + 唯一索引） | 数据 | 见 requirement-design.md §2.6；不建关联表、不归并存量多行 |
 | 18 | sig-info.yaml 位置配置 | 配置 | 「全局配置」弹窗按平台配置一个完整链接，存 `project_repo_global_config.config_json` |
 | 19 | 新增「全局配置」按钮与三页签弹窗；原「gitcode 角色映射」「项目公共账号」按钮并入 | 前端 | 见页面原型场景一 |
 
@@ -147,14 +147,14 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 ### 5.5 历史存量收敛（Phase 1 回填标记，归并推迟）
 
 - **背景**：存量体检发现 **53 个共享仓**（同 repo_url 多项目多行、配置可能不同）。归并需重映射其他仓子表 FK（如 sca `tbl_scan.repo_id`），而 7 个下游仓不归属本项目、不可控 → **归并推迟到 Phase 2**。
-- **Phase 1（本期上线时执行，幂等可重跑）**：回填 `repo_url_normalized` → 清洗同项目重复行 → 标记主仓（最早 create_at 行）→ 加 `(repo_url_normalized, project_id)` 唯一索引；**不归并、不删行、不建关联表、不删 `project_id`** → 7 个下游仓零影响。
+- **Phase 1（本期上线时执行，幂等可重跑）**：清洗同项目重复行 → 标记主仓（最早 create_at 行）→ 加 `(repo_url, project_id)` 唯一索引；**不归并、不删行、不建关联表、不删 `project_id`** → 7 个下游仓零影响。
 - **Phase 2（远期，7 仓逐个可控后）**：再评估全局唯一单行 + 关联表。
 - 迁移脚本与校验详见 requirement-design.md §2.6。
 
 ### 5.6 查询功能
 
 - 列表按 `project_id` 查 `repo_info`（现状不变，多行模型下每项目看到自己那行）。
-- 新增返回字段：`source`（来源列）、`projectCount`（同 `repo_url_normalized` 组内行数，关联项目数列）。
+- 新增返回字段：`source`（来源列）、`projectCount`（同 `repo_url` 组内行数，关联项目数列）。
 - 现有筛选/排序/分页逻辑不变。
 
 ## 6. 权限设计
@@ -264,7 +264,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 
 | 序号 | 验收项 | 验收方式 |
 |------|--------|----------|
-| 1 | **Phase 1** 迁移完成：`repo_url_normalized` 回填完整；每 `repo_url_normalized` 组合法主仓数=1；同项目重复行已清洗；`(repo_url_normalized, project_id)` 唯一索引生效；7 个下游仓按 `(project_id, repo_url)` 反查全部命中 | 迁移脚本校验输出 + DB 查询 + SCA 联调用例 |
+| 1 | **Phase 1** 迁移完成：同项目重复行已清洗；每 `repo_url` 组合法主仓数=1；`(repo_url, project_id)` 唯一索引生效；7 个下游仓按 `(project_id, repo_url)` 反查全部命中 | 迁移脚本校验输出 + DB 查询 + SCA 联调用例 |
 | 2 | 手动录入输入已存在 repo_url 后 blur 自动检测，自动按主仓配置同步到表单（可修改），无「一键同步」按钮 | UI 操作验证 |
 | 2b | 手动录入命中多行时支持「设为本项目为主仓」与「选择性删除其他项目行」；未删除时提示修改将同步全组 | UI + 接口验证（setMainRepo / deleteProjectIds） |
 | 3 | 手动录入提交后当前项目可见该仓库；未删除其他项目行时，主仓行配置变更后全组配置一致（同步覆盖） | UI + DB 验证 |

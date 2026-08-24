@@ -18,13 +18,13 @@
 2. **新增主仓标记**：`repo_info.is_main_repo`，同一 `repo_url` 组内**有且仅有一个主仓行**（默认=最早录入行，可迁移）。主仓行 = 该组配置的**权威来源**（配置单一来源）+ 后续归并时的保留行。
 3. **配置同步（单一来源）**：主仓行配置变更 → **同步覆盖同组所有行**（副仓行）。任一项目编辑/录入该组仓库，最终全组配置一致，消除漂移。
 4. **新录入不产生重复漂移**：仓库已在其他项目存在（组内有主仓行）→ 当前项目**新建一行**并**复制主仓配置**（而非重新手填），前端提示「该仓库主仓在项目 X，配置已同步」。
-5. **查重约束**：`(repo_url_normalized, project_id)` 唯一（一项目一行），不做 `repo_url` 全局唯一。
+5. **查重约束**：`(repo_url, project_id)` 唯一（一项目一行），不做 `repo_url` 全局唯一。
 
 > **为什么不做 repo_info 单行化（对比原方案）**：原方案把项目关联拆到 `repo_project_ref`、repo_info 全局唯一单行，副仓项目无行 → SCA 等下游按 `(project_id, repo_url)` 反查不到即报错，且用户无法感知需要指定新主仓；「同一仓库被多项目扫描」也无法支撑。方案 A 让每个项目都有可扫描的行，彻底规避该冲突，且下游 7 仓完全零改动。
 
 ### 1.3 改造边界（重要）
 
-- 本次改造**仅涉及 `repo_info` 表**（新增 `source` / `sig_config_file` / `is_participate_operation` / `repo_url_normalized` / `is_main_repo` 等字段）与 `project_repo_global_config`（全局配置表泛化）。
+- 本次改造**仅涉及 `repo_info` 表**（新增 `source` / `sig_config_file` / `is_participate_operation` / `is_main_repo` 等字段）与 `project_repo_global_config`（全局配置表泛化）。
 - 代码仓相关配置表还包括 `codecheck` 下的 Mongo 表（如 `sig_rule_set` 规则集表），**本次不改动**——仍允许不同项目对同一代码仓存在不同配置（规则集、告警抑制等项仍按各项目在 codecheck 侧各自配置，不在本期收敛范围内）。
 - **不新建 `repo_project_ref` 表**；不归并存量多行；不删 `project_id`（每行 `project_id` 语义=该行所属项目，与现状一致）。
 
@@ -36,15 +36,15 @@
 | 配置单一来源 | 通过**主仓配置同步**实现：`is_main_repo` 标记主仓行，主仓配置变更同步覆盖同 `repo_url` 组所有行 | 不删行、不迁移子表，7 仓零改动的前提下收敛配置漂移 |
 | 主仓标记 | `repo_info.is_main_repo`（TINYINT，组内恰一行=1）；首录行即主仓，可迁移 | 每行自身携带归属标记，无需新增关联表 |
 | 主仓语义 | 主仓行=组内配置权威源 + Phase 2 归并保留行；**所有项目行均参与下游扫描/检查**（无「副仓不可见」概念） | 与 SCA 反查方式兼容；迁移主仓即切换配置基准与归并保留行 |
-| 查重 | `(repo_url_normalized, project_id)` 唯一（一项目一行）；不做 repo_url 全局唯一 | 保证同项目不重复录入；不同项目各自建行以支撑各自扫描 |
-| `repo_url` 归一化 | 新增 `repo_url_normalized`（去 `.git`/末尾斜杠/统一 https/owner-repo 小写），普通索引用于组查询 | 用于「同 repo_url 组」判定（主仓同步、录入检测、列表去重） |
+| 查重 | `(repo_url, project_id)` 唯一（一项目一行）；不做 repo_url 全局唯一 | 保证同项目不重复录入；不同项目各自建行以支撑各自扫描 |
+| 组 key | 直接用 `repo_url`（录入已保证协议/https/平台/`.git` 结尾格式统一，无需额外归一化字段）；repo_url 加普通索引用于组查询 | 用于「同 repo_url 组」判定（主仓同步、录入检测、列表去重） |
 | source / sig_config_file | `repo_info.source`（manual/sig）标记配置来源；SIG 来源记录 `sig_config_file` 链接 | SIG 与手动互不覆盖、无优先级判定场景，无需额外表记录来源 |
 | 跨项目录入 | 仓库已在其他项目存在 → 当前项目**新建一行**并复制主仓配置；不删除其他项目行 | SCA 兼容 + 避免重复手填；配置靠同步保持全组一致 |
 | 选择性删除 | 手动录入/编辑时可勾选「删除之前项目的关联」=删除其他项目对应行 | 支持用户回收误关联；删除主仓行需先迁移主仓（§2.4） |
 | 下游仓改造 | **7 仓零改动**（framework 亦无需副仓拦截改造） | 多行模型下每项目都有行，权限/归属按行内 project_id 语义与现状一致 |
 | 全局配置 | `project_gitcode_role_mapping` 泛化为 `project_repo_global_config`（config_json 按平台分键） | 集中管理公共账号 / sig-info 位置 / 角色映射，见 §4.2 |
 | SIG 配置读取 | 实时调对应平台读取指定位置 sig-info.yaml 并解析；**去除 webhook / 入库缓存** | 保证读到最新配置，简化链路 |
-| 历史迁移 | **Phase 1**：回填 `repo_url_normalized` + 标记主仓 + 清洗同项目重复行后加 `(repo_url_normalized, project_id)` 唯一索引；**Phase 2**（远期，7 仓可控后）：再评估全局唯一单行 + 关联表 | 本期不归并、不删行，7 仓零影响；远期归并依赖下游仓配合 |
+| 历史迁移 | **Phase 1**：清洗同项目重复行（按 repo_url）+ 标记主仓 + 加 `(repo_url, project_id)` 唯一索引；**Phase 2**（远期，7 仓可控后）：再评估全局唯一单行 + 关联表 | 本期不归并、不删行，7 仓零影响；远期归并依赖下游仓配合 |
 | 改造边界 | 仅 repo_info + project_repo_global_config；codecheck Mongo（sig_rule_set）等不改 | 规则集等按各项目在 codecheck 侧各自配置，不在本期收敛范围 |
 | YAML 解析安全 | SnakeYAML `SafeConstructor` | 防 YAML 反序列化攻击 |
 | accessToken 传递 | 调平台 API 时 `Authorization: Bearer <token>` header | 遵循项目硬约束「第三方 API 调用 accessToken 必须在 header」 |
@@ -57,8 +57,8 @@
 
 ```
 addRepoInfo(userId, userName, projectId, RepoDTO, deleteProjectIds):
-  1. normalize repoUrl → 组 key = repo_url_normalized
-  2. 查该组现有行（repo_info where repo_url_normalized=? and is_deleted=0）
+  1. 组 key = repo_url（原样，录入已保证格式统一）
+  2. 查该组现有行（repo_info where repo_url=? and is_deleted=0）
   3. 未命中（全局首次录入）：
      - insert repo_info（source=manual, is_main_repo=1, 配置取 RepoDTO）  // 首录行即主仓
      - 同步平台元数据 + 配置 webhook（沿用现有 syncRepoInfo / autoSetWebHook）
@@ -103,7 +103,7 @@ repositories:
 listSigReposInConfig(userId, projectId, platform):
   1. 从 config_json 取该平台位置（校验属于该项目且平台一致）
   2. 实时调对应平台 getFileContent 读 sig-info.yaml → 解析 repositories → List<{owner, repo}>
-  3. 过滤：仅保留 (repo_url_normalized, projectId) 尚无行的仓库（已录入当前项目的不展示，避免覆盖）
+  3. 过滤：仅保留 (repo_url, projectId) 尚无行的仓库（已录入当前项目的不展示，避免覆盖）
   4. 组装完整 repoUrl + 默认参数（别名/默认分支/责任人/开源类型/是否参与运营/各开关，见 §2.2.4）
   5. 返回 [{ owner, repo, repoUrl, platform, defaultConfig }]
 ```
@@ -128,7 +128,7 @@ sigImport(userId, userName, projectId, platform, repoConfigs):
   1. 取该平台位置 → 实时读 sig-info.yaml → 解析 repositories
      → 校验每个 repoConfigs[].repoUrl 均在解析结果中（防伪造/过期数据）且当前项目无该行
   2. 事务内对每个仓库：
-     a. 查该组现有行（repo_url_normalized）
+     a. 查该组现有行（repo_url）
      b. 未命中（全局首次）→ insert 本行（source=sig, is_main_repo=1, 配置取 config）
      c. 命中（其他项目已存在，主仓行在别处）→ insert 本行（source=sig, is_main_repo=0,
         配置=主仓配置副本——复用现有配置不覆盖，保持全组一致）
@@ -145,7 +145,7 @@ sigImport(userId, userName, projectId, platform, repoConfigs):
 
 ```
 updateRepoInfo(userId, userName, projectId, repoId, RepoDTO, setMainRepo?):
-  1. 查本行（repo_id）→ normalize repoUrl → 组 key
+  1. 查本行（repo_id）→ 组 key = repo_url
   2. update 本行配置
   3. 若 setMainRepo=true → is_main_repo 置 1（原主仓行置 0），以本行配置为基准同步全组
   4. 若本行已是主仓 → 以本行配置为基准 update 组内其余行（副仓行，保持全组一致）
@@ -178,7 +178,7 @@ batchDeleteRepoInfo(userId, userName, repoIds, projectId):
 
 ### 2.5 主仓管理与配置同步（核心机制）
 
-- **主仓标记**：`repo_info.is_main_repo`，组内（`repo_url_normalized` 相同）有且仅有一个主仓行。
+- **主仓标记**：`repo_info.is_main_repo`，组内（`repo_url` 相同）有且仅有一个主仓行。
 - **首录即主仓**：新仓库首个录入项目的行 `is_main_repo=1`。
 - **迁移主仓**：`POST /project-repo/set-main-repo`（§6.5）将 `is_main_repo` 从当前主仓行迁移到指定行，并以新主仓配置为基准**同步全组**（update 组内所有行的配置字段）。
 - **配置同步**：任何使主仓行配置变更的操作（主仓行编辑、迁移主仓、主仓行经手动录入/SIG 更新），事务内以主仓行配置为基准 update 组内其余行，保证各项目读到一致配置。
@@ -192,19 +192,18 @@ batchDeleteRepoInfo(userId, userName, repoIds, projectId):
 
 ```
 migrateRepoInfoPhase1():
-  1. 回填 repo_url_normalized（应用层 normalize 全量更新）
-  2. 清洗同项目重复行：对 (repo_url_normalized, project_id) 多行的脏数据，保留最早 create_at 行，
+  1. 清洗同项目重复行：对 (repo_url, project_id) 多行的脏数据，保留最早 create_at 行，
      其余行迁移子表 FK 后删除（或提示人工处理，数量应极少）
-  3. 标记主仓：对每个 repo_url_normalized 组，默认 is_main_repo=1 给最早 create_at 行；组内仅此一行
-  4. ALTER TABLE repo_info ADD UNIQUE INDEX uk_repo_project (repo_url_normalized, project_id)
-  5. 校验：无同项目重复行；每组合法主仓数 = 1
+  2. 标记主仓：对每个 repo_url 组，默认 is_main_repo=1 给最早 create_at 行；组内仅此一行
+  3. ALTER TABLE repo_info ADD UNIQUE INDEX uk_repo_project (repo_url, project_id)
+  4. 校验：无同项目重复行；每组合法主仓数 = 1
 ```
 
 - **效果**：7 个下游仓零影响（每行 project_id 语义不变）；新录入一项目一行由唯一索引兜底；配置收敛靠主仓同步逻辑。
 - **Phase 1 明确不做**：不归并 53 个共享仓多行、不删存量行、不建 `repo_project_ref`、不删 `project_id`。
 
 **Phase 2（远期，7 仓逐个可控后评估）**：
-- 若仍需「全局唯一单行」，届时新建 `repo_project_ref` 关联表、推动 7 仓将反查改为查关联表，再按主仓行为基准归并 53 个共享仓（重映射子表 FK 后删副仓行），最后 `DROP COLUMN project_id` + 加 `repo_url_normalized` 唯一索引。
+- 若仍需「全局唯一单行」，届时新建 `repo_project_ref` 关联表、推动 7 仓将反查改为查关联表，再按主仓行为基准归并 53 个共享仓（重映射子表 FK 后删副仓行），最后 `DROP COLUMN project_id` + 加 `repo_url` 唯一索引。
 - 本期**不实施**，仅保留该远期目标说明。
 
 ### 2.7 前端实现逻辑
@@ -225,7 +224,7 @@ migrateRepoInfoPhase1():
 
 #### 2.7.3 列表页与编辑对话框
 
-- 列表新增「来源」（manual/sig，读 `repo_info.source`）、「关联项目数」（同 `repo_url_normalized` 组内行数，可选）列
+- 列表新增「来源」（manual/sig，读 `repo_info.source`）、「关联项目数」（同 `repo_url` 组内行数，可选）列
 - 编辑对话框：不做 SIG 来源拦截；组内多行时展示主仓提示 + 「设为本项目为主仓」（§2.3）
 
 ### 2.8 交互流程示例图
@@ -258,7 +257,6 @@ migrateRepoInfoPhase1():
 |------|------|
 | `source` | `manual` / `sig`，仓库配置来源 |
 | `sigConfigFile` | SIG 来源时记录配置文件链接 |
-| `repoUrlNormalized` | 归一化 repo_url（组 key） |
 | `isMainRepo` | 该 repo_url 组内是否主仓（0/1） |
 | `isParticipateOperation` | 是否参与运营（默认是，已存在） |
 
@@ -268,7 +266,7 @@ migrateRepoInfoPhase1():
 #### 3.1.2 Mapper 改造
 
 - [RepoInfoMapper.xml](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/resources/mapper/RepoInfoMapper.xml)：
-  - 新增 `selectByRepoUrlNormalized`：按组 key 查组内所有行（供主仓同步 / 录入检测 / 关联项目数）
+  - 新增 `selectByRepoUrl`：按 repo_url 查同组所有行（供主仓同步 / 录入检测 / 关联项目数）
   - 新增 `updateConfigByGroup`：以主仓配置为基准更新同组其余行（配置同步）
   - 新增 `markMainRepo` / `clearMainRepo`：主仓标记迁移
   - 现有按 `project_id` / `repo_id` 的查询**不变**（多行模型语义与现状一致）
@@ -281,13 +279,13 @@ migrateRepoInfoPhase1():
   - `updateRepoInfo`：主仓行变更后同步全组；可选迁移主仓（§2.3）
   - `deleteRepoInfo` / `batchDeleteRepoInfo`：增加 `projectId` 入参 + 主仓行删除校验（§2.4）
   - 新增 `checkRepoUrl`、`setMainRepo`、`getRepoAssociation`
-- 新增 [MainRepoSyncService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/)（或并入 RepoServiceImpl）：`syncGroupConfig(repoUrlNormalized, baseRow)` 以主仓行为基准同步同组配置；`migrateMainRepo(repoId, newMainRepoId)` 迁移主仓标记并同步全组。
+- 新增 [MainRepoSyncService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/)（或并入 RepoServiceImpl）：`syncGroupConfig(repoUrl, baseRow)` 以主仓行为基准同步同组配置；`migrateMainRepo(repoId, newMainRepoId)` 迁移主仓标记并同步全组。
 - 新增 [SigRepoImportService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/)：`saveConfig` / `listConfig` / `listReposInConfig` / `importRepos`（§2.2）。
 - 新增 [ProjectRepoGlobalConfigService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/)：`getGlobalConfig` / `updateGlobalConfig` / `updateProjectCommonAccount`。
 
 #### 3.1.4 工具类 / DTO
 
-- 新增 `RepoUrlNormalizer`（normalize / normalizeKey）、`SigInfoClient`（实时读 sig-info.yaml，参考 framework GitCode.getYaml 但 accessToken 走 header）、`SigDefaultParamBuilder`（默认参数/别名规则）。
+- 新增 `SigInfoClient`（实时读 sig-info.yaml，参考 framework GitCode.getYaml 但 accessToken 走 header）、`SigDefaultParamBuilder`（默认参数/别名规则）。
 - 新增 DTO/VO：`RepoUrlCheckQueryDTO` / `RepoUrlCheckVO`（exists、repoId、mainRepoProjectId、currentConfig、associatedProjects）、`SetMainRepoDTO`、`RepoAssociationVO`、`GlobalConfigVO`、`SigLocationDTO/VO`、`SigRepoItemVO`、`SigImportResultVO` 等（与 SIG 相关 VO 沿用 §2.2 描述）。
 - 删除计划中的 `RepoProjectRef` 相关 DTO/Entity/Mapper/Service。
 
@@ -313,17 +311,17 @@ ALTER TABLE repo_info ADD COLUMN sig_config_file VARCHAR(512) NULL
   COMMENT 'SIG来源时记录的配置文件链接' AFTER source;
 ALTER TABLE repo_info ADD COLUMN is_participate_operation TINYINT(1) NOT NULL DEFAULT 1
   COMMENT '是否参与运营（默认是）' AFTER sig_config_file;
-ALTER TABLE repo_info ADD COLUMN repo_url_normalized VARCHAR(512) NULL
-  COMMENT '归一化后的repo_url(去.git/末尾斜杠/统一https/owner-repo小写，组key)' AFTER repo_url;
 ALTER TABLE repo_info ADD COLUMN is_main_repo TINYINT(1) NOT NULL DEFAULT 0
-  COMMENT '同repo_url组内是否主仓(0-否,1-是)，组内恰一行=1' AFTER repo_url_normalized;
+  COMMENT '同repo_url组内是否主仓(0-否,1-是)，组内恰一行=1' AFTER repo_url;
 
--- 2. 数据回填 + 清洗 + 主仓标记 + 唯一索引（见 §2.6 Phase 1 迁移）
--- ALTER TABLE repo_info ADD UNIQUE INDEX uk_repo_project (repo_url_normalized, project_id);
+-- 2. 确保 repo_url 有普通索引用于组查询（若原表无则新增）：
+-- ALTER TABLE repo_info ADD INDEX idx_repo_url (repo_url);
+-- 3. 清洗 + 主仓标记 + 唯一索引（见 §2.6 Phase 1 迁移）
+-- ALTER TABLE repo_info ADD UNIQUE INDEX uk_repo_project (repo_url, project_id);
 ```
 
 - **`project_id` 不删除**：每行 `project_id`=该行所属项目，语义与现状一致，7 个下游仓继续按旧方式读取，零改动。
-- **不做 `repo_url` 全局唯一**：跨项目多行并存，`uk_repo_project (repo_url_normalized, project_id)` 保证一项目一行。
+- **不做 `repo_url` 全局唯一**：跨项目多行并存，`uk_repo_project (repo_url, project_id)` 保证一项目一行。
 
 ### 4.2 改造表 `project_repo_global_config`（原 `project_gitcode_role_mapping` 泛化）
 
@@ -368,7 +366,7 @@ ALTER TABLE project_repo_global_config
 ```
 project (1) ──── (N) repo_info (每行=该项目下的一条代码仓；同 repo_url 跨项目多行)
                      ├─ project_id       = 该行所属项目（7 仓反查键）
-                     ├─ repo_url_normalized = 组 key
+                     ├─ repo_url         = 组 key（同 repo_url 为一组，主仓同步按此分组）
                      ├─ is_main_repo     = 组内主仓标记（恰一行=1）
                      └─ source / sig_config_file / is_participate_operation
 
@@ -392,12 +390,12 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 
 | 表 | 索引 | 服务场景 |
 |------|------|---------|
-| `repo_info` | `uk_repo_project (repo_url_normalized, project_id)` | 一项目一行唯一；同组查询走前缀 |
+| `repo_info` | `uk_repo_project (repo_url, project_id)` | 一项目一行唯一；同组查询走前缀 |
 | | `idx_project_id (project_id)` | 列表页按项目查询（现有，保留） |
-| | `idx_repo_url_normalized (repo_url_normalized)` | 组查询（主仓同步/检测） |
+| | `idx_repo_url (repo_url)` | 组查询（主仓同步/检测） |
 | `project_repo_global_config` | `uk_project (project_id, is_deleted)` | 每项目一条全局配置 |
 
-- 主仓同步：按 `repo_url_normalized` 一次 UPDATE 同组行，组内行数少（1~N），单次 < 50ms。
+- 主仓同步：按 `repo_url` 一次 UPDATE 同组行，组内行数少（1~N），单次 < 50ms。
 - SIG 一键录入：单次最多 100 个仓库，事务内循环，单事务 < 2s。
 
 ### 5.2 配置读取设计（实时调对应平台）
@@ -602,7 +600,7 @@ SIG「选择仓库」下拉数据源：实时解析该平台 sig-info.yaml，仅
 ### 7.4 日志脱敏
 
 - 禁止打印：accessToken（仓库/项目公共账号令牌）、`currentConfig.accessToken`、YAML 内 accessToken、`config_json` 整对象。
-- 允许打印：projectId / repoUrl（normalized）/ platform / owner/repo/branch/path / 计数等。
+- 允许打印：projectId / repoUrl / platform / owner/repo/branch/path / 计数等。
 - 冲突检测返回的 `currentConfig` 中 accessToken 序列化前置空；`get-global-config` 公共账号令牌掩码 `******`；`update-project-common-account` 明文令牌不出日志、不返回。
 
 ### 7.5 SIG 录入与手动录入互不覆盖
@@ -613,7 +611,7 @@ SIG「选择仓库」下拉数据源：实时解析该平台 sig-info.yaml，仅
 
 ### 7.6 数据库安全
 
-- `uk_repo_project (repo_url_normalized, project_id)` 防同项目重复录入；不做 repo_url 全局唯一。
+- `uk_repo_project (repo_url, project_id)` 防同项目重复录入；不做 repo_url 全局唯一。
 - 软删除现状保留（is_deleted）；删除链路本期保持物理删除（与现状一致，7 仓零变化）。
 - accessToken 明文存储现状不改（可后续独立立项加密）。
 
@@ -624,7 +622,7 @@ SIG「选择仓库」下拉数据源：实时解析该平台 sig-info.yaml，仅
 ### 7.8 迁移脚本安全
 
 - `project_repo_global_config` 迁移：role_mapping 迁入 `config_json.gitcode.roleMapping`，批量 upsert 幂等可重跑。
-- **Phase 1** repo 迁移（回填 repo_url_normalized + 清洗同项目重复行 + 标主仓 + 加唯一索引）：事务分批（每批 1000 行）提交、可重跑；只动 repo_info 本身，不触碰 7 仓数据。
+- **Phase 1** repo 迁移（清洗同项目重复行 + 标主仓 + 加唯一索引）：事务分批（每批 1000 行）提交、可重跑；只动 repo_info 本身，不触碰 7 仓数据。
 - 迁移在上线后统一执行、不阻塞上线；迁移前备份 repo_info。
 - 灰度开关 `coderepo.repo-decouple.enabled`（仅控制主仓同步新逻辑开关，可快速回滚）。
 
@@ -636,7 +634,7 @@ SIG「选择仓库」下拉数据源：实时解析该平台 sig-info.yaml，仅
 - [ ] `update-project-common-account` 令牌不出日志、不返回明文；`get-global-config` 令牌掩码
 - [ ] YAML 含 `!!java/object` 等危险标签时解析被拒绝
 - [ ] 跨项目访问返回 403
-- [ ] **Phase 1** 迁移后：`uk_repo_project` 生效（同项目同 repo_url 无法重复插入）；每个 `repo_url_normalized` 组合法主仓数=1；7 个下游仓按 `(project_id, repo_url)` 反查全部命中（SCA 联调用例）
+- [ ] **Phase 1** 迁移后：`uk_repo_project` 生效（同项目同 repo_url 无法重复插入）；每个 `repo_url` 组合法主仓数=1；7 个下游仓按 `(project_id, repo_url)` 反查全部命中（SCA 联调用例）
 - [ ] 主仓配置同步：编辑主仓行 → 同组其余行配置一致；迁移主仓 → 新主仓配置同步全组、旧主仓降为副仓（单测 + DB 校验）
 - [ ] 删除主仓行且组内还有其他行 → 被拒绝并提示先迁移主仓
 - [ ] 单元测试覆盖：手动录入命中多行（复制主仓配置/设为主仓/选择性删除）、SIG 录入仅未录入仓库 + 不覆盖已有配置、主仓同步/迁移、全局配置 config_json 读写（含 roleMapping 迁移）、迁移幂等、sig-info.yaml 解析与位置白名单
