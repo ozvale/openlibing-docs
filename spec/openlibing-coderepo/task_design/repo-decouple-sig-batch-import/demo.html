@@ -260,7 +260,7 @@
 <body>
 
 <div class="page-title">代码仓管理与需求解耦 + SIG 组一键批量录入 · 页面原型</div>
-<div class="page-desc">本原型展示关键交互：①项目级「全局配置」弹窗（三页签，集中管理公共账号 / 代码仓录入配置（sig-info.yaml 链接） / GitCode 角色映射）；②手动录入（输入链接自动检测 → 历史多项目录入且配置不同则先选择主仓、配置按主仓自动同步，可选择性删除 / 修改配置同步提示）；③SIG 组一键录入（先多选尚未录入当前项目的仓库 → 表格核对/编辑/删除 → 批量录入）；④代码仓列表（来源列 + 关联项目数列）。样式对齐 openlibing-web Element Plus 主色 #006be6。</div>
+<div class="page-desc">本原型展示关键交互：①项目级「全局配置」弹窗（三页签，集中管理公共账号 / 代码仓录入配置（sig-info.yaml 链接） / GitCode 角色映射）；②手动录入（输入链接自动检测 → 历史多项目录入且配置不同则先选择主仓、配置按主仓自动同步，可选择性删除 / 修改配置同步提示）；③编辑代码仓配置（该 repo_url 已在多个项目录入过时提示设置主仓，保存后以主仓配置覆盖主仓与副仓配置，兼容 repo_info 跨项目重复历史数据）；④SIG 组一键录入（先多选尚未录入当前项目的仓库 → 表格核对/编辑/删除 → 批量录入）；⑤代码仓列表（来源列 + 关联项目数列）。样式对齐 openlibing-web Element Plus 主色 #006be6。</div>
 
 <!-- ========== 场景一：项目级全局配置（三页签弹窗） ========== -->
 <div class="section">
@@ -486,9 +486,101 @@
   </div>
 </div>
 
-<!-- ========== 场景三：SIG 组一键录入（多选未录入仓库 → 表格核对/编辑/删除 → 批量录入） ========== -->
+<!-- ========== 场景三：编辑代码仓配置（多项目已录入 → 主仓设置，以主仓覆盖主仓/副仓配置） ========== -->
 <div class="section">
   <span class="section-label">场景三</span>
+  <div class="section-title">编辑代码仓配置：该 repo_url 已在多个项目录入过 → 提示设置主仓，保存后以主仓配置为准对主仓与副仓的配置进行覆盖（兼容 repo_info 跨项目重复历史数据）</div>
+
+  <div class="dialog-mask">
+    <div class="dialog">
+      <div class="dialog-header">
+        <span>编辑代码仓配置（openlibing/openlibing-coderepo）</span>
+        <span class="dialog-close">✕</span>
+      </div>
+      <div class="dialog-body">
+        <div class="form-item" style="margin-bottom:14px;">
+          <label>仓库链接</label>
+          <div class="input disabled">https://gitcode.com/openlibing/openlibing-coderepo.git</div>
+          <div class="form-hint">保存前自动检测该 repo_url 是否已在多个项目录入过（兼容 repo_info 表中跨项目重复代码仓历史数据）</div>
+        </div>
+
+        <!-- 该 repo_url 已在多个项目录入：提示设置主仓，配置以主仓为准覆盖主仓与副仓 -->
+        <div class="alert alert-info">
+          <span class="alert-icon">ℹ</span>
+          <div>检测到该代码仓已在 <b>项目A</b>、<b>项目B</b> 录入。历史数据暂未归并，各项目中的配置可能不同，请先选择<b>主仓</b>，保存后将以<b>主仓配置覆盖主仓与副仓（其余项目）的配置</b>，保证各项目配置一致。</div>
+        </div>
+
+        <!-- 主仓设置：存量多行场景编辑时，以用户选定的主仓为准，保存后覆盖副仓配置 -->
+        <div class="main-repo">
+          <div class="mr-title">主仓设置：请选择以哪个项目为主仓？保存后将以该主仓的配置为准，覆盖项目A、项目B（副仓）中的该代码仓配置</div>
+          <label><input type="radio" name="editMainRepo" class="radio" checked> 项目A <span class="tag tag-primary">当前主仓</span></label>
+          <label><input type="radio" name="editMainRepo" class="radio"> 项目B</label>
+          <span class="form-hint">切换主仓后，下方表单将按所选主仓的配置重新同步（可继续手动修改）；保存后各项目（主仓 + 副仓）配置统一为所选主仓配置</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-item">
+            <label>托管平台</label>
+            <div class="select">gitcode</div>
+          </div>
+          <div class="form-item">
+            <label>代码仓别名</label>
+            <div class="input">openlibing-coderepo</div>
+          </div>
+          <div class="form-item">
+            <label><span class="req">*</span>仓库责任人</label>
+            <div class="input">sig-owner</div>
+          </div>
+          <div class="form-item">
+            <label><span class="req">*</span>用途</label>
+            <div class="select">自研源码</div>
+          </div>
+          <div class="form-item">
+            <label>语言</label>
+            <div class="select">java</div>
+          </div>
+          <div class="form-item">
+            <label><span class="req">*</span>开源类型</label>
+            <div class="select">主导开源</div>
+          </div>
+          <div class="form-item">
+            <label>接管PR管理</label>
+            <div class="select">是</div>
+          </div>
+          <div class="form-item">
+            <label>自动触发门禁流水线</label>
+            <div class="select">是</div>
+          </div>
+          <div class="form-item">
+            <label>自动触发接口扫描</label>
+            <div class="select">否</div>
+          </div>
+          <div class="form-item">
+            <label>代码风格自动修复</label>
+            <div class="select">否</div>
+          </div>
+          <div class="form-item">
+            <label>告警抑制自动检视</label>
+            <div class="select">否</div>
+          </div>
+          <div class="form-item">
+            <label>是否参与运营</label>
+            <div class="select">是</div>
+          </div>
+        </div>
+        <div class="form-hint" style="margin-top:10px;">编辑已录入仓库时不做「多项目影响提示」与「SIG 来源编辑拦截」（SIG 来源仓库同样允许编辑）；本仓已在多个项目录入，保存后以所选主仓配置覆盖主仓与副仓，请确认后提交。</div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn">保存</button>
+        <button class="btn btn-default">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 场景四：SIG 组一键录入（多选未录入仓库 → 表格核对/编辑/删除 → 批量录入） ========== -->
+<div class="section">
+  <span class="section-label">场景四</span>
   <div class="section-title">SIG 组一键录入：先多选尚未录入当前项目的 SIG 仓库，再在表格中核对 / 单条或批量编辑、删除后录入</div>
 
   <div class="dialog-mask">
