@@ -57,11 +57,30 @@ Wiki Service 中需要获取当前用户的 permissions 信息。评估了三种
 
 - **addWikiFile**：如果请求中 `visibility=1`，校验用户是否拥有 `manage_config` 权限
 - **updateWikiFile**：如果目标文档是受控文档（`oldWiki.visibility == 1`）或请求中设置 `visibility=1`，校验用户是否拥有 `manage_config` 权限
+- **browsingHistory**：查询文档后检查 visibility，无权限则拒绝记录浏览历史
+- **deleteWikiFile**：检查待删除文档中是否含受控文档，有则校验权限
+- **restoreWikiFile**：检查回收站文档中是否含受控文档，有则校验权限
+- **deleteWikiFileComplete**：检查回收站文档中是否含受控文档，有则校验权限
+- **updateParent**：检查当前文档是否为受控文档，是则校验权限
 - 无权限时返回错误提示，不静默忽略
 
 ### 6. Redis 使用规范
 
 使用 `StringRedisTemplate` 替代 `RedisTemplate<String, String>`，与项目其他 ServiceImpl 保持一致。两者序列化器均为 `StringRedisSerializer`，对线上 Redis 数据无影响。
+
+### 7. 健壮性修复
+
+在实现过程中发现并修复了以下问题：
+
+| 问题                                                               | 修复方式                              |
+| ------------------------------------------------------------------ | ------------------------------------- |
+| `updateWikiFile` 未检查 `fileContent` 为 null，导致 NPE            | 添加 `StringUtils.isNotBlank` 检查    |
+| `updateByEntity` SQL 中 `update_name` 和 `visibility` 之间缺少逗号 | 修复 SQL 语法                         |
+| `updateWikiFile` 浏览历史为空时返回失败（DB 更新已成功）           | 改为 best-effort 同步，不影响主流程   |
+| `updateParent` 未检查 `currentEntity` 为 null，导致 NPE            | 添加 null 检查                        |
+| `imageDetail` 未检查 `images` 为 null，导致 NPE                    | 添加 null 检查，返回空字节数组        |
+| `queryWikiDetailsById` SQL 缺少 `is_delete=0` 条件                 | 添加条件，防止查询已删除文档          |
+| visibility 过滤条件括号不一致（部分有括号，部分无）                | 统一为 `and visibility = 0`（无括号） |
 
 ## 涉及文件
 

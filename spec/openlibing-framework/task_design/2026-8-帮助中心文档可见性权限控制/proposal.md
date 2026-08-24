@@ -40,6 +40,11 @@
 - [ ] 无权限用户调用子文档查询时，不包含 `visibility=1` 的子文档
 - [ ] 无权限用户无法通过 `addWikiFile` 设置 `visibility=1`
 - [ ] 无权限用户无法通过 `updateWikiFile` 修改受控文档或设置 `visibility=1`
+- [ ] 无权限用户无法通过 `browsingHistory` 获取受控文档元数据
+- [ ] 无权限用户无法通过 `deleteWikiFile` 删除受控文档
+- [ ] 无权限用户无法通过 `restoreWikiFile` 恢复受控文档
+- [ ] 无权限用户无法通过 `deleteWikiFileComplete` 彻底删除受控文档
+- [ ] 无权限用户无法通过 `updateParent` 移动受控文档
 - [ ] 有权限用户可正常查看和编辑受控文档
 - [ ] 权限复用 `manage_config`，不新增自定义权限码
 - [ ] 存量文档不受影响（默认公开）
