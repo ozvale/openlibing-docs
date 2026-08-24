@@ -129,7 +129,7 @@
 
 ### 2.1 手动录入逻辑（含跨项目检测与选择性删除）
 
-> **核心变化**：输入仓库链接后 blur 即向后端发起检测请求，命中已录入其他项目的仓库时**自动将已有配置同步进表单**（无需「一键同步」按钮），用户可修改配置；「是否删除之前项目中的代码仓」支持**选择性删除**（仅取消所选项目与该代码仓的关联，非一次删除所有）；若未删除之前项目中的代码仓，修改配置会**同步修改之前项目中的代码仓配置**（代码仓配置全局唯一），前端需提示用户。
+> **核心变化**：输入仓库链接后 blur 即向后端发起检测请求，命中已录入其他项目的仓库时**自动将已有配置同步进表单**（无需「一键同步」按钮），用户可修改配置；**历史存量暂未归并，同一代码仓可能在多个项目（如 项目A、项目B）各有独立行且配置不同，前端先展示「主仓设置」让用户选择以哪个项目为主仓，配置按所选主仓自动同步（默认当前主仓）**；「是否删除之前项目中的代码仓」支持**选择性删除**（仅取消所选项目与该代码仓的关联，非一次删除所有）；若未删除之前项目中的代码仓，修改配置会**同步修改之前项目中的代码仓配置**（代码仓配置全局唯一），前端需提示用户。
 
 #### 2.1.1 录入主流程
 
@@ -142,12 +142,17 @@ addRepoInfo(userId, userName, projectId, RepoDTO, deleteProjectIds):
       - insert repo_project_ref (repo_id, project_id, source=manual)
       - 同步仓库信息（调 GitCodeUtil 拉平台元数据回填，沿用现有 syncRepoInfo 逻辑）
       - 配置 webhook（沿用现有 autoSetWebHook 逻辑）
-  3b. 命中（已存在，用户需在表单中二选一「主仓 / 副仓」，见下方说明）:
-      - 前端 blur 时已触发检测、表单已自动同步现有配置；用户明确选择：
+  3b. 命中（已存在；历史存量暂未归并，同一 repo_url 可能在多个项目存在独立行且配置不同）:
+      - 前端 blur 时已触发检测；checkRepoUrl 返回当前主仓 + 各关联项目配置（见 §2.1.2）。
+      - 前端展示「主仓设置」单选（列出所有关联项目，标记当前主仓，默认选中当前主仓）：
+        · 用户选定主仓（如 项目A / 项目B）→ 表单配置立即按所选主仓对应行的配置**自动同步**
+          （可继续手动修改）；提示「历史数据暂未归并，各项目配置可能不同，配置以主仓为准」。
+        · 用户也可将当前项目设为主仓（见下方「设为本项目为主仓」）。
+      - 随后确认当前项目归属（沿用二选一）：
         · **设为本项目为主仓（迁移归属）** → 将该 repo 主仓从原项目迁移到当前项目
-          （repo_info.project_id 改为当前项目）。前端强提示：「该仓库全部历史扫描/检查/漏洞
-          结果将整体迁移到本项目（结果按仓库存储、归属随主仓项目变化），原主仓项目的相关结果
-          将不再展示」；原主仓降为普通关联（或按 deleteProjectIds 删除）。
+          （repo_info.project_id 改为当前项目，配置以当前项目表单为准）。前端强提示：「该仓库
+          全部历史扫描/检查/漏洞结果将整体迁移到本项目（结果按仓库存储、归属随主仓项目变化），
+          原主仓项目的相关结果将不再展示」；原主仓降为普通关联（或按 deleteProjectIds 删除）。
         · **作为副仓关联（仅记录）** → 仅新建 repo_project_ref (repo_id, project_id, source=manual)，
           不修改 repo_info.project_id、不参与任何下游任务。前端提示：「该项目为副仓，仅作记录，
           不参与 SCA 扫描/防投毒/漏洞等检测，相关结果请在主仓项目查看」。
@@ -156,16 +161,16 @@ addRepoInfo(userId, userName, projectId, RepoDTO, deleteProjectIds):
           （仅取消所选项目与该代码仓的关联，repo_info 保留，其余项目不受影响）
         · 删「主仓」项目关联 → 必须同时指定**新主仓**（迁移给另一关联项目）或允许该仓进入
           「无主仓」状态（repo_info.project_id 置空，仅剩副仓 ref；下游 8 仓将看不到该仓，需提示）
-      - 若未勾选任何删除项且选择副仓 → 按表单更新 repo_info 配置（同步影响所有仍关联项目），
-        前端已提示「修改会同步修改之前项目中的代码仓配置」
+      - 若未勾选任何删除项且未设当前项目为主仓 → 按表单更新 repo_info 配置（以所选主仓配置为基准，
+        同步影响所有仍关联项目），前端已提示「修改会同步修改之前项目中的代码仓配置」
       - upsert repo_project_ref (repo_id, project_id, source=manual)
   4. 返回 repoId
 ```
 
 > **过渡期 53 个共享仓分流（Phase 1）**：存量 53 个共享仓（同一 `repo_url` 在 `repo_info` 存在多行未删除记录，迁移时列入待归并清单）在归并前**退化为现状行级语义**——
 > - 每个项目操作**各自的行**（新增/编辑/删除按行，8 仓按 `repo_info.project_id` 照常读到），该 repo_url **不参与新模型全局唯一去重**（多行是既定事实，归并前无法唯一）；
-> - `checkRepoUrl` 命中多行时取**基准行**（最早 `create_at`）配置作为 `currentConfig`，`associatedProjects` 合并所有行所属项目（去重）；
-> - 前端交互与需求一致（自动同步配置 + 选择性删除提示），提交时 `deleteProjectIds` 对其他项目删除其**行**（而非仅 ref），当前项目未关联则按现状新建当前项目行；
+> - `checkRepoUrl` 命中多行时返回**每行所属项目的配置**（`projectConfigs`）与**当前主仓**（`mainRepoProjectId`，默认=最早 `create_at` 行所属项目），`associatedProjects` 合并所有行所属项目（去重）；前端「主仓设置」默认选中当前主仓，用户改选主仓后按所选主仓对应行的配置**重新同步**（见 §2.1.2/§2.1.3）；
+> - 前端交互与需求一致（主仓设置 + 按主仓自动同步配置 + 选择性删除提示），提交时携带 `mainRepoProjectId`（主仓选择）与 `deleteProjectIds`（对其他项目删除其**行**，而非仅 ref），当前项目未关联则按现状新建当前项目行；
 > - Phase 2 归并后这些 repo_url 收敛为唯一行 + `repo_project_ref` 多对多，届时走新模型标准流程。
 
 #### 2.1.2 检测接口（前端 blur 触发）
@@ -173,19 +178,27 @@ addRepoInfo(userId, userName, projectId, RepoDTO, deleteProjectIds):
 ```
 checkRepoUrl(userId, projectId, repoUrl):
   1. normalize repoUrl
-  2. 查 repo_info by repo_url
+  2. 查 repo_info by repo_url（过渡期 53 个共享仓可能命中多行，见下方分流说明）
   3. 未命中 → { exists: false }（表单不填充，正常录入）
   4. 命中 → {
        exists: true,
        repoId,
-       currentConfig: { repoName, repoOwner, purpose, openSource, assumePr,
-                       defaultBranchName, isAutoFormat, isSuppressionEnabled,
-                       isParticipateOperation, ... },
-       associatedProjects: [            // 该 repo 已关联的项目列表
+       mainRepoProjectId,             // 当前主仓项目 id（repo_info.project_id；历史多行默认=最早 create_at 行所属项目）
+       currentConfig: {               // 当前主仓对应配置（默认同步基准，用户改选主仓后可覆盖）
+         repoName, repoOwner, purpose, openSource, assumePr,
+         defaultBranchName, isAutoFormat, isSuppressionEnabled,
+         isParticipateOperation, ...
+       },
+       projectConfigs: [              // 各关联项目各自的配置（历史多行配置可能不同，供「主仓设置」切换）
+         { projectId, projectName, config: { /* 同 currentConfig 字段 */ } }
+       ],
+       associatedProjects: [          // 该 repo 已关联的项目列表
          { projectId, projectName }
        ]
      }
-  5. 前端把 currentConfig 自动同步到表单（可修改），并展示「是否删除之前项目中的代码仓」多选
+  5. 前端默认把 currentConfig（当前主仓配置）同步到表单（可修改）；展示「主仓设置」单选
+     （列出 associatedProjects，标记当前主仓）与「是否删除之前项目中的代码仓」多选；
+     用户改选主仓后，按 projectConfigs[projectId].config 重新同步表单
 ```
 
 #### 2.1.3 前端交互（自动同步 + 选择性删除）
@@ -193,10 +206,11 @@ checkRepoUrl(userId, projectId, repoUrl):
 - `repoUrl` blur → 调 `checkRepoUrl`（防抖 300ms）
 - `exists=false` → 表单正常录入
 - `exists=true` →
-  - 顶部蓝色提示条：「检测到该代码仓已在 项目A、项目B 录入，已将已有配置自动同步到下方表单，可直接修改后提交。」（**无「一键同步」按钮**，配置自动同步）
+  - 顶部蓝色提示条：「检测到该代码仓已在 项目A、项目B 录入。历史数据暂未归并，各项目中的配置可能不同，请先选择**主仓**，下方表单将按主仓配置自动同步，可直接修改后提交。」（**无「一键同步」按钮**，配置自动同步）
+  - **「主仓设置」单选**：列出所有关联项目（`associatedProjects`），默认选中当前主仓（`mainRepoProjectId`，标记「当前主仓」）。用户改选主仓 → 表单配置立即按 `projectConfigs[projectId].config` 重新同步（可继续手动修改）；提示「切换主仓后该仓库全部历史检测结果归属也随之迁移到新主仓项目」。
   - 「是否删除之前项目中的代码仓？」多选框列出所有关联项目，**可多选**，仅取消所选项目与该代码仓的关联（**非一次删除所有**；不勾选则不删除该项目下的该代码仓）
   - 若未勾选任何删除项 → 黄色警告条：「您未删除之前项目中的代码仓，修改下方配置将**同步修改项目A、项目B中的该代码仓配置**（代码仓配置全局唯一）。」
-  - 表单字段全部可编辑；提交时携带 `deleteProjectIds`（勾选的项目）与表单配置
+  - 表单字段全部可编辑；提交时携带 `mainRepoProjectId`（所选主仓）、`deleteProjectIds`（勾选的项目）与表单配置
 
 ### 2.2 SIG 组一键录入逻辑
 
@@ -369,7 +383,8 @@ migrateRepoProjectRefPhase1():
 ```
 migrateRepoProjectRefPhase2():
   1. 按待归并清单逐个 repo_url_normalized 处理：
-     a. 选基准行（最早 create_at）作为唯一 repo_info（保留其配置、source、sig_config_file）
+     a. 选唯一 repo_info 基准行：优先取**用户通过「主仓设置」指定的主仓项目对应行**（过渡期已录入/编辑时记录）；
+        未指定主仓时默认取最早 create_at 行（保留其配置、source、sig_config_file）
      b. 其余行的 project_id 合并到 repo_project_ref：
         - 在 (基准 repo_id, 其余行 project_id) 上 upsert 关联（source 取该行原值 / merged）
         - 先将各子表（sca tbl_scan / anti-poison 相关表等，需对应仓配合数据脚本）中
@@ -406,7 +421,7 @@ migrateRepoProjectRefPhase2():
 #### 2.6.2 录入对话框改造（[Repos/index.vue](file:///d:/Develop/Java/openlibing-web/apps/web-openlibing/src/views/Repos/index.vue) 的 `el-dialog`）
 
 - 对话框顶部新增「录入方式」单选切换：`手动录入` / `SIG 组一键录入`
-- `手动录入` 模式：沿用现有表单，新增 `repoUrl` blur 时调检测接口（`checkRepoUrl`），命中时按 §2.1.3 自动同步配置 + 选择性删除 + 修改同步提示（**无「一键同步」按钮**）
+- `手动录入` 模式：沿用现有表单，新增 `repoUrl` blur 时调检测接口（`checkRepoUrl`），命中时按 §2.1.3 展示「主仓设置」（默认当前主仓，改选主仓后按所选主仓配置重新同步）+ 自动同步配置 + 选择性删除 + 修改同步提示（**无「一键同步」按钮**）
 - `SIG 组一键录入` 模式：
   - 隐藏现有表单字段
   - 顶部提示条：「SIG 组录入默认使用默认配置（别名=仓库名、责任人=建仓人、开源类型=主导开源、是否参与运营=是、其余各开关=否）；下拉仅展示尚未录入当前项目的 SIG 仓库，已录入的不展示，不会覆盖已有配置；sig-info.yaml 链接在「全局配置」中维护」
@@ -455,7 +470,7 @@ migrateRepoProjectRefPhase2():
 └──────────────────────────────────────────────────────────┘
 ```
 
-#### 图 1：手动录入（自动同步配置 + 选择性删除）
+#### 图 1：手动录入（主仓设置 → 按主仓自动同步配置 + 选择性删除）
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -464,9 +479,12 @@ migrateRepoProjectRefPhase2():
 ├──────────────────────────────────────────────────────────┤
 │  仓库链接: https://gitcode.com/org/repo.git   (blur 检测) │
 │                                                          │
-│  ℹ 检测到该代码仓已在 项目A、项目B 录入，已将已有配置      │
-│    自动同步到下方表单，可直接修改后提交。（无一键同步按钮） │
-│                                                          │
+│  ℹ 检测到该代码仓已在 项目A、项目B 录入。历史数据暂未归并，│
+│    各项目配置可能不同，请先选择主仓，表单将按主仓配置自动   │
+│    同步，可直接修改后提交。（无一键同步按钮）              │
+│  主仓设置（配置以主仓为准自动同步；主仓参与检测，副仓仅记录）│
+│    ◉ 项目A（当前主仓）   ○ 项目B                          │
+│    （切换主仓后表单按新主仓重新同步，检测结果归属随之迁移） │
 │  □ 是否删除之前项目中的代码仓？（可多选，仅取消所选项目    │
 │    关联）  ☑ 项目A   ☐ 项目B                              │
 │  ⚠ 您未删除之前项目中的代码仓，修改下方配置将同步修改      │
@@ -672,8 +690,18 @@ public class RepoUrlCheckQueryDTO {
 public class RepoUrlCheckVO {
   private Boolean exists;
   private Integer repoId;
-  private RepoInfoEntity currentConfig;     // 命中时返回现有配置（前端自动同步到表单）
+  private Integer mainRepoProjectId;    // 当前主仓项目 id（repo_info.project_id；历史多行默认=最早 create_at 行所属项目）
+  private RepoInfoEntity currentConfig; // 当前主仓对应配置（默认同步基准，前端自动同步到表单）
+  private List<ProjectConfigVO> projectConfigs;      // 各关联项目各自的配置（历史多行配置可能不同，供「主仓设置」切换）
   private List<AssociatedProjectVO> associatedProjects;  // 该 repo 已关联的项目列表（供选择性删除）
+}
+
+/** 某关联项目及其配置（「主仓设置」切换主仓后按此重新同步表单） */
+@Data @Builder
+public class ProjectConfigVO {
+  private Integer projectId;
+  private String projectName;
+  private RepoInfoEntity config;   // 该项目对应 repo_info 行的配置
 }
 
 /** SIG 仓库（sig-info.yaml 中 owner/repo） */
@@ -825,7 +853,7 @@ public class RepoAssociationVO {
 | 类 | 改动 |
 |------|------|
 | [RepoController](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/RepoController.java) | 新增 `check-repo-url`、`global-config`（get/update）、`update-project-common-account`、`sig/config`（保存/查询位置配置，带 platform）、`sig/repos`、`sig/import`；`delete-repo` 入参加 `projectId`（`get-repo-association` 仅在删除场景按需保留） |
-| [RepoDTO](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/dto/space/RepoDTO.java) | 新增 `deleteProjectIds`（List\<Integer\>，手动录入命中已存在仓库时，勾选要删除关联的「之前项目」ID 列表；不传表示不删除，修改配置同步影响所有仍关联项目） |
+| [RepoDTO](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/dto/space/RepoDTO.java) | 新增 `mainRepoProjectId`（Integer，手动录入命中已存在仓库时用户选定的**主仓项目**，默认当前主仓；配置同步与下游任务归属以主仓为准，设为本项目则主仓迁移到当前项目）与 `deleteProjectIds`（List\<Integer\>，手动录入命中已存在仓库时，勾选要删除关联的「之前项目」ID 列表；不传表示不删除，修改配置同步影响所有仍关联项目） |
 | [RepoService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/RepoService.java) | `addRepoInfo` 增加「命中已存在」分支（自动同步 + 选择性删除 `deleteProjectIds`）；`updateRepoInfo` 直接编辑（**无** sig 拦截、**无**多项目确认）；`deleteRepoInfo` 增加 `projectId` 入参；新增 `checkRepoUrl` |
 | [RepoServiceImpl](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java) | 实现上述改造；`queryRepoInfo` SQL 改 JOIN `repo_project_ref`；SIG 相关委托 `SigRepoImportService` |
 | [RepoInfoMapper.xml](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/resources/mapper/RepoInfoMapper.xml) | `queryRepoInfo` 改 JOIN；新增 `selectByRepoUrl`；`addRepoInfo` 保留 `project_id` 列写入（首次录入即最早关联） |
@@ -1237,6 +1265,8 @@ project (1) ──── (1) project_global_config ──实时读取──▶ S
 {
   // ... 现有字段不变（含表单配置） ...
   "isParticipateOperation": true,   // 新增, 可选: 是否参与运营（默认是）
+  "mainRepoProjectId": 2,   // 新增, 可选: 手动录入命中已存在仓库时用户选定的主仓项目 ID（默认当前主仓）；
+                            // 配置同步与下游任务归属以主仓为准；设为本项目则主仓迁移到当前项目
   "deleteProjectIds": [3]   // 新增, 可选: 手动录入命中已存在仓库时，勾选「是否删除之前项目中的代码仓」的项目 ID 列表；
                             // 空数组/不传表示不删除，修改配置同步影响所有仍关联项目（前端已提示）
 }
@@ -1244,7 +1274,7 @@ project (1) ──── (1) project_global_config ──实时读取──▶ S
 
 **响应**（不变）：`DataResult<Integer>`（repoId）
 
-**业务变化**：见 §2.1。`repo_url` 命中已存在仓库时**自动同步其配置到表单**（前端 blur 时已调 check-repo-url），提交时按表单更新配置（未删除之前项目时同步影响所有仍关联项目）、可选按 `deleteProjectIds` **选择性删除**所选项目关联（仅取消关联，repo_info 保留）。后端按归一化 `repo_url` 二次查重防并发。
+**业务变化**：见 §2.1。`repo_url` 命中已存在仓库时**按用户选定主仓（`mainRepoProjectId`）同步其配置到表单**（前端 blur 时已调 check-repo-url），提交时按表单更新配置（未删除之前项目时同步影响所有仍关联项目）、按 `mainRepoProjectId` 确定主仓归属（设为本项目则迁移主仓到当前项目）、可选按 `deleteProjectIds` **选择性删除**所选项目关联（仅取消关联，repo_info 保留）。后端按归一化 `repo_url` 二次查重防并发。
 
 ### 6.2 现有接口改造：`POST /project-repo/update-repo`
 
@@ -1267,7 +1297,7 @@ POST /project-repo/delete-repo?userId=xxx&userName=xxx&id={repoId}&projectId={pr
 
 ### 6.4 新增接口 1：`POST /project-repo/check-repo-url`
 
-**用途**：手动录入时 `repoUrl` blur 触发，检测 repo_url 全局是否已存在；命中时返回现有配置（前端**自动同步到表单**）与已关联项目列表（供**选择性删除**）。
+**用途**：手动录入时 `repoUrl` blur 触发，检测 repo_url 全局是否已存在；命中时返回**当前主仓**、**各关联项目配置**（前端「主仓设置」默认按当前主仓同步，改选主仓后按所选主仓配置重新同步）与已关联项目列表（供**选择性删除**）。
 
 **请求**：
 ```jsonc
@@ -1286,13 +1316,20 @@ POST /project-repo/delete-repo?userId=xxx&userName=xxx&id={repoId}&projectId={pr
   "data": {
     "exists": true,
     "repoId": 1001,
-    "currentConfig": {
+    "mainRepoProjectId": 2,           // 当前主仓项目（repo_info.project_id；历史多行默认=最早 create_at 行所属项目）
+    "currentConfig": {                // 当前主仓对应配置（默认同步基准）
       "repoName": "repo", "repoOwner": "sig-owner", "purpose": "自研源码",
       "openSource": "lead", "assumePr": "1", "autoTrigger": "1",
       "autoTriggerDesignScan": "0", "isAutoFormat": false,
       "isSuppressionEnabled": true, "isParticipateOperation": true, "disallowSelfMerge": 1,
       "disallowUnresolvedDiscussionsMerge": 0, "repoLanguage": "java"
     },
+    "projectConfigs": [               // 各关联项目各自的配置（历史多行配置可能不同）
+      { "projectId": 2, "projectName": "项目A",
+        "config": { /* 同 currentConfig 字段 */ } },
+      { "projectId": 3, "projectName": "项目B",
+        "config": { /* 同 currentConfig 字段 */ } }
+    ],
     "associatedProjects": [
       { "projectId": 2, "projectName": "项目A" },
       { "projectId": 3, "projectName": "项目B" }
@@ -1301,7 +1338,7 @@ POST /project-repo/delete-repo?userId=xxx&userName=xxx&id={repoId}&projectId={pr
 }
 ```
 
-前端据 `exists=true`：将 `currentConfig` 自动同步到表单（可修改）；展示「是否删除之前项目中的代码仓」多选（`associatedProjects`）；未勾选删除项时提示「修改会同步修改之前项目中的代码仓配置」。
+前端据 `exists=true`：展示「主仓设置」单选（`associatedProjects`，默认选中 `mainRepoProjectId`，标记「当前主仓」），默认将 `currentConfig` 同步到表单（可修改）；用户改选主仓后按 `projectConfigs[projectId].config` 重新同步表单；展示「是否删除之前项目中的代码仓」多选（`associatedProjects`）；未勾选删除项时提示「修改会同步修改之前项目中的代码仓配置」。
 
 ### 6.5 新增接口 2：`GET /project-repo/get-repo-association`
 
@@ -1730,5 +1767,6 @@ logger.info("Global config: {}", globalConfigVO);  // 含 commonAccount 令牌�
 - [ ] **Phase 1** 迁移后 `repo_project_ref` 未删除记录数 = `repo_info` 未删除记录数（1:1 回填完整）；53 个共享仓多行保留、其余 7 仓读取零变化（framework 仅做副仓拦截改造 §7.1.4）
 - [ ] **Phase 2**（8 仓可控后）归并完成：`SELECT repo_url_normalized, COUNT(*) FROM repo_info WHERE is_deleted=0 GROUP BY repo_url_normalized HAVING COUNT(*)>1` 返回 0 行，且下游子表 FK 已重映射（无悬空 repo_id）
 - [ ] 新录入重复仓库被代码层查重拦截：`add-repo` / `sig/import` 并发重复 `repo_url` 不产生第二条 `repo_info`（并发用例）
-- [ ] 单元测试覆盖：手动录入冲突（自动同步配置 + 选择性删除）、SIG 录入仅未录入仓库 + 不覆盖已有配置、SIG 来源仓库手动编辑、全局配置 config_json 读写（含 roleMapping 迁移）、迁移幂等、sig-info.yaml 解析与位置白名单
+- [ ] 单元测试覆盖：手动录入冲突（**主仓设置**：默认按当前主仓同步、切换主仓后按所选主仓配置重新同步、提交携带 `mainRepoProjectId` + 选择性删除）、SIG 录入仅未录入仓库 + 不覆盖已有配置、SIG 来源仓库手动编辑、全局配置 config_json 读写（含 roleMapping 迁移）、迁移幂等、sig-info.yaml 解析与位置白名单
+- [ ] 历史多项目配置不同场景（53 个共享仓未归并前）：`check-repo-url` 返回 `mainRepoProjectId` + 各关联项目 `projectConfigs`；用户切换主仓后表单按新主仓配置重新同步，主仓归属与下游任务归属正确（前端用例 + 单测）
 - [ ] framework 副仓拦截（§7.1.4）：副仓项目用户对主仓仓库的 `checkRepoUserNamePermission` 返回无权限、`saveRepoUserInfo` 不写入主仓成员表（主仓成员集合未被副仓用户污染）

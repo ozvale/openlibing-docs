@@ -245,12 +245,22 @@
   .delete-projects .dp-title { font-size: 13px; color: #191919; font-weight: 500; width: 100%; margin-bottom: 4px; }
   .delete-projects label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; }
   .delete-projects .checkbox { width: 14px; height: 14px; }
+
+  /* 主仓设置（历史多项目配置不同，配置同步以主仓为准） */
+  .main-repo {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    background: #ecf5ff; border: 1px solid #b3d8ff; border-radius: 4px;
+    padding: 10px 14px; margin-bottom: 12px;
+  }
+  .main-repo .mr-title { font-size: 13px; color: #191919; font-weight: 500; width: 100%; margin-bottom: 4px; }
+  .main-repo label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; }
+  .main-repo .radio { width: 14px; height: 14px; accent-color: #006be6; }
 </style>
 </head>
 <body>
 
 <div class="page-title">代码仓管理与需求解耦 + SIG 组一键批量录入 · 页面原型</div>
-<div class="page-desc">本原型展示关键交互：①项目级「全局配置」弹窗（三页签，集中管理公共账号 / 代码仓录入配置（sig-info.yaml 链接） / GitCode 角色映射）；②手动录入（输入链接自动检测 → 已存在则自动同步配置，可选择性删除 / 修改配置同步提示）；③SIG 组一键录入（先多选尚未录入当前项目的仓库 → 表格核对/编辑/删除 → 批量录入）；④代码仓列表（来源列 + 关联项目数列）。样式对齐 openlibing-web Element Plus 主色 #006be6。</div>
+<div class="page-desc">本原型展示关键交互：①项目级「全局配置」弹窗（三页签，集中管理公共账号 / 代码仓录入配置（sig-info.yaml 链接） / GitCode 角色映射）；②手动录入（输入链接自动检测 → 历史多项目录入且配置不同则先选择主仓、配置按主仓自动同步，可选择性删除 / 修改配置同步提示）；③SIG 组一键录入（先多选尚未录入当前项目的仓库 → 表格核对/编辑/删除 → 批量录入）；④代码仓列表（来源列 + 关联项目数列）。样式对齐 openlibing-web Element Plus 主色 #006be6。</div>
 
 <!-- ========== 场景一：项目级全局配置（三页签弹窗） ========== -->
 <div class="section">
@@ -362,7 +372,7 @@
 <!-- ========== 场景二：手动录入 - 已存在仓库的配置同步与选择性删除 ========== -->
 <div class="section">
   <span class="section-label">场景二</span>
-  <div class="section-title">手动录入：输入仓库链接自动检测；已录入其他项目则自动同步其配置，可选择性删除 / 修改配置同步提示</div>
+  <div class="section-title">手动录入：输入仓库链接自动检测；历史多项目录入且配置不同 → 先选择主仓，配置按主仓自动同步；可选择性删除 / 修改配置同步提示</div>
   <div class="toolbar">
     <button class="btn">+ 录入仓库</button>
     <button class="btn btn-default">↻ 同步仓库</button>
@@ -391,7 +401,15 @@
         <!-- 已存在于其他项目：配置自动同步（无需「一键同步」按钮） -->
         <div class="alert alert-info">
           <span class="alert-icon">ℹ</span>
-          <div>检测到该代码仓已在 <b>项目A</b>、<b>项目B</b> 录入，已将已有配置自动同步到下方表单，可直接修改后提交。</div>
+          <div>检测到该代码仓已在 <b>项目A</b>、<b>项目B</b> 录入。历史数据暂未归并，各项目中的配置可能不同，请先选择<b>主仓</b>，下方表单将按主仓配置自动同步，可直接修改后提交。（无「一键同步」按钮，配置自动同步）</div>
+        </div>
+
+        <!-- 主仓设置：历史多项目配置不同时，以用户选定的主仓为准 -->
+        <div class="main-repo">
+          <div class="mr-title">主仓设置：请选择以哪个项目为主仓？（主仓参与 SCA 扫描 / 防投毒 / 漏洞等检测，配置以主仓为准自动同步；副仓仅作记录，不参与检测）</div>
+          <label><input type="radio" name="mainRepo" class="radio" checked> 项目A <span class="tag tag-primary">当前主仓</span></label>
+          <label><input type="radio" name="mainRepo" class="radio"> 项目B</label>
+          <span class="form-hint">切换主仓后，下方表单将按所选主仓的配置重新同步；该仓库全部历史扫描/检查/漏洞结果归属也随之迁移到新主仓项目</span>
         </div>
 
         <!-- 选择性删除之前项目中的代码仓（支持多选，非一次删除所有） -->
@@ -458,7 +476,7 @@
             <div class="select">是</div>
           </div>
         </div>
-        <div class="form-hint" style="margin-top:10px;">表单已自动同步其他项目中的已有配置（可修改）；未删除之前项目时修改会同步影响其他项目，请确认后提交。</div>
+        <div class="form-hint" style="margin-top:10px;">表单已按所选主仓自动同步配置（可修改）；未删除之前项目时修改会同步影响所有仍关联项目，请确认后提交。</div>
       </div>
       <div class="dialog-footer">
         <button class="btn">确定</button>
