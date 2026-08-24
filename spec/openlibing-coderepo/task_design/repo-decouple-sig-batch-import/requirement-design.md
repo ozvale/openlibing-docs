@@ -24,7 +24,7 @@
 
 ### 1.3 改造边界（重要）
 
-- 本次改造**仅涉及 `repo_info` 表**（新增 `is_participate_operation` / `is_main_repo` 等字段）与 `project_repo_global_config`（全局配置表泛化）。
+- 本次改造**仅涉及 `repo_info` 表**（新增 `is_participate_operation` / `is_main_repo` 等字段）与 `project_gitcode_role_mapping` 表（**不改名**，直接数据迁移泛化为项目级全局配置，见 §4.2）。
 - 代码仓相关配置表还包括 `codecheck` 下的 Mongo 表（如 `sig_rule_set` 规则集表），**本次不改动**——仍允许不同项目对同一代码仓存在不同配置（规则集、告警抑制等项仍按各项目在 codecheck 侧各自配置，不在本期收敛范围内）。
 - **不新建 `repo_project_ref` 表**；不归并存量多行；不删 `project_id`（每行 `project_id` 语义=该行所属项目，与现状一致）。
 
@@ -41,10 +41,10 @@
 | 跨项目录入 | 仓库已在其他项目存在 → 当前项目**新建一行**并复制主仓配置；不删除其他项目行 | SCA 兼容 + 避免重复手填；配置靠同步保持全组一致 |
 | 选择性删除 | 手动录入/编辑时可勾选「删除之前项目的关联」=删除其他项目对应行 | 支持用户回收误关联；删除主仓行需先迁移主仓（§2.4） |
 | 下游仓改造 | **7 仓零改动**（framework 亦无需副仓拦截改造） | 多行模型下每项目都有行，权限/归属按行内 project_id 语义与现状一致 |
-| 全局配置 | `project_gitcode_role_mapping` 泛化为 `project_repo_global_config`（config_json 按平台分键） | 集中管理公共账号 / sig-info 位置 / 角色映射，见 §4.2 |
+| 全局配置 | `project_gitcode_role_mapping` **不改名**，直接数据迁移：加 `config_json` 列，存量 role_mapping 迁入 `config_json[platform].roleMapping`；角色映射条目用 `platformRole` 区分平台，可扩展 | 集中管理公共账号 / sig-info 位置 / 角色映射，见 §4.2 |
 | SIG 配置读取 | 实时调对应平台读取指定位置 sig-info.yaml 并解析；**去除 webhook / 入库缓存** | 保证读到最新配置，简化链路 |
 | 历史迁移 | **Phase 1**：清洗同项目重复行（按 repo_url）+ 标记主仓 + 加 `(repo_url, project_id)` 唯一索引；**Phase 2**（远期，7 仓可控后）：再评估全局唯一单行 + 关联表 | 本期不归并、不删行，7 仓零影响；远期归并依赖下游仓配合 |
-| 改造边界 | 仅 repo_info + project_repo_global_config；codecheck Mongo（sig_rule_set）等不改 | 规则集等按各项目在 codecheck 侧各自配置，不在本期收敛范围 |
+| 改造边界 | 仅 repo_info + project_gitcode_role_mapping（不改名数据迁移）；codecheck Mongo（sig_rule_set）等不改 | 规则集等按各项目在 codecheck 侧各自配置，不在本期收敛范围 |
 | YAML 解析安全 | SnakeYAML `SafeConstructor` | 防 YAML 反序列化攻击 |
 | accessToken 传递 | 调平台 API 时 `Authorization: Bearer <token>` header | 遵循项目硬约束「第三方 API 调用 accessToken 必须在 header」 |
 
@@ -78,7 +78,7 @@ addRepoInfo(userId, userName, projectId, RepoDTO, deleteProjectIds):
 
 #### 2.2.1 sig-info.yaml 位置配置（全局配置弹窗，每平台唯一链接）
 
-- 用户在「全局配置」弹窗按平台（gitcode/gitee/github）维护**一个** sig-info.yaml **完整链接**（形如 `https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private/sig-info.yaml`），存 `project_repo_global_config.config_json[platform].sigInfoLocation`。
+- 用户在「全局配置」弹窗按平台（gitcode/gitee/github）维护**一个** sig-info.yaml **完整链接**（形如 `https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private/sig-info.yaml`），存 `project_gitcode_role_mapping.config_json[platform].sigInfoLocation`。
 - 保存时解析链接为 owner/repo/branch/path 并实时校验文件可用性（OK / FILE_NOT_FOUND / PARSE_ERROR，不阻断保存）。
 
 #### 2.2.2 sig-info.yaml 文件格式（固定）
@@ -257,7 +257,7 @@ migrateRepoInfoPhase1():
 | `isMainRepo` | 该 repo_url 组内是否主仓（0/1） |
 | `isParticipateOperation` | 是否参与运营（默认是，已存在） |
 
-- 新增 [ProjectRepoGlobalConfigEntity](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/entity/space/)（表 `project_repo_global_config`，config_json 按平台分键）。原 `GitCodeRoleMappingEntity`（表 `project_gitcode_role_mapping`）作废，roleMapping 迁至 `config_json.gitcode.roleMapping`。
+- 改造现有 `GitCodeRoleMappingEntity`（表 `project_gitcode_role_mapping`，**不改名**）：新增 `configJson` 字段，作为项目级全局配置载体（config_json 按平台分键，角色映射条目用 `platformRole` 区分平台，可扩展）；存量 role_mapping 数据迁移至 `config_json.gitcode.roleMapping`。**不新增表、不重命名表**。
 - **不新增** `RepoProjectRefEntity`。
 
 #### 3.1.2 Mapper 改造
@@ -278,7 +278,7 @@ migrateRepoInfoPhase1():
   - 新增 `checkRepoUrl`、`setMainRepo`、`getRepoAssociation`
 - 新增 [MainRepoSyncService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/)（或并入 RepoServiceImpl）：`syncGroupConfig(repoUrl, baseRow)` 以主仓行为基准同步同组配置；`migrateMainRepo(repoId, newMainRepoId)` 迁移主仓标记并同步全组。
 - 新增 [SigRepoImportService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/)：`saveConfig` / `listConfig` / `listReposInConfig` / `importRepos`（§2.2）。
-- 新增 [ProjectRepoGlobalConfigService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/)：`getGlobalConfig` / `updateGlobalConfig` / `updateProjectCommonAccount`。
+- 新增 [ProjectRepoGlobalConfigService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/)（承接原 gitcode 角色映射能力，底层表 `project_gitcode_role_mapping` 不改名）：`getGlobalConfig` / `updateGlobalConfig` / `updateProjectCommonAccount`。
 
 #### 3.1.4 工具类 / DTO
 
@@ -316,27 +316,26 @@ ALTER TABLE repo_info ADD COLUMN is_main_repo TINYINT(1) NOT NULL DEFAULT 0
 - **`project_id` 不删除**：每行 `project_id`=该行所属项目，语义与现状一致，7 个下游仓继续按旧方式读取，零改动。
 - **不做 `repo_url` 全局唯一**：跨项目多行并存，`uk_repo_project (repo_url, project_id)` 保证一项目一行。
 
-### 4.2 改造表 `project_repo_global_config`（原 `project_gitcode_role_mapping` 泛化）
+### 4.2 改造表 `project_gitcode_role_mapping`（不改名，直接数据迁移泛化为项目级全局配置）
 
 ```sql
--- 1. 原 project_gitcode_role_mapping 重命名 + 增加 config_json 字段
-RENAME TABLE project_gitcode_role_mapping TO project_repo_global_config;
-ALTER TABLE project_repo_global_config
-    ADD COLUMN config_json JSON NULL COMMENT '项目级全局配置(JSON)：各平台sig-info位置、gitcode角色映射等，按平台分键，可扩展' AFTER project_id;
+-- 1. 不改名，原表直接增加 config_json 字段，复用为项目级全局配置载体
+ALTER TABLE project_gitcode_role_mapping
+    ADD COLUMN config_json JSON NULL COMMENT '项目级全局配置(JSON)：各平台sig-info位置、各平台角色映射等，按平台分键，可扩展' AFTER project_id;
 
--- 2. 数据迁移：role_mapping 文本迁入 config_json.gitcode.roleMapping，再删旧字段
--- ALTER TABLE project_repo_global_config DROP COLUMN role_mapping;
+-- 2. 数据迁移：存量 role_mapping 文本迁入 config_json.gitcode.roleMapping，再删旧字段
+-- ALTER TABLE project_gitcode_role_mapping DROP COLUMN role_mapping;
 ```
 
-**config_json 结构（约定）**：
+**config_json 结构（约定，按平台分键，角色映射条目用 `platformRole` 区分平台）**：
 
 ```jsonc
 {
   "gitcode": {
     "roleMapping": [
-      { "gitcodeRole": "owner",     "openlibingRole": "project_admin" },
-      { "gitcodeRole": "master",    "openlibingRole": "repo_admin" },
-      { "gitcodeRole": "developer", "openlibingRole": "developer" }
+      { "platformRole": "owner",     "openlibingRole": "project_admin" },
+      { "platformRole": "master",    "openlibingRole": "repo_admin" },
+      { "platformRole": "developer", "openlibingRole": "developer" }
     ],
     "sigInfoLocation": { "owner": "openlibing", "repo": "community-private",
                          "branch": "master",
@@ -361,9 +360,9 @@ project (1) ──── (N) repo_info (每行=该项目下的一条代码仓；
                      ├─ project_id       = 该行所属项目（7 仓反查键）
                      ├─ repo_url         = 组 key（同 repo_url 为一组，主仓同步按此分组）
                      ├─ is_main_repo     = 组内主仓标记（恰一行=1）
-                     └─ source / is_participate_operation
+                     └─ is_participate_operation
 
-project (1) ──── (1) project_repo_global_config ──实时读取──▶ SIG 仓 sig-info.yaml
+project (1) ──── (1) project_gitcode_role_mapping ──实时读取──▶ SIG 仓 sig-info.yaml
                       config_json[平台].sigInfoLocation                 │ 解析 repositories
                                   + roleMapping                          ▼
                                                           repo_info（主仓同步）
@@ -386,7 +385,7 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 | `repo_info` | `uk_repo_project (repo_url, project_id)` | 一项目一行唯一；同组查询走前缀 |
 | | `idx_project_id (project_id)` | 列表页按项目查询（现有，保留） |
 | | `idx_repo_url (repo_url)` | 组查询（主仓同步/检测） |
-| `project_repo_global_config` | `uk_project (project_id, is_deleted)` | 每项目一条全局配置 |
+| `project_gitcode_role_mapping` | `uk_project (project_id, is_deleted)` | 每项目一条全局配置 |
 
 - 主仓同步：按 `repo_url` 一次 UPDATE 同组行，组内行数少（1~N），单次 < 50ms。
 - SIG 一键录入：单次最多 100 个仓库，事务内循环，单事务 < 2s。
@@ -614,7 +613,7 @@ SIG「选择仓库」下拉数据源：实时解析该平台 sig-info.yaml，仅
 
 ### 7.8 迁移脚本安全
 
-- `project_repo_global_config` 迁移：role_mapping 迁入 `config_json.gitcode.roleMapping`，批量 upsert 幂等可重跑。
+- `project_gitcode_role_mapping` 迁移（不改名，直接数据迁移）：存量 role_mapping 迁入 `config_json.gitcode.roleMapping`，批量 upsert 幂等可重跑。
 - **Phase 1** repo 迁移（清洗同项目重复行 + 标主仓 + 加唯一索引）：事务分批（每批 1000 行）提交、可重跑；只动 repo_info 本身，不触碰 7 仓数据。
 - 迁移在上线后统一执行、不阻塞上线；迁移前备份 repo_info。
 - 灰度开关 `coderepo.repo-decouple.enabled`（仅控制主仓同步新逻辑开关，可快速回滚）。

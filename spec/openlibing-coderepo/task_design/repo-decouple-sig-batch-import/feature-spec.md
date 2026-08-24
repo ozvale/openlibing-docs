@@ -27,7 +27,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
    - SIG 组一键录入：用户在「全局配置」弹窗配置 sig-info.yaml 所在位置（**一个完整链接，每平台唯一**），各接口**实时调对应平台读取并解析**该位置 sig-info.yaml 的仓库清单批量导入；下拉仅展示**尚未录入当前项目**的 SIG 仓库（已录入的不展示，避免覆盖已有配置）。
 3. **SIG 与手动录入互不覆盖**：SIG 录入只针对尚未录入当前项目的仓库，不覆盖已有配置；SIG 来源仓库同样允许手动编辑（不做来源拦截）。
 4. **历史收敛（分两阶段，归并推迟）**：下游 7 仓（codecheck/cicd/framework/anti-poison/sca/gateway/vulnerability）不归属本项目、改造进度不可控，存量同一 repo_url 多条记录（体检发现 **53 个共享仓**）**不在本需求归并**——Phase 1 仅清洗同项目重复行、标记主仓、加 `(repo_url, project_id)` 唯一索引（组 key 直接用 repo_url，无需归一化字段）；待 7 仓逐个可控后 Phase 2 再评估全局唯一单行 + 关联表（见 requirement-design.md §2.6）。
-5. **改造边界**：本次改造**仅涉及 `repo_info` 表**与 `project_repo_global_config` 表；代码仓相关配置表还包括 `codecheck` 下的 Mongo 表（如 `sig_rule_set` 规则集表），**本次不改动**——仍允许不同项目对同一代码仓在 codecheck 侧存在不同配置（规则集、告警抑制等项不在本次收敛范围）。
+5. **改造边界**：本次改造**仅涉及 `repo_info` 表**与 `project_gitcode_role_mapping` 表（不改名，直接数据迁移泛化为项目级全局配置）；代码仓相关配置表还包括 `codecheck` 下的 Mongo 表（如 `sig_rule_set` 规则集表），**本次不改动**——仍允许不同项目对同一代码仓在 codecheck 侧存在不同配置（规则集、告警抑制等项不在本次收敛范围）。
 
 ## 2. 版本变化点清单
 
@@ -49,10 +49,10 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 | 12 | 编辑对话框：多项目已录入时主仓设置 + 不做 SIG 来源拦截 | 前端 | 见页面原型场景三 |
 | 13 | 列表页新增「关联项目数」列 | 前端 | 见页面原型列表页 |
 | 14 | 新增 `SigInfoClient` / `SigDefaultParamBuilder` 工具类 | 后端 | 实时读 sig-info.yaml、SIG 默认参数 |
-| 15 | `project_gitcode_role_mapping` 泛化为 `project_repo_global_config` | 数据模型 | 公共账号 / sig-info 位置 / 角色映射统一存 `config_json`，按平台分键 |
+| 15 | `project_gitcode_role_mapping` **不改名**，直接数据迁移：加 `config_json` 列，存量 role_mapping 迁入 `config_json[platform].roleMapping` | 数据模型 | 公共账号 / sig-info 位置 / 角色映射统一存 `config_json`，按平台分键；角色映射条目用 `platformRole` 区分平台，可扩展 |
 | 16 | 去除 webhook 推送 / 定时兜底同步 / 配置入库缓存 | 后端 | sig-info.yaml 由各接口实时调对应平台读取解析，不落库不缓存 |
 | 17 | 历史数据迁移 Phase 1（清洗 + 标主仓 + 唯一索引） | 数据 | 见 requirement-design.md §2.6；不建关联表、不归并存量多行 |
-| 18 | sig-info.yaml 位置配置 | 配置 | 「全局配置」弹窗按平台配置一个完整链接，存 `project_repo_global_config.config_json` |
+| 18 | sig-info.yaml 位置配置 | 配置 | 「全局配置」弹窗按平台配置一个完整链接，存 `project_gitcode_role_mapping.config_json` |
 | 19 | 新增「全局配置」按钮与三页签弹窗；原「gitcode 角色映射」「项目公共账号」按钮并入 | 前端 | 见页面原型场景一 |
 
 ## 3. 涉及页面清单
@@ -126,7 +126,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 
 ### 5.2 SIG 组一键录入
 
-- **位置配置**：全局配置弹窗按平台维护**一个** sig-info.yaml 完整链接（每平台唯一），存 `project_repo_global_config.config_json`，保存时实时校验可用性（详见 requirement-design.md §2.2.1 / §7.2）。
+- **位置配置**：全局配置弹窗按平台维护**一个** sig-info.yaml 完整链接（每平台唯一），存 `project_gitcode_role_mapping.config_json`，保存时实时校验可用性（详见 requirement-design.md §2.2.1 / §7.2）。
 - **仓库清单**（`sig/repos`）：实时读该平台 sig-info.yaml 解析仓库清单，仅返回**尚未录入当前项目**的仓库 + 默认参数；无「录入状态」列。
 - **一键录入**（`sig/import`）：默认参数或用户编辑配置（默认参数表见 requirement-design.md §2.2.4）；全局未命中 → 建主仓行；全局已存在 → 建副仓行并**复制主仓配置、不覆盖**；返回 imported/failed 计数。
 - SIG 来源仓库**允许手动编辑**（不做来源拦截）。
@@ -268,7 +268,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 | 2 | 手动录入输入已存在 repo_url 后 blur 自动检测，自动按主仓配置同步到表单（可修改），无「一键同步」按钮 | UI 操作验证 |
 | 2b | 手动录入命中多行时支持「设为本项目为主仓」与「选择性删除其他项目行」；未删除时提示修改将同步全组 | UI + 接口验证（setMainRepo / deleteProjectIds） |
 | 3 | 手动录入提交后当前项目可见该仓库；未删除其他项目行时，主仓行配置变更后全组配置一致（同步覆盖） | UI + DB 验证 |
-| 4 | 全局配置可保存/查询：三平台页签配置项目公共账号、sig-info.yaml 链接（GitCode 另含角色映射），保存时实时校验链接文件可用性 | UI 操作 + DB 验证 `project_repo_global_config.config_json` 记录 |
+| 4 | 全局配置可保存/查询：三平台页签配置项目公共账号、sig-info.yaml 链接（GitCode 另含角色映射），保存时实时校验链接文件可用性 | UI 操作 + DB 验证 `project_gitcode_role_mapping.config_json` 记录 |
 | 4b | SIG 一键录入：下拉仅展示尚未录入当前项目的仓库；单条/批量编辑、删除后录入 | UI 操作验证 |
 | 5 | SIG 录入的仓库同样允许手动编辑，调 update-repo 成功（不做来源拦截） | UI + 接口验证 |
 | 6 | SIG 录入不会覆盖已有配置：已录入当前项目的仓库不在 sig/repos 返回中；全局已存在仓库 SIG 录入后其配置不变（新行复制主仓配置） | 接口 + DB 验证 |
