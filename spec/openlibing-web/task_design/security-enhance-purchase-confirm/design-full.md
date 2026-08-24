@@ -205,3 +205,138 @@ getSecurityEnhanceRules 返回值：Array<CodeCheckRuleAccountVo 子集>
 
 - 若未来后端在规则项中补充独立 `ruleSecurity` 字段，检测函数可切换数据源而无需改调用方（检测细节收敛在 `getSecurityEnhanceRules` 内）
 - 全量覆盖需求（方案 B 场景）如后续提出，需要后端提供按 `ruleIds` 批量返回分类的轻量接口，本期不设计
+
+---
+
+# 后端设计（openlibing-codecheck，2026-08-24 范围扩展新增）
+
+> 背景：华为云对未购买增强包的租户返回 `{"error_code":"CC.00050006","error_msg":"error_service is: RulesCenterFusion, service_error_code is: CC.00101085.500, service_error_msg is: 未购买安全增强包"}`。经调查（详见 Issue #275 讨论），codecheck 仓对该返回的处理存在三类问题：公共层丢弃 `error_code`、保存路径透传原始英文拼接串、查询路径吞掉真实原因。
+
+## 7. 方案设计（后端）
+
+### 7.1 方案选型
+
+| 方案 | 做法 | 优点 | 缺点 | 结论 |
+|------|------|------|------|------|
+| 1. 公共层保留 `error_code` + 调整消费点 | `signAndExecute` 归一化时保留华为云原始 `error_code`，同步调整 4 处消费点 | 错误码可结构化传递 | `CC.00050006` 是通用码，无法识别"未购买"场景（该信息只在 `error_msg` 文本内），收益为零却引入 4 处行为变更风险（`getTaskProgress/Summary/Details` 错误消息质量回退、`getTaskCmetrics` 日志行为变化） | 放弃 |
+| 2. 业务层识别 + 翻译（采用） | 只改 `customTaskRuleSet` / `listCriterions` 两个业务方法，对 `error_msg` 做核心词匹配并翻译为友好中文 | 爆炸半径最小（`listCriterions` 全仓仅 1 个调用方）、失配时回退现状不劣化 | 华为云改文案会失配（可接受，回退即现状） | ✅ 采用 |
+
+### 7.2 总体流程（保存路径）
+
+```text
+华为云 POST /v2/ruleset 返回错误（HTTP 非 2xx）
+    ▼
+signAndExecute 归一化：{"code":"400","error_msg":"<华为云原始串>"}   ← 不改
+    ▼
+customTaskRuleSet 错误分支
+    ├─ logger.error 记录原始 errorCode/errorMsg（可追溯）
+    ├─ errorMsg 含"未购买安全增强包"
+    │       ├─ 是 → BusinessException("规则集包含代码检查安全增强类规则，请先购买增强规则集包后再保存", 500)
+    │       └─ 否 → parseInt 加固后抛 BusinessException(errorMsg, code)（原行为）
+    ▼
+callCustomTaskRuleSet 捕获（既有逻辑不改）
+    ▼
+前端 res.message = 友好中文 → ElMessage.error 展示
+```
+
+查询路径（`listCriterions`）同构：错误体识别 → 命中则抛友好 `BusinessException` → `getAccountRulesBySet` 捕获透出（替代"获取规则列表失败"）。
+
+## 8. 实现逻辑设计（后端）
+
+### 8.1 customTaskRuleSet 错误分支（改造后伪代码）
+
+```text
+errorMsg = error_msg ?: "创建规则集失败"
+errorCode = error_code ?: "500"
+logger.error("customTaskRuleSet failed, errorCode:{}, errorMsg:{}")
+if errorMsg.contains("未购买安全增强包"):
+    throw BusinessException("规则集包含代码检查安全增强类规则，请先购买增强规则集包后再保存", 500)
+try: code = Integer.parseInt(errorCode)
+catch NumberFormatException: code = 500        // 加固：CC.00050006 等非数字码
+throw BusinessException(errorMsg, code)        // 其余错误原行为不变
+```
+
+### 8.2 listCriterions 错误体透出（改造后伪代码）
+
+```text
+result = signAndExecute(request)
+if result.isPresent():
+    response = deserialize<CriterionResponse>(result)
+    if response.result != null: return Optional.of(ruleDetails)      // 成功路径不变
+    hashMap = deserialize<HashMap>(result)                            // 二次解析错误体
+    errorMsg = hashMap.error_msg ?: ""
+    logger.error("list criterions error, errorMsg:{}", errorMsg)
+    if errorMsg.contains("未购买安全增强包"):
+        throw BusinessException("规则集包含代码检查安全增强类规则，请先购买增强规则集包", 500)
+    // 其余非预期结构：维持现状返回 empty（调用方显示"获取规则列表失败"）
+return Optional.empty()
+```
+
+方法签名追加 `throws BusinessException`（checked exception，编译期强制唯一调用方适配）。
+
+### 8.3 调用方适配（getAccountRulesBySet）
+
+```text
+try:
+    ruleDetailsOptional = listCriterions(region, params, akSkVo)
+    ...（既有逻辑不变）
+catch BusinessException e:
+    return MultiResponse().code(e.getCode()).message(e.getErrorMessage())
+```
+
+与 `callCustomTaskRuleSet`（RuleDelegateImpl L626-629）既有捕获模式完全一致。
+
+### 8.4 兼容性核对结论（Full 模式系统性核对）
+
+| 消费点 | 核对结果 |
+|--------|---------|
+| `getTaskProgress/Summary/Details`（containsKey("error_code") 分支） | 不动公共层 → 行为零变化 |
+| `getTaskCmetrics`（L1221 error_code 日志） | 同上，零变化 |
+| `listCriterions` 调用方 | 全仓仅 `RuleDelegateImpl:985` 一处（rg 核对），签名变更编译期全覆盖 |
+| `customTaskRuleSet` 调用链 | `callCustomTaskRuleSet` 已 catch `BusinessException`，异常类型不变，零适配 |
+| 其余 `containsKey("code")` 消费点（6 处） | 逻辑不涉及，零影响 |
+
+## 9. 类设计（后端）
+
+| 类 | 变化 | 说明 |
+|----|------|------|
+| `RestCodeCheckUtil` | 修改 2 个方法 | `customTaskRuleSet`：错误分支增强（日志 + 识别翻译 + parseInt 加固）；`listCriterions`：签名加 `throws BusinessException` + 错误体识别。不新增公共方法，匹配逻辑内联（仅 2 处使用，YAGNI 不抽工具方法） |
+| `RuleDelegateImpl` | 修改 1 处 | `getAccountRulesBySet` 增加 catch `BusinessException` 透出 |
+| `BusinessException` | 不变 | 复用既有 `BusinessException(String errorMessage, int code)` |
+| `RestCodeCheckUtilTest` | 新增用例 | 见 §12 测试设计 |
+
+常量：匹配关键词 `"未购买安全增强包"` 与友好文案在两处使用——按仓内既有风格（如 `"language非法或无效"`）内联字符串，不抽常量类。
+
+## 10. 数据模型设计（后端）
+
+无新增模型。涉及的既有数据结构：
+
+| 结构 | 来源 | 变化 |
+|------|------|------|
+| 归一化错误体 `{"code":"400","error_msg":"..."}` | `signAndExecute` 内部产物 | 不变 |
+| `CriterionResponse` / `RuleDetails` | 华为云 `/v2/criterions` 响应映射 | 不变 |
+| `MultiResponse{code, message}` | 平台统一响应 | 不变（仅错误场景 message 文案变化） |
+| `BusinessException{errorMessage, code}` | 既有异常 | 不变 |
+
+## 11. 性能设计（后端）
+
+- 错误分支新增开销：一次 `contains` 字符串匹配（<1µs），仅在华为云返回错误时执行
+- `listCriterions` 错误体二次反序列化：仅发生在 `result == null` 的异常路径，正常路径零开销
+- 无新增网络调用、无锁、无内存驻留
+
+## 12. API 接口设计（后端）
+
+**对外 REST 契约零变更**，仅错误场景行为增强：
+
+| 接口 | 变化 |
+|------|------|
+| `POST /ci-portal/v2/grant/auth/project/ruleSet/custom` | 错误场景：`message` 从华为云原始英文拼接串 → 友好中文（未购买时）；不再可能因 `NumberFormatException` 返回系统异常 |
+| `POST /ci-portal/v2/grant/auth/rules/setting/account` | 错误场景：`message` 从"获取规则列表失败" → 真实原因友好提示（未购买时） |
+
+测试设计（`RestCodeCheckUtilTest`，沿用 `@Spy + doReturn` 桩掉 `signAndExecute` 的既有模式）：
+
+1. `customTaskRuleSet` 桩返回未购买错误体 → 断言抛 `BusinessException` 且消息为友好中文
+2. `customTaskRuleSet` 桩返回非数字 `error_code` 错误体 → 断言 code=500 不抛 `NumberFormatException`
+3. `customTaskRuleSet` 桩返回普通错误体 → 断言原样透传（回归保护）
+4. `listCriterions` 桩返回未购买错误体 → 断言抛友好 `BusinessException`
+5. `listCriterions` 桩返回正常体 → 断言返回规则详情（回归保护）
