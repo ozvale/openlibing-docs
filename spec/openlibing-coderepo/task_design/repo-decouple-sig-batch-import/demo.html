@@ -406,18 +406,18 @@
 
         <!-- 主仓设置：历史多项目配置不同时，以用户选定的主仓为准 -->
         <div class="main-repo">
-          <div class="mr-title">主仓设置：请选择以哪个项目为主仓？（主仓参与 SCA 扫描 / 防投毒 / 漏洞等检测，配置以主仓为准自动同步；副仓仅作记录，不参与检测）</div>
+          <div class="mr-title">主仓设置：请选择以哪个项目为主仓？主仓为该代码仓配置的权威来源，配置以主仓为准自动同步全组；各项目行均参与下游扫描/检查，结果归属各自项目</div>
           <label><input type="radio" name="mainRepo" class="radio" checked> 项目A <span class="tag tag-primary">当前主仓</span></label>
           <label><input type="radio" name="mainRepo" class="radio"> 项目B</label>
-          <span class="form-hint">切换主仓后，下方表单将按所选主仓的配置重新同步；该仓库全部历史扫描/检查/漏洞结果归属也随之迁移到新主仓项目</span>
+          <span class="form-hint">切换主仓后，下方表单将按所选主仓的配置重新同步（可继续手动修改）；迁移主仓仅改变配置基准，不改变各项目行扫描/检查结果的归属</span>
         </div>
 
         <!-- 选择性删除之前项目中的代码仓（支持多选，非一次删除所有） -->
         <div class="delete-projects">
-          <div class="dp-title">是否删除之前项目中的代码仓？（可多选，仅取消该代码仓与所选项目的关联）</div>
+          <div class="dp-title">是否删除之前项目中的代码仓？（可多选，仅删除该代码仓在所选项目下的记录，其他项目行不受影响）</div>
           <label><input type="checkbox" class="checkbox"> 项目A</label>
           <label><input type="checkbox" class="checkbox"> 项目B</label>
-          <span class="form-hint">删除支持选择性、而非一次删除所有；不勾选则不删除该项目下的该代码仓</span>
+          <span class="form-hint">删除支持选择性、而非一次删除所有；不勾选则不删除该项目下的该代码仓记录</span>
         </div>
 
         <!-- 未删除时修改配置的同步提示 -->
