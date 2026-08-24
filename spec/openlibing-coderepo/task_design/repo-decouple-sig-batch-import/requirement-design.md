@@ -24,7 +24,7 @@
 
 ### 1.3 改造边界（重要）
 
-- 本次改造**仅涉及 `repo_info` 表**（新增 `source` / `is_participate_operation` / `is_main_repo` 等字段）与 `project_repo_global_config`（全局配置表泛化）。
+- 本次改造**仅涉及 `repo_info` 表**（新增 `is_participate_operation` / `is_main_repo` 等字段）与 `project_repo_global_config`（全局配置表泛化）。
 - 代码仓相关配置表还包括 `codecheck` 下的 Mongo 表（如 `sig_rule_set` 规则集表），**本次不改动**——仍允许不同项目对同一代码仓存在不同配置（规则集、告警抑制等项仍按各项目在 codecheck 侧各自配置，不在本期收敛范围内）。
 - **不新建 `repo_project_ref` 表**；不归并存量多行；不删 `project_id`（每行 `project_id` 语义=该行所属项目，与现状一致）。
 
@@ -38,7 +38,6 @@
 | 主仓语义 | 主仓行=组内配置权威源 + Phase 2 归并保留行；**所有项目行均参与下游扫描/检查**（无「副仓不可见」概念） | 与 SCA 反查方式兼容；迁移主仓即切换配置基准与归并保留行 |
 | 查重 | `(repo_url, project_id)` 唯一（一项目一行）；不做 repo_url 全局唯一 | 保证同项目不重复录入；不同项目各自建行以支撑各自扫描 |
 | 组 key | 直接用 `repo_url`（录入已保证协议/https/平台/`.git` 结尾格式统一，无需额外归一化字段）；repo_url 加普通索引用于组查询 | 用于「同 repo_url 组」判定（主仓同步、录入检测、列表去重） |
-| source | `repo_info.source`（manual/sig）标记配置来源；**来源链接不冗余到行级**，SIG 仓库按项目从 `config_json[platform].sigInfoLocation` 实时读取 | SIG 与手动互不覆盖、无优先级判定场景，无需额外表/字段记录来源 |
 | 跨项目录入 | 仓库已在其他项目存在 → 当前项目**新建一行**并复制主仓配置；不删除其他项目行 | SCA 兼容 + 避免重复手填；配置靠同步保持全组一致 |
 | 选择性删除 | 手动录入/编辑时可勾选「删除之前项目的关联」=删除其他项目对应行 | 支持用户回收误关联；删除主仓行需先迁移主仓（§2.4） |
 | 下游仓改造 | **7 仓零改动**（framework 亦无需副仓拦截改造） | 多行模型下每项目都有行，权限/归属按行内 project_id 语义与现状一致 |
@@ -60,7 +59,7 @@ addRepoInfo(userId, userName, projectId, RepoDTO, deleteProjectIds):
   1. 组 key = repo_url（原样，录入已保证格式统一）
   2. 查该组现有行（repo_info where repo_url=? and is_deleted=0）
   3. 未命中（全局首次录入）：
-     - insert repo_info（source=manual, is_main_repo=1, 配置取 RepoDTO）  // 首录行即主仓
+     - insert repo_info（is_main_repo=1, 配置取 RepoDTO）  // 首录行即主仓
      - 同步平台元数据 + 配置 webhook（沿用现有 syncRepoInfo / autoSetWebHook）
   4. 命中（该 repo_url 已在其他项目存在）：
      - 前端 blur 已调 checkRepoUrl：返回 mainRepoProjectId（当前主仓）与 associatedProjects
@@ -129,8 +128,8 @@ sigImport(userId, userName, projectId, platform, repoConfigs):
      → 校验每个 repoConfigs[].repoUrl 均在解析结果中（防伪造/过期数据）且当前项目无该行
   2. 事务内对每个仓库：
      a. 查该组现有行（repo_url）
-     b. 未命中（全局首次）→ insert 本行（source=sig, is_main_repo=1, 配置取 config）
-     c. 命中（其他项目已存在，主仓行在别处）→ insert 本行（source=sig, is_main_repo=0,
+     b. 未命中（全局首次）→ insert 本行（is_main_repo=1, 配置取 config）
+     c. 命中（其他项目已存在，主仓行在别处）→ insert 本行（is_main_repo=0,
         配置=主仓配置副本——复用现有配置不覆盖，保持全组一致）
      d. 若本行为主仓 → 以本行配置同步全组（§2.5）
   3. 异步同步平台元数据 + 配置 webhook（不阻塞录入）
@@ -224,7 +223,7 @@ migrateRepoInfoPhase1():
 
 #### 2.7.3 列表页与编辑对话框
 
-- 列表新增「来源」（manual/sig，读 `repo_info.source`）、「关联项目数」（同 `repo_url` 组内行数，可选）列
+- 列表新增「关联项目数」（同 `repo_url` 组内行数，可选）列
 - 编辑对话框：不做 SIG 来源拦截；组内多行时展示主仓提示 + 「设为本项目为主仓」（§2.3）
 
 ### 2.8 交互流程示例图
@@ -255,7 +254,6 @@ migrateRepoInfoPhase1():
 
 | 字段 | 说明 |
 |------|------|
-| `source` | `manual` / `sig`，仓库配置来源（SIG 来源链接按项目从 `config_json` 读，不冗余存储） |
 | `isMainRepo` | 该 repo_url 组内是否主仓（0/1） |
 | `isParticipateOperation` | 是否参与运营（默认是，已存在） |
 
@@ -304,10 +302,8 @@ migrateRepoInfoPhase1():
 
 ```sql
 -- 1. 新增字段
-ALTER TABLE repo_info ADD COLUMN source VARCHAR(16) NOT NULL DEFAULT 'manual'
-  COMMENT '仓库配置来源: manual-手动录入, sig-SIG一键录入' AFTER default_branch_name;
 ALTER TABLE repo_info ADD COLUMN is_participate_operation TINYINT(1) NOT NULL DEFAULT 1
-  COMMENT '是否参与运营（默认是）' AFTER source;
+  COMMENT '是否参与运营（默认是）' AFTER default_branch_name;
 ALTER TABLE repo_info ADD COLUMN is_main_repo TINYINT(1) NOT NULL DEFAULT 0
   COMMENT '同repo_url组内是否主仓(0-否,1-是)，组内恰一行=1' AFTER repo_url;
 
@@ -370,7 +366,7 @@ project (1) ──── (N) repo_info (每行=该项目下的一条代码仓；
 project (1) ──── (1) project_repo_global_config ──实时读取──▶ SIG 仓 sig-info.yaml
                       config_json[平台].sigInfoLocation                 │ 解析 repositories
                                   + roleMapping                          ▼
-                                                          repo_info（source=sig / 主仓同步）
+                                                          repo_info（主仓同步）
 ```
 
 ### 4.5 数据量预估

@@ -35,7 +35,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 
 | 序号 | 变化点 | 类型 | 说明 |
 |------|--------|------|------|
-| 1 | `repo_info` 新增 `source`、`is_participate_operation`、`is_main_repo` 字段 | 数据模型 | source=manual/sig（SIG 来源链接按项目从 `config_json` 读，不冗余存储）；组 key 直接用 repo_url（录入已保证格式统一，无需归一化字段）；is_main_repo 标记组内主仓行（组内恰一行=1） |
+| 1 | `repo_info` 新增 `is_participate_operation`、`is_main_repo` 字段 | 数据模型 | 组 key 直接用 repo_url（录入已保证格式统一，无需归一化字段）；is_main_repo 标记组内主仓行（组内恰一行=1） |
 | 2 | Phase 1 新增 `(repo_url, project_id)` 唯一索引 | 数据模型 | 保证一项目一行；`project_id` **保留不删**（每行=该行所属项目，7 仓按现状读取） |
 | 3 | `/project-repo/add-repo` 增加「命中多行」分支 | 接口 | blur 检测命中其他项目已录入 → 复制主仓配置进表单；提交可选 `setMainRepo`（设为本项目主仓）与 `deleteProjectIds`（选择性删除其他项目行） |
 | 4 | `/project-repo/update-repo` 直接编辑 + `setMainRepo` | 接口 | 不做 SIG 来源拦截；主仓行变更自动同步全组 |
@@ -47,7 +47,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 | 10 | 录入对话框「录入方式」切换（手动/SIG） | 前端 | 见页面原型场景二、四 |
 | 11 | 手动录入：blur 自动检测 + 主仓提示 + 选择性删除 + 修改同步提示 | 前端 | 见页面原型场景二；无「一键同步」按钮 |
 | 12 | 编辑对话框：多项目已录入时主仓设置 + 不做 SIG 来源拦截 | 前端 | 见页面原型场景三 |
-| 13 | 列表页新增「来源」列、「关联项目数」列 | 前端 | 见页面原型列表页 |
+| 13 | 列表页新增「关联项目数」列 | 前端 | 见页面原型列表页 |
 | 14 | 新增 `SigInfoClient` / `SigDefaultParamBuilder` 工具类 | 后端 | 实时读 sig-info.yaml、SIG 默认参数 |
 | 15 | `project_gitcode_role_mapping` 泛化为 `project_repo_global_config` | 数据模型 | 公共账号 / sig-info 位置 / 角色映射统一存 `config_json`，按平台分键 |
 | 16 | 去除 webhook 推送 / 定时兜底同步 / 配置入库缓存 | 后端 | sig-info.yaml 由各接口实时调对应平台读取解析，不落库不缓存 |
@@ -59,7 +59,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 
 | 序号 | 页面 | 路径 | 改动类型 |
 |------|------|------|---------|
-| 1 | 代码仓管理列表页 | [Repos/index.vue](file:///d:/Develop/Java/openlibing-web/apps/web-openlibing/src/views/Repos/index.vue) | 改造：新增来源列、关联项目数列；录入/编辑/删除交互改造 |
+| 1 | 代码仓管理列表页 | [Repos/index.vue](file:///d:/Develop/Java/openlibing-web/apps/web-openlibing/src/views/Repos/index.vue) | 改造：新增关联项目数列；录入/编辑/删除交互改造 |
 | 2 | 录入代码仓对话框 | index.vue 内联 `el-dialog` | 改造：录入方式切换、手动录入自动检测（主仓提示 + 选择性删除）、SIG 一键录入表单 |
 | 3 | 编辑代码仓对话框 | index.vue 内联 `el-dialog` | 改造：多项目已录入时主仓设置；不做 SIG 来源拦截 |
 | 4 | 仓库分支管理 | [Repos/branches.vue](file:///d:/Develop/Java/openlibing-web/apps/web-openlibing/src/views/Repos/branches.vue) | 不改动（沿用 repo_id） |
@@ -106,7 +106,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 - sig-info.yaml 位置在「全局配置」对应平台页签配置，此处实时读取解析
 
 **列表页**
-- 新增「来源」列（手动/SIG 标签）、「关联项目数」列（同 repo_url 组内行数）
+- 新增「关联项目数」列（同 repo_url 组内行数）
 - 编辑/删除按钮不做来源拦截（SIG 来源仓库同样可编辑）
 
 ## 5. 业务逻辑设计
@@ -116,13 +116,13 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 ### 5.1 手动录入
 
 - 输入 `repoUrl` blur 调 `check-repo-url`（详见 requirement-design.md §2.1）：
-  - **全局首次录入**：新建本行（source=manual，`is_main_repo=1`，首录即主仓），同步平台元数据 + 配置 webhook。
+  - **全局首次录入**：新建本行（`is_main_repo=1`，首录即主仓），同步平台元数据 + 配置 webhook。
   - **已在其他项目录入**：自动按**主仓配置**同步进表单（可修改）。提交时：
     - 当前项目已有本行 → 更新本行配置；本行是主仓 → 以其配置同步全组。
     - 当前项目无本行 → 新建本行（`is_main_repo=0`，配置=主仓配置副本）。
     - 可选「设为本项目为主仓」（`setMainRepo`）→ 主仓迁移到本行并以本行配置同步全组。
     - 可选「删除其他项目中的该仓库」（`deleteProjectIds`）→ 删除对应项目行（含主仓行时需先迁移主仓，见 §5.4）。
-- **无「一键同步」按钮、不做 source=sig 拒绝**（SIG 来源仓库同样可录入关联到当前项目）。
+- **无「一键同步」按钮、不做来源拒绝**（任何仓库均可录入关联到当前项目）。
 
 ### 5.2 SIG 组一键录入
 
@@ -154,7 +154,7 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 ### 5.6 查询功能
 
 - 列表按 `project_id` 查 `repo_info`（现状不变，多行模型下每项目看到自己那行）。
-- 新增返回字段：`source`（来源列）、`projectCount`（同 `repo_url` 组内行数，关联项目数列）。
+- 新增返回字段：`projectCount`（同 `repo_url` 组内行数，关联项目数列）。
 - 现有筛选/排序/分页逻辑不变。
 
 ## 6. 权限设计
@@ -269,13 +269,13 @@ openLiBing 平台的代码仓管理当前采用「仓库信息与项目强耦合
 | 2b | 手动录入命中多行时支持「设为本项目为主仓」与「选择性删除其他项目行」；未删除时提示修改将同步全组 | UI + 接口验证（setMainRepo / deleteProjectIds） |
 | 3 | 手动录入提交后当前项目可见该仓库；未删除其他项目行时，主仓行配置变更后全组配置一致（同步覆盖） | UI + DB 验证 |
 | 4 | 全局配置可保存/查询：三平台页签配置项目公共账号、sig-info.yaml 链接（GitCode 另含角色映射），保存时实时校验链接文件可用性 | UI 操作 + DB 验证 `project_repo_global_config.config_json` 记录 |
-| 4b | SIG 一键录入：下拉仅展示尚未录入当前项目的仓库；单条/批量编辑、删除后录入；source=sig | UI 操作 + DB 验证 source=sig |
+| 4b | SIG 一键录入：下拉仅展示尚未录入当前项目的仓库；单条/批量编辑、删除后录入 | UI 操作验证 |
 | 5 | SIG 录入的仓库同样允许手动编辑，调 update-repo 成功（不做来源拦截） | UI + 接口验证 |
 | 6 | SIG 录入不会覆盖已有配置：已录入当前项目的仓库不在 sig/repos 返回中；全局已存在仓库 SIG 录入后其配置不变（新行复制主仓配置） | 接口 + DB 验证 |
 | 7 | SIG 表格列展示：默认分支、仓库责任人、开源类型、代码风格自动修复、告警抑制自动检视、是否参与运营（默认是） | UI 验证 |
 | 8 | 编辑多项目已录入仓库：展示主仓设置，保存后以所选主仓配置覆盖主仓与副仓配置；不做多项目影响二次确认 | UI + DB 验证 |
 | 9 | 删除主仓行且组内还有其他行 → 被拒绝并提示先迁移主仓；迁移后可删除 | UI + 接口验证 |
-| 10 | 列表页显示来源列、关联项目数列 | UI 验证 |
+| 10 | 列表页显示关联项目数列 | UI 验证 |
 | 11 | **Phase 2**（远期）归并完成：无同 repo_url 多行、子表 FK 已重映射，随后可加唯一索引 / 删 project_id | 归并脚本校验输出 + DB 查询 |
 | 12 | accessToken 不出现在日志与 URL 参数 | 安全验收（见 requirement-design.md §7.9） |
 | 13 | 跨项目访问仓库接口返回 403 | 接口验证 |

@@ -86,7 +86,6 @@
   .tag-info { background: #f4f4f5; color: #909399; border: 1px solid #d3d4d6; }
   .tag-warning { background: #fdf6ec; color: #e6a23c; border: 1px solid #f5dab1; }
   .tag-primary { background: #ecf5ff; color: #006be6; border: 1px solid #b3d8ff; }
-  .tag-sig { background: #fef0f6; color: #d63384; border: 1px solid #f5b8d8; }
 
   /* 对话框 */
   .dialog-mask {
@@ -260,7 +259,7 @@
 <body>
 
 <div class="page-title">代码仓管理与需求解耦 + SIG 组一键批量录入 · 页面原型</div>
-<div class="page-desc">本原型展示关键交互：①项目级「全局配置」弹窗（三页签，集中管理公共账号 / 代码仓录入配置（sig-info.yaml 链接） / GitCode 角色映射）；②手动录入（输入链接自动检测 → 历史多项目录入且配置不同则先选择主仓、配置按主仓自动同步，可选择性删除 / 修改配置同步提示）；③编辑代码仓配置（该 repo_url 已在多个项目录入过时提示设置主仓，保存后以主仓配置覆盖主仓与副仓配置，兼容 repo_info 跨项目重复历史数据）；④SIG 组一键录入（先多选尚未录入当前项目的仓库 → 表格核对/编辑/删除 → 批量录入）；⑤代码仓列表（来源列 + 关联项目数列）。样式对齐 openlibing-web Element Plus 主色 #006be6。</div>
+<div class="page-desc">本原型展示关键交互：①项目级「全局配置」弹窗（三页签，集中管理公共账号 / 代码仓录入配置（sig-info.yaml 链接） / GitCode 角色映射）；②手动录入（输入链接自动检测 → 历史多项目录入且配置不同则先选择主仓、配置按主仓自动同步，可选择性删除 / 修改配置同步提示）；③编辑代码仓配置（该 repo_url 已在多个项目录入过时提示设置主仓，保存后以主仓配置覆盖主仓与副仓配置，兼容 repo_info 跨项目重复历史数据）；④SIG 组一键录入（先多选尚未录入当前项目的仓库 → 表格核对/编辑/删除 → 批量录入）；⑤代码仓列表（关联项目数列）。样式对齐 openlibing-web Element Plus 主色 #006be6。</div>
 
 <!-- ========== 场景一：项目级全局配置（三页签弹窗） ========== -->
 <div class="section">
@@ -737,10 +736,10 @@
   </div>
 </div>
 
-<!-- ========== 列表页：来源列 + 关联项目数列 ========== -->
+<!-- ========== 列表页：关联项目数列 ========== -->
 <div class="section">
   <span class="section-label">列表页</span>
-  <div class="section-title">代码仓列表：新增「来源」列与「关联项目数」列</div>
+  <div class="section-title">代码仓列表：新增「关联项目数」列</div>
   <div class="toolbar">
     <button class="btn">+ 录入仓库</button>
     <button class="btn btn-default">↻ 同步仓库</button>
@@ -756,7 +755,6 @@
         <th>代码仓别名</th>
         <th>用途</th>
         <th>语言</th>
-        <th>来源</th>
         <th>关联项目数</th>
         <th>状态</th>
         <th>操作</th>
@@ -770,7 +768,6 @@
         <td>openlibing-coderepo</td>
         <td>自研源码</td>
         <td>java</td>
-        <td><span class="tag tag-primary">手动</span></td>
         <td>3</td>
         <td><span class="tag tag-success">正常</span></td>
         <td>
@@ -787,7 +784,6 @@
         <td>openlibing-web</td>
         <td>自研源码</td>
         <td>typescript</td>
-        <td><span class="tag tag-sig">SIG</span></td>
         <td>2</td>
         <td><span class="tag tag-success">正常</span></td>
         <td>
@@ -804,7 +800,6 @@
         <td>openlibing-framework</td>
         <td>自研源码</td>
         <td>java</td>
-        <td><span class="tag tag-sig">SIG</span></td>
         <td>1</td>
         <td><span class="tag tag-success">正常</span></td>
         <td>
@@ -821,7 +816,6 @@
         <td>openlibing-codecheck</td>
         <td>自研源码</td>
         <td>java</td>
-        <td><span class="tag tag-primary">手动</span></td>
         <td>1</td>
         <td><span class="tag tag-success">正常</span></td>
         <td>
