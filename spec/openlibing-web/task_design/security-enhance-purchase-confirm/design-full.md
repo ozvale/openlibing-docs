@@ -8,35 +8,32 @@
 
 “代码检查安全增强”类规则（分类标识 `security_enhance`）属于付费增强能力，需优先购买增强规则集包。当前规则集配置页（`CustomRuleConfig.vue`）保存时不做购买确认，未购买用户可能保存无法生效的规则集。
 
-目标：规则集配置页中，若当前生效规则包含安全增强类规则，在保存按钮旁实时提示需购买增强规则集包（附华为云购买链接），引导用户购买；提示不阻断保存，未购买时由后端错误翻译兜底。
+目标：规则集配置页中，若当前生效规则包含安全增强类规则，在“规则集配置”标题栏中间空白区实时提示需购买增强规则集包（附华为云购买链接），引导用户购买；提示不阻断保存，未购买时由后端错误翻译兜底。
 
 ### 1.2 方案选型
 
-| 方案 | 检测方式                                                            | 优点                                                                                 | 缺点                                                   | 结论    |
-| ---- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------ | ------- |
-| A    | 前端本地判定：最终保存 `ruleIds` × 已加载 `ruleList` 的 `ruleTages` | 检测零额外请求、实现简单、与用户可见范围一致（购买链接 region 另需一次项目详情请求） | 无法覆盖未加载分页的规则                               | ✅ 采用 |
-| B    | 保存前调 `rules/setting/account` 反查全量规则标签                   | 覆盖全量                                                                             | 多一次网络请求、需处理分页上限、覆盖的是用户不可见规则 | 放弃    |
-| C    | 仅检测用户本次新勾选（`newRule`）                                   | 最窄最简单                                                                           | 遗漏基于规则集带入的增强规则，不满足“所有保存场景”要求 | 放弃    |
+| 方案 | 检测方式                                                            | 优点                                                                         | 缺点                                                   | 结论    |
+| ---- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------ | ------- |
+| A    | 前端本地判定：最终保存 `ruleIds` × 已加载 `ruleList` 的 `ruleTages` | 检测零额外请求、实现简单、与用户可见范围一致（购买链接为固定常量，亦零请求） | 无法覆盖未加载分页的规则                               | ✅ 采用 |
+| B    | 保存前调 `rules/setting/account` 反查全量规则标签                   | 覆盖全量                                                                     | 多一次网络请求、需处理分页上限、覆盖的是用户不可见规则 | 放弃    |
+| C    | 仅检测用户本次新勾选（`newRule`）                                   | 最窄最简单                                                                   | 遗漏基于规则集带入的增强规则，不满足“所有保存场景”要求 | 放弃    |
 
 ### 1.3 总体流程
 
-> 方案变更（2026-08-24，用户确认）：① 初版为保存时购买确认弹窗拦截，现改为保存按钮旁常驻提示框 + 华为云购买链接，不阻断保存；② 文案与链接改版：不再显示命中条数，链接挂在“增强规则集包”上，URL 的 region 动态取自社区对接的华为云项目。
+> 方案变更（2026-08-24/25，用户确认）：① 初版为保存时购买确认弹窗拦截，现改为常驻提示框 + 华为云购买链接，不阻断保存；② 文案与链接改版：不再显示命中条数，链接挂在“增强规则集包”上；③ 位置调整：提示框从保存按钮旁（`cl-submit`）移至“规则集配置”标题栏（`.subTitle`）中间空白区；④ 链接定版：放弃 region 动态拼接（项目详情接口），改为固定链接 `https://support.huaweicloud.com/price-devcloud/codearts_29_0016.html`。
 
 ```text
-页面 init() ──► getProjectDetailInfo（/openlibing-framework/project/get-project-detail-info）
-                 取 data.hwProjectEntity.region ──► hwRegion（缺省 cn-southwest-2）
-
 用户勾选/取消勾选规则（newRule / oldRule / enableRuleIds 变化）
     │
     ▼
 securityEnhanceRules（computed，实时重算）
   = getSecurityEnhanceRules(handleSubmitData().ruleIds)
     │
-    ├─ 命中 0 条 ──► 保存按钮旁无提示框（DOM 不渲染）
+    ├─ 命中 0 条 ──► 标题栏无提示框（DOM 不渲染）
     │
-    └─ 命中 ≥1 条 ──► 保存按钮旁渲染 warning 提示框：
+    └─ 命中 ≥1 条 ──► “规则集配置”标题栏中间空白区渲染 warning 提示框：
                      `包含“代码检查安全增强”类规则，请确保已购买增强规则集包。`
-                     其中「增强规则集包」= el-link（:href="securityEnhancePurchaseUrl"，新窗口打开）
+                     其中「增强规则集包」= el-link（:href="SECURITY_ENHANCE_PURCHASE_URL" 固定链接，新窗口打开）
 
 用户点击"保存"（submitForm，不做任何拦截，保持原流程）
     ├─ 复制到社区场景（copyProjectId 非空）──► 复制确认弹窗 ──► handleSubmit()
@@ -48,10 +45,10 @@ securityEnhanceRules（computed，实时重算）
 ### 1.4 交互设计
 
 - 触发范围：新增（add）/ 复制（copy）/ 修改（config）三种场景共用同一页面与提示框位置
-- 提示框位置：保存按钮旁（`cl-submit` flex 容器内，与既有 `cl-new-num` 新开/新关条数提示同级）
-- 提示框样式：`el-alert`，`type: 'warning'`，`show-icon`，不可关闭（`:closable="false"`），紧凑 padding（`.cl-security-enhance-tip`：`flex:none; width:auto; padding:2px 12px`）
-- 文案：`包含“代码检查安全增强”类规则，请确保已购买` + `el-link`（`type: 'primary'`，`target="_blank"`，`:href="securityEnhancePurchaseUrl"`，文案「增强规则集包」）+ `。`
-- 购买链接：`https://console.huaweicloud.com/devcloud/?region=<region>#/subscribe/apply?packageType=feature&version=`；`region` 在 `init()` 时经 `getProjectDetailInfo`（`/openlibing-framework/project/get-project-detail-info`）取 `data.hwProjectEntity.region`，未绑定华为云项目或请求失败时缺省 `cn-southwest-2`
+- 提示框位置：“规则集配置”标题栏（`rule-config-main` 的 `.subTitle`）中间空白区，位于“规则集配置”标题与“导入规则”按钮之间（`.subTitle` 为 `space-between` 三段式 flex 布局，提示框自然居中）
+- 提示框样式：`el-alert`，`type: 'warning'`，`show-icon`，不可关闭（`:closable="false"`），紧凑 padding（`.cl-security-enhance-tip`：`flex:none; width:auto; padding:2px 12px`）；配色与“新启用/新停用”条数提示 `.cl-new-num`（rules.less）一致——背景 `rgb(252, 248, 227)`、边框 `#faebcc`、文字 `#8a6d3b`
+- 文案：`包含“代码检查安全增强”类规则，请确保已购买` + `el-link`（`type: 'primary'`，`target="_blank"`，`:href="SECURITY_ENHANCE_PURCHASE_URL"`，文案「增强规则集包」）+ `。`
+- 购买链接：固定 URL `https://support.huaweicloud.com/price-devcloud/codearts_29_0016.html`（华为云定价文档），模块常量 `SECURITY_ENHANCE_PURCHASE_URL`，零接口依赖
 - 联动性：随勾选/取消实时增删（computed 驱动），无需保存即可见
 - 不阻断保存：`submitForm()` 原流程不变；未购买时由后端华为云错误翻译兜底提示
 
@@ -78,12 +75,7 @@ securityEnhanceRules（computed，实时重算）
 securityEnhanceRules = computed(() =>
   getSecurityEnhanceRules(handleSubmitData().ruleIds))   // 依赖 newRule/oldRule/enableRuleIds/ruleList，均响应式
 
-hwRegion = ref('cn-southwest-2')                          // 缺省区域
-securityEnhancePurchaseUrl = computed(() =>
-  `https://console.huaweicloud.com/devcloud/?region=${hwRegion}#/subscribe/apply?packageType=feature&version=`)
-
-init():  getHwRegion()                                    // getProjectDetailInfo → data.hwProjectEntity.region
-                                                          // 命中则覆写 hwRegion，失败/未绑定静默回退缺省
+SECURITY_ENHANCE_PURCHASE_URL = 'https://support.huaweicloud.com/price-devcloud/codearts_29_0016.html'
 
 submitForm():                                            // 保持原流程，零拦截
   data = handleSubmitData()
@@ -93,11 +85,14 @@ submitForm():                                            // 保持原流程，�
   else:
     handleSubmit(data, isCopyTo)
 
-模板（cl-submit 区域）:
-  <el-button 保存>
-  <el-alert v-if="securityEnhanceRules.length > 0">
-    包含“代码检查安全增强”类规则，请确保已购买 <el-link :href="securityEnhancePurchaseUrl">增强规则集包</el-link>。
-  </el-alert>
+模板（rule-config-main 的 .subTitle 标题栏，位于「规则集配置」标题与「导入规则」按钮之间）:
+  <div class="subTitle">
+    <div>规则集配置（既有）</div>
+    <el-alert v-if="securityEnhanceRules.length > 0">
+      包含“代码检查安全增强”类规则，请确保已购买 <el-link :href="SECURITY_ENHANCE_PURCHASE_URL">增强规则集包</el-link>。
+    </el-alert>
+    <div>导入规则（既有）</div>
+  </div>
 ```
 
 ### 2.3 边界场景矩阵
@@ -105,7 +100,7 @@ submitForm():                                            // 保持原流程，�
 | 场景              | option | copyProjectId | 含增强规则 | 行为                                                              |
 | ----------------- | ------ | ------------- | ---------- | ----------------------------------------------------------------- |
 | 新增-未勾选增强   | add    | -             | 否         | 无提示框，直接保存（与现状一致）                                  |
-| 新增-勾选增强     | add    | -             | 是         | 按钮旁提示框实时出现，保存不拦截                                  |
+| 新增-勾选增强     | add    | -             | 是         | 标题栏提示框实时出现，保存不拦截                                  |
 | 复制-本社区       | copy   | 空            | 是         | 提示框 + 保存走复制确认弹窗                                       |
 | 复制-跨社区       | copy   | 非空          | 是         | 提示框 + 保存走复制确认弹窗                                       |
 | 修改-含增强       | config | -             | 是         | 提示框（覆盖基于规则集带入的增强规则）                            |
@@ -126,30 +121,27 @@ submitForm():                                            // 保持原流程，�
 
 ### 3.2 新增成员
 
-| 成员                         | 类别     | 签名                                      | 职责                                                                         |
-| ---------------------------- | -------- | ----------------------------------------- | ---------------------------------------------------------------------------- |
-| `SECURITY_ENHANCE_TAG`       | 模块常量 | `string = 'security_enhance'`             | 安全增强分类标识，单一事实来源，避免魔法字符串                               |
-| `getSecurityEnhanceRules`    | 函数     | `(ruleIdsStr: string) => Array<RuleItem>` | 输入最终保存 ruleIds，返回命中的增强类规则项列表                             |
-| `securityEnhanceRules`       | computed | `ComputedRef<Array<RuleItem>>`            | 基于 `handleSubmitData().ruleIds` 实时计算命中列表，驱动按钮旁提示框         |
-| `DEFAULT_HW_REGION`          | 模块常量 | `string = 'cn-southwest-2'`               | 购买链接缺省区域（项目详情未返回 region 时兜底）                             |
-| `hwRegion`                   | ref      | `Ref<string>`                             | 社区对接的华为云项目区域，`init()` 时经 `getHwRegion()` 写入                 |
-| `securityEnhancePurchaseUrl` | computed | `ComputedRef<string>`                     | 华为云订阅页链接模板，`region` 段动态取 `hwRegion`                           |
-| `getHwRegion`                | 函数     | `() => void`                              | 调 `getProjectDetailInfo` 取 `data.hwProjectEntity.region`，失败静默回退缺省 |
-| `.cl-security-enhance-tip`   | 样式类   | CSS（嵌套于 `.cl-submit`）                | 提示框在 flex 容器内不撑满（`flex:none; width:auto`）、紧凑 padding          |
+| 成员                            | 类别     | 签名                                      | 职责                                                                                         |
+| ------------------------------- | -------- | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `SECURITY_ENHANCE_TAG`          | 模块常量 | `string = 'security_enhance'`             | 安全增强分类标识，单一事实来源，避免魔法字符串                                               |
+| `SECURITY_ENHANCE_PURCHASE_URL` | 模块常量 | `string`                                  | 华为云定价文档固定链接（方案变更④定版，替代曾设计的 region 动态拼接）                        |
+| `getSecurityEnhanceRules`       | 函数     | `(ruleIdsStr: string) => Array<RuleItem>` | 输入最终保存 ruleIds，返回命中的增强类规则项列表                                             |
+| `securityEnhanceRules`          | computed | `ComputedRef<Array<RuleItem>>`            | 基于 `handleSubmitData().ruleIds` 实时计算命中列表，驱动标题栏提示框                         |
+| `.cl-security-enhance-tip`      | 样式类   | CSS（嵌套于 `.subTitle`）                 | 提示框在 flex 容器内不撑满（`flex:none; width:auto`）、紧凑 padding、内嵌 `el-link` 基线对齐 |
 
 ### 3.3 重构成员
 
-| 成员                 | 变化                                                                                                      |
-| -------------------- | --------------------------------------------------------------------------------------------------------- |
-| `submitForm`         | 初版曾重构为 `doSubmit()` 闭包 + 弹窗拦截；**方案变更后恢复原流程**（复制确认 + 提交，与主干一致）        |
-| `cl-submit` 模板区域 | 保存按钮后新增 `el-alert` 提示框（`v-if="securityEnhanceRules.length > 0"`，含 `el-link` 华为云购买链接） |
+| 成员                 | 变化                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `submitForm`         | 初版曾重构为 `doSubmit()` 闭包 + 弹窗拦截；**方案变更后恢复原流程**（复制确认 + 提交，与主干一致）                                                                  |
+| `.subTitle` 模板区域 | “规则集配置”标题与“导入规则”按钮之间新增 `el-alert` 提示框（`v-if="securityEnhanceRules.length > 0"`，含 `el-link` 华为云购买链接）；`cl-submit` 保存区恢复主干原样 |
 
 ### 3.4 不新增的东西（YAGNI）
 
 - 不新建组件、composable、工具模块（检测函数仅此一处使用）
 - 不引入 TypeScript interface 声明文件（该文件为 JS 风格 `<script setup>`，无既有类型标注惯例）
 - 不改动 `handleSubmitData` / `handleSubmit` / `handleIsSave` 等既有函数
-- 不将华为云订阅页 URL 抽为远端配置（收敛在 `securityEnhancePurchaseUrl` computed 单处，后续有专属购买页时直接替换该处）
+- 不将购买链接抽为远端配置（固定常量 `SECURITY_ENHANCE_PURCHASE_URL` 单处维护，后续换链接直接替换该处）
 
 ### 3.5 依赖关系
 
@@ -159,8 +151,7 @@ securityEnhanceRules（computed）──调用──► handleSubmitData（既�
                                 ──读取──► ruleList（既有响应式列表，检测数据源）
 submitForm ──调用──► handleSubmitData / handleSubmit / ElMessageBox.confirm（均为既有）
 getSecurityEnhanceRules ──读取──► ruleList、SECURITY_ENHANCE_TAG
-securityEnhancePurchaseUrl（computed）──读取──► hwRegion
-getHwRegion ──调用──► getProjectDetailInfo（@/api/api 既有封装）──读取──► app.projectInfo.projectId
+SECURITY_ENHANCE_PURCHASE_URL ──被读取──► .subTitle 模板区域的 el-link（:href）
 ```
 
 ## 4. 数据模型设计
@@ -184,13 +175,7 @@ getHwRegion ──调用──► getProjectDetailInfo（@/api/api 既有封装�
 | `uncheckIds` | string | 本次取消启用的规则 ID                              | 不涉及     |
 | 其余         | -      | `templateId`/`templateName`/`language`/`isDefault` | 不涉及     |
 
-项目详情（`GET /openlibing-framework/project/get-project-detail-info` 响应 `data`，仅取用嵌套华为云项目实体）：
-
-| 字段                     | 类型           | 说明                                            | 本方案用途                   |
-| ------------------------ | -------------- | ----------------------------------------------- | ---------------------------- |
-| `hwProjectEntity.region` | string         | 社区对接的华为云项目区域（如 `cn-southwest-2`） | 拼接购买链接 `region` 段     |
-| `hwProjectEntity`        | object \| null | 华为云项目实体（未绑定时为空）                  | 空则回退 `DEFAULT_HW_REGION` |
-| 其余字段                 | -              | 项目基础信息                                    | 不涉及                       |
+（曾设计取用 `GET /openlibing-framework/project/get-project-detail-info` 的 `data.hwProjectEntity.region` 拼接购买链接，方案变更④已放弃，不依赖该接口。）
 
 ### 4.2 新增数据结构
 
@@ -210,7 +195,7 @@ getSecurityEnhanceRules 返回值：Array<CodeCheckRuleAccountVo 子集>
 | 维度       | 分析                                                                                                                                                  |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 时间复杂度 | Set 构建 O(n)（n=最终 ruleIds 数）+ 列表过滤 O(m)（m=已加载规则数，分页 20/页，典型 ≤ 数百）；computed 惰性求值，仅依赖变化时重算，单次重算 <1ms 量级 |
-| 网络开销   | 检测零新增请求（方案 A 核心收益）；另在 `init()` 新增 1 次轻量项目详情 GET（获取购买链接 region，与规则检测互不影响）                                 |
+| 网络开销   | 零新增请求（方案 A 核心收益；购买链接为固定常量，无接口依赖）                                                                                         |
 | 渲染性能   | 无列表渲染变化；提示框为单个 `el-alert` 的条件渲染（v-if），命中/清空时一次挂载/卸载                                                                  |
 | 内存       | 临时 `Set` 与命中数组随 computed 重算即可回收，无驻留增长                                                                                             |
 | 用户体验   | 未勾选增强规则时提示框不渲染、保存路径零感知；勾选后实时见提示，无弹窗打断                                                                            |
@@ -221,11 +206,10 @@ getSecurityEnhanceRules 返回值：Array<CodeCheckRuleAccountVo 子集>
 
 ### 6.1 依赖的既有接口
 
-| 接口                                                        | 前端封装                    | 用途                                    | 与本方案关系                                   |
-| ----------------------------------------------------------- | --------------------------- | --------------------------------------- | ---------------------------------------------- |
-| `POST /ci-portal/v2/grant/auth/rules/setting/account`       | `getCodeCheckRuleSetConfig` | 分页获取规则（含 `ruleTages`）          | 检测数据来源，调用时机不变                     |
-| `GET /openlibing-framework/project/get-project-detail-info` | `getProjectDetailInfo`      | 项目详情（含 `hwProjectEntity.region`） | 购买链接 region 数据源，`init()` 新增调用 1 次 |
-| `POST /ci-portal/v2/grant/auth/project/ruleSet/custom`      | `addCodeCheckRuleset`       | 保存规则集                              | 调用路径与入参不变（提示不拦截保存）           |
+| 接口                                                   | 前端封装                    | 用途                           | 与本方案关系                         |
+| ------------------------------------------------------ | --------------------------- | ------------------------------ | ------------------------------------ |
+| `POST /ci-portal/v2/grant/auth/rules/setting/account`  | `getCodeCheckRuleSetConfig` | 分页获取规则（含 `ruleTages`） | 检测数据来源，调用时机不变           |
+| `POST /ci-portal/v2/grant/auth/project/ruleSet/custom` | `addCodeCheckRuleset`       | 保存规则集                     | 调用路径与入参不变（提示不拦截保存） |
 
 ### 6.2 契约不变性说明
 
