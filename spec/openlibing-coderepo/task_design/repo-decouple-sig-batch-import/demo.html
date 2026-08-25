@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<title>代码仓管理与需求解耦 - 页面原型</title>
+<title>代码仓管理优化 + SIG 仓一键同步 - 页面原型</title>
 <style>
   /* 对齐 openlibing-web Element Plus 风格：主色 #006be6 */
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -86,6 +86,7 @@
   .tag-info { background: #f4f4f5; color: #909399; border: 1px solid #d3d4d6; }
   .tag-warning { background: #fdf6ec; color: #e6a23c; border: 1px solid #f5dab1; }
   .tag-primary { background: #ecf5ff; color: #006be6; border: 1px solid #b3d8ff; }
+  .tag-error { background: #fef0f0; color: #f56c6c; border: 1px solid #fbc4c4; }
 
   /* 对话框 */
   .dialog-mask {
@@ -120,18 +121,6 @@
     justify-content: center;
     gap: 12px;
   }
-
-  /* 录入方式切换 */
-  .mode-switch {
-    display: flex;
-    gap: 20px;
-    padding: 10px 14px;
-    background: #f4f6fa;
-    border-radius: 4px;
-    margin-bottom: 16px;
-  }
-  .mode-switch label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 14px; }
-  .mode-switch input[type=radio] { accent-color: #006be6; }
 
   /* 提示条 */
   .alert {
@@ -176,17 +165,7 @@
 
   /* SIG 仓库清单表 */
   .sig-table th, .sig-table td { text-align: center; }
-  .sig-table th:first-child, .sig-table td:first-child { width: 40px; }
   .checkbox { width: 16px; height: 16px; accent-color: #006be6; cursor: pointer; }
-
-  .config-file-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-  .config-file-row label { font-size: 13px; color: #606266; min-width: 80px; }
-  .select-box {
-    min-width: 320px; height: 32px; border: 1px solid #dcdfe6; border-radius: 4px;
-    padding: 0 10px; display: flex; align-items: center; justify-content: space-between;
-    font-size: 13px; background: #fff;
-  }
-  .select-box::after { content: "▾"; color: #909399; }
 
   /* 全局配置弹窗：三页签 */
   .dialog-global { width: 960px; }
@@ -234,9 +213,12 @@
   .icon-btn.danger:hover { color: #f56c6c; }
   .btn-text.danger { color: #f56c6c; }
 
-  /* SIG 录入：宽表格 + 批量操作条 + 选择性删除 */
-  .dialog-sig { width: 1140px; }
-  .sig-toolbar { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; flex-wrap: wrap; }
+  /* SIG 一键同步任务状态卡片 */
+  .sync-task-card { border: 1px solid #e4e7ed; border-radius: 4px; padding: 10px 12px; margin-top: 12px; background: #fff; }
+  .sync-task-header { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .sync-task-body { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; font-size: 13px; color: #606266; }
+
+  /* 配置不一致项目列表 */
   .delete-projects {
     display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
     background: #f4f6fa; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px;
@@ -248,13 +230,13 @@
 </head>
 <body>
 
-<div class="page-title">代码仓管理与需求解耦 + SIG 组一键批量录入 · 页面原型</div>
-<div class="page-desc">本原型展示关键交互：①项目级「全局配置」弹窗（三页签，集中管理公共账号 / 代码仓录入配置（sig-info.yaml 链接） / GitCode 角色映射）；②手动录入（输入链接自动检测 → 首次录入默认即主仓；命中多项目录入时表单按主仓配置自动同步、可选择性删除，未删除之前项目行时提示是否将当前仓设为主仓（主仓仅用于录入时一键同步））；③编辑代码仓配置（仅更新本行，不涉及主仓，不做 SIG 来源拦截）；④SIG 组一键录入（先多选尚未录入当前项目的仓库 → 表格核对/编辑/删除 → 批量录入）；⑤代码仓列表（关联项目数列）。样式对齐 openlibing-web Element Plus 主色 #006be6。</div>
+<div class="page-title">代码仓管理优化 + SIG 仓一键同步 · 页面原型</div>
+<div class="page-desc">本原型展示关键交互（整体思路：尽量规避多项目下统一代码仓配置项不一致）：①项目级「全局配置」弹窗（三页签公共账号 / GitCode 角色映射 + 代码仓录入配置区：sig-info.yaml 多路径配置（输入后即时校验路径存在性与 sig-info.yaml 文件）+ SIG 仓一键同步按钮（异步 + 分布式锁）与任务状态展示，任务状态在本弹窗内展示）；②手动录入（输入链接 blur 自动检测 → 命中其他项目已录入时表单自动复制上次录入配置、可修改，提交时配置不一致仅提示性告警、不覆盖其他项目行；默认分支从平台获取、只读展示）；③编辑代码仓配置（存在跨项目行且配置不一致时保存前提示性告警，用户确认后仅更新本行，不覆盖；开关类配置按「任一项目开启即生效」OR 聚合）；样式对齐 openlibing-web Element Plus 主色 #006be6。</div>
 
-<!-- ========== 场景一：项目级全局配置（三页签弹窗） ========== -->
+<!-- ========== 场景一：项目级全局配置（三页签 + 代码仓录入配置区多路径 + 一键同步） ========== -->
 <div class="section">
   <span class="section-label">场景一</span>
-  <div class="section-title">项目级「全局配置」：三页签集中管理项目公共账号 / 代码仓录入配置 / GitCode 角色映射</div>
+  <div class="section-title">项目级「全局配置」：三页签（项目公共账号 / GitCode 角色映射）+ 代码仓录入配置区（sig-info.yaml 多路径 + SIG 仓一键同步）</div>
 
   <div class="toolbar">
     <button class="btn">+ 录入仓库</button>
@@ -263,6 +245,7 @@
     <button class="btn" style="background:#ff7d00; border-color:#ff7d00;">⚙ 全局配置</button>
   </div>
   <div class="form-hint" style="margin-bottom:6px;">工具栏「导出仓库」右侧新增「全局配置」按钮，对当前项目下所有代码仓生效；原「gitcode 角色映射」「项目公共账号」两个按钮的能力并入本弹窗。</div>
+  <div class="form-hint" style="margin-bottom:6px;">本弹窗能力由 <b>/project-config/global-config</b> 接口统一读写（ProjectConfigController）：项目公共账号（实现层仍存现有公共账号表）/ 代码仓录入配置（sig-info.yaml 多路径；<b>GET 回显按平台分组</b>——gitcode/gitee/github 外层 key，便于前端区分，提交时将各组 url 拍平为 URL 数组）/ GitCode 角色映射；路径输入后经 <b>POST /project-config/validate-sig-path</b> 即时校验；「SIG 仓一键同步」由 <b>POST /project-config/sig-sync</b> 触发（异步 + 分布式锁），任务状态经 <b>GET /project-config/sig-sync/status</b> 轮询（在本弹窗内展示）。</div>
 
   <div class="dialog-mask">
     <div class="dialog dialog-global">
@@ -299,21 +282,45 @@
           </div>
         </div>
 
-        <!-- ② 代码仓录入配置（sig-info.yaml 位置） -->
+        <!-- ② 代码仓录入配置（sig-info.yaml 多路径 + SIG 仓一键同步） -->
         <div class="gc-section">
           <div class="gc-section-title">
-            <span>代码仓录入配置（sig-info.yaml 位置）</span>
-            <span class="form-hint">每平台仅允许配置一个位置</span>
+            <span>代码仓录入配置（sig-info.yaml 路径，支持多个）</span>
+            <button class="btn" style="height:28px;padding:0 14px;">⟳ SIG 仓一键同步</button>
           </div>
           <div class="gc-loc-card" style="align-items:flex-start;">
             <div class="loc-info" style="flex:1;">
-              <div style="margin-bottom:6px;">sig-info.yaml 链接：</div>
-              <input type="text" value="https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private/sig-info.yaml" style="width:100%;">
+              <div style="margin-bottom:6px;">路径 1：</div>
+              <input type="text" value="https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private" style="width:100%;">
             </div>
             <span class="gc-loc-status ok-tag">● 可用</span>
-            <button class="btn btn-default" style="height:28px;padding:0 12px;">保存</button>
+            <span class="icon-btn danger" title="删除路径">－</span>
           </div>
-          <div class="form-hint">在代码托管平台（gitcode / gitee / github）对应代码仓、对应分支中找到 sig-info.yaml 文件，复制此时的完整链接填入即可（示例：https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private/sig-info.yaml）；保存时实时校验文件可用性。</div>
+          <div class="gc-loc-card" style="align-items:flex-start;">
+            <div class="loc-info" style="flex:1;">
+              <div style="margin-bottom:6px;">路径 2：</div>
+              <input type="text" value="https://gitcode.com/openlibing/community/blob/master/sigs/sig-infra" style="width:100%;">
+            </div>
+            <span class="gc-loc-status ok-tag">● 可用</span>
+            <span class="icon-btn danger" title="删除路径">－</span>
+          </div>
+          <button class="btn btn-default" style="height:28px;padding:0 12px;">+ 添加路径</button>
+          <div class="form-hint" style="margin-top:8px;">路径指向代码托管平台上 sig-info.yaml 所在<b>目录</b>（示例：https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private），系统在该目录下查找 sig-info.yaml 文件；可自由配置<b>多个</b>路径、不区分平台（后端根据 URL 域名自动识别 gitcode / gitee / github，统一管理区分）；<b>输入路径后（blur）即时调用 validate-sig-path 校验</b>该路径是否存在、其下是否存在 sig-info.yaml 文件，校验结果就地展示（可用 / 路径不存在 / 文件不存在），不阻断保存。</div>
+
+          <!-- 一键同步任务状态（异步 + 分布式锁；在全局配置弹窗内展示） -->
+          <div class="sync-task-card">
+            <div class="sync-task-header">
+              <span>最近一次同步任务</span>
+              <span class="tag tag-warning">RUNNING</span>
+            </div>
+            <div class="sync-task-body">
+              <span>任务 ID：sig-sync-123456</span>
+              <span>已同步：<b>36</b></span>
+              <span>失败：<b>2</b></span>
+            </div>
+            <div class="form-hint" style="margin-top:8px;">触发后立即返回任务 ID，异步执行（分布式锁 sig_sync:{projectId} 防同一项目并发重复触发，不担心执行时间较长）；任务状态<b>直接在本弹窗内展示</b>（轮询刷新最新状态，完成后展示 SUCCESS / FAILED / PARTIAL 与 imported / failed 计数及失败原因）。</div>
+          </div>
+          <div class="form-hint" style="margin-top:8px;">「SIG 仓一键同步」：从以上全部路径拉取 sig-info.yaml 并合并去重，仅同步<b>尚未录入当前项目</b>的仓库（已录入的不覆盖）；已存在于其他项目的仓库自动复制上次录入配置。默认参数：别名=repoUrl 中的 repo 名（项目内同名冲突依次尝试「repo名-平台名」、加数字递增）、责任人=代码托管平台创建人账号名、用途=自研源码、开源类型=主导开源、默认分支=从平台实时获取（<b>不可修改</b>）、公共账号令牌=项目级公共账号令牌；所有开关除「是否参与运营=是」外均默认为否。</div>
         </div>
 
         <!-- ③ 角色映射（仅 GitCode 页签） -->
@@ -354,14 +361,14 @@
   </div>
 
   <div style="margin-top:14px; font-size:13px; color:#666; line-height:1.8;">
-    <b>Gitee / GitHub 页签</b>：同样支持「项目公共账号」（可直接配置）与「代码仓录入配置」，但不含「角色映射」。
+    <b>Gitee / GitHub 页签</b>：同样支持「项目公共账号」（可直接配置），但不含「角色映射」；「代码仓录入配置」（sig-info.yaml 多路径 + 一键同步）为跨平台独立区域，不归属任何页签。
   </div>
 </div>
 
-<!-- ========== 场景二：手动录入 - 已存在仓库的配置同步与选择性删除 ========== -->
+<!-- ========== 场景二：手动录入 - 自动检测 + 复制上次配置 + 提示不覆盖 ========== -->
 <div class="section">
   <span class="section-label">场景二</span>
-  <div class="section-title">手动录入：输入仓库链接自动检测；首次录入默认即主仓；命中多项目录入时表单按主仓配置自动同步，可选择性删除 / 未删除时提示设为主仓（主仓仅用于录入时一键同步）</div>
+  <div class="section-title">手动录入：输入仓库链接 blur 自动检测；命中其他项目已录入时表单自动复制上次录入配置（可修改）；提交时配置不一致仅提示性告警，不覆盖其他项目行</div>
   <div class="toolbar">
     <button class="btn">+ 录入仓库</button>
     <button class="btn btn-default">↻ 同步仓库</button>
@@ -376,36 +383,16 @@
         <span class="dialog-close">✕</span>
       </div>
       <div class="dialog-body">
-        <div class="mode-switch">
-          <label><input type="radio" name="m1" checked> 手动录入</label>
-          <label><input type="radio" name="m1"> SIG 组一键录入</label>
-        </div>
-
         <div class="form-item" style="margin-bottom:14px;">
           <label><span class="req">*</span>仓库链接</label>
           <div class="input">https://gitcode.com/openlibing/openlibing-coderepo.git</div>
-          <div class="form-hint">输入链接失焦后自动发起检测请求，判断该代码仓是否已在其他项目录入</div>
+          <div class="form-hint">输入链接失焦后自动发起检测请求（<b>check-repo-url</b>，只传基础参数），判断该代码仓是否已在其他项目录入，命中时表单<b>直接使用</b><b>上次录入该代码仓的配置</b>（可修改）；默认分支沿用现有仓库信息获取逻辑、<b>只读展示不可修改</b>；提交前传 <b>formConfig</b>（blur 返回 repoId 非 null 时一并传）再调 check-repo-url 比对，配置不一致时弹窗提示（仅影响当前项目行）</div>
         </div>
 
-        <!-- 已存在于其他项目：配置自动同步（无需「一键同步」按钮） -->
+        <!-- 已存在于其他项目：自动复制上次录入配置（仅提示，不覆盖） -->
         <div class="alert alert-info">
           <span class="alert-icon">ℹ</span>
-          <div>检测到该代码仓已在 <b>项目A（主仓）</b>、<b>项目B</b> 录入。表单已按主仓配置自动同步，可直接修改后提交。（无「一键同步」按钮，仅录入时复制主仓配置，编辑各项目独立维护本行）</div>
-        </div>
-
-        <!-- 未删除之前项目行时：提示是否将当前仓设为主仓（主仓仅用于录入时一键同步） -->
-        <div class="delete-projects">
-          <div class="dp-title">是否需要将当前仓设为主仓？</div>
-          <label><input type="checkbox" class="checkbox"> 将当前仓设为主仓</label>
-          <span class="form-hint">主仓概念仅用于录入代码仓时一键同步配置项：后续其他项目录入该仓时，将按主仓配置一键同步；不参与扫描归属、不影响各项目行配置。</span>
-        </div>
-
-        <!-- 选择性删除之前项目中的代码仓（支持多选，非一次删除所有） -->
-        <div class="delete-projects">
-          <div class="dp-title">是否删除之前项目中的代码仓？（可多选，仅删除该代码仓在所选项目下的记录，其他项目行不受影响）</div>
-          <label><input type="checkbox" class="checkbox"> 项目A</label>
-          <label><input type="checkbox" class="checkbox"> 项目B</label>
-          <span class="form-hint">删除支持选择性、而非一次删除所有；不勾选则不删除该项目下的该代码仓记录</span>
+          <div>检测到该代码仓已在 <b>项目A</b>、<b>项目B</b> 录入。表单已按<b>上次录入配置</b>自动同步（可修改）；提交时若检测到配置不一致，将仅提示告警，<b>不会覆盖其他项目下的配置</b>。如需修改之前项目中的配置或删除之前的代码仓，请按提示切换到对应项目手动操作。</div>
         </div>
 
         <div class="form-grid">
@@ -416,6 +403,11 @@
           <div class="form-item">
             <label>代码仓别名</label>
             <div class="input">openlibing-coderepo</div>
+          </div>
+          <div class="form-item">
+            <label>默认分支</label>
+            <div class="input disabled">master</div>
+            <div class="form-hint">从代码托管平台实时获取，只读不可修改</div>
           </div>
           <div class="form-item">
             <label><span class="req">*</span>仓库责任人</label>
@@ -458,7 +450,7 @@
             <div class="select">是</div>
           </div>
         </div>
-        <div class="form-hint" style="margin-top:10px;">表单已按主仓配置自动同步（可修改）；主仓仅用于录入时一键同步，编辑各项目独立维护本行。未勾选删除其他项目行时，可在上方勾选「将当前仓设为主仓」。</div>
+        <div class="form-hint" style="margin-top:10px;">保存仅影响当前项目行，不修改其他项目下的代码仓配置；开关类配置在下游使用时按「任一项目开启即生效」聚合（存在重复录入时，任一开启即视为开启，全关闭才关闭）。</div>
       </div>
       <div class="dialog-footer">
         <button class="btn">确定</button>
@@ -466,12 +458,38 @@
       </div>
     </div>
   </div>
+
+  <!-- 提交时配置不一致：提示性告警（仅保存当前项目行，不覆盖其他项目） -->
+  <div class="dialog-mask">
+    <div class="dialog" style="width:560px;">
+      <div class="dialog-header">
+        <span>配置不一致提示</span>
+        <span class="dialog-close">✕</span>
+      </div>
+      <div class="dialog-body">
+        <div class="alert alert-warning">
+          <span class="alert-icon">⚠</span>
+          <div>当前表单配置与该代码仓在以下项目中的配置不一致：</div>
+        </div>
+        <div class="delete-projects">
+          <div class="dp-title">配置不一致的项目（同 repo_url 组内其他行）</div>
+          <label><span class="tag tag-primary">项目A</span><span class="form-hint">接管PR管理=否（当前=是）</span></label>
+          <label><span class="tag tag-info">项目B</span><span class="form-hint">自动触发门禁流水线=否（当前=是）</span></label>
+          <span class="form-hint" style="width:100%;">继续保存<b>仅写入当前项目行</b>，不修改以上项目下的配置；如需统一配置，请切换到对应项目手动修改。开关类配置在下游使用时按「任一项目开启即生效」聚合：存在重复录入时，任一项目开启即视为开启，全关闭才关闭。</span>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn">继续保存（仅当前项目行）</button>
+        <button class="btn btn-default">取消</button>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- ========== 场景三：编辑代码仓配置（仅更新本行，不涉及主仓） ========== -->
+<!-- ========== 场景三：编辑代码仓配置（跨项目行配置不一致时提示性告警、不覆盖） ========== -->
 <div class="section">
   <span class="section-label">场景三</span>
-  <div class="section-title">编辑代码仓配置：该 repo_url 已在多个项目录入过 → 仅更新当前项目本行配置，不涉及主仓（主仓仅用于录入时一键同步）；不做 SIG 来源拦截</div>
+  <div class="section-title">编辑代码仓配置：保存时若同 repo_url 存在跨项目行且配置不一致 → 弹窗提示性告警，用户确认后仅更新本行（不覆盖其他项目行）；无跨项目行或配置一致时直接保存（SIG 来源仓库同样允许编辑）</div>
 
   <div class="dialog-mask">
     <div class="dialog">
@@ -483,13 +501,13 @@
         <div class="form-item" style="margin-bottom:14px;">
           <label>仓库链接</label>
           <div class="input disabled">https://gitcode.com/openlibing/openlibing-coderepo.git</div>
-          <div class="form-hint">保存前自动检测该 repo_url 是否已在多个项目录入过（兼容 repo_info 表中跨项目重复代码仓历史数据）</div>
+          <div class="form-hint">编辑打开时回显本行当前配置（不预填其他项目数据）；保存前传 <b>repoId + formConfig</b> 调 <b>check-repo-url</b> 比对当前表单配置与同 repo_url 其他项目行（兼容 repo_info 表中跨项目重复代码仓历史数据），配置不一致时弹窗提示性告警</div>
         </div>
 
-        <!-- 该 repo_url 已在多个项目录入：仅更新本行，不涉及主仓 -->
-        <div class="alert alert-info">
-          <span class="alert-icon">ℹ</span>
-          <div>检测到该代码仓已在 <b>项目A（主仓）</b>、<b>项目B</b> 录入。编辑仅更新当前项目本行配置，不影响其他项目行；主仓仅用于录入时一键同步，本对话框不涉及主仓设置。</div>
+        <!-- 跨项目行存在：保存时提示性告警（不覆盖） -->
+        <div class="alert alert-warning">
+          <span class="alert-icon">⚠</span>
+          <div>检测到该代码仓已在 <b>项目A</b>、<b>项目B</b> 录入。若保存时本行配置与以上项目不一致，将弹窗提示性告警；确认后<b>仅更新本行</b>，<b>不覆盖其他项目行配置</b>。开关类配置在下游使用时按「任一项目开启即生效」聚合（任一开启即视为开启，全关闭才关闭）。</div>
         </div>
 
         <div class="form-grid">
@@ -500,6 +518,11 @@
           <div class="form-item">
             <label>代码仓别名</label>
             <div class="input">openlibing-coderepo</div>
+          </div>
+          <div class="form-item">
+            <label>默认分支</label>
+            <div class="input disabled">master</div>
+            <div class="form-hint">从代码托管平台实时获取，只读不可修改（不参与配置一致性比对）</div>
           </div>
           <div class="form-item">
             <label><span class="req">*</span>仓库责任人</label>
@@ -542,7 +565,7 @@
             <div class="select">是</div>
           </div>
         </div>
-        <div class="form-hint" style="margin-top:10px;">编辑已录入仓库时不做「多项目影响提示」与「SIG 来源编辑拦截」（SIG 来源仓库同样允许编辑）；仅更新当前项目本行配置，不影响其他项目行，请确认后提交。</div>
+        <div class="form-hint" style="margin-top:10px;">无跨项目行或配置一致时直接保存本行；存在跨项目行且配置不一致时保存前提示性告警，确认后仅更新本行，如需统一配置请手动到对应项目修改。</div>
       </div>
       <div class="dialog-footer">
         <button class="btn">保存</button>
@@ -550,258 +573,32 @@
       </div>
     </div>
   </div>
-</div>
 
-<!-- ========== 场景四：SIG 组一键录入（多选未录入仓库 → 表格核对/编辑/删除 → 批量录入） ========== -->
-<div class="section">
-  <span class="section-label">场景四</span>
-  <div class="section-title">SIG 组一键录入：先多选尚未录入当前项目的 SIG 仓库，再在表格中核对 / 单条或批量编辑、删除后录入</div>
-
+  <!-- 保存前提示性告警弹窗：仅更新本行，不覆盖其他项目行 -->
   <div class="dialog-mask">
-    <div class="dialog dialog-sig">
+    <div class="dialog" style="width:560px;">
       <div class="dialog-header">
-        <span>录入代码仓</span>
+        <span>配置不一致提示</span>
         <span class="dialog-close">✕</span>
       </div>
       <div class="dialog-body">
-        <div class="mode-switch">
-          <label><input type="radio" name="m2"> 手动录入</label>
-          <label><input type="radio" name="m2" checked> SIG 组一键录入</label>
+        <div class="alert alert-warning">
+          <span class="alert-icon">⚠</span>
+          <div>本行配置与该代码仓在以下项目中的配置不一致：</div>
         </div>
-
-        <div class="alert alert-info">
-          <span class="alert-icon">ℹ</span>
-          <div>SIG 组录入默认使用默认配置（别名=仓库名、责任人=建仓人、开源类型=主导开源、是否参与运营=是、其余各开关=否）。下拉仅展示<b>尚未录入当前项目</b>的 SIG 仓库，已录入的不展示，因此不会覆盖已有配置。</div>
+        <div class="delete-projects">
+          <div class="dp-title">配置不一致的项目（同 repo_url 组内其他行）</div>
+          <label><span class="tag tag-primary">项目A</span><span class="form-hint">接管PR管理=否（本行=是）</span></label>
+          <label><span class="tag tag-info">项目B</span><span class="form-hint">自动触发门禁流水线=否（本行=是）</span></label>
+          <span class="form-hint" style="width:100%;">确认后<b>仅更新本行</b>，其他项目行配置保持不变；如需统一配置，请切换到对应项目手动修改。开关类配置按「任一项目开启即生效」聚合：存在重复录入时，任一项目开启即视为开启，全关闭才关闭。</span>
         </div>
-
-        <div class="config-file-row">
-          <label>平台</label>
-          <div class="select-box" style="min-width:120px;">gitcode</div>
-          <span class="form-hint">该平台 sig-info.yaml 位置在「全局配置」中配置（每平台仅一个链接），此处实时读取解析</span>
-        </div>
-
-        <!-- 未录入仓库多选下拉 -->
-        <div class="config-file-row">
-          <label>选择仓库</label>
-          <div class="select-box" style="min-width:380px;">已选 4 个：openlibing-coderepo、openlibing-web、openlibing-framework、openlibing-codecheck…</div>
-          <span class="form-hint">下拉多选框仅展示尚未录入当前项目的 SIG 仓库，选出后表格展示所选仓库列表</span>
-        </div>
-
-        <div class="sig-toolbar">
-          <span>已选 <b>4</b> 个仓库</span>
-          <button class="btn btn-default" style="height:28px;padding:0 12px;">批量编辑配置</button>
-          <button class="btn btn-default" style="height:28px;padding:0 12px;">批量删除</button>
-          <span class="form-hint">默认使用默认配置；可单条 / 批量编辑，或直接使用默认值</span>
-        </div>
-
-        <table class="sig-table">
-          <thead>
-            <tr>
-              <th><input type="checkbox" class="checkbox" checked></th>
-              <th>代码仓</th>
-              <th>代码仓别名</th>
-              <th>平台</th>
-              <th>默认分支</th>
-              <th>仓库责任人</th>
-              <th>开源类型</th>
-              <th>用途</th>
-              <th>代码风格自动修复</th>
-              <th>告警抑制自动检视</th>
-              <th>是否参与运营</th>
-              <th style="width:130px;">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><input type="checkbox" class="checkbox" checked></td>
-              <td>openlibing/openlibing-coderepo</td>
-              <td>openlibing-coderepo</td>
-              <td>gitcode</td>
-              <td>master</td>
-              <td>openlibing</td>
-              <td>主导开源</td>
-              <td>自研源码</td>
-              <td>否</td>
-              <td>否</td>
-              <td>是</td>
-              <td><button class="btn-text">编辑配置</button> <button class="btn-text danger">删除</button></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" class="checkbox" checked></td>
-              <td>openlibing/openlibing-web</td>
-              <td>openlibing-web</td>
-              <td>gitcode</td>
-              <td>master</td>
-              <td>openlibing</td>
-              <td>主导开源</td>
-              <td>自研源码</td>
-              <td>否</td>
-              <td>否</td>
-              <td>是</td>
-              <td><button class="btn-text">编辑配置</button> <button class="btn-text danger">删除</button></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" class="checkbox" checked></td>
-              <td>openlibing/openlibing-framework</td>
-              <td>openlibing-framework</td>
-              <td>gitcode</td>
-              <td>master</td>
-              <td>openlibing</td>
-              <td>主导开源</td>
-              <td>自研源码</td>
-              <td>否</td>
-              <td>否</td>
-              <td>是</td>
-              <td><button class="btn-text">编辑配置</button> <button class="btn-text danger">删除</button></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" class="checkbox" checked></td>
-              <td>openlibing/openlibing-codecheck</td>
-              <td>openlibing-codecheck</td>
-              <td>gitcode</td>
-              <td>master</td>
-              <td>openlibing</td>
-              <td>主导开源</td>
-              <td>自研源码</td>
-              <td>是</td>
-              <td>否</td>
-              <td>是</td>
-              <td><button class="btn-text">编辑配置</button> <button class="btn-text danger">删除</button></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="form-hint" style="margin-top:10px;">「编辑配置」/「批量编辑配置」复用与手动录入一致的配置表单（默认值见上表，可修改后保存，或恢复默认）；单条 / 批量「删除」用于移除选错、不想录入的仓库。</div>
       </div>
       <div class="dialog-footer">
-        <button class="btn">一键录入 (4)</button>
+        <button class="btn">继续保存（仅本行生效）</button>
         <button class="btn btn-default">取消</button>
       </div>
     </div>
   </div>
-
-  <!-- 编辑配置示例（单条 / 批量共用同一表单） -->
-  <div class="dialog-mask" style="margin-top:10px;">
-    <div class="dialog" style="width:760px;">
-      <div class="dialog-header">
-        <span>编辑配置：openlibing/openlibing-coderepo（批量编辑作用于所有勾选仓库）</span>
-        <span class="dialog-close">✕</span>
-      </div>
-      <div class="dialog-body">
-        <div class="form-grid">
-          <div class="form-item"><label>代码仓别名</label><div class="input">openlibing-coderepo</div></div>
-          <div class="form-item"><label>仓库责任人</label><div class="input">openlibing</div></div>
-          <div class="form-item"><label>用途</label><div class="select">自研源码</div></div>
-          <div class="form-item"><label>语言</label><div class="select">java</div></div>
-          <div class="form-item"><label>开源类型</label><div class="select">主导开源</div></div>
-          <div class="form-item"><label>接管PR管理</label><div class="select">否</div></div>
-          <div class="form-item"><label>自动触发门禁流水线</label><div class="select">否</div></div>
-          <div class="form-item"><label>自动触发接口扫描</label><div class="select">否</div></div>
-          <div class="form-item"><label>代码风格自动修复</label><div class="select">否</div></div>
-          <div class="form-item"><label>告警抑制自动检视</label><div class="select">否</div></div>
-          <div class="form-item"><label>是否参与运营</label><div class="select">是</div></div>
-        </div>
-      </div>
-      <div class="dialog-footer">
-        <button class="btn">保存</button>
-        <button class="btn btn-default">恢复默认</button>
-        <button class="btn btn-default">取消</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ========== 列表页：关联项目数列 ========== -->
-<div class="section">
-  <span class="section-label">列表页</span>
-  <div class="section-title">代码仓列表：新增「关联项目数」列</div>
-  <div class="toolbar">
-    <button class="btn">+ 录入仓库</button>
-    <button class="btn btn-default">↻ 同步仓库</button>
-    <button class="btn btn-default">⚙ 全局配置</button>
-    <button class="btn btn-default">列配置</button>
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:40px;"><input type="checkbox" class="checkbox"></th>
-        <th>代码托管平台</th>
-        <th>代码仓</th>
-        <th>代码仓别名</th>
-        <th>用途</th>
-        <th>语言</th>
-        <th>关联项目数</th>
-        <th>状态</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><input type="checkbox" class="checkbox"></td>
-        <td>gitcode</td>
-        <td><a>openlibing/openlibing-coderepo</a></td>
-        <td>openlibing-coderepo</td>
-        <td>自研源码</td>
-        <td>java</td>
-        <td>3</td>
-        <td><span class="tag tag-success">正常</span></td>
-        <td>
-          <button class="btn-text">✎</button>
-          <button class="btn-text">🗑</button>
-          <button class="btn-text">👥</button>
-          <button class="btn-text">🔗</button>
-        </td>
-      </tr>
-      <tr>
-        <td><input type="checkbox" class="checkbox"></td>
-        <td>gitcode</td>
-        <td><a>openlibing/openlibing-web</a></td>
-        <td>openlibing-web</td>
-        <td>自研源码</td>
-        <td>typescript</td>
-        <td>2</td>
-        <td><span class="tag tag-success">正常</span></td>
-        <td>
-          <button class="btn-text">✎</button>
-          <button class="btn-text">🗑</button>
-          <button class="btn-text">👥</button>
-          <button class="btn-text">🔗</button>
-        </td>
-      </tr>
-      <tr>
-        <td><input type="checkbox" class="checkbox"></td>
-        <td>gitcode</td>
-        <td><a>openlibing/openlibing-framework</a></td>
-        <td>openlibing-framework</td>
-        <td>自研源码</td>
-        <td>java</td>
-        <td>1</td>
-        <td><span class="tag tag-success">正常</span></td>
-        <td>
-          <button class="btn-text">✎</button>
-          <button class="btn-text">🗑</button>
-          <button class="btn-text">👥</button>
-          <button class="btn-text">🔗</button>
-        </td>
-      </tr>
-      <tr>
-        <td><input type="checkbox" class="checkbox"></td>
-        <td>gitcode</td>
-        <td><a>openlibing/openlibing-codecheck</a></td>
-        <td>openlibing-codecheck</td>
-        <td>自研源码</td>
-        <td>java</td>
-        <td>1</td>
-        <td><span class="tag tag-success">正常</span></td>
-        <td>
-          <button class="btn-text">✎</button>
-          <button class="btn-text">🗑</button>
-          <button class="btn-text">👥</button>
-          <button class="btn-text">🔗</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
 </div>
 
 </body>
