@@ -17,12 +17,15 @@
 
 ## 2. 目标
 
-提供一个 `OfflineNotice` 组件（图标 + Popover 形式），具备：
+提供一个 `OfflineNotice` 组件（警示锚点 + Popover 形式），具备：
 
-- **轻量挂载**：在任意需要预告的功能入口旁挂上，使用一个警示图标作为视觉锚点。
-- **交互可控**：hover / click 弹出气泡，展示功能名（即将下线）、说明、链接。
-- **样式统一**：视觉与现有 `NoPermissionPopover.vue` 保持一致风格，融入 Element Plus 主题。
+- **轻量挂载**：在任意需要预告的功能入口旁挂上，使用一个警示「OFF」圆标作为视觉锚点。
+- **交互可控**：hover / click 弹出深色浮层，展示功能名（即将下线）、说明、链接。
+- **样式统一**：视觉与现有 `NoPermissionPopover.vue` 同手法（popper-class 覆盖 + popperOptions 自适应），融入 Element Plus 主题。
 - **配置透传**：通过 props 配置，不引入集中配置表或后端接口。
+- **菜单集成**：通过菜单 `extraRender` 扩展点接入，可在菜单项标题旁渲染预告锚点（首个落地场景）。
+
+> 本轮范围已随实现收敛：组件实际为深色浮层卡片形态 +「OFF」圆标，非白底卡片；不提供 `width` / `iconSize` 自定义，宽度随内容自适应；`iconColor` 语义为圆标底色。
 
 ## 3. 非目标
 
@@ -32,22 +35,23 @@
 - 不接入后端接口下发下线清单。
 - 不提供首次进入弹窗、内联横幅、Tooltip 文字提示等其他形式。
 - 不做权限校验、不做用户级"已读"持久化。
+- **本期不交付单元测试**（纯展示组件，测试留待接入业务页面后按需补充）。
 
 ## 4. 验收标准
 
 ### AC1 组件渲染
 
-- 给定 `featureName` prop，组件渲染一个警示图标。
-- 图标尺寸默认 16px，颜色默认为警示橙，可通过 `iconSize` / `iconColor` 覆盖。
+- 给定 `featureName` prop，组件渲染一个警示「OFF」圆标作为锚点。
+- 圆标底色默认为浅警示橙 `#fff1d6`、文字/徽标色 `#ffa034`，可通过 `iconColor` 覆盖底色；圆标带轻量脉动动画（尊重 `prefers-reduced-motion`）。
 
 ### AC2 Popover 内容
 
-- hover（默认）或 click 时，弹出气泡，气泡内包含：
-  - 标题：`<featureName> 即将下线`
+- hover（默认）或 click 时，弹出深色浮层，浮层内包含：
+  - 感叹号图标 + 标题：`<featureName> 即将下线`
   - 说明文案：`description` prop（可选）
-  - 链接：`link` prop（可选），新窗口打开
-- 气泡宽度默认 280px，可通过 `width` prop 覆盖。
-- 无 `description` 且无 `link` 时，气泡只展示头部标题。
+  - 链接：`link` prop（可选），新窗口打开，文案默认「了解更多」可由 `linkText` 覆盖
+- 气泡宽度随内容自适应（`max-content`），不设固定宽度。
+- 无 `description` 且无 `link` 时，气泡只展示标题。
 
 ### AC3 交互可控
 
@@ -57,8 +61,8 @@
 
 ### AC4 视觉一致性
 
-- 气泡视觉与 `NoPermissionPopover.vue` 风格统一：白底圆角、阴影、内部小卡片布局。
-- 使用 scoped 样式 + popper-class 覆盖，不污染全局。
+- 浮层与 `NoPermissionPopover.vue` 同手法：popper-class 全局覆盖 el-popover 白边/阴影，深色工具条式浮层（`#2a2a2a` 底、白色文字、`#ffa034` 强调色）。
+- 使用 scoped 样式 + popper-class 覆盖，不污染全局（独立前缀 `offline-notice-popper`）。
 
 ### AC5 类型与导出
 
@@ -67,13 +71,14 @@
 
 ### AC6 测试
 
-- 单元测试覆盖：渲染、标题文案、description/link 渲染与缺省、props 透传、`#reference` slot 覆盖。
-- 测试文件：`src/components/__tests__/OfflineNotice.spec.ts`。
+- 单元测试：本期未提供（纯展示、props 驱动，留待接入业务页面后按需补充）。
+- 手动验证覆盖：锚点渲染、气泡文案、description/link、`#reference` slot 覆盖、菜单项 `extraRender` 接入。
 
 ## 5. 风险与依赖
 
 - **无后端依赖**：纯前端 props 驱动。
 - **样式冲突**：popper-class 全局覆盖可能与现有样式冲突，需用独立前缀 `offline-notice-popper`。
+- **共享包改动**：菜单 `extraRender` 扩展点落在 `@core/ui-kit/menu-ui`、`@core/base/typings`、`@vben/utils` 等共享包，改动需保证向后兼容（新增可选字段，不破坏既有菜单渲染）。
 
 ## 6. 关联
 
