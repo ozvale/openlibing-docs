@@ -16,9 +16,9 @@
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| src/main/java/.../operation/codecheck/IncSummaryOperation.java | 修改 | 两处 count 改 `$count`；`getIncSummaryList` 分页默认值；新增 `org.bson.Document` import |
+| 文件                                                               | 操作 | 说明                                                                                                                                      |
+| ------------------------------------------------------------------ | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| src/main/java/.../operation/codecheck/IncSummaryOperation.java     | 修改 | 两处 count 改 `$count`；`getIncSummaryList` 分页默认值；新增 `org.bson.Document` import                                                   |
 | src/test/java/.../operation/codecheck/IncSummaryOperationTest.java | 修改 | 更新 `getSummaryList` 测试的 count stub（Document 映射）；新增 `getIncSummaryList` 测试：验证 $count 计数路径 + 不传分页时默认 skip/limit |
 
 ## 风险 & 缓解
