@@ -4,6 +4,20 @@
 >
 > **核心结论（本文档唯一基线）**：整体思路：尽量规避多项目下统一代码仓配置项不一致。`repo_info` 保持「一项目一行、多行并存」现状模型。**录入时**检测到同 repo_url 已在其他项目录入 → 从上次录入该代码仓的数据中复制配置到表单（可修改），提交时仅提示用户与之前某某项目中的配置不一致，**不做配置覆盖**；用户想修改之前项目配置或删除之前代码仓，按提示自己手动去改。**编辑时**检测到同 repo_url 跨项目配置不一致 → 仅做提示性告警让用户知道与其他项目下的配置不一致，**不自动覆盖**。**开关类配置 OR 聚合**：下游使用该配置时先校验该 repo_url 是否存在重复录入，存在的话只要其中一个开关打开即认为开启，全关闭才关闭（不修改用户在其他项目下的配置）。**SIG 仓一键同步**：全局配置窗口内的「一键同步」按钮，异步执行 + 分布式锁，支持多路径 sig-info.yaml 配置（输入路径后即时调 `validate-sig-path` 校验路径存在性与 sig-info.yaml 文件；同步任务状态在全局配置弹窗内展示）。**默认分支直接从代码托管平台获取、不可修改**。repo_info 层面下游 7 仓（codecheck/cicd/framework/anti-poison/sca/gateway/vulnerability）零改动；例外：全局配置表迁移涉及 framework 删除产品/项目的级联清理改指新表（见 §4.2）。
 
+## 0. 版本修订记录（对齐当前代码实现）
+
+> 本文档为设计基线，以下条目为按**当前实际代码实现**对早期设计做的对齐修订，标为「已实现」或「已修订」。如无后续再变更，以下述描述为准。
+
+| # | 早期设计 | 当前实现（对齐） | 状态 |
+|---|----------|------------------|------|
+| 1 | `sigInfoLocations` 为**顶层 URL 数组**，不按平台分键，后端按 URL 域名解析归类 | `config_json.sigInfoLocations` 改为**按平台分键的 Map**（`{"gitcode":[url...],"gitee":[...],"github":[...]}`）；`GlobalConfigUpdateDTO.sigInfoLocations` 为 `Map<String, List<String>>`，前端按平台分组提交，后端保存时校验「路径域名与平台键一致」；读取回显直接按平台分键返回 | 已修订（见 §1.4/§2.2.1/§3.1.4/§4.2/§6.4） |
+| 2 | `validate-sig-path` 单 `path` 入参、单结果返回 | 改为**批量**：入参 `{"paths":[...]}`，返回 `DataResult<List<SigPathValidateVO>>`，每条含 `path/valid/platform/errorCode/message`，单条失败不阻断其余路径（>20 条直接拒绝） | 已修订（见 §6.5/§6.8） |
+| 3 | 开关类配置 OR 聚合由 coderepo 提供 `internal/aggregate-switch` 接口 | 因当前**无下游调用方**，配套的 `internal/aggregate-switch` 接口及 `repo_info` 侧 `aggregateSwitchByRepoUrl` 聚合查询**已移除**（遵循「无下游调用方即不保留」原则）；开关 OR 聚合仅作为下游有需求时的设计约定，本期不落地接口 | 已修订（§6.10/§2.4 相应收敛） |
+| 4 | 业务日志未明确 updateGlobalConfig / triggerSigSync 记录 | 新增 `@LogApi` 独立 operation：`UPDATE_GLOBAL_CONFIG`（修改项目全局配置）、`SYNC_SIG_REPOS`（触发SIG仓一键同步）；`ProjectLogHandler.getOldData`/`encapsulatingLogsDetailVO` 分别记录旧 config_json 与返回的 data（新配置回显/同步任务信息，已去令牌） | 已实现 |
+| 5 | config_json 角色映射键值为 `gitcode` | 保持按平台分键，仅 gitcode 有 roleMapping；与实现一致 | 一致 |
+
+> 其余章节（repo_info 多行模型、一站式 key 结构、SIG 同步异步+分布式锁、默认参数、迁移策略等）与当前实现保持一致，不再单列。
+
 ## 1. 方案设计
 
 ### 1.1 问题域
@@ -83,10 +97,10 @@ addRepoInfo(userId, userName, projectId, RepoDTO):
 
 #### 2.2.1 sig-info.yaml 路径配置（全局配置弹窗，支持多路径）
 
-- 用户在「全局配置」弹窗的「代码仓录入配置」区域维护**多个** sig-info.yaml **路径**，存 `project_repo_global_config.config_json.sigInfoLocations`（数组）。
+- 用户在「全局配置」弹窗的「代码仓录入配置」区域维护**多个** sig-info.yaml **路径**，存 `project_repo_global_config.config_json.sigInfoLocations`（**按平台分键的 Map**：key 为 gitcode/gitee/github，value 为路径 URL 列表）。
 - 路径指向**目录**（如 `https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private`），系统在该目录下找 sig-info.yaml 文件。
-- **配置时不区分平台**，用户自由添加多个路径；**后端根据 URL 域名统一区分平台**（gitcode.com → gitcode，gitee.com → gitee，github.com → github）。
-- **输入路径后即时校验**：用户输入/修改路径后（blur / 防抖），前端调 `POST /project-config/validate-sig-path`（见 §6.5）校验该路径是否存在、其下是否存在 sig-info.yaml 文件；校验结果（可用 / 路径不存在 / 文件不存在）就地展示，**不阻断保存**。
+- **配置时按平台分组提交**，后端保存时校验每条 URL 域名与其所属平台键一致（gitcode.com → gitcode，gitee.com → gitee，github.com → github）。
+- **输入路径后即时批量校验**：用户输入/修改路径后（blur / 防抖），前端调 `POST /project-config/validate-sig-path`（见 §6.5）**批量**校验这些路径是否存在、其下是否存在 sig-info.yaml 文件；校验结果（可用 / 路径不存在 / 文件不存在）就地展示，**不阻断保存**。
 
 #### 2.2.2 sig-info.yaml 文件格式（固定）
 
@@ -390,17 +404,20 @@ CREATE TABLE project_repo_global_config (
 --    迁移完成后旧表 project_gitcode_role_mapping 废弃（不物理删除）
 ```
 
-**config_json 结构（约定，sigInfoLocations 顶层数组不按平台分键，角色映射按平台分键）**：
+**config_json 结构（约定，sigInfoLocations 按平台分键，角色映射亦按平台分键）**：
 
 ```jsonc
 {
-  // SIG sig-info.yaml 路径列表（不按平台分键，后端根据 URL 域名统一区分平台）
-  "sigInfoLocations": [
-    { "owner": "openlibing", "repo": "community-private", "branch": "master",
-      "path": "openLiBing-private/sigs/openLiBing-private" },   // 目录路径，在其下找 sig-info.yaml
-    { "owner": "openlibing", "repo": "community-private", "branch": "master",
-      "path": "openLiBing-private/sigs/sig2" }
-  ],
+  // SIG sig-info.yaml 路径列表（按平台分键：key 为 gitcode/gitee/github，value 为路径URL列表；
+  //   保存时校验每条 URL 域名与平台键一致；兼容旧版顶层数组存储，读取时自动归组）
+  "sigInfoLocations": {
+    "gitcode": [
+      "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private",
+      "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/sig2"
+    ],
+    "gitee":  [],
+    "github": []
+  },
   // 角色映射按平台分键（仅 gitcode 有）
   "gitcode": {
     "roleMapping": [
@@ -564,36 +581,42 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 
 ### 6.4 新增接口 2/3：`GET|POST /project-config/global-config`（项目级全局配置，由 ProjectConfigController 实现）
 
-- `GET /project-config/global-config?userId=xxx&projectId=1`：回显全局配置（sigInfoLocations 多路径 + 各平台 roleMapping + 公共账号掩码）。**sigInfoLocations 回显按平台分组**（`{ gitcode: [...], gitee: [...], github: [...] }`，平台 key 为后端根据 URL 域名解析归类，前端按平台分组区分；POST 提交仍收 URL 数组，前端将各组内 url 拍平提交）。
-- `POST /project-config/global-config`：**全局配置唯一写入口**，一次提交全部配置内容（三页签 + 代码仓录入配置区）——① 更新 `config_json.sigInfoLocations`（多路径列表）+ `config_json[platform].roleMapping`（仅 gitcode）（现有 `/project-config/update-gitcode-role-mapping` 废弃，前端改调本接口；路径可用性校验已前移至输入时的 `validate-sig-path` 接口，见 §6.5）；② **项目公共账号更新也并入本接口**（按平台提交登录名 + 令牌，令牌加密入库、留空不覆盖；**实现层仍写入现有项目公共账号表 `project_common_account_info`，不进 config_json，不迁移**）；接口内对 `projectId` 加分布式锁（防 config_json 读-改-写并发丢更新，见 §5.3）。
+- `GET /project-config/global-config?userId=xxx&projectId=1`：回显全局配置（sigInfoLocations 多路径 + 各平台 roleMapping + 公共账号掩码）。**sigInfoLocations 回显按平台分键**（`{ gitcode: [...], gitee: [...], github: [...] }`）；POST 提交同样按平台分键提交。
+- `POST /project-config/global-config`：**全局配置唯一写入口**，一次提交全部配置内容（三页签 + 代码仓录入配置区）——① 更新 `config_json.sigInfoLocations`（**按平台分键的 Map**，保存时校验每条 URL 域名与平台键一致）+ `config_json[platform].roleMapping`（仅 gitcode）（现有 `/project-config/update-gitcode-role-mapping` 废弃，前端改调本接口；路径可用性校验已前移至输入时的 `validate-sig-path` 接口，见 §6.5）；② **项目公共账号更新也并入本接口**（按平台提交登录名 + 令牌，令牌加密入库、留空不覆盖；**实现层仍写入现有项目公共账号表 `project_common_account_info`，不进 config_json，不迁移**）；接口内对 `projectId` 加分布式锁（防 config_json 读-改-写并发丢更新，见 §5.3）。
 
 > **控制器归属**：由现有 [ProjectConfigController](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/ProjectConfigController.java) 提供（`/project-config` 路径），不占用 `/project-repo`。
 
-### 6.5 新增接口 4：`POST /project-config/validate-sig-path`（sig-info 路径校验，由 ProjectConfigController 实现）
+### 6.5 新增接口 4：`POST /project-config/validate-sig-path`（sig-info 路径批量校验，由 ProjectConfigController 实现）
 
-**用途**：用户在全局配置弹窗输入/修改 sig-info 路径后（blur / 防抖）即时校验：该路径（owner/repo/branch/path）是否可访问、其下是否存在 sig-info.yaml 文件。校验结果就地展示，不阻断保存。
+**用途**：用户在全局配置弹窗输入/修改 sig-info 路径后（blur / 防抖）**批量**校验：每条路径（owner/repo/branch/path）是否可访问、其下是否存在 sig-info.yaml 文件。单条失败不阻断其余路径；校验结果就地展示，不阻断保存。
 
-请求：
+请求（批量）：
 
 ```jsonc
 {
   "userId": 10001,
   "projectId": 1,
-  "path": "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private"
+  "paths": [                        // ≤20 条
+    "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private",
+    "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/sig2"
+  ]
 }
 ```
 
-响应：
+响应（数组，逐条对应入参 paths）：
 
 ```jsonc
 {
   "code": 200,
-  "data": {
-    "valid": true,               // 路径存在且 sig-info.yaml 文件存在
-    "platform": "gitcode",       // 后端根据 URL 域名解析的平台（gitcode/gitee/github）
-    "errorCode": null,           // 失败时：REPO_NOT_FOUND / BRANCH_NOT_FOUND / FILE_NOT_FOUND / API_ERROR
-    "message": "校验通过"          // 失败原因描述（如「路径不存在」「目录下未找到 sig-info.yaml 文件」）
-  }
+  "data": [
+    {
+      "path": "https://gitcode.com/openlibing/community-private/blob/master/...",  // 对应该条入参路径
+      "valid": true,               // 路径存在且 sig-info.yaml 文件存在
+      "platform": "gitcode",       // 后端根据 URL 域名解析的平台（gitcode/gitee/github）
+      "errorCode": null,           // 失败时：REPO_NOT_FOUND / BRANCH_NOT_FOUND / FILE_NOT_FOUND / API_ERROR
+      "message": "校验通过"          // 失败原因描述
+    }
+  ]
 }
 ```
 
