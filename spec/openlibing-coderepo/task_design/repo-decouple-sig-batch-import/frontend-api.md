@@ -8,13 +8,13 @@
 
 ### 1.1 基础信息
 
-| 项 | 约定 |
-|------|------|
-| 服务 | openlibing-coderepo |
-| 路径前缀 | `/project-repo`（仓库相关，RepoController）、`/project-config`（全局配置相关，ProjectConfigController） |
-| 鉴权 | 沿用现有网关 token + 角色校验；新增接口读权限沿用 `query-repo` 角色集合、写权限沿用 `add-repo` 角色集合 |
-| 传参风格 | `userId` / `userName` / `projectId` 等简单参数走 **query 参数**（与现有接口一致）；复杂对象走 JSON 请求体 |
-| Content-Type | `application/json`（有请求体时） |
+| 项           | 约定                                                                                                      |
+| ------------ | --------------------------------------------------------------------------------------------------------- |
+| 服务         | openlibing-coderepo                                                                                       |
+| 路径前缀     | `/project-repo`（仓库相关，RepoController）、`/project-config`（全局配置相关，ProjectConfigController）   |
+| 鉴权         | 沿用现有网关 token + 角色校验；新增接口读权限沿用 `query-repo` 角色集合、写权限沿用 `add-repo` 角色集合   |
+| 传参风格     | `userId` / `userName` / `projectId` 等简单参数走 **query 参数**（与现有接口一致）；复杂对象走 JSON 请求体 |
+| Content-Type | `application/json`（有请求体时）                                                                          |
 
 ### 1.2 统一响应结构
 
@@ -28,28 +28,28 @@
 
 ### 1.3 核心行为变化摘要（前端必读）
 
-| 变化点 | 说明 |
-|--------|------|
-| 录入自动检测 | `repoUrl` blur 调 `check-repo-url`；命中其他项目已录入 → 表单**直接使用**同步过来的上次录入配置（可修改）；编辑对话框**不预填**其他项目数据，仅回显本行 |
+| 变化点         | 说明                                                                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 录入自动检测   | `repoUrl` blur 调 `check-repo-url`；命中其他项目已录入 → 表单**直接使用**同步过来的上次录入配置（可修改）；编辑对话框**不预填**其他项目数据，仅回显本行 |
 | 配置不一致提示 | 录入提交前 / 编辑保存前，传 `formConfig`（编辑时另传 `repoId`）调 `check-repo-url` 比对；`configDiff` 非空 → 弹确认弹窗，用户确认后**仅保存当前项目行** |
-| 默认分支只读 | 直接从代码托管平台实时获取，表单只读展示，**不提交该字段** |
-| 是否参与运营 | `add-repo` / `update-repo` 新增 `isParticipateOperation` 参数 |
-| 开关 OR 聚合 | 同一仓库被多项目录入时，开关类配置「任一项目开启即生效」——前端仅需在提示文案中说明，无接口调用变化 |
-| SIG 仓一键同步 | 全局配置弹窗内的「一键同步」按钮（异步 + 任务状态在弹窗内展示） |
-| 废弃接口 | `GET /project-repo/get-repo-association`、`POST /project-config/update-gitcode-role-mapping` 废弃（能力并入 `check-repo-url` / `global-config`） |
+| 默认分支只读   | 直接从代码托管平台实时获取，表单只读展示，**不提交该字段**                                                                                              |
+| 是否参与运营   | `add-repo` / `update-repo` 新增 `isParticipateOperation` 参数                                                                                           |
+| 开关 OR 聚合   | 同一仓库被多项目录入时，开关类配置「任一项目开启即生效」——前端仅需在提示文案中说明，无接口调用变化                                                      |
+| SIG 仓一键同步 | 全局配置弹窗内的「一键同步」按钮（异步 + 任务状态在弹窗内展示）                                                                                         |
+| 废弃接口       | `GET /project-repo/get-repo-association`、`POST /project-config/update-gitcode-role-mapping` 废弃（能力并入 `check-repo-url` / `global-config`）        |
 
 ## 2. 接口总览
 
-| 序号 | 接口 | 方法 | 路径 | 状态 | 使用场景 |
-|------|------|------|------|------|---------|
-| 1 | 录入/编辑冲突检测 | POST | `/project-repo/check-repo-url` | **新增** | 录入 blur 检测、编辑保存前差异检测 |
-| 2 | 录入仓库 | POST | `/project-repo/add-repo` | 改造 | 录入对话框提交 |
-| 3 | 修改仓库 | POST | `/project-repo/update-repo` | 改造 | 编辑对话框提交 |
-| 4 | 查询全局配置 | GET | `/project-config/global-config` | **新增** | 全局配置弹窗打开时回显 |
-| 5 | 更新全局配置 | POST | `/project-config/global-config` | **新增** | 全局配置弹窗保存 |
-| 6 | sig-info 路径校验 | POST | `/project-config/validate-sig-path` | **新增** | 路径输入 blur/防抖即时校验 |
-| 7 | 触发 SIG 仓一键同步 | POST | `/project-config/sig-sync` | **新增** | 全局配置弹窗「一键同步」按钮 |
-| 8 | 查询同步任务状态 | GET | `/project-config/sig-sync/status` | **新增** | 轮询任务状态（全局配置弹窗内展示） |
+| 序号 | 接口                | 方法 | 路径                                | 状态     | 使用场景                           |
+| ---- | ------------------- | ---- | ----------------------------------- | -------- | ---------------------------------- |
+| 1    | 录入/编辑冲突检测   | POST | `/project-repo/check-repo-url`      | **新增** | 录入 blur 检测、编辑保存前差异检测 |
+| 2    | 录入仓库            | POST | `/project-repo/add-repo`            | 改造     | 录入对话框提交                     |
+| 3    | 修改仓库            | POST | `/project-repo/update-repo`         | 改造     | 编辑对话框提交                     |
+| 4    | 查询全局配置        | GET  | `/project-config/global-config`     | **新增** | 全局配置弹窗打开时回显             |
+| 5    | 更新全局配置        | POST | `/project-config/global-config`     | **新增** | 全局配置弹窗保存                   |
+| 6    | sig-info 路径校验   | POST | `/project-config/validate-sig-path` | **新增** | 路径输入 blur/防抖即时校验         |
+| 7    | 触发 SIG 仓一键同步 | POST | `/project-config/sig-sync`          | **新增** | 全局配置弹窗「一键同步」按钮       |
+| 8    | 查询同步任务状态    | GET  | `/project-config/sig-sync/status`   | **新增** | 轮询任务状态（全局配置弹窗内展示） |
 
 ## 3. 接口详情
 
@@ -64,18 +64,18 @@
 
 - Query 参数：
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| userId | String | 是 | 操作人 id（权限校验） |
+| 参数   | 类型   | 必填 | 说明                  |
+| ------ | ------ | ---- | --------------------- |
+| userId | String | 是   | 操作人 id（权限校验） |
 
 - 请求体：
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| projectId | Integer | 是 | 当前项目 id |
-| repoUrl | String | 是 | 仓库链接（如 `https://gitcode.com/org/repo.git`） |
-| repoId | Integer | 否 | 当前项目本行 repo_id；**保存前比对时若当前项目已有本行（录入场景 blur 返回的 repoId 非 null、编辑场景）必须传**，比对时排除本行 |
-| formConfig | Object | 否 | 用户当前表单配置（**保存前比对时传**；字段同 add-repo 表单配置：repoName / repoOwner / purpose / openSource / repoLanguage / assumePr / autoTrigger / autoTriggerDesignScan / isAutoFormat / isSuppressionEnabled / isParticipateOperation / accessToken 等；默认分支不传、不参与比对） |
+| 参数       | 类型    | 必填 | 说明                                                                                                                                                                                                                                                                                    |
+| ---------- | ------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| projectId  | Integer | 是   | 当前项目 id                                                                                                                                                                                                                                                                             |
+| repoUrl    | String  | 是   | 仓库链接（如 `https://gitcode.com/org/repo.git`）                                                                                                                                                                                                                                       |
+| repoId     | Integer | 否   | 当前项目本行 repo_id；**保存前比对时若当前项目已有本行（录入场景 blur 返回的 repoId 非 null、编辑场景）必须传**，比对时排除本行                                                                                                                                                         |
+| formConfig | Object  | 否   | 用户当前表单配置（**保存前比对时传**；字段同 add-repo 表单配置：repoName / repoOwner / purpose / openSource / repoLanguage / assumePr / autoTrigger / autoTriggerDesignScan / isAutoFormat / isSuppressionEnabled / isParticipateOperation / accessToken 等；默认分支不传、不参与比对） |
 
 ```jsonc
 // 录入 blur 检测
@@ -112,9 +112,10 @@
   "code": 200,
   "msg": "success",
   "data": {
-    "exists": true,                 // 该 repo_url 是否已在任一项目录入
-    "repoId": 1001,                 // 当前项目本行 repo_id（当前项目未录入为 null）
-    "lastConfig": {                 // 上次录入该代码仓的配置副本（仅录入场景预填用；accessToken 已脱敏为空；不含 remark——备注为项目特定信息，不跨项目复制）
+    "exists": true, // 该 repo_url 是否已在任一项目录入
+    "repoId": 1001, // 当前项目本行 repo_id（当前项目未录入为 null）
+    "lastConfig": {
+      // 上次录入该代码仓的配置副本（仅录入场景预填用；accessToken 已脱敏为空；不含 remark——备注为项目特定信息，不跨项目复制）
       "repoName": "openlibing-coderepo",
       "repoOwner": "sig-owner",
       "purpose": "自研源码",
@@ -125,23 +126,25 @@
       "autoTriggerDesignScan": "0",
       "isAutoFormat": false,
       "isSuppressionEnabled": true,
-      "isParticipateOperation": true
+      "isParticipateOperation": true,
     },
-    "associatedProjects": [         // 已关联项目列表（不含当前项目，供提示文案展示）
+    "associatedProjects": [
+      // 已关联项目列表（不含当前项目，供提示文案展示）
       { "projectId": 2, "projectName": "项目A" },
-      { "projectId": 3, "projectName": "项目B" }
+      { "projectId": 3, "projectName": "项目B" },
     ],
-    "configDiff": [                 // 配置差异字段（仅当请求传 formConfig 时返回；本表单配置 与 同组其他行比对；无差异或无同组行为空数组）
+    "configDiff": [
+      // 配置差异字段（仅当请求传 formConfig 时返回；本表单配置 与 同组其他行比对；无差异或无同组行为空数组）
       {
         "field": "assumePr",
         "fieldLabel": "接管PR管理",
         "currentValue": "1",
         "otherValues": [
-          { "projectId": 2, "projectName": "项目A", "value": "0" }
-        ]
-      }
-    ]
-  }
+          { "projectId": 2, "projectName": "项目A", "value": "0" },
+        ],
+      },
+    ],
+  },
 }
 ```
 
@@ -162,24 +165,24 @@
 - Query 参数：`userId`（必填）、`userName`（必填）
 - 请求体（在现有 RepoDTO 基础上，仅列关键/变化字段）：
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| repoName | String | 是 | 代码仓别名，≤50 字符 |
-| repoUrl | String | 是 | 仓库地址 |
-| repoOwner | String | 是 | 仓库责任人 |
-| platform | String | 是 | `gitee` / `gitcode` / `github` |
-| projectId | Integer | 是 | 归属项目 id |
-| purpose | String | 是 | 用途（枚举：工程&配置文件 / 文档 / 构建 / 测试 / 自研工具（不参与构建）/ 自研工具（参与构建）/ 自研源码 / 运维部署 / 预研&技术） |
-| openSource | String | 是 | 开源类型：`lead` 主导开源 / `participate` 参与开源 |
-| assumePr | String | 是 | 接管 PR 管理：`"0"` / `"1"` |
-| autoTrigger | String | 是 | 自动触发门禁流水线：`"0"` / `"1"` |
-| autoTriggerDesignScan | String | 是 | 自动触发接口扫描：`"0"` / `"1"` |
-| isAutoFormat | Boolean | 是 | 代码风格自动修复 |
-| isSuppressionEnabled | Boolean | 是 | 告警抑制自动检视 |
-| **isParticipateOperation** | Boolean | 否 | **新增**：是否参与运营（默认 `true`） |
-| repoLanguage | String | 否 | 语言（java、go 等） |
-| accessToken / isEditAccessToken | String / Boolean | 否 | 仓库令牌及是否编辑标记（沿用现状） |
-| 其他字段 | — | 否 | projectName、realProjectName、disallowSelfMerge、disallowUnresolvedDiscussionsMerge、reviewerId、remark、codecheckRuleSet、antiRuleSet 等沿用现状 |
+| 参数                            | 类型             | 必填 | 说明                                                                                                                                              |
+| ------------------------------- | ---------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| repoName                        | String           | 是   | 代码仓别名，≤50 字符                                                                                                                              |
+| repoUrl                         | String           | 是   | 仓库地址                                                                                                                                          |
+| repoOwner                       | String           | 是   | 仓库责任人                                                                                                                                        |
+| platform                        | String           | 是   | `gitee` / `gitcode` / `github`                                                                                                                    |
+| projectId                       | Integer          | 是   | 归属项目 id                                                                                                                                       |
+| purpose                         | String           | 是   | 用途（枚举：工程&配置文件 / 文档 / 构建 / 测试 / 自研工具（不参与构建）/ 自研工具（参与构建）/ 自研源码 / 运维部署 / 预研&技术）                  |
+| openSource                      | String           | 是   | 开源类型：`lead` 主导开源 / `participate` 参与开源                                                                                                |
+| assumePr                        | String           | 是   | 接管 PR 管理：`"0"` / `"1"`                                                                                                                       |
+| autoTrigger                     | String           | 是   | 自动触发门禁流水线：`"0"` / `"1"`                                                                                                                 |
+| autoTriggerDesignScan           | String           | 是   | 自动触发接口扫描：`"0"` / `"1"`                                                                                                                   |
+| isAutoFormat                    | Boolean          | 是   | 代码风格自动修复                                                                                                                                  |
+| isSuppressionEnabled            | Boolean          | 是   | 告警抑制自动检视                                                                                                                                  |
+| **isParticipateOperation**      | Boolean          | 否   | **新增**：是否参与运营（默认 `true`）                                                                                                             |
+| repoLanguage                    | String           | 否   | 语言（java、go 等）                                                                                                                               |
+| accessToken / isEditAccessToken | String / Boolean | 否   | 仓库令牌及是否编辑标记（沿用现状）                                                                                                                |
+| 其他字段                        | —                | 否   | projectName、realProjectName、disallowSelfMerge、disallowUnresolvedDiscussionsMerge、reviewerId、remark、codecheckRuleSet、antiRuleSet 等沿用现状 |
 
 ```jsonc
 {
@@ -196,7 +199,7 @@
   "autoTriggerDesignScan": "0",
   "isAutoFormat": false,
   "isSuppressionEnabled": true,
-  "isParticipateOperation": true
+  "isParticipateOperation": true,
 }
 ```
 
@@ -225,10 +228,10 @@
 
 - Query 参数：
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| userId | String | 是 | 操作人 id |
-| projectId | Integer | 是 | 项目 id |
+| 参数      | 类型    | 必填 | 说明      |
+| --------- | ------- | ---- | --------- |
+| userId    | String  | 是   | 操作人 id |
+| projectId | Integer | 是   | 项目 id   |
 
 **响应**
 
@@ -245,27 +248,27 @@
           "owner": "openlibing",
           "repo": "community-private",
           "branch": "master",
-          "path": "openLiBing-private/sigs/openLiBing-private"
-        }
+          "path": "openLiBing-private/sigs/openLiBing-private",
+        },
       ],
       "gitee": [],
-      "github": []
+      "github": [],
     },
     // 角色映射（仅 gitcode 平台有）
     "roleMapping": {
       "gitcode": [
-        { "platformRole": "owner",     "openlibingRole": "project_admin" },
-        { "platformRole": "master",    "openlibingRole": "repo_admin" },
-        { "platformRole": "developer", "openlibingRole": "developer" }
-      ]
+        { "platformRole": "owner", "openlibingRole": "project_admin" },
+        { "platformRole": "master", "openlibingRole": "repo_admin" },
+        { "platformRole": "developer", "openlibingRole": "developer" },
+      ],
     },
     // 各平台项目公共账号（令牌掩码回显）
     "commonAccounts": {
       "gitcode": { "accountName": "openlibing-gitcode", "token": "******" },
-      "gitee":   { "accountName": "", "token": "" },
-      "github":  { "accountName": "", "token": "" }
-    }
-  }
+      "gitee": { "accountName": "", "token": "" },
+      "github": { "accountName": "", "token": "" },
+    },
+  },
 }
 ```
 
@@ -280,30 +283,30 @@
 - Query 参数：`userId`（必填）
 - 请求体：
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| projectId | Integer | 是 | 项目 id |
-| sigInfoLocations | String[] | 否 | sig-info.yaml 路径 URL 数组（**≤20 个**；平台由后端根据 URL 域名解析，前端无需区分；回显为按平台分组的对象——提交时将各组内 url 拍平为数组即可） |
-| roleMapping | Object | 否 | 仅 `gitcode` 键：`[{ "platformRole": "...", "openlibingRole": "..." }]` |
-| commonAccounts | Object | 否 | 各平台公共账号：`{ gitcode: { accountName, token }, gitee: {...}, github: {...} }`；**token 留空/`******` 表示不修改原令牌** |
+| 参数             | 类型     | 必填 | 说明                                                                                                                                            |
+| ---------------- | -------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| projectId        | Integer  | 是   | 项目 id                                                                                                                                         |
+| sigInfoLocations | String[] | 否   | sig-info.yaml 路径 URL 数组（**≤20 个**；平台由后端根据 URL 域名解析，前端无需区分；回显为按平台分组的对象——提交时将各组内 url 拍平为数组即可） |
+| roleMapping      | Object   | 否   | 仅 `gitcode` 键：`[{ "platformRole": "...", "openlibingRole": "..." }]`                                                                         |
+| commonAccounts   | Object   | 否   | 各平台公共账号：`{ gitcode: { accountName, token }, gitee: {...}, github: {...} }`；**token 留空/`******` 表示不修改原令牌**                    |
 
 ```jsonc
 {
   "projectId": 1,
   "sigInfoLocations": [
     "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private",
-    "https://gitcode.com/openlibing/community/blob/master/sigs/sig-infra"
+    "https://gitcode.com/openlibing/community/blob/master/sigs/sig-infra",
   ],
   "roleMapping": {
     "gitcode": [
-      { "platformRole": "owner",     "openlibingRole": "project_admin" },
-      { "platformRole": "master",    "openlibingRole": "repo_admin" },
-      { "platformRole": "developer", "openlibingRole": "developer" }
-    ]
+      { "platformRole": "owner", "openlibingRole": "project_admin" },
+      { "platformRole": "master", "openlibingRole": "repo_admin" },
+      { "platformRole": "developer", "openlibingRole": "developer" },
+    ],
   },
   "commonAccounts": {
-    "gitcode": { "accountName": "openlibing-gitcode", "token": "" }
-  }
+    "gitcode": { "accountName": "openlibing-gitcode", "token": "" },
+  },
 }
 ```
 
@@ -324,15 +327,15 @@
 - Query 参数：`userId`（必填）
 - 请求体：
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| projectId | Integer | 是 | 项目 id |
-| path | String | 是 | 路径 URL（指向 sig-info.yaml 所在**目录**） |
+| 参数      | 类型    | 必填 | 说明                                        |
+| --------- | ------- | ---- | ------------------------------------------- |
+| projectId | Integer | 是   | 项目 id                                     |
+| path      | String  | 是   | 路径 URL（指向 sig-info.yaml 所在**目录**） |
 
 ```jsonc
 {
   "projectId": 1,
-  "path": "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private"
+  "path": "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private",
 }
 ```
 
@@ -343,22 +346,22 @@
   "code": 200,
   "msg": "success",
   "data": {
-    "valid": true,               // 路径存在且其下存在 sig-info.yaml 文件
-    "platform": "gitcode",       // 后端根据 URL 域名解析的平台（gitcode / gitee / github）
-    "errorCode": null,           // 失败时：REPO_NOT_FOUND / BRANCH_NOT_FOUND / FILE_NOT_FOUND / API_ERROR
-    "message": "校验通过"         // 失败原因描述（如「路径不存在」「目录下未找到 sig-info.yaml 文件」）
-  }
+    "valid": true, // 路径存在且其下存在 sig-info.yaml 文件
+    "platform": "gitcode", // 后端根据 URL 域名解析的平台（gitcode / gitee / github）
+    "errorCode": null, // 失败时：REPO_NOT_FOUND / BRANCH_NOT_FOUND / FILE_NOT_FOUND / API_ERROR
+    "message": "校验通过", // 失败原因描述（如「路径不存在」「目录下未找到 sig-info.yaml 文件」）
+  },
 }
 ```
 
 **前端展示建议**
 
-| 校验结果 | 展示 |
-|---------|------|
-| `valid=true` | `● 可用`（绿色） |
-| `errorCode=REPO_NOT_FOUND` / `BRANCH_NOT_FOUND` | `● 路径不存在`（红色） |
-| `errorCode=FILE_NOT_FOUND` | `● 目录下未找到 sig-info.yaml 文件`（红色） |
-| `errorCode=API_ERROR` | `● 校验失败，请稍后重试`（红色） |
+| 校验结果                                        | 展示                                        |
+| ----------------------------------------------- | ------------------------------------------- |
+| `valid=true`                                    | `● 可用`（绿色）                            |
+| `errorCode=REPO_NOT_FOUND` / `BRANCH_NOT_FOUND` | `● 路径不存在`（红色）                      |
+| `errorCode=FILE_NOT_FOUND`                      | `● 目录下未找到 sig-info.yaml 文件`（红色） |
+| `errorCode=API_ERROR`                           | `● 校验失败，请稍后重试`（红色）            |
 
 ### 3.7 触发 SIG 仓一键同步 `POST /project-config/sig-sync`（新增）
 
@@ -374,11 +377,11 @@
 
 - Query 参数：
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| userId | String | 是 | 操作人 id |
-| userName | String | 是 | 操作人名称 |
-| projectId | Integer | 是 | 项目 id |
+| 参数      | 类型    | 必填 | 说明       |
+| --------- | ------- | ---- | ---------- |
+| userId    | String  | 是   | 操作人 id  |
+| userName  | String  | 是   | 操作人名称 |
+| projectId | Integer | 是   | 项目 id    |
 
 - 无请求体
 
@@ -391,8 +394,8 @@
   "data": {
     "taskId": "sig-sync-123456",
     "status": "RUNNING",
-    "message": "SIG同步任务已触发，请稍后查询结果"
-  }
+    "message": "SIG同步任务已触发，请稍后查询结果",
+  },
 }
 ```
 
@@ -406,11 +409,11 @@
 
 - Query 参数：
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| userId | String | 是 | 操作人 id |
-| projectId | Integer | 是 | 项目 id |
-| taskId | String | 否 | 任务 id（触发接口返回值；不传则返回最近一次任务） |
+| 参数      | 类型    | 必填 | 说明                                              |
+| --------- | ------- | ---- | ------------------------------------------------- |
+| userId    | String  | 是   | 操作人 id                                         |
+| projectId | Integer | 是   | 项目 id                                           |
+| taskId    | String  | 否   | 任务 id（触发接口返回值；不传则返回最近一次任务） |
 
 **响应**
 
@@ -420,48 +423,52 @@
   "msg": "success",
   "data": {
     "taskId": "sig-sync-123456",
-    "status": "PARTIAL",       // RUNNING / SUCCESS / FAILED / PARTIAL
-    "imported": 45,            // 已成功同步仓库数
-    "failed": 3,               // 失败仓库数
-    "failedRepos": [           // 失败仓库列表（含失败原因）
-      { "repoUrl": "https://gitcode.com/openlibing/openlibing-legacy.git", "reason": "平台API超时" }
+    "status": "PARTIAL", // RUNNING / SUCCESS / FAILED / PARTIAL
+    "imported": 45, // 已成功同步仓库数
+    "failed": 3, // 失败仓库数
+    "failedRepos": [
+      // 失败仓库列表（含失败原因）
+      {
+        "repoUrl": "https://gitcode.com/openlibing/openlibing-legacy.git",
+        "reason": "平台API超时",
+      },
     ],
-    "message": "同步完成：成功 45 个，失败 3 个"
-  }
+    "message": "同步完成：成功 45 个，失败 3 个",
+  },
 }
 ```
 
 **状态说明**
 
-| status | 含义 | 前端展示 |
-|--------|------|---------|
-| RUNNING | 执行中 | 黄色标签 + 已同步/失败计数，继续轮询 |
-| SUCCESS | 全部成功 | 绿色标签 + imported 计数 |
-| FAILED | 全部失败 | 红色标签 + 失败原因 |
+| status  | 含义     | 前端展示                                      |
+| ------- | -------- | --------------------------------------------- |
+| RUNNING | 执行中   | 黄色标签 + 已同步/失败计数，继续轮询          |
+| SUCCESS | 全部成功 | 绿色标签 + imported 计数                      |
+| FAILED  | 全部失败 | 红色标签 + 失败原因                           |
 | PARTIAL | 部分成功 | 橙色标签 + imported/failed 计数与失败原因列表 |
 
 **轮询建议**：每 3s 轮询一次，超时 10 分钟停止；任务完成后停止轮询。
 
 ## 4. 错误码
 
-| code | msg | 场景 |
-|------|------|------|
-| 200 | success | 成功 |
-| 403 | SIG 路径不存在或不属于该项目 | sig-sync 接口未配置任何 sigInfoLocations |
-| 403 | 平台不合法 | 路径 URL 域名非 gitcode/gitee/github |
-| 403 | 跨项目访问被拒绝 | userId 对 projectId 无访问权限 |
-| 409 | SIG 同步任务已在执行中 | 分布式锁获取失败（已有任务在跑） |
-| 404 | sig-info.yaml 文件不存在 | 实时读取指定路径失败（目录下无 sig-info.yaml） |
-| 500 | sig-info.yaml 格式错误或解析失败 | 实时解析失败 |
-| 500 | 配置文件读取失败，请稍后重试 | 平台 API 调用失败 |
-| 500 | 仓库链接不合法 | repoUrl 校验失败 |
-| 500 | 该仓库已录入当前项目 | 违反唯一约束（并发兜底） |
+| code | msg                              | 场景                                           |
+| ---- | -------------------------------- | ---------------------------------------------- |
+| 200  | success                          | 成功                                           |
+| 403  | SIG 路径不存在或不属于该项目     | sig-sync 接口未配置任何 sigInfoLocations       |
+| 403  | 平台不合法                       | 路径 URL 域名非 gitcode/gitee/github           |
+| 403  | 跨项目访问被拒绝                 | userId 对 projectId 无访问权限                 |
+| 409  | SIG 同步任务已在执行中           | 分布式锁获取失败（已有任务在跑）               |
+| 404  | sig-info.yaml 文件不存在         | 实时读取指定路径失败（目录下无 sig-info.yaml） |
+| 500  | sig-info.yaml 格式错误或解析失败 | 实时解析失败                                   |
+| 500  | 配置文件读取失败，请稍后重试     | 平台 API 调用失败                              |
+| 500  | 仓库链接不合法                   | repoUrl 校验失败                               |
+| 500  | 该仓库已录入当前项目             | 违反唯一约束（并发兜底）                       |
 
 ## 5. 前端交互要点汇总
 
-| 场景 | 交互流程 |
-|------|---------|
-| 录入对话框 | ① `repoUrl` blur（防抖 300ms）调 `check-repo-url`（只传基础参数）；② `exists=true` → 表单**直接使用** `lastConfig` 同步数据（可修改）+ 提示条列出已关联项目；③ 提交前传 `formConfig`（blur 返回的 repoId 非 null 时一并传）再调 `check-repo-url`，`configDiff` 非空 → 弹「配置不一致提示」确认弹窗（文案：仅影响当前项目行，不修改其他项目配置）；④ 确认后调 `add-repo`（含 `isParticipateOperation`，不含默认分支） |
-| 编辑对话框 | ① 打开时回显本行配置（不预填其他项目数据）；② 保存前传 `repoId` + `formConfig` 调 `check-repo-url`，`configDiff` 非空 → 弹「配置不一致提示」告警（文案含开关 OR 聚合规则说明）；③ 确认后调 `update-repo`（含 `isParticipateOperation`，不含默认分支）；默认分支只读展示 |
-| 全局配置弹窗 | ① 打开时 GET `global-config` 回显（`sigInfoLocations` 按平台分组返回，路径输入框用 `url` 回显、公共账号令牌显示掩码）；② 路径输入 blur（防抖 300ms）调 `validate-sig-path`，结果就地展示（不阻断保存）；③ 保存时 POST `global-config`（`sigInfoLocations` 传拍平后的 URL 数组；公共账号令牌留空表示不修改） |
-| SIG 仓一键同步 | ① 点击「一键同步」→ POST `sig-sync` 返回 `taskId`，按钮置灰；② 轮询 GET `sig-sync/status`（每 3s，超时 10 分钟）；③ 任务状态卡片展示在全局配置弹窗内（RUNNING/SUCCESS/FAILED/PARTIAL + imported/failed 计数与失败原因）；④ 完成后恢复按钮 |
+| 场景           | 交互流程                                                                                                                                                                                                                                                                                                                                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 录入对话框     | ① `repoUrl` blur（防抖 300ms）调 `check-repo-url`（只传基础参数）；② `exists=true` → 表单**直接使用** `lastConfig` 同步数据（可修改）+ 提示条列出已关联项目；③ 提交前传 `formConfig`（blur 返回的 repoId 非 null 时一并传）再调 `check-repo-url`，`configDiff` 非空 → 弹「配置不一致提示」确认弹窗（文案：仅影响当前项目行，不修改其他项目配置）；④ 确认后调 `add-repo`（含 `isParticipateOperation`，不含默认分支） |
+| 编辑对话框     | ① 打开时回显本行配置（不预填其他项目数据）；② 保存前传 `repoId` + `formConfig` 调 `check-repo-url`，`configDiff` 非空 → 弹「配置不一致提示」告警（文案含开关 OR 聚合规则说明）；③ 确认后调 `update-repo`（含 `isParticipateOperation`，不含默认分支）；默认分支只读展示                                                                                                                                              |
+| 全局配置弹窗   | ① 打开时 GET `global-config` 回显（`sigInfoLocations` 按平台分组返回，路径输入框用 `url` 回显、公共账号令牌显示掩码）；② 路径输入 blur（防抖 300ms）调 `validate-sig-path`，结果就地展示（不阻断保存）；③ 保存时 POST `global-config`（`sigInfoLocations` 传拍平后的 URL 数组；公共账号令牌留空表示不修改）                                                                                                          |
+| SIG 仓一键同步 | ① 点击「一键同步」→ POST `sig-sync` 返回 `taskId`，按钮置灰；② 轮询 GET `sig-sync/status`（每 3s，超时 10 分钟）；③ 任务状态卡片展示在全局配置弹窗内（RUNNING/SUCCESS/FAILED/PARTIAL + imported/failed 计数与失败原因）；④ 完成后恢复按钮                                                                                                                                                                            |

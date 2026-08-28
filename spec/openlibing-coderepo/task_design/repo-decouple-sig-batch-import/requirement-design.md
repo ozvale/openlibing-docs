@@ -8,13 +8,13 @@
 
 > 本文档为设计基线，以下条目为按**当前实际代码实现**对早期设计做的对齐修订，标为「已实现」或「已修订」。如无后续再变更，以下述描述为准。
 
-| # | 早期设计 | 当前实现（对齐） | 状态 |
-|---|----------|------------------|------|
-| 1 | `sigInfoLocations` 为**顶层 URL 数组**，不按平台分键，后端按 URL 域名解析归类 | `config_json.sigInfoLocations` 改为**按平台分键的 Map**（`{"gitcode":[url...],"gitee":[...],"github":[...]}`）；`GlobalConfigUpdateDTO.sigInfoLocations` 为 `Map<String, List<String>>`，前端按平台分组提交，后端保存时校验「路径域名与平台键一致」；读取回显直接按平台分键返回 | 已修订（见 §1.4/§2.2.1/§3.1.4/§4.2/§6.4） |
-| 2 | `validate-sig-path` 单 `path` 入参、单结果返回 | 改为**批量**：入参 `{"paths":[...]}`，返回 `DataResult<List<SigPathValidateVO>>`，每条含 `path/valid/platform/errorCode/message`，单条失败不阻断其余路径（>20 条直接拒绝） | 已修订（见 §6.5/§6.8） |
-| 3 | 开关类配置 OR 聚合由 coderepo 提供 `internal/aggregate-switch` 接口 | 因当前**无下游调用方**，配套的 `internal/aggregate-switch` 接口及 `repo_info` 侧 `aggregateSwitchByRepoUrl` 聚合查询**已移除**（遵循「无下游调用方即不保留」原则）；开关 OR 聚合仅作为下游有需求时的设计约定，本期不落地接口 | 已修订（§6.10/§2.4 相应收敛） |
-| 4 | 业务日志未明确 updateGlobalConfig / triggerSigSync 记录 | 新增 `@LogApi` 独立 operation：`UPDATE_GLOBAL_CONFIG`（修改项目全局配置）、`SYNC_SIG_REPOS`（触发SIG仓一键同步）；`ProjectLogHandler.getOldData`/`encapsulatingLogsDetailVO` 分别记录旧 config_json 与返回的 data（新配置回显/同步任务信息，已去令牌） | 已实现 |
-| 5 | config_json 角色映射键值为 `gitcode` | 保持按平台分键，仅 gitcode 有 roleMapping；与实现一致 | 一致 |
+| #   | 早期设计                                                                      | 当前实现（对齐）                                                                                                                                                                                                                                                                | 状态                                      |
+| --- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| 1   | `sigInfoLocations` 为**顶层 URL 数组**，不按平台分键，后端按 URL 域名解析归类 | `config_json.sigInfoLocations` 改为**按平台分键的 Map**（`{"gitcode":[url...],"gitee":[...],"github":[...]}`）；`GlobalConfigUpdateDTO.sigInfoLocations` 为 `Map<String, List<String>>`，前端按平台分组提交，后端保存时校验「路径域名与平台键一致」；读取回显直接按平台分键返回 | 已修订（见 §1.4/§2.2.1/§3.1.4/§4.2/§6.4） |
+| 2   | `validate-sig-path` 单 `path` 入参、单结果返回                                | 改为**批量**：入参 `{"paths":[...]}`，返回 `DataResult<List<SigPathValidateVO>>`，每条含 `path/valid/platform/errorCode/message`，单条失败不阻断其余路径（>20 条直接拒绝）                                                                                                      | 已修订（见 §6.5/§6.8）                    |
+| 3   | 开关类配置 OR 聚合由 coderepo 提供 `internal/aggregate-switch` 接口           | 因当前**无下游调用方**，配套的 `internal/aggregate-switch` 接口及 `repo_info` 侧 `aggregateSwitchByRepoUrl` 聚合查询**已移除**（遵循「无下游调用方即不保留」原则）；开关 OR 聚合仅作为下游有需求时的设计约定，本期不落地接口                                                    | 已修订（§6.10/§2.4 相应收敛）             |
+| 4   | 业务日志未明确 updateGlobalConfig / triggerSigSync 记录                       | 新增 `@LogApi` 独立 operation：`UPDATE_GLOBAL_CONFIG`（修改项目全局配置）、`SYNC_SIG_REPOS`（触发SIG仓一键同步）；`ProjectLogHandler.getOldData`/`encapsulatingLogsDetailVO` 分别记录旧 config_json 与返回的 data（新配置回显/同步任务信息，已去令牌）                          | 已实现                                    |
+| 5   | config_json 角色映射键值为 `gitcode`                                          | 保持按平台分键，仅 gitcode 有 roleMapping；与实现一致                                                                                                                                                                                                                           | 一致                                      |
 
 > 其余章节（repo_info 多行模型、一站式 key 结构、SIG 同步异步+分布式锁、默认参数、迁移策略等）与当前实现保持一致，不再单列。
 
@@ -43,25 +43,25 @@
 
 ### 1.4 关键决策汇总
 
-| 决策点 | 选择 | 理由 |
-|--------|------|------|
-| repo_info 数据模型 | **保持一项目一行、多行并存**；每行 `project_id`=该行所属项目，语义与现状一致 | SCA 等 7 仓按 `(project_id, repo_url)` 反查每行命中、零改动；多项目扫描共享仓为真实场景 |
-| 配置同步（录入时） | 录入时同 repo_url 已在其他项目存在 → 从**上次录入该代码仓的数据**复制配置到表单（可修改）；提交时仅提示与之前项目配置不一致，**不做配置覆盖** | 规避重复手填；不强制覆盖用户在各项目下的独立配置；通过提示让用户感知差异 |
-| 配置同步（编辑时） | 编辑保存时检测到同 repo_url 跨项目配置不一致 → 仅做提示性告警，**不自动覆盖**；用户确认后仅更新本行 | 不强制覆盖；让用户知道配置差异但保留独立维护权 |
-| 开关配置聚合 | 下游使用开关类配置时，先校验该 repo_url 是否存在重复录入，存在的话对多行开关取 **OR**（有一开启则开启，全关闭才关闭）；**不修改其他项目行**，仅在读取时聚合 | 保证下游行为判定正确（如门禁、webhook 等只要一个项目开启即生效）；不强制统一配置 |
-| 查重 | `(repo_url, project_id)` 唯一（一项目一行）；不做 repo_url 全局唯一 | 保证同项目不重复录入；不同项目各自建行以支撑各自扫描 |
-| 组 key | 直接用 `repo_url`（录入已保证协议/https/平台/`.git` 结尾格式统一，直接使用）；repo_url 加普通索引用于组查询 | 用于「同 repo_url 组」判定（录入复制上次配置、编辑冲突检测、开关聚合查询） |
-| 跨项目录入 | 仓库已在其他项目存在 → 当前项目**新建一行**并复制上次录入配置（可修改）；不删除其他项目行；提交时提示配置不一致 | SCA 兼容 + 避免重复手填；不强制覆盖 |
-| 下游仓改造 | **repo_info 层面 7 仓零改动**；**例外：全局配置表迁移（§4.2）影响 framework**——其删除产品/项目时原级联清理 `project_gitcode_role_mapping` 的逻辑需改指新表 | repo_info 多行模型下每项目都有行，权限/归属按行内 project_id 语义与现状一致；仅全局配置表迁移波及 framework 的删除级联清理（见 §4.2） |
-| 全局配置 | **新建 `project_repo_global_config` 表**（每项目一行），存 `config_json`：存量 role_mapping 从 `project_gitcode_role_mapping` 迁入 `config_json[platform].roleMapping`，迁移完成后旧表废弃；角色映射条目用 `platformRole` 区分平台，可扩展；SIG 路径列表存 `config_json.sigInfoLocations`（不按平台分键，后端根据 URL 域名统一区分） | 集中管理 sig-info 路径 / 角色映射（公共账号仍存现有表，经 global-config 接口统一读写），见 §4.2 |
-| SIG 配置读取 | 实时调对应平台读取指定路径下 sig-info.yaml 并解析，不落库不缓存 | 保证读到最新配置，简化链路 |
-| SIG 路径配置 | 用户可自由设置**多个** sig-info.yaml 路径；配置时不区分平台，后端根据 URL 域名统一区分平台；路径指向目录（如 `.../sigs/openLiBing-private`），在该目录下找 sig-info.yaml 文件；**输入路径后即时调 `validate-sig-path` 校验路径存在性与 sig-info.yaml 文件**（见 §6.5） | 支持多 SIG 组；后端统一管理平台归属；即时校验让用户当场发现路径错误 |
-| SIG 仓一键同步 | 全局配置窗口内「一键同步」按钮；**异步执行 + 分布式锁**（防并发重复执行）；**任务状态在全局配置弹窗内展示**；默认参数自动填充（别名/责任人/用途/开源类型/默认分支/公共账号令牌/各开关，见 §2.2.4） | 异步 + 锁避免执行时间长与并发问题 |
-| 默认分支 | **直接从代码托管平台获取，不可修改**（表单只读展示，编辑时也不可改） | 默认分支以平台为准，避免手工填错 |
-| 历史迁移 | **Phase 1**：清洗同项目重复行（按 repo_url）+ 加 `(repo_url, project_id)` 唯一索引 | 本期不归并、不删行，7 仓零影响 |
-| 改造边界 | 仅 repo_info 改造（新增 `is_participate_operation`）+ 新增 project_repo_global_config（从 project_gitcode_role_mapping 迁移数据后旧表废弃）；codecheck Mongo（sig_rule_set）等不改 | 规则集等按各项目在 codecheck 侧各自配置，不在本期收敛范围 |
-| YAML 解析安全 | SnakeYAML `SafeConstructor` | 防 YAML 反序列化攻击 |
-| accessToken 传递 | 调平台 API 时 `Authorization: Bearer <token>` header | 遵循项目硬约束「第三方 API 调用 accessToken 必须在 header」 |
+| 决策点             | 选择                                                                                                                                                                                                                                                                                                                                 | 理由                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| repo_info 数据模型 | **保持一项目一行、多行并存**；每行 `project_id`=该行所属项目，语义与现状一致                                                                                                                                                                                                                                                         | SCA 等 7 仓按 `(project_id, repo_url)` 反查每行命中、零改动；多项目扫描共享仓为真实场景                                               |
+| 配置同步（录入时） | 录入时同 repo_url 已在其他项目存在 → 从**上次录入该代码仓的数据**复制配置到表单（可修改）；提交时仅提示与之前项目配置不一致，**不做配置覆盖**                                                                                                                                                                                        | 规避重复手填；不强制覆盖用户在各项目下的独立配置；通过提示让用户感知差异                                                              |
+| 配置同步（编辑时） | 编辑保存时检测到同 repo_url 跨项目配置不一致 → 仅做提示性告警，**不自动覆盖**；用户确认后仅更新本行                                                                                                                                                                                                                                  | 不强制覆盖；让用户知道配置差异但保留独立维护权                                                                                        |
+| 开关配置聚合       | 下游使用开关类配置时，先校验该 repo_url 是否存在重复录入，存在的话对多行开关取 **OR**（有一开启则开启，全关闭才关闭）；**不修改其他项目行**，仅在读取时聚合                                                                                                                                                                          | 保证下游行为判定正确（如门禁、webhook 等只要一个项目开启即生效）；不强制统一配置                                                      |
+| 查重               | `(repo_url, project_id)` 唯一（一项目一行）；不做 repo_url 全局唯一                                                                                                                                                                                                                                                                  | 保证同项目不重复录入；不同项目各自建行以支撑各自扫描                                                                                  |
+| 组 key             | 直接用 `repo_url`（录入已保证协议/https/平台/`.git` 结尾格式统一，直接使用）；repo_url 加普通索引用于组查询                                                                                                                                                                                                                          | 用于「同 repo_url 组」判定（录入复制上次配置、编辑冲突检测、开关聚合查询）                                                            |
+| 跨项目录入         | 仓库已在其他项目存在 → 当前项目**新建一行**并复制上次录入配置（可修改）；不删除其他项目行；提交时提示配置不一致                                                                                                                                                                                                                      | SCA 兼容 + 避免重复手填；不强制覆盖                                                                                                   |
+| 下游仓改造         | **repo_info 层面 7 仓零改动**；**例外：全局配置表迁移（§4.2）影响 framework**——其删除产品/项目时原级联清理 `project_gitcode_role_mapping` 的逻辑需改指新表                                                                                                                                                                           | repo_info 多行模型下每项目都有行，权限/归属按行内 project_id 语义与现状一致；仅全局配置表迁移波及 framework 的删除级联清理（见 §4.2） |
+| 全局配置           | **新建 `project_repo_global_config` 表**（每项目一行），存 `config_json`：存量 role_mapping 从 `project_gitcode_role_mapping` 迁入 `config_json[platform].roleMapping`，迁移完成后旧表废弃；角色映射条目用 `platformRole` 区分平台，可扩展；SIG 路径列表存 `config_json.sigInfoLocations`（不按平台分键，后端根据 URL 域名统一区分） | 集中管理 sig-info 路径 / 角色映射（公共账号仍存现有表，经 global-config 接口统一读写），见 §4.2                                       |
+| SIG 配置读取       | 实时调对应平台读取指定路径下 sig-info.yaml 并解析，不落库不缓存                                                                                                                                                                                                                                                                      | 保证读到最新配置，简化链路                                                                                                            |
+| SIG 路径配置       | 用户可自由设置**多个** sig-info.yaml 路径；配置时不区分平台，后端根据 URL 域名统一区分平台；路径指向目录（如 `.../sigs/openLiBing-private`），在该目录下找 sig-info.yaml 文件；**输入路径后即时调 `validate-sig-path` 校验路径存在性与 sig-info.yaml 文件**（见 §6.5）                                                               | 支持多 SIG 组；后端统一管理平台归属；即时校验让用户当场发现路径错误                                                                   |
+| SIG 仓一键同步     | 全局配置窗口内「一键同步」按钮；**异步执行 + 分布式锁**（防并发重复执行）；**任务状态在全局配置弹窗内展示**；默认参数自动填充（别名/责任人/用途/开源类型/默认分支/公共账号令牌/各开关，见 §2.2.4）                                                                                                                                   | 异步 + 锁避免执行时间长与并发问题                                                                                                     |
+| 默认分支           | **直接从代码托管平台获取，不可修改**（表单只读展示，编辑时也不可改）                                                                                                                                                                                                                                                                 | 默认分支以平台为准，避免手工填错                                                                                                      |
+| 历史迁移           | **Phase 1**：清洗同项目重复行（按 repo_url）+ 加 `(repo_url, project_id)` 唯一索引                                                                                                                                                                                                                                                   | 本期不归并、不删行，7 仓零影响                                                                                                        |
+| 改造边界           | 仅 repo_info 改造（新增 `is_participate_operation`）+ 新增 project_repo_global_config（从 project_gitcode_role_mapping 迁移数据后旧表废弃）；codecheck Mongo（sig_rule_set）等不改                                                                                                                                                   | 规则集等按各项目在 codecheck 侧各自配置，不在本期收敛范围                                                                             |
+| YAML 解析安全      | SnakeYAML `SafeConstructor`                                                                                                                                                                                                                                                                                                          | 防 YAML 反序列化攻击                                                                                                                  |
+| accessToken 传递   | 调平台 API 时 `Authorization: Bearer <token>` header                                                                                                                                                                                                                                                                                 | 遵循项目硬约束「第三方 API 调用 accessToken 必须在 header」                                                                           |
 
 ## 2. 实现逻辑设计
 
@@ -107,7 +107,7 @@ addRepoInfo(userId, userName, projectId, RepoDTO):
 ```yaml
 # sig-info.yaml —— SIG 组代码仓清单（固定格式）
 repositories:
-  - repo:            # 可存在多个不同的 repo 分组
+  - repo: # 可存在多个不同的 repo 分组
       - openlibing/community
       - openlibing/openlibing-web
   - repo:
@@ -148,17 +148,17 @@ syncSigReposAsync(userId, userName, projectId):
 
 #### 2.2.4 默认参数（自动填充，用户可在录入后手动编辑）
 
-| 字段 | 默认值 | 说明 |
-|------|--------|------|
-| 代码仓别名 | 先用 repo 名；当前项目已存在同名 → `repo名-平台名`；仍冲突 → 加数字递增 | 当前项目内查重 |
-| 默认分支 | **实时调代码托管平台获取**（和已有逻辑一样从平台获取默认分支） | **不可修改**（直接取自平台，表单只读展示） |
-| 仓库责任人 | **实时调代码托管平台获取该代码仓的创建人账号名** | 可编辑 |
-| 用途 | 自研源码 | 可编辑 |
-| 开源类型 | 主导开源 | 可编辑 |
-| 是否参与运营 | 是 | 可编辑 |
-| 接管 PR / 自动触发门禁 / 接口扫描 / 代码风格修复 / 告警抑制 | 否 | 可编辑 |
-| 公共账号令牌 | **项目级公共账号令牌**（从项目公共账号表获取） | 沿用项目公共账号 |
-| 仓库规则集配置 | 不配置 | — |
+| 字段                                                        | 默认值                                                                  | 说明                                       |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------ |
+| 代码仓别名                                                  | 先用 repo 名；当前项目已存在同名 → `repo名-平台名`；仍冲突 → 加数字递增 | 当前项目内查重                             |
+| 默认分支                                                    | **实时调代码托管平台获取**（和已有逻辑一样从平台获取默认分支）          | **不可修改**（直接取自平台，表单只读展示） |
+| 仓库责任人                                                  | **实时调代码托管平台获取该代码仓的创建人账号名**                        | 可编辑                                     |
+| 用途                                                        | 自研源码                                                                | 可编辑                                     |
+| 开源类型                                                    | 主导开源                                                                | 可编辑                                     |
+| 是否参与运营                                                | 是                                                                      | 可编辑                                     |
+| 接管 PR / 自动触发门禁 / 接口扫描 / 代码风格修复 / 告警抑制 | 否                                                                      | 可编辑                                     |
+| 公共账号令牌                                                | **项目级公共账号令牌**（从项目公共账号表获取）                          | 沿用项目公共账号                           |
+| 仓库规则集配置                                              | 不配置                                                                  | —                                          |
 
 > **一键同步后允许手动编辑**：SIG 来源仓库同样允许手动编辑；编辑时若检测到跨项目配置不一致，同 §2.3 提示性告警，不覆盖。
 
@@ -195,6 +195,7 @@ updateRepoInfo(userId, userName, projectId, repoId, RepoDTO):
 > 下游使用开关类配置时，**先校验该 repo_url 是否存在重复录入**（同 repo_url 多行），存在的话对多行开关取 **OR**（有一开启则开启，全关闭才关闭）。**不修改用户在其他项目下的配置**，仅在读取时聚合判定。
 
 **开关类字段清单**（`repo_info` 表）：
+
 - `assume_pr`（接管 PR 管理）
 - `is_auto_trigger_gate`（自动触发门禁流水线）
 - `is_auto_interface_scan`（自动触发接口扫描）
@@ -241,6 +242,7 @@ migrateRepoInfoPhase1():
 - **Phase 1 明确不做**：不归并 53 个共享仓多行、不删存量行。
 
 **Phase 2（远期，7 仓逐个可控后）**：
+
 - 届时再评估存量共享仓的归并方案；本期不实施。
 
 ### 2.6 前端实现逻辑
@@ -320,8 +322,8 @@ migrateRepoInfoPhase1():
 
 - [RepoInfoEntity](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/entity/space/RepoInfoEntity.java) 新增字段：
 
-| 字段 | 说明 |
-|------|------|
+| 字段                     | 说明                                                               |
+| ------------------------ | ------------------------------------------------------------------ |
 | `isParticipateOperation` | 是否参与运营（默认是，**新增**——现实体/表无此字段，见 §4.1 ALTER） |
 
 - **新增 `ProjectRepoGlobalConfigEntity`**（表 `project_repo_global_config`，每项目一行）：`configJson` 字段作为项目级全局配置载体（config_json 按平台分键存角色映射，sigInfoLocations 为顶层数组不按平台分键）。存量 `GitCodeRoleMappingEntity`（表 `project_gitcode_role_mapping`）的 role_mapping 数据迁移至新表 `config_json.gitcode.roleMapping` 后，旧表废弃（不物理删除）。
@@ -413,21 +415,21 @@ CREATE TABLE project_repo_global_config (
   "sigInfoLocations": {
     "gitcode": [
       "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private",
-      "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/sig2"
+      "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/sig2",
     ],
-    "gitee":  [],
-    "github": []
+    "gitee": [],
+    "github": [],
   },
   // 角色映射按平台分键（仅 gitcode 有）
   "gitcode": {
     "roleMapping": [
-      { "platformRole": "owner",     "openlibingRole": "project_admin" },
-      { "platformRole": "master",    "openlibingRole": "repo_admin" },
-      { "platformRole": "developer", "openlibingRole": "developer" }
-    ]
+      { "platformRole": "owner", "openlibingRole": "project_admin" },
+      { "platformRole": "master", "openlibingRole": "repo_admin" },
+      { "platformRole": "developer", "openlibingRole": "developer" },
+    ],
   },
-  "gitee":  {},
-  "github": {}
+  "gitee": {},
+  "github": {},
 }
 ```
 
@@ -453,22 +455,22 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 
 ### 4.5 数据量预估
 
-| 维度 | 估算 |
-|------|------|
-| repo_info | 现状规模不变（< 10 万行），一项目一行；同 repo_url 多行并存（53 个共享仓） |
-| 单项目仓库数 | 平均 50-200，列表按 project_id 走索引，毫秒级 |
-| SIG 路径配置 | 每项目多个 sig-info.yaml 路径（存 config_json），内容不落库 |
+| 维度         | 估算                                                                       |
+| ------------ | -------------------------------------------------------------------------- |
+| repo_info    | 现状规模不变（< 10 万行），一项目一行；同 repo_url 多行并存（53 个共享仓） |
+| 单项目仓库数 | 平均 50-200，列表按 project_id 走索引，毫秒级                              |
+| SIG 路径配置 | 每项目多个 sig-info.yaml 路径（存 config_json），内容不落库                |
 
 ## 5. 性能设计
 
 ### 5.1 数据库性能
 
-| 表 | 索引 | 服务场景 |
-|------|------|---------|
-| `repo_info` | `uk_repo_project (repo_url, project_id)` | 一项目一行唯一；同组查询走前缀 |
-| | `idx_project_id (project_id)` | 列表页按项目查询（现有，保留） |
-| | `idx_repo_url (repo_url)` | 组查询（录入复制上次配置 / 编辑冲突检测 / 开关聚合） |
-| `project_repo_global_config` | `uk_project (project_id, is_deleted)` | 每项目一行全局配置（从旧表迁移，旧表废弃） |
+| 表                           | 索引                                     | 服务场景                                             |
+| ---------------------------- | ---------------------------------------- | ---------------------------------------------------- |
+| `repo_info`                  | `uk_repo_project (repo_url, project_id)` | 一项目一行唯一；同组查询走前缀                       |
+|                              | `idx_project_id (project_id)`            | 列表页按项目查询（现有，保留）                       |
+|                              | `idx_repo_url (repo_url)`                | 组查询（录入复制上次配置 / 编辑冲突检测 / 开关聚合） |
+| `project_repo_global_config` | `uk_project (project_id, is_deleted)`    | 每项目一行全局配置（从旧表迁移，旧表废弃）           |
 
 - 开关聚合查询：按 `repo_url` 一次 SELECT + GROUP BY，组内行数少（1~N），单次 < 50ms。
 - 一键同步：单次最多数百个仓库（多路径合并去重后），异步执行 + 分布式锁，不阻塞前端。
@@ -488,23 +490,23 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 
 ### 5.4 前端性能
 
-| 维度 | 策略 |
-|------|------|
-| 冲突预查 | `repoUrl` blur 防抖 300ms 调 `checkRepoUrl` |
-| sig-info 路径校验 | 路径输入框 blur 防抖 300ms 调 `validateSigPath`，结果就地展示 |
-| 一键同步 | 异步触发，返回任务 ID，前端轮询任务状态（如每 3s 轮询，超时 10 分钟，**在全局配置弹窗内展示**）；loading + 禁用按钮防重复提交 |
+| 维度              | 策略                                                                                                                          |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 冲突预查          | `repoUrl` blur 防抖 300ms 调 `checkRepoUrl`                                                                                   |
+| sig-info 路径校验 | 路径输入框 blur 防抖 300ms 调 `validateSigPath`，结果就地展示                                                                 |
+| 一键同步          | 异步触发，返回任务 ID，前端轮询任务状态（如每 3s 轮询，超时 10 分钟，**在全局配置弹窗内展示**）；loading + 禁用按钮防重复提交 |
 
 ### 5.5 性能验收指标
 
-| 指标 | 目标 |
-|------|------|
-| `checkRepoUrl` 响应 | < 100ms |
-| `validateSigPath` 响应 | < 2s（含调平台读目录校验，超时 3s） |
-| `queryRepoInfo` 响应 | < 100ms（与现状持平） |
-| `aggregateSwitchConfig`（开关聚合） | < 50ms |
-| `syncSigRepos` 触发响应 | < 200ms（立即返回任务 ID） |
-| 一键同步执行（100 个仓库） | < 5 分钟（异步，含平台元数据获取） |
-| Phase 1 迁移脚本（10 万行） | < 10 分钟 |
+| 指标                                | 目标                                |
+| ----------------------------------- | ----------------------------------- |
+| `checkRepoUrl` 响应                 | < 100ms                             |
+| `validateSigPath` 响应              | < 2s（含调平台读目录校验，超时 3s） |
+| `queryRepoInfo` 响应                | < 100ms（与现状持平）               |
+| `aggregateSwitchConfig`（开关聚合） | < 50ms                              |
+| `syncSigRepos` 触发响应             | < 200ms（立即返回任务 ID）          |
+| 一键同步执行（100 个仓库）          | < 5 分钟（异步，含平台元数据获取）  |
+| Phase 1 迁移脚本（10 万行）         | < 10 分钟                           |
 
 ## 6. API 接口设计
 
@@ -515,7 +517,7 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 ```jsonc
 {
   // ... 现有字段不变（含表单配置） ...
-  "isParticipateOperation": true   // 新增, 可选: 是否参与运营（默认是）
+  "isParticipateOperation": true, // 新增, 可选: 是否参与运营（默认是）
 }
 ```
 
@@ -528,7 +530,7 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 ```jsonc
 {
   // ... 现有字段不变（含表单配置） ...
-  "isParticipateOperation": true   // 新增, 可选: 是否参与运营（默认是）
+  "isParticipateOperation": true, // 新增, 可选: 是否参与运营（默认是）
 }
 ```
 
@@ -596,10 +598,11 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 {
   "userId": 10001,
   "projectId": 1,
-  "paths": [                        // ≤20 条
+  "paths": [
+    // ≤20 条
     "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private",
-    "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/sig2"
-  ]
+    "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/sig2",
+  ],
 }
 ```
 
@@ -610,13 +613,13 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
   "code": 200,
   "data": [
     {
-      "path": "https://gitcode.com/openlibing/community-private/blob/master/...",  // 对应该条入参路径
-      "valid": true,               // 路径存在且 sig-info.yaml 文件存在
-      "platform": "gitcode",       // 后端根据 URL 域名解析的平台（gitcode/gitee/github）
-      "errorCode": null,           // 失败时：REPO_NOT_FOUND / BRANCH_NOT_FOUND / FILE_NOT_FOUND / API_ERROR
-      "message": "校验通过"          // 失败原因描述
-    }
-  ]
+      "path": "https://gitcode.com/openlibing/community-private/blob/master/...", // 对应该条入参路径
+      "valid": true, // 路径存在且 sig-info.yaml 文件存在
+      "platform": "gitcode", // 后端根据 URL 域名解析的平台（gitcode/gitee/github）
+      "errorCode": null, // 失败时：REPO_NOT_FOUND / BRANCH_NOT_FOUND / FILE_NOT_FOUND / API_ERROR
+      "message": "校验通过", // 失败原因描述
+    },
+  ],
 }
 ```
 
@@ -634,8 +637,8 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
   "data": {
     "taskId": "sig-sync-123456",
     "status": "RUNNING",
-    "message": "SIG同步任务已触发，请稍后查询结果"
-  }
+    "message": "SIG同步任务已触发，请稍后查询结果",
+  },
 }
 ```
 
@@ -654,43 +657,44 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
   "code": 200,
   "data": {
     "taskId": "sig-sync-123456",
-    "status": "SUCCESS",        // RUNNING / SUCCESS / FAILED / PARTIAL
+    "status": "SUCCESS", // RUNNING / SUCCESS / FAILED / PARTIAL
     "imported": 45,
     "failed": 3,
-    "failedRepos": [            // 失败仓库列表（含失败原因）
-      { "repoUrl": "...", "reason": "平台API超时" }
+    "failedRepos": [
+      // 失败仓库列表（含失败原因）
+      { "repoUrl": "...", "reason": "平台API超时" },
     ],
-    "message": "同步完成：成功 45 个，失败 3 个"
-  }
+    "message": "同步完成：成功 45 个，失败 3 个",
+  },
 }
 ```
 
 ### 6.8 接口契约汇总
 
-| 接口 | 方法 | 路径 | 控制器 | 请求体 | 响应体 |
-|------|------|------|--------|--------|--------|
-| 录入仓库（改造） | POST | `/project-repo/add-repo` | RepoController | RepoDTO（新增 isParticipateOperation） | `DataResult<Integer>` |
-| 修改仓库（改造） | POST | `/project-repo/update-repo` | RepoController | RepoDTO（新增 isParticipateOperation） | `DataResult<Integer>` |
-| 录入/编辑冲突检测（新增） | POST | `/project-repo/check-repo-url` | RepoController | RepoUrlCheckQueryDTO | `DataResult<RepoUrlCheckVO>` |
-| 查询全局配置（新增） | GET | `/project-config/global-config` | ProjectConfigController | projectId | `DataResult<GlobalConfigVO>`（含公共账号掩码） |
-| 更新全局配置（新增，公共账号更新并入） | POST | `/project-config/global-config` | ProjectConfigController | GlobalConfigUpdateDTO（sigInfoLocations + roleMapping + 项目公共账号登录名/令牌） | `DataResult<GlobalConfigVO>`（公共账号实现层仍存 `project_common_account_info`） |
-| sig-info 路径校验（新增） | POST | `/project-config/validate-sig-path` | ProjectConfigController | {userId, projectId, path} | `DataResult<SigPathValidateVO>`（valid/platform/errorCode/message） |
-| SIG 仓一键同步（新增，异步 + 锁） | POST | `/project-config/sig-sync` | ProjectConfigController | {userId, userName, projectId} | `DataResult<SyncSigReposTaskVO>`（任务 ID + 状态） |
-| 查询同步任务状态（新增） | GET | `/project-config/sig-sync/status` | ProjectConfigController | taskId + projectId | `DataResult<SyncSigReposTaskVO>`（状态 + imported/failed） |
+| 接口                                   | 方法 | 路径                                | 控制器                  | 请求体                                                                            | 响应体                                                                           |
+| -------------------------------------- | ---- | ----------------------------------- | ----------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 录入仓库（改造）                       | POST | `/project-repo/add-repo`            | RepoController          | RepoDTO（新增 isParticipateOperation）                                            | `DataResult<Integer>`                                                            |
+| 修改仓库（改造）                       | POST | `/project-repo/update-repo`         | RepoController          | RepoDTO（新增 isParticipateOperation）                                            | `DataResult<Integer>`                                                            |
+| 录入/编辑冲突检测（新增）              | POST | `/project-repo/check-repo-url`      | RepoController          | RepoUrlCheckQueryDTO                                                              | `DataResult<RepoUrlCheckVO>`                                                     |
+| 查询全局配置（新增）                   | GET  | `/project-config/global-config`     | ProjectConfigController | projectId                                                                         | `DataResult<GlobalConfigVO>`（含公共账号掩码）                                   |
+| 更新全局配置（新增，公共账号更新并入） | POST | `/project-config/global-config`     | ProjectConfigController | GlobalConfigUpdateDTO（sigInfoLocations + roleMapping + 项目公共账号登录名/令牌） | `DataResult<GlobalConfigVO>`（公共账号实现层仍存 `project_common_account_info`） |
+| sig-info 路径校验（新增）              | POST | `/project-config/validate-sig-path` | ProjectConfigController | {userId, projectId, path}                                                         | `DataResult<SigPathValidateVO>`（valid/platform/errorCode/message）              |
+| SIG 仓一键同步（新增，异步 + 锁）      | POST | `/project-config/sig-sync`          | ProjectConfigController | {userId, userName, projectId}                                                     | `DataResult<SyncSigReposTaskVO>`（任务 ID + 状态）                               |
+| 查询同步任务状态（新增）               | GET  | `/project-config/sig-sync/status`   | ProjectConfigController | taskId + projectId                                                                | `DataResult<SyncSigReposTaskVO>`（状态 + imported/failed）                       |
 
 ### 6.9 错误码约定
 
-| code | msg | 场景 |
-|------|------|------|
-| 200 | success | 成功 |
-| 403 | SIG 路径不存在或不属于该项目 | sig-sync 接口未配置任何 sigInfoLocations |
-| 403 | 平台不合法 | 路径 URL 域名非 gitcode/gitee/github |
-| 409 | SIG 同步任务已在执行中 | 分布式锁获取失败（已有任务在跑） |
-| 404 | sig-info.yaml 文件不存在 | 实时读取指定路径失败（目录下无 sig-info.yaml） |
-| 500 | sig-info.yaml 格式错误或解析失败 | 实时解析失败 |
-| 500 | 配置文件读取失败，请稍后重试 | 平台 API 调用失败 |
-| 500 | 仓库链接不合法 | repoUrl 校验失败 |
-| 500 | 该仓库已录入当前项目 | 违反 uk_repo_project 唯一约束（并发兜底） |
+| code | msg                              | 场景                                           |
+| ---- | -------------------------------- | ---------------------------------------------- |
+| 200  | success                          | 成功                                           |
+| 403  | SIG 路径不存在或不属于该项目     | sig-sync 接口未配置任何 sigInfoLocations       |
+| 403  | 平台不合法                       | 路径 URL 域名非 gitcode/gitee/github           |
+| 409  | SIG 同步任务已在执行中           | 分布式锁获取失败（已有任务在跑）               |
+| 404  | sig-info.yaml 文件不存在         | 实时读取指定路径失败（目录下无 sig-info.yaml） |
+| 500  | sig-info.yaml 格式错误或解析失败 | 实时解析失败                                   |
+| 500  | 配置文件读取失败，请稍后重试     | 平台 API 调用失败                              |
+| 500  | 仓库链接不合法                   | repoUrl 校验失败                               |
+| 500  | 该仓库已录入当前项目             | 违反 uk_repo_project 唯一约束（并发兜底）      |
 
 ### 6.10 内部 API 契约
 

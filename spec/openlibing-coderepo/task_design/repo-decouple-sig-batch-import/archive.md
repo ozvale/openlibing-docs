@@ -10,6 +10,7 @@
 ## 交付历程
 
 ### openlibing-coderepo-fork（分支 repo-decouple-sig-batch-import）
+
 - `4f00d52` feat(repo-decouple): 实现代码仓解耦 + SIG 仓一键同步
 - `0164384` refactor(repo-decouple): 全局配置表主键改雪花算法 + 去软删除字段 + 去重复行清洗
 - `96ab4b6` fix(coderepo): 修复 SIG 同步并发锁与多平台细节
@@ -21,6 +22,7 @@
 - `22fd64c` feat(project-config): batch sig-path validate, platform-keyed sigInfoLocations, add business logs
 
 ### openlibing-framework（分支 repo-decouple-sig-batch-import）
+
 - `073565d7` feat(repo-decouple): 级联清理改指 project_repo_global_config 新表
 
 ## 用户自测反馈
@@ -47,4 +49,5 @@
 - 审计日志切面（AOP `getOldData`/`encapsulatingLogsDetailVO`）解析空串必须判空，避免日志切面阻断业务响应。
 
 ## 归档日期
+
 2026-08-27
