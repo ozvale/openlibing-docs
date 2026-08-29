@@ -6,7 +6,7 @@
 - 业务 Issue: https://gitcode.com/openlibing/openlibing-cicd/issues/217
 - 业务 PR: https://gitcode.com/openlibing/openlibing-cicd/pull/542（head: `migrate-apollo-to-nacos` → base: `release_20260820`）
 - docs Issue: https://gitcode.com/openlibing/openlibing-docs/issues/143
-- docs PR: <创建后回填>
+- docs PR: https://gitcode.com/openlibing/openlibing-docs/pull/863
 
 ## 交付历程
 
