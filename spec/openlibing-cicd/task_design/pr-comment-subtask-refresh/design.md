@@ -17,22 +17,22 @@
 
 ```java
 public enum PipelineJobStatusEnums {
-    INIT("INIT", "初始化", "128346"),
+    INIT("INIT", "初始化", "128995"),
     QUEUED("QUEUED", "排队中", "128346"),
     COMPLETED("COMPLETED", "已完成", "9989"),
-    RUNNING("RUNNING", "运行中", "128346"),
+    RUNNING("RUNNING", "运行中", "9654"),
     CANCELED("CANCELED", "已终止运行", "129000"),
     FAILED("FAILED", "运行失败", "10060"),
     PAUSED("PAUSED", "已暂停", "128721"),
-    SUSPEND("SUSPEND", "已挂起", "128721"),
-    SKIPPED("SKIPPED", "已跳过", "128721"),
-    IGNORED("IGNORED", "已忽略", "128721"),
-    UNSELECTED("UNSELECTED", "无法查询", "10060");
+    SUSPEND("SUSPEND", "已挂起", "128997"),
+    SKIPPED("SKIPPED", "已跳过", "9193"),
+    IGNORED("IGNORED", "已忽略", "9898"),
+    UNSELECTED("UNSELECTED", "无法查询", "11036");
     // ...
 }
 ```
 
-emoji 冲突清单：
+emoji 冲突清单（改造前的现状）：
 
 - `INIT` / `QUEUED` / `RUNNING` 共用 `128346`（⏱）
 - `PAUSED` / `SUSPEND` / `SKIPPED` / `IGNORED` 共用 `128721`（⛔）
