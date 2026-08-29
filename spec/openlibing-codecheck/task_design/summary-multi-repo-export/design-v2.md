@@ -39,7 +39,7 @@
 | 多选参数表示       | 新增 `repoNames: List<String>`，保留 `repoName`                                          | 备选：复用 `repoName` 传逗号串——类型不安全、与既有单值调用方（APIG 网关等）冲突，弃用 |
 | Criteria 构建      | `repoNames` 优先 `in` 查询，空则回退 `repoName is`                                       | 保证既有单选调用方零影响，向后兼容                                                    |
 | 分支下拉选项       | 所选仓库分支的 Set 去重并集（保持原有大小写不敏感排序）                                  | 备选：仅取第一个仓库分支——多仓场景语义错误，弃用                                      |
-| 多选交互           | `multiple` + `collapse-tags` + `collapse-tags-tooltip`，保留 `filterable`/`allow-create` | collapse 避免标签撑爆筛选栏；tooltip 查看完整选择                                     |
+| 多选交互           | `multiple` + `collapse-tags` + `collapse-tags-tooltip`；保留 `filterable`，多选场景禁用 `allow-create` | collapse 避免标签撑爆筛选栏；tooltip 查看完整选择；自定义值无分支且不可查，禁用以消除歧义 |
 | 仓库切换时分支处理 | 清空已选分支                                                                             | 旧分支可能不属于新仓库集合，保留会产生空结果歧义                                      |
 
 ### 1.4 兼容性边界
@@ -72,7 +72,9 @@
 ### 2.2 前端交互逻辑
 
 ```
-【选择仓库】el-select(multiple, collapse-tags)
+【选择仓库】el-select(multiple, collapse-tags, filterable, 禁用 allow-create)
+  // 多选场景禁用 allow-create：自定义输入的仓库名不在 targetDomain 键集合内，
+  // 分支并集无法为其派生分支且后端 in 查询必然为空，属于「可选不可查」，故从根上禁止
   change → handleRepoChanged()
     branchOptions = [...new Set(selectedRepos.flatMap(r => targetDomain[r] || []))]
                     .filter(Boolean)
@@ -84,7 +86,8 @@
   shared.ts formInlineFactory: repoName:'' → repoNames: []（响应式共享单例）
   resetFormInline(): repoNames = []
   列表组件 data.formInline（本地副本，用于 isFormInlineChanged 差异比较）：repoName:'' → repoNames: []
-  isFormInlineChanged: JSON.stringify 全量比较，数组值天然兼容，无需改动
+  同步时须防御性拷贝：formInline.repoNames = [...shared.repoNames]  // 新建数组引用，禁止直接赋值共享同一引用
+  isFormInlineChanged: JSON.stringify 全量比较，依赖上述「本地副本持有独立数组引用」，否则恒判相等、无法触发刷新
 
 【查询参数构造】
   IncrementCheckList.getIncCheckList / StaticCheckList.getCheckList:
@@ -174,7 +177,7 @@ private List<String> repoNames;   // 多选仓库过滤；非空时优先于 rep
   mrId: '',
 }
 // IncrementCheckList / StaticCheckList 的 data.formInline 本地副本同步该字段类型，
-// 保证 isFormInlineChanged 的键数量比较逻辑不变
+// 同步时对 repoNames 做防御性拷贝（新建数组引用），保证 isFormInlineChanged 全量比较可感知多选变化
 ```
 
 ### 4.4 数据兼容性

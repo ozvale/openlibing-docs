@@ -14,7 +14,7 @@
 | 多选用新字段 `repoNames`（List），保留 `repoName`                                           | 老调用方（APIG 网关、内部单选）零影响；Criteria 中 `repoNames` 优先、为空回退 `repoName` |
 | 分支选项为所选仓库分支的去重并集（大小写不敏感排序），仓库变化时清空已选分支                | 旧分支可能不属于新仓库集合，保留会产生空结果歧义                                         |
 | 表单类型 `repoName: string` → `repoNames: string[]` 同步改 shared.ts 与两个列表组件本地副本 | `isFormInlineChanged` 依赖 shared 与本地 formInline 键数量一致                           |
-| 多选交互用 `multiple collapse-tags collapse-tags-tooltip`，保留 `filterable`/`allow-create` | 折叠标签避免撑爆筛选栏；保留现有输入过滤与自定义输入能力                                 |
+| 多选交互用 `multiple collapse-tags collapse-tags-tooltip`，保留 `filterable`、多选禁用 `allow-create` | 折叠标签避免撑爆筛选栏；保留输入过滤；禁用自定义输入以消除「可选不可查」歧义 |
 
 ## 涉及文件
 
