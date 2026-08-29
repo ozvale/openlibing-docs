@@ -252,7 +252,7 @@ buildCheckDTO.setState(
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | 历史已发布的 PR 评论中含旧 emoji（如 ⏱）                    | 不主动迁移，新评论按新 emoji + 英文名渲染                                                                                       |
 | 第三方调用 `getAsciiCodeByNameEn("INIT")` 拿到 `128995`     | 自动得到新 emoji，无需调用方修改                                                                                                |
-| `prepareCommentTable` 渲染 `&#128995; INIT`                 | 浏览器/邮件客户端支持 Unicode emoji，正常渲染为 `� INIT`                                                                       |
+| `prepareCommentTable` 渲染 `&#128995; INIT`                 | 浏览器/邮件客户端支持 Unicode emoji，正常渲染为 `� INIT`                                                                        |
 | 极少数老客户端不支持 `&#128995;` 等 Unicode 较新字符        | 退化显示为方框或空白 + 英文名，不影响功能                                                                                       |
 | `pipelineRunDetail.getStatus()` / `job.getStatus()` 为 null | `setJobStatusNameEn(null)` → 渲染输出 `&#<ascii>; null`，需在调用前过滤或回归验证华为云不会返回 null（华为云正常不会返回 null） |
 

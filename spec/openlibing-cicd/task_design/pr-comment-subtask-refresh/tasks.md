@@ -184,7 +184,7 @@
 | 第三方代码依赖 `INIT` / `RUNNING` 等状态的 `ascii_code=128346` | 全仓搜索 `128346` / `getAsciiCodeByNameEn` 调用点，确认无硬编码依赖 |
 | `saveBuildCheck` 行为变化                                      | T7 回归测试覆盖                                                     |
 | `CommentTableVo` 全参构造调用点未更新                          | 全仓搜索 `new CommentTableVo(`，更新为 5 参构造或 setter 链         |
-| 老客户端不支持较新 Unicode emoji（如 � � ⬜）                | 仅影响视觉，不阻塞功能                                              |
+| 老客户端不支持较新 Unicode emoji（如 � � ⬜）                  | 仅影响视觉，不阻塞功能                                              |
 | 旧 PR 评论中保留旧 emoji                                       | 不主动迁移，新评论按新值 + 英文名渲染                               |
 
 ## 不做的事

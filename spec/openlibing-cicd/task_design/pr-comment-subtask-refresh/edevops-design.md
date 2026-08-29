@@ -84,14 +84,14 @@
 
 ### 2.3 emoji 选择理由
 
-| 状态       | 新 emoji | Unicode 名称                                           | 选择理由                                  |
-| ---------- | -------- | ------------------------------------------------------ | ----------------------------------------- |
-| INIT       | 🟣       | LARGE PURPLE CIRCLE                                    | 区别于 QUEUED/RUNNING 的"等待启动"提示    |
-| RUNNING    | ▶        | BLACK RIGHT-POINTING TRIANGLE                          | 直觉性"播放/运行中"符号                   |
-| SUSPEND    | 🟥       | LARGE RED SQUARE                                       | 与 PAUSED（⛔）及 CANCELED（🔴）区分      |
-| SKIPPED    | ⏭        | BLACK RIGHT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR | "快进/跳过"直觉性符号                     |
-| IGNORED    | ⚪       | MEDIUM WHITE CIRCLE                                    | "空白/忽略"的视觉感                       |
-| UNSELECTED | ⬜       | WHITE LARGE SQUARE                                     | "未选中/空白槽位"，与 FAILED（❌）区分    |
+| 状态       | 新 emoji | Unicode 名称                                           | 选择理由                               |
+| ---------- | -------- | ------------------------------------------------------ | -------------------------------------- |
+| INIT       | 🟣       | LARGE PURPLE CIRCLE                                    | 区别于 QUEUED/RUNNING 的"等待启动"提示 |
+| RUNNING    | ▶        | BLACK RIGHT-POINTING TRIANGLE                          | 直觉性"播放/运行中"符号                |
+| SUSPEND    | 🟥       | LARGE RED SQUARE                                       | 与 PAUSED（⛔）及 CANCELED（🔴）区分   |
+| SKIPPED    | ⏭        | BLACK RIGHT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR | "快进/跳过"直觉性符号                  |
+| IGNORED    | ⚪       | MEDIUM WHITE CIRCLE                                    | "空白/忽略"的视觉感                    |
+| UNSELECTED | ⬜       | WHITE LARGE SQUARE                                     | "未选中/空白槽位"，与 FAILED（❌）区分 |
 
 ### 2.4 渲染链路（改造后）
 
