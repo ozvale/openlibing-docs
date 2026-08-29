@@ -56,6 +56,7 @@
 
 - `publishSbomFile` 接口原计划复制，用户决策移除，不在本次 ApigController 复制范围
 - 原 `SbomController` 中的 `publishSbomFile` 接口保留不变
+- `ApigControllerTest` 单元测试原计划在 Phase 4 阶段补充（见提案验收标准与影响范围），本次范围调整取消交付：ApigController 为 SbomController 8 个机机接口的原样复制，复用同一 `SbomService` 实现，未新增业务逻辑，本次以编译验证、IDE 诊断、Git Hooks 门禁作为回归保障，未新增单测。提案中对应验收标准项与影响范围中的该测试文件条目同步作废，以本说明为准
 
 ### Codecheck 修复（commit 95243251）
 
@@ -64,13 +65,14 @@
 
 ## 验证结果
 
-| 项                                      | 结果                                               |
-| --------------------------------------- | -------------------------------------------------- |
-| 编译验证 `mvn compile -pl sbom-web -am` | ✅ BUILD SUCCESS（11 模块全部通过）                |
-| IDE 诊断                                | ✅ 0 错误 0 警告                                   |
-| 原 SbomController 回归                  | ✅ 一行未改，无回归风险                            |
-| 业务 PR Git Hooks                       | ✅ PASSED                                          |
-| sbom-dev 分支同步                       | ✅ 已 merge 并 push 到 origin/sbom-dev（08e439c3） |
+| 项                                      | 结果                                                  |
+| --------------------------------------- | ----------------------------------------------------- |
+| 编译验证 `mvn compile -pl sbom-web -am` | ✅ BUILD SUCCESS（11 模块全部通过）                   |
+| IDE 诊断                                | ✅ 0 错误 0 警告                                      |
+| `ApigControllerTest` 单测               | ➖ 未新增（范围调整取消交付，见上文「范围调整说明」） |
+| 原 SbomController 回归                  | ✅ 一行未改，无回归风险                               |
+| 业务 PR Git Hooks                       | ✅ PASSED                                             |
+| sbom-dev 分支同步                       | ✅ 已 merge 并 push 到 origin/sbom-dev（08e439c3）    |
 
 ## 经验沉淀
 
