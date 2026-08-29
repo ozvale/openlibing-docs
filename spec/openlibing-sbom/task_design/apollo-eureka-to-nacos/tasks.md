@@ -5,11 +5,11 @@
 - [x] Task 1: 根 `pom.xml` 升级 `openlibing-common` 到 1.0.20.0（dependencyManagement）；清理 `apollo-client.version` / `eureka-client.version` 属性及对应 dependencyManagement 声明。
 - [x] Task 2: `sbom-web/pom.xml` 移除 `spring-cloud-starter-netflix-eureka-client` 直接依赖及其 exclusions。
 - [x] Task 3: `SbomManagerApplication.java` 新增 `static { SnapShotSwitch.setIsSnapShot(false); }` 静态块，import `com.alibaba.nacos.client.config.utils.SnapShotSwitch`（已从 nacos-client-3.0.3.jar 验证包路径）。
-- [x] Task 4: `application-dev.properties` 移除 eureka.* 配置项；新增 Nacos config + discovery 配置（namespace=openlibing-beta，server-addr=1.95.74.1:31252，Data ID: sbom, application）。dev 是 HTTP 环境（ssl.enabled=false），不配 secure。
+- [x] Task 4: `application-dev.properties` 移除 eureka.* 配置项；新增 Nacos config + discovery 配置（namespace=openlibing-beta，server-addr=1.95.74.1:31252，Data ID: sbom, application-local）。dev 是 HTTP 环境（ssl.enabled=false），不配 secure。
 - [x] Task 5: `application-prod.properties` 移除 eureka.* 与 apollo.* 配置项；新增 Nacos config + discovery 配置（namespace=openlibing-prod，server-addr=华为云 CSE Nacos，Data ID: sbom, application，secure=true 注册为 HTTPS）。
 - [x] Task 6: `application-gama.properties` 移除 eureka.* 与 apollo.* 配置项；新增 Nacos config + discovery 配置（namespace=openlibing-gamma，server-addr=华为云 CSE Nacos，Data ID: sbom, application，secure=true 注册为 HTTPS）。
 - [x] Task 7: `start-openlibing-sbom.sh` 删除 `-Dapollo.cache.file.enable=false` JVM 参数行。
-- [x] Task 8: 删除 `ConfigContextInitializer.java`（cache 模块，原从环境变量 TRUST_STORE 加载 SSL trustStore，迁移后不再需要）；`SbomManagerApplication.java` 移除其 import 与 `addInitializers(new ConfigContextInitializer())` 调用。Grep 确认全仓仅此一处引用。
+- [x] Task 8: 删除 `ConfigContextInitializer.java`（cache 模块，原从环境变量 TRUST_STORE 加载 SSL trustStore；迁移后 trustStore 仍由启动脚本中的 JVM 参数 `-Djavax.net.ssl.trustStore` 加载，与配置中心无关，删除该类仅因 Spring 层的 ContextInitializer 变得冗余）；`SbomManagerApplication.java` 移除其 import 与 `addInitializers(new ConfigContextInitializer())` 调用。Grep 确认全仓仅此一处引用。
 
 ## 适配决策
 
