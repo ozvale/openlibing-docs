@@ -27,19 +27,19 @@ CICD 平台通过 PR 评论向用户展示流水线进度，`prepareCommentTable
 
 `PipelineJobStatusEnums` ([PipelineJobStatusEnums.java:15-26](file:///d:/CODE/JAVACODE/AIDev/openlibing/openlibing-cicd/src/main/java/com/openlibing/cicd/common/enums/PipelineJobStatusEnums.java#L15-L26))：
 
-| nameEn | nameCn | ascii_code | 渲染字符 |
-|--------|--------|------------|----------|
-| INIT | 初始化 | 128346 | ⏱ |
-| QUEUED | 排队中 | 128346 | ⏱ |
-| COMPLETED | 已完成 | 9989 | ✅ |
-| RUNNING | 运行中 | 128346 | ⏱ |
-| CANCELED | 已终止运行 | 129000 | 🔴 |
-| FAILED | 运行失败 | 10060 | ❌ |
-| PAUSED | 已暂停 | 128721 | ⛔ |
-| SUSPEND | 已挂起 | 128721 | ⛔ |
-| SKIPPED | 已跳过 | 128721 | ⛔ |
-| IGNORED | 已忽略 | 128721 | ⛔ |
-| UNSELECTED | 无法查询 | 10060 | ❌ |
+| nameEn     | nameCn     | ascii_code | 渲染字符 |
+| ---------- | ---------- | ---------- | -------- |
+| INIT       | 初始化     | 128346     | ⏱        |
+| QUEUED     | 排队中     | 128346     | ⏱        |
+| COMPLETED  | 已完成     | 9989       | ✅       |
+| RUNNING    | 运行中     | 128346     | ⏱        |
+| CANCELED   | 已终止运行 | 129000     | 🔴       |
+| FAILED     | 运行失败   | 10060      | ❌       |
+| PAUSED     | 已暂停     | 128721     | ⛔       |
+| SUSPEND    | 已挂起     | 128721     | ⛔       |
+| SKIPPED    | 已跳过     | 128721     | ⛔       |
+| IGNORED    | 已忽略     | 128721     | ⛔       |
+| UNSELECTED | 无法查询   | 10060      | ❌       |
 
 ## 功能描述
 
@@ -49,19 +49,19 @@ CICD 平台通过 PR 评论向用户展示流水线进度，`prepareCommentTable
 
 **新 ascii_code 映射**：
 
-| nameEn | nameCn | 原 ascii_code | 新 ascii_code | 原 emoji | 新 emoji | 说明 |
-|--------|--------|---------------|---------------|----------|----------|------|
-| INIT | 初始化 | 128346 | **128995** | ⏱ | 🟧 | 橙色圆圈，标识"初始化准备中" |
-| QUEUED | 排队中 | 128346 | 128346（不变） | ⏱ | ⏱ | 沿用 |
-| COMPLETED | 已完成 | 9989 | 9989（不变） | ✅ | ✅ | 沿用 |
-| RUNNING | 运行中 | 128346 | **9654** | ⏱ | ▶ | 黑色右指三角，标识"运行中" |
-| CANCELED | 已终止运行 | 129000 | 129000（不变） | 🔴 | 🔴 | 沿用 |
-| FAILED | 运行失败 | 10060 | 10060（不变） | ❌ | ❌ | 沿用 |
-| PAUSED | 已暂停 | 128721 | 128721（不变） | ⛔ | ⛔ | 沿用 |
-| SUSPEND | 已挂起 | 128721 | **128997** | ⛔ | 🟪 | 紫色圆圈，与 PAUSED 区分 |
-| SKIPPED | 已跳过 | 128721 | **9193** | ⛔ | ⏭ | 快进符号，标识"跳过" |
-| IGNORED | 已忽略 | 128721 | **9898** | ⛔ | ⚪ | 白色圆圈，标识"忽略" |
-| UNSELECTED | 无法查询 | 10060 | **11036** | ❌ | ⬜ | 白色方形，与 FAILED 区分 |
+| nameEn     | nameCn     | 原 ascii_code | 新 ascii_code  | 原 emoji | 新 emoji | 说明                         |
+| ---------- | ---------- | ------------- | -------------- | -------- | -------- | ---------------------------- |
+| INIT       | 初始化     | 128346        | **128995**     | ⏱        | 🟧       | 橙色圆圈，标识"初始化准备中" |
+| QUEUED     | 排队中     | 128346        | 128346（不变） | ⏱        | ⏱        | 沿用                         |
+| COMPLETED  | 已完成     | 9989          | 9989（不变）   | ✅       | ✅       | 沿用                         |
+| RUNNING    | 运行中     | 128346        | **9654**       | ⏱        | ▶        | 黑色右指三角，标识"运行中"   |
+| CANCELED   | 已终止运行 | 129000        | 129000（不变） | 🔴       | 🔴       | 沿用                         |
+| FAILED     | 运行失败   | 10060         | 10060（不变）  | ❌       | ❌       | 沿用                         |
+| PAUSED     | 已暂停     | 128721        | 128721（不变） | ⛔       | ⛔       | 沿用                         |
+| SUSPEND    | 已挂起     | 128721        | **128997**     | ⛔       | 🟪       | 紫色圆圈，与 PAUSED 区分     |
+| SKIPPED    | 已跳过     | 128721        | **9193**       | ⛔       | ⏭        | 快进符号，标识"跳过"         |
+| IGNORED    | 已忽略     | 128721        | **9898**       | ⛔       | ⚪       | 白色圆圈，标识"忽略"         |
+| UNSELECTED | 无法查询   | 10060         | **11036**      | ❌       | ⬜       | 白色方形，与 FAILED 区分     |
 
 ### 需求 2：状态列追加状态英文名
 
@@ -72,6 +72,7 @@ CICD 平台通过 PR 评论向用户展示流水线进度，`prepareCommentTable
 **改造后**：`<td style="padding:8px;text-align:left;">&#<ascii>; <nameEn></td>` → 显示 emoji + 空格 + 英文名，状态列左对齐 + 8px 内边距（如 `⏱ QUEUED`；左对齐为用户自测反馈后追加，commit `b1a393d5`）
 
 **字段设计**：
+
 - `CommentTableVo` 新增 `jobStatusNameEn` 字段（String），存储状态英文名（如 `"INIT"` / `"COMPLETED"`）。
 - `PipelineServiceImpl.buildCommentTableVo`（两个重载）填充 `jobStatusNameEn`：
   - 流水线整体行：`vo.setJobStatusNameEn(pipelineRunDetail.getStatus())`
@@ -80,19 +81,19 @@ CICD 平台通过 PR 评论向用户展示流水线进度，`prepareCommentTable
 
 **视觉对照**：
 
-| 状态 | 修改前 | 修改后 |
-|------|--------|--------|
-| INIT | ⏱ | 🟧 INIT |
-| QUEUED | ⏱ | ⏱ QUEUED |
-| RUNNING | ⏱ | ▶ RUNNING |
-| COMPLETED | ✅ | ✅ COMPLETED |
-| CANCELED | 🔴 | 🔴 CANCELED |
-| FAILED | ❌ | ❌ FAILED |
-| PAUSED | ⛔ | ⛔ PAUSED |
-| SUSPEND | ⛔ | 🟪 SUSPEND |
-| SKIPPED | ⛔ | ⏭ SKIPPED |
-| IGNORED | ⛔ | ⚪ IGNORED |
-| UNSELECTED | ❌ | ⬜ UNSELECTED |
+| 状态       | 修改前 | 修改后        |
+| ---------- | ------ | ------------- |
+| INIT       | ⏱      | 🟧 INIT       |
+| QUEUED     | ⏱      | ⏱ QUEUED      |
+| RUNNING    | ⏱      | ▶ RUNNING     |
+| COMPLETED  | ✅     | ✅ COMPLETED  |
+| CANCELED   | 🔴     | 🔴 CANCELED   |
+| FAILED     | ❌     | ❌ FAILED     |
+| PAUSED     | ⛔     | ⛔ PAUSED     |
+| SUSPEND    | ⛔     | 🟪 SUSPEND    |
+| SKIPPED    | ⛔     | ⏭ SKIPPED     |
+| IGNORED    | ⛔     | ⚪ IGNORED    |
+| UNSELECTED | ❌     | ⬜ UNSELECTED |
 
 ## 不做什么
 
@@ -141,18 +142,18 @@ CICD 平台通过 PR 评论向用户展示流水线进度，`prepareCommentTable
 
 ### 业务仓 `openlibing-cicd`
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `common/enums/PipelineJobStatusEnums.java` | 修改 | 6 个状态的 `ascii_code` 字段值调整 |
-| `business/vo/CommentTableVo.java` | 修改 | 新增 `jobStatusNameEn` 字段 |
-| `business/service/impl/PipelineServiceImpl.java` | 修改 | `buildCommentTableVo`（2 个重载）填充 `jobStatusNameEn`；`prepareCommentTable` 渲染状态列追加英文名 |
-| `src/test/java/.../business/service/impl/PrepareCommentTableTest.java` | 新增 | 覆盖状态列渲染格式与边界场景（含 6 个新 ascii_code 值与 5 个未变状态回归） |
+| 文件                                                                   | 操作 | 说明                                                                                                |
+| ---------------------------------------------------------------------- | ---- | --------------------------------------------------------------------------------------------------- |
+| `common/enums/PipelineJobStatusEnums.java`                             | 修改 | 6 个状态的 `ascii_code` 字段值调整                                                                  |
+| `business/vo/CommentTableVo.java`                                      | 修改 | 新增 `jobStatusNameEn` 字段                                                                         |
+| `business/service/impl/PipelineServiceImpl.java`                       | 修改 | `buildCommentTableVo`（2 个重载）填充 `jobStatusNameEn`；`prepareCommentTable` 渲染状态列追加英文名 |
+| `src/test/java/.../business/service/impl/PrepareCommentTableTest.java` | 新增 | 覆盖状态列渲染格式与边界场景（含 6 个新 ascii_code 值与 5 个未变状态回归）                          |
 
 ### docs 仓 `openlibing-docs`
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `spec/openlibing-cicd/task_design/pr-comment-subtask-refresh/proposal.md` | 新增 | 本文件 |
-| `spec/openlibing-cicd/task_design/pr-comment-subtask-refresh/design.md` | 新增 | 详见 `design.md` |
-| `spec/openlibing-cicd/task_design/pr-comment-subtask-refresh/tasks.md` | 新增 | 详见 `tasks.md` |
+| 文件                                                                            | 操作 | 说明                     |
+| ------------------------------------------------------------------------------- | ---- | ------------------------ |
+| `spec/openlibing-cicd/task_design/pr-comment-subtask-refresh/proposal.md`       | 新增 | 本文件                   |
+| `spec/openlibing-cicd/task_design/pr-comment-subtask-refresh/design.md`         | 新增 | 详见 `design.md`         |
+| `spec/openlibing-cicd/task_design/pr-comment-subtask-refresh/tasks.md`          | 新增 | 详见 `tasks.md`          |
 | `spec/openlibing-cicd/task_design/pr-comment-subtask-refresh/edevops-design.md` | 新增 | 详见 `edevops-design.md` |

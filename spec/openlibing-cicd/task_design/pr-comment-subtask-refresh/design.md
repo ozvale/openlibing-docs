@@ -33,6 +33,7 @@ public enum PipelineJobStatusEnums {
 ```
 
 emoji 冲突清单：
+
 - `INIT` / `QUEUED` / `RUNNING` 共用 `128346`（⏱）
 - `PAUSED` / `SUSPEND` / `SKIPPED` / `IGNORED` 共用 `128721`（⛔）
 - `FAILED` / `UNSELECTED` 共用 `10060`（❌）
@@ -87,19 +88,19 @@ public class CommentTableVo {
 
 ### 3.1 字段值映射
 
-| nameEn | nameCn | 原 ascii_code | 新 ascii_code | 原 emoji | 新 emoji | 说明 |
-|--------|--------|---------------|---------------|----------|----------|------|
-| INIT | 初始化 | 128346 | **128995** | ⏱ | 🟧 | 橙色圆圈，标识"初始化准备中" |
-| QUEUED | 排队中 | 128346 | 128346（不变） | ⏱ | ⏱ | 沿用 |
-| COMPLETED | 已完成 | 9989 | 9989（不变） | ✅ | ✅ | 沿用 |
-| RUNNING | 运行中 | 128346 | **9654** | ⏱ | ▶ | 黑色右指三角，标识"运行中" |
-| CANCELED | 已终止运行 | 129000 | 129000（不变） | 🔴 | 🔴 | 沿用 |
-| FAILED | 运行失败 | 10060 | 10060（不变） | ❌ | ❌ | 沿用 |
-| PAUSED | 已暂停 | 128721 | 128721（不变） | ⛔ | ⛔ | 沿用 |
-| SUSPEND | 已挂起 | 128721 | **128997** | ⛔ | 🟪 | 紫色圆圈，与 PAUSED 区分 |
-| SKIPPED | 已跳过 | 128721 | **9193** | ⛔ | ⏭ | 快进符号，标识"跳过" |
-| IGNORED | 已忽略 | 128721 | **9898** | ⛔ | ⚪ | 白色圆圈，标识"忽略" |
-| UNSELECTED | 无法查询 | 10060 | **11036** | ❌ | ⬜ | 白色方形，与 FAILED 区分 |
+| nameEn     | nameCn     | 原 ascii_code | 新 ascii_code  | 原 emoji | 新 emoji | 说明                         |
+| ---------- | ---------- | ------------- | -------------- | -------- | -------- | ---------------------------- |
+| INIT       | 初始化     | 128346        | **128995**     | ⏱        | 🟧       | 橙色圆圈，标识"初始化准备中" |
+| QUEUED     | 排队中     | 128346        | 128346（不变） | ⏱        | ⏱        | 沿用                         |
+| COMPLETED  | 已完成     | 9989          | 9989（不变）   | ✅       | ✅       | 沿用                         |
+| RUNNING    | 运行中     | 128346        | **9654**       | ⏱        | ▶        | 黑色右指三角，标识"运行中"   |
+| CANCELED   | 已终止运行 | 129000        | 129000（不变） | 🔴       | 🔴       | 沿用                         |
+| FAILED     | 运行失败   | 10060         | 10060（不变）  | ❌       | ❌       | 沿用                         |
+| PAUSED     | 已暂停     | 128721        | 128721（不变） | ⛔       | ⛔       | 沿用                         |
+| SUSPEND    | 已挂起     | 128721        | **128997**     | ⛔       | 🟪       | 紫色圆圈，与 PAUSED 区分     |
+| SKIPPED    | 已跳过     | 128721        | **9193**       | ⛔       | ⏭        | 快进符号，标识"跳过"         |
+| IGNORED    | 已忽略     | 128721        | **9898**       | ⛔       | ⚪       | 白色圆圈，标识"忽略"         |
+| UNSELECTED | 无法查询   | 10060         | **11036**      | ❌       | ⬜       | 白色方形，与 FAILED 区分     |
 
 ### 3.2 改造后的枚举定义
 
@@ -196,6 +197,7 @@ stringBuilder
 ```
 
 渲染示例：
+
 - INIT: `<td>&#128995; INIT</td>` → 🟧 INIT
 - COMPLETED: `<td>&#9989; COMPLETED</td>` → ✅ COMPLETED
 - SKIPPED: `<td>&#9193; SKIPPED</td>` → ⏭ SKIPPED
@@ -203,14 +205,14 @@ stringBuilder
 
 ### 3.6 不涉及的关键模块
 
-| 模块 | 是否影响 | 说明 |
-|------|----------|------|
-| `savePipelineInfoWithAsyncPrOps` 幂等判断 | 否 | 仅比较 `status`，未读取 `ascii_code` / `jobStatusNameEn` |
-| `saveBuildCheck` 门禁结果存库 | 需回归 | 见 4.2 兼容性分析 |
-| `updatePrLabel` / `pushGitCodeCommitStatus` | 否 | 不依赖 `ascii_code` / `jobStatusNameEn` |
-| `PipelineStatusUpdateMessage` / `PipelineStatusUpdateConsumer` | 否 | 不涉及 `ascii_code` |
-| `PipelineStartEventHandler` / `PrOpEventConsumer` | 否 | 不涉及渲染 |
-| `prepareCommentTableTopInfo` / `prepareCommentTableEndInfo` | 否 | 表头表尾不变 |
+| 模块                                                           | 是否影响 | 说明                                                     |
+| -------------------------------------------------------------- | -------- | -------------------------------------------------------- |
+| `savePipelineInfoWithAsyncPrOps` 幂等判断                      | 否       | 仅比较 `status`，未读取 `ascii_code` / `jobStatusNameEn` |
+| `saveBuildCheck` 门禁结果存库                                  | 需回归   | 见 4.2 兼容性分析                                        |
+| `updatePrLabel` / `pushGitCodeCommitStatus`                    | 否       | 不依赖 `ascii_code` / `jobStatusNameEn`                  |
+| `PipelineStatusUpdateMessage` / `PipelineStatusUpdateConsumer` | 否       | 不涉及 `ascii_code`                                      |
+| `PipelineStartEventHandler` / `PrOpEventConsumer`              | 否       | 不涉及渲染                                               |
+| `prepareCommentTableTopInfo` / `prepareCommentTableEndInfo`    | 否       | 表头表尾不变                                             |
 
 ## 4. 兼容性与边界
 
@@ -230,6 +232,7 @@ buildCheckDTO.setState(
 ```
 
 本次改造：
+
 - `COMPLETED.ascii_code` 保持 `9989` 不变 → 成功判定基准不变。
 - SKIPPED / IGNORED / UNSELECTED 的 `ascii_code` 改为非 `9989` 的值 → 仍判定为 `failed`，行为不变。
 - 新增 `jobStatusNameEn` 字段未被 `saveBuildCheck` 使用 → 不影响。
@@ -239,17 +242,18 @@ buildCheckDTO.setState(
 ### 4.3 `CommentTableVo` 调用点兼容性
 
 全仓搜索 `new CommentTableVo(...)` 调用点（除 `@NoArgsConstructor` + setter 链外的全参构造）：
+
 - `buildCommentTableVo`（2 个重载）已用 setter 链，新增字段不影响。
 - 其他类如 `saveBuildCheck` 仅读 `getJobStatusAscii` / `getJobName` / `getJobUrl`，不读 `jobStatusNameEn`，兼容。
 
 ### 4.4 边界场景
 
-| 场景 | 行为 |
-|------|------|
-| 历史已发布的 PR 评论中含旧 emoji（如 ⏱） | 不主动迁移，新评论按新 emoji + 英文名渲染 |
-| 第三方调用 `getAsciiCodeByNameEn("INIT")` 拿到 `128995` | 自动得到新 emoji，无需调用方修改 |
-| `prepareCommentTable` 渲染 `&#128995; INIT` | 浏览器/邮件客户端支持 Unicode emoji，正常渲染为 `🟧 INIT` |
-| 极少数老客户端不支持 `&#128995;` 等 Unicode 较新字符 | 退化显示为方框或空白 + 英文名，不影响功能 |
+| 场景                                                        | 行为                                                                                                                            |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 历史已发布的 PR 评论中含旧 emoji（如 ⏱）                    | 不主动迁移，新评论按新 emoji + 英文名渲染                                                                                       |
+| 第三方调用 `getAsciiCodeByNameEn("INIT")` 拿到 `128995`     | 自动得到新 emoji，无需调用方修改                                                                                                |
+| `prepareCommentTable` 渲染 `&#128995; INIT`                 | 浏览器/邮件客户端支持 Unicode emoji，正常渲染为 `🟧 INIT`                                                                       |
+| 极少数老客户端不支持 `&#128995;` 等 Unicode 较新字符        | 退化显示为方框或空白 + 英文名，不影响功能                                                                                       |
 | `pipelineRunDetail.getStatus()` / `job.getStatus()` 为 null | `setJobStatusNameEn(null)` → 渲染输出 `&#<ascii>; null`，需在调用前过滤或回归验证华为云不会返回 null（华为云正常不会返回 null） |
 
 ## 5. 测试策略

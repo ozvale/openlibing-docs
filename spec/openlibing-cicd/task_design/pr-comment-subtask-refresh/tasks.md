@@ -7,15 +7,15 @@
 
 ## 任务总览
 
-| ID | 任务 | 优先级 | 依赖 | 状态 |
-|----|------|--------|------|------|
-| T1 | 修改 `PipelineJobStatusEnums` 6 个状态的 `ascii_code` | 高 | 无 | ✅ 完成 |
-| T2 | `CommentTableVo` 新增 `jobStatusNameEn` 字段 | 高 | 无 | ✅ 完成 |
-| T3 | `buildCommentTableVo`（2 个重载）填充 `jobStatusNameEn` | 高 | T2 | ✅ 完成 |
-| T4 | `prepareCommentTable` 渲染状态列追加英文名（含左对齐 + 内边距，自测反馈追加） | 高 | T2、T3 | ✅ 完成 |
-| T5 | 新增 `PrepareCommentTableTest` 单元测试（覆盖渲染格式与枚举值回归） | 高 | T1-T4 | ✅ 完成（15/15 通过） |
-| T6 | 回归现有测试 | 中 | T1-T5 | ✅ 完成 |
-| T7 | 手动验收 PR 评论渲染 | 中 | T1-T6 | ✅ 完成（PR #557） |
+| ID  | 任务                                                                          | 优先级 | 依赖   | 状态                  |
+| --- | ----------------------------------------------------------------------------- | ------ | ------ | --------------------- |
+| T1  | 修改 `PipelineJobStatusEnums` 6 个状态的 `ascii_code`                         | 高     | 无     | ✅ 完成               |
+| T2  | `CommentTableVo` 新增 `jobStatusNameEn` 字段                                  | 高     | 无     | ✅ 完成               |
+| T3  | `buildCommentTableVo`（2 个重载）填充 `jobStatusNameEn`                       | 高     | T2     | ✅ 完成               |
+| T4  | `prepareCommentTable` 渲染状态列追加英文名（含左对齐 + 内边距，自测反馈追加） | 高     | T2、T3 | ✅ 完成               |
+| T5  | 新增 `PrepareCommentTableTest` 单元测试（覆盖渲染格式与枚举值回归）           | 高     | T1-T4  | ✅ 完成（15/15 通过） |
+| T6  | 回归现有测试                                                                  | 中     | T1-T5  | ✅ 完成               |
+| T7  | 手动验收 PR 评论渲染                                                          | 中     | T1-T6  | ✅ 完成（PR #557）    |
 
 > 追加任务（自测反馈）：状态列左对齐 + 8px 内边距 — commit `b1a393d5`，✅ 完成
 
@@ -179,13 +179,13 @@
 
 ## 风险与缓解
 
-| 风险 | 缓解 |
-|------|------|
+| 风险                                                           | 缓解                                                                |
+| -------------------------------------------------------------- | ------------------------------------------------------------------- |
 | 第三方代码依赖 `INIT` / `RUNNING` 等状态的 `ascii_code=128346` | 全仓搜索 `128346` / `getAsciiCodeByNameEn` 调用点，确认无硬编码依赖 |
-| `saveBuildCheck` 行为变化 | T7 回归测试覆盖 |
-| `CommentTableVo` 全参构造调用点未更新 | 全仓搜索 `new CommentTableVo(`，更新为 5 参构造或 setter 链 |
-| 老客户端不支持较新 Unicode emoji（如 🟧 🟪 ⬜） | 仅影响视觉，不阻塞功能 |
-| 旧 PR 评论中保留旧 emoji | 不主动迁移，新评论按新值 + 英文名渲染 |
+| `saveBuildCheck` 行为变化                                      | T7 回归测试覆盖                                                     |
+| `CommentTableVo` 全参构造调用点未更新                          | 全仓搜索 `new CommentTableVo(`，更新为 5 参构造或 setter 链         |
+| 老客户端不支持较新 Unicode emoji（如 🟧 🟪 ⬜）                | 仅影响视觉，不阻塞功能                                              |
+| 旧 PR 评论中保留旧 emoji                                       | 不主动迁移，新评论按新值 + 英文名渲染                               |
 
 ## 不做的事
 
