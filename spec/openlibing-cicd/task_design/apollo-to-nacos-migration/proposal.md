@@ -11,6 +11,7 @@ FE 需求名称：自建apollo、eureka服务替换为华为云CSE服务（nacos
 ## 功能描述
 
 **做什么**：
+
 - 升级 `openlibing-common` 1.0.19.5 → 1.0.20.4（内置 Nacos 依赖，移除 Apollo/Eureka 传递依赖）
 - 启动类 `OpenlibingCicdApplication` 移除 `@EnableApolloConfig` 与 `ConfigContextInitializer`，新增静态代码块关闭 Nacos 配置快照落盘（`SnapShotSwitch.setIsSnapShot(false)`）
 - `application-beta.yaml` / `application-gama.yaml` / `application-prod.yaml` 三个环境 profile 全部由 Apollo 块改为 Nacos `spring.config.import` + `cloud.nacos`（config + discovery）
@@ -22,6 +23,7 @@ FE 需求名称：自建apollo、eureka服务替换为华为云CSE服务（nacos
 - `PipelineControllerTest` 增加 `@TestPropertySource` 禁用 Nacos 配置导入检查，适配 `@WebMvcTest` 切片上下文
 
 **不做什么**：
+
 - 不新建 `application-local.yaml`（仓库无此文件，本地开发沿用 beta namespace）
 - 不清理 `parameter_verification_exception_type` 死配置（仓库中未发现该配置使用）
 - 不清理 `OPLB_ACCESS_TOKEN` 未使用常量（仓库中未发现该常量）
@@ -45,6 +47,7 @@ FE 需求名称：自建apollo、eureka服务替换为华为云CSE服务（nacos
 ## 影响范围
 
 **受影响模块/文件**（12 个）：
+
 - `pom.xml`
 - `src/main/java/com/openlibing/cicd/OpenlibingCicdApplication.java`
 - `src/main/java/com/openlibing/cicd/business/service/impl/CrossRegionServiceImpl.java`
