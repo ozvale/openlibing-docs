@@ -4,7 +4,8 @@
 
 - 业务 Issue: https://gitcode.com/openlibing/openlibing-cicd/issues/207
 - 业务 PR: https://gitcode.com/openlibing/openlibing-cicd/pulls/557
-- docs PR: （创建后回填）
+- docs Issue: https://gitcode.com/openlibing/openlibing-docs/issues/144
+- docs PR: https://gitcode.com/openlibing/openlibing-docs/pulls/868
 
 ## 需求最终范围
 
