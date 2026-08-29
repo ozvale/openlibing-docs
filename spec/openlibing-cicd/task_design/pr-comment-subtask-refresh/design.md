@@ -7,7 +7,7 @@
 ## 1. 设计目标
 
 1. 通过调整 `PipelineJobStatusEnums` 中部分状态的 `ascii_code` 字段值，解决 PR 评论中多个状态共用同一 emoji、辨识度低的问题。
-2. 在状态列 emoji 后追加状态英文名（`nameEn`），提升可读性，例如 `🟧 INIT`、`✅ COMPLETED`。
+2. 在状态列 emoji 后追加状态英文名（`nameEn`），提升可读性，例如 `🟣 INIT`、`✅ COMPLETED`。
 
 ## 2. 现状分析
 
@@ -90,14 +90,14 @@ public class CommentTableVo {
 
 | nameEn     | nameCn     | 原 ascii_code | 新 ascii_code  | 原 emoji | 新 emoji | 说明                         |
 | ---------- | ---------- | ------------- | -------------- | -------- | -------- | ---------------------------- |
-| INIT       | 初始化     | 128346        | **128995**     | ⏱        | 🟧       | 橙色圆圈，标识"初始化准备中" |
+| INIT       | 初始化     | 128346        | **128995**     | ⏱        | 🟣       | 紫色圆圈，标识"初始化准备中" |
 | QUEUED     | 排队中     | 128346        | 128346（不变） | ⏱        | ⏱        | 沿用                         |
 | COMPLETED  | 已完成     | 9989          | 9989（不变）   | ✅       | ✅       | 沿用                         |
 | RUNNING    | 运行中     | 128346        | **9654**       | ⏱        | ▶        | 黑色右指三角，标识"运行中"   |
 | CANCELED   | 已终止运行 | 129000        | 129000（不变） | 🔴       | 🔴       | 沿用                         |
 | FAILED     | 运行失败   | 10060         | 10060（不变）  | ❌       | ❌       | 沿用                         |
 | PAUSED     | 已暂停     | 128721        | 128721（不变） | ⛔       | ⛔       | 沿用                         |
-| SUSPEND    | 已挂起     | 128721        | **128997**     | ⛔       | 🟪       | 紫色圆圈，与 PAUSED 区分     |
+| SUSPEND    | 已挂起     | 128721        | **128997**     | ⛔       | 🟥       | 红色方块，与 PAUSED 区分     |
 | SKIPPED    | 已跳过     | 128721        | **9193**       | ⛔       | ⏭        | 快进符号，标识"跳过"         |
 | IGNORED    | 已忽略     | 128721        | **9898**       | ⛔       | ⚪       | 白色圆圈，标识"忽略"         |
 | UNSELECTED | 无法查询   | 10060         | **11036**      | ❌       | ⬜       | 白色方形，与 FAILED 区分     |
@@ -106,14 +106,14 @@ public class CommentTableVo {
 
 ```java
 public enum PipelineJobStatusEnums {
-    INIT("INIT", "初始化", "128995"),          // ⏱ → 🟧
+    INIT("INIT", "初始化", "128995"),          // ⏱ → �
     QUEUED("QUEUED", "排队中", "128346"),      // 沿用
     COMPLETED("COMPLETED", "已完成", "9989"),   // 沿用
     RUNNING("RUNNING", "运行中", "9654"),       // ⏱ → ▶
     CANCELED("CANCELED", "已终止运行", "129000"), // 沿用
     FAILED("FAILED", "运行失败", "10060"),      // 沿用
     PAUSED("PAUSED", "已暂停", "128721"),        // 沿用
-    SUSPEND("SUSPEND", "已挂起", "128997"),      // ⛔ → 🟪
+    SUSPEND("SUSPEND", "已挂起", "128997"),      // ⛔ → �
     SKIPPED("SKIPPED", "已跳过", "9193"),        // ⛔ → ⏭
     IGNORED("IGNORED", "已忽略", "9898"),        // ⛔ → ⚪
     UNSELECTED("UNSELECTED", "无法查询", "11036"); // ❌ → ⬜
@@ -198,7 +198,7 @@ stringBuilder
 
 渲染示例：
 
-- INIT: `<td>&#128995; INIT</td>` → 🟧 INIT
+- INIT: `<td>&#128995; INIT</td>` → � INIT
 - COMPLETED: `<td>&#9989; COMPLETED</td>` → ✅ COMPLETED
 - SKIPPED: `<td>&#9193; SKIPPED</td>` → ⏭ SKIPPED
 - UNSELECTED: `<td>&#11036; UNSELECTED</td>` → ⬜ UNSELECTED
@@ -252,7 +252,7 @@ buildCheckDTO.setState(
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | 历史已发布的 PR 评论中含旧 emoji（如 ⏱）                    | 不主动迁移，新评论按新 emoji + 英文名渲染                                                                                       |
 | 第三方调用 `getAsciiCodeByNameEn("INIT")` 拿到 `128995`     | 自动得到新 emoji，无需调用方修改                                                                                                |
-| `prepareCommentTable` 渲染 `&#128995; INIT`                 | 浏览器/邮件客户端支持 Unicode emoji，正常渲染为 `🟧 INIT`                                                                       |
+| `prepareCommentTable` 渲染 `&#128995; INIT`                 | 浏览器/邮件客户端支持 Unicode emoji，正常渲染为 `� INIT`                                                                       |
 | 极少数老客户端不支持 `&#128995;` 等 Unicode 较新字符        | 退化显示为方框或空白 + 英文名，不影响功能                                                                                       |
 | `pipelineRunDetail.getStatus()` / `job.getStatus()` 为 null | `setJobStatusNameEn(null)` → 渲染输出 `&#<ascii>; null`，需在调用前过滤或回归验证华为云不会返回 null（华为云正常不会返回 null） |
 
@@ -288,9 +288,9 @@ buildCheckDTO.setState(
 
 - 触发一次 PR 评论流水线（如评论触发或 webhook 触发）。
 - 检查 PR 评论表格中各状态 emoji + 英文名渲染：
-  - INIT 渲染为 `🟧 INIT`
+  - INIT 渲染为 `� INIT`
   - RUNNING 渲染为 `▶ RUNNING`
-  - SUSPEND 渲染为 `🟪 SUSPEND`
+  - SUSPEND 渲染为 `� SUSPEND`
   - SKIPPED 渲染为 `⏭ SKIPPED`
   - IGNORED 渲染为 `⚪ IGNORED`
   - UNSELECTED 渲染为 `⬜ UNSELECTED`

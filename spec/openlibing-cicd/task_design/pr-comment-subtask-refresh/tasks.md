@@ -41,14 +41,14 @@
   UNSELECTED("UNSELECTED", "无法查询", "10060");
 
   // 修改后（仅 6 个状态的 ascii_code 变化，nameEn/nameCn 不动）
-  INIT("INIT", "初始化", "128995"),          // ⏱ → 🟧
+  INIT("INIT", "初始化", "128995"),          // ⏱ → 🟣
   QUEUED("QUEUED", "排队中", "128346"),      // 沿用
   COMPLETED("COMPLETED", "已完成", "9989"),   // 沿用
   RUNNING("RUNNING", "运行中", "9654"),       // ⏱ → ▶
   CANCELED("CANCELED", "已终止运行", "129000"), // 沿用
   FAILED("FAILED", "运行失败", "10060"),      // 沿用
   PAUSED("PAUSED", "已暂停", "128721"),        // 沿用
-  SUSPEND("SUSPEND", "已挂起", "128997"),      // ⛔ → 🟪
+  SUSPEND("SUSPEND", "已挂起", "128997"),      // ⛔ → 🟥
   SKIPPED("SKIPPED", "已跳过", "9193"),        // ⛔ → ⏭
   IGNORED("IGNORED", "已忽略", "9898"),        // ⛔ → ⚪
   UNSELECTED("UNSELECTED", "无法查询", "11036"); // ❌ → ⬜
@@ -131,7 +131,7 @@
   ```
 
 - 渲染示例：
-  - INIT: `<td>&#128995; INIT</td>` → 🟧 INIT
+  - INIT: `<td>&#128995; INIT</td>` → 🟣 INIT
   - COMPLETED: `<td>&#9989; COMPLETED</td>` → ✅ COMPLETED
   - SKIPPED: `<td>&#9193; SKIPPED</td>` → ⏭ SKIPPED
 - 验证：本地编译通过。
@@ -168,9 +168,9 @@
 
 - 触发一次 PR 评论流水线（如评论触发或 webhook 触发）。
 - 检查 PR 评论表格中各状态 emoji + 英文名渲染：
-  - INIT 渲染为 `🟧 INIT`
+  - INIT 渲染为 `� INIT`
   - RUNNING 渲染为 `▶ RUNNING`
-  - SUSPEND 渲染为 `🟪 SUSPEND`
+  - SUSPEND 渲染为 `� SUSPEND`
   - SKIPPED 渲染为 `⏭ SKIPPED`
   - IGNORED 渲染为 `⚪ IGNORED`
   - UNSELECTED 渲染为 `⬜ UNSELECTED`
@@ -184,7 +184,7 @@
 | 第三方代码依赖 `INIT` / `RUNNING` 等状态的 `ascii_code=128346` | 全仓搜索 `128346` / `getAsciiCodeByNameEn` 调用点，确认无硬编码依赖 |
 | `saveBuildCheck` 行为变化                                      | T7 回归测试覆盖                                                     |
 | `CommentTableVo` 全参构造调用点未更新                          | 全仓搜索 `new CommentTableVo(`，更新为 5 参构造或 setter 链         |
-| 老客户端不支持较新 Unicode emoji（如 🟧 🟪 ⬜）                | 仅影响视觉，不阻塞功能                                              |
+| 老客户端不支持较新 Unicode emoji（如 � � ⬜）                | 仅影响视觉，不阻塞功能                                              |
 | 旧 PR 评论中保留旧 emoji                                       | 不主动迁移，新评论按新值 + 英文名渲染                               |
 
 ## 不做的事

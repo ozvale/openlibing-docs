@@ -12,7 +12,7 @@
 经评审，原始需求"子任务状态结束触发评论刷新 + 任务状态文字提示"调整为：
 
 1. PR 流水线报告评论表格状态列在 emoji 后追加状态英文名（如 `✅ COMPLETED`）
-2. 优化 6 个状态的 emoji 辨识度（INIT→🟧、RUNNING→▶、SUSPEND→🟪、SKIPPED→⏭、IGNORED→⚪、UNSELECTED→⬜）
+2. 优化 6 个状态的 emoji 辨识度（INIT→🟣、RUNNING→▶、SUSPEND→🟥、SKIPPED→⏭、IGNORED→⚪、UNSELECTED→⬜）
 3. 状态列左对齐 + 8px 内边距（用户自测后追加的需求）
 
 子任务状态指纹方案（subtaskFingerprint / lastSubtaskFingerprint）已从需求中移除，未实现。

@@ -51,21 +51,21 @@ CICD 平台通过 PR 评论向用户展示流水线进度，`prepareCommentTable
 
 | nameEn     | nameCn     | 原 ascii_code | 新 ascii_code  | 原 emoji | 新 emoji | 说明                         |
 | ---------- | ---------- | ------------- | -------------- | -------- | -------- | ---------------------------- |
-| INIT       | 初始化     | 128346        | **128995**     | ⏱        | 🟧       | 橙色圆圈，标识"初始化准备中" |
+| INIT       | 初始化     | 128346        | **128995**     | ⏱        | 🟣       | 紫色圆圈，标识"初始化准备中" |
 | QUEUED     | 排队中     | 128346        | 128346（不变） | ⏱        | ⏱        | 沿用                         |
 | COMPLETED  | 已完成     | 9989          | 9989（不变）   | ✅       | ✅       | 沿用                         |
 | RUNNING    | 运行中     | 128346        | **9654**       | ⏱        | ▶        | 黑色右指三角，标识"运行中"   |
 | CANCELED   | 已终止运行 | 129000        | 129000（不变） | 🔴       | 🔴       | 沿用                         |
 | FAILED     | 运行失败   | 10060         | 10060（不变）  | ❌       | ❌       | 沿用                         |
 | PAUSED     | 已暂停     | 128721        | 128721（不变） | ⛔       | ⛔       | 沿用                         |
-| SUSPEND    | 已挂起     | 128721        | **128997**     | ⛔       | 🟪       | 紫色圆圈，与 PAUSED 区分     |
+| SUSPEND    | 已挂起     | 128721        | **128997**     | ⛔       | 🟥       | 红色方块，与 PAUSED 区分     |
 | SKIPPED    | 已跳过     | 128721        | **9193**       | ⛔       | ⏭        | 快进符号，标识"跳过"         |
 | IGNORED    | 已忽略     | 128721        | **9898**       | ⛔       | ⚪       | 白色圆圈，标识"忽略"         |
 | UNSELECTED | 无法查询   | 10060         | **11036**      | ❌       | ⬜       | 白色方形，与 FAILED 区分     |
 
 ### 需求 2：状态列追加状态英文名
 
-**渲染改造**：`prepareCommentTable` 渲染状态列时，在 emoji 后追加状态英文名（`nameEn`），格式为 `<emoji> <nameEn>`（emoji + 空格 + 英文名），例如 `🟧 INIT`、`✅ COMPLETED`、`▶ RUNNING`、`⏭ SKIPPED`。
+**渲染改造**：`prepareCommentTable` 渲染状态列时，在 emoji 后追加状态英文名（`nameEn`），格式为 `<emoji> <nameEn>`（emoji + 空格 + 英文名），例如 `🟣 INIT`、`✅ COMPLETED`、`▶ RUNNING`、`⏭ SKIPPED`。
 
 **改造前**：`<td>&#<ascii>;</td>` → 仅显示 emoji（如 `⏱`）
 
@@ -83,14 +83,14 @@ CICD 平台通过 PR 评论向用户展示流水线进度，`prepareCommentTable
 
 | 状态       | 修改前 | 修改后        |
 | ---------- | ------ | ------------- |
-| INIT       | ⏱      | 🟧 INIT       |
+| INIT       | ⏱      | 🟣 INIT       |
 | QUEUED     | ⏱      | ⏱ QUEUED      |
 | RUNNING    | ⏱      | ▶ RUNNING     |
 | COMPLETED  | ✅     | ✅ COMPLETED  |
 | CANCELED   | 🔴     | 🔴 CANCELED   |
 | FAILED     | ❌     | ❌ FAILED     |
 | PAUSED     | ⛔     | ⛔ PAUSED     |
-| SUSPEND    | ⛔     | 🟪 SUSPEND    |
+| SUSPEND    | ⛔     | � SUSPEND    |
 | SKIPPED    | ⛔     | ⏭ SKIPPED     |
 | IGNORED    | ⛔     | ⚪ IGNORED    |
 | UNSELECTED | ❌     | ⬜ UNSELECTED |
@@ -112,9 +112,9 @@ CICD 平台通过 PR 评论向用户展示流水线进度，`prepareCommentTable
 
 ## 验收标准
 
-- [ ] `PipelineJobStatusEnums.INIT.ascii_code` 从 `128346` 改为 `128995`（🟧）。
+- [ ] `PipelineJobStatusEnums.INIT.ascii_code` 从 `128346` 改为 `128995`（🟣）。
 - [ ] `PipelineJobStatusEnums.RUNNING.ascii_code` 从 `128346` 改为 `9654`（▶）。
-- [ ] `PipelineJobStatusEnums.SUSPEND.ascii_code` 从 `128721` 改为 `128997`（🟪）。
+- [ ] `PipelineJobStatusEnums.SUSPEND.ascii_code` 从 `128721` 改为 `128997`（🟥）。
 - [ ] `PipelineJobStatusEnums.SKIPPED.ascii_code` 从 `128721` 改为 `9193`（⏭）。
 - [ ] `PipelineJobStatusEnums.IGNORED.ascii_code` 从 `128721` 改为 `9898`（⚪）。
 - [ ] `PipelineJobStatusEnums.UNSELECTED.ascii_code` 从 `10060` 改为 `11036`（⬜）。

@@ -9,7 +9,7 @@
 ### 1.1 目标
 
 1. 通过调整 `PipelineJobStatusEnums` 中部分状态的 `ascii_code` 字段值，解决 PR 评论中多个状态共用同一 emoji、辨识度低的问题。
-2. 在状态列 emoji 后追加状态英文名（`nameEn`），提升可读性，例如 `🟧 INIT`、`✅ COMPLETED`。
+2. 在状态列 emoji 后追加状态英文名（`nameEn`），提升可读性，例如 `🟣 INIT`、`✅ COMPLETED`。
 
 ### 1.2 范围
 
@@ -70,14 +70,14 @@
 
 | nameEn     | nameCn     | 原 ascii_code | 新 ascii_code  | 原 emoji | 新 emoji | 渲染格式（改后） |
 | ---------- | ---------- | ------------- | -------------- | -------- | -------- | ---------------- |
-| INIT       | 初始化     | 128346        | **128995**     | ⏱        | 🟧       | `🟧 INIT`        |
+| INIT       | 初始化     | 128346        | **128995**     | ⏱        | 🟣       | `🟣 INIT`        |
 | QUEUED     | 排队中     | 128346        | 128346（不变） | ⏱        | ⏱        | `⏱ QUEUED`       |
 | COMPLETED  | 已完成     | 9989          | 9989（不变）   | ✅       | ✅       | `✅ COMPLETED`   |
 | RUNNING    | 运行中     | 128346        | **9654**       | ⏱        | ▶        | `▶ RUNNING`      |
 | CANCELED   | 已终止运行 | 129000        | 129000（不变） | 🔴       | 🔴       | `🔴 CANCELED`    |
 | FAILED     | 运行失败   | 10060         | 10060（不变）  | ❌       | ❌       | `❌ FAILED`      |
 | PAUSED     | 已暂停     | 128721        | 128721（不变） | ⛔       | ⛔       | `⛔ PAUSED`      |
-| SUSPEND    | 已挂起     | 128721        | **128997**     | ⛔       | 🟪       | `🟪 SUSPEND`     |
+| SUSPEND    | 已挂起     | 128721        | **128997**     | ⛔       | 🟥       | `🟥 SUSPEND`     |
 | SKIPPED    | 已跳过     | 128721        | **9193**       | ⛔       | ⏭        | `⏭ SKIPPED`      |
 | IGNORED    | 已忽略     | 128721        | **9898**       | ⛔       | ⚪       | `⚪ IGNORED`     |
 | UNSELECTED | 无法查询   | 10060         | **11036**      | ❌       | ⬜       | `⬜ UNSELECTED`  |
@@ -86,9 +86,9 @@
 
 | 状态       | 新 emoji | Unicode 名称                                           | 选择理由                                  |
 | ---------- | -------- | ------------------------------------------------------ | ----------------------------------------- |
-| INIT       | 🟧       | LARGE ORANGE CIRCLE                                    | 暖色"等待启动"提示，区别于 QUEUED/RUNNING |
+| INIT       | 🟣       | LARGE PURPLE CIRCLE                                    | 区别于 QUEUED/RUNNING 的"等待启动"提示    |
 | RUNNING    | ▶        | BLACK RIGHT-POINTING TRIANGLE                          | 直觉性"播放/运行中"符号                   |
-| SUSPEND    | 🟪       | LARGE PURPLE CIRCLE                                    | 与 PAUSED（⛔）区分，标识"挂起"           |
+| SUSPEND    | 🟥       | LARGE RED SQUARE                                       | 与 PAUSED（⛔）及 CANCELED（🔴）区分      |
 | SKIPPED    | ⏭        | BLACK RIGHT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR | "快进/跳过"直觉性符号                     |
 | IGNORED    | ⚪       | MEDIUM WHITE CIRCLE                                    | "空白/忽略"的视觉感                       |
 | UNSELECTED | ⬜       | WHITE LARGE SQUARE                                     | "未选中/空白槽位"，与 FAILED（❌）区分    |
@@ -110,7 +110,7 @@ CommentTableVo.jobStatusNameEn = "INIT"
 prepareCommentTable 输出 "<td>&#128995; INIT</td>"  ← 拼接 emoji + 空格 + 英文名
    │
    ▼
-PR 评论 HTML 渲染为 "🟧 INIT"
+PR 评论 HTML 渲染为 "🟣 INIT"
 ```
 
 ### 2.5 边界场景
@@ -119,7 +119,7 @@ PR 评论 HTML 渲染为 "🟧 INIT"
 | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | 历史已发布的 PR 评论含旧 emoji（如 ⏱）                      | 不主动迁移，新评论按新 emoji + 英文名渲染                                                                   |
 | 第三方调用 `getAsciiCodeByNameEn("INIT")` 拿到 `128995`     | 自动得到新 emoji，无需调用方修改                                                                            |
-| `prepareCommentTable` 渲染 `&#128995; INIT`                 | 浏览器/邮件客户端支持 Unicode emoji，正常渲染为 `🟧 INIT`                                                   |
+| `prepareCommentTable` 渲染 `&#128995; INIT`                 | 浏览器/邮件客户端支持 Unicode emoji，正常渲染为 `🟣 INIT`                                                   |
 | 极少数老客户端不支持较新 Unicode 字符                       | 退化显示为方框或空白 + 英文名，不阻塞功能                                                                   |
 | `pipelineRunDetail.getStatus()` / `job.getStatus()` 为 null | `setJobStatusNameEn(null)` → 渲染输出 `&#<ascii>; null`，需回归验证华为云不会返回 null（正常不会返回 null） |
 
@@ -163,14 +163,14 @@ public enum PipelineJobStatusEnums {
 
 ```java
 public enum PipelineJobStatusEnums {
-    INIT("INIT", "初始化", "128995"),          // ⏱ → 🟧
+    INIT("INIT", "初始化", "128995"),          // ⏱ → 🟣
     QUEUED("QUEUED", "排队中", "128346"),      // 沿用
     COMPLETED("COMPLETED", "已完成", "9989"),   // 沿用
     RUNNING("RUNNING", "运行中", "9654"),       // ⏱ → ▶
     CANCELED("CANCELED", "已终止运行", "129000"), // 沿用
     FAILED("FAILED", "运行失败", "10060"),      // 沿用
     PAUSED("PAUSED", "已暂停", "128721"),        // 沿用
-    SUSPEND("SUSPEND", "已挂起", "128997"),      // ⛔ → 🟪
+    SUSPEND("SUSPEND", "已挂起", "128997"),      // ⛔ → 🟥
     SKIPPED("SKIPPED", "已跳过", "9193"),        // ⛔ → ⏭
     IGNORED("IGNORED", "已忽略", "9898"),        // ⛔ → ⚪
     UNSELECTED("UNSELECTED", "无法查询", "11036"); // ❌ → ⬜
