@@ -101,25 +101,25 @@ private boolean hasRepoLocator(QuerySummaryModel query) {
 com.openlibing.codecheck.business.operation.codecheck
   └─ StaticAlarmSummaryOperation           // 新增
        ├─ queryStaticAlarmSummaryList(QuerySummaryModel query): PageVo
-       │     ├─ buildCriteriaFromQuery(query): Criteria
-       │     ├─ countScanRun(criteria): long
-       │     ├─ pageScanRun(criteria, query): List<StaticAlarmScanRunEntity>
-       │     ├─ batchAggregateIssues(scanRunIds): Map<scanRunId, IssueStats>
-       │     │     // 按 scan_run_id 聚合 status 各档计数（OPEN/RESOLVED/IGNORED）
-       │     ├─ enrichRepoAndProjectInfo(scanRuns)
-       │     │     // 通过 projectId 反查 repo_info.repoId / project 表 projectName
-       │     │     // 通过 hw_project_info 反查 hw_project_id
-       │     ├─ enrichCodeMetrics(scanRuns)
-       │     │     // Feign 调 coderepo getLatestMetricsByGitUrl(gitUrl)
-       │     │     // 拉取 code_metrics_record.metrics_data_json
-       │     └─ toDtos(scanRuns, issueStatsMap, metricsMap): List<CodeCheckResultSummaryDTO>
-       │
+       │     // 主入口：count + 分页 find 内联完成（MongoTemplate）
        ├─ buildCriteriaFromQuery(query): Criteria
        │     // 把 QuerySummaryModel 的过滤条件翻译成 CodeQL 表上的等价条件
        │     // 具体映射见 §4.4
-       │
-       └─ toDto(scanRun, issueStats, metrics): CodeCheckResultSummaryDTO
-             // 单条 scan_run + 聚合的 issue 统计 + 度量数据 → 一条 DTO
+       ├─ batchAggregateIssues(scanRuns): Map<scanRunId, IssueStats>
+       │     // 按 pipeline_run_id 聚合 status / severity 各档计数
+       │     // 仅对快照字段未就绪的 scan_run 聚合（needIssueAggregationFallback 判定）
+       ├─ enrichRepoAndProjectInfo(scanRuns): Map<repoUrl, RepoContext>
+       │     // 批量反查 repo_info / project_info / hw_project_info，内存 Map 关联
+       ├─ enrichCodeMetrics(scanRuns): Map<groupKey, CodeMetricsSnapshotDTO>
+       │     // Feign 调 coderepo getLatestMetricsByCommitBatch(queries)
+       │     // 按 (repo_url, branch, commit_id) 三元组批量关联 code_metrics_record
+       │     // 以 scan_run 为主，按 commit_id 精确匹配（详见 §4.6）
+       ├─ toDto(scanRun, issueStats, metrics): CodeCheckResultSummaryDTO
+       │     // 单条 scan_run + 聚合的 issue 统计 + 度量数据 → 一条 DTO
+       ├─ resolveXxxCount 系列 / applyMetrics / mapScanRunStatus
+       │     // 计数字段快照优先、issue 聚合兜底；度量字段填充；状态枚举映射
+       └─ groupKey(repoUrl, branch, commitId): String
+             // 度量关联的内存索引键
 ```
 
 ### 4.2 不复用 FullSummaryOperation 的原因
@@ -178,18 +178,18 @@ com.openlibing.codecheck.business.operation.codecheck
 | 36  | `majorCount`                     | `static_alarm_scan_run` | `major_count_snapshot`                                               | scan_run 新增字段；未就绪回退到 issue 表 `severity="High"` 聚合                                                                                                                                              |
 | 37  | `minorCount`                     | `static_alarm_scan_run` | `minor_count_snapshot`                                               | scan_run 新增字段；未就绪回退到 issue 表 `severity="Medium"` 聚合                                                                                                                                            |
 | 38  | `suggestionCount`                | `static_alarm_scan_run` | `suggestion_count_snapshot`                                          | scan_run 新增字段；未就绪回退到 issue 表 `severity="Low"` 聚合                                                                                                                                               |
-| 39  | `codeLine`                       | `code_metrics_record`   | `metrics_data_json.codeScale`                                        | 度量数据走 §4.6 时序关联；找不到记录置 0                                                                                                                                                                     |
-| 40  | `codeLineTotal`                  | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `codeLineTotal`）               | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 null 或 0                                                                                                                                 |
+| 39  | `codeLine`                       | `code_metrics_record`   | `metrics_data_json.codeScale`                                        | 度量数据走 §4.6 commit 精确关联；找不到记录置 0                                                                                                                                                                     |
+| 40  | `codeLineTotal`                  | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `codeLineTotal`）               | 度量数据走 §4.6 commit 精确关联；依赖 coderepo 改造；未就绪或找不到记录置 null 或 0                                                                                                                                 |
 | 41  | `codeQuality`                    | 固定值                  | `100`                                                                | —                                                                                                                                                                                                            |
-| 42  | `commentLines`                   | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `commentLines`）                | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 0                                                                                                                                         |
-| 44  | `complexityCount`                | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `complexityCount`）             | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 0                                                                                                                                         |
-| 45  | `cyclomaticComplexityPerMethod`  | `code_metrics_record`   | `metrics_data_json.avgCyclomaticComplexity`                          | 度量数据走 §4.6 时序关联；找不到记录置 0                                                                                                                                                                     |
-| 46  | `cyclomaticComplexityPerFile`    | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `cyclomaticComplexityPerFile`） | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 null                                                                                                                                      |
-| 47  | `duplicatedBlocks`               | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `duplicatedBlocks`）            | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 0                                                                                                                                         |
-| 48  | `duplicatedLines`                | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `duplicatedLines`）             | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 0                                                                                                                                         |
-| 49  | `duplicationRatio`               | `code_metrics_record`   | `metrics_data_json.totalCodeDuplicationRate`                         | 度量数据走 §4.6 时序关联；找不到记录置 `"0"` 或 null                                                                                                                                                         |
-| 50  | `fileDuplicationRatio`           | `code_metrics_record`   | `metrics_data_json.totalFileDuplicationRate`                         | 度量数据走 §4.6 时序关联；找不到记录置 `"0"` 或 null                                                                                                                                                         |
-| 57  | `metricInfo`                     | `code_metrics_record`   | `metrics_data_json` 原文                                             | 度量数据走 §4.6 时序关联；找不到记录置 null 或空 JSON 字符串                                                                                                                                                 |
+| 42  | `commentLines`                   | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `commentLines`）                | 度量数据走 §4.6 commit 精确关联；依赖 coderepo 改造；未就绪或找不到记录置 0                                                                                                                                         |
+| 44  | `complexityCount`                | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `complexityCount`）             | 度量数据走 §4.6 commit 精确关联；依赖 coderepo 改造；未就绪或找不到记录置 0                                                                                                                                         |
+| 45  | `cyclomaticComplexityPerMethod`  | `code_metrics_record`   | `metrics_data_json.avgCyclomaticComplexity`                          | 度量数据走 §4.6 commit 精确关联；找不到记录置 0                                                                                                                                                                     |
+| 46  | `cyclomaticComplexityPerFile`    | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `cyclomaticComplexityPerFile`） | 度量数据走 §4.6 commit 精确关联；依赖 coderepo 改造；未就绪或找不到记录置 null                                                                                                                                      |
+| 47  | `duplicatedBlocks`               | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `duplicatedBlocks`）            | 度量数据走 §4.6 commit 精确关联；依赖 coderepo 改造；未就绪或找不到记录置 0                                                                                                                                         |
+| 48  | `duplicatedLines`                | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `duplicatedLines`）             | 度量数据走 §4.6 commit 精确关联；依赖 coderepo 改造；未就绪或找不到记录置 0                                                                                                                                         |
+| 49  | `duplicationRatio`               | `code_metrics_record`   | `metrics_data_json.totalCodeDuplicationRate`                         | 度量数据走 §4.6 commit 精确关联；找不到记录置 `"0"` 或 null                                                                                                                                                         |
+| 50  | `fileDuplicationRatio`           | `code_metrics_record`   | `metrics_data_json.totalFileDuplicationRate`                         | 度量数据走 §4.6 commit 精确关联；找不到记录置 `"0"` 或 null                                                                                                                                                         |
+| 57  | `metricInfo`                     | `code_metrics_record`   | `metrics_data_json` 原文                                             | 度量数据走 §4.6 commit 精确关联；找不到记录置 null 或空 JSON 字符串                                                                                                                                                 |
 | 58  | `riskCoefficient`                | 固定值                  | `100`                                                                | —                                                                                                                                                                                                            |
 | 59  | `taskRuleInfo`                   | —                       | —                                                                    | 不对接，置 null                                                                                                                                                                                              |
 | 62  | `repoUrl`                        | `static_alarm_scan_run` | `repo_url`                                                           | 直接取（仅 `mrUrl` 不对接置 null）                                                                                                                                                                           |
@@ -246,15 +246,14 @@ CodeQL 扫描与代码度量扫描是两条独立的扫描链路，执行时机�
 
 #### 4.6.3 commit_id 精确关联算法
 
-**以 CodeQL `scan_run` 为主**，对每条 scan_run 按如下步骤取度量记录：
+**以 CodeQL `scan_run` 为主，按本页 scan_run 批量执行**：
 
-1. 取该 scan_run 的 `repo_url` / `branch` / `commit_id` 作为查询参数（三者任一为空则跳过）
-2. 调用 coderepo HTTP 接口 `getLatestMetricsByCommit(gitUrl, branch, commitId)`（详见 §4.6.7）：
-   - 过滤条件：`git_url = #{gitUrl} AND branch_name = #{branchName} AND commit_id = #{commitId} AND status = 0`
-   - 排序：`detection_completed_at DESC`
-   - 取第一条（同一 commit 因扫描器重跑可能产生多条记录，取最新一条）
-3. 命中 → 把该 `code_metrics_record.metrics_data_json` 用于本条 scan_run 的度量字段填充
-4. 未命中（该 repo+branch+commit 三元组从未做过代码度量扫描，或度量记录全部失败）→ 度量字段走默认值（见 §4.6.4）
+1. 遍历本页 scan_run，收集非空的 `(repo_url, branch, commit_id)` 三元组（任一为空则该条跳过度量关联，相关字段走默认值）
+2. 一次性调用 coderepo 批量接口 `CodeMetricsFeignClient.getLatestMetricsByCommitBatch(queries)`（详见 §4.6.7）：
+   - 过滤条件：`status = 0 AND (git_url, branch_name, commit_id) IN (...)` 三元组精确匹配
+   - coderepo 侧对每个三元组取 `detection_completed_at` 最大的一条（同一 commit 因扫描器重跑可能产生多条记录，取最新一条）
+3. 命中 → 按 `groupKey(repoUrl, branch, commitId)` 建立内存索引，把该 `code_metrics_record.metrics_data_json` 用于对应 scan_run 的度量字段填充
+4. 未命中（该三元组从未做过代码度量扫描，或度量记录全部失败）→ 度量字段走默认值（见 §4.6.4）
 
 > `status = 0` 过滤掉失败度量记录。`commit_id` 精确匹配天然解决时序偏离问题，无需 `detection_completed_at < scan_start_at` 时序窗口。
 
@@ -306,14 +305,15 @@ CodeQL 扫描与代码度量扫描是两条独立的扫描链路，执行时机�
 
 #### 4.6.7 coderepo HTTP 接口设计
 
-新增**机机接口专用 Controller** `MachineApiCodeMetricsController`（与 coderepo 现有 `CodeMetricsController` 前端接口隔离），类级路径 `/machine-api/v1/metrics/code`。
+接口挂载于 coderepo 现有**机机接口专用 Controller** `InternalProjectRepoController`（类级路径 `/project-repo/internal`，与 coderepo 现有 `CodeMetricsController` 前端接口隔离），本次仅新增批量接口。
 
 **接口契约**：
 
-| 路径                                                       | 方法 | 入参                                  | 出参                                       | 用途                                               |
-| ---------------------------------------------------------- | ---- | ------------------------------------- | ------------------------------------------ | -------------------------------------------------- |
-| `POST /machine-api/v1/metrics/code/latest-by-commit`       | POST | `LatestMetricsByCommitQueryDTO`       | `DataResult<CodeMetricsSnapshotDTO>`       | 单条查询（备用，本次 codecheck 主要走 batch 接口） |
-| `POST /machine-api/v1/metrics/code/latest-by-commit/batch` | POST | `List<LatestMetricsByCommitQueryDTO>` | `DataResult<List<CodeMetricsSnapshotDTO>>` | 批量查询（codecheck 主要调用入口）                 |
+| 路径                                                                  | 方法 | 入参                                  | 出参                                       | 用途                              |
+| --------------------------------------------------------------------- | ---- | ------------------------------------- | ------------------------------------------ | --------------------------------- |
+| `POST /project-repo/internal/metrics/code/latest-by-commit/batch`     | POST | `List<LatestMetricsByCommitQueryDTO>` | `DataResult<List<CodeMetricsSnapshotDTO>>` | 批量查询（codecheck 唯一调用入口） |
+
+> 不提供单条接口：单条场景由调用方以 1 元素列表复用 batch 接口，避免维护两套契约。
 
 **入参 DTO** `LatestMetricsByCommitQueryDTO`：
 
@@ -349,12 +349,13 @@ public class CodeMetricsSnapshotDTO {
 }
 ```
 
+> codecheck 侧在 `business/entity/dto/metrics/` 下持有同名入参 / 出参 DTO，作为 Feign 契约副本；coderepo 侧为唯一权威定义。
+
 **Service 方法**：
 
 ```java
 public interface CodeMetricsService {
   // 新增
-  CodeMetricsSnapshotDTO getLatestMetricsByCommit(String gitUrl, String branchName, String commitId);
   List<CodeMetricsSnapshotDTO> getLatestMetricsByCommitBatch(List<LatestMetricsByCommitQueryDTO> queries);
 }
 ```
@@ -363,34 +364,13 @@ public interface CodeMetricsService {
 
 ```java
 public interface CodeMetricsRecordMapper {
-  // 新增单条
-  CodeMetricsRecordEntity selectLatestByCommit(
-      @Param("gitUrl") String gitUrl,
-      @Param("branchName") String branchName,
-      @Param("commitId") String commitId);
-
   // 新增批量
   List<CodeMetricsRecordEntity> selectLatestByCommitBatch(
       @Param("queries") List<LatestMetricsByCommitQueryDTO> queries);
 }
 ```
 
-**单条 SQL**：
-
-```sql
-SELECT id, git_url, branch_name, pipeline_run_id, run_number, commit_id,
-       metrics_data_json, detection_started_at, detection_completed_at,
-       status, error_message, create_time
-FROM code_metrics_record
-WHERE git_url = #{gitUrl}
-  AND branch_name = #{branchName}
-  AND commit_id = #{commitId}
-  AND status = 0
-ORDER BY detection_completed_at DESC
-LIMIT 1
-```
-
-**批量 SQL**（用户确认项 5：一次性三元组 IN 关联）：
+**批量 SQL**：
 
 ```sql
 SELECT id, git_url, branch_name, pipeline_run_id, run_number, commit_id,
@@ -408,7 +388,7 @@ ORDER BY git_url, branch_name, detection_completed_at DESC
 
 > 批量接口返回结果中，对每个 `(gitUrl, branchName, commitId)` 只取 `detection_completed_at` 最大的一条；codecheck 侧按 `(gitUrl, branchName, commitId)` 索引取用。
 
-**索引建议**：在 `code_metrics_record` 表上建立 `(git_url, branch_name, commit_id, status, detection_completed_at DESC)` 联合索引以支持批量 SQL。
+**索引**：表创建时已有的 `idx_git_url_branch (git_url, branch_name)` 联合索引可支撑批量 SQL 的前缀过滤；`(git_url, branch_name, commit_id)` 全量联合索引留待性能验证后评估（见 proposal 遗留项）。
 
 ### 4.7 法律合规过滤：排除 CodeQL 来源数据
 
@@ -457,13 +437,14 @@ criteria.and("tool").ne("CodeQL");
 | 5   | 插件 + Service 上报 | `metrics_data_json` 新增 `cyclomaticComplexityPerFile` 字段                                                                                                                                                                                                                                                                                                                    | #46 `cyclomaticComplexityPerFile` | 置 null           |
 | 6   | 插件 + Service 上报 | `metrics_data_json` 新增 `duplicatedBlocks` 字段                                                                                                                                                                                                                                                                                                                               | #47 `duplicatedBlocks`            | 置 0              |
 | 7   | 插件 + Service 上报 | `metrics_data_json` 新增 `duplicatedLines` 字段                                                                                                                                                                                                                                                                                                                                | #48 `duplicatedLines`             | 置 0              |
-| 8   | HTTP 接口新增       | 新增 `MachineApiCodeMetricsController`（机机接口专用，类级路径 `/machine-api/v1/metrics/code`），暴露 `POST /latest-before-time` 和 `POST /latest-before-time/batch` 两个接口；按 `git_url + branch_name + detection_completed_at < beforeTime + status=0` 关联，返回 `CodeMetricsSnapshotDTO`（含 `metrics_data_json` 原文）；供 codecheck 通过 Feign 调用。详细设计见 §4.6.7 | 所有度量字段                      | 字段全部置 null/0 |
+| 8   | HTTP 接口新增       | coderepo 现有机机接口专用 `InternalProjectRepoController`（类级路径 `/project-repo/internal`）新增 `POST /project-repo/internal/metrics/code/latest-by-commit/batch` 接口；按 `git_url + branch_name + commit_id` 三元组精确匹配 + `status=0` 关联，每个三元组取 `detection_completed_at` 最新一条，返回 `CodeMetricsSnapshotDTO`（含 `metrics_data_json` 原文）；供 codecheck 通过 Feign 调用。详细设计见 §4.6.7 | 所有度量字段                      | 字段全部置 null/0 |
 
 ### 5.3 PR 矩阵
 
-- **codecheck 业务 PR**：实现 `StaticAlarmSummaryOperation` + 修改 `CheckboardDelegateImpl` + 新增 Feign client；scan_run 的 8 个快照字段由 `add-count-yym` 分支（fast-forward 合并到本分支）落地，本分支仅消费
-- **coderepo 业务 PR**：新增 6 个 `metrics_data_json` 字段的上报 + 暴露 HTTP 接口
-- **docs PR**：归档 spec 三件套
+- **codecheck 业务 PR**（openlibing-codecheck#327）：实现 `StaticAlarmSummaryOperation` + 修改 `CheckboardDelegateImpl` + 新增 `CodeMetricsFeignClient`；scan_run 的 8 个快照字段由 `add-count-yym` 分支（fast-forward 合并到本分支）落地，本分支仅消费
+- **coderepo 业务 PR**（openlibing-coderepo#159）：`code_metrics_record` 新增 `commit_id` 字段 + 暴露 `/project-repo/internal/metrics/code/latest-by-commit/batch` 机机接口
+- **code-metrics-scan 插件 PR**：`metrics_data_json` 新增 6 个字段的上报 + `commitId` 上报（`ATOMGIT_SHA`）
+- **docs PR**（openlibing-docs#889）：归档 spec 三件套
 
 跨仓改动按 §5.1 / §5.2 顺序推进：coderepo 字段就绪 → codecheck Feign 调通 → codecheck 降级路径落地。
 
@@ -512,12 +493,16 @@ try {
 
 #### openlibing-coderepo 仓
 
-| 文件                               | 改动类型 | 说明                                              |
-| ---------------------------------- | -------- | ------------------------------------------------- |
-| `CodeMetricsController.java`       | 修改     | 新增 HTTP 查询接口暴露 `getLatestMetricsByGitUrl` |
-| `CodeMetricsService.java` / `Impl` | 修改     | 已有 Service 方法对外可见                         |
-| 插件上报逻辑                       | 修改     | `metrics_data_json` 新增 6 个字段上报             |
-| 测试                               | 新增     | 新 HTTP 接口用例                                  |
+| 文件                                          | 改动类型 | 说明                                                                        |
+| --------------------------------------------- | -------- | --------------------------------------------------------------------------- |
+| `InternalProjectRepoController.java`          | 修改     | 新增机机接口 `POST /metrics/code/latest-by-commit/batch`                    |
+| `CodeMetricsService.java` / `Impl`            | 修改     | 新增 `getLatestMetricsByCommitBatch` 批量查询方法                           |
+| `CodeMetricsRecordMapper.java` / `.xml`       | 修改     | 新增 `selectLatestByCommitBatch` 三元组 IN 批量 SQL                         |
+| `LatestMetricsByCommitQueryDTO.java`          | 新增     | HTTP 接口入参 DTO（gitUrl / branchName / commitId）                         |
+| `CodeMetricsSnapshotDTO.java`                 | 新增     | HTTP 接口出参 DTO（含 `metricsDataJson` 原文）                              |
+| `CodeMetricsRecordEntity.java` + Liquibase    | 修改     | `code_metrics_record` 新增 `commit_id` 字段                                 |
+| `CodeMetricsServiceImplTest.java`             | 修改     | 补充批量查询用例（同一 commit 重跑取最新 / 无命中返回空 / 混合查询各自正确） |
+| 插件上报逻辑（code-metrics-scan）             | 修改     | `metrics_data_json` 新增 6 个字段上报 + `commitId` 上报                     |
 
 #### openlibing-docs 仓
 
@@ -565,8 +550,8 @@ try {
 6. **分页语义对齐**：与原接口「同时非空才分页」语义保持一致
 7. **跨仓协同改造**：codecheck + coderepo 同步 PR，`metrics_data_json` 字段就绪前 codecheck 走默认值
 8. **不对接字段显式声明**：12 个字段不对接（见 §4.3.1），降级路径不返回或置 null
-9. **度量数据时序关联**：以 CodeQL `scan_run` 为主，按 `repo_url + branch` 关联，取 `scan_start_at` 之前最近一次度量记录（见 §4.6）。找不到走默认值，避免度量扫描时刻偏离导致指标失真
-10. **批量 Feign 调用优先**：性能优化方向已写入 §4.6.5，本次落地优先保证正确性
+9. **度量数据 commit 精确关联**：以 CodeQL `scan_run` 为主，按 `git_url + branch_name + commit_id` 三元组精确匹配（见 §4.6），废弃早期「`repo_url + branch` + 取 `scan_start_at` 之前最近一次度量记录」的时序窗口方案；同一 commit 重跑取 `detection_completed_at` 最新一条，找不到走默认值，彻底避免度量扫描时刻偏离导致指标失真
+10. **批量 Feign 调用落地**：`/latest-by-commit/batch` 接口本次已实现（§4.6.5），一次性三元组 IN 关联避免 codecheck 侧 N+1 Feign 调用
 
 ## 10. 后续演进
 
@@ -575,6 +560,6 @@ try {
 | 落地 §5 跨仓改动清单中的字段新增                                  | 进入 tasks.md 拆分后                        |
 | 考虑原华为云路径补显式排序                                        | 另一个改进项                                |
 | 考虑同类接口 `/codecheck/full/task/result/summary` 是否也需要降级 | 视入湖消费方需求                            |
-| `result` 字段在 CodeQL 路径的过滤实现（§4.4）                     | 编码时确认                                  |
+| `result` 字段在 CodeQL 路径的过滤实现（§4.4）                     | 已定口径：查询层不做 result 过滤，`DTO.result` 由 `issue_snapshot` 推导；消费方需按 result 过滤时另行评估 |
 | 度量关联 Feign 批量接口的性能优化（§4.6.5）                       | 入湖消费方 page_size 增大或接口 RT 不达标时 |
-| 度量关联缓存（同 repo+branch+beforeTime 多次查询可复用）          | 接口 RT 不达标时                            |
+| 度量关联缓存（同 repo+branch+commitId 三元组多次查询可复用）      | 接口 RT 不达标时                            |

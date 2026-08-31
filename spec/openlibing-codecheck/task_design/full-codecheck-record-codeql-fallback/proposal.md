@@ -1,4 +1,4 @@
-# /full-codecheck-record/list 接入 CodeQL 降级查询 - 需求提案
+# /full-codecheck-record/list 接入静态告警降级查询 - 需求提案
 
 ## 1. 背景
 
@@ -46,15 +46,16 @@
 
 - **openlibing-codecheck 仓**：
   - 修改 `CheckboardDelegateImpl#queryFullTaskResultSummary`：增加降级逻辑
-  - 新增 `CodeQlSummaryOperation`：CodeQL 多表关联查询与 DTO 组装
-  - 新增 `CodeMetricsFeignClient`：Feign 调用 coderepo HTTP 接口
-  - 修改 `StaticAlarmScanRunEntity`：新增 8 个快照字段（`ignore_snapshot` / `issue_snapshot` / `new_count_snapshot` / `solve_snapshot` / `critical_count_snapshot` / `major_count_snapshot` / `minor_count_snapshot` / `suggestion_count_snapshot`）
-  - 测试：补充 `CheckboardDelegateImplTest` 降级路径用例 + 新增 `CodeQlSummaryOperationTest`
+  - 新增 `StaticAlarmSummaryOperation`：静态告警多表关联查询与 DTO 组装（含 `queryStaticAlarmSummaryList` 主入口、`buildCriteriaFromQuery` 条件翻译、`batchAggregateIssues` 聚合、`enrichRepoAndProjectInfo` / `enrichCodeMetrics` 批量反查与度量关联、`toDto` 组装）
+  - 新增 `CodeMetricsFeignClient`：Feign 调用 coderepo 机机接口 `/project-repo/internal/metrics/code/latest-by-commit/batch`
+  - 修改 `StaticAlarmScanRunEntity`：新增 8 个快照字段（7 个计数快照 + `snapshot_computed` 标志位）：`issue_snapshot`（由 `issue_count` 更名）/ `solve_snapshot` / `ignore_snapshot` / `critical_count_snapshot` / `major_count_snapshot` / `minor_count_snapshot` / `suggestion_count_snapshot` / `snapshot_computed`；同时移除 `new_issue_count` / `resolved_issue_count` 等老字段
+  - 测试：补充 `CheckboardDelegateImplTest` 降级路径用例 + 新增 `StaticAlarmSummaryOperationTest`
 - **openlibing-coderepo 仓**：
-  - 修改 `CodeMetricsController`：新增 HTTP 查询接口 `getLatestMetricsBeforeTime(gitUrl, branch, beforeTime)`，按 `repo_url + branch` 关联并取 `beforeTime` 之前最近一次度量记录；支持批量入参
-  - 修改 `CodeMetricsService` / `Impl`：新增按 `repo_url + branch + beforeTime` 取最近一次度量记录的 Service 方法
-  - 修改插件上报逻辑：`metrics_data_json` 新增 6 个字段（`codeLineTotal` / `commentLines` / `complexityCount` / `cyclomaticComplexityPerFile` / `duplicatedBlocks` / `duplicatedLines`）
-  - 测试：新 HTTP 接口用例
+  - 修改 `InternalProjectRepoController`：新增机机接口 `POST /project-repo/internal/metrics/code/latest-by-commit/batch`，按 `git_url + branch_name + commit_id` 三元组精确关联（`status=0`，同一 commit 重跑取 `detection_completed_at` 最新一条），支持批量入参
+  - 修改 `CodeMetricsService` / `Impl`：新增 `getLatestMetricsByCommitBatch(List<LatestMetricsByCommitQueryDTO>)` 批量查询方法
+  - 修改 `CodeMetricsRecordEntity` + Liquibase：`code_metrics_record` 新增 `commit_id` 字段
+  - 修改插件上报逻辑：`metrics_data_json` 新增 6 个字段（`codeLineTotal` / `commentLines` / `complexityCount` / `cyclomaticComplexityPerFile` / `duplicatedBlocks` / `duplicatedLines`）+ `commitId` 上报
+  - 测试：`CodeMetricsServiceImplTest` 补充批量查询用例
 
 ### 3.2 Out of Scope
 
@@ -74,15 +75,17 @@
 
 ### 4.2 遗留项
 
-| 编号 | 遗留项                                                                           | 时机                |
-| ---- | -------------------------------------------------------------------------------- | ------------------- |
-| L-1  | `result` 字段在 CodeQL 路径的过滤实现（design.md §4.4）                          | 编码时确认          |
-| L-2  | coderepo `metrics_data_json` 6 个新增字段的具体字段名（暂命名见 design.md §5.2） | coderepo 改造时确认 |
-| L-3  | 12 个不对接字段的消费方兼容性确认（入湖消费方是否接受 DTO 字段缺失或 null）      | 业务对接时确认      |
+| 编号 | 遗留项                                                                           | 时机           |
+| ---- | -------------------------------------------------------------------------------- | -------------- |
+| L-1  | ~~`result` 字段在 CodeQL 路径的过滤实现~~ 已定口径：查询层不做 result 过滤，`DTO.result` 由 `issue_snapshot` 推导（见 design.md §10） | 已完成         |
+| L-2  | ~~coderepo `metrics_data_json` 6 个新增字段的具体字段名~~ 已随 coderepo PR（openlibing-coderepo#159）落地，字段名与 design.md §5.2 一致 | 已完成         |
+| L-3  | 12 个不对接字段的消费方兼容性确认（入湖消费方是否接受 DTO 字段缺失或 null）      | 业务对接时确认 |
+| L-4  | codecheck 降级路径的单元测试（`StaticAlarmSummaryOperationTest` / `CheckboardDelegateImplTest` 降级用例）尚未落地 | 后续迭代补充   |
 
 ## 5. 关联
 
 - 关联代码仓：`openlibing/openlibing-codecheck`
-- 关联 Issue：待创建
+- 关联 Issue：openlibing/openlibing-codecheck#178
+- 关联业务 PR：openlibing/openlibing-codecheck#327
 - 关联 spec：`spec/openlibing-codecheck/task_design/static-alarm/`（CodeQL SARIF 解析链路与表结构来源）
 - 关联 spec：`spec/openlibing-codecheck/task_design/machine-api-summary-dto/`（机机接口 DTO 拆分历史）
