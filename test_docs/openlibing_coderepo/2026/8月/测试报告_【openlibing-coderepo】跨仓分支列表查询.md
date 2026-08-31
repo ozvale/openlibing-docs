@@ -5,7 +5,7 @@
 * **需求链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/109
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/109
 * **需求名称**: 跨仓分支列表查询（分支管理-查询跨仓分支信息）
-* **开发责任人**: YangPan
+* **开发责任人**: 杨攀
 * **测试责任人**: 徐愚冰
 * **最终结论:**： 通过
 * **测试维度** :

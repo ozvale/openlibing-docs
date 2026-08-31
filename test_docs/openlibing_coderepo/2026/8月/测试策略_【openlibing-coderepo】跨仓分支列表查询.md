@@ -8,7 +8,7 @@
 * **核心目标**:
   新增两个接口：`POST /openlibing-coderepo/repo/branch/list`（跨仓分支列表，支持按仓库、分支名、平台、指标等条件筛选与排序）与 `POST /openlibing-coderepo/repo/branch/filter-meta`（筛选元数据）。多平台分支拉取抽象为 `PlatformBranchClient`（GitCode / Gitee / Github 三平台统一适配）；按用户角色过滤可访问仓库（项目/产业/系统管理员全量可见，仓库角色仅可见授权仓）；同步分支提示按 `syncUser` 区分文案；过滤空值统一归一化为空串。前端菜单：代码仓管理服务 → 分支管理。
 * **设计文档**: 未找到独立设计文档（Issue #109 正文含接口契约与改造要点，本策略以 Issue 正文为设计基线）
-* **开发责任人**: YangPan
+* **开发责任人**: 杨攀
 * **测试责任人**: 徐愚冰
 
 ---
