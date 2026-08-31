@@ -57,7 +57,7 @@
 | 4   | `POST /webhookEvent/hooks/gitee/{repoId}`   | gitee   | 含 repoId 旧路径，仅日志观察，观察期后废弃 |
 | 5   | `POST /webhookEvent/hooks/github`           | github  | 旧直连路径，仅日志观察，观察期后废弃       |
 
-> **物理隔离设计**：APIG 后端路径指向新建的 `/webhookEvent/apig/hooks/{platform}`，与旧接口 `/webhookEvent/hooks/` 完全分离。新接口只有 APIG 能转发到（webhook URL 已迁移到 APIG 的流量），旧接口只有直连请求会访问（webhook URL 未迁移的流量）。通过日志统计哪个接口有流量，即可 100% 判断迁移状态，无需依赖请求头。
+> **物理隔离设计**：APIG 后端路径指向新建的 `/apig/webhook/{platform}/repo`，与旧接口 `/webhookEvent/hooks/` 完全分离。新接口只有 APIG 能转发到（webhook URL 已迁移到 APIG 的流量），旧接口只有直连请求会访问（webhook URL 未迁移的流量）。通过日志统计哪个接口有流量，即可 100% 判断迁移状态，无需依赖请求头。
 
 ### 1.3 整体架构
 
@@ -70,7 +70,7 @@ gitcode/gitee/github
 │  ┌────────────────────────────────────┐  │
 │  │ 3 个 API（POST，无认证，HTTPS）     │  │
 │  │  前端路径 /coderepo/webhook/hooks/*│  │
-│  │  后端路径 /webhookEvent/apig/hooks/*│  │
+│  │  后端路径 /apig/webhook/{platform}/repo│  │
 │  │  （不含 repoId，3 个平台各 1 个）  │  │
 │  └────────────────────────────────────┘  │
 │  ┌────────────────────────────────────┐  │
@@ -90,7 +90,7 @@ gitcode/gitee/github
 │  WebHookEventController                  │
 │  ┌────────────────────────────────────┐  │
 │  │ 新接口（APIG 专用，3 个）          │  │
-│  │ /webhookEvent/apig/hooks/{platform}│  │
+│  │ /apig/webhook/{platform}/repo│  │
 │  │ → 日志 path=apig → 投递 MQ         │  │
 │  └────────────────────────────────────┘  │
 │  ┌────────────────────────────────────┐  │
@@ -109,7 +109,7 @@ gitcode/gitee/github
 | ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | APIG 认证方式    | 无认证                                                                       | webhook 由 git 平台主动调用，无法携带 APIG 鉴权凭证；来源控制交给 IP 白名单                                        |
 | APIG API 数量    | 3 个（gitcode / gitee / github 各 1 个，不含 repoId）                        | 存量 webhook 全部迁移到不含 repoId 的新路径，无需保留 repoId 旧路径；APIG 只发布 3 个接口                          |
-| APIG 后端接口    | 新建 3 个专用接口 `/webhookEvent/apig/hooks/{platform}`                      | 物理隔离 APIG 流量与直连流量，通过日志统计接口路径即可 100% 判断迁移状态，无需依赖请求头，无需逐仓确认 webhook URL |
+| APIG 后端接口    | 新建 3 个专用接口 `/apig/webhook/{platform}/repo`                            | 物理隔离 APIG 流量与直连流量，通过日志统计接口路径即可 100% 判断迁移状态，无需依赖请求头，无需逐仓确认 webhook URL |
 | 旧接口处理       | 5 个旧接口全部保留并增加日志，观察期后一次性废弃                             | 不立即废弃，先通过日志观察确认旧接口无流量（存量 webhook 全部迁移完成），再一次性删除 Controller 代码              |
 | 流量来源识别     | 通过接口路径物理隔离                                                         | 新接口有流量 = 走 APIG（已迁移）；旧接口有流量 = 直连后端（未迁移）。比请求头方式更直观可靠                        |
 | webhook URL 配置 | 复用 `openlibing.coderepo.webhook.url`，Apollo 改值为 APIG URL               | 改值后新创建的 webhook 自动走 APIG；存量 webhook 由定时任务迁移                                                    |
@@ -146,7 +146,7 @@ gitcode/gitee/github
 
 #### 阶段 1：迁移上线（本次需求交付）
 
-- 新建 3 个 APIG 专用后端接口 `/webhookEvent/apig/hooks/{platform}`，与旧接口物理隔离。
+- 新建 3 个 APIG 专用后端接口 `/apig/webhook/{platform}/repo`，与旧接口物理隔离。
 - APIG 发布 3 个 API，后端路径指向新建的专用接口。
 - 5 个旧接口（`/webhookEvent/hooks/`）保留不动，仅增加流量来源日志（见 3.4 节）。
 - `refreshWebhookHandler` 全量执行，迁移存量 webhook URL 到 APIG URL。
@@ -158,7 +158,7 @@ gitcode/gitee/github
 | 指标             | 验证方式                                                                                                  | 期望结果                                                            |
 | ---------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | 旧接口无流量     | 监控 5 个旧接口（`/webhookEvent/hooks/`）的访问日志，关注 `path=direct` 与 `path=legacy-with-repoId` 日志 | 观察期内无任何请求（说明存量 webhook 全部迁移完成，无直连后端流量） |
-| 新接口有正常流量 | 监控 3 个新接口（`/webhookEvent/apig/hooks/`）的访问日志，关注 `path=apig` 日志                           | 流量正常（与平台事件触发频率匹配，说明 APIG 链路畅通）              |
+| 新接口有正常流量 | 监控 3 个新接口（`/apig/webhook/`）的访问日志，关注 `path=apig` 日志                           | 流量正常（与平台事件触发频率匹配，说明 APIG 链路畅通）              |
 
 **异常处理**：
 
@@ -299,13 +299,13 @@ token 获取、请求头构造、响应判断均与 `updateRepoWebhookForPushEve
 
 ### 3.1 涉及类清单
 
-| 类                       | 路径                                                                                                                                                                  | 改动类型                       |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| `RepoServiceImpl`        | `business/service/impl/RepoServiceImpl.java`             | 修改 + 新增方法                |
+| 类                       | 路径                                              | 改动类型                       |
+| ------------------------ | ------------------------------------------------- | ------------------------------ |
+| `RepoServiceImpl`        | `business/service/impl/RepoServiceImpl.java`      | 修改 + 新增方法                |
 | `WebHookEventController` | `business/controller/WebHookEventController.java` | 修改（增加流量来源日志）       |
-| `RepoWebhook`            | `business/entity/webhooks/RepoWebhook.java`                  | 新增字段（github config 映射） |
-| `XxlJobHandler`          | `common/job/XxlJobHandler.java`                            | 不改动                         |
-| `WebhookAuthUtil`        | `common/utils/WebhookAuthUtil.java`                      | 不改动                         |
+| `RepoWebhook`            | `business/entity/webhooks/RepoWebhook.java`       | 新增字段（github config 映射） |
+| `XxlJobHandler`          | `common/job/XxlJobHandler.java`                   | 不改动                         |
+| `WebhookAuthUtil`        | `common/utils/WebhookAuthUtil.java`               | 不改动                         |
 
 ### 3.2 `RepoServiceImpl` 改动方法
 
@@ -394,23 +394,23 @@ public static class RepoWebhookConfig {
 
 #### 3.4.1 新增 3 个 APIG 专用接口方法
 
-新增 3 个 `@PostMapping` 方法，路径为 `/webhookEvent/apig/hooks/{platform}`，仅供 APIG 转发调用：
+新增 3 个 `@PostMapping` 方法，路径为 `/apig/webhook/{platform}/repo`，仅供 APIG 转发调用：
 
 ```java
-@PostMapping(value = {"/apig/hooks/gitcode"})
+@PostMapping(value = {"/apig/webhook/gitcode/repo"})
 public String apigGitCodeWebhookEvent(HttpServletRequest request) {
   logWebhookSource("gitcode", "apig");
   // 复用现有 gitCodeWebhookEvent 的处理逻辑
   return handleGitCodeWebhook(request);
 }
 
-@PostMapping(value = {"/apig/hooks/gitee"})
+@PostMapping(value = {"/apig/webhook/gitee/repo"})
 public String apigGiteeWebhookEvent(HttpServletRequest request) {
   logWebhookSource("gitee", "apig");
   return handleGiteeWebhook(request);
 }
 
-@PostMapping(value = {"/apig/hooks/github"})
+@PostMapping(value = {"/apig/webhook/github/repo"})
 public String apigGithubWebhookEvent(HttpServletRequest request) {
   logWebhookSource("github", "apig");
   return handleGithubWebhook(request);
@@ -587,11 +587,11 @@ private void logWebhookSource(String platform, String path) {
 
 **新增 3 个 APIG 专用接口**：
 
-| #   | 接口路径                                | 平台    | 说明                          |
-| --- | --------------------------------------- | ------- | ----------------------------- |
-| 1   | `POST /webhookEvent/apig/hooks/gitcode` | gitcode | 新增，APIG 后端路径指向此接口 |
-| 2   | `POST /webhookEvent/apig/hooks/gitee`   | gitee   | 新增，APIG 后端路径指向此接口 |
-| 3   | `POST /webhookEvent/apig/hooks/github`  | github  | 新增，APIG 后端路径指向此接口 |
+| #   | 接口路径                          | 平台    | 说明                          |
+| --- | --------------------------------- | ------- | ----------------------------- |
+| 1   | `POST /apig/webhook/gitcode/repo` | gitcode | 新增，APIG 后端路径指向此接口 |
+| 2   | `POST /apig/webhook/gitee/repo`   | gitee   | 新增，APIG 后端路径指向此接口 |
+| 3   | `POST /apig/webhook/github/repo`  | github  | 新增，APIG 后端路径指向此接口 |
 
 **保留 5 个旧接口（仅增加日志，观察期后废弃）**：路径与入参不变，详见 1.2 节。
 
@@ -614,11 +614,11 @@ private void logWebhookSource(String platform, String path) {
 
 | #   | 前端路径（APIG 对外）             | 后端路径（转发到 coderepo 新接口） |
 | --- | --------------------------------- | ---------------------------------- |
-| 1   | `/coderepo/webhook/hooks/gitcode` | `/webhookEvent/apig/hooks/gitcode` |
-| 2   | `/coderepo/webhook/hooks/gitee`   | `/webhookEvent/apig/hooks/gitee`   |
-| 3   | `/coderepo/webhook/hooks/github`  | `/webhookEvent/apig/hooks/github`  |
+| 1   | `/coderepo/webhook/hooks/gitcode` | `/apig/webhook/gitcode/repo`       |
+| 2   | `/coderepo/webhook/hooks/gitee`   | `/apig/webhook/gitee/repo`         |
+| 3   | `/coderepo/webhook/hooks/github`  | `/apig/webhook/github/repo`        |
 
-> **关键**：APIG 后端路径指向新建的 `/webhookEvent/apig/hooks/{platform}`，与旧接口 `/webhookEvent/hooks/` 物理隔离。这样：
+> **关键**：APIG 后端路径指向新建的 `/apig/webhook/{platform}/repo`，与旧接口 `/webhookEvent/hooks/` 物理隔离。这样：
 >
 > - webhook URL 已迁移到 APIG 的流量 → APIG 转发到新接口 → 日志 `path=apig`
 > - webhook URL 未迁移（仍指向旧直连 URL）的流量 → 直连后端旧接口 → 日志 `path=direct` 或 `path=legacy-with-repoId`
@@ -720,7 +720,7 @@ private void logWebhookSource(String platform, String path) {
 ### 8.1 非代码（APIG 侧）
 
 - [ ] 3 个 API 已创建（gitcode / gitee / github 各 1 个，不含 repoId），请求方式 POST、无认证、HTTPS。
-- [ ] APIG 后端路径指向新建的 `/webhookEvent/apig/hooks/{platform}`（不是旧路径 `/webhookEvent/hooks/`）。
+- [ ] APIG 后端路径指向新建的 `/apig/webhook/{platform}/repo`（不是旧路径 `/webhookEvent/hooks/`）。
 - [ ] 未发布含 `{repoId}` 的 API（确认 APIG 侧无对应 API）。
 - [ ] IP 白名单策略已绑定到 3 个 API，仅 gitcode/gitee/github 出口 IP 可通过。
 - [ ] 非白名单 IP 调用返回 403。
@@ -741,7 +741,7 @@ private void logWebhookSource(String platform, String path) {
 
 ### 8.3 代码（新接口与流量来源日志）
 
-- [ ] 新增 3 个 APIG 专用接口 `/webhookEvent/apig/hooks/{platform}`，核心逻辑复用公共处理方法，无代码重复。
+- [ ] 新增 3 个 APIG 专用接口 `/apig/webhook/{platform}/repo`，核心逻辑复用公共处理方法，无代码重复。
 - [ ] 5 个旧接口方法入口处均调用 `logWebhookSource`，记录 `platform` / `path` 两字段。
 - [ ] 新接口日志中 `path=apig`。
 - [ ] 旧接口（不含 repoId）日志中 `path=direct`。
