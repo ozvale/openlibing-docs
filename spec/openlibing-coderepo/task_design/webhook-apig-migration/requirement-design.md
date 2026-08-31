@@ -34,7 +34,7 @@
 
 ### 1.2 涉及的 webhook 接口
 
-来源：[WebHookEventController](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/WebHookEventController.java)
+来源：`business/controller/WebHookEventController.java`
 
 **新建 3 个 APIG 专用后端接口（不含 repoId，仅供 APIG 转发）**：
 
@@ -45,7 +45,7 @@
 | 3   | `POST /webhook/github/repo`  | `POST /apig/webhook/github/repo`  | github  | 新增 |
 
 注：需要在openlibing-gateway WebhookAuthFilter 中新增链接校验白名单：/apig/webhook/
-同时在注释中声明：apig转发的webhook接口规范示例为：/apig/webhook/{platform}/repo以及/apig/webhook/{platform}/pipeline/{pipelineId}，其中repo和piepline表示具体业务场景
+同时在注释中声明：apig转发的webhook接口规范示例为：/apig/webhook/{platform}/repo以及/apig/webhook/{platform}/pipeline/{pipelineId}，其中repo和pipeline表示具体业务场景
 
 **保留的 5 个旧接口（仅增加日志，观察期后废弃）**：
 
@@ -178,12 +178,12 @@ gitcode/gitee/github
 
 ### 2.1 现状
 
-[XxlJobHandler.refreshWebhookHandler](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/job/XxlJobHandler.java#L280-L317) → `refreshUnconfiguredWebhooks` → `refreshSingleRepoWebhook` → 依次调用：
+`XxlJobHandler.refreshWebhookHandler`（`common/job/XxlJobHandler.java#L280-L317`） → `refreshUnconfiguredWebhooks` → `refreshSingleRepoWebhook` 依次调用：
 
-1. [autoSetCoderepoWebHook](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java#L4234-L4303)：拉取平台 webhook 列表 → 清理 beta 残留 → 新 URL 精确匹配则跳过 → 旧 URL 前缀匹配则去重后跳过 → 否则创建新 webhook。
-2. [ensureCoderepoWebhookPushEventSubscribed](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java#L4342-L4413)：对已存在 coderepo webhook PATCH 补齐 push 事件订阅。
+1. `autoSetCoderepoWebHook`（`business/service/impl/RepoServiceImpl.java#L4234-L4303`）：拉取平台 webhook 列表 → 清理 beta 残留 → 新 URL 精确匹配则跳过 → 旧 URL 前缀匹配则去重后跳过 → 否则创建新 webhook。
+2. `ensureCoderepoWebhookPushEventSubscribed`（`business/service/impl/RepoServiceImpl.java#L4342-L4413`）：对已存在 coderepo webhook PATCH 补齐 push 事件订阅。
 
-webhook URL 来自配置 `openlibing.coderepo.webhook.url`（[声明](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java#L272-L273)），模板形如 `https://www.openlibing.com/gateway/openlibing-coderepo/webhookEvent/hooks/%s`。
+webhook URL 来自配置 `openlibing.coderepo.webhook.url`（声明见 `business/service/impl/RepoServiceImpl.java#L272-L273`），模板形如 `https://www.openlibing.com/gateway/openlibing-coderepo/webhookEvent/hooks/%s`。
 
 **现状缺陷**：`autoSetCoderepoWebHook` 在识别到旧 URL 前缀匹配时只做「去重清理 + 跳过创建」，不会更新 webhook 的 URL，导致存量 webhook 一直指向旧直连地址，迁移到 APIG 必须补齐「PATCH 更新 URL」分支。
 
@@ -248,7 +248,7 @@ autoSetCoderepoWebHook(repoInfo, org, repo):
 
 ### 2.4 新增 `updateRepoWebhookUrl` 方法逻辑
 
-参考 [updateRepoWebhookForPushEvent](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java#L4435-L4490) 的 PATCH 模式，新增 URL 更新方法。逻辑步骤：
+参考 `updateRepoWebhookForPushEvent`（`business/service/impl/RepoServiceImpl.java#L4435-L4490`）的 PATCH 模式，新增 URL 更新方法。逻辑步骤：
 
 1. 调用 `getAccessTokenForWebhook(platform, org, repo)` 获取 token；token 为空则记录 warn 并返回 false。
 2. 按平台构造 PATCH 请求 URL（复用 `*_WEBHOOK_UPDATE_URL` 常量，与 update push event 同一 URL，HTTP 方法均为 PATCH）。
@@ -279,11 +279,11 @@ token 获取、请求头构造、响应判断均与 `updateRepoWebhookForPushEve
 
 **同步改造**：将 `ensureCoderepoWebhookPushEventSubscribed` 的 coderepo webhook 识别逻辑也改为「新 URL 精确匹配 + `openlibing-coderepo/webhookEvent/hooks/` 子串匹配」，与 `autoSetCoderepoWebHook` 保持一致。这样无论迁移是否成功，都能正确识别 coderepo webhook 并补齐 push 事件订阅。
 
-> 改造点：[ensureCoderepoWebhookPushEventSubscribed](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java#L4364-L4375) 中筛选 `coderepoWebhooks` 的 filter 条件，将 `url.startsWith(legacyUrlPrefix)` 替换为 `url.contains("openlibing-coderepo/webhookEvent/hooks/")`。
+改造点：`ensureCoderepoWebhookPushEventSubscribed`（`business/service/impl/RepoServiceImpl.java#L4364-L4375`）中筛选 `coderepoWebhooks` 的 filter 条件，将 `url.startsWith(legacyUrlPrefix)` 替换为 `url.contains("openlibing-coderepo/webhookEvent/hooks/")`。
 
 ### 2.6 `refreshWebhookHandler` 入口不变
 
-[XxlJobHandler.refreshWebhookHandler](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/job/XxlJobHandler.java#L280-L317) 的入参解析、`refreshUnconfiguredWebhooks`、`refreshSingleRepoWebhook` 调用链均不变。改造落在 `autoSetCoderepoWebHook` 与 `ensureCoderepoWebhookPushEventSubscribed` 内部，对外行为兼容：
+`XxlJobHandler.refreshWebhookHandler`（`common/job/XxlJobHandler.java#L280-L317`） 的入参解析、`refreshUnconfiguredWebhooks`、`refreshSingleRepoWebhook` 调用链均不变。改造落在 `autoSetCoderepoWebHook` 与 `ensureCoderepoWebhookPushEventSubscribed` 内部，对外行为兼容：
 
 - 不传参 → 全量扫描，存量 webhook 迁移 URL + 缺失 webhook 创建
 - 传 `projectId` → 单项目范围迁移
@@ -301,11 +301,11 @@ token 获取、请求头构造、响应判断均与 `updateRepoWebhookForPushEve
 
 | 类                       | 路径                                                                                                                                                                  | 改动类型                       |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| `RepoServiceImpl`        | [RepoServiceImpl.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java)             | 修改 + 新增方法                |
-| `WebHookEventController` | [WebHookEventController.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/WebHookEventController.java) | 修改（增加流量来源日志）       |
-| `RepoWebhook`            | [RepoWebhook.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/entity/webhooks/RepoWebhook.java)                  | 新增字段（github config 映射） |
-| `XxlJobHandler`          | [XxlJobHandler.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/job/XxlJobHandler.java)                            | 不改动                         |
-| `WebhookAuthUtil`        | [WebhookAuthUtil.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/utils/WebhookAuthUtil.java)                      | 不改动                         |
+| `RepoServiceImpl`        | `business/service/impl/RepoServiceImpl.java`             | 修改 + 新增方法                |
+| `WebHookEventController` | `business/controller/WebHookEventController.java` | 修改（增加流量来源日志）       |
+| `RepoWebhook`            | `business/entity/webhooks/RepoWebhook.java`                  | 新增字段（github config 映射） |
+| `XxlJobHandler`          | `common/job/XxlJobHandler.java`                            | 不改动                         |
+| `WebhookAuthUtil`        | `common/utils/WebhookAuthUtil.java`                      | 不改动                         |
 
 ### 3.2 `RepoServiceImpl` 改动方法
 
@@ -669,7 +669,7 @@ private void logWebhookSource(String platform, String path) {
 
 ### 7.3 应用层（webhook 签名校验，不变）
 
-- 5 个 webhook 接口仍通过 [WebhookAuthUtil.webhookAuth](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/utils/WebhookAuthUtil.java#L71) 校验平台签名头：
+- 5 个 webhook 接口仍通过 `WebhookAuthUtil.webhookAuth`（`common/utils/WebhookAuthUtil.java#L71`） 校验平台签名头：
   - gitcode：`X-GitCode-Token`
   - gitee：`X-Gitee-Token`
   - github：`X-Hub-Signature-256`
