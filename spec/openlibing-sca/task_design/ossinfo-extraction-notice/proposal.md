@@ -8,12 +8,12 @@
 
 功能位于 SCA 服务 `dm` 模块，对外提供 `/project/notice/scan` 下 4 个接口：
 
-| 接口 | 路径 | 行为 |
-|------|------|------|
-| 启动扫描 | `POST /project/notice/scan/start` | 仅传 `productName`；服务端拉取产品 SBOM 自动解析软件清单，落库后经 RabbitMQ 异步执行，立即返回 `scanId` |
-| 保存发布名称 | `POST /project/notice/scan/release` | 按 productName 保存/更新发布名称（release_name），支持后续按发布名称查询 |
-| 查询结果 | `POST /project/notice/scan/query` | 按 releaseName（优先）或 productName 查询最新扫描：合并 NOTICE 下载地址、扫描状态、失败软件明细 |
-| 人工补充 | `POST /project/notice/scan/supplement` | 对扫描失败的软件人工补充 NOTICE 文本，重建合并文档并返回新下载地址与剩余失败明细 |
+| 接口         | 路径                                   | 行为                                                                                                    |
+| ------------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 启动扫描     | `POST /project/notice/scan/start`      | 仅传 `productName`；服务端拉取产品 SBOM 自动解析软件清单，落库后经 RabbitMQ 异步执行，立即返回 `scanId` |
+| 保存发布名称 | `POST /project/notice/scan/release`    | 按 productName 保存/更新发布名称（release_name），支持后续按发布名称查询                                |
+| 查询结果     | `POST /project/notice/scan/query`      | 按 releaseName（优先）或 productName 查询最新扫描：合并 NOTICE 下载地址、扫描状态、失败软件明细         |
+| 人工补充     | `POST /project/notice/scan/supplement` | 对扫描失败的软件人工补充 NOTICE 文本，重建合并文档并返回新下载地址与剩余失败明细                        |
 
 ## Motivation
 
@@ -30,23 +30,23 @@
 
 ### 涉及文件
 
-| 文件 | 角色 |
-|------|------|
-| `dm/controller/ProjectNoticeScanController.java` | REST 接口入口（4 个接口） |
-| `dm/service/ProjectNoticeScanService.java` | 服务接口定义 |
-| `dm/service/impl/ProjectNoticeScanServiceImpl.java` | 服务实现：启动/发布名/查询/人工补充，SBOM 解析 |
-| `dm/service/impl/ProjectNoticeScanAsyncProcessor.java` | RabbitMQ 消费者：单包处理、合并上传、结果落库 |
-| `dm/util/ProjectNoticeScanExecutor.java` | 执行器：下载、Python 子进程、OBS 上传/下载、合并上传、目录清理 |
-| `dm/util/NoticeMerger.java` | 合并文档生成：头部声明 + License 去重 + 下载地址表 |
-| `dm/util/packageurl/*.java` | purl 解析器体系（Composite + Pypi/Maven/Npm/Go/CGit/Rpm/Default） |
-| `dm/event/ProjectNoticeScanCreatedEvent.java` / `ProjectNoticeScanEventListener.java` | 事务提交后向 RabbitMQ 投递 scanId |
-| `common/config/rabbitmq/ProjectNoticeScanRabbitConfig.java` | 手动 ack、单消费者容器工厂 |
-| `common/enums/ProjectNoticeScanStatus.java` / `ProjectNoticeScanDetailStatus.java` | 扫描/明细状态枚举 |
-| `analysis/entity/TblProjectNoticeScan.java` / `TblProjectNoticeScanDetail.java` | 持久化实体 |
-| `analysis/entity/dto/ProjectNoticeScan*Po.java`、`vo/ProjectNoticeScan*VO.java` | 请求/响应 DTO |
-| `dm/dao/TblProjectNoticeScan(Detail)Mapper.java` + `mapper/dm/*.xml` | MyBatis 数据访问 |
-| `db/changelog/mysql/20260716/create-tbl-project-notice-scan.xml` | Liquibase 建表 |
-| `tools/OSSinfo_extraction/` | 本地化的 Python 提取工具（随镜像构建，不再运行时 git clone） |
+| 文件                                                                                  | 角色                                                              |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `dm/controller/ProjectNoticeScanController.java`                                      | REST 接口入口（4 个接口）                                         |
+| `dm/service/ProjectNoticeScanService.java`                                            | 服务接口定义                                                      |
+| `dm/service/impl/ProjectNoticeScanServiceImpl.java`                                   | 服务实现：启动/发布名/查询/人工补充，SBOM 解析                    |
+| `dm/service/impl/ProjectNoticeScanAsyncProcessor.java`                                | RabbitMQ 消费者：单包处理、合并上传、结果落库                     |
+| `dm/util/ProjectNoticeScanExecutor.java`                                              | 执行器：下载、Python 子进程、OBS 上传/下载、合并上传、目录清理    |
+| `dm/util/NoticeMerger.java`                                                           | 合并文档生成：头部声明 + License 去重 + 下载地址表                |
+| `dm/util/packageurl/*.java`                                                           | purl 解析器体系（Composite + Pypi/Maven/Npm/Go/CGit/Rpm/Default） |
+| `dm/event/ProjectNoticeScanCreatedEvent.java` / `ProjectNoticeScanEventListener.java` | 事务提交后向 RabbitMQ 投递 scanId                                 |
+| `common/config/rabbitmq/ProjectNoticeScanRabbitConfig.java`                           | 手动 ack、单消费者容器工厂                                        |
+| `common/enums/ProjectNoticeScanStatus.java` / `ProjectNoticeScanDetailStatus.java`    | 扫描/明细状态枚举                                                 |
+| `analysis/entity/TblProjectNoticeScan.java` / `TblProjectNoticeScanDetail.java`       | 持久化实体                                                        |
+| `analysis/entity/dto/ProjectNoticeScan*Po.java`、`vo/ProjectNoticeScan*VO.java`       | 请求/响应 DTO                                                     |
+| `dm/dao/TblProjectNoticeScan(Detail)Mapper.java` + `mapper/dm/*.xml`                  | MyBatis 数据访问                                                  |
+| `db/changelog/mysql/20260716/create-tbl-project-notice-scan.xml`                      | Liquibase 建表                                                    |
+| `tools/OSSinfo_extraction/`                                                           | 本地化的 Python 提取工具（随镜像构建，不再运行时 git clone）      |
 
 ### 关联改动
 

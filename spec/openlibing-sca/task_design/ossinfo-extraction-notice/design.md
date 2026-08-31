@@ -45,8 +45,8 @@ ProjectNoticeScanController (REST, /project/notice/scan/*)
 
 请求体 `ProjectNoticeScanStartPo`：
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
+| 字段          | 类型   | 说明                                    |
+| ------------- | ------ | --------------------------------------- |
 | `productName` | String | 产品名称，用于拉取 SBOM 与组织 OBS 目录 |
 
 响应：`scanId`（UUID 去横线）。同步阶段完成落库与消息投递即返回；后续处理进度通过 `/query` 感知。
@@ -63,13 +63,13 @@ ProjectNoticeScanController (REST, /project/notice/scan/*)
 
 响应 `ProjectNoticeScanVO`：
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `productName` | String | 产品名称 |
-| `scanStatus` | Integer | 扫描状态原始值：0-待处理 / 1-处理中 / 2-成功 / 3-失败 |
-| `scanStatusName` | String | 状态中文描述（`ProjectNoticeScanStatus.nameOf`，非法值返回空串不抛错） |
-| `mergedOssUrl` | String | 合并 NOTICE 文件 OBS 签名 URL（扫描完成且有成功项时非空） |
-| `failedDetails` | List | 失败软件明细：`softwareName` / `version` / `downloadUrl` |
+| 字段             | 类型    | 说明                                                                   |
+| ---------------- | ------- | ---------------------------------------------------------------------- |
+| `productName`    | String  | 产品名称                                                               |
+| `scanStatus`     | Integer | 扫描状态原始值：0-待处理 / 1-处理中 / 2-成功 / 3-失败                  |
+| `scanStatusName` | String  | 状态中文描述（`ProjectNoticeScanStatus.nameOf`，非法值返回空串不抛错） |
+| `mergedOssUrl`   | String  | 合并 NOTICE 文件 OBS 签名 URL（扫描完成且有成功项时非空）              |
+| `failedDetails`  | List    | 失败软件明细：`softwareName` / `version` / `downloadUrl`               |
 
 ### POST /supplement — 人工补充
 
@@ -81,30 +81,30 @@ ProjectNoticeScanController (REST, /project/notice/scan/*)
 
 ### tbl_project_notice_scan（扫描总表）
 
-| 列 | 类型 | 说明 |
-|----|------|------|
-| `id` | VARCHAR(64) PK | 主键 |
-| `scan_id` | VARCHAR(64) UK | 扫描ID（对外暴露） |
-| `project_name` | VARCHAR(256) NOT NULL | 产品名称（索引） |
-| `release_name` | VARCHAR(256) | 发布名称（索引） |
-| `total_count` / `success_count` / `fail_count` | INT | 计数 |
-| `merged_oss_url` | VARCHAR(1024) | 合并文件 OBS 签名 URL |
-| `status` | INT | 0-PENDING / 1-PROCESSING / 2-SUCCESS / 3-FAILED（索引） |
-| `error_msg` | VARCHAR(1024) | 总体错误信息 |
-| `create_time` / `update_time` / `finish_time` | DATETIME | 时间戳 |
+| 列                                             | 类型                  | 说明                                                    |
+| ---------------------------------------------- | --------------------- | ------------------------------------------------------- |
+| `id`                                           | VARCHAR(64) PK        | 主键                                                    |
+| `scan_id`                                      | VARCHAR(64) UK        | 扫描ID（对外暴露）                                      |
+| `project_name`                                 | VARCHAR(256) NOT NULL | 产品名称（索引）                                        |
+| `release_name`                                 | VARCHAR(256)          | 发布名称（索引）                                        |
+| `total_count` / `success_count` / `fail_count` | INT                   | 计数                                                    |
+| `merged_oss_url`                               | VARCHAR(1024)         | 合并文件 OBS 签名 URL                                   |
+| `status`                                       | INT                   | 0-PENDING / 1-PROCESSING / 2-SUCCESS / 3-FAILED（索引） |
+| `error_msg`                                    | VARCHAR(1024)         | 总体错误信息                                            |
+| `create_time` / `update_time` / `finish_time`  | DATETIME              | 时间戳                                                  |
 
 ### tbl_project_notice_scan_detail（扫描明细表）
 
-| 列 | 类型 | 说明 |
-|----|------|------|
-| `id` | VARCHAR(64) PK | 主键 |
-| `scan_id` | VARCHAR(64) NOT NULL | 关联总表（索引） |
+| 列                          | 类型                        | 说明                                                 |
+| --------------------------- | --------------------------- | ---------------------------------------------------- |
+| `id`                        | VARCHAR(64) PK              | 主键                                                 |
+| `scan_id`                   | VARCHAR(64) NOT NULL        | 关联总表（索引）                                     |
 | `software_name` / `version` | VARCHAR(256)/(128) NOT NULL | 软件标识（`(scan_id, software_name, version)` 唯一） |
-| `download_url` | VARCHAR(1024) NOT NULL | 下载地址（可为 purl 原文） |
-| `readme_oss_url` | VARCHAR(1024) | 单包 Readme.opensource OBS 签名 URL |
-| `status` | INT | 0-PENDING / 1-SUCCESS / 2-FAILED |
-| `error_msg` | VARCHAR(1024) | 失败原因（截断至 1024） |
-| `(software_name, version)` | 索引 | 全局缓存查询用 |
+| `download_url`              | VARCHAR(1024) NOT NULL      | 下载地址（可为 purl 原文）                           |
+| `readme_oss_url`            | VARCHAR(1024)               | 单包 Readme.opensource OBS 签名 URL                  |
+| `status`                    | INT                         | 0-PENDING / 1-SUCCESS / 2-FAILED                     |
+| `error_msg`                 | VARCHAR(1024)               | 失败原因（截断至 1024）                              |
+| `(software_name, version)`  | 索引                        | 全局缓存查询用                                       |
 
 ### 状态枚举
 
@@ -115,12 +115,12 @@ ProjectNoticeScanController (REST, /project/notice/scan/*)
 
 ### 消息拓扑
 
-| 项 | 值（配置键与默认值） |
-|----|--------------------|
-| Exchange | `${spring.rabbitmq.sca.notice_scan_exchange:notice_scan_exchange}` |
-| Routing Key | `${spring.rabbitmq.sca.notice_scan_key:notice_scan_key}` |
-| Queue | `${spring.rabbitmq.sca.notice_scan_queue:notice_scan_queue}` |
-| 死信 | `x-dead-letter-exchange=${spring.rabbitmq.sca.death_queue}`，`x-dead-letter-routing-key=death` |
+| 项          | 值（配置键与默认值）                                                                           |
+| ----------- | ---------------------------------------------------------------------------------------------- |
+| Exchange    | `${spring.rabbitmq.sca.notice_scan_exchange:notice_scan_exchange}`                             |
+| Routing Key | `${spring.rabbitmq.sca.notice_scan_key:notice_scan_key}`                                       |
+| Queue       | `${spring.rabbitmq.sca.notice_scan_queue:notice_scan_queue}`                                   |
+| 死信        | `x-dead-letter-exchange=${spring.rabbitmq.sca.death_queue}`，`x-dead-letter-routing-key=death` |
 
 exchange/queue/binding 由 `@RabbitListener + @QueueBinding` 注解内联声明；`ProjectNoticeScanRabbitConfig` 仅提供独立容器工厂 `projectNoticeScanContainerFactory`（`AcknowledgeMode.MANUAL`、并发消费者 1/1），避免与全局 ack 模式耦合。
 
@@ -256,15 +256,15 @@ Bean 名 `projectNoticeScanExecutorUtil`。
 
 `PackageUrlResolverComposite` 按 `@Order` 顺序委托，首个 `supports` 命中的 resolver 处理：
 
-| 顺序 | Resolver | 支持输入 | 候选构造策略 |
-|------|----------|----------|--------------|
-| 10 | `PypiPackageUrlResolver` | `pkg:pypi/` | 镜像 simple index（PEP 503）→ pypi.org JSON API → 原始地址兜底；sdist 优先、wheel 回退 |
-| 20 | `MavenPackageUrlResolver` | `pkg:maven/` 前缀 + repo1.maven.org host | 解析 groupId/name/version 构造 maven2 路径；sources jar 优先、普通 jar 兜底；version 缺失回退 |
-| 30 | `NpmPackageUrlResolver` | `pkg:npm/` | 离线确定性构造 `/{name}/-/{basename}-{version}.tgz`（scoped 包文件名去 scope 前缀）；零网络调用 |
-| 40 | `GoPackageUrlResolver` | `pkg:golang/` | version 循环解码兼容双重编码（`%252B`）；module path 仅全小写 |
-| 50 | `CGitPackageUrlResolver` | git 仓库 URL | 识别 `.git` 等仓库地址，交 Executor 走 `git clone` |
-| 60 | `RpmPackageUrlResolver` | openEuler/CentOS 等 rpm 地址 | 版本目录拼 `-LTS` 后缀；main/update source 标准路径候选 |
-| MAX | `DefaultPackageUrlResolver` | 其余 | 原始地址单候选兜底 |
+| 顺序 | Resolver                    | 支持输入                                 | 候选构造策略                                                                                    |
+| ---- | --------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 10   | `PypiPackageUrlResolver`    | `pkg:pypi/`                              | 镜像 simple index（PEP 503）→ pypi.org JSON API → 原始地址兜底；sdist 优先、wheel 回退          |
+| 20   | `MavenPackageUrlResolver`   | `pkg:maven/` 前缀 + repo1.maven.org host | 解析 groupId/name/version 构造 maven2 路径；sources jar 优先、普通 jar 兜底；version 缺失回退   |
+| 30   | `NpmPackageUrlResolver`     | `pkg:npm/`                               | 离线确定性构造 `/{name}/-/{basename}-{version}.tgz`（scoped 包文件名去 scope 前缀）；零网络调用 |
+| 40   | `GoPackageUrlResolver`      | `pkg:golang/`                            | version 循环解码兼容双重编码（`%252B`）；module path 仅全小写                                   |
+| 50   | `CGitPackageUrlResolver`    | git 仓库 URL                             | 识别 `.git` 等仓库地址，交 Executor 走 `git clone`                                              |
+| 60   | `RpmPackageUrlResolver`     | openEuler/CentOS 等 rpm 地址             | 版本目录拼 `-LTS` 后缀；main/update source 标准路径候选                                         |
+| MAX  | `DefaultPackageUrlResolver` | 其余                                     | 原始地址单候选兜底                                                                              |
 
 **统一约定**：
 
@@ -300,29 +300,29 @@ Bean 名 `projectNoticeScanExecutorUtil`。
 
 ## 配置项
 
-| 配置键 | 默认值 | 说明 |
-|--------|--------|------|
-| `sca.notice.obs.bucketName` | （必配） | OBS 目标 Bucket |
-| `sca.notice.python.timeoutMinutes` | 20 | Python 单包提取超时（分钟） |
-| `sca.notice.python.jobs` | 0（=CPU 核数，上限 8） | scancode 并行进程数 |
-| `spring.rabbitmq.sca.notice_scan_exchange` | notice_scan_exchange | 扫描消息 exchange |
-| `spring.rabbitmq.sca.notice_scan_key` | notice_scan_key | 路由键 |
-| `spring.rabbitmq.sca.notice_scan_queue` | notice_scan_queue | 扫描队列 |
-| `spring.rabbitmq.sca.death_queue` | （必配） | 死信 exchange |
+| 配置键                                     | 默认值                 | 说明                        |
+| ------------------------------------------ | ---------------------- | --------------------------- |
+| `sca.notice.obs.bucketName`                | （必配）               | OBS 目标 Bucket             |
+| `sca.notice.python.timeoutMinutes`         | 20                     | Python 单包提取超时（分钟） |
+| `sca.notice.python.jobs`                   | 0（=CPU 核数，上限 8） | scancode 并行进程数         |
+| `spring.rabbitmq.sca.notice_scan_exchange` | notice_scan_exchange   | 扫描消息 exchange           |
+| `spring.rabbitmq.sca.notice_scan_key`      | notice_scan_key        | 路由键                      |
+| `spring.rabbitmq.sca.notice_scan_queue`    | notice_scan_queue      | 扫描队列                    |
+| `spring.rabbitmq.sca.death_queue`          | （必配）               | 死信 exchange               |
 
 ## Error Handling
 
-| 场景 | 行为 |
-|------|------|
-| SBOM 不存在 / 解析不出软件包 | `start` 同步返回 `ScaException(60000)` |
-| 单包下载/提取/上传失败 | 明细置 FAILED（error_msg 截断 1024），继续处理其他明细 |
-| 全部明细失败 | 扫描置 FAILED（"all software failed"），不生成合并文档 |
-| 合并/上传失败 | 扫描置 FAILED（"merge failed: ..."），已成功的单包 Readme 仍保留在 OBS |
-| 消费抛 RuntimeException | `basicNack(requeue=false)` 进死信队列 |
-| 事务提交后消息发送失败 | 仅 ERROR 日志，scan 悬挂 PENDING（已知缺口，靠监控/人工） |
-| query 两个查询参数都为空 / 记录不存在 | `ScaException(60000)` |
-| supplement 匹配不到明细 / 扫描未完成 | `ScaException(60000)` |
-| 目录清理失败 | 仅 WARN，不影响主流程 |
+| 场景                                  | 行为                                                                   |
+| ------------------------------------- | ---------------------------------------------------------------------- |
+| SBOM 不存在 / 解析不出软件包          | `start` 同步返回 `ScaException(60000)`                                 |
+| 单包下载/提取/上传失败                | 明细置 FAILED（error_msg 截断 1024），继续处理其他明细                 |
+| 全部明细失败                          | 扫描置 FAILED（"all software failed"），不生成合并文档                 |
+| 合并/上传失败                         | 扫描置 FAILED（"merge failed: ..."），已成功的单包 Readme 仍保留在 OBS |
+| 消费抛 RuntimeException               | `basicNack(requeue=false)` 进死信队列                                  |
+| 事务提交后消息发送失败                | 仅 ERROR 日志，scan 悬挂 PENDING（已知缺口，靠监控/人工）              |
+| query 两个查询参数都为空 / 记录不存在 | `ScaException(60000)`                                                  |
+| supplement 匹配不到明细 / 扫描未完成  | `ScaException(60000)`                                                  |
+| 目录清理失败                          | 仅 WARN，不影响主流程                                                  |
 
 ## File Structure
 
@@ -356,16 +356,16 @@ tools/OSSinfo_extraction/                               # 本地化 Python 工�
 
 ## Dependencies
 
-| 依赖 | 用途 |
-|------|------|
-| Spring AMQP / RabbitMQ | 异步串行执行、死信 |
-| `org.springframework.transaction.event` | 事务提交后投递消息 |
-| MyBatis + Liquibase | 持久化与建表 |
-| `com.alibaba.fastjson2` | SBOM JSON 解析 |
-| `java.net.http.HttpClient` | 源码包/OBS 签名 URL 下载 |
-| `com.obs.services.ObsClient` + `SignUtils` | OBS 上传与签名 URL |
-| `ossinfo_extraction` (Python CLI) | 版权/许可证提取（镜像内置） |
-| `git` CLI | git 仓库类依赖浅克隆 |
+| 依赖                                       | 用途                        |
+| ------------------------------------------ | --------------------------- |
+| Spring AMQP / RabbitMQ                     | 异步串行执行、死信          |
+| `org.springframework.transaction.event`    | 事务提交后投递消息          |
+| MyBatis + Liquibase                        | 持久化与建表                |
+| `com.alibaba.fastjson2`                    | SBOM JSON 解析              |
+| `java.net.http.HttpClient`                 | 源码包/OBS 签名 URL 下载    |
+| `com.obs.services.ObsClient` + `SignUtils` | OBS 上传与签名 URL          |
+| `ossinfo_extraction` (Python CLI)          | 版权/许可证提取（镜像内置） |
+| `git` CLI                                  | git 仓库类依赖浅克隆        |
 
 ## Limitations
 
