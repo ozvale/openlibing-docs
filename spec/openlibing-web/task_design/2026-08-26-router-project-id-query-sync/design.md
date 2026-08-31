@@ -24,13 +24,13 @@ watch(projectInfo.projectId) 触发
 
 ## 2. 关键设计决策
 
-| # | 决策 | 理由 |
-|---|---|---|
-| 1 | 守卫改写用 `next(to)` 重定向 | 与既有 `setPlatformFlagGuard` 同机制；第二圈守卫命中目标状态即放行，无死循环 |
-| 2 | store 为空时守卫不介入 | 保证 `?projectId=X` / `?projectName=X` 分享链接在初始导航（store 未加载）时原样到达 `Content.vue` 的 `getProject` 完成项目还原 |
-| 3 | `Content.getProject` 统一写 `app.projectInfo` | 使 watch 立即触发时拿到的 projectId 与当前路由一致，避免初始化后又被 watch 改写一次 URL |
-| 4 | projectName 全部移除、只写 projectId（用户要求） | 收敛参数风格；分享链接兼容性靠「还原逻辑保留 + 还原后 URL 转换」实现 |
-| 5 | watch 监听源用单一 `projectId` 而非数组 | 减少无谓触发（此前 projectName 变化也会触发） |
+| #   | 决策                                             | 理由                                                                                                                           |
+| --- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | 守卫改写用 `next(to)` 重定向                     | 与既有 `setPlatformFlagGuard` 同机制；第二圈守卫命中目标状态即放行，无死循环                                                   |
+| 2   | store 为空时守卫不介入                           | 保证 `?projectId=X` / `?projectName=X` 分享链接在初始导航（store 未加载）时原样到达 `Content.vue` 的 `getProject` 完成项目还原 |
+| 3   | `Content.getProject` 统一写 `app.projectInfo`    | 使 watch 立即触发时拿到的 projectId 与当前路由一致，避免初始化后又被 watch 改写一次 URL                                        |
+| 4   | projectName 全部移除、只写 projectId（用户要求） | 收敛参数风格；分享链接兼容性靠「还原逻辑保留 + 还原后 URL 转换」实现                                                           |
+| 5   | watch 监听源用单一 `projectId` 而非数组          | 减少无谓触发（此前 projectName 变化也会触发）                                                                                  |
 
 ## 3. 不重载视图的论证
 
@@ -42,10 +42,10 @@ watch(projectInfo.projectId) 触发
 
 ## 4. 影响范围
 
-| 维度 | 影响 |
-|---|---|
-| 文件 | `guard.ts`（守卫重写）、`app.ts`（watch 简化）、`Content.vue`（首个 commit 已含，projectInfo 统一写入） |
-| 接口 | 无变更 |
-| 数据模型 | 无变更 |
-| 页签 | 旧页签激活时一次性自愈迁移为当前项目地址 |
-| 子应用 | 启动 URL 携带 projectId（`buildSubAppUrl` 拼主应用 query），不重载 |
+| 维度     | 影响                                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------- |
+| 文件     | `guard.ts`（守卫重写）、`app.ts`（watch 简化）、`Content.vue`（首个 commit 已含，projectInfo 统一写入） |
+| 接口     | 无变更                                                                                                  |
+| 数据模型 | 无变更                                                                                                  |
+| 页签     | 旧页签激活时一次性自愈迁移为当前项目地址                                                                |
+| 子应用   | 启动 URL 携带 projectId（`buildSubAppUrl` 拼主应用 query），不重载                                      |

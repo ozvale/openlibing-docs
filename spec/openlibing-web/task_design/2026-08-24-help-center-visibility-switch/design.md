@@ -11,11 +11,11 @@
 ```js
 // 是否有管理中心配置权限
 const hasManageConfigPermission = computed(() =>
-  Boolean(app?.user?.permissions?.find?.((i) => i === 'manage_config')),
+  Boolean(app?.user?.permissions?.find?.((i) => i === "manage_config")),
 );
 // 当前 url 是否在管理中心模块下
 const isManageCenterRoute = computed(() =>
-  route.path.startsWith('/manageCenter'),
+  route.path.startsWith("/manageCenter"),
 );
 ```
 
@@ -53,20 +53,26 @@ const visibilityValue = computed({
 
 ```js
 const isComponentActive = ref(true);
-onActivated(() => { isComponentActive.value = true; });
-onDeactivated(() => { isComponentActive.value = false; });
-onBeforeUnmount(() => { isComponentActive.value = false; });
+onActivated(() => {
+  isComponentActive.value = true;
+});
+onDeactivated(() => {
+  isComponentActive.value = false;
+});
+onBeforeUnmount(() => {
+  isComponentActive.value = false;
+});
 ```
 
 push 前检查 `if (isComponentActive.value)` 再执行。同时覆盖 keep-alive 失活与组件卸载两种场景。
 
 ## 3. 影响范围
 
-| 文件 | 变更 |
-| --- | --- |
+| 文件                              | 变更                                                                        |
+| --------------------------------- | --------------------------------------------------------------------------- |
 | `views/HelpCenter/helpCenter.vue` | 开关 UI + visibilityValue 计算属性 + 保存/回滚逻辑 + isComponentActive 守卫 |
-| `router/manageRouter.ts` | 新增 /manageCenter/helpCenterSetting 路由 |
-| `views/manageCenter/index.vue` | 菜单新增帮助中心入口 |
+| `router/manageRouter.ts`          | 新增 /manageCenter/helpCenterSetting 路由                                   |
+| `views/manageCenter/index.vue`    | 菜单新增帮助中心入口                                                        |
 
 无后端接口变更、无数据模型变更、无部署配置变更。
 
