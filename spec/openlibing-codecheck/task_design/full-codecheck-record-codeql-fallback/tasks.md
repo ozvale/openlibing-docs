@@ -32,9 +32,9 @@
 - [x] 新增 `StaticAlarmSummaryOperation.java`
   - [x] 实现 `queryStaticAlarmSummaryList(QuerySummaryModel query): PageVo` 主入口（count + 分页内联）
   - [x] 实现 `buildCriteriaFromQuery(query): Criteria` 条件翻译（含 `tool != "CodeQL"` 固定过滤）
-  - [x] 实现 `batchAggregateIssues(scanRuns): Map<scanRunId, IssueStats>` 聚合（快照未就绪才聚合，`needIssueAggregationFallback` 判定）
+  - [x] 实现 `batchAggregateIssues(scanRuns): Map<pipelineRunId, IssueStats>` 聚合（issue 表外键为 `pipeline_run_id`，快照未就绪才聚合，`needIssueAggregationFallback` 判定）
   - [x] 实现 `enrichRepoAndProjectInfo(scanRuns)`：批量反查 `repo_info` / `project_info` / `hw_project_info`，内存 Map 关联（避免 N+1）
-  - [x] 实现 `enrichCodeMetrics(scanRuns)`：收集 `(repo_url, branch, commit_id)` 三元组，Feign 批量调用 coderepo，内存按 `groupKey` 关联
+  - [x] 实现 `enrichCodeMetrics(scanRuns)`：收集 `(repo_url, branch, commit_id)` 三元组，按 ≤100 条/批切分（与 coderepo 入参上限对齐）Feign 分批调用 coderepo，单批失败局部降级（该批走默认值），内存按 `groupKey` 合并关联
   - [x] 实现 `toDto(scanRun, issueStats, metrics): CodeCheckResultSummaryDTO` 单条转换（含 `resolveXxxCount` 快照优先/聚合兜底、`applyMetrics` 度量填充）
   - [x] 显式排序：`scanStartAt DESC`
   - [x] 分页语义：同时非空才分页

@@ -55,7 +55,7 @@ MachineApiCheckboardController#queryFullTaskResultSummary
        │     └─ staticAlarmSummaryOperation.queryStaticAlarmSummaryList(query)  // 新增降级路径
        │           ├─ buildCriteriaFromQuery(query)              // 翻译过滤条件
        │           ├─ countScanRun / pageScanRun                  // scan_run 分页
-       │           ├─ batchAggregateIssues(scanRunIds)            // issue 按状态聚合
+       │           ├─ batchAggregateIssues(scanRuns)               // issue 按 pipeline_run_id 聚合
        │           ├─ enrichRepoAndProjectInfo(scanRuns)         // 反查 repo_info / hw_project_info
        │     ├─ enrichCodeMetrics(scanRuns)                 // Feign 调 coderepo 按 repo_url+branch+commit_id 关联度量
       │           // 以 scan_run 为主，按 commit_id 精确匹配取最近的 code_metrics_record
@@ -105,9 +105,10 @@ com.openlibing.codecheck.business.operation.codecheck
        ├─ buildCriteriaFromQuery(query): Criteria
        │     // 把 QuerySummaryModel 的过滤条件翻译成 CodeQL 表上的等价条件
        │     // 具体映射见 §4.4
-       ├─ batchAggregateIssues(scanRuns): Map<scanRunId, IssueStats>
+       ├─ batchAggregateIssues(scanRuns): Map<pipelineRunId, IssueStats>
        │     // 按 pipeline_run_id 聚合 status / severity 各档计数
-       │     // 仅对快照字段未就绪的 scan_run 聚合（needIssueAggregationFallback 判定）
+       │     // 关联键统一为 pipeline_run_id：static_alarm_issue 外键为 pipeline_run_id（无 scan_run_id 字段），
+       │     // scan_run.issue_snapshot 等快照未就绪时才回退聚合（needIssueAggregationFallback 判定）
        ├─ enrichRepoAndProjectInfo(scanRuns): Map<repoUrl, RepoContext>
        │     // 批量反查 repo_info / project_info / hw_project_info，内存 Map 关联
        ├─ enrichCodeMetrics(scanRuns): Map<groupKey, CodeMetricsSnapshotDTO>
@@ -165,7 +166,7 @@ com.openlibing.codecheck.business.operation.codecheck
 | 21  | `isDeleted`                      | 固定值                  | `0`                                                                  | —                                                                                                                                                                                                            |
 | 22  | `isBack`                         | 固定值                  | `false`                                                              | —                                                                                                                                                                                                            |
 | 23  | `total`                          | `static_alarm_scan_run` | `issue_snapshot`                                                     | 与 `issue` 字段同值（add-count-yym 分支将 `issue_count` 更名为 `issue_snapshot`）                                                                                                                            |
-| 24  | `issue`                          | `static_alarm_issue`    | `status`                                                             | `status="OPEN"` 计数，按 `scan_run_id` 聚合                                                                                                                                                                  |
+| 24  | `issue`                          | `static_alarm_issue`    | `status`                                                             | `status="OPEN"` 计数，按 `pipeline_run_id` 聚合（issue 表外键，见下方注）                                                                                                                                    |
 | 25  | `solve`                          | `static_alarm_issue`    | `status`                                                             | `status="RESOLVED"` 计数                                                                                                                                                                                     |
 | 26  | `ignore`                         | `static_alarm_issue`    | `status`                                                             | `status="IGNORED"` 计数                                                                                                                                                                                      |
 | 27  | `inReview`                       | 固定值                  | `0`                                                                  | 不需要审批                                                                                                                                                                                                   |
@@ -195,6 +196,8 @@ com.openlibing.codecheck.business.operation.codecheck
 | 62  | `repoUrl`                        | `static_alarm_scan_run` | `repo_url`                                                           | 直接取（仅 `mrUrl` 不对接置 null）                                                                                                                                                                           |
 
 > 字段编号沿用原始 62 字段表，未出现的编号即 §4.3.1 列出的不对接字段。
+
+> **issue 聚合关联键统一口径**：`static_alarm_issue` 与 `static_alarm_scan_run` 的关联外键是 `pipeline_run_id`（issue 表不存在 `scan_run_id` 字段，历史数据亦兼容），全文（§4.1 / §4.3.2 / §4.7.3）统一按 `pipeline_run_id` 聚合，实现见 `batchAggregateIssues`。
 
 ### 4.4 过滤条件翻译
 
@@ -249,9 +252,11 @@ CodeQL 扫描与代码度量扫描是两条独立的扫描链路，执行时机�
 **以 CodeQL `scan_run` 为主，按本页 scan_run 批量执行**：
 
 1. 遍历本页 scan_run，收集非空的 `(repo_url, branch, commit_id)` 三元组（任一为空则该条跳过度量关联，相关字段走默认值）
-2. 一次性调用 coderepo 批量接口 `CodeMetricsFeignClient.getLatestMetricsByCommitBatch(queries)`（详见 §4.6.7）：
+2. **分批调用** coderepo 批量接口 `CodeMetricsFeignClient.getLatestMetricsByCommitBatch(queries)`（详见 §4.6.7）：
+   - 三元组列表按 **≤100 条/批** 切分（slice），逐批调用后合并结果——coderepo 侧入参列表有 `@Size(max=100)` 上限（coderepo design §4.1），不切分时全量查询 / 大 pageSize 场景下三元组数可能远超 100，单次调用会被整单拒绝导致本页度量全部静默丢失
    - 过滤条件：`status = 0 AND (git_url, branch_name, commit_id) IN (...)` 三元组精确匹配
    - coderepo 侧对每个三元组取 `detection_completed_at` 最大的一条（同一 commit 因扫描器重跑可能产生多条记录，取最新一条）
+   - **单批失败局部降级**：某一批调用异常或被拒时仅该批三元组的度量字段走默认值，记 warn 日志后继续处理其余批次；不做整页放弃（「放弃部分度量」是局部损失，「整页截断」会让无感知的度量字段丢失扩散到全部记录）
 3. 命中 → 按 `groupKey(repoUrl, branch, commitId)` 建立内存索引，把该 `code_metrics_record.metrics_data_json` 用于对应 scan_run 的度量字段填充
 4. 未命中（该三元组从未做过代码度量扫描，或度量记录全部失败）→ 度量字段走默认值（见 §4.6.4）
 
@@ -272,6 +277,7 @@ CodeQL 扫描与代码度量扫描是两条独立的扫描链路，执行时机�
 
 - 单条 scan_run 触发一次 Feign 调用，page_size 过大时 N+1 风险高
 - **本次落地即支持批量入参**（§4.6.7 `/batch` 接口），coderepo 侧一次性按 `(git_url, branch_name, commit_id) IN (...)` 三元组精确关联，返回所有命中记录，由 codecheck 内存 join
+- **批量上限与切分**：coderepo 入参列表上限 100 条（`@Size(max=100)`），codecheck 侧按 ≤100 条/批切分多次调用后合并（§4.6.3 第 2 步），全量查询 / 大 pageSize 场景不会因超限整单被拒
 - 批量 SQL 实现方式（用户确认项 5）：
 
   ```sql
@@ -465,16 +471,17 @@ try {
 
 ### 6.2 边界场景
 
-| 场景                                                           | 处理                                                   |
-| -------------------------------------------------------------- | ------------------------------------------------------ |
-| task_result_summary 命中 + CodeQL 也有数据                     | 走原路径，CodeQL 不查                                  |
-| task_result_summary total==0 + 无仓库定位字段                  | 不降级，直接返回空                                     |
-| task_result_summary total==0 + 有定位字段 + CodeQL 也空        | 返回空 PageVo                                          |
-| task_result_summary total==0 + 有定位字段 + CodeQL 异常        | 返回空 PageVo，记错误日志                              |
-| 分页越界（CodeQL count > 0 但 skip 超出）                      | 返回空 list，total 仍为 count（与原接口行为一致）      |
-| coderepo Feign 调用失败                                        | 度量字段全部走兜底值（null/0），不抛异常，记 warn 日志 |
-| scan_run 快照字段未就绪（`snapshot_computed=false` 或为 null） | 计数字段回退到 issue 表聚合                            |
-| coderepo `metrics_data_json` 字段未就绪                        | 度量字段走兜底值（见 §5.2）                            |
+| 场景                                                           | 处理                                                                                           |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| task_result_summary 命中 + CodeQL 也有数据                     | 走原路径，CodeQL 不查                                                                          |
+| task_result_summary total==0 + 无仓库定位字段                  | 不降级，直接返回空                                                                             |
+| task_result_summary total==0 + 有定位字段 + CodeQL 也空        | 返回空 PageVo                                                                                  |
+| task_result_summary total==0 + 有定位字段 + CodeQL 异常        | 返回空 PageVo，记错误日志                                                                      |
+| 分页越界（CodeQL count > 0 但 skip 超出）                      | 返回空 list，total 仍为 count（与原接口行为一致）                                              |
+| coderepo Feign 调用失败                                        | 当前批三元组的度量字段全部走兜底值（null/0），记 warn 日志后继续后续批次，不抛异常、不整页放弃 |
+| coderepo 批量入参超限（单批 > 100 条）                         | 不会发生：codecheck 侧按 ≤100 条/批切分调用（§4.6.3 第 2 步）                                  |
+| scan_run 快照字段未就绪（`snapshot_computed=false` 或为 null） | 计数字段回退到 issue 表聚合                                                                    |
+| coderepo `metrics_data_json` 字段未就绪                        | 度量字段走兜底值（见 §5.2）                                                                    |
 
 ## 7. 影响范围
 
@@ -551,7 +558,7 @@ try {
 7. **跨仓协同改造**：codecheck + coderepo 同步 PR，`metrics_data_json` 字段就绪前 codecheck 走默认值
 8. **不对接字段显式声明**：12 个字段不对接（见 §4.3.1），降级路径不返回或置 null
 9. **度量数据 commit 精确关联**：以 CodeQL `scan_run` 为主，按 `git_url + branch_name + commit_id` 三元组精确匹配（见 §4.6），废弃早期「`repo_url + branch` + 取 `scan_start_at` 之前最近一次度量记录」的时序窗口方案；同一 commit 重跑取 `detection_completed_at` 最新一条，找不到走默认值，彻底避免度量扫描时刻偏离导致指标失真
-10. **批量 Feign 调用落地**：`/latest-by-commit/batch` 接口本次已实现（§4.6.5），一次性三元组 IN 关联避免 codecheck 侧 N+1 Feign 调用
+10. **批量 Feign 调用落地**：`/latest-by-commit/batch` 接口本次已实现（§4.6.5），批量三元组 IN 关联避免 codecheck 侧 N+1 Feign 调用；受 coderepo 入参上限 100 条约束，codecheck 侧按 ≤100 条/批切分多次调用后合并（§4.6.3 第 2 步），单批失败仅局部降级
 
 ## 10. 后续演进
 
