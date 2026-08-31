@@ -1,4 +1,4 @@
-# openlibing-platform-release 迭代分支 dsq_202608_iter2 PR 报告
+# openlibing-platform-release release_20260831_iter2 PR 报告
 
 ## PR 概览
 
@@ -8,7 +8,7 @@
 | 标题    | chore(release): 合入 dsq_202608_iter2 迭代变更至 release_20260831_iter2                   |
 | 分支    | `dsq_202608_iter2` → `release_20260831_iter2`（fork: disiqi/openlibing-platform-release） |
 | 作者    | disiqi                                                                                    |
-| 状态    | open                                                                                      |
+| 状态    | merged                                                                                    |
 | Commits | 29                                                                                        |
 | 变更    | 23 files, +1135 / -92                                                                     |
 | 标签    | ai-assisted, ci-pipeline-running                                                          |
@@ -17,8 +17,8 @@
 
 | issueID | issue名称                                                      | 责任人 | 评审结果 | 发布日期   |
 | ------- | -------------------------------------------------------------- | ------ | -------- | ---------- |
-| #66     | [缺陷]: 特性看板中发布评审特性数据采集时间和上报时间异常       | disiqi | 通过     | 2026-08-31 |
 | #67     | [缺陷]: 特性看板发布评审特性，发布评审平均完成时间指标数据异常 | disiqi | 通过     | 2026-08-31 |
+| #66     | [缺陷]: 特性看板中发布评审特性数据采集时间和上报时间异常       | disiqi | 通过     | 2026-08-31 |
 
 ## 变更摘要
 
