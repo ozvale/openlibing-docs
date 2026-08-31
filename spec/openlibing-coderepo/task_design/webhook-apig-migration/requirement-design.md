@@ -2,6 +2,7 @@
 
 > **状态勘误（2026-08-29）**：本需求的整体交付与最终方案以 `proposal.md` / `design.md` / `tasks.md` /
 > `archive.md` 为准。两点说明：
+>
 > - 最终 APIG 后端入口统一为 `/apig/webhook/{platform}/repo`（本文件中早期草稿的 `/webhookEvent/apig/hooks/{platform}`
 >   不作为最终路径）。
 > - 阶段 3「废弃旧接口」已作为独立小需求交付（openlibing/openlibing-coderepo#153），5 个 `/webhookEvent/hooks/*`
@@ -23,13 +24,13 @@
 - **无限流**：恶意或异常重试可能打垮 coderepo 服务。
 - **认证弱**：webhook 自身签名校验在应用层（`WebhookAuthUtil`），网络层无前置过滤。
 
-| 维度 | 目标 |
-|------|------|
-| 来源限制 | 仅 gitcode/gitee/github 出口 IP 段可调用 webhook（APIG IP 白名单） |
-| 限流 | 单接口限流（APIG 流控策略），防止异常重试打垮服务 |
+| 维度     | 目标                                                                                                                      |
+| -------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 来源限制 | 仅 gitcode/gitee/github 出口 IP 段可调用 webhook（APIG IP 白名单）                                                        |
+| 限流     | 单接口限流（APIG 流控策略），防止异常重试打垮服务                                                                         |
 | 存量迁移 | `refreshWebhookHandler` 定时任务运行时把存量 webhook URL（含 repoId 旧路径 + 旧直连 URL）改为新的 APIG URL（不含 repoId） |
-| 新增仓库 | 未创建 webhook 的代码仓直接按新的 APIG URL 生成 webhook |
-| 路径统一 | 废弃含 `{repoId}` 的旧路径接口，APIG 只发布 3 个不含 repoId 的接口；全部 webhook 统一到不含 repoId 的新路径 |
+| 新增仓库 | 未创建 webhook 的代码仓直接按新的 APIG URL 生成 webhook                                                                   |
+| 路径统一 | 废弃含 `{repoId}` 的旧路径接口，APIG 只发布 3 个不含 repoId 的接口；全部 webhook 统一到不含 repoId 的新路径               |
 
 ### 1.2 涉及的 webhook 接口
 
@@ -37,25 +38,24 @@
 
 **新建 3 个 APIG 专用后端接口（不含 repoId，仅供 APIG 转发）**：
 
-| # | 接口路径（apig） | 接口路径（后端） | 平台 | 说明 |
-|---|----------------|----------------|------|------|
-| 1 | `POST /webhook/gitcode/repo` | `POST /apig/webhook/gitcode/repo` | gitcode | 新增 |
-| 2 | `POST /webhook/gitee/repo` | `POST /apig/webhook/gitee/repo` | gitee | 新增 |
-| 3 | `POST /webhook/github/repo` | `POST /apig/webhook/github/repo` | github | 新增 |
+| #   | 接口路径（apig）             | 接口路径（后端）                  | 平台    | 说明 |
+| --- | ---------------------------- | --------------------------------- | ------- | ---- |
+| 1   | `POST /webhook/gitcode/repo` | `POST /apig/webhook/gitcode/repo` | gitcode | 新增 |
+| 2   | `POST /webhook/gitee/repo`   | `POST /apig/webhook/gitee/repo`   | gitee   | 新增 |
+| 3   | `POST /webhook/github/repo`  | `POST /apig/webhook/github/repo`  | github  | 新增 |
 
 注：需要在openlibing-gateway WebhookAuthFilter 中新增链接校验白名单：/apig/webhook/
 同时在注释中声明：apig转发的webhook接口规范示例为：/apig/webhook/{platform}/repo以及/apig/webhook/{platform}/pipeline/{pipelineId}，其中repo和piepline表示具体业务场景
 
-
 **保留的 5 个旧接口（仅增加日志，观察期后废弃）**：
 
-| # | 接口路径（后端） | 平台 | 说明 |
-|---|----------------|------|------|
-| 1 | `POST /webhookEvent/hooks/gitcode` | gitcode | 旧直连路径，仅日志观察，观察期后废弃 |
-| 2 | `POST /webhookEvent/hooks/gitcode/{repoId}` | gitcode | 含 repoId 旧路径，仅日志观察，观察期后废弃 |
-| 3 | `POST /webhookEvent/hooks/gitee` | gitee | 旧直连路径，仅日志观察，观察期后废弃 |
-| 4 | `POST /webhookEvent/hooks/gitee/{repoId}` | gitee | 含 repoId 旧路径，仅日志观察，观察期后废弃 |
-| 5 | `POST /webhookEvent/hooks/github` | github | 旧直连路径，仅日志观察，观察期后废弃 |
+| #   | 接口路径（后端）                            | 平台    | 说明                                       |
+| --- | ------------------------------------------- | ------- | ------------------------------------------ |
+| 1   | `POST /webhookEvent/hooks/gitcode`          | gitcode | 旧直连路径，仅日志观察，观察期后废弃       |
+| 2   | `POST /webhookEvent/hooks/gitcode/{repoId}` | gitcode | 含 repoId 旧路径，仅日志观察，观察期后废弃 |
+| 3   | `POST /webhookEvent/hooks/gitee`            | gitee   | 旧直连路径，仅日志观察，观察期后废弃       |
+| 4   | `POST /webhookEvent/hooks/gitee/{repoId}`   | gitee   | 含 repoId 旧路径，仅日志观察，观察期后废弃 |
+| 5   | `POST /webhookEvent/hooks/github`           | github  | 旧直连路径，仅日志观察，观察期后废弃       |
 
 > **物理隔离设计**：APIG 后端路径指向新建的 `/webhookEvent/apig/hooks/{platform}`，与旧接口 `/webhookEvent/hooks/` 完全分离。新接口只有 APIG 能转发到（webhook URL 已迁移到 APIG 的流量），旧接口只有直连请求会访问（webhook URL 未迁移的流量）。通过日志统计哪个接口有流量，即可 100% 判断迁移状态，无需依赖请求头。
 
@@ -105,17 +105,17 @@ gitcode/gitee/github
 
 ### 1.4 关键决策
 
-| 决策点 | 选择 | 理由 |
-|--------|------|------|
-| APIG 认证方式 | 无认证 | webhook 由 git 平台主动调用，无法携带 APIG 鉴权凭证；来源控制交给 IP 白名单 |
-| APIG API 数量 | 3 个（gitcode / gitee / github 各 1 个，不含 repoId） | 存量 webhook 全部迁移到不含 repoId 的新路径，无需保留 repoId 旧路径；APIG 只发布 3 个接口 |
-| APIG 后端接口 | 新建 3 个专用接口 `/webhookEvent/apig/hooks/{platform}` | 物理隔离 APIG 流量与直连流量，通过日志统计接口路径即可 100% 判断迁移状态，无需依赖请求头，无需逐仓确认 webhook URL |
-| 旧接口处理 | 5 个旧接口全部保留并增加日志，观察期后一次性废弃 | 不立即废弃，先通过日志观察确认旧接口无流量（存量 webhook 全部迁移完成），再一次性删除 Controller 代码 |
-| 流量来源识别 | 通过接口路径物理隔离 | 新接口有流量 = 走 APIG（已迁移）；旧接口有流量 = 直连后端（未迁移）。比请求头方式更直观可靠 |
-| webhook URL 配置 | 复用 `openlibing.coderepo.webhook.url`，Apollo 改值为 APIG URL | 改值后新创建的 webhook 自动走 APIG；存量 webhook 由定时任务迁移 |
-| 存量迁移方式 | PATCH 就地更新 URL（复用 webhook id） | 沿用 `updateRepoWebhookForPushEvent` 的 PATCH 模式，避免删除重建导致中间态事件丢失 |
-| 旧 webhook 识别 | URL 含 `openlibing-coderepo/webhookEvent/hooks/` 子串即视为 coderepo webhook | 既能匹配旧直连 URL，也能匹配含 repoId 的旧路径；新 APIG URL 不含该子串，不会误判 |
-| local/beta 环境 | 迁移 | 测试环境需要验证 APIG 流程 |
+| 决策点           | 选择                                                                         | 理由                                                                                                               |
+| ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| APIG 认证方式    | 无认证                                                                       | webhook 由 git 平台主动调用，无法携带 APIG 鉴权凭证；来源控制交给 IP 白名单                                        |
+| APIG API 数量    | 3 个（gitcode / gitee / github 各 1 个，不含 repoId）                        | 存量 webhook 全部迁移到不含 repoId 的新路径，无需保留 repoId 旧路径；APIG 只发布 3 个接口                          |
+| APIG 后端接口    | 新建 3 个专用接口 `/webhookEvent/apig/hooks/{platform}`                      | 物理隔离 APIG 流量与直连流量，通过日志统计接口路径即可 100% 判断迁移状态，无需依赖请求头，无需逐仓确认 webhook URL |
+| 旧接口处理       | 5 个旧接口全部保留并增加日志，观察期后一次性废弃                             | 不立即废弃，先通过日志观察确认旧接口无流量（存量 webhook 全部迁移完成），再一次性删除 Controller 代码              |
+| 流量来源识别     | 通过接口路径物理隔离                                                         | 新接口有流量 = 走 APIG（已迁移）；旧接口有流量 = 直连后端（未迁移）。比请求头方式更直观可靠                        |
+| webhook URL 配置 | 复用 `openlibing.coderepo.webhook.url`，Apollo 改值为 APIG URL               | 改值后新创建的 webhook 自动走 APIG；存量 webhook 由定时任务迁移                                                    |
+| 存量迁移方式     | PATCH 就地更新 URL（复用 webhook id）                                        | 沿用 `updateRepoWebhookForPushEvent` 的 PATCH 模式，避免删除重建导致中间态事件丢失                                 |
+| 旧 webhook 识别  | URL 含 `openlibing-coderepo/webhookEvent/hooks/` 子串即视为 coderepo webhook | 既能匹配旧直连 URL，也能匹配含 repoId 的旧路径；新 APIG URL 不含该子串，不会误判                                   |
+| local/beta 环境  | 迁移                                                                         | 测试环境需要验证 APIG 流程                                                                                         |
 
 ### 1.5 流程模式与风险
 
@@ -126,14 +126,14 @@ gitcode/gitee/github
 - 无 DB schema 变化、无新 REST API。
 - 安全影响有限（IP 白名单在 APIG 侧，代码侧仅改 URL）。
 
-| 风险 | 对策 |
-|------|------|
-| APIG URL 配置错误导致全部 webhook 失效 | Apollo 配置变更后先在单仓库（`repoId` 参数）验证，再全量执行 |
-| github PATCH `config` 丢失 `content_type`/`secret` | 实现时先读原 webhook `config`，连同 `url` 一起回填 |
-| 存量 webhook 迁移期间事件丢失 | 采用 PATCH 就地更新（非删除重建），webhook id 不变，中间态窗口最小 |
-| gitcode/gitee/github 出口 IP 段变更 | IP 白名单由运维定期核对各平台官方文档更新 |
-| 含 repoId 旧路径 webhook 迁移遗漏 | Controller 代码暂保留作为兜底；全量迁移后通过日志核对遗漏仓库并补迁 |
-| 旧直连 URL 被外部嗅探后绕过 APIG 直调 | 迁移完成后，可后续在网关层封禁 `/webhookEvent/hooks/` 直连路径（本需求不含） |
+| 风险                                               | 对策                                                                         |
+| -------------------------------------------------- | ---------------------------------------------------------------------------- |
+| APIG URL 配置错误导致全部 webhook 失效             | Apollo 配置变更后先在单仓库（`repoId` 参数）验证，再全量执行                 |
+| github PATCH `config` 丢失 `content_type`/`secret` | 实现时先读原 webhook `config`，连同 `url` 一起回填                           |
+| 存量 webhook 迁移期间事件丢失                      | 采用 PATCH 就地更新（非删除重建），webhook id 不变，中间态窗口最小           |
+| gitcode/gitee/github 出口 IP 段变更                | IP 白名单由运维定期核对各平台官方文档更新                                    |
+| 含 repoId 旧路径 webhook 迁移遗漏                  | Controller 代码暂保留作为兜底；全量迁移后通过日志核对遗漏仓库并补迁          |
+| 旧直连 URL 被外部嗅探后绕过 APIG 直调              | 迁移完成后，可后续在网关层封禁 `/webhookEvent/hooks/` 直连路径（本需求不含） |
 
 ### 1.6 回滚
 
@@ -155,10 +155,10 @@ gitcode/gitee/github
 
 通过日志监控验证迁移彻底性，**两个指标同时满足**方可进入阶段 3：
 
-| 指标 | 验证方式 | 期望结果 |
-|------|---------|---------|
-| 旧接口无流量 | 监控 5 个旧接口（`/webhookEvent/hooks/`）的访问日志，关注 `path=direct` 与 `path=legacy-with-repoId` 日志 | 观察期内无任何请求（说明存量 webhook 全部迁移完成，无直连后端流量） |
-| 新接口有正常流量 | 监控 3 个新接口（`/webhookEvent/apig/hooks/`）的访问日志，关注 `path=apig` 日志 | 流量正常（与平台事件触发频率匹配，说明 APIG 链路畅通） |
+| 指标             | 验证方式                                                                                                  | 期望结果                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 旧接口无流量     | 监控 5 个旧接口（`/webhookEvent/hooks/`）的访问日志，关注 `path=direct` 与 `path=legacy-with-repoId` 日志 | 观察期内无任何请求（说明存量 webhook 全部迁移完成，无直连后端流量） |
+| 新接口有正常流量 | 监控 3 个新接口（`/webhookEvent/apig/hooks/`）的访问日志，关注 `path=apig` 日志                           | 流量正常（与平台事件触发频率匹配，说明 APIG 链路畅通）              |
 
 **异常处理**：
 
@@ -238,6 +238,7 @@ autoSetCoderepoWebHook(repoInfo, org, repo):
 **关键改动**：第 2 步是新增的「URL 迁移分支」。原逻辑在此处只会「跳过创建」，导致存量 webhook 一直指向旧 URL；改造后改为 PATCH 更新 URL，实现运行时迁移。
 
 > **子串匹配覆盖两类存量 webhook**：现有「旧 URL 前缀匹配」判定用的是 `newUrl + "/"` 前缀（即 `新URL/{repoId}` 形式），只能识别含 repoId 的旧路径。改造后改用 `openlibing-coderepo/webhookEvent/hooks/` 子串匹配，可同时覆盖：
+>
 > - 旧直连 URL（不含 repoId）：`/gateway/openlibing-coderepo/webhookEvent/hooks/gitcode`
 > - 含 repoId 旧路径：`/gateway/openlibing-coderepo/webhookEvent/hooks/gitcode/123`
 >
@@ -257,10 +258,10 @@ autoSetCoderepoWebHook(repoInfo, org, repo):
 
 各平台 body 格式：
 
-| 平台 | PATCH body | 说明 |
-|------|-----------|------|
-| gitee / gitcode | `{"url": "<newUrl>"}` | 平台保留未传字段（事件订阅、secret 等不变） |
-| github | `{"config": {"url": "<newUrl>", "content_type": "<原值>", "secret": "<原值>"}}` | github URL 在 `config.url` 下；`content_type`、`secret` 必须连同回填，否则会被重置为默认值 |
+| 平台            | PATCH body                                                                      | 说明                                                                                       |
+| --------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| gitee / gitcode | `{"url": "<newUrl>"}`                                                           | 平台保留未传字段（事件订阅、secret 等不变）                                                |
+| github          | `{"config": {"url": "<newUrl>", "content_type": "<原值>", "secret": "<原值>"}}` | github URL 在 `config.url` 下；`content_type`、`secret` 必须连同回填，否则会被重置为默认值 |
 
 token 获取、请求头构造、响应判断均与 `updateRepoWebhookForPushEvent` 保持一致：
 
@@ -298,13 +299,13 @@ token 获取、请求头构造、响应判断均与 `updateRepoWebhookForPushEve
 
 ### 3.1 涉及类清单
 
-| 类 | 路径 | 改动类型 |
-|----|------|---------|
-| `RepoServiceImpl` | [RepoServiceImpl.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java) | 修改 + 新增方法 |
-| `WebHookEventController` | [WebHookEventController.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/WebHookEventController.java) | 修改（增加流量来源日志） |
-| `RepoWebhook` | [RepoWebhook.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/entity/webhooks/RepoWebhook.java) | 新增字段（github config 映射） |
-| `XxlJobHandler` | [XxlJobHandler.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/job/XxlJobHandler.java) | 不改动 |
-| `WebhookAuthUtil` | [WebhookAuthUtil.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/utils/WebhookAuthUtil.java) | 不改动 |
+| 类                       | 路径                                                                                                                                                                  | 改动类型                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `RepoServiceImpl`        | [RepoServiceImpl.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java)             | 修改 + 新增方法                |
+| `WebHookEventController` | [WebHookEventController.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/WebHookEventController.java) | 修改（增加流量来源日志）       |
+| `RepoWebhook`            | [RepoWebhook.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/entity/webhooks/RepoWebhook.java)                  | 新增字段（github config 映射） |
+| `XxlJobHandler`          | [XxlJobHandler.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/job/XxlJobHandler.java)                            | 不改动                         |
+| `WebhookAuthUtil`        | [WebhookAuthUtil.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/utils/WebhookAuthUtil.java)                      | 不改动                         |
 
 ### 3.2 `RepoServiceImpl` 改动方法
 
@@ -422,13 +423,13 @@ public String apigGithubWebhookEvent(HttpServletRequest request) {
 
 现有 5 个旧接口方法在入口处增加 `logWebhookSource` 调用，核心逻辑改为调用抽取出的公共处理方法：
 
-| 旧接口方法 | 日志调用 |
-|---------|---------|
-| `gitCodeWebhookEvent`（无 repoId 路径） | `logWebhookSource("gitcode", "direct")` |
+| 旧接口方法                              | 日志调用                                            |
+| --------------------------------------- | --------------------------------------------------- |
+| `gitCodeWebhookEvent`（无 repoId 路径） | `logWebhookSource("gitcode", "direct")`             |
 | `gitCodeWebhookEvent`（含 repoId 路径） | `logWebhookSource("gitcode", "legacy-with-repoId")` |
-| `giteeWebhookEvent`（无 repoId 路径） | `logWebhookSource("gitee", "direct")` |
-| `giteeWebhookEvent`（含 repoId 路径） | `logWebhookSource("gitee", "legacy-with-repoId")` |
-| `githubWebhookEvent` | `logWebhookSource("github", "direct")` |
+| `giteeWebhookEvent`（无 repoId 路径）   | `logWebhookSource("gitee", "direct")`               |
+| `giteeWebhookEvent`（含 repoId 路径）   | `logWebhookSource("gitee", "legacy-with-repoId")`   |
+| `githubWebhookEvent`                    | `logWebhookSource("github", "direct")`              |
 
 > gitcode / gitee 的 `@PostMapping` 用 `{"/hooks/gitcode", "/hooks/gitcode/{repoId}"}` 合并映射，方法内通过 `repoId` 是否为空判断路径类型，日志的 `path` 字段相应取 `direct` 或 `legacy-with-repoId`。
 
@@ -468,30 +469,30 @@ private void logWebhookSource(String platform, String path) {
 
 现有字段（不变）：
 
-| 字段 | JSON 映射 | 类型 | 说明 |
-|------|----------|------|------|
-| `id` | `id` | String | webhook id |
-| `url` | `url` | String | webhook URL（gitee/gitcode） |
-| `password` | `password` | String | webhook 签名（gitee/gitcode） |
-| `isPushEvents` | `push_events` | Boolean | push 事件订阅（gitee/gitcode） |
-| `isTagPushEvents` | `tag_push_events` | Boolean | tag push 事件 |
-| `isIssuesEvents` | `issues_events` | Boolean | issue 事件 |
-| `isNoteEvents` | `note_events` | Boolean | note 事件 |
-| `isMergeRequestsEvents` | `merge_requests_events` | Boolean | merge request 事件 |
-| `events` | `events` | List\<String\> | github 事件列表 |
-| `accessToken` | `access_token` | String | 访问 token |
-| `encryptionType` | `encryption_type` | String | 加密类型 |
+| 字段                    | JSON 映射               | 类型           | 说明                           |
+| ----------------------- | ----------------------- | -------------- | ------------------------------ |
+| `id`                    | `id`                    | String         | webhook id                     |
+| `url`                   | `url`                   | String         | webhook URL（gitee/gitcode）   |
+| `password`              | `password`              | String         | webhook 签名（gitee/gitcode）  |
+| `isPushEvents`          | `push_events`           | Boolean        | push 事件订阅（gitee/gitcode） |
+| `isTagPushEvents`       | `tag_push_events`       | Boolean        | tag push 事件                  |
+| `isIssuesEvents`        | `issues_events`         | Boolean        | issue 事件                     |
+| `isNoteEvents`          | `note_events`           | Boolean        | note 事件                      |
+| `isMergeRequestsEvents` | `merge_requests_events` | Boolean        | merge request 事件             |
+| `events`                | `events`                | List\<String\> | github 事件列表                |
+| `accessToken`           | `access_token`          | String         | 访问 token                     |
+| `encryptionType`        | `encryption_type`       | String         | 加密类型                       |
 
 新增字段：
 
-| 字段 | JSON 映射 | 类型 | 说明 |
-|------|----------|------|------|
-| `config` | `config` | RepoWebhookConfig | github webhook 配置（url/content_type/secret） |
+| 字段     | JSON 映射 | 类型              | 说明                                           |
+| -------- | --------- | ----------------- | ---------------------------------------------- |
+| `config` | `config`  | RepoWebhookConfig | github webhook 配置（url/content_type/secret） |
 
 ### 4.2 配置项
 
-| 配置项 | 来源 | 现值（示例） | 新值（示例） | 说明 |
-|--------|------|-------------|-------------|------|
+| 配置项                            | 来源   | 现值（示例）                                                                   | 新值（示例）                                    | 说明                                     |
+| --------------------------------- | ------ | ------------------------------------------------------------------------------ | ----------------------------------------------- | ---------------------------------------- |
 | `openlibing.coderepo.webhook.url` | Apollo | `https://www.openlibing.com/gateway/openlibing-coderepo/webhookEvent/hooks/%s` | `https://<apig-host>/coderepo/webhook/hooks/%s` | webhook 回调 URL 模板，`%s` 由平台名替换 |
 
 其余配置项（`gitee.common.access_token`、`gitcode.common.access_token`、`openlibing.webhook.sign.account.description`、`security.part1`、`spring.profiles.active` 等）均不变。
@@ -544,12 +545,12 @@ private void logWebhookSource(String platform, String path) {
 
 `refreshWebhookHandler` 全量执行时遍历所有未配置 webhook 的代码仓（实际为所有 coderepo 接入仓库）。单仓库处理耗时主要消耗在平台 API 调用：
 
-| 步骤 | API 调用 | 次数 |
-|------|---------|------|
-| `getRepoWebhookList` | GET 平台 webhook 列表 | 1 |
-| `cleanBetaWebhooks` | DELETE beta webhook（按需） | 0~N |
-| `cleanDuplicateLegacyWebhooks` | DELETE 多余旧 webhook（按需） | 0~N |
-| `updateRepoWebhookUrl`（新增） | PATCH 更新 URL | 0 或 1 |
+| 步骤                                       | API 调用                         | 次数    |
+| ------------------------------------------ | -------------------------------- | ------- |
+| `getRepoWebhookList`                       | GET 平台 webhook 列表            | 1       |
+| `cleanBetaWebhooks`                        | DELETE beta webhook（按需）      | 0~N     |
+| `cleanDuplicateLegacyWebhooks`             | DELETE 多余旧 webhook（按需）    | 0~N     |
+| `updateRepoWebhookUrl`（新增）             | PATCH 更新 URL                   | 0 或 1  |
 | `ensureCoderepoWebhookPushEventSubscribed` | GET webhook 列表 + PATCH（按需） | 1 + 0~1 |
 
 单仓库迁移场景（存量 webhook 需迁移 URL）较改造前多 1 次 PATCH 调用，耗时增加可忽略（百毫秒级）。
@@ -586,11 +587,11 @@ private void logWebhookSource(String platform, String path) {
 
 **新增 3 个 APIG 专用接口**：
 
-| # | 接口路径 | 平台 | 说明 |
-|---|---------|------|------|
-| 1 | `POST /webhookEvent/apig/hooks/gitcode` | gitcode | 新增，APIG 后端路径指向此接口 |
-| 2 | `POST /webhookEvent/apig/hooks/gitee` | gitee | 新增，APIG 后端路径指向此接口 |
-| 3 | `POST /webhookEvent/apig/hooks/github` | github | 新增，APIG 后端路径指向此接口 |
+| #   | 接口路径                                | 平台    | 说明                          |
+| --- | --------------------------------------- | ------- | ----------------------------- |
+| 1   | `POST /webhookEvent/apig/hooks/gitcode` | gitcode | 新增，APIG 后端路径指向此接口 |
+| 2   | `POST /webhookEvent/apig/hooks/gitee`   | gitee   | 新增，APIG 后端路径指向此接口 |
+| 3   | `POST /webhookEvent/apig/hooks/github`  | github  | 新增，APIG 后端路径指向此接口 |
 
 **保留 5 个旧接口（仅增加日志，观察期后废弃）**：路径与入参不变，详见 1.2 节。
 
@@ -600,24 +601,25 @@ private void logWebhookSource(String platform, String path) {
 
 每个 API 按下表配置：
 
-| 配置项 | 值 |
-|--------|------|
-| 请求方式 | POST |
-| 安全认证 | 无认证 |
-| 请求协议 | HTTPS |
-| 前端路径 | 见下表 |
+| 配置项   | 值                                 |
+| -------- | ---------------------------------- |
+| 请求方式 | POST                               |
+| 安全认证 | 无认证                             |
+| 请求协议 | HTTPS                              |
+| 前端路径 | 见下表                             |
 | 后端路径 | 见下表（指向新建的 APIG 专用接口） |
-| 后端服务 | openlibing-coderepo 服务地址 |
+| 后端服务 | openlibing-coderepo 服务地址       |
 
 **APIG 发布的 3 个 API（后端指向新接口）**：
 
-| # | 前端路径（APIG 对外） | 后端路径（转发到 coderepo 新接口） |
-|---|---------------------|---------------------------------|
-| 1 | `/coderepo/webhook/hooks/gitcode` | `/webhookEvent/apig/hooks/gitcode` |
-| 2 | `/coderepo/webhook/hooks/gitee` | `/webhookEvent/apig/hooks/gitee` |
-| 3 | `/coderepo/webhook/hooks/github` | `/webhookEvent/apig/hooks/github` |
+| #   | 前端路径（APIG 对外）             | 后端路径（转发到 coderepo 新接口） |
+| --- | --------------------------------- | ---------------------------------- |
+| 1   | `/coderepo/webhook/hooks/gitcode` | `/webhookEvent/apig/hooks/gitcode` |
+| 2   | `/coderepo/webhook/hooks/gitee`   | `/webhookEvent/apig/hooks/gitee`   |
+| 3   | `/coderepo/webhook/hooks/github`  | `/webhookEvent/apig/hooks/github`  |
 
 > **关键**：APIG 后端路径指向新建的 `/webhookEvent/apig/hooks/{platform}`，与旧接口 `/webhookEvent/hooks/` 物理隔离。这样：
+>
 > - webhook URL 已迁移到 APIG 的流量 → APIG 转发到新接口 → 日志 `path=apig`
 > - webhook URL 未迁移（仍指向旧直连 URL）的流量 → 直连后端旧接口 → 日志 `path=direct` 或 `path=legacy-with-repoId`
 >
@@ -643,11 +645,11 @@ private void logWebhookSource(String platform, String path) {
 
 `updateRepoWebhookUrl` 调用的平台 API，复用现有 `*_WEBHOOK_UPDATE_URL` 常量：
 
-| 平台 | PATCH URL | 请求头 | body |
-|------|-----------|--------|------|
-| gitee | `https://gitee.com/api/v5/repos/{org}/{repo}/hooks/{hookId}` | `PRIVATE-TOKEN: <token>` | `{"url": "<newUrl>"}` |
-| gitcode | `https://api.gitcode.com/api/v5/repos/{org}/{repo}/hooks/{hookId}` | `PRIVATE-TOKEN: <token>` | `{"url": "<newUrl>"}` |
-| github | `https://api.github.com/repos/{org}/{repo}/hooks/{hookId}` | `Authorization: Bearer <token>` + `Accept: application/vnd.github+json` | `{"config": {"url": "<newUrl>", "content_type": "<原值>", "secret": "<原值>"}}` |
+| 平台    | PATCH URL                                                          | 请求头                                                                  | body                                                                            |
+| ------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| gitee   | `https://gitee.com/api/v5/repos/{org}/{repo}/hooks/{hookId}`       | `PRIVATE-TOKEN: <token>`                                                | `{"url": "<newUrl>"}`                                                           |
+| gitcode | `https://api.gitcode.com/api/v5/repos/{org}/{repo}/hooks/{hookId}` | `PRIVATE-TOKEN: <token>`                                                | `{"url": "<newUrl>"}`                                                           |
+| github  | `https://api.github.com/repos/{org}/{repo}/hooks/{hookId}`         | `Authorization: Bearer <token>` + `Accept: application/vnd.github+json` | `{"config": {"url": "<newUrl>", "content_type": "<原值>", "secret": "<原值>"}}` |
 
 - 响应 200 视为成功；非 200 记录 warn 并返回 false。
 - 与 `updateRepoWebhookForPushEvent` 共用同一 PATCH URL，仅 body 不同。
@@ -703,15 +705,15 @@ private void logWebhookSource(String platform, String path) {
 
 ### 7.8 风险与对策汇总
 
-| 风险 | 对策 |
-|------|------|
-| APIG URL 配置错误导致全部 webhook 失效 | Apollo 配置变更后先在单仓库（`repoId` 参数）验证，再全量执行 |
-| github PATCH `config` 丢失 `content_type`/`secret` | 实现时先读原 webhook `config`，连同 `url` 一起回填；`secret` 为掩码时不传 |
-| 存量 webhook 迁移期间事件丢失 | 采用 PATCH 就地更新（非删除重建），webhook id 不变，中间态窗口最小 |
-| gitcode/gitee/github 出口 IP 段变更 | IP 白名单由运维定期核对各平台官方文档更新 |
-| 含 repoId 旧路径 webhook 迁移遗漏 | Controller 代码暂保留作为兜底；全量迁移后通过日志核对遗漏仓库并补迁 |
-| 旧直连 URL 被外部嗅探后绕过 APIG 直调 | 后续在网关层封禁 `/webhookEvent/hooks/` 直连路径（本需求不含） |
-| 平台 token 失效导致 PATCH 失败 | `getAccessTokenForWebhook` 多级回退；PATCH 失败仅记录 warn，不影响其他仓库迁移 |
+| 风险                                               | 对策                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------------ |
+| APIG URL 配置错误导致全部 webhook 失效             | Apollo 配置变更后先在单仓库（`repoId` 参数）验证，再全量执行                   |
+| github PATCH `config` 丢失 `content_type`/`secret` | 实现时先读原 webhook `config`，连同 `url` 一起回填；`secret` 为掩码时不传      |
+| 存量 webhook 迁移期间事件丢失                      | 采用 PATCH 就地更新（非删除重建），webhook id 不变，中间态窗口最小             |
+| gitcode/gitee/github 出口 IP 段变更                | IP 白名单由运维定期核对各平台官方文档更新                                      |
+| 含 repoId 旧路径 webhook 迁移遗漏                  | Controller 代码暂保留作为兜底；全量迁移后通过日志核对遗漏仓库并补迁            |
+| 旧直连 URL 被外部嗅探后绕过 APIG 直调              | 后续在网关层封禁 `/webhookEvent/hooks/` 直连路径（本需求不含）                 |
+| 平台 token 失效导致 PATCH 失败                     | `getAccessTokenForWebhook` 多级回退；PATCH 失败仅记录 warn，不影响其他仓库迁移 |
 
 ## 8. 验收标准
 
