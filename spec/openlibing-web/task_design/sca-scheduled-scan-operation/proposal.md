@@ -5,7 +5,7 @@
 `openlibing-web` 检测中心（`InspectionCenter/index.vue`）的 Sca Tab 当前已支持：
 
 - 单行操作：开始扫描、删除
-- 批量操作：批量扫描、批量删除、定时扫描（原「批量定时扫描」）
+- 批量操作：批量扫描（外置主按钮）+「...」更多操作下拉（批量删除、开启定时扫描、取消定时扫描）
 - 列表筛选：仓库 / 分支 / 任务状态
 
 实际运维场景中，用户希望对重点仓库+分支周期性发起 SCA 版本扫描（如每日凌晨、每周一），避免人工重复触发。当前已能开启定时扫描，但缺少「取消定时扫描」入口；同时仓库体积大于 100M 时禁止开启定时扫描（避免扫描耗时过长），且未开启状态与已开启状态需要互斥操作入口，故需结合 `isScheduled`（是否已开启）与 `isOversize`（仓库是否超量）双字段联合判定按钮可见性。
@@ -14,12 +14,14 @@
 
 在 Sca Tab 列表中提供「定时扫描」与「取消定时扫描」两类入口，并按仓库扫描状态互斥展示：
 
-1. **批量操作区**：
-   - 原「批量定时扫描」按钮文案调整为「定时扫描」（行为不变，仍批量开启定时扫描）。
-   - 新增「取消定时扫描」按钮，对勾选记录中已开启（`isScheduled === 1`）的批量取消定时（`isScheduled: 0`），跳过未开启的行。
+1. **批量操作区**（最终形态：「批量扫描」外置主按钮 +「...」更多操作下拉）：
+   - 「批量扫描」保留为外置主按钮（`type="primary"`，`VideoPlay` 图标）。
+   - 「批量删除」「开启定时扫描」「取消定时扫描」收敛进「...」更多操作下拉（`el-dropdown trigger="click" placement="bottom-end"`，触发按钮为 `MoreFilled` 实心图标按钮）。
+   - 「...」触发按钮**始终可点击展开**（未勾选数据时不禁用）；菜单项各自按勾选状态禁用（未勾选时「批量删除」置灰，定时两项按 `batchScheduledScanDisabled` / `batchCancelScheduledScanDisabled` 置灰）。
+   - 菜单项「开启定时扫描」旁带 `QuestionFilled` 问号图标 + tooltip「定时扫描仅支持≤100MB的仓库」（气泡向上）；批量按钮区下方的黄色提示行已移除。
 2. **列表操作列**：
    - 原「定时扫描」tooltip 文案调整为「开启定时扫描」（行为不变，仍单行开启定时扫描）。
-   - 新增「取消定时扫描」入口，**仅在该行已开启定时扫描（`isScheduled === 1`）时出现**，与「开启定时扫描」互斥显示；`isScheduled !== 1 && isOversize === 1`（仓库>100M）时「开启定时扫描」按钮置灰禁用，tooltip 切为「仓库超过 100M，扫描耗时可能过长，禁止开启定时扫描」（不隐藏入口，让用户感知禁用原因）。
+   - 新增「取消定时扫描」入口，**仅在该行已开启定时扫描（`isScheduled === 1`）时出现**，与「开启定时扫描」互斥显示；`isScheduled !== 1 && isOversize === 1`（仓库>100M）时「开启定时扫描」按钮置灰禁用，tooltip 切为「仓库超过 100M，扫描耗时，占用资源，建议非高峰期手动执行扫描」（不隐藏入口，让用户感知禁用原因）。
 3. **状态判定字段**：通过列表接口返回的 `isScheduled` + `isOversize` 双数值字段联合判断：`isScheduled===1` 已开启可取消；`isScheduled!==1 && isOversize!==1` 可开启；`isScheduled!==1 && isOversize===1`（仓库>100M）按钮禁用 + 超量提示。
 
 ### 当前阶段范围（前端先行）
@@ -37,12 +39,25 @@
 
 - 批量按钮文案「批量定时扫描」→「定时扫描」
 - 列表操作列 tooltip「定时扫描」→「开启定时扫描」
-- 批量操作区新增「取消定时扫描」按钮（warning 类型，始终展示）
-- 列表操作列新增「取消定时扫描」入口（v-if `row.isScheduled === 1`，与「开启定时扫描」互斥；`row.isScheduled !== 1 && row.isOversize === 1` 时「开启定时扫描」按钮禁用 + tooltip 切为「仓库超过 100M，扫描耗时可能过长，禁止开启定时扫描」）
-- 「开启定时扫描」/「取消定时扫描」改用**内联 SVG 图标**替换 `@element-plus/icons-vue` 的 `Timer` / `CircleClose`，批量按钮 + 列表操作列一致；SVG class 为 `.btn-icon`（批量按钮）/ `.row-icon`（列表操作列）尺寸样式（仅控制 width/height/margin），按钮本体 `.scan-btn` / `.cancel-btn` / 行级 `.disable-class` 仅作模板 class 标识（未在 CSS 中定义）；颜色靠 SVG `stroke="currentColor"` 跟随 el-button 自身 color（disabled 时 el-button 自动变灰）；同步从 `@element-plus/icons-vue` import 中移除 `Timer` 与 `CircleClose`
+- 批量操作区新增「取消定时扫描」按钮（warning 类型，始终展示）（**已被后续再扩展取代**：收敛进「...」更多下拉菜单项）
+- 列表操作列新增「取消定时扫描」入口（v-if `row.isScheduled === 1`，与「开启定时扫描」互斥；`row.isScheduled !== 1 && row.isOversize === 1` 时「开启定时扫描」按钮禁用 + tooltip 切为「仓库超过 100M，扫描耗时，占用资源，建议非高峰期手动执行扫描」）
+- 「开启定时扫描」/「取消定时扫描」改用**内联 SVG 图标**替换 `@element-plus/icons-vue` 的 `Timer` / `CircleClose`，批量按钮 + 列表操作列一致；SVG class 为 `.btn-icon`（批量按钮）/ `.row-icon`（列表操作列）尺寸样式（仅控制 width/height/margin），按钮本体 `.scan-btn` / `.cancel-btn` / 行级 `.disable-class` 仅作模板 class 标识（未在 CSS 中定义）；颜色靠 SVG `stroke="currentColor"` 跟随 el-button 自身 color（disabled 时 el-button 自动变灰）；同步从 `@element-plus/icons-vue` import 中移除 `Timer` 与 `CircleClose`（**批量入口图标已由本次再扩展取代**：批量操作收敛为 `MoreFilled`「...」下拉菜单项，`.btn-icon` / `.scan-btn` / `.cancel-btn` 相关样式已清理，内联 SVG 仅保留在列表操作列）
 - 新增 `handleBatchCancelScheduledScan` / `handleRowCancelScheduledScan` 函数，复用 `scaBatchUpdateScheduled({ isScheduled: 0 })`
 - 开启定时扫描成功提示语统一为「开启成功，将于每日零点自动执行定时扫描」（批量 / 单行）
 - 消费 `isScheduled` + `isOversize` 双数值字段（0/1）：`isScheduled===1` 已开启可取消；`isScheduled!==1 && isOversize!==1` 可开启；`isScheduled!==1 && isOversize===1`（仓库>100M）列表入口按钮禁用 + 超量提示
+
+**本次再扩展交付（批量操作收敛为「...」更多下拉，最终形态）**：
+
+- 批量操作区仅保留「批量扫描」外置主按钮（`type="primary"`，`VideoPlay` 图标，`:disabled="batchScanDisabled"`，`:loading="batchScanLoading"`）
+- 新增「...」更多操作下拉：外层 `el-tooltip`（content「更多操作」）包裹 `el-dropdown`（`trigger="click"`，`placement="bottom-end"`），触发按钮为 `MoreFilled` 实心图标按钮（`class="more-btn"`，仅图标无文字）；**始终可点击展开，未勾选不禁用**
+- 嵌套顺序约束（踩坑记录）：`el-tooltip` 必须包裹在 `el-dropdown` **外层**——dropdown 把 click 触发绑定到默认插槽直接子元素，若 tooltip 嵌在 dropdown 与 button 之间会导致点击无法展开下拉
+- 下拉菜单三个菜单项：「批量删除」（`command="delete"`，未勾选时 `:disabled`）、「开启定时扫描」（`command="scheduled"`，`:disabled="batchScheduledScanDisabled"`）、「取消定时扫描」（`command="cancel"`，`:disabled="batchCancelScheduledScanDisabled"`）
+- 菜单项「开启定时扫描」内容包在 `span.scheduled-item` 中：文字 + `QuestionFilled` 问号图标（`el-icon.tip-question`）+ `el-tooltip`（content「定时扫描仅支持≤100MB的仓库」，`placement="top"` 气泡向上）
+- 新增统一分发函数 `handleBatchCommand(command)`：`delete` → `handleBatchDelete`、`scheduled` → `handleBatchScheduledScan`、`cancel` → `handleBatchCancelScheduledScan`
+- 移除 `batchDeleteLoading` 状态（批量删除入口变为菜单项，无按钮 loading 态，CommonDialog 弹窗自带 confirmLoading）
+- 移除批量按钮区下方黄色提示行（`.batch-tips`）及 `.tip-icon` 样式（提示信息收敛到问号 tooltip）
+- 二次确认弹窗已由 `ElMessageBox.confirm` 迁移至 `CommonDialog` 组件（`openCommonDialog`，commit `3c30af18`）；批量开启成功提示语为「开启成功，将于每日零点自动执行定时扫描」（commit `4ff5e441`）
+- 列表操作列单行「开启 / 取消定时扫描」互斥图标入口不变
 
 **可选后续**（待产品确认，非本 spec 范围）：
 
@@ -51,22 +66,17 @@
 
 ## 验收标准
 
-### 批量操作（开启定时）
+### 批量操作（「...」更多下拉）
 
-- [ ] Sca Tab 批量操作区在「批量扫描」「批量删除」之后展示「定时扫描」按钮（文案已由「批量定时扫描」调整）
-- [ ] 按钮使用内联 SVG 图标（SVG class `.btn-icon`，钟表轮廓：4 个铃铛装饰 + 表盘 `circle cx=12 cy=12 r=8` + 时针 `M12 12 L12 7.5` + 分针 `M12 12 L15.5 12`），`type="primary"`，按钮本体带 `class="scan-btn"`；禁用时 el-button 自动让 currentColor 变灰，SVG 跟随
-- [ ] 未勾选任何行 或 勾选全无可开启目标（已开启 `isScheduled===1` 或 超量 `isOversize===1`）时按钮禁用
-- [ ] 勾选行后点击按钮：自动过滤 `isScheduled !== 1 && isOversize !== 1` 的可开启行；含跳过则在二次确认弹窗 message 末尾追加「\n\n已跳过 N 条不可开启的记录（已开启或仓库超过 100M）」（不再单独弹 warning）；全无可开启行弹出 info 提示并终止
-- [ ] 通过 `ElMessageBox.confirm` 二次确认后发起 API 请求（`isScheduled: 1`），成功后弹出 success 提示「开启成功，将于每日零点自动执行定时扫描」并刷新列表
-- [ ] 失败时弹出 error 提示（后端 message 或默认文案）
-
-### 批量操作（取消定时，本次新增）
-
-- [ ] Sca Tab 批量操作区在「定时扫描」之后新增「取消定时扫描」按钮，使用内联 SVG 图标（SVG class `.btn-icon`，钟表轮廓 + 一条贯穿斜线 `M3.5 3.5 L20.5 20.5`），按钮本体带 `class="cancel-btn"`；禁用时 el-button 自动让 currentColor 变灰，SVG 跟随
-- [ ] 按钮始终展示，未勾选任何行 或 勾选全为未开启（`isScheduled !== 1`）时禁用（无可取消定时扫描的目标）
-- [ ] 勾选行后点击按钮：自动过滤 `isScheduled === 1` 的行；若有跳过则在二次确认弹窗 message 末尾追加「\n\n已跳过 N 条未开启定时扫描的记录」（不再单独弹 warning）；若无任何已开启行弹出 info 提示并终止
-- [ ] 通过 `ElMessageBox.confirm` 二次确认后发起 API 请求（`isScheduled: 0`），成功后弹出 success 提示「取消成功」并刷新列表
-- [ ] 失败时弹出 error 提示（后端 message 或默认文案）
+- [ ] Sca Tab 批量操作区展示：外置「批量扫描」主按钮（`type="primary"`，`VideoPlay` 图标）+「...」更多操作下拉按钮（`MoreFilled` 实心图标，仅图标无文字，hover tooltip「更多操作」）
+- [ ] 「...」按钮始终可点击展开（未勾选数据时不禁用）；展开后菜单含三项：批量删除、开启定时扫描、取消定时扫描
+- [ ] 菜单项禁用规则：未勾选时「批量删除」置灰；勾选全无可开启目标（`isScheduled===1` 或 `isOversize===1`）时「开启定时扫描」置灰；勾选全为未开启（`isScheduled !== 1`）时「取消定时扫描」置灰
+- [ ] 菜单项「开启定时扫描」文字旁显示 `QuestionFilled` 问号图标，hover 后气泡向上展示「定时扫描仅支持≤100MB的仓库」；批量按钮区下方无黄色提示行
+- [ ] 选择「开启定时扫描」菜单项：自动过滤 `isScheduled !== 1 && isOversize !== 1` 的可开启行；含跳过则在 CommonDialog 二次确认弹窗 message 末尾追加「\n已跳过 N 条不可开启的记录（已开启或仓库超过 100M）。」；全无可开启行弹出 info 提示「所选记录均无可开启定时扫描的仓库（已开启或仓库超过 100M）」并终止
+- [ ] 确认后发起 API 请求（`isScheduled: 1`），成功后弹出 success 提示「开启成功，将于每日零点自动执行定时扫描」并刷新列表；失败时弹出 error 提示（后端 message 或默认文案）
+- [ ] 选择「取消定时扫描」菜单项：自动过滤 `isScheduled === 1` 的行；含跳过则在 CommonDialog 二次确认弹窗 message 末尾追加「\n已跳过 N 条未开启定时扫描的记录。」；无已开启行时菜单项置灰（防御性 info 提示「所选记录均未开启定时扫描，无需取消」）
+- [ ] 确认后发起 API 请求（`isScheduled: 0`），成功后弹出 success 提示「取消成功」并刷新列表；失败时弹出 error 提示（后端 message 或默认文案）
+- [ ] 选择「批量删除」菜单项：CommonDialog 二次确认（危险模板）后调用批量删除接口，成功提示「删除成功」并刷新列表；失败弹出 error 提示
 
 ### 列表操作列（开启定时）
 
@@ -74,7 +84,7 @@
 - [ ] 在该行 `isScheduled !== 1` 时显示（与「取消定时扫描」互斥；超量未开启时按钮可见但禁用）
 - [ ] 按钮使用内联 SVG 图标（SVG class `.row-icon`）；`row.isOversize === 1` 时按钮 `:disabled="true"` + `:class="{ 'disable-class': row.isOversize === 1 }"`，靠 el-button disabled 状态让 currentColor 变灰，SVG 跟随变灰
 - [ ] `row.isOversize !== 1`：按钮可点击，`el-tooltip` 提示文案「开启定时扫描」
-- [ ] `row.isOversize === 1`（超量未开启）：按钮 `:disabled`，`el-tooltip` 提示文案切为「仓库超过 100M，扫描耗时可能过长，禁止开启定时扫描」
+- [ ] `row.isOversize === 1`（超量未开启）：按钮 `:disabled`，`el-tooltip` 提示文案切为「仓库超过 100M，扫描耗时，占用资源，建议非高峰期手动执行扫描」
 - [ ] 可点击状态下点击发起 API 请求（单行 `isScheduled: 1`），成功后弹出 success 提示「开启成功，将于每日零点自动执行定时扫描」并刷新列表
 - [ ] 失败时弹出 error 提示（后端 message 或默认文案）
 
