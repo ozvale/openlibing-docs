@@ -11,6 +11,8 @@
 **文件**: `apps/web-openlibing/src/views/CodeCheckDashboard/codeListComponent.vue`
 
 - [ ] `props` 新增 `filterLine: { type: Object, default: () => ({}) }`
+- [ ] 新增 data 标志 `submitting: false`（防重复提交）
+- [ ] 新增计算属性 `isAllMode`：`mode === 'all'`（全量态统一分发标志）
 - [ ] 新增计算属性 `displayDataCount`：全量操作返回 `formInline.total`，否则返回 `dialogForm.data.length`
 - [ ] 新增辅助方法 `isAllOperation(op)`：判断 op 是否为 4 个全量 operation 之一
 
@@ -18,10 +20,10 @@
 
 **文件**: `apps/web-openlibing/src/views/CodeCheckDashboard/codeListComponent.vue`
 
-- [ ] 在「批量屏蔽」按钮后新增「全量屏蔽」按钮，v-if 同「批量屏蔽」，disabled=`formInline.codeList.length === 0`，点击 `batchOperationAll('全量屏蔽')`
-- [ ] 在「批量审核」按钮后新增「全量审核」按钮，v-if 同「批量审核」
-- [ ] 在「批量转审」按钮后新增「全量转审」按钮，v-if 同「批量转审」
-- [ ] 在「批量撤销」按钮后新增「全量撤销」按钮，v-if 同「批量撤销」
+- [ ] 在「批量屏蔽」按钮后新增「全量屏蔽」按钮，v-if 同「批量屏蔽」，disabled=`formInline.total === 0`（与提交参数 `count` 同口径，不依赖当前页行数），点击 `batchOperationAll('全量屏蔽')`
+- [ ] 在「批量审核」按钮后新增「全量审核」按钮，v-if 同「批量审核」，disabled 同上
+- [ ] 在「批量转审」按钮后新增「全量转审」按钮，v-if 同「批量转审」，disabled 同上
+- [ ] 在「批量撤销」按钮后新增「全量撤销」按钮，v-if 同「批量撤销」，disabled 同上
 
 ## Task 4: 子组件新增 batchOperationAll 方法
 
@@ -40,6 +42,7 @@
   - 屏蔽：`applyShield(this.getAllSubmitParam('apply'))`
   - 审核：`apiClientInstant.post(CK_SHIELD_AUDIT, { data: this.getAllSubmitParam('examine') })`
   - 转审：`apiClientInstant.post(CK_SHIELD_REFERRAL, { data: this.getAllSubmitParam('switch') })`
+- [ ] 方法入口防重复提交守卫：`if (this.submitting) return; this.submitting = true;`，`finally` 中复位 `this.submitting = false`
 - [ ] 新增 `getAllSubmitParam(type)` 方法：复用 `getSubmitParam(type)` 思路，但用 `query + count` 替换 `detailsId`
 - [ ] 接收返回值后判断 `res.code === 409`，若是则 `this.$message.warning(...)` + `this.refresh()` + 关闭弹窗
 
@@ -49,19 +52,19 @@
 
 - [ ] `confirmReturn(id)` 增加无 id 入参的全量分支：基于 `this.operation === '全量撤销'` 判断
 - [ ] 全量分支提交参数：`{ type, query: { ...this.filterLine }, count: this.formInline.total }`
+- [ ] 全量分支同样受 `submitting` 防重复提交守卫保护（`.then` 提交动作内置守卫与复位）
 - [ ] `.then((res) => { ... })` 内判断 `res.code === 409`：若是则 `this.$message.warning(...)` + `this.refresh()`
 
-## Task 7: 弹窗模板分支兼容全量 operation
+## Task 7: 弹窗模板分支基于全量态标志兼容
 
 **文件**: `apps/web-openlibing/src/views/CodeCheckDashboard/codeListComponent.vue`
 
 - [ ] 「选中项数量」展示从 `dialogForm.data.length` 改为 `displayDataCount`
-- [ ] `operation === '批量审核' || operation === '审核'` 扩展为同时包含 `'全量审核'`
-- [ ] `operation === '批量转审' || operation === '转审'` 扩展为同时包含 `'全量转审'`
-- [ ] `else`（屏蔽类弹窗分支）天然兼容 `'全量屏蔽'`
+- [ ] 模板中「是否全量」类判断统一以 `isAllMode`（或 `isAllOperation(operation)`）作为分发依据，不在 `operation === '批量审核' || operation === '审核'` 等既有判断中逐处 OR 追加 `'全量审核'` 字符串（转审、屏蔽类分支同理）
+- [ ] 弹窗确认按钮 / 确认框提交按钮设置 `:disabled="submitting"`、`:loading="submitting"`，提交期间置灰防重复触发
 
 ## Task 8: 自检与验证
 
 - [ ] 运行 `pnpm lint` 确保无新增 ESLint error/warn
 - [ ] 运行 `pnpm check:type` 确保无类型错误
-- [ ] 手动验证：4 个全量按钮显隐、disabled、提交参数、409 刷新行为
+- [ ] 手动验证：4 个全量按钮显隐、disabled（`total === 0` 口径）、提交参数、409 刷新行为、提交期间重复点击被拦截
