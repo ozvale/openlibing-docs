@@ -60,11 +60,12 @@
 - "发布模版"按钮：`NoPermissionPopover`（`auth="platform_release_config"`，`placement="bottom"`），原 `v-if` 改 `:disabled`。
 - "发布设置"按钮：同上（同一权限码 `platform_release_config`）。
 
-### 2.5 工具市场（`src/views/ToolManagement/ToolMarket/index.vue`）
+### 2.5 工具市场（`src/views/ToolManagement/ToolMarket/index.vue`）（已回退）
 
-- "创建工具"按钮：`NoPermissionPopover`（`auth="tool_apply"`，`placement="bottom"`），原 `v-if` 改 `:disabled`。
-- "工具管理"按钮：`NoPermissionPopover`（`auth="tool_manage"`，`placement="bottom"`）。
-- "我的流程"按钮：`NoPermissionPopover`（`auth="my_tool"`，`placement="bottom"`）。
+- ~~"创建工具"按钮：`NoPermissionPopover`（`auth="tool_apply"`，`placement="bottom"`），原 `v-if` 改 `:disabled`。~~
+- ~~"工具管理"按钮：`NoPermissionPopover`（`auth="tool_manage"`，`placement="bottom"`）。~~
+- ~~"我的流程"按钮：`NoPermissionPopover`（`auth="my_tool"`，`placement="bottom"`）。~~
+- **后续回退**（`fix-permission-bubble-and-offline-notice` 提交 `a4f622ee`）：三个按钮移除 `NoPermissionPopover` 包裹与导入，恢复为纯 `:disabled="!canHandle(...)"` 置灰控制。`permissions-meta.ts` 中对应元数据保留（其他场景仍可引用）。
 
 ### 2.6 SCA 布局（`src/views/sca/layout/index.vue`）
 
@@ -94,16 +95,16 @@
 
 ## 4. 影响范围
 
-| 文件                                            | 改动                                                          |
-| ----------------------------------------------- | ------------------------------------------------------------- |
-| `src/assets/css/cve.less`                       | `.disabled` 光标 `text` → `not-allowed`                       |
-| `src/constants/permissions-meta.ts`             | 新增 12 个权限码元数据并注册到 `PERMISSIONS_META`             |
-| `src/views/Project/index.vue`                   | 编辑 / 成员管理按钮接入 `NoPermissionPopover`                 |
-| `src/views/Project/projectUserManage.vue`       | 添加 / 编辑 / 删除成员按钮接入                                |
-| `src/views/Publish/publishReview/index.vue`     | 发布模版 / 发布设置按钮接入                                   |
-| `src/views/ToolManagement/ToolMarket/index.vue` | 创建工具 / 工具管理 / 我的流程按钮接入                        |
-| `src/views/cve/cveManager.vue`                  | 配置 / 同步漏洞按钮接入 + `syncVulnerabilityRefresh` 权限守卫 |
-| `src/views/sca/layout/index.vue`                | 社区配置按钮接入                                              |
+| 文件                                            | 改动                                                             |
+| ----------------------------------------------- | ---------------------------------------------------------------- |
+| `src/assets/css/cve.less`                       | `.disabled` 光标 `text` → `not-allowed`                          |
+| `src/constants/permissions-meta.ts`             | 新增 12 个权限码元数据并注册到 `PERMISSIONS_META`                |
+| `src/views/Project/index.vue`                   | 编辑 / 成员管理按钮接入 `NoPermissionPopover`                    |
+| `src/views/Project/projectUserManage.vue`       | 添加 / 编辑 / 删除成员按钮接入                                   |
+| `src/views/Publish/publishReview/index.vue`     | 发布模版 / 发布设置按钮接入                                      |
+| `src/views/ToolManagement/ToolMarket/index.vue` | 创建工具 / 工具管理 / 我的流程按钮接入（后续 `a4f622ee` 已回退） |
+| `src/views/cve/cveManager.vue`                  | 配置 / 同步漏洞按钮接入 + `syncVulnerabilityRefresh` 权限守卫    |
+| `src/views/sca/layout/index.vue`                | 社区配置按钮接入                                                 |
 
 > 组件本体 `NoPermissionPopover.vue` 未改动，仅作为使用方引用。
 

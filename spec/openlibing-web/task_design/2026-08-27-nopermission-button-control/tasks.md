@@ -4,7 +4,7 @@
 - **业务分支**：`feature/nopermission`（fork：`vermouth_fee/openlibing-web`）
 - **流程模式**：Standard
 - **创建日期**：2026-08-27
-- **最近同步**：对齐 `feature/nopermission` 最新提交 `cb8f8842`
+- **最近同步**：2026-08-31（`feature/nopermission` `cb8f8842` 已随 `!739` 合入 `release_20260831`；后续 `fix-permission-bubble-and-offline-notice` `a4f622ee` 回退工具市场接入，见 Step 6）
 
 ## 实现步骤
 
@@ -37,9 +37,10 @@
 
 - [x] `src/views/Publish/publishReview/index.vue`："发布模版" / "发布设置"按钮由 `v-if` 改 `NoPermissionPopover` + `:disabled`（`auth="platform_release_config"`，`placement="bottom"`）
 
-### Step 6: 工具市场
+### Step 6: 工具市场（已回退）
 
-- [x] `src/views/ToolManagement/ToolMarket/index.vue`："创建工具"（`tool_apply`）/ "工具管理"（`tool_manage`）/ "我的流程"（`my_tool`）按钮由 `v-if` 改 `NoPermissionPopover` + `:disabled`（`placement="bottom"`）
+- [x] ~~`src/views/ToolManagement/ToolMarket/index.vue`："创建工具"（`tool_apply`）/ "工具管理"（`tool_manage`）/ "我的流程"（`my_tool`）按钮由 `v-if` 改 `NoPermissionPopover` + `:disabled`（`placement="bottom"`）~~
+- [x] 后续回退（`fix-permission-bubble-and-offline-notice` 提交 `a4f622ee`）：移除上述 `NoPermissionPopover` 包裹与导入，恢复为纯 `:disabled` 置灰控制
 
 ### Step 7: SCA 布局
 
@@ -48,7 +49,8 @@
 ### Step 8: 验证与提交
 
 - [x] IDE LSP 诊断：无 error / warning
-- [x] 业务仓 5 个 commit（`2f014068` → `20487ff0` → `fe45c9aa` → `8f4457eb` → `cb8f8842`，基于 master `ea44d2fa`）
+- [x] 业务仓 5 个 commit（`2f014068` → `20487ff0` → `fe45c9aa` → `8f4457eb` → `cb8f8842`，基于 master `ea44d2fa`，已随 `!739` 合入 `release_20260831`）
+- [x] 后续回退 commit（`fix-permission-bubble-and-offline-notice` `a4f622ee`，工具市场部分，见 Step 6）
 - [ ] 业务仓 PR（用户自测确认后）
 - [ ] docs 仓 PR（业务 PR 合入后）
 
