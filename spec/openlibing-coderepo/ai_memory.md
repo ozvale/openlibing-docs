@@ -12,11 +12,11 @@
 
 ### Push 事件 payload 跨平台差异
 
-| 平台 | 事件类型（请求头值） | 仓库 URL 字段 | 分支新增判定 | 分支删除判定 |
-|------|-------------------|--------------|------------|------------|
-| gitcode | `Push Hook`（`X-GitCode-Event`） | `repository.git_http_url` | `before` 全 0 | `after` 全 0 |
-| gitee | `Push Hook`（`X-Gitee-Event`） | `repository.git_http_url` | `created=true`，缺失回退 `before` 全 0 | `deleted=true`，缺失回退 `after` 全 0 |
-| github | `push`（`X-GitHub-Event`） | `repository.clone_url`（带 `.git`）/ `repository.html_url`（无后缀） | `created=true` | `deleted=true` |
+| 平台    | 事件类型（请求头值）             | 仓库 URL 字段                                                        | 分支新增判定                           | 分支删除判定                          |
+| ------- | -------------------------------- | -------------------------------------------------------------------- | -------------------------------------- | ------------------------------------- |
+| gitcode | `Push Hook`（`X-GitCode-Event`） | `repository.git_http_url`                                            | `before` 全 0                          | `after` 全 0                          |
+| gitee   | `Push Hook`（`X-Gitee-Event`）   | `repository.git_http_url`                                            | `created=true`，缺失回退 `before` 全 0 | `deleted=true`，缺失回退 `after` 全 0 |
+| github  | `push`（`X-GitHub-Event`）       | `repository.clone_url`（带 `.git`）/ `repository.html_url`（无后缀） | `created=true`                         | `deleted=true`                        |
 
 - 覆写 `WebHookEventHandler#supportedEventTypes()` 返回多值集合（如 `{Push Hook, push}`）即可让单 handler 处理多平台事件类型，无需改 dispatcher。
 - 本地 `repo_info.repo_url` 由用户录入，格式可能带/不带 `.git`，github 需用 `clone_url` 和 `html_url` 双候选依次反查。
@@ -40,3 +40,11 @@
 - `repo_branch` 表唯一索引保证分支记录唯一，新增用 `INSERT IGNORE` 静默跳过重复。
 - 增量同步单分支删除按 `repoId + branchName`，避免 `deleteByIds` 需先查询拿 `branchId` 的两次 SQL。
 - `is_default` 字段在 push payload 中无信息，新增分支时置 `0`，准确性由 `XxlJobHandler` 定时全量同步兜底修正。
+
+## 代码度量（metrics）
+
+- **雪花 ID 跨前后端传参一律用 String**：Snowflake 主键超过 JS Number 安全整数（2^53），后端返回给前端（尤其 `recordId`/`blockId` 等）统一用 String 传输，避免前端精度丢失。
+- **代码内容 Base64 入库 + 出库两阶段回检**：入库前 `Base64` 编码防明文进日志/DBA 一眼可见；出库前做 `Base64.isBase64` 快速过滤 + "解码→重编码→比对"回检验证，防止 `pass`/`return` 等纯字母明文被误判。工具类在本仓独立实现，不跨仓依赖。
+- **重复块按"出现位置"存储而非"配对对"**：一个 N 位置重复块存 N 行（而非 N×(N-1)/2 对），天然支撑"一块对多位置（含同文件多位置）"，前端 drawer 多页签直接映射 `occurrence_index`。
+- **历史快照未命中不做降级拉取**：历史扫描结果行号是扫描时点快照，拉最新代码会行号错位，误导比"提示无快照"更差——宁可提示"该记录无代码快照"。
+- **大批量分批上报用独立接口**：超大批量数据分批时单独建接口按 `recordId` 累积入库，避免复用主上报接口导致其幂等删除逻辑被反复执行。
