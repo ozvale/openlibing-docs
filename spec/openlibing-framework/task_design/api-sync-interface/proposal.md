@@ -7,6 +7,7 @@ openLiBing 需要自动感知全量接口，实现接口权限的自动化配置
 ## 功能描述
 
 ### 做什么
+
 1. **对接接口管理服务**：通过 Feign 客户端对接外部接口管理服务，获取全量接口数据
 2. **接口数据同步**：定时同步接口管理服务的接口数据到本地数据库
 3. **接口标识管理**：自动识别已下线接口（flag=0）和正常接口（flag=1），支持按 flag 过滤
@@ -17,6 +18,7 @@ openLiBing 需要自动感知全量接口，实现接口权限的自动化配置
 8. **API 兼容性扫描**：新增 API 扫描工作流，检测接口兼容性变更
 
 ### 不做什么
+
 - 不涉及前端 UI 变更
 - 不涉及接口管理服务本身的开发
 - 不涉及已有接口权限数据的迁移
@@ -36,13 +38,13 @@ openLiBing 需要自动感知全量接口，实现接口权限的自动化配置
 
 ## 影响范围
 
-| 模块 | 影响 | 说明 |
-|------|------|------|
-| 接口管理客户端 | 新增 | InterfaceManagementClient + Feign 配置 |
-| 接口同步服务 | 修改 | ServiceInterfaceInfoServiceImpl 重写同步逻辑 |
-| 菜单服务 | 修改 | MenuServiceImpl 新增 URL 同步和角色查询 |
-| 白名单管理 | 新增 | WhitelistInterfaceInfoServiceImpl CRUD |
-| 日志切面 | 修改 | ServiceInterfaceLogHandler 补充日志 |
-| 定时任务 | 新增 | SyncServiceInterfaceInfoJob 定时同步 |
-| 数据库 | 修改 | 新增索引，新增表结构变更 |
-| 安全编码 | 修复 | 14 个文件的 EI_EXPOSE_REP/EI_EXPOSE_REP2 修复 |
+| 模块           | 影响 | 说明                                          |
+| -------------- | ---- | --------------------------------------------- |
+| 接口管理客户端 | 新增 | InterfaceManagementClient + Feign 配置        |
+| 接口同步服务   | 修改 | ServiceInterfaceInfoServiceImpl 重写同步逻辑  |
+| 菜单服务       | 修改 | MenuServiceImpl 新增 URL 同步和角色查询       |
+| 白名单管理     | 新增 | WhitelistInterfaceInfoServiceImpl CRUD        |
+| 日志切面       | 修改 | ServiceInterfaceLogHandler 补充日志           |
+| 定时任务       | 新增 | SyncServiceInterfaceInfoJob 定时同步          |
+| 数据库         | 修改 | 新增索引，新增表结构变更                      |
+| 安全编码       | 修复 | 14 个文件的 EI_EXPOSE_REP/EI_EXPOSE_REP2 修复 |
