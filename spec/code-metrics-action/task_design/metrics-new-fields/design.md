@@ -129,8 +129,12 @@ CoderepoUploader.upload() payload 新增 commitId（与 pipelineRunId / runNumbe
   - action 仓：OBS 全量文件 fullPayload + /report 请求体两处都带
   - scan 仓：直传 /report payload（旧协议单 payload）
                                                                    ▼
-openlibing-coderepo：暂不解析入库（用户决策"仅插件发送"），
-fastjson2 反序列化忽略未知字段；后续要入库时从 OBS 文件 buildPayload 读取 commitId 即可，插件无需再发版
+openlibing-coderepo：已解析入库（随业务 PR openlibing-coderepo#159 交付，详见
+coderepo 仓 spec `openlibing-coderepo/task_design/code-metrics-machine-api-query` §5）：
+`CodeMetricsServiceImpl#readMetaField` 流式解析 OBS 全量文件时经 `case "commitId"` 读取该键
+放入 `CodeMetricsPayload`，随后 `saveCodeMetricsRecord` 落库到 `code_metrics_record.commit_id`
+列（Liquibase changeSet `20260824_add_commit_id_to_code_metrics_record`），作为
+`/latest-by-commit/batch` 机机接口的关联键
 ```
 
 ### 5.3 改动文件
@@ -145,6 +149,6 @@ fastjson2 反序列化忽略未知字段；后续要入库时从 OBS 文件 buil
 
 ### 5.4 兼容性
 
-- 服务端 `CodeMetricsReportDTO` 未声明 commitId，fastjson2 忽略未知字段，旧版服务端行为不变
-- OBS 全量文件多出的 commitId 键对保底定时任务补导入路径同样无影响（buildPayload 未读取）
-- 后续服务端要持久化时：`CodeMetricsPayload` + `buildPayload()` 读取 `payload.getString("commitId")` → `CodeMetricsRecordEntity` 加 `commit_id` 列即可，数据源已在 OBS 文件中就绪
+- 服务端 `CodeMetricsReportDTO`（/report 请求体）不声明 commitId：commitId 仅经 OBS 全量文件传递（与 runNumber / detectionStartedAt 等 OBS 元数据同机制），HTTP 请求体无需携带，fastjson2 忽略请求体未知字段
+- OBS 全量文件中的 commitId 键由 coderepo `readMetaField` 在解析时读取入库（`case "commitId"` → `CodeMetricsPayload` → `code_metrics_record.commit_id` 列），保底定时任务补导入路径走同一解析入口，旧记录无该键时 commit_id 为空、行为不变
+- 服务端持久化已落地（openlibing-coderepo#159）：`CodeMetricsPayload.commitId` + `CodeMetricsRecordEntity.commit_id` 列 + Liquibase 幂等变更，插件侧无需再改；该字段是 codecheck 降级路径 `/latest-by-commit/batch` 三元组关联的关联键（见 coderepo 仓 spec `code-metrics-machine-api-query`）

@@ -48,7 +48,9 @@
 - [x] 新增 test/smoke-test.js（15 项断言，含块计数辅助方法 3 项专项单测）
 - [x] 说明：scan 仓 dist/index.js 是源码入口而非 ncc bundle（构建打包在发布到 action 仓时进行），无 bundle 双写
 
-## commitId 上报（后续追加；用户决策：仅插件发送，服务端暂不入库）
+## commitId 上报（后续追加；最终口径：插件发送 + 服务端已解析入库）
+
+> 口径修订：最初用户决策「仅插件发送，服务端暂不入库」；后随 coderepo 机机接口需求（openlibing-coderepo#159）落地，服务端已从 OBS 全量文件解析 `commitId` 并持久化到 `code_metrics_record.commit_id` 列（`readMetaField` case "commitId" → `CodeMetricsPayload` → `saveCodeMetricsRecord`），详见 coderepo 仓 spec `openlibing-coderepo/task_design/code-metrics-machine-api-query` §5。
 
 - [x] 口径确认：`commitId = process.env['ATOMGIT_SHA'] || ''`，与 CodeQL（openlibing-upload-sarif）同源
 - [x] code-metrics-action：dist/index.js 入口读 ATOMGIT_SHA + 日志 + scan options
@@ -57,6 +59,7 @@
 - [x] code-metrics-action：dist/uploaders/CoderepoUploader.js payload 加 commitId
 - [x] code-metrics-scan：dist/index.js（入口 + 内联副本）、dist/scanner.js、dist/uploaders/CoderepoUploader.js 同步双写（旧直传协议，单 payload 加字段）
 - [x] 两仓 test/smoke-test.js 各 +2 项 commitId 用例（stub 上传链路）
+- [x] 服务端落库（随 openlibing-coderepo#159）：`commit_id` 列（Liquibase 幂等）+ `readMetaField` 解析 OBS JSON 入库，作为 `/latest-by-commit/batch` 三元组关联键
 
 ## 验证
 
