@@ -9,12 +9,12 @@
 
 [CodeMetricsController.java](file:///d:/projects/openlibing/openlibing-coderepo/src/main/java/com/openlibing/coderepo/business/controller/CodeMetricsController.java) 类级路径 `/metrics/code`，现有 4 个 POST 接口，**全部面向前端或上游上报**：
 
-| 路径 | 用途 |
-|---|---|
-| `POST /metrics/code/report` | apig 上报接口（OBS 中转） |
-| `POST /metrics/code/file-detail` | 文件级指标详情（前端分页查询） |
-| `POST /metrics/code/file-content` | 文件代码视图（前端） |
-| `POST /metrics/code/duplication-block/detail` | 重复块详情（前端） |
+| 路径                                          | 用途                           |
+| --------------------------------------------- | ------------------------------ |
+| `POST /metrics/code/report`                   | apig 上报接口（OBS 中转）      |
+| `POST /metrics/code/file-detail`              | 文件级指标详情（前端分页查询） |
+| `POST /metrics/code/file-content`             | 文件代码视图（前端）           |
+| `POST /metrics/code/duplication-block/detail` | 重复块详情（前端）             |
 
 **关键发现**：现有 Controller 没有任何「按 gitUrl 取最新度量」的 HTTP 接口暴露给后端服务调用。
 
@@ -25,6 +25,7 @@ Map<String, BranchMetricsVO> getLatestMetricsByGitUrl(String gitUrl);
 ```
 
 实现语义：
+
 - 入参：仅 `gitUrl`
 - 查询：`selectLatestByGitUrl(gitUrl)` 返回该仓库所有 status=0 的记录，按 `branch_name, detection_completed_at DESC` 排序
 - 内存按 `branchName` 分组，每组用 `buildMergedMetricsVO` 合并 5 个指标
@@ -36,26 +37,26 @@ Map<String, BranchMetricsVO> getLatestMetricsByGitUrl(String gitUrl);
 
 [CodeMetricsRecordEntity.java](file:///d:/projects/openlibing/openlibing-coderepo/src/main/java/com/openlibing/coderepo/business/entity/metrics/CodeMetricsRecordEntity.java)：
 
-| 字段 | 类型 | 用途 |
-|---|---|---|
-| `id` | BIGINT (雪花ID) | 主键 |
-| `git_url` | VARCHAR | 仓库 URL |
-| `branch_name` | VARCHAR | 分支名 |
-| `pipeline_run_id` | VARCHAR | 流水线执行记录 ID |
-| `run_number` | VARCHAR | 流水线运行编号 |
-| `metrics_data_json` | TEXT | 指标数据 JSON 原文 |
-| `detection_started_at` | TIMESTAMP | 检测开始时间 |
-| `detection_completed_at` | TIMESTAMP | 检测完成时间 |
-| `status` | TINYINT | 0 成功 / 1 失败 / 2 部分成功 |
-| `error_message` | VARCHAR | 错误信息 |
-| `create_time` | TIMESTAMP | 记录创建时间 |
+| 字段                     | 类型            | 用途                         |
+| ------------------------ | --------------- | ---------------------------- |
+| `id`                     | BIGINT (雪花ID) | 主键                         |
+| `git_url`                | VARCHAR         | 仓库 URL                     |
+| `branch_name`            | VARCHAR         | 分支名                       |
+| `pipeline_run_id`        | VARCHAR         | 流水线执行记录 ID            |
+| `run_number`             | VARCHAR         | 流水线运行编号               |
+| `metrics_data_json`      | TEXT            | 指标数据 JSON 原文           |
+| `detection_started_at`   | TIMESTAMP       | 检测开始时间                 |
+| `detection_completed_at` | TIMESTAMP       | 检测完成时间                 |
+| `status`                 | TINYINT         | 0 成功 / 1 失败 / 2 部分成功 |
+| `error_message`          | VARCHAR         | 错误信息                     |
+| `create_time`            | TIMESTAMP       | 记录创建时间                 |
 
 ### 1.4 现有 Mapper 方法
 
-| 方法 | SQL 关键条件 |
-|---|---|
-| `selectLatestByGitUrl(gitUrl)` | `WHERE git_url=#{gitUrl} AND status=0 ORDER BY branch_name, detection_completed_at DESC` |
-| `selectByPipelineRunId(gitUrl, branchName, pipelineRunId)` | 三条件精确匹配，`LIMIT 1` |
+| 方法                                                       | SQL 关键条件                                                                             |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `selectLatestByGitUrl(gitUrl)`                             | `WHERE git_url=#{gitUrl} AND status=0 ORDER BY branch_name, detection_completed_at DESC` |
+| `selectByPipelineRunId(gitUrl, branchName, pipelineRunId)` | 三条件精确匹配，`LIMIT 1`                                                                |
 
 ## 2. 设计目标
 
@@ -85,6 +86,7 @@ codecheck Feign client
 ### 3.2 与现有 Service 的隔离
 
 不复用 `getLatestMetricsByGitUrl`：
+
 - 现有方法的「合并 5 指标」语义与新需求不符
 - 现有方法返回 `BranchMetricsVO`（5 个固定指标），新需求返回 `metrics_data_json` 原文
 - 解耦后，前端页面逻辑不受新接口影响
@@ -312,14 +314,14 @@ ON code_metrics_record(git_url, branch_name, status, detection_completed_at DESC
 
 ### 5.1 metrics_data_json 新增 6 个字段
 
-| # | 字段名 | 类型 | 用途 |
-|---|---|---|---|
-| 1 | `codeLineTotal` | Integer | 总代码行数 |
-| 2 | `commentLines` | Integer | 注释行数 |
-| 3 | `complexityCount` | Integer | 复杂度计数 |
-| 4 | `cyclomaticComplexityPerFile` | Double | 文件圈复杂度 |
-| 5 | `duplicatedBlocks` | Integer | 重复块数 |
-| 6 | `duplicatedLines` | Integer | 重复行数 |
+| #   | 字段名                        | 类型    | 用途         |
+| --- | ----------------------------- | ------- | ------------ |
+| 1   | `codeLineTotal`               | Integer | 总代码行数   |
+| 2   | `commentLines`                | Integer | 注释行数     |
+| 3   | `complexityCount`             | Integer | 复杂度计数   |
+| 4   | `cyclomaticComplexityPerFile` | Double  | 文件圈复杂度 |
+| 5   | `duplicatedBlocks`            | Integer | 重复块数     |
+| 6   | `duplicatedLines`             | Integer | 重复行数     |
 
 ### 5.2 字段缺失容忍
 
@@ -329,48 +331,49 @@ ON code_metrics_record(git_url, branch_name, status, detection_completed_at DESC
 
 ### 6.1 新增
 
-| 文件 | 说明 |
-|---|---|
+| 文件                                   | 说明                    |
+| -------------------------------------- | ----------------------- |
 | `MachineApiCodeMetricsController.java` | 机机接口专用 Controller |
-| `LatestMetricsBeforeTimeQueryDTO.java` | HTTP 入参 DTO |
-| `CodeMetricsSnapshotDTO.java` | HTTP 出参 DTO |
+| `LatestMetricsBeforeTimeQueryDTO.java` | HTTP 入参 DTO           |
+| `CodeMetricsSnapshotDTO.java`          | HTTP 出参 DTO           |
 
 ### 6.2 修改
 
-| 文件 | 说明 |
-|---|---|
-| `CodeMetricsService.java` | 新增 2 个 Service 方法签名 |
-| `CodeMetricsServiceImpl.java` | 新增 2 个 Service 方法实现 + `toSnapshotDto` 私有方法 |
-| `CodeMetricsRecordMapper.java` | 新增 2 个 Mapper 方法签名 |
-| `CodeMetricsRecordMapper.xml` | 新增 2 条 SQL |
-| 插件上报逻辑 | `metrics_data_json` 新增 6 个字段 |
+| 文件                           | 说明                                                  |
+| ------------------------------ | ----------------------------------------------------- |
+| `CodeMetricsService.java`      | 新增 2 个 Service 方法签名                            |
+| `CodeMetricsServiceImpl.java`  | 新增 2 个 Service 方法实现 + `toSnapshotDto` 私有方法 |
+| `CodeMetricsRecordMapper.java` | 新增 2 个 Mapper 方法签名                             |
+| `CodeMetricsRecordMapper.xml`  | 新增 2 条 SQL                                         |
+| 插件上报逻辑                   | `metrics_data_json` 新增 6 个字段                     |
 
 ### 6.3 测试
 
-| 文件 | 说明 |
-|---|---|
-| `MachineApiCodeMetricsControllerTest.java` | 新增：HTTP 接口契约测试 |
-| `CodeMetricsServiceImplTest.java` | 修改：补充新 Service 方法用例 |
-| `CodeMetricsRecordMapperTest.java` | 修改：补充新 Mapper 方法用例 |
+| 文件                                       | 说明                          |
+| ------------------------------------------ | ----------------------------- |
+| `MachineApiCodeMetricsControllerTest.java` | 新增：HTTP 接口契约测试       |
+| `CodeMetricsServiceImplTest.java`          | 修改：补充新 Service 方法用例 |
+| `CodeMetricsRecordMapperTest.java`         | 修改：补充新 Mapper 方法用例  |
 
 ## 7. 测试策略
 
 ### 7.1 单元测试
 
-| 用例 | 期望 |
-|---|---|
-| 单条查询命中 | 返回 `detection_completed_at < beforeTime` 的最近一条，含 `metricsDataJson` 原文 |
-| 单条查询未命中（无成功记录） | 返回 null，不抛异常 |
-| 单条查询过滤失败记录 | `status != 0` 的记录不返回 |
-| 批量查询多条命中 | 每个 `(gitUrl, branchName)` 返回 1 条（最大 `detection_completed_at`） |
-| 批量查询部分未命中 | 命中的返回，未命中的不返回（结果数 ≤ 入参数） |
-| 批量查询入参 > 100 条 | Controller 层 `@Size(max=100)` 校验拒绝 |
-| 批量查询入参为空 | Service 层返回空 list |
-| 度量扫描晚于 beforeTime | 该记录不返回（时序条件过滤） |
+| 用例                         | 期望                                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| 单条查询命中                 | 返回 `detection_completed_at < beforeTime` 的最近一条，含 `metricsDataJson` 原文 |
+| 单条查询未命中（无成功记录） | 返回 null，不抛异常                                                              |
+| 单条查询过滤失败记录         | `status != 0` 的记录不返回                                                       |
+| 批量查询多条命中             | 每个 `(gitUrl, branchName)` 返回 1 条（最大 `detection_completed_at`）           |
+| 批量查询部分未命中           | 命中的返回，未命中的不返回（结果数 ≤ 入参数）                                    |
+| 批量查询入参 > 100 条        | Controller 层 `@Size(max=100)` 校验拒绝                                          |
+| 批量查询入参为空             | Service 层返回空 list                                                            |
+| 度量扫描晚于 beforeTime      | 该记录不返回（时序条件过滤）                                                     |
 
 ### 7.2 集成测试
 
 构造真实 `code_metrics_record` 数据，验证：
+
 - 单条 + 批量 SQL 在 MySQL 8 上的 IN 元组语法性能
 - 索引 `idx_metrics_git_branch_status_completed` 是否被命中
 - 多分支同仓库场景下的正确分组
@@ -386,9 +389,9 @@ ON code_metrics_record(git_url, branch_name, status, detection_completed_at DESC
 
 ## 9. 后续演进
 
-| 项 | 时机 |
-|---|---|
-| 批量接口 SQL 在 MySQL 8 上的 IN 元组语法性能验证 | 联调时 |
-| 索引 `idx_metrics_git_branch_status_completed` 实际命中率监控 | 上线后 RT 不达标时 |
-| `metrics_data_json` 6 个新字段最终字段名确认 | 插件改造时 |
-| docs 仓 spec 分支名重命名为 `spec-openlibing-coderepo-code-metrics-machine-api-query` | docs PR 创建时 |
+| 项                                                                                    | 时机               |
+| ------------------------------------------------------------------------------------- | ------------------ |
+| 批量接口 SQL 在 MySQL 8 上的 IN 元组语法性能验证                                      | 联调时             |
+| 索引 `idx_metrics_git_branch_status_completed` 实际命中率监控                         | 上线后 RT 不达标时 |
+| `metrics_data_json` 6 个新字段最终字段名确认                                          | 插件改造时         |
+| docs 仓 spec 分支名重命名为 `spec-openlibing-coderepo-code-metrics-machine-api-query` | docs PR 创建时     |

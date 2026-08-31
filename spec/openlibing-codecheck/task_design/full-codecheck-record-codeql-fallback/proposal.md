@@ -22,23 +22,23 @@
 
 ### 2.1 功能验收
 
-| 编号 | 验收点 | 期望 |
-|---|---|---|
-| AC-1 | `task_result_summary` 命中 | 走原查询路径，返回华为云 summary 数据；CodeQL 降级路径不被触发 |
-| AC-2 | `task_result_summary` total==0 且指定了仓库定位字段 | 降级到 CodeQL，返回由 `static_alarm_scan_run` + `static_alarm_issue` 组装出的等价结构数据 |
-| AC-3 | `task_result_summary` total==0 且未指定任何仓库定位字段 | 不降级，直接返回空结果，避免无条件全量查询触发 CodeQL 扫表 |
-| AC-4 | 两边都查不到 | 返回空 PageVo，不抛异常 |
-| AC-5 | 降级路径支持分页 | `pageNum` + `pageSize` 同时非空时分页，否则全量（与原接口分页语义对齐） |
-| AC-6 | 降级路径返回结构 | 与原接口 `CodeCheckResultSummaryDTO` 字段结构一致，入湖消费方无需改代码 |
-| AC-7 | 原华为云路径行为不变 | `FullSummaryOperation.queryFullSummaryList` 不修改，`/codecheck/full/task/result/summary` 等同类接口不受影响 |
+| 编号 | 验收点                                                  | 期望                                                                                                         |
+| ---- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| AC-1 | `task_result_summary` 命中                              | 走原查询路径，返回华为云 summary 数据；CodeQL 降级路径不被触发                                               |
+| AC-2 | `task_result_summary` total==0 且指定了仓库定位字段     | 降级到 CodeQL，返回由 `static_alarm_scan_run` + `static_alarm_issue` 组装出的等价结构数据                    |
+| AC-3 | `task_result_summary` total==0 且未指定任何仓库定位字段 | 不降级，直接返回空结果，避免无条件全量查询触发 CodeQL 扫表                                                   |
+| AC-4 | 两边都查不到                                            | 返回空 PageVo，不抛异常                                                                                      |
+| AC-5 | 降级路径支持分页                                        | `pageNum` + `pageSize` 同时非空时分页，否则全量（与原接口分页语义对齐）                                      |
+| AC-6 | 降级路径返回结构                                        | 与原接口 `CodeCheckResultSummaryDTO` 字段结构一致，入湖消费方无需改代码                                      |
+| AC-7 | 原华为云路径行为不变                                    | `FullSummaryOperation.queryFullSummaryList` 不修改，`/codecheck/full/task/result/summary` 等同类接口不受影响 |
 
 ### 2.2 非功能验收
 
-| 编号 | 验收点 | 期望 |
-|---|---|---|
-| NFR-1 | 接口契约不变 | 路径、HTTP 方法、入参 DTO、出参结构均不变 |
-| NFR-2 | 异常隔离 | CodeQL 降级路径内部异常不应影响接口可用性，异常时回退到返回空结果并记录错误日志 |
-| NFR-3 | 可观测 | 降级触发、CodeQL 查询耗时、降级路径异常均有日志，便于排查入湖消费方问题 |
+| 编号  | 验收点       | 期望                                                                            |
+| ----- | ------------ | ------------------------------------------------------------------------------- |
+| NFR-1 | 接口契约不变 | 路径、HTTP 方法、入参 DTO、出参结构均不变                                       |
+| NFR-2 | 异常隔离     | CodeQL 降级路径内部异常不应影响接口可用性，异常时回退到返回空结果并记录错误日志 |
+| NFR-3 | 可观测       | 降级触发、CodeQL 查询耗时、降级路径异常均有日志，便于排查入湖消费方问题         |
 
 ## 3. 范围
 
@@ -74,11 +74,11 @@
 
 ### 4.2 遗留项
 
-| 编号 | 遗留项 | 时机 |
-|---|---|---|
-| L-1 | `result` 字段在 CodeQL 路径的过滤实现（design.md §4.4） | 编码时确认 |
-| L-2 | coderepo `metrics_data_json` 6 个新增字段的具体字段名（暂命名见 design.md §5.2） | coderepo 改造时确认 |
-| L-3 | 12 个不对接字段的消费方兼容性确认（入湖消费方是否接受 DTO 字段缺失或 null） | 业务对接时确认 |
+| 编号 | 遗留项                                                                           | 时机                |
+| ---- | -------------------------------------------------------------------------------- | ------------------- |
+| L-1  | `result` 字段在 CodeQL 路径的过滤实现（design.md §4.4）                          | 编码时确认          |
+| L-2  | coderepo `metrics_data_json` 6 个新增字段的具体字段名（暂命名见 design.md §5.2） | coderepo 改造时确认 |
+| L-3  | 12 个不对接字段的消费方兼容性确认（入湖消费方是否接受 DTO 字段缺失或 null）      | 业务对接时确认      |
 
 ## 5. 关联
 

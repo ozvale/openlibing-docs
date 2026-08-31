@@ -13,19 +13,19 @@
 
 ### 2.1 记录级指标（code_metrics_record.metrics_data_json，6 个）
 
-| # | 字段 | 口径 | 插件端取数逻辑 | 服务端查询侧出口 |
-|---|------|------|---------------|-----------------|
-| 1 | `codeLineTotal` | 扫描代码总行数 = 代码 + 注释 + 空行的物理总行数 | SlocDetector 解析 scc 汇总输出的 `Lines` 字段（内部名 `rawLines`），现成数据，formatForReport 白名单直接透传 | `BranchMetricsVO.codeLineTotal` |
-| 2 | `commentLines` | 注释行数 = 扫描范围内所有文件注释行数总和（**直接取 sloc 的 scc 汇总 commentLines**） | SlocDetector 现成的 `commentLines`（scc 汇总 totalComment），formatForReport 白名单直接透传，不累加明细。每文件 commentLines 明细仍随 fileDetails 落 file_detail 供文件级下钻（见 2.2） | `BranchMetricsVO.commentLines` |
-| 3 | `complexityCount` | 函数圈复杂度总和（方法维度总量，与 avgCyclomaticComplexity 同源） | LizardDetector 的 `totalCC`（Σ 所有函数 CCN）——原本已计算但被 formatForReport 白名单丢弃，现在透传 | `BranchMetricsVO.complexityCount` |
-| 4 | `cyclomaticComplexityPerFile` | 文件维度圈复杂度 = Σ函数圈复杂度 ÷ **含函数的文件数**（区别于方法维度 avgCyclomaticComplexity） | LizardDetector **新增计算**：`totalCC / fileDetails.length`，`toFixed(2)` 保留 2 位小数；无函数文件/空结果时为 0 | `BranchMetricsVO.cyclomaticComplexityPerFile` |
-| 5 | `duplicatedBlocks` | 重复代码块数量 = 重复块**出现位置总数**（同一内容在 3 个文件中出现计 3，与 duplication_block 表行数一致） | DuplicationDetector **新增**：`duplicationOccurrences.length`；getEmptyResult 补 0 | `BranchMetricsVO.duplicatedBlocks` |
-| 6 | `duplicatedLines` | 重复代码行数量 = Σ 每文件重复行数（totalCodeDuplicationRate 的分子） | DuplicationDetector 现成的 `duplicatedLines`——原被白名单丢弃，现在透传 | `BranchMetricsVO.duplicatedLines` |
+| #   | 字段                          | 口径                                                                                                      | 插件端取数逻辑                                                                                                                                                                          | 服务端查询侧出口                              |
+| --- | ----------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| 1   | `codeLineTotal`               | 扫描代码总行数 = 代码 + 注释 + 空行的物理总行数                                                           | SlocDetector 解析 scc 汇总输出的 `Lines` 字段（内部名 `rawLines`），现成数据，formatForReport 白名单直接透传                                                                            | `BranchMetricsVO.codeLineTotal`               |
+| 2   | `commentLines`                | 注释行数 = 扫描范围内所有文件注释行数总和（**直接取 sloc 的 scc 汇总 commentLines**）                     | SlocDetector 现成的 `commentLines`（scc 汇总 totalComment），formatForReport 白名单直接透传，不累加明细。每文件 commentLines 明细仍随 fileDetails 落 file_detail 供文件级下钻（见 2.2） | `BranchMetricsVO.commentLines`                |
+| 3   | `complexityCount`             | 函数圈复杂度总和（方法维度总量，与 avgCyclomaticComplexity 同源）                                         | LizardDetector 的 `totalCC`（Σ 所有函数 CCN）——原本已计算但被 formatForReport 白名单丢弃，现在透传                                                                                      | `BranchMetricsVO.complexityCount`             |
+| 4   | `cyclomaticComplexityPerFile` | 文件维度圈复杂度 = Σ函数圈复杂度 ÷ **含函数的文件数**（区别于方法维度 avgCyclomaticComplexity）           | LizardDetector **新增计算**：`totalCC / fileDetails.length`，`toFixed(2)` 保留 2 位小数；无函数文件/空结果时为 0                                                                        | `BranchMetricsVO.cyclomaticComplexityPerFile` |
+| 5   | `duplicatedBlocks`            | 重复代码块数量 = 重复块**出现位置总数**（同一内容在 3 个文件中出现计 3，与 duplication_block 表行数一致） | DuplicationDetector **新增**：`duplicationOccurrences.length`；getEmptyResult 补 0                                                                                                      | `BranchMetricsVO.duplicatedBlocks`            |
+| 6   | `duplicatedLines`             | 重复代码行数量 = Σ 每文件重复行数（totalCodeDuplicationRate 的分子）                                      | DuplicationDetector 现成的 `duplicatedLines`——原被白名单丢弃，现在透传                                                                                                                  | `BranchMetricsVO.duplicatedLines`             |
 
 ### 2.2 文件级明细（code_metrics_file_detail.metrics_json，1 个）
 
-| 字段 | 口径 | 插件端取数逻辑（SlocDetector 三条路径） | 服务端处理 |
-|------|------|--------------------------------------|-----------|
+| 字段                     | 口径           | 插件端取数逻辑（SlocDetector 三条路径）                                                                                                                                                                                                                                                         | 服务端处理                                                                          |
+| ------------------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `commentLines`（每文件） | 单文件注释行数 | ① **scc --by-file 正常路径**：取 scc 每文件 `Comment` 字段（精确口径）<br>② **scc fallback 路径**（--by-file 输出为空重新收集文件）：启发式计数——非空且以 `//` `/*` `*` `#` 开头计为注释行<br>③ **全量 fallback**（scc 二进制不可用）：块注释状态机（`/* */` 跨行追踪 + `//` 单行），按文件累计 | `FileDetailDTO.commentLines` → `buildFileMetricsJson` 写入 metrics_json（null → 0） |
 
 明细合并规则（MetricsCalculator.mergeFileDetails）：sloc 基底文件取明细值；lizard-only / duplication-only 文件补 `commentLines: 0`。

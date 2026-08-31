@@ -18,9 +18,9 @@ CodeQL 扫描结果（`static_alarm_scan_run` + `static_alarm_issue`）位于 co
 
 机机接口专用 Controller `MachineApiCodeMetricsController`，类级路径 `/machine-api/v1/metrics/code`：
 
-| 路径 | 方法 | 入参 | 出参 | 用途 |
-|---|---|---|---|---|
-| `POST /machine-api/v1/metrics/code/latest-before-time` | POST | `LatestMetricsBeforeTimeQueryDTO` | `DataResult<CodeMetricsSnapshotDTO>` | 单条查询 |
+| 路径                                                         | 方法 | 入参                                    | 出参                                       | 用途                               |
+| ------------------------------------------------------------ | ---- | --------------------------------------- | ------------------------------------------ | ---------------------------------- |
+| `POST /machine-api/v1/metrics/code/latest-before-time`       | POST | `LatestMetricsBeforeTimeQueryDTO`       | `DataResult<CodeMetricsSnapshotDTO>`       | 单条查询                           |
 | `POST /machine-api/v1/metrics/code/latest-before-time/batch` | POST | `List<LatestMetricsBeforeTimeQueryDTO>` | `DataResult<List<CodeMetricsSnapshotDTO>>` | 批量查询（codecheck 主要调用入口） |
 
 ### 2.2 关联规则
@@ -33,14 +33,14 @@ CodeQL 扫描结果（`static_alarm_scan_run` + `static_alarm_issue`）位于 co
 
 插件上报时 `metrics_data_json` 新增 6 个字段：
 
-| # | 字段 | 类型 | 用途 |
-|---|---|---|---|
-| 1 | `codeLineTotal` | Integer | 总代码行数 |
-| 2 | `commentLines` | Integer | 注释行数 |
-| 3 | `complexityCount` | Integer | 复杂度计数 |
-| 4 | `cyclomaticComplexityPerFile` | Double | 文件圈复杂度 |
-| 5 | `duplicatedBlocks` | Integer | 重复块数 |
-| 6 | `duplicatedLines` | Integer | 重复行数 |
+| #   | 字段                          | 类型    | 用途         |
+| --- | ----------------------------- | ------- | ------------ |
+| 1   | `codeLineTotal`               | Integer | 总代码行数   |
+| 2   | `commentLines`                | Integer | 注释行数     |
+| 3   | `complexityCount`             | Integer | 复杂度计数   |
+| 4   | `cyclomaticComplexityPerFile` | Double  | 文件圈复杂度 |
+| 5   | `duplicatedBlocks`            | Integer | 重复块数     |
+| 6   | `duplicatedLines`             | Integer | 重复行数     |
 
 ## 3. In Scope
 
@@ -82,11 +82,11 @@ CodeQL 扫描结果（`static_alarm_scan_run` + `static_alarm_issue`）位于 co
 
 ## 5. 遗留项
 
-| 编号 | 遗留项 | 时机 |
-|---|---|---|
-| L-1 | `metrics_data_json` 6 个新字段最终字段名确认（暂命名见 §2.3） | 插件改造时确认 |
-| L-2 | 批量接口 SQL 在 MySQL 8 上的 IN 元组语法性能验证（建议加 `(git_url, branch_name, status, detection_completed_at)` 联合索引） | 联调时验证 |
-| L-3 | docs 仓 spec 分支名 `spec-code-metrics-action-metrics-new-fields` 不符合 AGENTS.md 命名规则（应为 `spec-openlibing-coderepo-<change-name>`），后续 PR 时考虑重命名 | docs PR 创建时处理 |
+| 编号 | 遗留项                                                                                                                                                             | 时机               |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| L-1  | `metrics_data_json` 6 个新字段最终字段名确认（暂命名见 §2.3）                                                                                                      | 插件改造时确认     |
+| L-2  | 批量接口 SQL 在 MySQL 8 上的 IN 元组语法性能验证（建议加 `(git_url, branch_name, status, detection_completed_at)` 联合索引）                                       | 联调时验证         |
+| L-3  | docs 仓 spec 分支名 `spec-code-metrics-action-metrics-new-fields` 不符合 AGENTS.md 命名规则（应为 `spec-openlibing-coderepo-<change-name>`），后续 PR 时考虑重命名 | docs PR 创建时处理 |
 
 ## 6. 跨仓联动
 

@@ -20,12 +20,14 @@
 ### 1.3 CodeQL 数据链路（参考）
 
 CodeQL 数据通过 SARIF 上报链路入库，涉及表：
+
 - `static_alarm_scan_run`：扫描记录表（一次扫描一条）
 - `static_alarm_issue`：静态告警问题表（按指纹去重，多次扫描复用）
 - `hw_project_info`：项目-hw 映射表（`project_id ↔ hw_project_id`）
 - `repo_info`：仓库信息表（通过 `projectId` 反查 `repoId`）
 
 CodeQL 度量数据位于 `openlibing-coderepo` 仓：
+
 - `code_metrics_record`：顶层度量（`metrics_data_json`）
 - `code_metrics_file_detail`：文件级度量明细（`metrics_json`）
 
@@ -138,76 +140,76 @@ com.openlibing.codecheck.business.operation.codecheck
 
 #### 4.3.2 字段映射表（50 个字段）
 
-| # | DTO 字段 | 来源表 | 来源字段 / 规则 | 备注 |
-|---|---|---|---|---|
-| 1 | `id` | `static_alarm_scan_run` | `id` | 直接取 |
-| 2 | `date` | `static_alarm_scan_run` | `createdAt` | 格式化 `yyyy-MM-dd` |
-| 3 | `dateTime` | `static_alarm_scan_run` | `(updatedAt - createdAt) / 1000` | 秒级耗时，取整 |
-| 4 | `repoNameEn` | `static_alarm_scan_run` | `repo` | 直接取 |
-| 5 | `repoId` | 反查 `repo_info` | 通过 `projectId` 反查 | 反查不到置 null |
-| 6 | `projectName` | 反查 project 表 | 通过 `projectId` 反查 | 反查不到置 null |
-| 7 | `obProjectId` | 入参 `projectId` 透传 | — | 与原接口硬过滤口径对齐 |
-| 8 | `projectId` (hwProjectId) | 反查 `hw_project_info` | `project_id → hw_project_id` | 反查不到置 null |
-| 9 | `executeTime` | `static_alarm_scan_run` | `createdAt` | `yyyy-MM-dd HH:mm:ss` 格式化 |
-| 10 | `endTime` | `static_alarm_scan_run` | `updatedAt` | `yyyy-MM-dd HH:mm:ss` 格式化 |
-| 11 | `gitBranch` | `static_alarm_scan_run` | `branch` | 直接取 |
-| 12 | `taskId` | — | — | 不对接，置 null |
-| 13 | `taskName` | — | — | 不对接，置 null |
-| 14 | `lastCheckTime` / `lastExecTime` | `static_alarm_scan_run` | `updatedAt` | 与 endTime 一致 |
-| 15 | `createdAt` | `static_alarm_scan_run` | `createdAt` | `yyyy-MM-dd HH:mm:ss` 格式化 |
-| 16 | `creatorId` | — | — | 不对接，置 null |
-| 17 | `checkType` | 固定值 | `"source"` | 字面字符串 |
-| 18 | `result` | `static_alarm_scan_run` | `issue_snapshot` | `issue_snapshot > 0 ? "failed" : "pass"`（add-count-yym 分支将 `issue_count` 更名为 `issue_snapshot`） |
-| 19 | `codeCheckStatus` | `static_alarm_scan_run` | `status` | `SUCCESS→"success" / FAILED→"failed" / PARSING→"processing"` |
-| 20 | `type` | 固定值 | `"new"` | — |
-| 21 | `isDeleted` | 固定值 | `0` | — |
-| 22 | `isBack` | 固定值 | `false` | — |
-| 23 | `total` | `static_alarm_scan_run` | `issue_snapshot` | 与 `issue` 字段同值（add-count-yym 分支将 `issue_count` 更名为 `issue_snapshot`） |
-| 24 | `issue` | `static_alarm_issue` | `status` | `status="OPEN"` 计数，按 `scan_run_id` 聚合 |
-| 25 | `solve` | `static_alarm_issue` | `status` | `status="RESOLVED"` 计数 |
-| 26 | `ignore` | `static_alarm_issue` | `status` | `status="IGNORED"` 计数 |
-| 27 | `inReview` | 固定值 | `0` | 不需要审批 |
-| 28 | `invalid` | 固定值 | `0` | — |
-| 29 | `ignoreCount` | `static_alarm_scan_run` | `ignore_snapshot` | scan_run 新增字段；未就绪回退到 issue 表 `status="IGNORED"` 聚合 |
-| 32 | `issueCount` | `static_alarm_scan_run` | `issue_snapshot` | scan_run 新增字段；未就绪回退到 issue 表 `status="OPEN"` 聚合 |
-| 33 | `newCount` | `static_alarm_scan_run` | `issue_snapshot` | 与 #32 `issueCount` 同源（add-count-yym 分支已将 `issue_count` 更名为 `issue_snapshot`，原 `new_issue_count` 字段被移除，本字段语义降级为复用 `issue_snapshot`）；未就绪回退到 issue 表 `status="OPEN"` 聚合 |
-| 34 | `solveCount` | `static_alarm_scan_run` | `solve_snapshot` | scan_run 新增字段；未就绪回退到 issue 表 `status="RESOLVED"` 聚合 |
-| 35 | `criticalCount` | `static_alarm_scan_run` | `critical_count_snapshot` | scan_run 新增字段；未就绪回退到 issue 表 `severity="Critical"` 聚合 |
-| 36 | `majorCount` | `static_alarm_scan_run` | `major_count_snapshot` | scan_run 新增字段；未就绪回退到 issue 表 `severity="High"` 聚合 |
-| 37 | `minorCount` | `static_alarm_scan_run` | `minor_count_snapshot` | scan_run 新增字段；未就绪回退到 issue 表 `severity="Medium"` 聚合 |
-| 38 | `suggestionCount` | `static_alarm_scan_run` | `suggestion_count_snapshot` | scan_run 新增字段；未就绪回退到 issue 表 `severity="Low"` 聚合 |
-| 39 | `codeLine` | `code_metrics_record` | `metrics_data_json.codeScale` | 度量数据走 §4.6 时序关联；找不到记录置 0 |
-| 40 | `codeLineTotal` | `code_metrics_record` | `metrics_data_json` 新增字段（暂命名 `codeLineTotal`） | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 null 或 0 |
-| 41 | `codeQuality` | 固定值 | `100` | — |
-| 42 | `commentLines` | `code_metrics_record` | `metrics_data_json` 新增字段（暂命名 `commentLines`） | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 0 |
-| 44 | `complexityCount` | `code_metrics_record` | `metrics_data_json` 新增字段（暂命名 `complexityCount`） | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 0 |
-| 45 | `cyclomaticComplexityPerMethod` | `code_metrics_record` | `metrics_data_json.avgCyclomaticComplexity` | 度量数据走 §4.6 时序关联；找不到记录置 0 |
-| 46 | `cyclomaticComplexityPerFile` | `code_metrics_record` | `metrics_data_json` 新增字段（暂命名 `cyclomaticComplexityPerFile`） | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 null |
-| 47 | `duplicatedBlocks` | `code_metrics_record` | `metrics_data_json` 新增字段（暂命名 `duplicatedBlocks`） | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 0 |
-| 48 | `duplicatedLines` | `code_metrics_record` | `metrics_data_json` 新增字段（暂命名 `duplicatedLines`） | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 0 |
-| 49 | `duplicationRatio` | `code_metrics_record` | `metrics_data_json.totalCodeDuplicationRate` | 度量数据走 §4.6 时序关联；找不到记录置 `"0"` 或 null |
-| 50 | `fileDuplicationRatio` | `code_metrics_record` | `metrics_data_json.totalFileDuplicationRate` | 度量数据走 §4.6 时序关联；找不到记录置 `"0"` 或 null |
-| 57 | `metricInfo` | `code_metrics_record` | `metrics_data_json` 原文 | 度量数据走 §4.6 时序关联；找不到记录置 null 或空 JSON 字符串 |
-| 58 | `riskCoefficient` | 固定值 | `100` | — |
-| 59 | `taskRuleInfo` | — | — | 不对接，置 null |
-| 62 | `repoUrl` | `static_alarm_scan_run` | `repo_url` | 直接取（仅 `mrUrl` 不对接置 null） |
+| #   | DTO 字段                         | 来源表                  | 来源字段 / 规则                                                      | 备注                                                                                                                                                                                                         |
+| --- | -------------------------------- | ----------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `id`                             | `static_alarm_scan_run` | `id`                                                                 | 直接取                                                                                                                                                                                                       |
+| 2   | `date`                           | `static_alarm_scan_run` | `createdAt`                                                          | 格式化 `yyyy-MM-dd`                                                                                                                                                                                          |
+| 3   | `dateTime`                       | `static_alarm_scan_run` | `(updatedAt - createdAt) / 1000`                                     | 秒级耗时，取整                                                                                                                                                                                               |
+| 4   | `repoNameEn`                     | `static_alarm_scan_run` | `repo`                                                               | 直接取                                                                                                                                                                                                       |
+| 5   | `repoId`                         | 反查 `repo_info`        | 通过 `projectId` 反查                                                | 反查不到置 null                                                                                                                                                                                              |
+| 6   | `projectName`                    | 反查 project 表         | 通过 `projectId` 反查                                                | 反查不到置 null                                                                                                                                                                                              |
+| 7   | `obProjectId`                    | 入参 `projectId` 透传   | —                                                                    | 与原接口硬过滤口径对齐                                                                                                                                                                                       |
+| 8   | `projectId` (hwProjectId)        | 反查 `hw_project_info`  | `project_id → hw_project_id`                                         | 反查不到置 null                                                                                                                                                                                              |
+| 9   | `executeTime`                    | `static_alarm_scan_run` | `createdAt`                                                          | `yyyy-MM-dd HH:mm:ss` 格式化                                                                                                                                                                                 |
+| 10  | `endTime`                        | `static_alarm_scan_run` | `updatedAt`                                                          | `yyyy-MM-dd HH:mm:ss` 格式化                                                                                                                                                                                 |
+| 11  | `gitBranch`                      | `static_alarm_scan_run` | `branch`                                                             | 直接取                                                                                                                                                                                                       |
+| 12  | `taskId`                         | —                       | —                                                                    | 不对接，置 null                                                                                                                                                                                              |
+| 13  | `taskName`                       | —                       | —                                                                    | 不对接，置 null                                                                                                                                                                                              |
+| 14  | `lastCheckTime` / `lastExecTime` | `static_alarm_scan_run` | `updatedAt`                                                          | 与 endTime 一致                                                                                                                                                                                              |
+| 15  | `createdAt`                      | `static_alarm_scan_run` | `createdAt`                                                          | `yyyy-MM-dd HH:mm:ss` 格式化                                                                                                                                                                                 |
+| 16  | `creatorId`                      | —                       | —                                                                    | 不对接，置 null                                                                                                                                                                                              |
+| 17  | `checkType`                      | 固定值                  | `"source"`                                                           | 字面字符串                                                                                                                                                                                                   |
+| 18  | `result`                         | `static_alarm_scan_run` | `issue_snapshot`                                                     | `issue_snapshot > 0 ? "failed" : "pass"`（add-count-yym 分支将 `issue_count` 更名为 `issue_snapshot`）                                                                                                       |
+| 19  | `codeCheckStatus`                | `static_alarm_scan_run` | `status`                                                             | `SUCCESS→"success" / FAILED→"failed" / PARSING→"processing"`                                                                                                                                                 |
+| 20  | `type`                           | 固定值                  | `"new"`                                                              | —                                                                                                                                                                                                            |
+| 21  | `isDeleted`                      | 固定值                  | `0`                                                                  | —                                                                                                                                                                                                            |
+| 22  | `isBack`                         | 固定值                  | `false`                                                              | —                                                                                                                                                                                                            |
+| 23  | `total`                          | `static_alarm_scan_run` | `issue_snapshot`                                                     | 与 `issue` 字段同值（add-count-yym 分支将 `issue_count` 更名为 `issue_snapshot`）                                                                                                                            |
+| 24  | `issue`                          | `static_alarm_issue`    | `status`                                                             | `status="OPEN"` 计数，按 `scan_run_id` 聚合                                                                                                                                                                  |
+| 25  | `solve`                          | `static_alarm_issue`    | `status`                                                             | `status="RESOLVED"` 计数                                                                                                                                                                                     |
+| 26  | `ignore`                         | `static_alarm_issue`    | `status`                                                             | `status="IGNORED"` 计数                                                                                                                                                                                      |
+| 27  | `inReview`                       | 固定值                  | `0`                                                                  | 不需要审批                                                                                                                                                                                                   |
+| 28  | `invalid`                        | 固定值                  | `0`                                                                  | —                                                                                                                                                                                                            |
+| 29  | `ignoreCount`                    | `static_alarm_scan_run` | `ignore_snapshot`                                                    | scan_run 新增字段；未就绪回退到 issue 表 `status="IGNORED"` 聚合                                                                                                                                             |
+| 32  | `issueCount`                     | `static_alarm_scan_run` | `issue_snapshot`                                                     | scan_run 新增字段；未就绪回退到 issue 表 `status="OPEN"` 聚合                                                                                                                                                |
+| 33  | `newCount`                       | `static_alarm_scan_run` | `issue_snapshot`                                                     | 与 #32 `issueCount` 同源（add-count-yym 分支已将 `issue_count` 更名为 `issue_snapshot`，原 `new_issue_count` 字段被移除，本字段语义降级为复用 `issue_snapshot`）；未就绪回退到 issue 表 `status="OPEN"` 聚合 |
+| 34  | `solveCount`                     | `static_alarm_scan_run` | `solve_snapshot`                                                     | scan_run 新增字段；未就绪回退到 issue 表 `status="RESOLVED"` 聚合                                                                                                                                            |
+| 35  | `criticalCount`                  | `static_alarm_scan_run` | `critical_count_snapshot`                                            | scan_run 新增字段；未就绪回退到 issue 表 `severity="Critical"` 聚合                                                                                                                                          |
+| 36  | `majorCount`                     | `static_alarm_scan_run` | `major_count_snapshot`                                               | scan_run 新增字段；未就绪回退到 issue 表 `severity="High"` 聚合                                                                                                                                              |
+| 37  | `minorCount`                     | `static_alarm_scan_run` | `minor_count_snapshot`                                               | scan_run 新增字段；未就绪回退到 issue 表 `severity="Medium"` 聚合                                                                                                                                            |
+| 38  | `suggestionCount`                | `static_alarm_scan_run` | `suggestion_count_snapshot`                                          | scan_run 新增字段；未就绪回退到 issue 表 `severity="Low"` 聚合                                                                                                                                               |
+| 39  | `codeLine`                       | `code_metrics_record`   | `metrics_data_json.codeScale`                                        | 度量数据走 §4.6 时序关联；找不到记录置 0                                                                                                                                                                     |
+| 40  | `codeLineTotal`                  | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `codeLineTotal`）               | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 null 或 0                                                                                                                                 |
+| 41  | `codeQuality`                    | 固定值                  | `100`                                                                | —                                                                                                                                                                                                            |
+| 42  | `commentLines`                   | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `commentLines`）                | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 0                                                                                                                                         |
+| 44  | `complexityCount`                | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `complexityCount`）             | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 0                                                                                                                                         |
+| 45  | `cyclomaticComplexityPerMethod`  | `code_metrics_record`   | `metrics_data_json.avgCyclomaticComplexity`                          | 度量数据走 §4.6 时序关联；找不到记录置 0                                                                                                                                                                     |
+| 46  | `cyclomaticComplexityPerFile`    | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `cyclomaticComplexityPerFile`） | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 null                                                                                                                                      |
+| 47  | `duplicatedBlocks`               | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `duplicatedBlocks`）            | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 0                                                                                                                                         |
+| 48  | `duplicatedLines`                | `code_metrics_record`   | `metrics_data_json` 新增字段（暂命名 `duplicatedLines`）             | 度量数据走 §4.6 时序关联；依赖 coderepo 改造；未就绪或找不到记录置 0                                                                                                                                         |
+| 49  | `duplicationRatio`               | `code_metrics_record`   | `metrics_data_json.totalCodeDuplicationRate`                         | 度量数据走 §4.6 时序关联；找不到记录置 `"0"` 或 null                                                                                                                                                         |
+| 50  | `fileDuplicationRatio`           | `code_metrics_record`   | `metrics_data_json.totalFileDuplicationRate`                         | 度量数据走 §4.6 时序关联；找不到记录置 `"0"` 或 null                                                                                                                                                         |
+| 57  | `metricInfo`                     | `code_metrics_record`   | `metrics_data_json` 原文                                             | 度量数据走 §4.6 时序关联；找不到记录置 null 或空 JSON 字符串                                                                                                                                                 |
+| 58  | `riskCoefficient`                | 固定值                  | `100`                                                                | —                                                                                                                                                                                                            |
+| 59  | `taskRuleInfo`                   | —                       | —                                                                    | 不对接，置 null                                                                                                                                                                                              |
+| 62  | `repoUrl`                        | `static_alarm_scan_run` | `repo_url`                                                           | 直接取（仅 `mrUrl` 不对接置 null）                                                                                                                                                                           |
 
 > 字段编号沿用原始 62 字段表，未出现的编号即 §4.3.1 列出的不对接字段。
 
 ### 4.4 过滤条件翻译
 
-| QuerySummaryModel 字段 | CodeQL 侧等价条件 |
-|---|---|
-| —（固定过滤，非入参） | `static_alarm_scan_run.tool != "CodeQL"`（法律合规过滤，详见 §4.7，所有查询无条件附加） |
-| `projectName` | 通过 `projectId` 反查 `project` 表得到 `projectName`，再过滤 scan_run；或入参透传 |
-| `manifestBranch` | `static_alarm_scan_run.branch` 精确匹配 |
-| `repoName` | `static_alarm_scan_run.repo` 精确匹配 |
-| `startTime` | `static_alarm_scan_run.createdAt >= startTime`（记录创建时间下界） |
-| `endTime` | `static_alarm_scan_run.updatedAt <= endTime`（记录更新时间上界） |
-| `result` | 后置过滤：先聚合 issue 得到 `issue_snapshot`（add-count-yym 分支将 `issue_count` 更名为 `issue_snapshot`），再按 `result` 过滤；或不在 SQL 层过滤，由应用层筛选 |
-| `repoIds` | 通过 `projectId` 反查 `repo_info` 得到 `repoId`，再过滤 scan_run |
-| `pageNum` / `pageSize` | 仅当同时非空且 count > 0 时 skip/limit |
-| 其他 DTO 字段 | 不进入 CodeQL 查询条件（与原接口口径一致） |
+| QuerySummaryModel 字段 | CodeQL 侧等价条件                                                                                                                                               |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| —（固定过滤，非入参）  | `static_alarm_scan_run.tool != "CodeQL"`（法律合规过滤，详见 §4.7，所有查询无条件附加）                                                                         |
+| `projectName`          | 通过 `projectId` 反查 `project` 表得到 `projectName`，再过滤 scan_run；或入参透传                                                                               |
+| `manifestBranch`       | `static_alarm_scan_run.branch` 精确匹配                                                                                                                         |
+| `repoName`             | `static_alarm_scan_run.repo` 精确匹配                                                                                                                           |
+| `startTime`            | `static_alarm_scan_run.createdAt >= startTime`（记录创建时间下界）                                                                                              |
+| `endTime`              | `static_alarm_scan_run.updatedAt <= endTime`（记录更新时间上界）                                                                                                |
+| `result`               | 后置过滤：先聚合 issue 得到 `issue_snapshot`（add-count-yym 分支将 `issue_count` 更名为 `issue_snapshot`），再按 `result` 过滤；或不在 SQL 层过滤，由应用层筛选 |
+| `repoIds`              | 通过 `projectId` 反查 `repo_info` 得到 `repoId`，再过滤 scan_run                                                                                                |
+| `pageNum` / `pageSize` | 仅当同时非空且 count > 0 时 skip/limit                                                                                                                          |
+| 其他 DTO 字段          | 不进入 CodeQL 查询条件（与原接口口径一致）                                                                                                                      |
 
 ### 4.5 分页与排序
 
@@ -220,6 +222,7 @@ com.openlibing.codecheck.business.operation.codecheck
 #### 4.6.1 问题背景
 
 CodeQL 扫描与代码度量扫描是两条独立的扫描链路，执行时机不同：
+
 - CodeQL 扫描结果写入 `static_alarm_scan_run`（含 `commit_id` / `scan_start_at` / `scan_end_at`）
 - 代码度量扫描结果写入 `code_metrics_record`（含 `commit_id` / 独立的扫描时间字段）
 
@@ -231,11 +234,11 @@ CodeQL 扫描与代码度量扫描是两条独立的扫描链路，执行时机�
 
 按「代码仓地址 + 分支 + commit ID」三元组关联：
 
-| CodeQL 侧字段 | 度量侧字段 | 关联语义 |
-|---|---|---|
-| `static_alarm_scan_run.repo_url` | `code_metrics_record.git_url` | 代码仓地址 |
-| `static_alarm_scan_run.branch` | `code_metrics_record.branch_name` | 分支名 |
-| `static_alarm_scan_run.commit_id` | `code_metrics_record.commit_id` | 触发扫描的 commit ID（精确匹配，避免时序偏离） |
+| CodeQL 侧字段                     | 度量侧字段                        | 关联语义                                       |
+| --------------------------------- | --------------------------------- | ---------------------------------------------- |
+| `static_alarm_scan_run.repo_url`  | `code_metrics_record.git_url`     | 代码仓地址                                     |
+| `static_alarm_scan_run.branch`    | `code_metrics_record.branch_name` | 分支名                                         |
+| `static_alarm_scan_run.commit_id` | `code_metrics_record.commit_id`   | 触发扫描的 commit ID（精确匹配，避免时序偏离） |
 
 > 字段名以实际表结构为准（coderepo `code_metrics_record` 表分支字段为 `branch_name`，非 `branch`）。coderepo HTTP 接口入参命名见 §4.6.7。
 
@@ -257,12 +260,12 @@ CodeQL 扫描与代码度量扫描是两条独立的扫描链路，执行时机�
 
 #### 4.6.4 找不到度量记录时的默认值
 
-| 字段类别 | 默认值 |
-|---|---|
+| 字段类别                                                                                                                                                                                                     | 默认值                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
 | `codeLine` / `codeLineTotal` / `commentLines` / `complexityCount` / `cyclomaticComplexityPerMethod` / `cyclomaticComplexityPerFile` / `duplicatedBlocks` / `duplicatedLines` / `methodsTotal` / `filesTotal` | `0` 或 `null`（按字段类型；§4.3.2 已标） |
-| `duplicationRatio` / `fileDuplicationRatio` | `"0"` 字符串 或 `null` |
-| `metricInfo` | `null` 或空 JSON 字符串 |
-| `codeQuality` / `riskCoefficient` | 固定值 `100`（不依赖度量，已有规则） |
+| `duplicationRatio` / `fileDuplicationRatio`                                                                                                                                                                  | `"0"` 字符串 或 `null`                   |
+| `metricInfo`                                                                                                                                                                                                 | `null` 或空 JSON 字符串                  |
+| `codeQuality` / `riskCoefficient`                                                                                                                                                                            | 固定值 `100`（不依赖度量，已有规则）     |
 
 > 若度量字段尚未在 coderepo `metrics_data_json` 中上报，同样走默认值（与 §5.2 未就绪兜底一致）。
 
@@ -294,6 +297,7 @@ CodeQL 扫描与代码度量扫描是两条独立的扫描链路，执行时机�
 #### 4.6.6 与 `code_metrics_file_detail` 的关联
 
 `filesTotal` / `methodsTotal` 等需要从 `code_metrics_file_detail` 聚合的字段：
+
 - 取 §4.6.3 命中的 `code_metrics_record.id` 作为 `record_id`
 - 在 `code_metrics_file_detail` 中按 `record_id` 聚合
 - 若 §4.6.3 未命中，则 file_detail 不查，相关字段走默认值
@@ -306,10 +310,10 @@ CodeQL 扫描与代码度量扫描是两条独立的扫描链路，执行时机�
 
 **接口契约**：
 
-| 路径 | 方法 | 入参 | 出参 | 用途 |
-|---|---|---|---|---|
-| `POST /machine-api/v1/metrics/code/latest-by-commit` | POST | `LatestMetricsByCommitQueryDTO` | `DataResult<CodeMetricsSnapshotDTO>` | 单条查询（备用，本次 codecheck 主要走 batch 接口） |
-| `POST /machine-api/v1/metrics/code/latest-by-commit/batch` | POST | `List<LatestMetricsByCommitQueryDTO>` | `DataResult<List<CodeMetricsSnapshotDTO>>` | 批量查询（codecheck 主要调用入口） |
+| 路径                                                       | 方法 | 入参                                  | 出参                                       | 用途                                               |
+| ---------------------------------------------------------- | ---- | ------------------------------------- | ------------------------------------------ | -------------------------------------------------- |
+| `POST /machine-api/v1/metrics/code/latest-by-commit`       | POST | `LatestMetricsByCommitQueryDTO`       | `DataResult<CodeMetricsSnapshotDTO>`       | 单条查询（备用，本次 codecheck 主要走 batch 接口） |
+| `POST /machine-api/v1/metrics/code/latest-by-commit/batch` | POST | `List<LatestMetricsByCommitQueryDTO>` | `DataResult<List<CodeMetricsSnapshotDTO>>` | 批量查询（codecheck 主要调用入口）                 |
 
 **入参 DTO** `LatestMetricsByCommitQueryDTO`：
 
@@ -437,23 +441,23 @@ criteria.and("tool").ne("CodeQL");
 
 ### 5.1 openlibing-codecheck 仓
 
-| # | 改动类型 | 改动内容 | 影响字段 |
-|---|---|---|---|
-| 1 | MongoDB 集合新增字段 | `static_alarm_scan_run` 新增 8 个快照字段（含 1 个标志位）：`issue_snapshot`（原 `issue_count` 更名）/ `solve_snapshot` / `ignore_snapshot` / `critical_count_snapshot` / `major_count_snapshot` / `minor_count_snapshot` / `suggestion_count_snapshot` / `snapshot_computed`（Boolean 标志位，标志前 7 个快照字段是否计算成功）。前 7 个快照字段由 `SarifParseServiceImpl` 在解析成功后调用 `StaticAlarmOperation.aggregateSnapshot` 聚合 issue 表写入；`snapshot_computed=false` 时前 7 个字段为 null，降级路径回退 issue 表实时聚合 | #29 / #32 / #33 / #34 / #35 / #36 / #37 / #38 |
+| #   | 改动类型             | 改动内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | 影响字段                                      |
+| --- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| 1   | MongoDB 集合新增字段 | `static_alarm_scan_run` 新增 8 个快照字段（含 1 个标志位）：`issue_snapshot`（原 `issue_count` 更名）/ `solve_snapshot` / `ignore_snapshot` / `critical_count_snapshot` / `major_count_snapshot` / `minor_count_snapshot` / `suggestion_count_snapshot` / `snapshot_computed`（Boolean 标志位，标志前 7 个快照字段是否计算成功）。前 7 个快照字段由 `SarifParseServiceImpl` 在解析成功后调用 `StaticAlarmOperation.aggregateSnapshot` 聚合 issue 表写入；`snapshot_computed=false` 时前 7 个字段为 null，降级路径回退 issue 表实时聚合 | #29 / #32 / #33 / #34 / #35 / #36 / #37 / #38 |
 
 > 注：`add-count-yym` 分支已将 `issue_count` 更名为 `issue_snapshot`，同时移除 `new_issue_count` / `resolved_issue_count` 两个老字段。#33 `newCount` 字段语义降级为复用 `issue_snapshot`（原 `new_issue_count` 字段已不存在）。
 
 ### 5.2 openlibing-coderepo 仓
 
-| # | 改动类型 | 改动内容 | 影响字段 | 未就绪兜底 |
-|---|---|---|---|---|
-| 2 | 插件 + Service 上报 | `metrics_data_json` 新增「总行数」字段（暂命名 `codeLineTotal`） | #40 `codeLineTotal` | 置 null 或 0 |
-| 3 | 插件 + Service 上报 | `metrics_data_json` 新增 `commentLines` 字段 | #42 `commentLines` | 置 0 |
-| 4 | 插件 + Service 上报 | `metrics_data_json` 新增 `complexityCount` 字段 | #44 `complexityCount` | 置 0 |
-| 5 | 插件 + Service 上报 | `metrics_data_json` 新增 `cyclomaticComplexityPerFile` 字段 | #46 `cyclomaticComplexityPerFile` | 置 null |
-| 6 | 插件 + Service 上报 | `metrics_data_json` 新增 `duplicatedBlocks` 字段 | #47 `duplicatedBlocks` | 置 0 |
-| 7 | 插件 + Service 上报 | `metrics_data_json` 新增 `duplicatedLines` 字段 | #48 `duplicatedLines` | 置 0 |
-| 8 | HTTP 接口新增 | 新增 `MachineApiCodeMetricsController`（机机接口专用，类级路径 `/machine-api/v1/metrics/code`），暴露 `POST /latest-before-time` 和 `POST /latest-before-time/batch` 两个接口；按 `git_url + branch_name + detection_completed_at < beforeTime + status=0` 关联，返回 `CodeMetricsSnapshotDTO`（含 `metrics_data_json` 原文）；供 codecheck 通过 Feign 调用。详细设计见 §4.6.7 | 所有度量字段 | 字段全部置 null/0 |
+| #   | 改动类型            | 改动内容                                                                                                                                                                                                                                                                                                                                                                       | 影响字段                          | 未就绪兜底        |
+| --- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- | ----------------- |
+| 2   | 插件 + Service 上报 | `metrics_data_json` 新增「总行数」字段（暂命名 `codeLineTotal`）                                                                                                                                                                                                                                                                                                               | #40 `codeLineTotal`               | 置 null 或 0      |
+| 3   | 插件 + Service 上报 | `metrics_data_json` 新增 `commentLines` 字段                                                                                                                                                                                                                                                                                                                                   | #42 `commentLines`                | 置 0              |
+| 4   | 插件 + Service 上报 | `metrics_data_json` 新增 `complexityCount` 字段                                                                                                                                                                                                                                                                                                                                | #44 `complexityCount`             | 置 0              |
+| 5   | 插件 + Service 上报 | `metrics_data_json` 新增 `cyclomaticComplexityPerFile` 字段                                                                                                                                                                                                                                                                                                                    | #46 `cyclomaticComplexityPerFile` | 置 null           |
+| 6   | 插件 + Service 上报 | `metrics_data_json` 新增 `duplicatedBlocks` 字段                                                                                                                                                                                                                                                                                                                               | #47 `duplicatedBlocks`            | 置 0              |
+| 7   | 插件 + Service 上报 | `metrics_data_json` 新增 `duplicatedLines` 字段                                                                                                                                                                                                                                                                                                                                | #48 `duplicatedLines`             | 置 0              |
+| 8   | HTTP 接口新增       | 新增 `MachineApiCodeMetricsController`（机机接口专用，类级路径 `/machine-api/v1/metrics/code`），暴露 `POST /latest-before-time` 和 `POST /latest-before-time/batch` 两个接口；按 `git_url + branch_name + detection_completed_at < beforeTime + status=0` 关联，返回 `CodeMetricsSnapshotDTO`（含 `metrics_data_json` 原文）；供 codecheck 通过 Feign 调用。详细设计见 §4.6.7 | 所有度量字段                      | 字段全部置 null/0 |
 
 ### 5.3 PR 矩阵
 
@@ -480,16 +484,16 @@ try {
 
 ### 6.2 边界场景
 
-| 场景 | 处理 |
-|---|---|
-| task_result_summary 命中 + CodeQL 也有数据 | 走原路径，CodeQL 不查 |
-| task_result_summary total==0 + 无仓库定位字段 | 不降级，直接返回空 |
-| task_result_summary total==0 + 有定位字段 + CodeQL 也空 | 返回空 PageVo |
-| task_result_summary total==0 + 有定位字段 + CodeQL 异常 | 返回空 PageVo，记错误日志 |
-| 分页越界（CodeQL count > 0 但 skip 超出） | 返回空 list，total 仍为 count（与原接口行为一致） |
-| coderepo Feign 调用失败 | 度量字段全部走兜底值（null/0），不抛异常，记 warn 日志 |
-| scan_run 快照字段未就绪（`snapshot_computed=false` 或为 null） | 计数字段回退到 issue 表聚合 |
-| coderepo `metrics_data_json` 字段未就绪 | 度量字段走兜底值（见 §5.2） |
+| 场景                                                           | 处理                                                   |
+| -------------------------------------------------------------- | ------------------------------------------------------ |
+| task_result_summary 命中 + CodeQL 也有数据                     | 走原路径，CodeQL 不查                                  |
+| task_result_summary total==0 + 无仓库定位字段                  | 不降级，直接返回空                                     |
+| task_result_summary total==0 + 有定位字段 + CodeQL 也空        | 返回空 PageVo                                          |
+| task_result_summary total==0 + 有定位字段 + CodeQL 异常        | 返回空 PageVo，记错误日志                              |
+| 分页越界（CodeQL count > 0 但 skip 超出）                      | 返回空 list，total 仍为 count（与原接口行为一致）      |
+| coderepo Feign 调用失败                                        | 度量字段全部走兜底值（null/0），不抛异常，记 warn 日志 |
+| scan_run 快照字段未就绪（`snapshot_computed=false` 或为 null） | 计数字段回退到 issue 表聚合                            |
+| coderepo `metrics_data_json` 字段未就绪                        | 度量字段走兜底值（见 §5.2）                            |
 
 ## 7. 影响范围
 
@@ -497,29 +501,29 @@ try {
 
 #### openlibing-codecheck 仓
 
-| 文件 | 改动类型 | 说明 |
-|---|---|---|
-| `CheckboardDelegateImpl.java` | 修改 | `queryFullTaskResultSummary` 增加降级逻辑 |
-| `StaticAlarmSummaryOperation.java` | 新增 | 静态告警多表关联查询与 DTO 组装 |
-| `CodeMetricsFeignClient.java` | 新增 | Feign 调用 coderepo HTTP 接口 |
-| `StaticAlarmScanRunEntity.java` | 修改（由 `add-count-yym` 分支 fast-forward 合并带入） | 新增 8 个快照字段（7 个计数 + `snapshot_computed` 标志位），移除 `issue_count` / `new_issue_count` / `resolved_issue_count` 3 个老字段 |
-| `CheckboardDelegateImplTest.java` | 修改 | 补充降级路径用例 |
-| `StaticAlarmSummaryOperationTest.java` | 新增 | 静态告警 Operation 单元测试 |
+| 文件                                   | 改动类型                                              | 说明                                                                                                                                   |
+| -------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `CheckboardDelegateImpl.java`          | 修改                                                  | `queryFullTaskResultSummary` 增加降级逻辑                                                                                              |
+| `StaticAlarmSummaryOperation.java`     | 新增                                                  | 静态告警多表关联查询与 DTO 组装                                                                                                        |
+| `CodeMetricsFeignClient.java`          | 新增                                                  | Feign 调用 coderepo HTTP 接口                                                                                                          |
+| `StaticAlarmScanRunEntity.java`        | 修改（由 `add-count-yym` 分支 fast-forward 合并带入） | 新增 8 个快照字段（7 个计数 + `snapshot_computed` 标志位），移除 `issue_count` / `new_issue_count` / `resolved_issue_count` 3 个老字段 |
+| `CheckboardDelegateImplTest.java`      | 修改                                                  | 补充降级路径用例                                                                                                                       |
+| `StaticAlarmSummaryOperationTest.java` | 新增                                                  | 静态告警 Operation 单元测试                                                                                                            |
 
 #### openlibing-coderepo 仓
 
-| 文件 | 改动类型 | 说明 |
-|---|---|---|
-| `CodeMetricsController.java` | 修改 | 新增 HTTP 查询接口暴露 `getLatestMetricsByGitUrl` |
-| `CodeMetricsService.java` / `Impl` | 修改 | 已有 Service 方法对外可见 |
-| 插件上报逻辑 | 修改 | `metrics_data_json` 新增 6 个字段上报 |
-| 测试 | 新增 | 新 HTTP 接口用例 |
+| 文件                               | 改动类型 | 说明                                              |
+| ---------------------------------- | -------- | ------------------------------------------------- |
+| `CodeMetricsController.java`       | 修改     | 新增 HTTP 查询接口暴露 `getLatestMetricsByGitUrl` |
+| `CodeMetricsService.java` / `Impl` | 修改     | 已有 Service 方法对外可见                         |
+| 插件上报逻辑                       | 修改     | `metrics_data_json` 新增 6 个字段上报             |
+| 测试                               | 新增     | 新 HTTP 接口用例                                  |
 
 #### openlibing-docs 仓
 
-| 文件 | 改动类型 | 说明 |
-|---|---|---|
-| `spec/openlibing-codecheck/task_design/full-codecheck-record-codeql-fallback/{proposal,design,tasks}.md` | 新增 | 本 spec 三件套 |
+| 文件                                                                                                     | 改动类型 | 说明           |
+| -------------------------------------------------------------------------------------------------------- | -------- | -------------- |
+| `spec/openlibing-codecheck/task_design/full-codecheck-record-codeql-fallback/{proposal,design,tasks}.md` | 新增     | 本 spec 三件套 |
 
 ### 7.2 不改动
 
@@ -533,19 +537,19 @@ try {
 
 ### 8.1 单元测试
 
-| 用例 | 期望 |
-|---|---|
-| task_result_summary 命中 | 走原路径，CodeQL Operation 不被调用，返回华为云数据 |
-| task_result_summary 空 + 有定位字段 + CodeQL 命中 | 走降级路径，返回 CodeQL 组装结果 |
-| task_result_summary 空 + 无定位字段 | 不降级，返回空 PageVo |
-| 两边都空 | 返回空 PageVo |
-| CodeQL 异常 | 返回空 PageVo，记错误日志，不抛异常 |
-| 降级带分页 | 分页参数生效 |
-| 降级无分页 | 全量返回 |
-| CodeQL 多 scan_run 聚合 | issue 计数正确 |
-| scan_run 快照字段未就绪（`snapshot_computed=false` 或为 null） | 计数字段回退到 issue 表聚合 |
-| coderepo Feign 调用失败 | 度量字段走兜底值，不抛异常 |
-| coderepo `metrics_data_json` 字段未就绪 | 度量字段走兜底值 |
+| 用例                                                           | 期望                                                |
+| -------------------------------------------------------------- | --------------------------------------------------- |
+| task_result_summary 命中                                       | 走原路径，CodeQL Operation 不被调用，返回华为云数据 |
+| task_result_summary 空 + 有定位字段 + CodeQL 命中              | 走降级路径，返回 CodeQL 组装结果                    |
+| task_result_summary 空 + 无定位字段                            | 不降级，返回空 PageVo                               |
+| 两边都空                                                       | 返回空 PageVo                                       |
+| CodeQL 异常                                                    | 返回空 PageVo，记错误日志，不抛异常                 |
+| 降级带分页                                                     | 分页参数生效                                        |
+| 降级无分页                                                     | 全量返回                                            |
+| CodeQL 多 scan_run 聚合                                        | issue 计数正确                                      |
+| scan_run 快照字段未就绪（`snapshot_computed=false` 或为 null） | 计数字段回退到 issue 表聚合                         |
+| coderepo Feign 调用失败                                        | 度量字段走兜底值，不抛异常                          |
+| coderepo `metrics_data_json` 字段未就绪                        | 度量字段走兜底值                                    |
 
 ### 8.2 集成测试
 
@@ -566,11 +570,11 @@ try {
 
 ## 10. 后续演进
 
-| 项 | 时机 |
-|---|---|
-| 落地 §5 跨仓改动清单中的字段新增 | 进入 tasks.md 拆分后 |
-| 考虑原华为云路径补显式排序 | 另一个改进项 |
-| 考虑同类接口 `/codecheck/full/task/result/summary` 是否也需要降级 | 视入湖消费方需求 |
-| `result` 字段在 CodeQL 路径的过滤实现（§4.4） | 编码时确认 |
-| 度量关联 Feign 批量接口的性能优化（§4.6.5） | 入湖消费方 page_size 增大或接口 RT 不达标时 |
-| 度量关联缓存（同 repo+branch+beforeTime 多次查询可复用） | 接口 RT 不达标时 |
+| 项                                                                | 时机                                        |
+| ----------------------------------------------------------------- | ------------------------------------------- |
+| 落地 §5 跨仓改动清单中的字段新增                                  | 进入 tasks.md 拆分后                        |
+| 考虑原华为云路径补显式排序                                        | 另一个改进项                                |
+| 考虑同类接口 `/codecheck/full/task/result/summary` 是否也需要降级 | 视入湖消费方需求                            |
+| `result` 字段在 CodeQL 路径的过滤实现（§4.4）                     | 编码时确认                                  |
+| 度量关联 Feign 批量接口的性能优化（§4.6.5）                       | 入湖消费方 page_size 增大或接口 RT 不达标时 |
+| 度量关联缓存（同 repo+branch+beforeTime 多次查询可复用）          | 接口 RT 不达标时                            |
