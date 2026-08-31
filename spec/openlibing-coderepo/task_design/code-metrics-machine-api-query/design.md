@@ -37,20 +37,20 @@ Map<String, BranchMetricsVO> getLatestMetricsByGitUrl(String gitUrl);
 
 [CodeMetricsRecordEntity.java](file:///d:/projects/openlibing/openlibing-coderepo/src/main/java/com/openlibing/coderepo/business/entity/metrics/CodeMetricsRecordEntity.java)：
 
-| 字段                     | 类型            | 用途                                          |
-| ------------------------ | --------------- | --------------------------------------------- |
-| `id`                     | BIGINT (雪花ID) | 主键                                          |
-| `git_url`                | VARCHAR         | 仓库 URL                                      |
-| `branch_name`            | VARCHAR         | 分支名                                        |
-| `pipeline_run_id`        | VARCHAR         | 流水线执行记录 ID                             |
-| `run_number`             | VARCHAR         | 流水线运行编号                                |
+| 字段                     | 类型            | 用途                                             |
+| ------------------------ | --------------- | ------------------------------------------------ |
+| `id`                     | BIGINT (雪花ID) | 主键                                             |
+| `git_url`                | VARCHAR         | 仓库 URL                                         |
+| `branch_name`            | VARCHAR         | 分支名                                           |
+| `pipeline_run_id`        | VARCHAR         | 流水线执行记录 ID                                |
+| `run_number`             | VARCHAR         | 流水线运行编号                                   |
 | `commit_id`              | VARCHAR(64)     | 触发本次扫描的 commit ID（插件端上报，本次新增） |
-| `metrics_data_json`      | TEXT            | 指标数据 JSON 原文                            |
-| `detection_started_at`   | TIMESTAMP       | 检测开始时间                                  |
-| `detection_completed_at` | TIMESTAMP       | 检测完成时间                                  |
-| `status`                 | TINYINT         | 0 成功 / 1 失败 / 2 部分成功                  |
-| `error_message`          | VARCHAR         | 错误信息                                      |
-| `create_time`            | TIMESTAMP       | 记录创建时间                                  |
+| `metrics_data_json`      | TEXT            | 指标数据 JSON 原文                               |
+| `detection_started_at`   | TIMESTAMP       | 检测开始时间                                     |
+| `detection_completed_at` | TIMESTAMP       | 检测完成时间                                     |
+| `status`                 | TINYINT         | 0 成功 / 1 失败 / 2 部分成功                     |
+| `error_message`          | VARCHAR         | 错误信息                                         |
+| `create_time`            | TIMESTAMP       | 记录创建时间                                     |
 
 ### 1.4 现有 Mapper 方法
 
@@ -293,43 +293,43 @@ public interface CodeMetricsRecordMapper {
 
 ### 6.1 新增
 
-| 文件                                   | 说明                              |
-| -------------------------------------- | --------------------------------- |
-| `LatestMetricsByCommitQueryDTO.java`   | HTTP 入参 DTO                     |
-| `CodeMetricsSnapshotDTO.java`          | HTTP 出参 DTO                     |
+| 文件                                 | 说明          |
+| ------------------------------------ | ------------- |
+| `LatestMetricsByCommitQueryDTO.java` | HTTP 入参 DTO |
+| `CodeMetricsSnapshotDTO.java`        | HTTP 出参 DTO |
 
 ### 6.2 修改
 
-| 文件                                      | 说明                                                         |
-| ----------------------------------------- | ------------------------------------------------------------ |
-| `InternalProjectRepoController.java`      | 新增机机接口 `POST /metrics/code/latest-by-commit/batch`     |
-| `CodeMetricsService.java`                 | 新增 `getLatestMetricsByCommitBatch` 方法签名                |
-| `CodeMetricsServiceImpl.java`             | 新增 `getLatestMetricsByCommitBatch` 实现 + `toSnapshotDto` 私有方法 |
-| `CodeMetricsRecordMapper.java`            | 新增 `selectLatestByCommitBatch` 方法签名                    |
-| `CodeMetricsRecordMapper.xml`             | 新增三元组 IN 批量 SQL                                       |
-| `CodeMetricsRecordEntity.java`            | 新增 `commitId` 字段                                         |
-| `db.changelog.xml`                        | 新增 `commit_id` 列（Liquibase，幂等）                       |
-| 插件上报逻辑（code-metrics-scan）         | `metrics_data_json` 新增 6 个字段 + `commitId` 上报          |
+| 文件                                 | 说明                                                                 |
+| ------------------------------------ | -------------------------------------------------------------------- |
+| `InternalProjectRepoController.java` | 新增机机接口 `POST /metrics/code/latest-by-commit/batch`             |
+| `CodeMetricsService.java`            | 新增 `getLatestMetricsByCommitBatch` 方法签名                        |
+| `CodeMetricsServiceImpl.java`        | 新增 `getLatestMetricsByCommitBatch` 实现 + `toSnapshotDto` 私有方法 |
+| `CodeMetricsRecordMapper.java`       | 新增 `selectLatestByCommitBatch` 方法签名                            |
+| `CodeMetricsRecordMapper.xml`        | 新增三元组 IN 批量 SQL                                               |
+| `CodeMetricsRecordEntity.java`       | 新增 `commitId` 字段                                                 |
+| `db.changelog.xml`                   | 新增 `commit_id` 列（Liquibase，幂等）                               |
+| 插件上报逻辑（code-metrics-scan）    | `metrics_data_json` 新增 6 个字段 + `commitId` 上报                  |
 
 ### 6.3 测试
 
-| 文件                              | 说明                                       |
-| --------------------------------- | ------------------------------------------ |
-| `CodeMetricsServiceImplTest.java` | 修改：补充批量查询 Service 方法用例        |
+| 文件                              | 说明                                |
+| --------------------------------- | ----------------------------------- |
+| `CodeMetricsServiceImplTest.java` | 修改：补充批量查询 Service 方法用例 |
 
 ## 7. 测试策略
 
 ### 7.1 单元测试
 
-| 用例                                   | 期望                                                                             |
-| -------------------------------------- | -------------------------------------------------------------------------------- |
-| 同一 commit 重跑多条记录               | 返回 `detection_completed_at` 最大的一条（完成时间为空的记录不参与竞争）         |
-| 批量查询无命中                         | 返回空 list，不抛异常                                                            |
-| 批量入参为空 / null                    | Service 层短路返回空 list，不触达 Mapper                                         |
-| 批量查询多条命中（混合 repo/branch/commit） | 每个三元组各返回 1 条，按 `gitUrl, branchName` 排序                          |
-| 批量查询部分未命中                     | 命中的返回，未命中的不返回（结果数 ≤ 入参数）                                    |
-| 批量查询入参 > 100 条                  | Controller 层 `@Size(max=100)` 校验拒绝                                          |
-| 失败记录过滤                           | `status != 0` 的记录不返回                                                       |
+| 用例                                        | 期望                                                                     |
+| ------------------------------------------- | ------------------------------------------------------------------------ |
+| 同一 commit 重跑多条记录                    | 返回 `detection_completed_at` 最大的一条（完成时间为空的记录不参与竞争） |
+| 批量查询无命中                              | 返回空 list，不抛异常                                                    |
+| 批量入参为空 / null                         | Service 层短路返回空 list，不触达 Mapper                                 |
+| 批量查询多条命中（混合 repo/branch/commit） | 每个三元组各返回 1 条，按 `gitUrl, branchName` 排序                      |
+| 批量查询部分未命中                          | 命中的返回，未命中的不返回（结果数 ≤ 入参数）                            |
+| 批量查询入参 > 100 条                       | Controller 层 `@Size(max=100)` 校验拒绝                                  |
+| 失败记录过滤                                | `status != 0` 的记录不返回                                               |
 
 ### 7.2 集成测试
 
@@ -350,8 +350,8 @@ public interface CodeMetricsRecordMapper {
 
 ## 9. 后续演进
 
-| 项                                                       | 时机               |
-| -------------------------------------------------------- | ------------------ |
-| 批量接口 SQL 在 MySQL 8 上的 IN 元组语法性能验证         | 联调时             |
-| `(git_url, branch_name, commit_id)` 全量联合索引评估     | 上线后 RT 不达标时 |
-| 现有 `idx_git_url_branch` 索引实际命中率监控             | 上线后 RT 不达标时 |
+| 项                                                   | 时机               |
+| ---------------------------------------------------- | ------------------ |
+| 批量接口 SQL 在 MySQL 8 上的 IN 元组语法性能验证     | 联调时             |
+| `(git_url, branch_name, commit_id)` 全量联合索引评估 | 上线后 RT 不达标时 |
+| 现有 `idx_git_url_branch` 索引实际命中率监控         | 上线后 RT 不达标时 |

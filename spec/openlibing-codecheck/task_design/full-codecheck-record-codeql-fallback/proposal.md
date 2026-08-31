@@ -75,12 +75,12 @@
 
 ### 4.2 遗留项
 
-| 编号 | 遗留项                                                                           | 时机           |
-| ---- | -------------------------------------------------------------------------------- | -------------- |
-| L-1  | ~~`result` 字段在 CodeQL 路径的过滤实现~~ 已定口径：查询层不做 result 过滤，`DTO.result` 由 `issue_snapshot` 推导（见 design.md §10） | 已完成         |
+| 编号 | 遗留项                                                                                                                                  | 时机           |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| L-1  | ~~`result` 字段在 CodeQL 路径的过滤实现~~ 已定口径：查询层不做 result 过滤，`DTO.result` 由 `issue_snapshot` 推导（见 design.md §10）   | 已完成         |
 | L-2  | ~~coderepo `metrics_data_json` 6 个新增字段的具体字段名~~ 已随 coderepo PR（openlibing-coderepo#159）落地，字段名与 design.md §5.2 一致 | 已完成         |
-| L-3  | 12 个不对接字段的消费方兼容性确认（入湖消费方是否接受 DTO 字段缺失或 null）      | 业务对接时确认 |
-| L-4  | codecheck 降级路径的单元测试（`StaticAlarmSummaryOperationTest` / `CheckboardDelegateImplTest` 降级用例）尚未落地 | 后续迭代补充   |
+| L-3  | 12 个不对接字段的消费方兼容性确认（入湖消费方是否接受 DTO 字段缺失或 null）                                                             | 业务对接时确认 |
+| L-4  | codecheck 降级路径的单元测试（`StaticAlarmSummaryOperationTest` / `CheckboardDelegateImplTest` 降级用例）尚未落地                       | 后续迭代补充   |
 
 ## 5. 关联
 

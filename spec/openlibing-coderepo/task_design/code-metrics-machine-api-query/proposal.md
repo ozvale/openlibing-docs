@@ -18,9 +18,9 @@ CodeQL 扫描结果（`static_alarm_scan_run` + `static_alarm_issue`）位于 co
 
 挂载在现有机机接口专用 Controller `InternalProjectRepoController`（类级路径 `/project-repo/internal`），不新建 Controller：
 
-| 路径                                                                   | 方法 | 入参                                    | 出参                                       | 用途                               |
-| ---------------------------------------------------------------------- | ---- | --------------------------------------- | ------------------------------------------ | ---------------------------------- |
-| `POST /project-repo/internal/metrics/code/latest-by-commit/batch`      | POST | `List<LatestMetricsByCommitQueryDTO>`   | `DataResult<List<CodeMetricsSnapshotDTO>>` | 批量查询（codecheck 唯一调用入口） |
+| 路径                                                              | 方法 | 入参                                  | 出参                                       | 用途                               |
+| ----------------------------------------------------------------- | ---- | ------------------------------------- | ------------------------------------------ | ---------------------------------- |
+| `POST /project-repo/internal/metrics/code/latest-by-commit/batch` | POST | `List<LatestMetricsByCommitQueryDTO>` | `DataResult<List<CodeMetricsSnapshotDTO>>` | 批量查询（codecheck 唯一调用入口） |
 
 > 不提供单条接口：单条场景由调用方以 1 元素列表复用 batch 接口，避免维护两套契约。
 
@@ -89,20 +89,20 @@ CodeQL 扫描结果（`static_alarm_scan_run` + `static_alarm_issue`）位于 co
 
 ## 5. 验收结果
 
-| 编号 | 验收项                                             | 结果                                          |
-| ---- | -------------------------------------------------- | --------------------------------------------- |
-| V-1  | 批量接口契约（入参校验 / 出参结构 / 空结果语义）   | 通过，随 PR openlibing-coderepo#159 交付      |
-| V-2  | 三元组 IN 批量 SQL 正确性（分组取最新 / status 过滤） | 通过，`CodeMetricsServiceImplTest` 覆盖       |
-| V-3  | 同一 commit 重跑取 `detection_completed_at` 最新   | 通过，单测覆盖                                |
-| V-4  | `commit_id` 列 Liquibase 幂等变更                  | 通过                                          |
-| V-5  | MySQL 8 IN 元组语法性能验证                        | 联调时验证（见遗留项）                        |
+| 编号 | 验收项                                                | 结果                                     |
+| ---- | ----------------------------------------------------- | ---------------------------------------- |
+| V-1  | 批量接口契约（入参校验 / 出参结构 / 空结果语义）      | 通过，随 PR openlibing-coderepo#159 交付 |
+| V-2  | 三元组 IN 批量 SQL 正确性（分组取最新 / status 过滤） | 通过，`CodeMetricsServiceImplTest` 覆盖  |
+| V-3  | 同一 commit 重跑取 `detection_completed_at` 最新      | 通过，单测覆盖                           |
+| V-4  | `commit_id` 列 Liquibase 幂等变更                     | 通过                                     |
+| V-5  | MySQL 8 IN 元组语法性能验证                           | 联调时验证（见遗留项）                   |
 
 ## 6. 遗留项
 
-| 编号 | 遗留项                                                                                              | 时机               |
-| ---- | --------------------------------------------------------------------------------------------------- | ------------------ |
-| L-1  | 批量接口 SQL 在 MySQL 8 上的 IN 元组语法性能验证（现有 `idx_git_url_branch` 前缀索引命中率监控）    | 联调时验证         |
-| L-2  | `(git_url, branch_name, commit_id)` 全量联合索引评估                                                | 上线后 RT 不达标时 |
+| 编号 | 遗留项                                                                                                                                                             | 时机               |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| L-1  | 批量接口 SQL 在 MySQL 8 上的 IN 元组语法性能验证（现有 `idx_git_url_branch` 前缀索引命中率监控）                                                                   | 联调时验证         |
+| L-2  | `(git_url, branch_name, commit_id)` 全量联合索引评估                                                                                                               | 上线后 RT 不达标时 |
 | L-3  | docs 仓 spec 分支名 `spec-code-metrics-action-metrics-new-fields` 不符合 AGENTS.md 命名规则（应为 `spec-openlibing-coderepo-<change-name>`），后续 PR 时考虑重命名 | docs PR 创建时处理 |
 
 ## 7. 跨仓联动
