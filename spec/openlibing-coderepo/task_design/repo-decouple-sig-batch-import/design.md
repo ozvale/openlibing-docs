@@ -34,7 +34,7 @@ repo_info 保持「一项目一行、多行并存」，靠「提示不覆盖 + �
 | coderepo  | `common/aop/ProjectLogHandler.java`、`common/constants/LogOperationAndModule.java`                     | 改：新增两个 operation 及日志数据记录                                                            |
 | coderepo  | `common/utils/{SigInfoClient,SigDefaultParamBuilder,Github}.java`                                      | 新增                                                                                             |
 | coderepo  | `resources/db/changelog/.../repo-decouple-sig-batch-import.xml`                                        | 新增：建表 + 迁移 + 索引                                                                         |
-| framework | `business/service/impl/{Project,Product}ServiceImpl.java`、`mapper/ProjectRepoGlobalConfigMapper.(java | xml)`、`GitcodeRoleMappingMapper`                                                                | 改：删除级联清理改指新表，清理未用注入 |
+| framework | `business/service/impl/{Project,Product}ServiceImpl.java`、`mapper/ProjectRepoGlobalConfigMapper.java / ProjectRepoGlobalConfigMapper.xml`、`GitcodeRoleMappingMapper`                                                                | 改：删除级联清理改指新表，清理未用注入 |
 | web       | `apps/web-openlibing/src/views/Repos/dialog/GlobalConfigDialog.vue` 等                                 | 改：配置弹窗 + 多路径 + 一键同步进度                                                             |
 
 ## 风险 & 缓解

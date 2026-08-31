@@ -3,9 +3,9 @@
 ## 关联
 
 - 业务 Issue: https://gitcode.com/openlibing/openlibing-coderepo/issues/90
-- 业务 PR（coderepo）: https://gitcode.com/openlibing/openlibing-coderepo/pulls/<coderepo-pr>
-- 业务 PR（framework）: https://gitcode.com/openlibing/openlibing-framework/pulls/<framework-pr>
-- docs PR: https://gitcode.com/openlibing/openlibing-docs/pulls/<docs-pr>
+- 业务 PR（coderepo）: https://gitcode.com/openlibing/openlibing-coderepo/pulls/152
+- 业务 PR（framework）: https://gitcode.com/openlibing/openlibing-framework/pulls/398
+- docs PR: https://gitcode.com/openlibing/openlibing-docs/pulls/855
 
 ## 交付历程
 

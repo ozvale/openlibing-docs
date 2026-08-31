@@ -13,7 +13,7 @@
 | 服务         | openlibing-coderepo                                                                                       |
 | 路径前缀     | `/project-repo`（仓库相关，RepoController）、`/project-config`（全局配置相关，ProjectConfigController）   |
 | 鉴权         | 沿用现有网关 token + 角色校验；新增接口读权限沿用 `query-repo` 角色集合、写权限沿用 `add-repo` 角色集合   |
-| 传参风格     | `userId` / `userName` / `projectId` 等简单参数走 **query 参数**（与现有接口一致）；复杂对象走 JSON 请求体 |
+| 传参风格     | 现有 `/project-repo` 接口沿用 `userId` / `userName` 走 query、复杂对象走 JSON 请求体；本期新增 `/project-config` 接口的参数位置以各节定义为准：`global-config` 走 query（`userId`/`userName`/`projectId`），`validate-sig-path` / `sig-sync` 的 `userId`/`userName`/`projectId` 统一放 JSON 请求体（与需求设计基线 §6.5/§6.6 一致），`sig-sync/status` 走 query |
 | Content-Type | `application/json`（有请求体时）                                                                          |
 
 ### 1.2 统一响应结构
@@ -280,23 +280,27 @@
 
 **请求**
 
-- Query 参数：`userId`（必填）
+- Query 参数：`userId`（必填）、`userName`（必填）
 - 请求体：
 
-| 参数             | 类型     | 必填 | 说明                                                                                                                                            |
-| ---------------- | -------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| projectId        | Integer  | 是   | 项目 id                                                                                                                                         |
-| sigInfoLocations | String[] | 否   | sig-info.yaml 路径 URL 数组（**≤20 个**；平台由后端根据 URL 域名解析，前端无需区分；回显为按平台分组的对象——提交时将各组内 url 拍平为数组即可） |
-| roleMapping      | Object   | 否   | 仅 `gitcode` 键：`[{ "platformRole": "...", "openlibingRole": "..." }]`                                                                         |
-| commonAccounts   | Object   | 否   | 各平台公共账号：`{ gitcode: { accountName, token }, gitee: {...}, github: {...} }`；**token 留空/`******` 表示不修改原令牌**                    |
+| 参数             | 类型     | 必填 | 说明                                                                                                                                                                                                        |
+| ---------------- | -------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| projectId        | Integer  | 是  | 项目 id                                                                                                                                                                                                     |
+| sigInfoLocations | Object   | 否   | sig-info.yaml 路径 URL，**按平台分键 Map** 提交（`{ "gitcode": [...], "gitee": [...], "github": [...] }`，**合计 ≤20 个**；后端保存时校验每条 URL 域名与其所属平台键一致；回显同结构）                    |
+| roleMapping      | Object   | 否   | 仅 `gitcode` 键：`[{ "platformRole": "...", "openlibingRole": "..." }]`                                                                                                                                     |
+| commonAccounts   | Object   | 否   | 各平台公共账号：`{ gitcode: { accountName, token }, gitee: {...}, github: {...} }`；**token 留空/`******` 表示不修改原令牌**                                                                                |
 
 ```jsonc
 {
   "projectId": 1,
-  "sigInfoLocations": [
-    "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private",
-    "https://gitcode.com/openlibing/community/blob/master/sigs/sig-infra",
-  ],
+  "sigInfoLocations": {
+    "gitcode": [
+      "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private",
+      "https://gitcode.com/openlibing/community/blob/master/sigs/sig-infra",
+    ],
+    "gitee": [],
+    "github": [],
+  },
   "roleMapping": {
     "gitcode": [
       { "platformRole": "owner", "openlibingRole": "project_admin" },
@@ -320,41 +324,46 @@
 
 ### 3.6 sig-info 路径校验 `POST /project-config/validate-sig-path`（新增）
 
-**用途**：全局配置弹窗中用户输入/修改 sig-info 路径后（blur / 防抖 300ms）即时校验：该路径是否可访问、其下是否存在 sig-info.yaml 文件。**校验结果就地展示，不阻断保存**。
+**用途**：全局配置弹窗中用户输入/修改 sig-info 路径后（blur / 防抖 300ms）**批量**校验：每条路径（owner/repo/branch/path）是否可访问、其下是否存在 sig-info.yaml 文件。**单条失败不阻断其余路径**；校验结果就地逐条展示，不阻断保存。
 
-**请求**
+**请求**（参数统一放 JSON 请求体，与需求设计基线一致）
 
-- Query 参数：`userId`（必填）
-- 请求体：
-
-| 参数      | 类型    | 必填 | 说明                                        |
-| --------- | ------- | ---- | ------------------------------------------- |
-| projectId | Integer | 是   | 项目 id                                     |
-| path      | String  | 是   | 路径 URL（指向 sig-info.yaml 所在**目录**） |
+| 参数      | 类型     | 必填 | 说明                                                                    |
+| --------- | -------- | ---- | ----------------------------------------------------------------------- |
+| userId    | String   | 是   | 操作人 id（权限校验）                                                   |
+| projectId | Integer  | 是   | 项目 id                                                                 |
+| paths     | String[] | 是   | 路径 URL 数组（每条指向 sig-info.yaml 所在**目录**，**≤20 个**）        |
 
 ```jsonc
 {
+  "userId": "10001",
   "projectId": 1,
-  "path": "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private",
+  "paths": [
+    "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private",
+    "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/sig2",
+  ],
 }
 ```
 
-**响应**
+**响应**：`DataResult<List<SigPathValidateVO>>`（逐条对应入参 `paths`，顺序一致）
 
 ```jsonc
 {
   "code": 200,
   "msg": "success",
-  "data": {
-    "valid": true, // 路径存在且其下存在 sig-info.yaml 文件
-    "platform": "gitcode", // 后端根据 URL 域名解析的平台（gitcode / gitee / github）
-    "errorCode": null, // 失败时：REPO_NOT_FOUND / BRANCH_NOT_FOUND / FILE_NOT_FOUND / API_ERROR
-    "message": "校验通过", // 失败原因描述（如「路径不存在」「目录下未找到 sig-info.yaml 文件」）
-  },
+  "data": [
+    {
+      "path": "https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private", // 对应该条入参路径
+      "valid": true, // 路径存在且其下存在 sig-info.yaml 文件
+      "platform": "gitcode", // 后端根据 URL 域名解析的平台（gitcode / gitee / github）
+      "errorCode": null, // 失败时：REPO_NOT_FOUND / BRANCH_NOT_FOUND / FILE_NOT_FOUND / API_ERROR
+      "message": "校验通过", // 失败原因描述（如「路径不存在」「目录下未找到 sig-info.yaml 文件」）
+    },
+  ],
 }
 ```
 
-**前端展示建议**
+**前端展示建议**（对响应列表中每条路径逐条展示）
 
 | 校验结果                                        | 展示                                        |
 | ----------------------------------------------- | ------------------------------------------- |
@@ -362,6 +371,8 @@
 | `errorCode=REPO_NOT_FOUND` / `BRANCH_NOT_FOUND` | `● 路径不存在`（红色）                      |
 | `errorCode=FILE_NOT_FOUND`                      | `● 目录下未找到 sig-info.yaml 文件`（红色） |
 | `errorCode=API_ERROR`                           | `● 校验失败，请稍后重试`（红色）            |
+
+> 校验仅在就地标红，不阻断保存；单条失败不阻断其余路径；超过 20 条整批拒绝。
 
 ### 3.7 触发 SIG 仓一键同步 `POST /project-config/sig-sync`（新增）
 
@@ -373,9 +384,7 @@
 - 仅同步**尚未录入当前项目**的仓库（已录入的不覆盖）；
 - 已存在于其他项目的仓库自动复制**上次录入配置**；全局首次录入的仓库按默认参数填充：别名=repoUrl 中的 repo 名（项目内同名冲突依次尝试「repo名-平台名」、加数字递增）、责任人=代码托管平台创建人账号名、用途=自研源码、开源类型=主导开源、默认分支=从平台实时获取（不可修改）、公共账号令牌=项目级公共账号令牌；所有开关除「是否参与运营=是」外均默认为否。
 
-**请求**
-
-- Query 参数：
+**请求**（参数统一放 JSON 请求体，与需求设计基线一致）
 
 | 参数      | 类型    | 必填 | 说明       |
 | --------- | ------- | ---- | ---------- |
@@ -383,7 +392,13 @@
 | userName  | String  | 是   | 操作人名称 |
 | projectId | Integer | 是   | 项目 id    |
 
-- 无请求体
+```jsonc
+{
+  "userId": "10001",
+  "userName": "张三",
+  "projectId": 1,
+}
+```
 
 **响应**（立即返回任务 ID，异步执行）
 
@@ -457,7 +472,6 @@
 | 403  | SIG 路径不存在或不属于该项目     | sig-sync 接口未配置任何 sigInfoLocations       |
 | 403  | 平台不合法                       | 路径 URL 域名非 gitcode/gitee/github           |
 | 403  | 跨项目访问被拒绝                 | userId 对 projectId 无访问权限                 |
-| 409  | SIG 同步任务已在执行中           | 分布式锁获取失败（已有任务在跑）               |
 | 404  | sig-info.yaml 文件不存在         | 实时读取指定路径失败（目录下无 sig-info.yaml） |
 | 500  | sig-info.yaml 格式错误或解析失败 | 实时解析失败                                   |
 | 500  | 配置文件读取失败，请稍后重试     | 平台 API 调用失败                              |
@@ -470,5 +484,5 @@
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 录入对话框     | ① `repoUrl` blur（防抖 300ms）调 `check-repo-url`（只传基础参数）；② `exists=true` → 表单**直接使用** `lastConfig` 同步数据（可修改）+ 提示条列出已关联项目；③ 提交前传 `formConfig`（blur 返回的 repoId 非 null 时一并传）再调 `check-repo-url`，`configDiff` 非空 → 弹「配置不一致提示」确认弹窗（文案：仅影响当前项目行，不修改其他项目配置）；④ 确认后调 `add-repo`（含 `isParticipateOperation`，不含默认分支） |
 | 编辑对话框     | ① 打开时回显本行配置（不预填其他项目数据）；② 保存前传 `repoId` + `formConfig` 调 `check-repo-url`，`configDiff` 非空 → 弹「配置不一致提示」告警（文案含开关 OR 聚合规则说明）；③ 确认后调 `update-repo`（含 `isParticipateOperation`，不含默认分支）；默认分支只读展示                                                                                                                                              |
-| 全局配置弹窗   | ① 打开时 GET `global-config` 回显（`sigInfoLocations` 按平台分组返回，路径输入框用 `url` 回显、公共账号令牌显示掩码）；② 路径输入 blur（防抖 300ms）调 `validate-sig-path`，结果就地展示（不阻断保存）；③ 保存时 POST `global-config`（`sigInfoLocations` 传拍平后的 URL 数组；公共账号令牌留空表示不修改）                                                                                                          |
+| 全局配置弹窗   | ① 打开时 GET `global-config` 回显（`sigInfoLocations` 按平台分组返回，路径输入框用 `url` 回显、公共账号令牌显示掩码）；② 路径输入 blur（防抖 300ms）调 `validate-sig-path`，结果就地展示（不阻断保存）；③ 保存时 POST `global-config`（`sigInfoLocations` 按平台分键 Map 提交 `{gitcode:[...],gitee:[...],github:[...]}`；公共账号令牌留空表示不修改）                                                                                                          |
 | SIG 仓一键同步 | ① 点击「一键同步」→ POST `sig-sync` 返回 `taskId`，按钮置灰；② 轮询 GET `sig-sync/status`（每 3s，超时 10 分钟）；③ 任务状态卡片展示在全局配置弹窗内（RUNNING/SUCCESS/FAILED/PARTIAL + imported/failed 计数与失败原因）；④ 完成后恢复按钮                                                                                                                                                                            |

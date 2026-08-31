@@ -53,7 +53,7 @@
 | 组 key             | 直接用 `repo_url`（录入已保证协议/https/平台/`.git` 结尾格式统一，直接使用）；repo_url 加普通索引用于组查询                                                                                                                                                                                                                          | 用于「同 repo_url 组」判定（录入复制上次配置、编辑冲突检测、开关聚合查询）                                                            |
 | 跨项目录入         | 仓库已在其他项目存在 → 当前项目**新建一行**并复制上次录入配置（可修改）；不删除其他项目行；提交时提示配置不一致                                                                                                                                                                                                                      | SCA 兼容 + 避免重复手填；不强制覆盖                                                                                                   |
 | 下游仓改造         | **repo_info 层面 7 仓零改动**；**例外：全局配置表迁移（§4.2）影响 framework**——其删除产品/项目时原级联清理 `project_gitcode_role_mapping` 的逻辑需改指新表                                                                                                                                                                           | repo_info 多行模型下每项目都有行，权限/归属按行内 project_id 语义与现状一致；仅全局配置表迁移波及 framework 的删除级联清理（见 §4.2） |
-| 全局配置           | **新建 `project_repo_global_config` 表**（每项目一行），存 `config_json`：存量 role_mapping 从 `project_gitcode_role_mapping` 迁入 `config_json[platform].roleMapping`，迁移完成后旧表废弃；角色映射条目用 `platformRole` 区分平台，可扩展；SIG 路径列表存 `config_json.sigInfoLocations`（不按平台分键，后端根据 URL 域名统一区分） | 集中管理 sig-info 路径 / 角色映射（公共账号仍存现有表，经 global-config 接口统一读写），见 §4.2                                       |
+| 全局配置           | **新建 `project_repo_global_config` 表**（每项目一行），存 `config_json`：存量 role_mapping 从 `project_gitcode_role_mapping` 迁入 `config_json[platform].roleMapping`，迁移完成后旧表废弃；角色映射条目用 `platformRole` 区分平台，可扩展；SIG 路径列表存 `config_json.sigInfoLocations`（**按平台分键的 Map**，后端保存时校验每条路径域名与平台键一致） | 集中管理 sig-info 路径 / 角色映射（公共账号仍存现有表，经 global-config 接口统一读写），见 §4.2                                       |
 | SIG 配置读取       | 实时调对应平台读取指定路径下 sig-info.yaml 并解析，不落库不缓存                                                                                                                                                                                                                                                                      | 保证读到最新配置，简化链路                                                                                                            |
 | SIG 路径配置       | 用户可自由设置**多个** sig-info.yaml 路径；配置时不区分平台，后端根据 URL 域名统一区分平台；路径指向目录（如 `.../sigs/openLiBing-private`），在该目录下找 sig-info.yaml 文件；**输入路径后即时调 `validate-sig-path` 校验路径存在性与 sig-info.yaml 文件**（见 §6.5）                                                               | 支持多 SIG 组；后端统一管理平台归属；即时校验让用户当场发现路径错误                                                                   |
 | SIG 仓一键同步     | 全局配置窗口内「一键同步」按钮；**异步执行 + 分布式锁**（防并发重复执行）；**任务状态在全局配置弹窗内展示**；默认参数自动填充（别名/责任人/用途/开源类型/默认分支/公共账号令牌/各开关，见 §2.2.4）                                                                                                                                   | 异步 + 锁避免执行时间长与并发问题                                                                                                     |
@@ -247,10 +247,10 @@ migrateRepoInfoPhase1():
 
 ### 2.6 前端实现逻辑
 
-#### 2.6.1 全局配置弹窗（新增，[Repos/index.vue](file:///d:/Develop/Java/openlibing-web/apps/web-openlibing/src/views/Repos/index.vue)）
+#### 2.6.1 全局配置弹窗（新增，`Repos/index.vue`）
 
 - 工具栏「导出仓库」右侧新增「全局配置」按钮；原「gitcode 角色映射」「项目公共账号」按钮并入。
-- 三页签 GitCode / Gitee / GitHub，各页签（**接口走 `/project-config`，由现有 [ProjectConfigController](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/ProjectConfigController.java) 提供**）：
+- 三页签 GitCode / Gitee / GitHub，各页签（**接口走 `/project-config`，由现有 `ProjectConfigController` 提供**）：
   - **项目公共账号**：直接编辑登录名 + 令牌（留空不修改），**随 `/project-config/global-config` 统一提交**（实现层仍写入现有项目公共账号表 `project_common_account_info`，不进 config_json，见 §4.2 / §6.4）
   - **角色映射**：仅 GitCode 页签（gitcode 角色 ↔ openLiBing 角色），存 `config_json.gitcode.roleMapping`，**统一调 `/project-config/global-config` 读写（现有 `/project-config/update-gitcode-role-mapping` 废弃，前端改调新接口，角色映射唯一写入口）**
 - **代码仓录入配置（SIG sig-info.yaml 路径列表）**：不限定在页签内，作为独立区域展示；用户可自由添加多个路径（不区分平台），输入路径后（blur / 防抖）调 `/project-config/validate-sig-path` 即时校验该路径是否存在、其下是否存在 sig-info.yaml（结果就地展示，不阻断保存）；路径列表随 `/project-config/global-config` 统一提交（保存时不再重复校验）
@@ -320,44 +320,42 @@ migrateRepoInfoPhase1():
 
 #### 3.1.1 Entity 改造
 
-- [RepoInfoEntity](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/entity/space/RepoInfoEntity.java) 新增字段：
+- `RepoInfoEntity` 新增字段：
 
 | 字段                     | 说明                                                               |
 | ------------------------ | ------------------------------------------------------------------ |
 | `isParticipateOperation` | 是否参与运营（默认是，**新增**——现实体/表无此字段，见 §4.1 ALTER） |
 
-- **新增 `ProjectRepoGlobalConfigEntity`**（表 `project_repo_global_config`，每项目一行）：`configJson` 字段作为项目级全局配置载体（config_json 按平台分键存角色映射，sigInfoLocations 为顶层数组不按平台分键）。存量 `GitCodeRoleMappingEntity`（表 `project_gitcode_role_mapping`）的 role_mapping 数据迁移至新表 `config_json.gitcode.roleMapping` 后，旧表废弃（不物理删除）。
+- **新增 `ProjectRepoGlobalConfigEntity`**（表 `project_repo_global_config`，每项目一行）：`configJson` 字段作为项目级全局配置载体（config_json 中 `sigInfoLocations` 与角色映射均按平台分键）。存量 `GitCodeRoleMappingEntity`（表 `project_gitcode_role_mapping`）的 role_mapping 数据迁移至新表 `config_json.gitcode.roleMapping` 后，旧表废弃（不物理删除）。
 
 #### 3.1.2 Mapper 改造
 
-- [RepoInfoMapper.xml](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/resources/mapper/RepoInfoMapper.xml)：
-  - 新增 `selectByRepoUrl`：按 repo_url 查同组所有行（供录入复制上次配置 / 编辑冲突检测 / 开关聚合查询）
-  - 新增 `aggregateSwitchByRepoUrl`：按 repo_url 聚合开关字段（MAX，OR 逻辑，见 §2.4）
+- `RepoInfoMapper.xml`：
+  - 新增 `selectByRepoUrl`：按 repo_url 查同组所有行（供录入复制上次配置 / 编辑冲突检测）
   - 现有按 `project_id` / `repo_id` 的查询**不变**（多行模型语义与现状一致）
 
 #### 3.1.3 Service
 
-- [RepoService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/RepoService.java) / [RepoServiceImpl](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java)：
+- `RepoService` / `RepoServiceImpl`：
   - `addRepoInfo`：新增「命中多行」分支（复制上次录入配置 + 提示不覆盖，见 §2.1）
   - `updateRepoInfo`：存在跨项目行且配置不一致时提示性告警，不覆盖（§2.3）；DTO 新增 `isParticipateOperation` 参数（见 §6.2）
   - 新增 `checkRepoUrl`（返回上次录入配置副本 + 配置差异，供录入复制与编辑冲突检测复用）
-  - 新增 `aggregateSwitchConfig(repoUrl)`：开关聚合查询（§2.4），供下游或 internal 接口调用
-- 全局配置与一键同步能力**统一收敛到现有 [ProjectConfigService](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/service/ProjectConfigService.java)**，底层表 `project_repo_global_config`（新增，数据从 `project_gitcode_role_mapping` 迁移）：`getGlobalConfig` / `updateGlobalConfig`（**全局配置唯一写入口**：config_json 读写，含 sigInfoLocations + roleMapping；**项目公共账号更新也并入该方法**——实现层仍写现有项目公共账号表 `project_common_account_info`，不进 config_json，见 §6.4）/ `validateSigPath`（校验 sig-info 路径存在性与 sig-info.yaml 文件，见 §6.5）/ `syncSigReposAsync`（异步一键同步，带分布式锁，见 §2.2.3）。全局配置接口由现有 [ProjectConfigController](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/ProjectConfigController.java)（`/project-config`）暴露。
+- 全局配置与一键同步能力**统一收敛到现有 `ProjectConfigService`**，底层表 `project_repo_global_config`（新增，数据从 `project_gitcode_role_mapping` 迁移）：`getGlobalConfig` / `updateGlobalConfig`（**全局配置唯一写入口**：config_json 读写，含 sigInfoLocations + roleMapping；**项目公共账号更新也并入该方法**——实现层仍写现有项目公共账号表 `project_common_account_info`，不进 config_json，见 §6.4）/ `validateSigPath`（批量校验 sig-info 路径存在性与 sig-info.yaml 文件，见 §6.5）/ `syncSigReposAsync`（异步一键同步，带分布式锁，见 §2.2.3）。全局配置接口由现有 `ProjectConfigController`（`/project-config`）暴露。
 
 #### 3.1.4 工具类 / DTO
 
 - 新增 `SigInfoClient`（实时读 sig-info.yaml，支持多路径，参考 framework GitCode.getYaml 但 accessToken 走 header）、`SigDefaultParamBuilder`（默认参数填充：实时调平台获取创建人账号名 + 默认分支 + 别名冲突处理）。
-- 新增 DTO/VO：`RepoUrlCheckQueryDTO`（projectId、repoUrl + 可选 repoId/formConfig，见 §6.3）/ `RepoUrlCheckVO`（exists、repoId、lastConfig、associatedProjects、configDiff）、`GlobalConfigVO`（sigInfoLocations 按平台分组 + gitcode roleMapping + 公共账号掩码）、`GlobalConfigUpdateDTO`（sigInfoLocations URL 数组 + roleMapping + **项目公共账号登录名/令牌**，账号实现层写 `project_common_account_info`）、`SigPathValidateDTO/VO`（路径校验入参/结果，见 §6.5）、`SigLocationDTO/VO`、`SyncSigReposTaskVO`（任务 ID + 状态 + imported/failed 计数）。
+- 新增 DTO/VO：`RepoUrlCheckQueryDTO`（projectId、repoUrl + 可选 repoId/formConfig，见 §6.3）/ `RepoUrlCheckVO`（exists、repoId、lastConfig、associatedProjects、configDiff）、`GlobalConfigVO`（sigInfoLocations 按平台分键 + gitcode roleMapping + 公共账号掩码）、`GlobalConfigUpdateDTO`（sigInfoLocations **按平台分键 Map** + roleMapping + **项目公共账号登录名/令牌**，账号实现层写 `project_common_account_info`）、`SigPathValidateDTO/VO`（路径批量校验入参/结果，见 §6.5）、`SyncSigReposTaskVO`（任务 ID + 状态 + imported/failed 计数）。
 
 #### 3.1.5 现有业务读取点（`repoInfo.getProjectId()` 多项目语义）
 
 > **结论：全部无需改造。** 多行模型下每行 `project_id`=该行所属项目，`repoInfo.getProjectId()` 语义与现状完全一致（平台 token、越权校验、列表查询、删除/编辑、成员/角色、上报/日志、事件归属）。本期**不做**任何读取点改造。
 > 定时任务（syncRepoInfoHandler / codeMetricsObsImportHandler / refreshWebhookHandler / FrameworkJobs.refreshProjectIdCache）均按 `project_id` 逐项目处理，语义不变，零改动。
-> **开关聚合读取点**：下游仓使用开关类配置时，改为调用 coderepo 的聚合查询（`aggregateSwitchConfig(repoUrl)` 或 internal 接口），而非按单行读取。本期下游 7 仓零改动——聚合逻辑由 coderepo 在提供数据时统一处理。
+> **开关聚合读取点（下游约定）**：开关 OR 聚合仅作为下游读取约定（本期无下游调用方，聚合接口与 `aggregateSwitchByRepoUrl`/`aggregateSwitchConfig` 均不落地，见 §0 修订记录 3）；下游需要使用开关聚合时，由 coderepo 在提供数据时按 `repo_url` 统一聚合（MAX）返回。
 
 ### 3.2 前端类设计（openlibing-web）
 
-- [Repos/index.vue](file:///d:/Develop/Java/openlibing-web/apps/web-openlibing/src/views/Repos/index.vue)：录入对话框手动录入 blur 检测（命中时复制上次配置、提交时提示不一致不覆盖）；工具栏新增「全局配置」按钮与三页签弹窗（含代码仓录入配置多路径 + 路径即时校验 + 一键同步按钮 + 同步任务状态展示）；**编辑对话框保存时若存在跨项目行且配置不一致 → 弹窗提示性告警（不覆盖其他项目行），用户确认后仅更新本行**。
+- `Repos/index.vue`：录入对话框手动录入 blur 检测（命中时复制上次配置、提交时提示不一致不覆盖）；工具栏新增「全局配置」按钮与三页签弹窗（含代码仓录入配置多路径 + 路径即时校验 + 一键同步按钮 + 同步任务状态展示）；**编辑对话框保存时若存在跨项目行且配置不一致 → 弹窗提示性告警（不覆盖其他项目行），用户确认后仅更新本行**。
 - api/url 层新增：`checkRepoUrl`（录入/编辑冲突检测）/ `getGlobalConfig` / `updateGlobalConfig`（含项目公共账号提交）/ `validateSigPath`（sig-info 路径即时校验）/ `syncSigRepos`（异步一键同步，返回任务 ID）/ `getSyncTaskStatus`（轮询任务状态，在全局配置弹窗内展示）（全局配置相关走 `/project-config`，见 §6.3-6.7）。
 
 ## 4. 数据模型设计
@@ -382,7 +380,7 @@ ALTER TABLE repo_info ADD COLUMN is_participate_operation TINYINT(1) NOT NULL DE
 
 > **核心变化**：**新建**项目级全局配置表 `project_repo_global_config`（每项目一行），统一承载 sig-info 路径 / 角色映射等全局配置（**项目公共账号仍存现有 `project_common_account_info` 表，不进 config_json、不迁移，仅经 global-config 接口统一读写**）；存量 `project_gitcode_role_mapping` 中的 role_mapping 数据**迁移**到新表 `config_json.gitcode.roleMapping`，迁移完成后旧表废弃（不物理删除，角色映射读写改指新表）。
 >
-> **下游影响（framework 例外）**：经工作区全量核对，除 coderepo（+fork）外，**openlibing-framework** 也引用旧表——[ProductServiceImpl](file:///d:/Develop/Java/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/ProductServiceImpl.java) / [ProjectServiceImpl](file:///d:/Develop/Java/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/ProjectServiceImpl.java) 删除产品/项目时通过 `GitcodeRoleMappingMapper.deleteMappingByProjectId` 级联清理 `project_gitcode_role_mapping`。旧表废弃后该级联清理需**改指新表对应行**（删除产品/项目时同步清理 `project_repo_global_config` 该 project_id 行），否则删项目后新表残留脏数据；framework 的 `selectMappingByProjectId` 为未使用注入，随迁移一并清理。其余仓（codecheck/cicd/web/common/sca/anti-poison/gateway/vulnerability 等）均未引用该表。
+> **下游影响（framework 例外）**：经工作区全量核对，除 coderepo（+fork）外，**openlibing-framework** 也引用旧表——`ProductServiceImpl` / `ProjectServiceImpl` 删除产品/项目时通过 `GitcodeRoleMappingMapper.deleteMappingByProjectId` 级联清理 `project_gitcode_role_mapping`。旧表废弃后该级联清理需**改指新表对应行**（删除产品/项目时同步清理 `project_repo_global_config` 该 project_id 行），否则删项目后新表残留脏数据；framework 的 `selectMappingByProjectId` 为未使用注入，随迁移一并清理。其余仓（codecheck/cicd/web/common/sca/anti-poison/gateway/vulnerability 等）均未引用该表。
 
 ```sql
 -- 1. 新建项目级全局配置表（每项目一行，承接 sig-info 路径 / 角色映射等全局配置；
@@ -390,7 +388,7 @@ ALTER TABLE repo_info ADD COLUMN is_participate_operation TINYINT(1) NOT NULL DE
 CREATE TABLE project_repo_global_config (
     id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
     project_id     BIGINT UNSIGNED NOT NULL COMMENT '项目ID',
-    config_json    JSON            NULL COMMENT '项目级全局配置(JSON)：sig-info路径列表(顶层sigInfoLocations)、各平台角色映射(按平台分键)，可扩展',
+    config_json    JSON            NULL COMMENT '项目级全局配置(JSON)：sigInfoLocations按平台分键、各平台角色映射(按平台分键)，可扩展',
     create_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     create_user    VARCHAR(64)     NULL COMMENT '创建人',
@@ -448,7 +446,7 @@ project (1) ──── (N) repo_info (每行=该项目下的一条代码仓；
                      └─ is_participate_operation
 
 project (1) ──── (1) project_repo_global_config ──实时读取──▶ SIG 仓 sig-info.yaml（多路径）
-                      config_json.sigInfoLocations（数组）        │ 解析 repositories
+                      config_json.sigInfoLocations（按平台分键）  │ 解析 repositories
                       + config_json[平台].roleMapping            ▼
                                                           repo_info（一键同步批量录入）
 ```
@@ -503,7 +501,6 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 | `checkRepoUrl` 响应                 | < 100ms                             |
 | `validateSigPath` 响应              | < 2s（含调平台读目录校验，超时 3s） |
 | `queryRepoInfo` 响应                | < 100ms（与现状持平）               |
-| `aggregateSwitchConfig`（开关聚合） | < 50ms                              |
 | `syncSigRepos` 触发响应             | < 200ms（立即返回任务 ID）          |
 | 一键同步执行（100 个仓库）          | < 5 分钟（异步，含平台元数据获取）  |
 | Phase 1 迁移脚本（10 万行）         | < 10 分钟                           |
@@ -512,7 +509,7 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 
 ### 6.1 现有接口改造：`POST /project-repo/add-repo`
 
-请求体在 [RepoDTO](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/dto/space/RepoDTO.java) 基础上新增：
+请求体在 `RepoDTO` 基础上新增：
 
 ```jsonc
 {
@@ -525,7 +522,7 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 
 ### 6.2 现有接口改造：`POST /project-repo/update-repo`
 
-请求体在 [RepoDTO](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/dto/space/RepoDTO.java) 基础上新增：
+请求体在 `RepoDTO` 基础上新增：
 
 ```jsonc
 {
@@ -586,7 +583,7 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 - `GET /project-config/global-config?userId=xxx&projectId=1`：回显全局配置（sigInfoLocations 多路径 + 各平台 roleMapping + 公共账号掩码）。**sigInfoLocations 回显按平台分键**（`{ gitcode: [...], gitee: [...], github: [...] }`）；POST 提交同样按平台分键提交。
 - `POST /project-config/global-config`：**全局配置唯一写入口**，一次提交全部配置内容（三页签 + 代码仓录入配置区）——① 更新 `config_json.sigInfoLocations`（**按平台分键的 Map**，保存时校验每条 URL 域名与平台键一致）+ `config_json[platform].roleMapping`（仅 gitcode）（现有 `/project-config/update-gitcode-role-mapping` 废弃，前端改调本接口；路径可用性校验已前移至输入时的 `validate-sig-path` 接口，见 §6.5）；② **项目公共账号更新也并入本接口**（按平台提交登录名 + 令牌，令牌加密入库、留空不覆盖；**实现层仍写入现有项目公共账号表 `project_common_account_info`，不进 config_json，不迁移**）；接口内对 `projectId` 加分布式锁（防 config_json 读-改-写并发丢更新，见 §5.3）。
 
-> **控制器归属**：由现有 [ProjectConfigController](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/ProjectConfigController.java) 提供（`/project-config` 路径），不占用 `/project-repo`。
+> **控制器归属**：由现有 `ProjectConfigController` 提供（`/project-config` 路径），不占用 `/project-repo`。
 
 ### 6.5 新增接口 4：`POST /project-config/validate-sig-path`（sig-info 路径批量校验，由 ProjectConfigController 实现）
 
@@ -678,7 +675,7 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 | 录入/编辑冲突检测（新增）              | POST | `/project-repo/check-repo-url`      | RepoController          | RepoUrlCheckQueryDTO                                                              | `DataResult<RepoUrlCheckVO>`                                                     |
 | 查询全局配置（新增）                   | GET  | `/project-config/global-config`     | ProjectConfigController | projectId                                                                         | `DataResult<GlobalConfigVO>`（含公共账号掩码）                                   |
 | 更新全局配置（新增，公共账号更新并入） | POST | `/project-config/global-config`     | ProjectConfigController | GlobalConfigUpdateDTO（sigInfoLocations + roleMapping + 项目公共账号登录名/令牌） | `DataResult<GlobalConfigVO>`（公共账号实现层仍存 `project_common_account_info`） |
-| sig-info 路径校验（新增）              | POST | `/project-config/validate-sig-path` | ProjectConfigController | {userId, projectId, path}                                                         | `DataResult<SigPathValidateVO>`（valid/platform/errorCode/message）              |
+| sig-info 路径校验（新增，批量）        | POST | `/project-config/validate-sig-path` | ProjectConfigController | {userId, projectId, paths[]}                                                      | `DataResult<List<SigPathValidateVO>>`（逐条 valid/platform/errorCode/message）   |
 | SIG 仓一键同步（新增，异步 + 锁）      | POST | `/project-config/sig-sync`          | ProjectConfigController | {userId, userName, projectId}                                                     | `DataResult<SyncSigReposTaskVO>`（任务 ID + 状态）                               |
 | 查询同步任务状态（新增）               | GET  | `/project-config/sig-sync/status`   | ProjectConfigController | taskId + projectId                                                                | `DataResult<SyncSigReposTaskVO>`（状态 + imported/failed）                       |
 
@@ -689,7 +686,6 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 | 200  | success                          | 成功                                           |
 | 403  | SIG 路径不存在或不属于该项目     | sig-sync 接口未配置任何 sigInfoLocations       |
 | 403  | 平台不合法                       | 路径 URL 域名非 gitcode/gitee/github           |
-| 409  | SIG 同步任务已在执行中           | 分布式锁获取失败（已有任务在跑）               |
 | 404  | sig-info.yaml 文件不存在         | 实时读取指定路径失败（目录下无 sig-info.yaml） |
 | 500  | sig-info.yaml 格式错误或解析失败 | 实时解析失败                                   |
 | 500  | 配置文件读取失败，请稍后重试     | 平台 API 调用失败                              |
@@ -698,8 +694,7 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 
 ### 6.10 内部 API 契约
 
-- [InternalProjectRepoController](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/InternalProjectRepoController.java) `POST /project-repo/internal/query-repo`：语义与 `query-repo` 一致、不要求 `userId`；响应 `data.list` 为精简视图（repoId/projectId/repoName/repoUrl/repoOwner/platform/status），不返回敏感字段。**多行模型下按行返回，语义与现状一致，下游仓零改动**。
-- 新增 `POST /project-repo/internal/aggregate-switch`：按 repo_url 聚合开关配置（MAX，OR 逻辑，见 §2.4），供下游仓使用开关配置时调用。请求 `{ "repoUrl": "..." }`，响应 `{ "assumePr": 1, "isAutoTriggerGate": 0, ... }`。
+- `InternalProjectRepoController`（`POST /project-repo/internal/query-repo`）：语义与 `query-repo` 一致、不要求 `userId`；响应 `data.list` 为精简视图（repoId/projectId/repoName/repoUrl/repoOwner/platform/status），不返回敏感字段。**多行模型下按行返回，语义与现状一致，下游仓零改动**。
 - 删除仓库后通知 openlibing-codecheck 重算 `is_used` 的调用契约不变（走 `OpenlibingCodeCheckClient`）。
 
 ## 7. 安全设计
@@ -747,7 +742,7 @@ project (1) ──── (1) project_repo_global_config ──实时读取──
 ### 7.8 迁移脚本安全
 
 - **新增 `project_repo_global_config` 表 + 数据迁移（Liquibase）**：建表与存量 `project_gitcode_role_mapping.role_mapping` 迁移（→ `config_json.gitcode.roleMapping`，每项目一行批量 upsert 幂等可重跑）在**同一 Liquibase changeset** 内定义，**随实例启动原子执行**（与代码上线同步，杜绝「上线后-迁移前」角色映射读空的空窗）；迁移完成后旧表 `project_gitcode_role_mapping` 废弃（不物理删除，角色映射读写改指新表）。
-- **framework 同步改造（例外仓）**：[ProjectServiceImpl](file:///d:/Develop/Java/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/ProjectServiceImpl.java) / [ProductServiceImpl](file:///d:/Develop/Java/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/ProductServiceImpl.java) 删除产品/项目时的 `GitcodeRoleMappingMapper.deleteMappingByProjectId` 级联清理**改指新表** `project_repo_global_config`（删该 project_id 行）；清理未使用的 `selectMappingByProjectId` 注入。
+- **framework 同步改造（例外仓）**：`ProjectServiceImpl` / `ProductServiceImpl` 删除产品/项目时的 `GitcodeRoleMappingMapper.deleteMappingByProjectId` 级联清理**改指新表** `project_repo_global_config`（删该 project_id 行）；清理未使用的 `selectMappingByProjectId` 注入。
 - **Phase 1** repo 迁移（清洗同项目重复行 + 加唯一索引）：事务分批（每批 1000 行）提交、可重跑；只动 repo_info 本身，不触碰 7 仓数据。
 - **framework 级联清理改造建议与 coderepo 同迭代上线**（避免 coderepo 上线而 framework 未改期间删除产品/项目时级联清理落空、新表残留脏行）。
 - **Phase 1** repo 迁移在上线后统一执行、不阻塞上线；迁移前备份 repo_info（全局配置建表/迁移见首条，随实例启动）。

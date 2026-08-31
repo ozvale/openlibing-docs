@@ -245,7 +245,7 @@
     <button class="btn" style="background:#ff7d00; border-color:#ff7d00;">⚙ 全局配置</button>
   </div>
   <div class="form-hint" style="margin-bottom:6px;">工具栏「导出仓库」右侧新增「全局配置」按钮，对当前项目下所有代码仓生效；原「gitcode 角色映射」「项目公共账号」两个按钮的能力并入本弹窗。</div>
-  <div class="form-hint" style="margin-bottom:6px;">本弹窗能力由 <b>/project-config/global-config</b> 接口统一读写（ProjectConfigController）：项目公共账号（实现层仍存现有公共账号表）/ 代码仓录入配置（sig-info.yaml 多路径；<b>GET 回显按平台分组</b>——gitcode/gitee/github 外层 key，便于前端区分，提交时将各组 url 拍平为 URL 数组）/ GitCode 角色映射；路径输入后经 <b>POST /project-config/validate-sig-path</b> 即时校验；「SIG 仓一键同步」由 <b>POST /project-config/sig-sync</b> 触发（异步 + 分布式锁），任务状态经 <b>GET /project-config/sig-sync/status</b> 轮询（在本弹窗内展示）。</div>
+  <div class="form-hint" style="margin-bottom:6px;">本弹窗能力由 <b>/project-config/global-config</b> 接口统一读写（ProjectConfigController）：项目公共账号（实现层仍存现有公共账号表）/ 代码仓录入配置（sig-info.yaml 多路径；<b>GET 回显与 POST 提交均按平台分键</b>——gitcode/gitee/github 外层 key，便于前端区分，提交时按平台分组提交 Map）/ GitCode 角色映射；路径输入后经 <b>POST /project-config/validate-sig-path</b> 即时校验；「SIG 仓一键同步」由 <b>POST /project-config/sig-sync</b> 触发（异步 + 分布式锁），任务状态经 <b>GET /project-config/sig-sync/status</b> 轮询（在本弹窗内展示）。</div>
 
   <div class="dialog-mask">
     <div class="dialog dialog-global">
