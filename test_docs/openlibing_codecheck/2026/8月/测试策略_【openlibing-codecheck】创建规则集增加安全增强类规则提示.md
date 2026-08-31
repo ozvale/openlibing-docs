@@ -8,7 +8,7 @@
 * **核心目标**:
   "代码检查安全增强"类规则属付费增强能力。前端（openlibing-web）在规则集配置页（新增/复制/修改三场景共用）实时检测勾选规则中是否包含安全增强类规则（`ruleTages` 含 `security_enhance`），包含时在保存按钮旁常驻 warning 提示并附华为云购买链接（region 取自社区对接华为云项目，默认 `cn-southwest-2`），提示**不阻断保存**；后端（openlibing-codecheck）识别华为云 `未购买安全增强包` 错误（保存路径与查询路径分别翻译为友好中文提示），并加固非数字错误码解析兜底。
 * **设计文档**: `openlibing-docs/spec/openlibing-web/task_design/security-enhance-purchase-confirm/proposal.md`、`design.md`（关联 Issue openlibing/openlibing-web#275）
-* **开发责任人**: taohuoquan
+* **开发责任人**: 陶获权
 * **测试责任人**: 徐愚冰
 
 ---

@@ -5,7 +5,7 @@
 * **需求链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/180
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/180
 * **需求名称**: 创建规则集增加安全增强类规则提示（安全增强包购买确认）
-* **开发责任人**: taohuoquan
+* **开发责任人**: 陶获权
 * **测试责任人**: 徐愚冰
 * **最终结论:**： 通过
 * **测试维度** :

@@ -5,7 +5,7 @@
 * **需求链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/90
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/90
 * **需求名称**: 代码仓管理与项目解耦（同 repo_url 跨项目提示不覆盖）+ SIG 组 sig-info.yaml 批量录入整合既有同步链路
-* **开发责任人**: yanzhaohong
+* **开发责任人**: 闫兆鸿
 * **测试责任人**: 徐愚冰
 * **最终结论:**： 通过
 * **测试维度** :

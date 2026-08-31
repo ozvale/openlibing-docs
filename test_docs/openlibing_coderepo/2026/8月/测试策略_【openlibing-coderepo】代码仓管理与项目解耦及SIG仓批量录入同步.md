@@ -8,7 +8,7 @@
 * **核心目标**:
   在保持 repo_info「一项目一行、多行并存」模型（`(repo_url, project_id)` 唯一）前提下：① 用户录入/编辑代码仓时，同 repo_url 已在其他项目录入则从上次配置复制到表单，跨项目配置不一致仅提示性告警不覆盖；② 全局配置弹窗维护各平台公共账号令牌、gitcode 角色映射、SIG `sig-info.yaml` 路径列表（`config_json.sigInfoLocations` 按平台分键），保存时校验有效性、变更检测后异步触发同步；③ SIG 同步整合进 `/sync-repo`、`POST /global-config` 与 `syncRepoInfoHandler` 定时任务（移除独立接口 `/project-config/trigger-sig-sync` 与 `/project-config/sig-sync-status`）；SIG 仓默认参数自动填充，无效 sig 路径跳过不阻断，失效路径下线硬删对应录入仓库；`repo_info` 新增 `repo_source`（manual/sig）；异步同步具备分布式锁并发控制与代次协作中断（令牌/配置变更自增项目代次，在途任务步骤边界自检中止并按最新配置重跑）。迭代：openLiBing-202608（release_202608_iter2）。
 * **设计文档**: 未找到独立设计文档（Issue #90 正文含完整需求设计：主成功场景/扩展场景/约束/非功能需求，本策略以 Issue 正文为设计基线）
-* **开发责任人**: yanzhaohong
+* **开发责任人**: 闫兆鸿
 * **测试责任人**: 徐愚冰
 
 ---

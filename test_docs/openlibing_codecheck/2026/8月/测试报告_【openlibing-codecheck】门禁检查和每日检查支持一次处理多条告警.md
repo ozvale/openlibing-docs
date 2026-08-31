@@ -5,7 +5,7 @@
 * **需求链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/183
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/183
 * **需求名称**: 门禁检查和每日检查-支持一次处理多条告警（屏蔽申请"全部处理"）
-* **开发责任人**: xiezhiqiang
+* **开发责任人**: 谢志强
 * **测试责任人**: 徐愚冰
 * **最终结论:**： 通过
 * **测试维度** :

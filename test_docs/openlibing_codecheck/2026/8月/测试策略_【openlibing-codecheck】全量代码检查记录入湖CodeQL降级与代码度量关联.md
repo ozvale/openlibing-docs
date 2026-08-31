@@ -8,7 +8,7 @@
 * **核心目标**:
   入湖消费方调用 `/machine-api/v1/full-codecheck-record/list` 时，原实现只查 `task_result_summary` 表；当项目未接入华为云 CodeCheck 该表无数据。本次在原查询无数据且入参含仓库定位字段时**降级走静态告警链路**（`static_alarm_scan_run` + `static_alarm_issue`）组装等价结果；因 CodeQL 法律风险**无条件排除 `tool = "CodeQL"` 记录**；`startTime`/`endTime` 按 `createdAt`/`updatedAt` 过滤；代码度量字段通过 `git_url + branch_name + commit_id` 三元组精确关联 coderepo 度量记录（机机接口 `/project-repo/internal/metrics/code/latest-by-commit/batch`，取 `detection_completed_at` 最新一条），未命中走默认值。涉及三仓联动：code-metrics-action（插件端新增 6 个度量字段 + commitId 上报）、openlibing-coderepo（commit_id 落库 + 机机接口）、openlibing-codecheck（降级组装）。
 * **设计文档**: Issue #178 正文（内嵌完整设计：跨仓改动清单 + 62 字段映射表 + 度量关联算法）
-* **开发责任人**: Chenmingxu
+* **开发责任人**: 陈明旭
 * **测试责任人**: 徐愚冰
 
 ---

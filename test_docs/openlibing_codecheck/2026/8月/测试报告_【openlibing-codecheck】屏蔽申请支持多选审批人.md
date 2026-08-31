@@ -5,7 +5,7 @@
 * **需求链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/182
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/182
 * **需求名称**: 门禁屏蔽申请支持多选审批人（或签 OR 模式）
-* **开发责任人**: xiezhiqiang
+* **开发责任人**: 谢志强
 * **测试责任人**: 徐愚冰
 * **最终结论:**： 通过
 * **测试维度** :

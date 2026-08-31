@@ -5,7 +5,7 @@
 * **需求链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/181
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/181
 * **需求名称**: 版本级检查、门禁检查 CodeCheck 子页面支持多选代码仓
-* **开发责任人**: taohuoquan
+* **开发责任人**: 陶获权
 * **测试责任人**: 徐愚冰
 * **最终结论:**： 通过
 * **测试维度** :

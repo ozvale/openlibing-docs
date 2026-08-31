@@ -8,7 +8,7 @@
 * **核心目标**:
   在现有 5 个屏蔽写接口（提交/审批/转审/待审撤销/通过后撤销）上增加「全部处理」能力：调用方不传 `detailsId`，改为传列表查询条件 `query` + 条数 `count`；后端按「列表条件 ∩ 操作硬条件」count 比对一致后，经 Redis 占用（SET NX，TTL 2 小时 + 续租）并入 RabbitMQ 异步分批（每批 100 条，`_id` 升序）执行。门禁（type=inc）与版本级检查（type=full）共用同一套写接口，不新增路径、不改分页查询接口。
 * **设计文档**: `openlibing-docs/spec/openlibing-codecheck/task_design/shield-process-all/design.md`
-* **开发责任人**: xiezhiqiang
+* **开发责任人**: 谢志强
 * **测试责任人**: 徐愚冰
 
 ---

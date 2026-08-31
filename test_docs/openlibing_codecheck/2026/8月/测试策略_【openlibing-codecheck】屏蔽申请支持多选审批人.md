@@ -8,7 +8,7 @@
 * **核心目标**:
   门禁（type=inc）与每日检查（type=full）场景下，屏蔽申请提交、转审支持多选审批人（新增 `reviewerIds`，或签：任一人审核即终结）；审核权限改为审批人名单成员（先成功者生效，后续 409，非名单 403）；「待我审批」查询与待办计数改为 `reviewerId = me OR reviewers.userId = me`；一条申请 × N 审批人 = N 条 message_apply；`reviewerId` 待审时=名单第一人、审完后覆盖为实际操作人；历史无 `reviewers` 字段数据运行时兼容。
 * **设计文档**: `openlibing-docs/spec/openlibing-codecheck/task_design/shield-multi-reviewer/design.md`
-* **开发责任人**: xiezhiqiang
+* **开发责任人**: 谢志强
 * **测试责任人**: 徐愚冰
 
 ---

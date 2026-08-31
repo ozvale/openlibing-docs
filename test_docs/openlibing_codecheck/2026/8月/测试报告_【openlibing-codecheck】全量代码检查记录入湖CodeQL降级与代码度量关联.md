@@ -5,7 +5,7 @@
 * **需求链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/178
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/178
 * **需求名称**: `/machine-api/v1/full-codecheck-record/list` 入湖接口 CodeQL 降级与代码度量 commit_id 精确关联
-* **开发责任人**: Chenmingxu
+* **开发责任人**: 陈明旭
 * **测试责任人**: 徐愚冰
 * **最终结论:**： 通过
 * **测试维度** :

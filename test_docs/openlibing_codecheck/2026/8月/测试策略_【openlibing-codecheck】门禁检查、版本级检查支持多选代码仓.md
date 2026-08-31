@@ -8,7 +8,7 @@
 * **核心目标**:
   门禁检查 / 版本级检查页面 CodeCheck 子页的仓库下拉筛选框支持多选，列表按所选仓库集合过滤（后端 `QuerySummaryModel` 新增 `repoNames`，`repoNameEn in` 查询，空值回退 `repoName` 单值保证向后兼容）；多选仓库时分支下拉展示所选仓库分支的去重并集（分支仍单选），仓库切换时清空已选分支。范围变更（2026-08-25）：列表全量导出已取消，仅保留仓库多选筛选。
 * **设计文档**: `openlibing-docs/spec/openlibing-codecheck/task_design/summary-multi-repo-export/design-v2.md`（关联 Issue #174）
-* **开发责任人**: taohuoquan
+* **开发责任人**: 陶获权
 * **测试责任人**: 徐愚冰
 
 ---
