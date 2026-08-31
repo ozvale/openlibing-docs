@@ -14,7 +14,7 @@
 
 ### 流水线列表（src/views/pipeline/pipeline.vue）
 
-- 新增 SessionStorage 缓存，key 为 `pipeline_filter_cache_${projectId}`，按项目隔离
+- 新增 SessionStorage 缓存，key 为 `` `pipeline_filter_cache_${app.projectInfo?.projectId || ''}` ``（projectId 为空时以空字符串兜底），按项目隔离
 - 缓存内容：`queryParam`（名称、状态）、`pagination`（pageNum、pageSize）、`byGroup`、`currentPipelineGroup`
 - 统一监听筛选与分页变化，自动写入 SessionStorage
 - 切换项目（projectId 变化）时先无条件重置为默认值（清空名称/状态、重置分页、退出分组模式、回到全部分组），再尝试恢复目标项目缓存

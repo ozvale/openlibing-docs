@@ -4,12 +4,12 @@
 
 ### 存储设计
 
-| 项       | 值                                                        |
-| -------- | --------------------------------------------------------- |
-| 存储介质 | `sessionStorage`（会话级，关闭标签页即失效）              |
-| Key      | `` `pipeline_filter_cache_${app.projectInfo?.projectId    |     | ''}` `` |
-| 隔离维度 | `projectId`，不同项目各自独立缓存                         |
-| 序列化   | `JSON.stringify` / `JSON.parse`，解析失败静默降级为无缓存 |
+| 项       | 值                                                                  |
+| -------- | ------------------------------------------------------------------- |
+| 存储介质 | `sessionStorage`（会话级，关闭标签页即失效）                        |
+| Key      | `` `pipeline_filter_cache_${app.projectInfo?.projectId \|\| ''}` `` |
+| 隔离维度 | `projectId`，不同项目各自独立缓存                                   |
+| 序列化   | `JSON.stringify` / `JSON.parse`，解析失败静默降级为无缓存           |
 
 ### 缓存结构
 
