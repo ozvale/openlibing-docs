@@ -21,10 +21,10 @@
 | 文件 | 操作 | 说明 |
 |------|------|------|
 | `business/controller/WebHookEventController.java` | 修改 | 阶段 1 新增 `apigGitCodeWebhookEvent` / `apigGiteeWebhookEvent` / `apigGithubWebhookEvent`，抽取 `handleGitCodeWebhook` / `handleGiteeWebhook` / `handleGithubWebhook` 公共方法 + `logWebhookSource` 流量来源日志；阶段 3 删除 5 个 `/webhookEvent/hooks/*` 接口及相关多余 import |
-| `business/service/impl/RepoServiceImpl.java` | 修改 | 拆分 `autoSetCoderepoWebHook`，新增 `LEGACY_CODEREPO_WEBHOOK_URL_MARKER`、`migrateLegacyCoderepoWebhooks`、`updateRepoWebhookUrl`、`buildWebhookUrlUpdateBody` |
-| `business/entity/webhooks/RepoWebhook.java` | 修改 | 新增 `config` 字段及 `RepoWebhookConfig` 内部类；`secret` 加 `@ToString.Exclude` |
-| `common/job/XxlJobHandler.java` | 修改 | `refreshWebhookHandler` 运行时迁移存量 webhook URL 到 APIG 链接 |
-| `controller/WebHookEventControllerTest.java` | 修改 | 旧接口用例替换为 APIG 入口用例 |
+| `business/service/impl/RepoServiceImpl.java` | 修改 | 拆分 `autoSetCoderepoWebHook`，新增 `LEGACY_CODEREPO_WEBHOOK_URL_MARKER`、`migrateLegacyCoderepoWebhooks`、`updateRepoWebhookUrl`、`buildWebhookUrlUpdateBody`；阶段 4 `resolveWebhookSign` 由查账号表改为解密 Apollo 密钥，删除 `webhookDescription` 字段与 `MachineInterfaceAccountMapper` 注入 |
+| mapper / 实体 / 常量 / XML（机机四表） | 删除 | 阶段 4 删除 `MachineInterfaceAuthMapper` / `MachineInterfaceAccountMapper`（含 XML）、`MachineInterfaceEntity` / `MachineInterfaceAccountEntity` / `MachineInterfaceLogEntity`、`MachineInterfaceConstants` |
+| `common/utils/WebhookAuthUtilTest.java` | 修改 | 阶段 4 重写以适配 Apollo 密钥鉴权 |
+| `service/impl/RepoServiceImplTest.java` | 修改 | 阶段 4 移除账号 mapper 引用 |
 
 ## 风险 & 缓解
 

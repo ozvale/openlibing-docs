@@ -22,6 +22,10 @@
   APIG 链接；旧接口保留并增加流量来源日志用于观察期统计。
 - 阶段 3（#153，「移除废弃的 legacy webhook hooks 接口」）：观察期通过后，彻底删除 5 个旧直连 hooks 接口
   及其相关无用方法，webhook 事件流量全部收敛到 APIG 专用入口 `/apig/webhook/{platform}/repo`。
+- 阶段 4（#153 内：「下线机机接口账号相关四表」）：webhook 前置 APIG 后，机机接口账号/日志能力随之下线，
+  清理 `machine_interface`、`machine_interface_account`、`machine_interface_log`、`machine_interface_permission`
+  四张表相关代码，webhook 签名校验密钥与 webhook 创建签名密钥统一改读 Apollo 配置
+  `webhook.secretKey`。
 
 **不做什么**
 
@@ -35,15 +39,23 @@
 - [ ] 3 个新 APIG 专用接口 `/apig/webhook/{platform}/repo` 正常接收并处理 gitcode / gitee / github 事件。
 - [ ] 存量 webhook URL 全部迁移到不含 `repoId` 的新 APIG 路径，含 `{repoId}` 的地址不再被平台调用。
 - [ ] 单测用例由旧接口替换为新 APIG 入口，编译与测试通过。
+- [ ] 机机接口账号相关的 `machine_interface` / `machine_interface_account` / `machine_interface_log` /
+      `machine_interface_permission` 四表相关 mapper / 实体 / 常量 / XML 已从代码删除。
+- [ ] webhook 签名校验与创建均从 Apollo 配置 `webhook.secretKey` 读取密钥，不再依赖机机接口账号表。
+- [ ] 移除了机机接口调用日志记录（`machineInterfaceLog`），改由 APIG 接口调用日志承载。
 
 ## 影响范围
 
 - 业务仓：`openlibing-coderepo-fork`
-  - `WebHookEventController`（新增 APIG 入口、移除旧 hooks 接口）
-  - `RepoServiceImpl`（webhook URL 迁移）
+  - `WebHookEventController`（新增 APIG 入口、移除旧 hooks 接口、移除机机日志调用）
+  - `RepoServiceImpl`（webhook URL 迁移；签名密钥改读 Apollo）
   - `RepoWebhook` 实体（github webhook config 字段）
   - `XxlJobHandler#refreshWebhookHandler`（定时迁移）
-  - `WebHookEventControllerTest`
+  - `WebhookAuthUtil`（移除账号表校验与日志，密钥改读 Apollo）
+  - `WebHookEventControllerTest` / `WebhookAuthUtilTest` / `RepoServiceImplTest`
+  - 删除机机接口相关文件：`MachineInterfaceAuthMapper`、`MachineInterfaceAccountMapper`（含 XML）、
+    `MachineInterfaceEntity` / `MachineInterfaceAccountEntity` / `MachineInterfaceLogEntity`、
+    `MachineInterfaceConstants` 及对应 mapper 单测
 - 华为云 APIG 控制台（运维配置，非代码）：
   - 3 个 API 前端路径 + 后端指向新接口
   - IP 白名单访问控制策略、流控策略

@@ -21,7 +21,7 @@
 
 - **来源不可控**：无 IP 白名单，无法限制只有 gitcode/gitee/github 出口能触发。
 - **无限流**：恶意或异常重试可能打垮 coderepo 服务。
-- **认证弱**：webhook 自身签名校验在应用层（`MachineInterfaceAuthUtil`），网络层无前置过滤。
+- **认证弱**：webhook 自身签名校验在应用层（`WebhookAuthUtil`），网络层无前置过滤。
 
 | 维度 | 目标 |
 |------|------|
@@ -290,7 +290,7 @@ token 获取、请求头构造、响应判断均与 `updateRepoWebhookForPushEve
 
 ### 2.7 不改动的部分
 
-- 5 个 webhook 接口的 Controller 逻辑、签名校验（`MachineInterfaceAuthUtil`）、MQ 投递逻辑不变（含 repoId 的 2 个接口保留作为兜底，APIG 不发布）。
+- 5 个 webhook 接口的 Controller 逻辑、签名校验（`WebhookAuthUtil`）、MQ 投递逻辑不变（含 repoId 的 2 个接口保留作为兜底，APIG 不发布）。
 - `cleanBetaWebhooks`、`cleanDuplicateLegacyWebhooks` 去重逻辑不变，复用现有选主与删除能力。
 - `XxlJobHandler.java`、`WebHookEventController.java` 无需改动。
 
@@ -304,7 +304,7 @@ token 获取、请求头构造、响应判断均与 `updateRepoWebhookForPushEve
 | `WebHookEventController` | [WebHookEventController.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/controller/WebHookEventController.java) | 修改（增加流量来源日志） |
 | `RepoWebhook` | [RepoWebhook.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/business/entity/webhooks/RepoWebhook.java) | 新增字段（github config 映射） |
 | `XxlJobHandler` | [XxlJobHandler.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/job/XxlJobHandler.java) | 不改动 |
-| `MachineInterfaceAuthUtil` | [MachineInterfaceAuthUtil.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/utils/MachineInterfaceAuthUtil.java) | 不改动 |
+| `WebhookAuthUtil` | [WebhookAuthUtil.java](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/utils/WebhookAuthUtil.java) | 不改动 |
 
 ### 3.2 `RepoServiceImpl` 改动方法
 
@@ -667,7 +667,7 @@ private void logWebhookSource(String platform, String path) {
 
 ### 7.3 应用层（webhook 签名校验，不变）
 
-- 5 个 webhook 接口仍通过 [MachineInterfaceAuthUtil.webhookMachineInterfacePermissionAuth](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/utils/MachineInterfaceAuthUtil.java#L71) 校验平台签名头：
+- 5 个 webhook 接口仍通过 [WebhookAuthUtil.webhookAuth](file:///d:/Develop/Java/openlibing-coderepo-fork/src/main/java/com/openlibing/coderepo/common/utils/WebhookAuthUtil.java#L71) 校验平台签名头：
   - gitcode：`X-GitCode-Token`
   - gitee：`X-Gitee-Token`
   - github：`X-Hub-Signature-256`
