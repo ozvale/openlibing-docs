@@ -8,13 +8,13 @@
 
 ### 1.1 基础信息
 
-| 项           | 约定                                                                                                      |
-| ------------ | --------------------------------------------------------------------------------------------------------- |
-| 服务         | openlibing-coderepo                                                                                       |
-| 路径前缀     | `/project-repo`（仓库相关，RepoController）、`/project-config`（全局配置相关，ProjectConfigController）   |
-| 鉴权         | 沿用现有网关 token + 角色校验；新增接口读权限沿用 `query-repo` 角色集合、写权限沿用 `add-repo` 角色集合   |
+| 项           | 约定                                                                                                                                                                                                                                                                                                                                                            |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 服务         | openlibing-coderepo                                                                                                                                                                                                                                                                                                                                             |
+| 路径前缀     | `/project-repo`（仓库相关，RepoController）、`/project-config`（全局配置相关，ProjectConfigController）                                                                                                                                                                                                                                                         |
+| 鉴权         | 沿用现有网关 token + 角色校验；新增接口读权限沿用 `query-repo` 角色集合、写权限沿用 `add-repo` 角色集合                                                                                                                                                                                                                                                         |
 | 传参风格     | 现有 `/project-repo` 接口沿用 `userId` / `userName` 走 query、复杂对象走 JSON 请求体；本期新增 `/project-config` 接口的参数位置以各节定义为准：`global-config` 走 query（`userId`/`userName`/`projectId`），`validate-sig-path` / `sig-sync` 的 `userId`/`userName`/`projectId` 统一放 JSON 请求体（与需求设计基线 §6.5/§6.6 一致），`sig-sync/status` 走 query |
-| Content-Type | `application/json`（有请求体时）                                                                          |
+| Content-Type | `application/json`（有请求体时）                                                                                                                                                                                                                                                                                                                                |
 
 ### 1.2 统一响应结构
 
@@ -283,12 +283,12 @@
 - Query 参数：`userId`（必填）、`userName`（必填）
 - 请求体：
 
-| 参数             | 类型     | 必填 | 说明                                                                                                                                                                                                        |
-| ---------------- | -------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| projectId        | Integer  | 是  | 项目 id                                                                                                                                                                                                     |
-| sigInfoLocations | Object   | 否   | sig-info.yaml 路径 URL，**按平台分键 Map** 提交（`{ "gitcode": [...], "gitee": [...], "github": [...] }`，**合计 ≤20 个**；后端保存时校验每条 URL 域名与其所属平台键一致；回显同结构）                    |
-| roleMapping      | Object   | 否   | 仅 `gitcode` 键：`[{ "platformRole": "...", "openlibingRole": "..." }]`                                                                                                                                     |
-| commonAccounts   | Object   | 否   | 各平台公共账号：`{ gitcode: { accountName, token }, gitee: {...}, github: {...} }`；**token 留空/`******` 表示不修改原令牌**                                                                                |
+| 参数             | 类型    | 必填 | 说明                                                                                                                                                                                   |
+| ---------------- | ------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| projectId        | Integer | 是   | 项目 id                                                                                                                                                                                |
+| sigInfoLocations | Object  | 否   | sig-info.yaml 路径 URL，**按平台分键 Map** 提交（`{ "gitcode": [...], "gitee": [...], "github": [...] }`，**合计 ≤20 个**；后端保存时校验每条 URL 域名与其所属平台键一致；回显同结构） |
+| roleMapping      | Object  | 否   | 仅 `gitcode` 键：`[{ "platformRole": "...", "openlibingRole": "..." }]`                                                                                                                |
+| commonAccounts   | Object  | 否   | 各平台公共账号：`{ gitcode: { accountName, token }, gitee: {...}, github: {...} }`；**token 留空/`******` 表示不修改原令牌**                                                           |
 
 ```jsonc
 {
@@ -328,11 +328,11 @@
 
 **请求**（参数统一放 JSON 请求体，与需求设计基线一致）
 
-| 参数      | 类型     | 必填 | 说明                                                                    |
-| --------- | -------- | ---- | ----------------------------------------------------------------------- |
-| userId    | String   | 是   | 操作人 id（权限校验）                                                   |
-| projectId | Integer  | 是   | 项目 id                                                                 |
-| paths     | String[] | 是   | 路径 URL 数组（每条指向 sig-info.yaml 所在**目录**，**≤20 个**）        |
+| 参数      | 类型     | 必填 | 说明                                                             |
+| --------- | -------- | ---- | ---------------------------------------------------------------- |
+| userId    | String   | 是   | 操作人 id（权限校验）                                            |
+| projectId | Integer  | 是   | 项目 id                                                          |
+| paths     | String[] | 是   | 路径 URL 数组（每条指向 sig-info.yaml 所在**目录**，**≤20 个**） |
 
 ```jsonc
 {
@@ -484,5 +484,5 @@
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 录入对话框     | ① `repoUrl` blur（防抖 300ms）调 `check-repo-url`（只传基础参数）；② `exists=true` → 表单**直接使用** `lastConfig` 同步数据（可修改）+ 提示条列出已关联项目；③ 提交前传 `formConfig`（blur 返回的 repoId 非 null 时一并传）再调 `check-repo-url`，`configDiff` 非空 → 弹「配置不一致提示」确认弹窗（文案：仅影响当前项目行，不修改其他项目配置）；④ 确认后调 `add-repo`（含 `isParticipateOperation`，不含默认分支） |
 | 编辑对话框     | ① 打开时回显本行配置（不预填其他项目数据）；② 保存前传 `repoId` + `formConfig` 调 `check-repo-url`，`configDiff` 非空 → 弹「配置不一致提示」告警（文案含开关 OR 聚合规则说明）；③ 确认后调 `update-repo`（含 `isParticipateOperation`，不含默认分支）；默认分支只读展示                                                                                                                                              |
-| 全局配置弹窗   | ① 打开时 GET `global-config` 回显（`sigInfoLocations` 按平台分组返回，路径输入框用 `url` 回显、公共账号令牌显示掩码）；② 路径输入 blur（防抖 300ms）调 `validate-sig-path`，结果就地展示（不阻断保存）；③ 保存时 POST `global-config`（`sigInfoLocations` 按平台分键 Map 提交 `{gitcode:[...],gitee:[...],github:[...]}`；公共账号令牌留空表示不修改）                                                                                                          |
+| 全局配置弹窗   | ① 打开时 GET `global-config` 回显（`sigInfoLocations` 按平台分组返回，路径输入框用 `url` 回显、公共账号令牌显示掩码）；② 路径输入 blur（防抖 300ms）调 `validate-sig-path`，结果就地展示（不阻断保存）；③ 保存时 POST `global-config`（`sigInfoLocations` 按平台分键 Map 提交 `{gitcode:[...],gitee:[...],github:[...]}`；公共账号令牌留空表示不修改）                                                               |
 | SIG 仓一键同步 | ① 点击「一键同步」→ POST `sig-sync` 返回 `taskId`，按钮置灰；② 轮询 GET `sig-sync/status`（每 3s，超时 10 分钟）；③ 任务状态卡片展示在全局配置弹窗内（RUNNING/SUCCESS/FAILED/PARTIAL + imported/failed 计数与失败原因）；④ 完成后恢复按钮                                                                                                                                                                            |
