@@ -11,12 +11,12 @@
 
 ## 用例列表
 
-| 用例编号 | 用例标题 | 用例类型 | 优先级 | 脚本位置 | 状态 |
-|----------|----------|----------|--------|----------|------|
-| TC-ISSUE001-001 | 保存流水线为模板（API） | auto_api | P0 | src/tests/openlibing/openlibing-cicd/pipeline/test_template_save_001.py | active |
-| TC-ISSUE001-002 | 基于模板创建流水线（API） | auto_api | P0 | src/tests/openlibing/openlibing-cicd/pipeline/test_template_create_001.py | active |
-| TC-ISSUE001-003 | 模板保存表单校验（UI 手工） | manual | P1 | — | active |
-| TC-ISSUE001-004 | 模板越权访问（API） | auto_api | P0 | src/tests/openlibing/openlibing-cicd/pipeline/test_template_authz_001.py | active |
+| 用例编号        | 用例标题                    | 用例类型 | 优先级 | 脚本位置                                                                  | 状态   |
+| --------------- | --------------------------- | -------- | ------ | ------------------------------------------------------------------------- | ------ |
+| TC-ISSUE001-001 | 保存流水线为模板（API）     | auto_api | P0     | src/tests/openlibing/openlibing-cicd/pipeline/test_template_save_001.py   | active |
+| TC-ISSUE001-002 | 基于模板创建流水线（API）   | auto_api | P0     | src/tests/openlibing/openlibing-cicd/pipeline/test_template_create_001.py | active |
+| TC-ISSUE001-003 | 模板保存表单校验（UI 手工） | manual   | P1     | —                                                                         | active |
+| TC-ISSUE001-004 | 模板越权访问（API）         | auto_api | P0     | src/tests/openlibing/openlibing-cicd/pipeline/test_template_authz_001.py  | active |
 
 ---
 
@@ -76,8 +76,8 @@
 
 ## 用例汇总
 
-| 类型 | 数量 | 通过 | 失败 | 跳过 |
-|------|------|------|------|------|
-| 手工用例 | 1 | 0 | 0 | 0 |
-| 自动化-API | 3 | 0 | 0 | 0 |
-| **合计** | **4** | **0** | **0** | **0** |
+| 类型       | 数量  | 通过  | 失败  | 跳过  |
+| ---------- | ----- | ----- | ----- | ----- |
+| 手工用例   | 1     | 0     | 0     | 0     |
+| 自动化-API | 3     | 0     | 0     | 0     |
+| **合计**   | **4** | **0** | **0** | **0** |

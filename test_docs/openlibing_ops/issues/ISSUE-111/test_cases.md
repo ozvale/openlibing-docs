@@ -18,42 +18,43 @@
 
 > 由**测试人员**填写。自动化用例的 Action 链接在此**统一填写一个**，无需每条用例重复填写。
 
-| 字段 | 内容 |
-|------|------|
+| 字段                 | 内容                                                                                                                                                      |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 自动化执行Action链接 | —（本地 pytest 执行：GitCode 流水线仅 main 分支注册，当前 test-0829 分支无法触发 action；执行证据已内联归档于 test_report.md「附录 A 本地执行凭证归档」） |
-| 手工执行人 | 测试人员（会话用户）：TC-018/TC-019 已于 2026-08-31 人工执行并回填 |
-| 执行日期 | 2026-08-31 |
+| 手工执行人           | 测试人员（会话用户）：TC-018/TC-019 已于 2026-08-31 人工执行并回填                                                                                        |
+| 执行日期             | 2026-08-31                                                                                                                                                |
 
 ---
 
 ## 用例列表
 
-| 用例编号 | 用例标题 | 所属功能点 | 用例类型 | 用例来源 | 用例等级 | 脚本位置 | 状态 |
-|----------|----------|------------|----------|----------|----------|----------|------|
-| TC-ISSUE111-001 | 项目维度汇总接口契约与遗留问题数公式验证 | F3 计算口径 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_statistics_001.py | active |
-| TC-ISSUE111-002 | 组织维度汇总接口契约与遗留问题数公式验证 | F3 计算口径 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_statistics_001.py | active |
-| TC-ISSUE111-003 | 汇总卡片与明细全量求和一致性验证（项目维度） | F4 汇总-明细一致性 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_consistency_002.py | active |
-| TC-ISSUE111-004 | 汇总卡片与明细全量求和一致性验证（组织维度） | F4 汇总-明细一致性 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_consistency_002.py | active |
-| TC-ISSUE111-005 | 时间范围四档参数映射与区间单调性验证 | F5 时间范围切换 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_time_range_003.py | active |
-| TC-ISSUE111-006 | 明细分页参数与翻页数据不重叠验证 | F6 明细分页 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_detail_004.py | active |
-| TC-ISSUE111-007 | 全量导出与明细一致性及文件结构验证 | F7 全量导出 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_export_005.py | active |
-| TC-ISSUE111-008 | 趋势接口契约结构冒烟验证（两维度） | F9 趋势契约冒烟 | auto_api | new | L2 | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_trend_006.py | active |
-| TC-ISSUE111-009 | 关联指标字段完整性与数值格式验证 | F8 关联指标 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_fields_007.py | active |
-| TC-ISSUE111-010 | 项目维度看板菜单入口与页面展示验证 | F1 项目维度看板 | auto_ui | new | L0 | src/tests/openlibing/openlibing_ops/ui/beta/quality_dashboard/test_ui_quality_dashboard_project_001.py | active |
-| TC-ISSUE111-011 | 组织维度看板直达 URL 加载与展示验证 | F2 组织维度看板 | auto_ui | new | L0 | src/tests/openlibing/openlibing_ops/ui/beta/quality_dashboard/test_ui_quality_dashboard_org_002.py | active |
-| TC-ISSUE111-012 | UI 时间范围四档切换与三接口联动验证 | F5 时间范围切换(UI) | auto_ui | new | L0 | src/tests/openlibing/openlibing_ops/ui/beta/quality_dashboard/test_ui_quality_dashboard_time_range_003.py | active |
-| TC-ISSUE111-013 | UI 卡片展示值与 API 返回一致性验证 | F8 关联指标(UI) | auto_ui | new | L1 | src/tests/openlibing/openlibing_ops/ui/beta/quality_dashboard/test_ui_quality_dashboard_data_consistency_004.py | active |
-| TC-ISSUE111-014 | UI 明细分页翻页与导出下载验证 | F6/F7 分页导出(UI) | auto_ui | new | L1 | src/tests/openlibing/openlibing_ops/ui/beta/quality_dashboard/test_ui_quality_dashboard_detail_export_005.py | active |
-| TC-ISSUE111-015 | 匿名与伪造 token 调用看板接口被拒绝验证 | F10 认证校验 | auto_sec | new | L1 | src/tests/openlibing/openlibing_ops/security/beta/quality_dashboard/test_security_quality_dashboard_auth_001.py | active |
-| TC-ISSUE111-016 | 低权限账号调用看板接口被拒绝验证 | F11 纵向越权 | auto_sec | new | L1 | src/tests/openlibing/openlibing_ops/security/beta/quality_dashboard/test_security_quality_dashboard_vertical_002.py | active |
-| TC-ISSUE111-017 | 看板接口响应体敏感信息防护验证 | F12 敏感信息防护 | auto_sec | new | L2 | src/tests/openlibing/openlibing_ops/security/beta/quality_dashboard/test_security_quality_dashboard_sensitive_003.py | active |
-| TC-ISSUE111-018 | 组织维度「测试运营」菜单入口验证（待部署） | F13 组织菜单入口 | manual | new | L1 | — | active |
-| TC-ISSUE111-019 | UI 交互细节验证（日期区间/弹层/筛选器） | F14 UI 交互细节 | manual | new | L2 | — | active |
+| 用例编号        | 用例标题                                     | 所属功能点          | 用例类型 | 用例来源 | 用例等级 | 脚本位置                                                                                                             | 状态   |
+| --------------- | -------------------------------------------- | ------------------- | -------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------- | ------ |
+| TC-ISSUE111-001 | 项目维度汇总接口契约与遗留问题数公式验证     | F3 计算口径         | auto_api | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_statistics_001.py          | active |
+| TC-ISSUE111-002 | 组织维度汇总接口契约与遗留问题数公式验证     | F3 计算口径         | auto_api | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_statistics_001.py          | active |
+| TC-ISSUE111-003 | 汇总卡片与明细全量求和一致性验证（项目维度） | F4 汇总-明细一致性  | auto_api | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_consistency_002.py         | active |
+| TC-ISSUE111-004 | 汇总卡片与明细全量求和一致性验证（组织维度） | F4 汇总-明细一致性  | auto_api | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_consistency_002.py         | active |
+| TC-ISSUE111-005 | 时间范围四档参数映射与区间单调性验证         | F5 时间范围切换     | auto_api | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_time_range_003.py          | active |
+| TC-ISSUE111-006 | 明细分页参数与翻页数据不重叠验证             | F6 明细分页         | auto_api | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_detail_004.py              | active |
+| TC-ISSUE111-007 | 全量导出与明细一致性及文件结构验证           | F7 全量导出         | auto_api | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_export_005.py              | active |
+| TC-ISSUE111-008 | 趋势接口契约结构冒烟验证（两维度）           | F9 趋势契约冒烟     | auto_api | new      | L2       | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_trend_006.py               | active |
+| TC-ISSUE111-009 | 关联指标字段完整性与数值格式验证             | F8 关联指标         | auto_api | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/quality_dashboard/test_api_quality_dashboard_fields_007.py              | active |
+| TC-ISSUE111-010 | 项目维度看板菜单入口与页面展示验证           | F1 项目维度看板     | auto_ui  | new      | L0       | src/tests/openlibing/openlibing_ops/ui/beta/quality_dashboard/test_ui_quality_dashboard_project_001.py               | active |
+| TC-ISSUE111-011 | 组织维度看板直达 URL 加载与展示验证          | F2 组织维度看板     | auto_ui  | new      | L0       | src/tests/openlibing/openlibing_ops/ui/beta/quality_dashboard/test_ui_quality_dashboard_org_002.py                   | active |
+| TC-ISSUE111-012 | UI 时间范围四档切换与三接口联动验证          | F5 时间范围切换(UI) | auto_ui  | new      | L0       | src/tests/openlibing/openlibing_ops/ui/beta/quality_dashboard/test_ui_quality_dashboard_time_range_003.py            | active |
+| TC-ISSUE111-013 | UI 卡片展示值与 API 返回一致性验证           | F8 关联指标(UI)     | auto_ui  | new      | L1       | src/tests/openlibing/openlibing_ops/ui/beta/quality_dashboard/test_ui_quality_dashboard_data_consistency_004.py      | active |
+| TC-ISSUE111-014 | UI 明细分页翻页与导出下载验证                | F6/F7 分页导出(UI)  | auto_ui  | new      | L1       | src/tests/openlibing/openlibing_ops/ui/beta/quality_dashboard/test_ui_quality_dashboard_detail_export_005.py         | active |
+| TC-ISSUE111-015 | 匿名与伪造 token 调用看板接口被拒绝验证      | F10 认证校验        | auto_sec | new      | L1       | src/tests/openlibing/openlibing_ops/security/beta/quality_dashboard/test_security_quality_dashboard_auth_001.py      | active |
+| TC-ISSUE111-016 | 低权限账号调用看板接口被拒绝验证             | F11 纵向越权        | auto_sec | new      | L1       | src/tests/openlibing/openlibing_ops/security/beta/quality_dashboard/test_security_quality_dashboard_vertical_002.py  | active |
+| TC-ISSUE111-017 | 看板接口响应体敏感信息防护验证               | F12 敏感信息防护    | auto_sec | new      | L2       | src/tests/openlibing/openlibing_ops/security/beta/quality_dashboard/test_security_quality_dashboard_sensitive_003.py | active |
+| TC-ISSUE111-018 | 组织维度「测试运营」菜单入口验证（待部署）   | F13 组织菜单入口    | manual   | new      | L1       | —                                                                                                                    | active |
+| TC-ISSUE111-019 | UI 交互细节验证（日期区间/弹层/筛选器）      | F14 UI 交互细节     | manual   | new      | L2       | —                                                                                                                    | active |
 
 > **用例来源说明**：
+>
 > - `reuse`：复用已有用例，引用已有用例编号（在详情中"引用已有用例"字段标注），不重新归档
 > - `new`：新设计用例，必须按规则 5.3 归档到模块用例文件与 case_list.md
-> - **模块归档编号对照**：TC-ISSUE111-001~019 → `openlibing_ops_quality_dashboard_202608_001`~`019`（归档于 `assets/docs/openlibing/openlibing_ops/test_case.md`，openlibing_ops 为历史非标准目录统一清单）
+> - **模块归档编号对照**：TC-ISSUE111-001~~019 → `openlibing_ops_quality_dashboard_202608_001`~~`019`（归档于 `assets/docs/openlibing/openlibing_ops/test_case.md`，openlibing_ops 为历史非标准目录统一清单）
 > - **复用检查结论**（2026-08-31）：已检索 `test_case.md` 全量 154 条用例，无质量风险看板 / issue-legacy / 遗留问题相关用例，全部按 new 设计
 
 ---
@@ -62,30 +63,31 @@
 
 > 本节由**测试人员**填写，AI 不得代填。执行结果未填写完整前，AI 不得生成测试报告（见规则 03 第4节）。
 
-| 用例编号 | 用例类型 | 执行结果 | 缺陷issue | 备注                                                                               |
-|----------|----------|------|------------|----------------------------------------------------------------------------------|
-| TC-ISSUE111-001 | auto_api | pass | — | summary 8 字段契约+五级求和公式成立；R6观察: issueBugCount=25 == issueLegacyCount=25            |
-| TC-ISSUE111-002 | auto_api | pass | — | 组织维度合计行 name=「合计」，公式成立，DI="397.00" 两位小数格式正确                                      |
-| TC-ISSUE111-003 | auto_api | pass | — | 项目维度分页全量拉取求和与 summary 一致                                                         |
-| TC-ISSUE111-004 | auto_api | pass | — | 组织维度全量求和与 summary 一致；行结构符合契约                                                     |
-| TC-ISSUE111-005 | auto_api | pass | — | 四档参数映射正确；单调性成立（今日0/近7天7/近30天25/近90天66）                                           |
-| TC-ISSUE111-006 | auto_api | pass | — | total=35、末页=4、首页10条、第2页10条、末页5条，跨页无重叠                                            |
-| TC-ISSUE111-007 | auto_api | pass | — | 导出48行/11列/Sheet「Issue遗留问题明细」，与明细 total=48 一致（全量语义）                               |
-| TC-ISSUE111-008 | auto_api | pass | — | 两维度趋势契约结构完整（dates=30，trendList 长度一致）                                             |
-| TC-ISSUE111-009 | auto_api | pass | — | 字段齐全类型正确；R6观察: 项目 25/25/25.00，组织 397/397/397.00（bug==legacy 恒等，待 Issue 3.1 口径确认） |
-| TC-ISSUE111-010 | auto_ui | pass | — | 菜单入口可达（测试管理→质量风险），7卡片/趋势图/明细表/分页/导出结构完整                                          |
-| TC-ISSUE111-011 | auto_ui | pass | — | 组织维度直达加载正常，卡片值 397/397.00/0/0/0/0/397                                            |
-| TC-ISSUE111-012 | auto_ui | pass | — | 四档切换参数正确、三接口联动重查、卡片数值单调不减                                                        |
-| TC-ISSUE111-013 | auto_ui | pass | — | 7 张卡片值 == statistics summary 字段；明细首行各列 == detail records[0]                      |
-| TC-ISSUE111-014 | auto_ui | pass | — | total=35 翻页生效；导出 Issue遗留问题明细_*.xlsx(5531B) 非空                                    |
-| TC-ISSUE111-015 | auto_sec | pass | — | 匿名/伪造token × 4接口全部 401 正确拒绝                                                      |
-| TC-ISSUE111-016 | auto_sec | pass | — | 高权限基线 4/4 可用；低权限 pub_LIBING 完整凭证调用 4 接口全部 401 正确拒绝（无纵向越权）                        |
-| TC-ISSUE111-017 | auto_sec | pass | — | 4 接口响应无 token/密码/密钥/手机号/邮箱泄露                                                     |
-| TC-ISSUE111-018 | manual | pass | — | 「测试运营」菜单已补充部署，入口可达组织维度质量风险看板（测试人员人工验证）              |
-| TC-ISSUE111-019 | manual | pass | — | 交互细节均正常：自定义区间生效、弹层重叠不阻塞操作、维度筛选器正常、分辨率布局无错乱（测试人员人工验证） |
+| 用例编号        | 用例类型 | 执行结果 | 缺陷issue | 备注                                                                                                       |
+| --------------- | -------- | -------- | --------- | ---------------------------------------------------------------------------------------------------------- |
+| TC-ISSUE111-001 | auto_api | pass     | —         | summary 8 字段契约+五级求和公式成立；R6观察: issueBugCount=25 == issueLegacyCount=25                       |
+| TC-ISSUE111-002 | auto_api | pass     | —         | 组织维度合计行 name=「合计」，公式成立，DI="397.00" 两位小数格式正确                                       |
+| TC-ISSUE111-003 | auto_api | pass     | —         | 项目维度分页全量拉取求和与 summary 一致                                                                    |
+| TC-ISSUE111-004 | auto_api | pass     | —         | 组织维度全量求和与 summary 一致；行结构符合契约                                                            |
+| TC-ISSUE111-005 | auto_api | pass     | —         | 四档参数映射正确；单调性成立（今日0/近7天7/近30天25/近90天66）                                             |
+| TC-ISSUE111-006 | auto_api | pass     | —         | total=35、末页=4、首页10条、第2页10条、末页5条，跨页无重叠                                                 |
+| TC-ISSUE111-007 | auto_api | pass     | —         | 导出48行/11列/Sheet「Issue遗留问题明细」，与明细 total=48 一致（全量语义）                                 |
+| TC-ISSUE111-008 | auto_api | pass     | —         | 两维度趋势契约结构完整（dates=30，trendList 长度一致）                                                     |
+| TC-ISSUE111-009 | auto_api | pass     | —         | 字段齐全类型正确；R6观察: 项目 25/25/25.00，组织 397/397/397.00（bug==legacy 恒等，待 Issue 3.1 口径确认） |
+| TC-ISSUE111-010 | auto_ui  | pass     | —         | 菜单入口可达（测试管理→质量风险），7卡片/趋势图/明细表/分页/导出结构完整                                   |
+| TC-ISSUE111-011 | auto_ui  | pass     | —         | 组织维度直达加载正常，卡片值 397/397.00/0/0/0/0/397                                                        |
+| TC-ISSUE111-012 | auto_ui  | pass     | —         | 四档切换参数正确、三接口联动重查、卡片数值单调不减                                                         |
+| TC-ISSUE111-013 | auto_ui  | pass     | —         | 7 张卡片值 == statistics summary 字段；明细首行各列 == detail records[0]                                   |
+| TC-ISSUE111-014 | auto_ui  | pass     | —         | total=35 翻页生效；导出 Issue遗留问题明细_*.xlsx(5531B) 非空                                               |
+| TC-ISSUE111-015 | auto_sec | pass     | —         | 匿名/伪造token × 4接口全部 401 正确拒绝                                                                    |
+| TC-ISSUE111-016 | auto_sec | pass     | —         | 高权限基线 4/4 可用；低权限 pub_LIBING 完整凭证调用 4 接口全部 401 正确拒绝（无纵向越权）                  |
+| TC-ISSUE111-017 | auto_sec | pass     | —         | 4 接口响应无 token/密码/密钥/手机号/邮箱泄露                                                               |
+| TC-ISSUE111-018 | manual   | pass     | —         | 「测试运营」菜单已补充部署，入口可达组织维度质量风险看板（测试人员人工验证）                               |
+| TC-ISSUE111-019 | manual   | pass     | —         | 交互细节均正常：自定义区间生效、弹层重叠不阻塞操作、维度筛选器正常、分辨率布局无错乱（测试人员人工验证）   |
 
 > **执行结果取值**：pass（通过）/ fail（失败）/ block（阻塞）/ skip（跳过）
 > **填写要求**：
+>
 > - 自动化用例的 Action 链接在头部"执行信息"中统一填写，此处不重复
 > - 手工用例的执行人在头部"执行信息"中统一填写，此处不重复
 > - **fail 用例必须创建并填写缺陷issue**（gitcode 缺陷 issue 链接），否则不得生成报告
@@ -452,26 +454,26 @@
 
 ## 用例汇总
 
-| 类型 | 数量 | 通过 | 失败 | 阻塞 | 跳过 |
-|------|------|------|------|------|------|
-| 手工用例 | 2 | 2 | 0 | 0 | 0 |
-| 自动化-UI | 5 | 5 | 0 | 0 | 0 |
-| 自动化-API | 9 | 9 | 0 | 0 | 0 |
-| 自动化-性能 | 0 | 0 | 0 | 0 | 0 |
-| 自动化-安全 | 3 | 3 | 0 | 0 | 0 |
-| **合计** | **19** | **19** | **0** | **0** | **0** |
+| 类型        | 数量   | 通过   | 失败  | 阻塞  | 跳过  |
+| ----------- | ------ | ------ | ----- | ----- | ----- |
+| 手工用例    | 2      | 2      | 0     | 0     | 0     |
+| 自动化-UI   | 5      | 5      | 0     | 0     | 0     |
+| 自动化-API  | 9      | 9      | 0     | 0     | 0     |
+| 自动化-性能 | 0      | 0      | 0     | 0     | 0     |
+| 自动化-安全 | 3      | 3      | 0     | 0     | 0     |
+| **合计**    | **19** | **19** | **0** | **0** | **0** |
 
-| 用例来源 | 数量 |
-|----------|------|
-| reuse（复用旧用例） | 0 |
-| new（新设计用例） | 19 |
+| 用例来源            | 数量 |
+| ------------------- | ---- |
+| reuse（复用旧用例） | 0    |
+| new（新设计用例）   | 19   |
 
 ---
 
 ## 版本历史
 
-| 版本 | 日期 | 修改人 | 修改内容 |
-|------|------|--------|----------|
-| v1.0 | 2026-08-31 | AI Agent | 初始版本（19 用例：9 API + 5 UI + 3 安全 + 2 手工，全部 new） |
+| 版本 | 日期       | 修改人                         | 修改内容                                                                                                 |
+| ---- | ---------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| v1.0 | 2026-08-31 | AI Agent                       | 初始版本（19 用例：9 API + 5 UI + 3 安全 + 2 手工，全部 new）                                            |
 | v1.1 | 2026-08-31 | AI Agent（经测试人员确认授权） | 回填执行结果：自动化 17/17 pass（本地 pytest，beta 环境）；TC-018 block（菜单未部署）；TC-019 待人工执行 |
-| v1.2 | 2026-08-31 | 测试人员 + AI Agent | 手工用例执行完毕：TC-018 pass（菜单已部署入口可达）、TC-019 pass（交互细节正常）；19/19 全部通过 |
+| v1.2 | 2026-08-31 | 测试人员 + AI Agent            | 手工用例执行完毕：TC-018 pass（菜单已部署入口可达）、TC-019 pass（交互细节正常）；19/19 全部通过         |

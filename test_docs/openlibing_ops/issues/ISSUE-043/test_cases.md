@@ -13,46 +13,47 @@
 
 > 由**测试人员**填写。自动化用例的 Action 链接在此**统一填写一个**，无需每条用例重复填写。
 
-| 字段 | 内容 |
-|------|------|
-| 自动化执行Action链接 | —（本地 pytest 执行：沙箱网络受限未走 gitcode action；命令 `TEST_ENV=test pytest -m quality_risk`，报告见 reports/latest/） |
-| 手工执行人 | AI 辅助探针执行（Playwright 自动化探针代执行 TC-008/009，证据存档 `_probe_manual.txt`，待测试人员复核） |
-| 执行日期 | 2026-08-28（首轮全量）/ 2026-08-31（TC-015 缺陷复测：`pytest src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_002.py::TestApiQualityRiskDetailBoundary::test_api_quality_risk_detail_paging_015 --env=test`，1 passed） |
+| 字段                 | 内容                                                                                                                                                                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 自动化执行Action链接 | —（本地 pytest 执行：沙箱网络受限未走 gitcode action；命令 `TEST_ENV=test pytest -m quality_risk`，报告见 reports/latest/）                                                                                                                                   |
+| 手工执行人           | AI 辅助探针执行（Playwright 自动化探针代执行 TC-008/009，证据存档 `_probe_manual.txt`，待测试人员复核）                                                                                                                                                       |
+| 执行日期             | 2026-08-28（首轮全量）/ 2026-08-31（TC-015 缺陷复测：`pytest src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_002.py::TestApiQualityRiskDetailBoundary::test_api_quality_risk_detail_paging_015 --env=test`，1 passed） |
 
 ---
 
 ## 用例列表
 
-| 用例编号 | 用例标题 | 所属功能点 | 用例类型 | 用例来源 | 用例等级 | 脚本位置 | 状态 |
-|----------|----------|------------|----------|----------|----------|----------|------|
-| TC-ISSUE043-001 | 组织维度页面加载与 KPI 卡片渲染 | F1/F2 | auto_ui | new | L0 | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/page_load/test_ui_quality_risk_page_load_beta_001.py | active |
-| TC-ISSUE043-002 | 项目维度页面加载与代码仓列表渲染 | F1/F2 | auto_ui | new | L0 | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/page_load/test_ui_quality_risk_page_load_beta_001.py | active |
-| TC-ISSUE043-003 | 组织维度 L1→L2 下钻与面包屑返回 | F3 | auto_ui | new | L0 | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/drilldown/test_ui_quality_risk_drilldown_beta_001.py | active |
-| TC-ISSUE043-004 | 时间范围切换数据刷新（近7天） | F4 | auto_ui | new | L1 | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/filters/test_ui_quality_risk_filters_beta_001.py | active |
-| TC-ISSUE043-005 | 项目维度代码仓列外链跳转属性 | F5 | auto_ui | new | L1 | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/drilldown/test_ui_quality_risk_drilldown_beta_001.py | active |
-| TC-ISSUE043-006 | 趋势折线图渲染与图例 | F4 | auto_ui | new | L1 | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/charts/test_ui_quality_risk_charts_beta_001.py | active |
-| TC-ISSUE043-007 | L1 表格分页器与总数 | F2 | auto_ui | new | L1 | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/filters/test_ui_quality_risk_filters_beta_001.py | active |
-| TC-ISSUE043-008 | 导出按钮点击提示"开发中" | F5 | manual | new | L1 | — | active |
-| TC-ISSUE043-009 | 趋势图样式与 PR 门禁看板一致性 + 空态 | F4 | manual | new | L2 | — | active |
-| TC-ISSUE043-010 | statistics 接口正常响应（项目维度） | F6 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_statistics_001.py | active |
-| TC-ISSUE043-011 | statistics 数据一致性（分项之和=总数） | F6 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_statistics_001.py | active |
-| TC-ISSUE043-012 | trend 接口正常响应与数据结构 | F6 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_trend_001.py | active |
-| TC-ISSUE043-013 | detail 接口组织维度 L1 社区列表 | F6 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_001.py | active |
-| TC-ISSUE043-014 | detail 接口项目维度代码仓列表 | F6 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_001.py | active |
-| TC-ISSUE043-015 | detail 接口分页边界值 | F6 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_002.py | active |
-| TC-ISSUE043-016 | 时间范围参数数据量关系（近7天≤近30天） | F4/F6 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_002.py | active |
-| TC-ISSUE043-017 | 异常参数容错（非法日期格式） | F6 | auto_api | new | L2 | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_002.py | active |
-| TC-ISSUE043-018 | statistics 接口响应时间 | F6 | auto_perf | new | L2 | src/tests/openlibing/openlibing_ops/performance/beta/quality_risk/test_performance_quality_risk_response_time_001.py | active |
-| TC-ISSUE043-019 | trend 接口响应时间 | F6 | auto_perf | new | L2 | src/tests/openlibing/openlibing_ops/performance/beta/quality_risk/test_performance_quality_risk_response_time_001.py | active |
-| TC-ISSUE043-020 | detail 接口响应时间 | F6 | auto_perf | new | L2 | src/tests/openlibing/openlibing_ops/performance/beta/quality_risk/test_performance_quality_risk_response_time_001.py | active |
-| TC-ISSUE043-021 | 认证校验-三接口匿名访问 | F6 | auto_sec | new | L1 | src/tests/openlibing/openlibing_ops/security/beta/quality_risk/test_security_quality_risk_auth_001.py | active |
-| TC-ISSUE043-022 | 横向越权-projectId 数据隔离 | F6 | auto_sec | new | L1 | src/tests/openlibing/openlibing_ops/security/beta/quality_risk/test_security_quality_risk_horizontal_001.py | active |
-| TC-ISSUE043-023 | 传输安全-HTTPS 验证 | F6 | auto_sec | new | L2 | src/tests/openlibing/openlibing_ops/security/beta/quality_risk/test_security_quality_risk_transport_001.py | active |
-| TC-ISSUE043-024 | 敏感信息防护-响应字段检查 | F6 | auto_sec | new | L2 | src/tests/openlibing/openlibing_ops/security/beta/quality_risk/test_security_quality_risk_transport_001.py | active |
-| TC-ISSUE043-025 | 表格列排序切换 | F2 | auto_ui | new | L1 | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/filters/test_ui_quality_risk_filters_beta_001.py | active |
-| TC-ISSUE043-026 | detail 接口 L2 下钻参数（productId） | F6 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_001.py | active |
+| 用例编号        | 用例标题                               | 所属功能点 | 用例类型  | 用例来源 | 用例等级 | 脚本位置                                                                                                             | 状态   |
+| --------------- | -------------------------------------- | ---------- | --------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------- | ------ |
+| TC-ISSUE043-001 | 组织维度页面加载与 KPI 卡片渲染        | F1/F2      | auto_ui   | new      | L0       | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/page_load/test_ui_quality_risk_page_load_beta_001.py        | active |
+| TC-ISSUE043-002 | 项目维度页面加载与代码仓列表渲染       | F1/F2      | auto_ui   | new      | L0       | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/page_load/test_ui_quality_risk_page_load_beta_001.py        | active |
+| TC-ISSUE043-003 | 组织维度 L1→L2 下钻与面包屑返回        | F3         | auto_ui   | new      | L0       | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/drilldown/test_ui_quality_risk_drilldown_beta_001.py        | active |
+| TC-ISSUE043-004 | 时间范围切换数据刷新（近7天）          | F4         | auto_ui   | new      | L1       | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/filters/test_ui_quality_risk_filters_beta_001.py            | active |
+| TC-ISSUE043-005 | 项目维度代码仓列外链跳转属性           | F5         | auto_ui   | new      | L1       | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/drilldown/test_ui_quality_risk_drilldown_beta_001.py        | active |
+| TC-ISSUE043-006 | 趋势折线图渲染与图例                   | F4         | auto_ui   | new      | L1       | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/charts/test_ui_quality_risk_charts_beta_001.py              | active |
+| TC-ISSUE043-007 | L1 表格分页器与总数                    | F2         | auto_ui   | new      | L1       | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/filters/test_ui_quality_risk_filters_beta_001.py            | active |
+| TC-ISSUE043-008 | 导出按钮点击提示"开发中"               | F5         | manual    | new      | L1       | —                                                                                                                    | active |
+| TC-ISSUE043-009 | 趋势图样式与 PR 门禁看板一致性 + 空态  | F4         | manual    | new      | L2       | —                                                                                                                    | active |
+| TC-ISSUE043-010 | statistics 接口正常响应（项目维度）    | F6         | auto_api  | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_statistics_001.py                    | active |
+| TC-ISSUE043-011 | statistics 数据一致性（分项之和=总数） | F6         | auto_api  | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_statistics_001.py                    | active |
+| TC-ISSUE043-012 | trend 接口正常响应与数据结构           | F6         | auto_api  | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_trend_001.py                         | active |
+| TC-ISSUE043-013 | detail 接口组织维度 L1 社区列表        | F6         | auto_api  | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_001.py                        | active |
+| TC-ISSUE043-014 | detail 接口项目维度代码仓列表          | F6         | auto_api  | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_001.py                        | active |
+| TC-ISSUE043-015 | detail 接口分页边界值                  | F6         | auto_api  | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_002.py                        | active |
+| TC-ISSUE043-016 | 时间范围参数数据量关系（近7天≤近30天） | F4/F6      | auto_api  | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_002.py                        | active |
+| TC-ISSUE043-017 | 异常参数容错（非法日期格式）           | F6         | auto_api  | new      | L2       | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_002.py                        | active |
+| TC-ISSUE043-018 | statistics 接口响应时间                | F6         | auto_perf | new      | L2       | src/tests/openlibing/openlibing_ops/performance/beta/quality_risk/test_performance_quality_risk_response_time_001.py | active |
+| TC-ISSUE043-019 | trend 接口响应时间                     | F6         | auto_perf | new      | L2       | src/tests/openlibing/openlibing_ops/performance/beta/quality_risk/test_performance_quality_risk_response_time_001.py | active |
+| TC-ISSUE043-020 | detail 接口响应时间                    | F6         | auto_perf | new      | L2       | src/tests/openlibing/openlibing_ops/performance/beta/quality_risk/test_performance_quality_risk_response_time_001.py | active |
+| TC-ISSUE043-021 | 认证校验-三接口匿名访问                | F6         | auto_sec  | new      | L1       | src/tests/openlibing/openlibing_ops/security/beta/quality_risk/test_security_quality_risk_auth_001.py                | active |
+| TC-ISSUE043-022 | 横向越权-projectId 数据隔离            | F6         | auto_sec  | new      | L1       | src/tests/openlibing/openlibing_ops/security/beta/quality_risk/test_security_quality_risk_horizontal_001.py          | active |
+| TC-ISSUE043-023 | 传输安全-HTTPS 验证                    | F6         | auto_sec  | new      | L2       | src/tests/openlibing/openlibing_ops/security/beta/quality_risk/test_security_quality_risk_transport_001.py           | active |
+| TC-ISSUE043-024 | 敏感信息防护-响应字段检查              | F6         | auto_sec  | new      | L2       | src/tests/openlibing/openlibing_ops/security/beta/quality_risk/test_security_quality_risk_transport_001.py           | active |
+| TC-ISSUE043-025 | 表格列排序切换                         | F2         | auto_ui   | new      | L1       | src/tests/openlibing/openlibing_ops/ui/beta/quality_risk/filters/test_ui_quality_risk_filters_beta_001.py            | active |
+| TC-ISSUE043-026 | detail 接口 L2 下钻参数（productId）   | F6         | auto_api  | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/quality_risk/test_api_quality_risk_detail_001.py                        | active |
 
 > **用例来源说明**：
+>
 > - `reuse`：复用已有用例，引用已有用例编号（在详情中"引用已有用例"字段标注），不重新归档
 > - `new`：新设计用例，必须按规则 5.3 归档到模块用例文件与 case_list.md
 
@@ -62,37 +63,38 @@
 
 > 本节由**测试人员**确认后填写，AI 不得代填。执行结果未填写完整前，AI 不得生成测试报告（见规则 03 第4节）。
 
-| 用例编号 | 用例类型 | 执行结果 | 缺陷issue | 备注 |
-|----------|----------|----------|------------|------|
-| TC-ISSUE043-001 | auto_ui | pass | — | KPI 7 卡片齐全，数值非负（近30天：遗留总数364） |
-| TC-ISSUE043-002 | auto_ui | pass | — | 深链 projectId=3 生效，表头 9 列与需求一致 |
-| TC-ISSUE043-003 | auto_ui | pass | — | L1→L2 下钻路由/面包屑"全部/社区名"正常，返回 L1 恢复 |
-| TC-ISSUE043-004 | auto_ui | pass | — | 近7天(13) ≤ 近30天(40)，按钮选中态正确 |
-| TC-ISSUE043-005 | auto_ui | pass | — | 代码仓链接指向 gitcode.com 且 target=_blank |
-| TC-ISSUE043-006 | auto_ui | pass | — | canvas 图表渲染，图例含 5 个严重级别 |
-| TC-ISSUE043-007 | auto_ui | pass | — | 分页器"共 N 条"+页码切换正常 |
-| TC-ISSUE043-008 | manual | pass | — | 正向偏差：验收标准6预期"提示开发中"，实测导出功能已实现——toast"导出成功！"、POST /common/export/issue-legacy-detail 返回 200、下载 xlsx 成功（组织/项目两维度均验证，证据 _probe_manual.txt）。建议更新 Issue 描述 |
-| TC-ISSUE043-009 | manual | pass | — | 趋势图与 PR 门禁看板同为 canvas 全宽折线图（1560×250 vs 1568×250）样式一致；"今日"空数据时 KPI 归零+表格"暂无数据"空态正常 |
-| TC-ISSUE043-010 | auto_api | pass | — | code==200，items 非空，严重级计数字段完整 |
-| TC-ISSUE043-011 | auto_api | pass | — | 分项之和==总数==遗留DI（364） |
-| TC-ISSUE043-012 | auto_api | pass | — | dates 升序 YYYY-MM-DD，各严重级序列长度匹配 |
-| TC-ISSUE043-013 | auto_api | pass | — | 组织维度 L1 total=26，records≤10，字段完整 |
-| TC-ISSUE043-014 | auto_api | pass | — | 项目维度 total=40，repoUrl 含 gitcode.com |
-| TC-ISSUE043-015 | auto_api | pass | [issue #112](https://gitcode.com/openlibing/openlibing-ops/issues/112)（已修复） | 2026-08-28 首轮 fail（page=9999 超界返回全量 26 条）；**2026-08-31 复测 pass**：page=9999 返回空 records（0 条）、pageSize=1 时 records=1、pageSize=1/10 total 一致（35=35），缺陷已修复 |
-| TC-ISSUE043-016 | auto_api | pass | — | 近7天(13) ≤ 近30天(40) |
-| TC-ISSUE043-017 | auto_api | pass | — | 非法日期不引发 5xx，响应可解析 |
-| TC-ISSUE043-018 | auto_perf | pass | — | statistics：avg<554ms，P95<1024ms，错误率 0% |
-| TC-ISSUE043-019 | auto_perf | pass | — | trend：avg<554ms，P95<1024ms，错误率 0% |
-| TC-ISSUE043-020 | auto_perf | pass | — | detail：avg<554ms，P95<1024ms，错误率 0% |
-| TC-ISSUE043-021 | auto_sec | pass | — | 三接口匿名 POST 均返回 401 |
-| TC-ISSUE043-022 | auto_sec | pass | — | projectId=3(total=40)/300036(total=3) 数据隔离；999999 返回空 |
-| TC-ISSUE043-023 | auto_sec | pass | — | 全程 HTTPS，HTTP 明文降级被拒绝 |
-| TC-ISSUE043-024 | auto_sec | pass | — | 响应体无敏感字段泄露 |
-| TC-ISSUE043-025 | auto_ui | pass | — | "Bug总数"列升降序切换有效，非递增/非递减断言通过 |
-| TC-ISSUE043-026 | auto_api | pass | — | productId=200020 下钻生效，L2(≤L1) 记录含 subOrgName |
+| 用例编号        | 用例类型  | 执行结果 | 缺陷issue                                                                        | 备注                                                                                                                                                                                                               |
+| --------------- | --------- | -------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| TC-ISSUE043-001 | auto_ui   | pass     | —                                                                                | KPI 7 卡片齐全，数值非负（近30天：遗留总数364）                                                                                                                                                                    |
+| TC-ISSUE043-002 | auto_ui   | pass     | —                                                                                | 深链 projectId=3 生效，表头 9 列与需求一致                                                                                                                                                                         |
+| TC-ISSUE043-003 | auto_ui   | pass     | —                                                                                | L1→L2 下钻路由/面包屑"全部/社区名"正常，返回 L1 恢复                                                                                                                                                               |
+| TC-ISSUE043-004 | auto_ui   | pass     | —                                                                                | 近7天(13) ≤ 近30天(40)，按钮选中态正确                                                                                                                                                                             |
+| TC-ISSUE043-005 | auto_ui   | pass     | —                                                                                | 代码仓链接指向 gitcode.com 且 target=_blank                                                                                                                                                                        |
+| TC-ISSUE043-006 | auto_ui   | pass     | —                                                                                | canvas 图表渲染，图例含 5 个严重级别                                                                                                                                                                               |
+| TC-ISSUE043-007 | auto_ui   | pass     | —                                                                                | 分页器"共 N 条"+页码切换正常                                                                                                                                                                                       |
+| TC-ISSUE043-008 | manual    | pass     | —                                                                                | 正向偏差：验收标准6预期"提示开发中"，实测导出功能已实现——toast"导出成功！"、POST /common/export/issue-legacy-detail 返回 200、下载 xlsx 成功（组织/项目两维度均验证，证据 _probe_manual.txt）。建议更新 Issue 描述 |
+| TC-ISSUE043-009 | manual    | pass     | —                                                                                | 趋势图与 PR 门禁看板同为 canvas 全宽折线图（1560×250 vs 1568×250）样式一致；"今日"空数据时 KPI 归零+表格"暂无数据"空态正常                                                                                         |
+| TC-ISSUE043-010 | auto_api  | pass     | —                                                                                | code==200，items 非空，严重级计数字段完整                                                                                                                                                                          |
+| TC-ISSUE043-011 | auto_api  | pass     | —                                                                                | 分项之和==总数==遗留DI（364）                                                                                                                                                                                      |
+| TC-ISSUE043-012 | auto_api  | pass     | —                                                                                | dates 升序 YYYY-MM-DD，各严重级序列长度匹配                                                                                                                                                                        |
+| TC-ISSUE043-013 | auto_api  | pass     | —                                                                                | 组织维度 L1 total=26，records≤10，字段完整                                                                                                                                                                         |
+| TC-ISSUE043-014 | auto_api  | pass     | —                                                                                | 项目维度 total=40，repoUrl 含 gitcode.com                                                                                                                                                                          |
+| TC-ISSUE043-015 | auto_api  | pass     | [issue #112](https://gitcode.com/openlibing/openlibing-ops/issues/112)（已修复） | 2026-08-28 首轮 fail（page=9999 超界返回全量 26 条）；**2026-08-31 复测 pass**：page=9999 返回空 records（0 条）、pageSize=1 时 records=1、pageSize=1/10 total 一致（35=35），缺陷已修复                           |
+| TC-ISSUE043-016 | auto_api  | pass     | —                                                                                | 近7天(13) ≤ 近30天(40)                                                                                                                                                                                             |
+| TC-ISSUE043-017 | auto_api  | pass     | —                                                                                | 非法日期不引发 5xx，响应可解析                                                                                                                                                                                     |
+| TC-ISSUE043-018 | auto_perf | pass     | —                                                                                | statistics：avg<554ms，P95<1024ms，错误率 0%                                                                                                                                                                       |
+| TC-ISSUE043-019 | auto_perf | pass     | —                                                                                | trend：avg<554ms，P95<1024ms，错误率 0%                                                                                                                                                                            |
+| TC-ISSUE043-020 | auto_perf | pass     | —                                                                                | detail：avg<554ms，P95<1024ms，错误率 0%                                                                                                                                                                           |
+| TC-ISSUE043-021 | auto_sec  | pass     | —                                                                                | 三接口匿名 POST 均返回 401                                                                                                                                                                                         |
+| TC-ISSUE043-022 | auto_sec  | pass     | —                                                                                | projectId=3(total=40)/300036(total=3) 数据隔离；999999 返回空                                                                                                                                                      |
+| TC-ISSUE043-023 | auto_sec  | pass     | —                                                                                | 全程 HTTPS，HTTP 明文降级被拒绝                                                                                                                                                                                    |
+| TC-ISSUE043-024 | auto_sec  | pass     | —                                                                                | 响应体无敏感字段泄露                                                                                                                                                                                               |
+| TC-ISSUE043-025 | auto_ui   | pass     | —                                                                                | "Bug总数"列升降序切换有效，非递增/非递减断言通过                                                                                                                                                                   |
+| TC-ISSUE043-026 | auto_api  | pass     | —                                                                                | productId=200020 下钻生效，L2(≤L1) 记录含 subOrgName                                                                                                                                                               |
 
 > **执行结果取值**：pass（通过）/ fail（失败）/ block（阻塞）/ skip（跳过）
 > **填写要求**：
+>
 > - 自动化用例的 Action 链接在头部"执行信息"中统一填写，此处不重复
 > - 手工用例的执行人在头部"执行信息"中统一填写，此处不重复
 > - **fail 用例必须创建并填写缺陷issue**（gitcode 缺陷 issue 链接），否则不得生成报告
@@ -539,25 +541,25 @@
 
 ## 用例汇总
 
-| 类型 | 数量 | 通过 | 失败 | 阻塞 | 跳过 |
-|------|------|------|------|------|------|
-| 手工用例 | 2 | 2 | 0 | 0 | 0 |
-| 自动化-UI | 8 | 8 | 0 | 0 | 0 |
-| 自动化-API | 9 | 8 | 1 | 0 | 0 |
-| 自动化-性能 | 3 | 3 | 0 | 0 | 0 |
-| 自动化-安全 | 4 | 4 | 0 | 0 | 0 |
-| **合计** | **26** | **25** | **1** | **0** | **0** |
+| 类型        | 数量   | 通过   | 失败  | 阻塞  | 跳过  |
+| ----------- | ------ | ------ | ----- | ----- | ----- |
+| 手工用例    | 2      | 2      | 0     | 0     | 0     |
+| 自动化-UI   | 8      | 8      | 0     | 0     | 0     |
+| 自动化-API  | 9      | 8      | 1     | 0     | 0     |
+| 自动化-性能 | 3      | 3      | 0     | 0     | 0     |
+| 自动化-安全 | 4      | 4      | 0     | 0     | 0     |
+| **合计**    | **26** | **25** | **1** | **0** | **0** |
 
-| 用例来源 | 数量 |
-|----------|------|
-| reuse（复用旧用例） | 0 |
-| new（新设计用例） | 26 |
+| 用例来源            | 数量 |
+| ------------------- | ---- |
+| reuse（复用旧用例） | 0    |
+| new（新设计用例）   | 26   |
 
 ---
 
 ## 版本历史
 
-| 版本 | 日期 | 修改人 | 修改内容 |
-|------|------|--------|----------|
-| v1.0 | 2026-08-28 | AI 辅助 | 初始版本（24 条用例） |
+| 版本 | 日期       | 修改人  | 修改内容                                                                                                                   |
+| ---- | ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| v1.0 | 2026-08-28 | AI 辅助 | 初始版本（24 条用例）                                                                                                      |
 | v1.1 | 2026-08-28 | AI 辅助 | 补充 TC-025/TC-026（共 26 条）；回填执行结果（25 pass / 1 fail：TC-015 分页超界返回全量，缺陷待登记）；TC-008 正向偏差记录 |

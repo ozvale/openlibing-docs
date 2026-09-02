@@ -18,30 +18,31 @@
 
 > 由**测试人员**填写。自动化用例的 Action 链接在此**统一填写一个**，无需每条用例重复填写。
 
-| 字段 | 内容 |
-|------|------|
+| 字段                 | 内容                                                                                                                                                                                                                             |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 自动化执行Action链接 | 本地 pytest 重跑执行（执行凭证：JUnit XML 已内联归档于 test_report.md「附录 A 本地执行凭证归档」，UI 批次 4/4 通过 66.93s + 安全批次 2/2 通过 35.02s；GitCode CI 流水线因仅默认分支注册 workflow 未触发，action 链接待后续补充） |
-| 手工执行人 | AI Agent 浏览器辅助验证（测试人员授权指令执行，2026-08-31；TC-007/008/009 验证证据：看板截图 + precision-coverage 接口抓包均 200） |
-| 执行日期 | 2026-08-31 |
+| 手工执行人           | AI Agent 浏览器辅助验证（测试人员授权指令执行，2026-08-31；TC-007/008/009 验证证据：看板截图 + precision-coverage 接口抓包均 200）                                                                                               |
+| 执行日期             | 2026-08-31                                                                                                                                                                                                                       |
 
 ---
 
 ## 用例列表
 
-| 用例编号 | 用例标题 | 所属功能点 | 用例类型 | 用例来源 | 用例等级 | 脚本位置 | 状态 |
-|----------|----------|------------|----------|----------|----------|----------|------|
-| TC-ISSUE106-001 | 精准测试菜单入口存在性验证 | F1 菜单入口 | auto_ui | new | L0 | src/tests/openlibing/openlibing_ops/ui/beta/coverage_dashboard/test_ui_coverage_dashboard_entry_001.py | active |
-| TC-ISSUE106-002 | 看板应用路由与 iframe 看板内容加载验证 | F2 路由与重定向 | auto_ui | new | L0 | src/tests/openlibing/openlibing_ops/ui/beta/coverage_dashboard/test_ui_coverage_dashboard_entry_001.py | active |
-| TC-ISSUE106-003 | 已授权账号直达项目看板内容渲染验证 | F3 看板内容渲染 | auto_ui | new | L0 | src/tests/openlibing/openlibing_ops/ui/beta/coverage_dashboard/test_ui_coverage_dashboard_entry_001.py | active |
-| TC-ISSUE106-004 | 仓库覆盖率数值格式与文件下钻入口验证 | F4 覆盖率数值与下钻 | auto_ui | new | L1 | src/tests/openlibing/openlibing_ops/ui/beta/coverage_dashboard/test_ui_coverage_dashboard_entry_001.py | active |
-| TC-ISSUE106-005 | 匿名（未登录）访问看板路由拦截验证 | F5 匿名访问拦截 | auto_sec | new | L0 | src/tests/openlibing/openlibing_ops/security/beta/coverage_dashboard/test_security_coverage_dashboard_auth_001.py | active |
-| TC-ISSUE106-006 | 低权限账号访问看板路由拦截验证 | F6 低权限拦截 | auto_sec | new | L1 | src/tests/openlibing/openlibing_ops/security/beta/coverage_dashboard/test_security_coverage_dashboard_auth_001.py | active |
-| TC-ISSUE106-007 | 项目级看板四种覆盖率指标展示验证 | F7 覆盖率展示 | manual | new | L0 | — | active |
-| TC-ISSUE106-008 | 项目级看板文件下钻与覆盖详情验证 | F8 文件下钻 | manual | new | L1 | — | active |
-| TC-ISSUE106-009 | 组织级看板指标展示验证 | F9 组织级指标 | manual | new | L1 | — | active |
-| TC-ISSUE106-010 | OBS 数据来源路径映射验证 | F10 数据来源 | manual | new | L2 | — | active |
+| 用例编号        | 用例标题                               | 所属功能点          | 用例类型 | 用例来源 | 用例等级 | 脚本位置                                                                                                          | 状态   |
+| --------------- | -------------------------------------- | ------------------- | -------- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------- | ------ |
+| TC-ISSUE106-001 | 精准测试菜单入口存在性验证             | F1 菜单入口         | auto_ui  | new      | L0       | src/tests/openlibing/openlibing_ops/ui/beta/coverage_dashboard/test_ui_coverage_dashboard_entry_001.py            | active |
+| TC-ISSUE106-002 | 看板应用路由与 iframe 看板内容加载验证 | F2 路由与重定向     | auto_ui  | new      | L0       | src/tests/openlibing/openlibing_ops/ui/beta/coverage_dashboard/test_ui_coverage_dashboard_entry_001.py            | active |
+| TC-ISSUE106-003 | 已授权账号直达项目看板内容渲染验证     | F3 看板内容渲染     | auto_ui  | new      | L0       | src/tests/openlibing/openlibing_ops/ui/beta/coverage_dashboard/test_ui_coverage_dashboard_entry_001.py            | active |
+| TC-ISSUE106-004 | 仓库覆盖率数值格式与文件下钻入口验证   | F4 覆盖率数值与下钻 | auto_ui  | new      | L1       | src/tests/openlibing/openlibing_ops/ui/beta/coverage_dashboard/test_ui_coverage_dashboard_entry_001.py            | active |
+| TC-ISSUE106-005 | 匿名（未登录）访问看板路由拦截验证     | F5 匿名访问拦截     | auto_sec | new      | L0       | src/tests/openlibing/openlibing_ops/security/beta/coverage_dashboard/test_security_coverage_dashboard_auth_001.py | active |
+| TC-ISSUE106-006 | 低权限账号访问看板路由拦截验证         | F6 低权限拦截       | auto_sec | new      | L1       | src/tests/openlibing/openlibing_ops/security/beta/coverage_dashboard/test_security_coverage_dashboard_auth_001.py | active |
+| TC-ISSUE106-007 | 项目级看板四种覆盖率指标展示验证       | F7 覆盖率展示       | manual   | new      | L0       | —                                                                                                                 | active |
+| TC-ISSUE106-008 | 项目级看板文件下钻与覆盖详情验证       | F8 文件下钻         | manual   | new      | L1       | —                                                                                                                 | active |
+| TC-ISSUE106-009 | 组织级看板指标展示验证                 | F9 组织级指标       | manual   | new      | L1       | —                                                                                                                 | active |
+| TC-ISSUE106-010 | OBS 数据来源路径映射验证               | F10 数据来源        | manual   | new      | L2       | —                                                                                                                 | active |
 
 > **用例来源说明**：
+>
 > - `reuse`：复用已有用例，引用已有用例编号（在详情中"引用已有用例"字段标注），不重新归档
 > - `new`：新设计用例，必须按规则 5.3 归档到模块用例文件与 case_list.md
 > - **模块归档编号说明**：本 Issue 10 条用例以原编号 `TC-ISSUE106-001~010` 直接归档于 `test_case.md`（coverage_dashboard 模块，v1.5 归档、v2.0 同步权限适配；未另分配 `openlibing_ops_coverage_dashboard_202608_*` 模块编号）
@@ -52,27 +53,29 @@
 
 > 本节由**测试人员**填写，AI 不得代填。执行结果未填写完整前，AI 不得生成测试报告（见规则 03 第4节）。
 
-| 用例编号 | 用例类型 | 执行结果 | 缺陷issue | 备注                                                                                                 |
-|----------|----------|------|------------|----------------------------------------------------------------------------------------------------|
-| TC-ISSUE106-001 | auto_ui | pass | — | 重跑通过（脚本 v2 修复菜单采集：逐级展开嵌套「测试管理」分组 + 路由激活自动展开兜底策略），采集到「精准测试」菜单项且可见可点击 |
-| TC-ISSUE106-002 | auto_ui | pass | — | 重跑通过（断言改以页面标题 + iframe 内容判定，兼容应用级持久化 tab 场景）：应用路由标题「精准测试」，iframe 内嵌 precision-test 看板并渲染覆盖率指标 |
-| TC-ISSUE106-003 | auto_ui | pass | — | 重跑通过（权限开通后切换为正向内容验证）：直达项目看板标题正确，运营 KPI 5 项 + 四种覆盖率指标 + 仓库列表全部渲染，无无权限提示 |
-| TC-ISSUE106-004 | auto_ui | pass | — | 重跑通过（权限开通后切换为数值格式与下钻入口验证）：仓库行数据 ≥1 条，覆盖率 xx.xx% 数值 ≥4 个，「点击查看文件列表」下钻按钮存在 |
-| TC-ISSUE106-005 | auto_sec | pass | — | 匿名访问未渲染看板内容（无越权信号），拦截判定通过                                                                          |
-| TC-ISSUE106-006 | auto_sec | pass | — | 低权限账号 pub_LIBING 访问未渲染看板内容（无越权信号），纵向越权防护通过                                                         |
-| TC-ISSUE106-007 | manual | pass | — | 手工验证通过：项目看板展示行/分支/函数/文件四种覆盖率（MindIE-LLM 78.10%/63.40%/74.50%/66.10%，vllm-ascend 68.67%/58.15%/96.73%/84.57%），数值格式合理；summary/repo/list 接口 200 |
-| TC-ISSUE106-008 | manual | pass | — | 手工验证通过：仓库行「行覆盖率」→ 文件列表 → 文件覆盖详情下钻链路完整（attention_mask.py 行覆盖率 98.46%、分支 83.33%、函数 100.00%，源码逐行覆盖标识正常渲染）；file/list 与 file/detail 接口 200 |
-| TC-ISSUE106-009 | manual | pass | — | 手工验证通过：组织级看板展示接入占比 0.14%/PR渗透率/减少工作量 32,290 秒/时长降幅 76.43%/访问量 753 + 四种覆盖率（71.93%/60.21%/87.45%/73.02%），口径与 Issue 定义一致；summary/project-list 接口 200 |
-| TC-ISSUE106-010 | manual | block | — | 前置条件不满足：OBS 上报路径约定待开发提供，无法核对上报数据与看板数据一致性；看板已有真实数据（2 仓库，采集日期 2026-08-20/08-30）表明数据链路已打通，但路径映射规则与数据一致性未验证 |
+| 用例编号        | 用例类型 | 执行结果 | 缺陷issue | 备注                                                                                                                                                                                                  |
+| --------------- | -------- | -------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TC-ISSUE106-001 | auto_ui  | pass     | —         | 重跑通过（脚本 v2 修复菜单采集：逐级展开嵌套「测试管理」分组 + 路由激活自动展开兜底策略），采集到「精准测试」菜单项且可见可点击                                                                       |
+| TC-ISSUE106-002 | auto_ui  | pass     | —         | 重跑通过（断言改以页面标题 + iframe 内容判定，兼容应用级持久化 tab 场景）：应用路由标题「精准测试」，iframe 内嵌 precision-test 看板并渲染覆盖率指标                                                  |
+| TC-ISSUE106-003 | auto_ui  | pass     | —         | 重跑通过（权限开通后切换为正向内容验证）：直达项目看板标题正确，运营 KPI 5 项 + 四种覆盖率指标 + 仓库列表全部渲染，无无权限提示                                                                       |
+| TC-ISSUE106-004 | auto_ui  | pass     | —         | 重跑通过（权限开通后切换为数值格式与下钻入口验证）：仓库行数据 ≥1 条，覆盖率 xx.xx% 数值 ≥4 个，「点击查看文件列表」下钻按钮存在                                                                      |
+| TC-ISSUE106-005 | auto_sec | pass     | —         | 匿名访问未渲染看板内容（无越权信号），拦截判定通过                                                                                                                                                    |
+| TC-ISSUE106-006 | auto_sec | pass     | —         | 低权限账号 pub_LIBING 访问未渲染看板内容（无越权信号），纵向越权防护通过                                                                                                                              |
+| TC-ISSUE106-007 | manual   | pass     | —         | 手工验证通过：项目看板展示行/分支/函数/文件四种覆盖率（MindIE-LLM 78.10%/63.40%/74.50%/66.10%，vllm-ascend 68.67%/58.15%/96.73%/84.57%），数值格式合理；summary/repo/list 接口 200                    |
+| TC-ISSUE106-008 | manual   | pass     | —         | 手工验证通过：仓库行「行覆盖率」→ 文件列表 → 文件覆盖详情下钻链路完整（attention_mask.py 行覆盖率 98.46%、分支 83.33%、函数 100.00%，源码逐行覆盖标识正常渲染）；file/list 与 file/detail 接口 200    |
+| TC-ISSUE106-009 | manual   | pass     | —         | 手工验证通过：组织级看板展示接入占比 0.14%/PR渗透率/减少工作量 32,290 秒/时长降幅 76.43%/访问量 753 + 四种覆盖率（71.93%/60.21%/87.45%/73.02%），口径与 Issue 定义一致；summary/project-list 接口 200 |
+| TC-ISSUE106-010 | manual   | block    | —         | 前置条件不满足：OBS 上报路径约定待开发提供，无法核对上报数据与看板数据一致性；看板已有真实数据（2 仓库，采集日期 2026-08-20/08-30）表明数据链路已打通，但路径映射规则与数据一致性未验证               |
 
 > **执行结果取值**：pass（通过）/ fail（失败）/ block（阻塞）/ skip（跳过）
 > **填写要求**：
+>
 > - 自动化用例的 Action 链接在头部"执行信息"中统一填写，此处不重复
 > - 手工用例的执行人在头部"执行信息"中统一填写，此处不重复
 > - **fail 用例必须创建并填写缺陷issue**（gitcode 缺陷 issue 链接），否则不得生成报告
 > - fail/block 用例必须填写 备注 说明原因
 >
 > **本期说明（2026-08-31 重跑更新）**：
+>
 > 1. **权限开通后重跑**：测试账号 p_tianyan 已开通精准测试看板权限（test_case_coverage / precision-coverage / precision-coverage-project），TC-ISSUE106-001~004 原按「无权限 → 重定向 noPermission」设计的断言不再适用，脚本升级 v2 按权限开通后口径切换为看板内容正向验证，重跑 6 条自动化用例**全部通过**（UI 批次 4/4 + 安全批次 2/2）；无权限拦截行为由安全用例 TC-ISSUE106-005/006（匿名/低权限身份）持续覆盖。
 > 2. **首跑 4 条 fail 均为脚本假阴性**（菜单采集定位错误、URL 断言不兼容 tab 激活、断言时机过早），经人工浏览器复核产品行为符合预期，不创建产品缺陷 issue，已于脚本 v2 修复并重跑回改为 pass。
 > 3. **手工用例**：TC-007/008/009 经浏览器辅助验证通过（证据：看板截图与 precision-coverage 接口抓包）；TC-010 因 OBS 上报路径约定待开发提供而阻塞。
@@ -264,26 +267,26 @@
 
 ## 用例汇总
 
-| 类型 | 数量 | 通过 | 失败 | 阻塞 | 跳过 |
-|------|------|------|------|------|------|
-| 手工用例 | 4 | 3 | 0 | 1 | 0 |
-| 自动化-UI | 4 | 4 | 0 | 0 | 0 |
-| 自动化-API | 0 | 0 | 0 | 0 | 0 |
-| 自动化-性能 | 0 | 0 | 0 | 0 | 0 |
-| 自动化-安全 | 2 | 2 | 0 | 0 | 0 |
-| **合计** | **10** | **9** | **0** | **1** | **0** |
+| 类型        | 数量   | 通过  | 失败  | 阻塞  | 跳过  |
+| ----------- | ------ | ----- | ----- | ----- | ----- |
+| 手工用例    | 4      | 3     | 0     | 1     | 0     |
+| 自动化-UI   | 4      | 4     | 0     | 0     | 0     |
+| 自动化-API  | 0      | 0     | 0     | 0     | 0     |
+| 自动化-性能 | 0      | 0     | 0     | 0     | 0     |
+| 自动化-安全 | 2      | 2     | 0     | 0     | 0     |
+| **合计**    | **10** | **9** | **0** | **1** | **0** |
 
-| 用例来源 | 数量 |
-|----------|------|
-| reuse（复用旧用例） | 0 |
-| new（新设计用例） | 10 |
+| 用例来源            | 数量 |
+| ------------------- | ---- |
+| reuse（复用旧用例） | 0    |
+| new（新设计用例）   | 10   |
 
 ---
 
 ## 版本历史
 
-| 版本 | 日期 | 修改人 | 修改内容 |
-|------|------|--------|----------|
-| v1.0 | 2026-08-29 | AI Agent | 初始版本（批次一可执行 6 条自动化 + 批次二 blocked 4 条手工） |
-| v1.1 | 2026-08-31 | AI Agent | 回填本地执行结果：6 条自动化 2 pass / 4 fail（均为脚本假阴性，人工复核产品行为符合预期）；4 条手工因看板权限阻塞 |
+| 版本 | 日期       | 修改人   | 修改内容                                                                                                                                                                                                                                                                                                               |
+| ---- | ---------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v1.0 | 2026-08-29 | AI Agent | 初始版本（批次一可执行 6 条自动化 + 批次二 blocked 4 条手工）                                                                                                                                                                                                                                                          |
+| v1.1 | 2026-08-31 | AI Agent | 回填本地执行结果：6 条自动化 2 pass / 4 fail（均为脚本假阴性，人工复核产品行为符合预期）；4 条手工因看板权限阻塞                                                                                                                                                                                                       |
 | v1.2 | 2026-08-31 | AI Agent | 权限开通后重跑回填：6 条自动化全部 pass（脚本 v2 修复 3 类假阴性并按权限开通口径适配）；TC-002/003/004 标题与验证口径同步适配（无权限拦截由安全用例 TC-005/006 承接）；手工 TC-007/008/009 验证 pass（证据：看板截图 + precision-coverage 接口抓包），TC-010 因 OBS 路径约定未提供阻塞；汇总 9 pass / 0 fail / 1 block |

@@ -13,41 +13,42 @@
 
 > 由**测试人员**填写。自动化用例的 Action 链接在此**统一填写一个**，无需每条用例重复填写。
 
-| 字段 | 内容 |
-|------|------|
+| 字段                 | 内容                                                    |
+| -------------------- | ------------------------------------------------------- |
 | 自动化执行Action链接 | 本地 pytest 执行（gitcode action 待测试人员确认后补充） |
-| 手工执行人 | — |
-| 执行日期 | 2026-08-11 |
+| 手工执行人           | —                                                       |
+| 执行日期             | 2026-08-11                                              |
 
 ---
 
 ## 用例列表
 
-| 用例编号 | 用例标题 | 所属功能点 | 用例类型 | 用例来源 | 用例等级 | 脚本位置 | 状态 |
-|----------|----------|------------|----------|----------|----------|----------|------|
-| TC-ISSUE078-001 | 明细接口返回 failedTaskType 字段 | FP-01 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_detail_001.py | active |
-| TC-ISSUE078-002 | 失败任务类型筛选-构建任务 | FP-02 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_detail_002.py | active |
-| TC-ISSUE078-003 | 失败任务类型筛选-测试任务 | FP-02 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_detail_002.py | active |
-| TC-ISSUE078-004 | 失败任务类型筛选-其他任务 | FP-02 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_detail_002.py | active |
-| TC-ISSUE078-005 | 失败任务类型不传/非法值不过滤 | FP-02 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_detail_002.py | active |
-| TC-ISSUE078-006 | 项目级汇总接口返回结构验证 | FP-04 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_summary_001.py | active |
-| TC-ISSUE078-007 | 项目级汇总接口字段完整性（26 字段） | FP-04 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_summary_001.py | active |
-| TC-ISSUE078-008 | 汇总接口无 projectId 参数行为 | FP-04 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_summary_001.py | active |
-| TC-ISSUE078-009 | 主列表导出接口返回 xlsx 文件流 | FP-06 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_export_001.py | active |
-| TC-ISSUE078-010 | UI-失败任务类型列存在及取值合法 | FP-01 | auto_ui | new | L0 | src/tests/openlibing/openlibing_ops/ui/beta/nightly_dashboard/failure_type/test_ui_nightly_dashboard_failure_type_beta_001.py | active |
-| TC-ISSUE078-011 | UI-未失败流水线展示"流水线未失败" | FP-01 | auto_ui | new | L1 | src/tests/openlibing/openlibing_ops/ui/beta/nightly_dashboard/failure_type/test_ui_nightly_dashboard_failure_type_beta_001.py | active |
-| TC-ISSUE078-012 | UI-失败任务类型筛选功能 | FP-02 | auto_ui | new | L0 | src/tests/openlibing/openlibing_ops/ui/beta/nightly_dashboard/failure_type/test_ui_nightly_dashboard_failure_type_beta_002.py | active |
-| TC-ISSUE078-013 | UI-主列表导出按钮及下载验证 | FP-06 | auto_ui | new | L0 | src/tests/openlibing/openlibing_ops/ui/beta/nightly_dashboard/export/test_ui_nightly_dashboard_export_beta_001.py | active |
-| TC-ISSUE078-014 | UI-项目级汇总无导出、流水线级有导出 | FP-07 | auto_ui | new | L1 | src/tests/openlibing/openlibing_ops/ui/beta/nightly_dashboard/export/test_ui_nightly_dashboard_export_beta_001.py | active |
-| TC-ISSUE078-015 | 汇总接口响应时间验证 | FP-08 | auto_perf | new | L1 | src/tests/openlibing/openlibing_ops/performance/beta/nightly_dashboard/test_performance_nightly_dashboard_summary_001.py | active |
-| TC-ISSUE078-016 | 汇总/导出接口未认证访问拒绝 | FP-09 | auto_sec | new | L1 | src/tests/openlibing/openlibing_ops/security/beta/nightly_dashboard/test_security_nightly_dashboard_001.py | active |
-| TC-ISSUE078-017 | 认证校验-伪造 token 请求 | FP-10 | auto_sec | new | L1 | src/tests/openlibing/openlibing_ops/security/beta/nightly_dashboard/test_security_nightly_dashboard_001.py | active |
-| TC-ISSUE078-018 | 横向越权-跨项目数据隔离 | FP-11 | auto_sec | new | L1 | src/tests/openlibing/openlibing_ops/security/beta/nightly_dashboard/test_security_nightly_dashboard_002.py | active |
-| TC-ISSUE078-019 | 传输安全-HTTPS 与 Cookie 属性 | FP-12 | auto_sec | new | L1 | src/tests/openlibing/openlibing_ops/security/beta/nightly_dashboard/test_security_nightly_dashboard_003.py | active |
-| TC-ISSUE078-020 | CSRF 防护-导出接口变更请求 | FP-13 | auto_sec | new | L1 | src/tests/openlibing/openlibing_ops/security/beta/nightly_dashboard/test_security_nightly_dashboard_003.py | active |
-| TC-ISSUE078-021 | 敏感信息防护-响应不泄露凭证 | FP-14 | auto_sec | new | L1 | src/tests/openlibing/openlibing_ops/security/beta/nightly_dashboard/test_security_nightly_dashboard_003.py | active |
+| 用例编号        | 用例标题                            | 所属功能点 | 用例类型  | 用例来源 | 用例等级 | 脚本位置                                                                                                                      | 状态   |
+| --------------- | ----------------------------------- | ---------- | --------- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- | ------ |
+| TC-ISSUE078-001 | 明细接口返回 failedTaskType 字段    | FP-01      | auto_api  | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_detail_001.py                       | active |
+| TC-ISSUE078-002 | 失败任务类型筛选-构建任务           | FP-02      | auto_api  | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_detail_002.py                       | active |
+| TC-ISSUE078-003 | 失败任务类型筛选-测试任务           | FP-02      | auto_api  | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_detail_002.py                       | active |
+| TC-ISSUE078-004 | 失败任务类型筛选-其他任务           | FP-02      | auto_api  | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_detail_002.py                       | active |
+| TC-ISSUE078-005 | 失败任务类型不传/非法值不过滤       | FP-02      | auto_api  | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_detail_002.py                       | active |
+| TC-ISSUE078-006 | 项目级汇总接口返回结构验证          | FP-04      | auto_api  | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_summary_001.py                      | active |
+| TC-ISSUE078-007 | 项目级汇总接口字段完整性（26 字段） | FP-04      | auto_api  | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_summary_001.py                      | active |
+| TC-ISSUE078-008 | 汇总接口无 projectId 参数行为       | FP-04      | auto_api  | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_summary_001.py                      | active |
+| TC-ISSUE078-009 | 主列表导出接口返回 xlsx 文件流      | FP-06      | auto_api  | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/nightly_dashboard/test_api_nightly_dashboard_export_001.py                       | active |
+| TC-ISSUE078-010 | UI-失败任务类型列存在及取值合法     | FP-01      | auto_ui   | new      | L0       | src/tests/openlibing/openlibing_ops/ui/beta/nightly_dashboard/failure_type/test_ui_nightly_dashboard_failure_type_beta_001.py | active |
+| TC-ISSUE078-011 | UI-未失败流水线展示"流水线未失败"   | FP-01      | auto_ui   | new      | L1       | src/tests/openlibing/openlibing_ops/ui/beta/nightly_dashboard/failure_type/test_ui_nightly_dashboard_failure_type_beta_001.py | active |
+| TC-ISSUE078-012 | UI-失败任务类型筛选功能             | FP-02      | auto_ui   | new      | L0       | src/tests/openlibing/openlibing_ops/ui/beta/nightly_dashboard/failure_type/test_ui_nightly_dashboard_failure_type_beta_002.py | active |
+| TC-ISSUE078-013 | UI-主列表导出按钮及下载验证         | FP-06      | auto_ui   | new      | L0       | src/tests/openlibing/openlibing_ops/ui/beta/nightly_dashboard/export/test_ui_nightly_dashboard_export_beta_001.py             | active |
+| TC-ISSUE078-014 | UI-项目级汇总无导出、流水线级有导出 | FP-07      | auto_ui   | new      | L1       | src/tests/openlibing/openlibing_ops/ui/beta/nightly_dashboard/export/test_ui_nightly_dashboard_export_beta_001.py             | active |
+| TC-ISSUE078-015 | 汇总接口响应时间验证                | FP-08      | auto_perf | new      | L1       | src/tests/openlibing/openlibing_ops/performance/beta/nightly_dashboard/test_performance_nightly_dashboard_summary_001.py      | active |
+| TC-ISSUE078-016 | 汇总/导出接口未认证访问拒绝         | FP-09      | auto_sec  | new      | L1       | src/tests/openlibing/openlibing_ops/security/beta/nightly_dashboard/test_security_nightly_dashboard_001.py                    | active |
+| TC-ISSUE078-017 | 认证校验-伪造 token 请求            | FP-10      | auto_sec  | new      | L1       | src/tests/openlibing/openlibing_ops/security/beta/nightly_dashboard/test_security_nightly_dashboard_001.py                    | active |
+| TC-ISSUE078-018 | 横向越权-跨项目数据隔离             | FP-11      | auto_sec  | new      | L1       | src/tests/openlibing/openlibing_ops/security/beta/nightly_dashboard/test_security_nightly_dashboard_002.py                    | active |
+| TC-ISSUE078-019 | 传输安全-HTTPS 与 Cookie 属性       | FP-12      | auto_sec  | new      | L1       | src/tests/openlibing/openlibing_ops/security/beta/nightly_dashboard/test_security_nightly_dashboard_003.py                    | active |
+| TC-ISSUE078-020 | CSRF 防护-导出接口变更请求          | FP-13      | auto_sec  | new      | L1       | src/tests/openlibing/openlibing_ops/security/beta/nightly_dashboard/test_security_nightly_dashboard_003.py                    | active |
+| TC-ISSUE078-021 | 敏感信息防护-响应不泄露凭证         | FP-14      | auto_sec  | new      | L1       | src/tests/openlibing/openlibing_ops/security/beta/nightly_dashboard/test_security_nightly_dashboard_003.py                    | active |
 
 > **用例来源说明**：
+>
 > - `reuse`：复用已有用例，引用已有用例编号（在详情中"引用已有用例"字段标注），不重新归档
 > - `new`：新设计用例，必须按规则 5.3 归档到模块用例文件与 case_list.md
 
@@ -57,32 +58,33 @@
 
 > 本节由**测试人员**确认后生效。以下为本地 pytest 实测结果（2026-08-11），Action 链接与缺陷 issue 待测试人员补充。
 
-| 用例编号 | 用例类型 | 执行结果 | 缺陷issue | 备注 |
-|----------|----------|----------|------------|------|
-| TC-ISSUE078-001 | auto_api | pass | — | 明细接口正常返回 failedTaskType 且取值合法 |
-| TC-ISSUE078-002 | auto_api | skip | — | 时间范围内无"构建任务"失败记录，跳过一致性校验 |
-| TC-ISSUE078-003 | auto_api | skip | — | 时间范围内无"测试任务"失败记录，跳过一致性校验 |
-| TC-ISSUE078-004 | auto_api | pass | — | 筛选"其他任务"返回记录均匹配 |
-| TC-ISSUE078-005 | auto_api | fail | [待测试人员创建] | 非法 failedTaskType 返回业务 code=500（文档约定"其他值不过滤"），疑似后端未容错 |
-| TC-ISSUE078-006 | auto_api | pass | — | 汇总接口返回 PageResult 结构，total 0/1 符合文档 |
-| TC-ISSUE078-007 | auto_api | pass | — | 26 字段完整；注意实测字段名为 caseReleaseCountP0（文档为 caseTotalCountP0），语义一致 |
-| TC-ISSUE078-008 | auto_api | fail | [待测试人员创建] | 不传 projectId 返回业务 code=500（文档声明 projectId 可选），疑似后端缺省处理缺陷 |
-| TC-ISSUE078-009 | auto_api | pass | — | 导出接口返回 xlsx 文件流，Content-Type 正确 |
-| TC-ISSUE078-010 | auto_ui | pass | — | 失败任务类型列存在且取值合法 |
-| TC-ISSUE078-011 | auto_ui | pass | — | 成功流水线展示"流水线未失败" |
-| TC-ISSUE078-012 | auto_ui | pass | — | 筛选选项存在，筛选后数据正确过滤 |
-| TC-ISSUE078-013 | auto_ui | pass | — | 导出按钮存在，点击触发 xlsx 下载 |
-| TC-ISSUE078-014 | auto_ui | pass | — | 项目级汇总无导出按钮，流水线级有导出按钮 |
-| TC-ISSUE078-015 | auto_perf | pass | — | 汇总接口 avg<3s，P95<5s，error_rate 0 |
-| TC-ISSUE078-016 | auto_sec | pass | — | 未认证访问汇总/导出接口均被拒绝（无 cookie 独立请求验证 401） |
-| TC-ISSUE078-017 | auto_sec | pass | — | 无会话下伪造 token 请求汇总/明细/导出接口均返回 401 |
-| TC-ISSUE078-018 | auto_sec | pass | — | 不同 projectId 数据隔离正确，无权限项目不泄露数据 |
-| TC-ISSUE078-019 | auto_sec | fail | [待测试人员创建] | 会话 Cookie 缺 Secure/HttpOnly 属性（token、csrf-token-open-li-bing 均缺） |
-| TC-ISSUE078-020 | auto_sec | fail | [待测试人员创建] | 导出接口无 CSRF 防护：缺失/伪造 CSRF token 均返回有效 xlsx |
-| TC-ISSUE078-021 | auto_sec | pass | — | 汇总接口响应体/响应头未泄露敏感字段 |
+| 用例编号        | 用例类型  | 执行结果 | 缺陷issue        | 备注                                                                                  |
+| --------------- | --------- | -------- | ---------------- | ------------------------------------------------------------------------------------- |
+| TC-ISSUE078-001 | auto_api  | pass     | —                | 明细接口正常返回 failedTaskType 且取值合法                                            |
+| TC-ISSUE078-002 | auto_api  | skip     | —                | 时间范围内无"构建任务"失败记录，跳过一致性校验                                        |
+| TC-ISSUE078-003 | auto_api  | skip     | —                | 时间范围内无"测试任务"失败记录，跳过一致性校验                                        |
+| TC-ISSUE078-004 | auto_api  | pass     | —                | 筛选"其他任务"返回记录均匹配                                                          |
+| TC-ISSUE078-005 | auto_api  | fail     | [待测试人员创建] | 非法 failedTaskType 返回业务 code=500（文档约定"其他值不过滤"），疑似后端未容错       |
+| TC-ISSUE078-006 | auto_api  | pass     | —                | 汇总接口返回 PageResult 结构，total 0/1 符合文档                                      |
+| TC-ISSUE078-007 | auto_api  | pass     | —                | 26 字段完整；注意实测字段名为 caseReleaseCountP0（文档为 caseTotalCountP0），语义一致 |
+| TC-ISSUE078-008 | auto_api  | fail     | [待测试人员创建] | 不传 projectId 返回业务 code=500（文档声明 projectId 可选），疑似后端缺省处理缺陷     |
+| TC-ISSUE078-009 | auto_api  | pass     | —                | 导出接口返回 xlsx 文件流，Content-Type 正确                                           |
+| TC-ISSUE078-010 | auto_ui   | pass     | —                | 失败任务类型列存在且取值合法                                                          |
+| TC-ISSUE078-011 | auto_ui   | pass     | —                | 成功流水线展示"流水线未失败"                                                          |
+| TC-ISSUE078-012 | auto_ui   | pass     | —                | 筛选选项存在，筛选后数据正确过滤                                                      |
+| TC-ISSUE078-013 | auto_ui   | pass     | —                | 导出按钮存在，点击触发 xlsx 下载                                                      |
+| TC-ISSUE078-014 | auto_ui   | pass     | —                | 项目级汇总无导出按钮，流水线级有导出按钮                                              |
+| TC-ISSUE078-015 | auto_perf | pass     | —                | 汇总接口 avg<3s，P95<5s，error_rate 0                                                 |
+| TC-ISSUE078-016 | auto_sec  | pass     | —                | 未认证访问汇总/导出接口均被拒绝（无 cookie 独立请求验证 401）                         |
+| TC-ISSUE078-017 | auto_sec  | pass     | —                | 无会话下伪造 token 请求汇总/明细/导出接口均返回 401                                   |
+| TC-ISSUE078-018 | auto_sec  | pass     | —                | 不同 projectId 数据隔离正确，无权限项目不泄露数据                                     |
+| TC-ISSUE078-019 | auto_sec  | fail     | [待测试人员创建] | 会话 Cookie 缺 Secure/HttpOnly 属性（token、csrf-token-open-li-bing 均缺）            |
+| TC-ISSUE078-020 | auto_sec  | fail     | [待测试人员创建] | 导出接口无 CSRF 防护：缺失/伪造 CSRF token 均返回有效 xlsx                            |
+| TC-ISSUE078-021 | auto_sec  | pass     | —                | 汇总接口响应体/响应头未泄露敏感字段                                                   |
 
 > **执行结果取值**：pass（通过）/ fail（失败）/ block（阻塞）/ skip（跳过）
 > **填写要求**：
+>
 > - fail 用例必须创建并填写缺陷issue（gitcode 缺陷 issue 链接），否则不得生成报告
 > - fail/block 用例必须填写 备注 说明原因
 
@@ -464,27 +466,27 @@
 
 ## 用例汇总
 
-| 类型 | 数量 | 通过 | 失败 | 阻塞 | 跳过 |
-|------|------|------|------|------|------|
-| 手工用例 | 0 | 0 | 0 | 0 | 0 |
-| 自动化-UI | 5 | 5 | 0 | 0 | 0 |
-| 自动化-API | 9 | 5 | 2 | 0 | 2 |
-| 自动化-性能 | 1 | 1 | 0 | 0 | 0 |
-| 自动化-安全 | 6 | 4 | 2 | 0 | 0 |
-| **合计** | **21** | **15** | **4** | **0** | **2** |
+| 类型        | 数量   | 通过   | 失败  | 阻塞  | 跳过  |
+| ----------- | ------ | ------ | ----- | ----- | ----- |
+| 手工用例    | 0      | 0      | 0     | 0     | 0     |
+| 自动化-UI   | 5      | 5      | 0     | 0     | 0     |
+| 自动化-API  | 9      | 5      | 2     | 0     | 2     |
+| 自动化-性能 | 1      | 1      | 0     | 0     | 0     |
+| 自动化-安全 | 6      | 4      | 2     | 0     | 0     |
+| **合计**    | **21** | **15** | **4** | **0** | **2** |
 
-| 用例来源 | 数量 |
-|----------|------|
-| reuse（复用旧用例） | 0 |
-| new（新设计用例） | 21 |
+| 用例来源            | 数量 |
+| ------------------- | ---- |
+| reuse（复用旧用例） | 0    |
+| new（新设计用例）   | 21   |
 
 ---
 
 ## 版本历史
 
-| 版本 | 日期 | 修改人 | 修改内容 |
-|------|------|--------|----------|
-| v1.0 | 2026-08-11 | tester-a | 初始版本 |
-| v1.1 | 2026-08-11 | tester-a | 回填本地 pytest 执行结果（pass 12 / fail 2 / skip 2） |
+| 版本 | 日期       | 修改人   | 修改内容                                                                             |
+| ---- | ---------- | -------- | ------------------------------------------------------------------------------------ |
+| v1.0 | 2026-08-11 | tester-a | 初始版本                                                                             |
+| v1.1 | 2026-08-11 | tester-a | 回填本地 pytest 执行结果（pass 12 / fail 2 / skip 2）                                |
 | v1.2 | 2026-08-12 | tester-a | 新增安全测试用例 TC-ISSUE078-017~021（认证伪造/横向越权/传输安全/CSRF/敏感信息防护） |
-| v1.3 | 2026-08-12 | tester-a | 回填安全测试执行结果（017/018/021 pass；019/020 fail 缺陷待创建） |
+| v1.3 | 2026-08-12 | tester-a | 回填安全测试执行结果（017/018/021 pass；019/020 fail 缺陷待创建）                    |

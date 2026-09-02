@@ -18,43 +18,44 @@
 
 > 由**测试人员**填写。自动化用例的 Action 链接在此**统一填写一个**，无需每条用例重复填写。
 
-| 字段 | 内容 |
-|------|------|
+| 字段                 | 内容                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
 | 自动化执行Action链接 | 本地 beta 执行（TEST_ENV=test + SECURITY_ENABLED=true，串行分 3 批；无 GitCode Action 流水线） |
-| 手工执行人 | mth |
-| 执行日期 | 2026-08-31 |
+| 手工执行人           | mth                                                                                            |
+| 执行日期             | 2026-08-31                                                                                     |
 
 ---
 
 ## 用例列表
 
-| 用例编号 | 用例标题 | 所属功能点 | 用例类型 | 用例来源 | 用例等级 | 脚本位置 | 状态 |
-|----------|----------|------------|----------|----------|----------|----------|------|
-| TC-ISSUE109-001 | summary 接口 7 天窗口 KPI 数据结构与分组验证 | FP-2 KPI 汇总 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_summary_001.py | active |
-| TC-ISSUE109-002 | summary 接口 projectId 过滤验证 | FP-2 KPI 汇总 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_summary_001.py | active |
-| TC-ISSUE109-003 | trend 接口 pool 维度分组与逐小时曲线验证 | FP-3 NPU 趋势 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_trend_002.py | active |
-| TC-ISSUE109-004 | trend 接口 gen 维度分组验证 | FP-3 NPU 趋势 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_trend_002.py | active |
-| TC-ISSUE109-005 | heatmap 接口服务器骨架与分配数据验证 | FP-4 服务器热力图 | auto_api | new | L0 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_heatmap_003.py | active |
-| TC-ISSUE109-006 | heatmap 接口空数据窗口补零验证 | FP-4 服务器热力图 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_heatmap_003.py | active |
-| TC-ISSUE109-007 | run-analysis 有效 runId 状态机验证 | FP-5 运行分析 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_run_analysis_004.py | active |
-| TC-ISSUE109-008 | run-analysis 无效 runId 空数据验证 | FP-5 运行分析 | auto_api | new | L2 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_run_analysis_004.py | active |
-| TC-ISSUE109-009 | project-alloc-trend 接口曲线数据验证 | FP-6 项目下钻 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_project_trend_005.py | active |
-| TC-ISSUE109-010 | 时间参数校验决策表验证（4 接口 × 5 非法场景） | FP-7 时间范围校验 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_time_validate_006.py | active |
-| TC-ISSUE109-011 | 时间窗口边界值验证（6 天/7 天整） | FP-7 时间范围校验 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_time_validate_006.py | active |
-| TC-ISSUE109-012 | run-analysis 必填参数校验验证 | FP-7 时间范围校验 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_run_analysis_004.py | active |
-| TC-ISSUE109-013 | 数据管道新鲜度弱断言验证 | FP-8 数据管道 | auto_api | new | L1 | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_data_freshness_007.py | active |
-| TC-ISSUE109-014 | 看板页面渲染与图表完整性验证 | FP-2/3/4/5/6 UI 层 | manual | new | L0 | — | active |
-| TC-ISSUE109-015 | 时间选择器与维度切换交互验证 | FP-3/7 UI 层 | manual | new | L1 | — | active |
-| TC-ISSUE109-016 | 热力图悬浮与抽屉交互验证 | FP-4 UI 层 | manual | new | L1 | — | active |
-| TC-ISSUE109-017 | 无权限访问拦截验证 | FP-1 权限守卫 | manual | new | L1 | — | active |
-| TC-ISSUE109-018 | 低权限账号纵向越权验证（5 接口） | FP-1 权限模型 | auto_sec | new | L0 | src/tests/openlibing/openlibing_ops/security/beta/resource_dashboard/test_security_resource_vertical_001.py | active |
-| TC-ISSUE109-019 | 匿名与伪造 token 调用看板接口认证校验 | FP-1 权限模型 | auto_sec | new | L1 | src/tests/openlibing/openlibing_ops/security/beta/resource_dashboard/test_security_resource_auth_002.py | active |
-| TC-ISSUE109-020 | 看板接口响应体敏感信息防护验证 | 敏感信息防护 | auto_sec | new | L2 | src/tests/openlibing/openlibing_ops/security/beta/resource_dashboard/test_security_resource_sensitive_003.py | active |
+| 用例编号        | 用例标题                                      | 所属功能点         | 用例类型 | 用例来源 | 用例等级 | 脚本位置                                                                                                     | 状态   |
+| --------------- | --------------------------------------------- | ------------------ | -------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------ | ------ |
+| TC-ISSUE109-001 | summary 接口 7 天窗口 KPI 数据结构与分组验证  | FP-2 KPI 汇总      | auto_api | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_summary_001.py             | active |
+| TC-ISSUE109-002 | summary 接口 projectId 过滤验证               | FP-2 KPI 汇总      | auto_api | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_summary_001.py             | active |
+| TC-ISSUE109-003 | trend 接口 pool 维度分组与逐小时曲线验证      | FP-3 NPU 趋势      | auto_api | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_trend_002.py               | active |
+| TC-ISSUE109-004 | trend 接口 gen 维度分组验证                   | FP-3 NPU 趋势      | auto_api | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_trend_002.py               | active |
+| TC-ISSUE109-005 | heatmap 接口服务器骨架与分配数据验证          | FP-4 服务器热力图  | auto_api | new      | L0       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_heatmap_003.py             | active |
+| TC-ISSUE109-006 | heatmap 接口空数据窗口补零验证                | FP-4 服务器热力图  | auto_api | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_heatmap_003.py             | active |
+| TC-ISSUE109-007 | run-analysis 有效 runId 状态机验证            | FP-5 运行分析      | auto_api | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_run_analysis_004.py        | active |
+| TC-ISSUE109-008 | run-analysis 无效 runId 空数据验证            | FP-5 运行分析      | auto_api | new      | L2       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_run_analysis_004.py        | active |
+| TC-ISSUE109-009 | project-alloc-trend 接口曲线数据验证          | FP-6 项目下钻      | auto_api | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_project_trend_005.py       | active |
+| TC-ISSUE109-010 | 时间参数校验决策表验证（4 接口 × 5 非法场景） | FP-7 时间范围校验  | auto_api | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_time_validate_006.py       | active |
+| TC-ISSUE109-011 | 时间窗口边界值验证（6 天/7 天整）             | FP-7 时间范围校验  | auto_api | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_time_validate_006.py       | active |
+| TC-ISSUE109-012 | run-analysis 必填参数校验验证                 | FP-7 时间范围校验  | auto_api | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_run_analysis_004.py        | active |
+| TC-ISSUE109-013 | 数据管道新鲜度弱断言验证                      | FP-8 数据管道      | auto_api | new      | L1       | src/tests/openlibing/openlibing_ops/api/beta/resource_dashboard/test_api_resource_data_freshness_007.py      | active |
+| TC-ISSUE109-014 | 看板页面渲染与图表完整性验证                  | FP-2/3/4/5/6 UI 层 | manual   | new      | L0       | —                                                                                                            | active |
+| TC-ISSUE109-015 | 时间选择器与维度切换交互验证                  | FP-3/7 UI 层       | manual   | new      | L1       | —                                                                                                            | active |
+| TC-ISSUE109-016 | 热力图悬浮与抽屉交互验证                      | FP-4 UI 层         | manual   | new      | L1       | —                                                                                                            | active |
+| TC-ISSUE109-017 | 无权限访问拦截验证                            | FP-1 权限守卫      | manual   | new      | L1       | —                                                                                                            | active |
+| TC-ISSUE109-018 | 低权限账号纵向越权验证（5 接口）              | FP-1 权限模型      | auto_sec | new      | L0       | src/tests/openlibing/openlibing_ops/security/beta/resource_dashboard/test_security_resource_vertical_001.py  | active |
+| TC-ISSUE109-019 | 匿名与伪造 token 调用看板接口认证校验         | FP-1 权限模型      | auto_sec | new      | L1       | src/tests/openlibing/openlibing_ops/security/beta/resource_dashboard/test_security_resource_auth_002.py      | active |
+| TC-ISSUE109-020 | 看板接口响应体敏感信息防护验证                | 敏感信息防护       | auto_sec | new      | L2       | src/tests/openlibing/openlibing_ops/security/beta/resource_dashboard/test_security_resource_sensitive_003.py | active |
 
 > **用例来源说明**：
+>
 > - `reuse`：复用已有用例，引用已有用例编号（在详情中"引用已有用例"字段标注），不重新归档
 > - `new`：新设计用例，必须按规则 5.3 归档到模块用例文件与 case_list.md
-> - **模块归档编号对照**：TC-ISSUE109-001~020 → `openlibing_ops_resource_dashboard_202608_001`~`020`（归档于 `assets/docs/openlibing/openlibing_ops/resource_dashboard/auto_test_cases.md` 与 `manual_test_cases.md`）
+> - **模块归档编号对照**：TC-ISSUE109-001~~020 → `openlibing_ops_resource_dashboard_202608_001`~~`020`（归档于 `assets/docs/openlibing/openlibing_ops/resource_dashboard/auto_test_cases.md` 与 `manual_test_cases.md`）
 > - **复用检查结论**（2026-08-31）：已检索 `test_case.md` 全量用例及各模块用例目录，无 resource-operation / nRDashboard / npu_resource 相关用例（关键词仅命中 ISSUE-109 自身文档），resource_dashboard 为新建模块，全部按 new 设计
 
 ---
@@ -64,32 +65,33 @@
 > 本节由**测试人员**填写，AI 不得代填。执行结果未填写完整前，AI 不得生成测试报告（见规则 03 第4节）。
 > **2026-08-31 回填说明**：自动化用例结果依据本地 beta 执行实测输出回填（junit 原始文件因存储层异常丢失，结果以本表为准）；手工用例 TC-014~017 由测试人员执行并确认结果。
 
-| 用例编号 | 用例类型 | 执行结果 | 缺陷issue | 备注 |
-|----------|----------|----------|------------|------|
-| TC-ISSUE109-001 | auto_api | pass | — | KPI 四字段结构完整、cloud/lab 分组正确、npuNum 非负 |
-| TC-ISSUE109-002 | auto_api | pass | — | projectId 过滤生效：过滤后 cloud:1/lab:1 ≤ 全量 cloud:3/lab:10 |
-| TC-ISSUE109-003 | auto_api | pass | — | pool 分组曲线结构完整、labels 逐小时连续、数值 ∈ [0,100] |
-| TC-ISSUE109-004 | auto_api | pass | — | gen 维度分组正常（基线 A2/A3/310P），结构与 pool 一致 |
-| TC-ISSUE109-005 | auto_api | pass | — | 有数据窗口 servers 骨架完整、抽样存在非零分配值 |
-| TC-ISSUE109-006 | auto_api | pass | — | 空数据窗口 HTTP 200 不报错、骨架完整、alloc/usage 全 0 |
-| TC-ISSUE109-007 | auto_api | pass | — | 有效 runId 状态机完整，states ⊆ {QUEUING, RUNNING, NONE} |
-| TC-ISSUE109-008 | auto_api | pass | — | 随机 runId 返回空结构（labels=[]/allocServers=[]/usageServers=[]）不报错 |
-| TC-ISSUE109-009 | auto_api | pass | — | project-alloc-trend 逐小时申请次数与排队时长曲线结构正确 |
-| TC-ISSUE109-010 | auto_api | fail | [#115](https://gitcode.com/openlibing/openlibing-ops/issues/115) | 20/20 非法时间场景返回 500 系统异常而非 40001；对照组 4 个合法请求均 200 正常（排除服务故障误判），确认缺陷存在 |
-| TC-ISSUE109-011 | auto_api | pass | — | 6 天与 7 天整边界跨度均正常返回 200+数据 |
-| TC-ISSUE109-012 | auto_api | pass | — | 缺 runId/projectId 均返回 40001 参数异常（基线保持，防回归） |
-| TC-ISSUE109-013 | auto_api | pass | — | 当日数据管道有产出（cloud/lab 至少一组非空资源数据） |
-| TC-ISSUE109-014 | manual | pass | — | 页面无白屏/控制台报错，KPI 卡片/趋势图/热力图/下钻折线图四类图表完整渲染，抽样数值与 API 层一致 |
-| TC-ISSUE109-015 | manual | pass | — | 时间范围切换图表联动刷新正常，pool/gen 维度切换分组正确，超 7 天跨度被拦截且提示友好 |
-| TC-ISSUE109-016 | manual | pass | — | 热力图悬浮浮层显示任务名/排队时长等 jobs 信息，机器详情抽屉正常打开、内容正确、可正常关闭 |
-| TC-ISSUE109-017 | manual | pass | — | 无权限账号访问 /apps/nRDashboard?projectId=300036 重定向 noPermission 页并显示暂无权限提示（守卫生效正常） |
-| TC-ISSUE109-018 | auto_sec | fail | [#114](https://gitcode.com/openlibing/openlibing-ops/issues/114) | p_tianyan（npu_resource=false，缺陷精确复现账号）会话内浏览器 fetch 5/5 接口越权成功返回 200+全量数据（heatmap 泄露 88 台服务器）；pub_LIBING 纯低权限对照 401 被拒（基础权限层有效，npu_resource 业务校验缺失） |
-| TC-ISSUE109-019 | auto_sec | pass | — | 匿名与伪造 token 调用 5 接口均被 401 拒绝 |
-| TC-ISSUE109-020 | auto_sec | pass | — | 5 接口响应体/响应头未泄露凭证类敏感字段（password/token/secret/密钥/手机号/邮箱） |
+| 用例编号        | 用例类型 | 执行结果 | 缺陷issue                                                        | 备注                                                                                                                                                                                                             |
+| --------------- | -------- | -------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TC-ISSUE109-001 | auto_api | pass     | —                                                                | KPI 四字段结构完整、cloud/lab 分组正确、npuNum 非负                                                                                                                                                              |
+| TC-ISSUE109-002 | auto_api | pass     | —                                                                | projectId 过滤生效：过滤后 cloud:1/lab:1 ≤ 全量 cloud:3/lab:10                                                                                                                                                   |
+| TC-ISSUE109-003 | auto_api | pass     | —                                                                | pool 分组曲线结构完整、labels 逐小时连续、数值 ∈ [0,100]                                                                                                                                                         |
+| TC-ISSUE109-004 | auto_api | pass     | —                                                                | gen 维度分组正常（基线 A2/A3/310P），结构与 pool 一致                                                                                                                                                            |
+| TC-ISSUE109-005 | auto_api | pass     | —                                                                | 有数据窗口 servers 骨架完整、抽样存在非零分配值                                                                                                                                                                  |
+| TC-ISSUE109-006 | auto_api | pass     | —                                                                | 空数据窗口 HTTP 200 不报错、骨架完整、alloc/usage 全 0                                                                                                                                                           |
+| TC-ISSUE109-007 | auto_api | pass     | —                                                                | 有效 runId 状态机完整，states ⊆ {QUEUING, RUNNING, NONE}                                                                                                                                                         |
+| TC-ISSUE109-008 | auto_api | pass     | —                                                                | 随机 runId 返回空结构（labels=[]/allocServers=[]/usageServers=[]）不报错                                                                                                                                         |
+| TC-ISSUE109-009 | auto_api | pass     | —                                                                | project-alloc-trend 逐小时申请次数与排队时长曲线结构正确                                                                                                                                                         |
+| TC-ISSUE109-010 | auto_api | fail     | [#115](https://gitcode.com/openlibing/openlibing-ops/issues/115) | 20/20 非法时间场景返回 500 系统异常而非 40001；对照组 4 个合法请求均 200 正常（排除服务故障误判），确认缺陷存在                                                                                                  |
+| TC-ISSUE109-011 | auto_api | pass     | —                                                                | 6 天与 7 天整边界跨度均正常返回 200+数据                                                                                                                                                                         |
+| TC-ISSUE109-012 | auto_api | pass     | —                                                                | 缺 runId/projectId 均返回 40001 参数异常（基线保持，防回归）                                                                                                                                                     |
+| TC-ISSUE109-013 | auto_api | pass     | —                                                                | 当日数据管道有产出（cloud/lab 至少一组非空资源数据）                                                                                                                                                             |
+| TC-ISSUE109-014 | manual   | pass     | —                                                                | 页面无白屏/控制台报错，KPI 卡片/趋势图/热力图/下钻折线图四类图表完整渲染，抽样数值与 API 层一致                                                                                                                  |
+| TC-ISSUE109-015 | manual   | pass     | —                                                                | 时间范围切换图表联动刷新正常，pool/gen 维度切换分组正确，超 7 天跨度被拦截且提示友好                                                                                                                             |
+| TC-ISSUE109-016 | manual   | pass     | —                                                                | 热力图悬浮浮层显示任务名/排队时长等 jobs 信息，机器详情抽屉正常打开、内容正确、可正常关闭                                                                                                                        |
+| TC-ISSUE109-017 | manual   | pass     | —                                                                | 无权限账号访问 /apps/nRDashboard?projectId=300036 重定向 noPermission 页并显示暂无权限提示（守卫生效正常）                                                                                                       |
+| TC-ISSUE109-018 | auto_sec | fail     | [#114](https://gitcode.com/openlibing/openlibing-ops/issues/114) | p_tianyan（npu_resource=false，缺陷精确复现账号）会话内浏览器 fetch 5/5 接口越权成功返回 200+全量数据（heatmap 泄露 88 台服务器）；pub_LIBING 纯低权限对照 401 被拒（基础权限层有效，npu_resource 业务校验缺失） |
+| TC-ISSUE109-019 | auto_sec | pass     | —                                                                | 匿名与伪造 token 调用 5 接口均被 401 拒绝                                                                                                                                                                        |
+| TC-ISSUE109-020 | auto_sec | pass     | —                                                                | 5 接口响应体/响应头未泄露凭证类敏感字段（password/token/secret/密钥/手机号/邮箱）                                                                                                                                |
 
 > **执行结果取值**：pass（通过）/ fail（失败）/ block（阻塞）/ skip（跳过）
 > **执行批次说明**（2026-08-31 本地 beta 串行执行，规避 WAF 限流分 3 批）：
-> - 批次1：12 条轻请求量 API 用例（TC-001~009/011~013）→ 12/12 pass，44.17s
+>
+> - 批次1：12 条轻请求量 API 用例（TC-001~~009/011~~013）→ 12/12 pass，44.17s
 > - 批次2：TC-010 时间校验决策表（24 请求）→ fail（缺陷 #115 闭环），47.65s
 > - 批次3：3 条安全用例 → TC-019/020 pass；TC-018 fail（缺陷 #114 闭环，攻击路径已修正为 p_tianyan 主路径 + pub_LIBING 对照路径）
 > - junit 证据：原 `execution_results/` 下 junit 文件（junit_api_batch1.xml、junit_api_batch2.xml、junit_security_batch3.xml、junit_security_019_020.xml、tc018_final.log）因 2026-08-31 存储层异常丢失，逐条结果以本表为准
@@ -406,28 +408,28 @@
 
 ## 用例汇总
 
-| 类型 | 数量 | 通过 | 失败 | 阻塞 | 跳过 |
-|------|------|------|------|------|------|
-| 手工用例 | 4 | 4 | 0 | 0 | 0 |
-| 自动化-UI | 0 | 0 | 0 | 0 | 0 |
-| 自动化-API | 13 | 12 | 1 | 0 | 0 |
-| 自动化-性能 | 0 | 0 | 0 | 0 | 0 |
-| 自动化-安全 | 3 | 2 | 1 | 0 | 0 |
-| **合计** | **20** | **18** | **2** | **0** | **0** |
+| 类型        | 数量   | 通过   | 失败  | 阻塞  | 跳过  |
+| ----------- | ------ | ------ | ----- | ----- | ----- |
+| 手工用例    | 4      | 4      | 0     | 0     | 0     |
+| 自动化-UI   | 0      | 0      | 0     | 0     | 0     |
+| 自动化-API  | 13     | 12     | 1     | 0     | 0     |
+| 自动化-性能 | 0      | 0      | 0     | 0     | 0     |
+| 自动化-安全 | 3      | 2      | 1     | 0     | 0     |
+| **合计**    | **20** | **18** | **2** | **0** | **0** |
 
 > 统计口径：20 条用例全部执行（18 pass + 2 fail，通过率 90%）；2 条 fail 均为已知缺陷闭环用例（TC-010 → #115、TC-018 → #114），缺陷 issue 链接已填写。
 
-| 用例来源 | 数量 |
-|----------|------|
-| reuse（复用旧用例） | 0 |
-| new（新设计用例） | 20 |
+| 用例来源            | 数量 |
+| ------------------- | ---- |
+| reuse（复用旧用例） | 0    |
+| new（新设计用例）   | 20   |
 
 ---
 
 ## 版本历史
 
-| 版本 | 日期 | 修改人 | 修改内容 |
-|------|------|--------|----------|
-| v1.0 | 2026-08-31 | mth | 初始版本（20 条：13 auto_api + 3 auto_sec + 4 manual） |
-| v1.1 | 2026-08-31 | mth | 本地 beta 执行回填：16 条自动化用例结果（14 pass + 2 fail）；TC-018 攻击路径修正为 p_tianyan 主路径（npu_resource=false 精确复现账号）+ pub_LIBING 对照路径；补充执行批次与 junit 证据说明 |
-| v1.2 | 2026-08-31 | mth | 手工用例 TC-014~017 执行结果回填（4/4 pass，执行人 mth）；20 条用例全部执行完毕（18 pass + 2 fail），报告生成门槛校验通过 |
+| 版本 | 日期       | 修改人 | 修改内容                                                                                                                                                                                   |
+| ---- | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| v1.0 | 2026-08-31 | mth    | 初始版本（20 条：13 auto_api + 3 auto_sec + 4 manual）                                                                                                                                     |
+| v1.1 | 2026-08-31 | mth    | 本地 beta 执行回填：16 条自动化用例结果（14 pass + 2 fail）；TC-018 攻击路径修正为 p_tianyan 主路径（npu_resource=false 精确复现账号）+ pub_LIBING 对照路径；补充执行批次与 junit 证据说明 |
+| v1.2 | 2026-08-31 | mth    | 手工用例 TC-014~017 执行结果回填（4/4 pass，执行人 mth）；20 条用例全部执行完毕（18 pass + 2 fail），报告生成门槛校验通过                                                                  |
