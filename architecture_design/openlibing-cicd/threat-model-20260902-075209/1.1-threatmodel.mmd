@@ -1,0 +1,78 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'background': '#ffffff', 'primaryColor': '#ffffff', 'lineColor': '#666666' }}}%%
+flowchart LR
+    classDef process fill:#6baed6,stroke:#2171b5,stroke-width:2px,color:#000000
+    classDef external fill:#fdae61,stroke:#d94701,stroke-width:2px,color:#000000
+    classDef datastore fill:#74c476,stroke:#238b45,stroke-width:2px,color:#000000
+    linkStyle default stroke:#666666,stroke-width:2px
+
+    EndUser["EndUser (平台用户)"]:::external
+    GitCode["GitCode"]:::external
+    Gitee["Gitee"]:::external
+    HuaweiCloud["HuaweiCloud (OBS/SWR/CodeCheck)"]:::external
+    Nacos["Nacos"]:::external
+    XxlJobAdmin["XxlJobAdmin"]:::external
+    APIGateway["APIGateway"]:::external
+
+    subgraph External["External"]
+        RabbitMQ[("RabbitMQ")]:::datastore
+        MySQL[("MySQL")]:::datastore
+        Redis[("Redis")]:::datastore
+    end
+
+    subgraph Application["openlibing-cicd 应用"]
+        PipelineControllerV2(("PipelineControllerV2")):::process
+        AuthInterceptor(("AuthInterceptor")):::process
+        ApigWebhookController(("ApigWebhookController")):::process
+        WebHookEventController(("WebHookEventController")):::process
+        CrossRegionController(("CrossRegionController")):::process
+        InternalPipelineController(("InternalPipelineController")):::process
+        MachineInterfaceAuthUtil(("MachineInterfaceAuthUtil")):::process
+        WebHookEventConsumer(("WebHookEventConsumer")):::process
+        PipelineEventConsumer(("PipelineEventConsumer")):::process
+        PipelineStatusUpdateConsumer(("PipelineStatusUpdateConsumer")):::process
+        PrOpEventConsumer(("PrOpEventConsumer")):::process
+        PipelineFailEmailConsumer(("PipelineFailEmailConsumer")):::process
+        XxlJobHandler(("XxlJobHandler")):::process
+        PipelineStatusThirdPartyApiClient(("PipelineStatusThirdPartyApiClient")):::process
+        HwCloudClient(("HwCloudClient")):::process
+        ObsBucketServiceImpl(("ObsBucketServiceImpl")):::process
+    end
+
+    EndUser <-->|"DF01: HTTPS 平台会话"| APIGateway
+    APIGateway <-->|"DF02: HTTPS 转发 (userId/projectId)"| PipelineControllerV2
+    APIGateway <-->|"DF03: HTTPS 转发"| InternalPipelineController
+    APIGateway <-->|"DF04: HTTPS 转发"| CrossRegionController
+    GitCode <-->|"DF05: HTTPS Webhook (HMAC-SHA256)"| ApigWebhookController
+    Gitee <-->|"DF06: HTTPS Webhook (token+timestamp)"| ApigWebhookController
+    GitCode <-->|"DF07: HTTPS Webhook (HMAC)"| WebHookEventController
+    Gitee <-->|"DF08: HTTPS Webhook (无验签)"| WebHookEventController
+    GitCode <-->|"DF09: HTTPS Webhook (HMAC)"| CrossRegionController
+    Gitee <-->|"DF10: HTTPS Webhook (无验签)"| CrossRegionController
+    ApigWebhookController <-->|"DF11: AMQP 发布"| RabbitMQ
+    WebHookEventController <-->|"DF12: AMQP 发布"| RabbitMQ
+    RabbitMQ <-->|"DF13: AMQP 消费"| WebHookEventConsumer
+    RabbitMQ <-->|"DF14: AMQP 消费"| PipelineEventConsumer
+    RabbitMQ <-->|"DF15: AMQP 消费"| PipelineStatusUpdateConsumer
+    RabbitMQ <-->|"DF16: AMQP 消费"| PrOpEventConsumer
+    RabbitMQ <-->|"DF17: AMQP 消费"| PipelineFailEmailConsumer
+    PipelineStatusThirdPartyApiClient <-->|"DF18: HTTPS + PRIVATE-TOKEN"| GitCode
+    PipelineStatusThirdPartyApiClient <-->|"DF19: HTTPS + PRIVATE-TOKEN"| Gitee
+    HwCloudClient <-->|"DF20: HTTPS + AK/SK"| HuaweiCloud
+    ObsBucketServiceImpl <-->|"DF21: HTTPS OBS + AK/SK + 签名URL"| HuaweiCloud
+    AuthInterceptor <-->|"DF22: JDBC 权限查询"| MySQL
+    PipelineControllerV2 <-->|"DF23: JDBC"| MySQL
+    WebHookEventConsumer <-->|"DF24: JDBC"| MySQL
+    PipelineStatusUpdateConsumer <-->|"DF25: JDBC"| MySQL
+    PipelineEventConsumer <-->|"DF26: JDBC"| MySQL
+    PrOpEventConsumer <-->|"DF27: JDBC"| MySQL
+    PipelineFailEmailConsumer <-->|"DF28: JDBC"| MySQL
+    AuthInterceptor <-->|"DF29: TCP 缓存"| Redis
+    PipelineControllerV2 <-->|"DF30: TCP 缓存/锁"| Redis
+    WebHookEventConsumer <-->|"DF31: TCP 缓存/锁"| Redis
+    XxlJobHandler <-->|"DF32: HTTP 任务回调"| XxlJobAdmin
+    PipelineControllerV2 <-->|"DF33: HTTP 配置/发现"| Nacos
+    HwCloudClient <-->|"DF34: HTTP 配置/发现"| Nacos
+    PipelineStatusUpdateConsumer <-->|"DF35: HTTP 回调第三方"| GitCode
+
+    style External fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+    style Application fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
