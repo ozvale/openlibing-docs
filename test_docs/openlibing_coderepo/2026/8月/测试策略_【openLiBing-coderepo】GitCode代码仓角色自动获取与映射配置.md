@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2107193266
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/108
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/108
 * **需求名称**: GitCode代码仓角色自动获取与映射配置
 * **核心目标**:
   调用GitCode API自动获取指定仓库全部角色列表供前端下拉选取，替代手动输入；前端页面展示3列（角色类型、gitcode角色、openlibing角色），系统角色下拉选择、自定义角色手动输入。

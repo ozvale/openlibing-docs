@@ -3,12 +3,12 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2102887722
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/53
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/53
 * **需求名称**: 流水线列表、详情接口优化并支持搜索条件缓存
 * **开发责任人**: 陈宁
 * **测试责任人**: 赵威
-* **最终结论:**： 通过
-* **测试维度** :
+* **最终结论**: 通过
+* **测试维度**:
 * [x] **功能自检测试**
 * [ ] **体验测试**
 * [ ] **集成测试**

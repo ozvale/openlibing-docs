@@ -3,12 +3,12 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2107193266
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/108
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/108
 * **需求名称**: GitCode代码仓角色自动获取与映射配置
 * **开发责任人**: 杨攀
 * **测试责任人**: 赵威
-* **最终结论:**： 通过
-* **测试维度** :
+* **最终结论**: 通过
+* **测试维度**:
 * [x] **功能自检测试**
 * [ ] **体验测试**
 * [ ] **集成测试**

@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2102887722
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/53
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/53
 * **需求名称**: 流水线列表、详情接口优化并支持搜索条件缓存
 * **核心目标**:
   页面缓存流水线搜索条件，缓存新增项目维度，提升用户体验。根据评审意见，后端接口优化暂缓（查询速度可接受暂不优化）。

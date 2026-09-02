@@ -3,12 +3,12 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2107443323
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/106
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/106
 * **需求名称**: 代码仓管理-显示令牌过期时间、权限，支持排序
 * **开发责任人**: 马菲飞
 * **测试责任人**: 赵威
-* **最终结论:**： 通过
-* **测试维度** :
+* **最终结论**: 通过
+* **测试维度**:
 * [x] **功能自检测试**
 * [ ] **体验测试**
 * [ ] **集成测试**

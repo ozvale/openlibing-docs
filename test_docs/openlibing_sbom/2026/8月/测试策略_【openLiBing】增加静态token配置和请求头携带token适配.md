@@ -3,6 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2107184299
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-ops-web/issues/35
 * **需求名称**: 增加静态token配置和请求头携带token适配-sbom
 * **核心目标**:
   新增内部接口静态Token校验能力，各业务服务增加Token配置，并在接口调用请求头中携带Token信息，完成调用链路适配，确保接口调用符合安全认证要求。
@@ -15,7 +16,7 @@
 
 * [x] **功能自检测试**
 > * **测试重点:** 静态Token配置、调用链路适配。
-> * **目的:** 确保内部接口Fegin调用正常。
+> * **目的:** 确保内部接口Feign调用正常。
 > * **触发条件:** 强制执行。
 
 * [ ] **体验测试**

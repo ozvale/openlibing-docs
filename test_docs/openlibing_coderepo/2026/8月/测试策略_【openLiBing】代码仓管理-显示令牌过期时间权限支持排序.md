@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2107443323
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/106
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/106
 * **需求名称**: 代码仓管理-显示令牌过期时间、权限，支持排序
 * **核心目标**:
   代码仓管理界面展示令牌过期时间与权限范围，支持筛选排序；区分令牌来源（继承自项目/单独设置），修改项目级令牌时对继承自项目的令牌统一修改。

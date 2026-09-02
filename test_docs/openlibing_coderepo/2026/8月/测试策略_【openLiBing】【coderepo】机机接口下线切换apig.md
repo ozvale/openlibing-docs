@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2107354448
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/206
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/206
 * **需求名称**: 【coderepo】机机接口下线切换apig
 * **核心目标**:
   存量机机接口从openlibing切换至apig，保证安全合规；主要验证gitcode的webhook能力（代码风格修复、告警抑制注释、自动同步分支）。

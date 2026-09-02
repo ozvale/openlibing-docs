@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2107355015
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/61
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/61
 * **需求名称**: 【sbom】机机接口下线切换apig
 * **核心目标**:
   存量机机接口从openlibing切换至apig，保证安全合规

@@ -3,7 +3,7 @@
 ## 1. 基本信息
 
 * **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097822996
-* * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/207
+* **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/207
 * **需求名称**: PR流水线报告支持任务结束刷新、任务状态增加文字提示
 * **核心目标**:
   PR流水线报告任务状态列新增说明，图标+status原文显示，未执行的任务不显示。根据评审意见，报告按子任务进度刷新功能不实现。
@@ -51,3 +51,10 @@
 * 测试步骤:
     1. 验证PR流水线报告整体展示正常，无布局异常
 * 预期结果: 报告展示正常，状态列展示符合优化预期
+
+**4.未执行任务不显示验证**:
+* 前置条件:PR流水线存在未执行的任务
+* 测试步骤:
+    1. 打开PR流水线报告
+    2. 查看任务状态列，验证未执行的任务不显示状态
+* 预期结果: 未执行的任务在状态列不显示，已执行任务正常展示
