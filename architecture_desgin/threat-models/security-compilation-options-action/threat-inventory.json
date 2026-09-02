@@ -1,0 +1,1482 @@
+{
+  "schema_version": "1.0",
+  "report_folder": "security-compilation-options-action",
+  "commit": "5189dc5",
+  "commit_date": "2026-09-02T04:24:04Z",
+  "branch": "sec-option-oidc-auth",
+  "repository": "https://gitcode.com/openlibing/security-compilation-options-action.git",
+  "analysis_timestamp": "2026-09-02T11:00:00Z",
+  "model": "GLM-5.2",
+
+  "components": [
+    {
+      "id": "ActionEntryPoint",
+      "display": "ActionEntryPoint",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.OSProcess",
+      "boundary": "CIRunner",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": ["dist/index.js"],
+      "source_directories": ["dist"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": ["dist/index.js"],
+        "source_directories": ["dist"],
+        "class_names": ["run"],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["@actions/core", "@openlibing/huaweicloud-oidc-client"],
+        "inbound_from": ["WorkflowAuthor", "PRContributor"],
+        "outbound_to": ["SecOptionScanner", "PyPIMirror", "WorkspaceArtifacts"],
+        "protocols": ["YAML/env vars", "FS (Node fs)", "HTTPS (pip)"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "ApigSigner",
+      "display": "ApigSigner",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.OSProcess",
+      "boundary": "CIRunner",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": ["dist/uploaders/CicdUploader.js"],
+      "source_directories": ["dist/uploaders"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": ["dist/uploaders/CicdUploader.js"],
+        "source_directories": ["dist/uploaders"],
+        "class_names": ["ApigSigner"],
+        "namespace": "",
+        "config_keys": ["apig-app-key", "apig-app-secret"],
+        "api_routes": [],
+        "dependencies": ["crypto"],
+        "inbound_from": ["CicdUploader"],
+        "outbound_to": ["OpenLibingAPIG"],
+        "protocols": ["in-process JS call"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "CicdUploader",
+      "display": "CicdUploader",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "CIRunner",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": ["dist/uploaders/CicdUploader.js"],
+      "source_directories": ["dist/uploaders"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": ["dist/uploaders/CicdUploader.js"],
+        "source_directories": ["dist/uploaders"],
+        "class_names": ["CicdUploader"],
+        "namespace": "",
+        "config_keys": ["cicdUrl", "useOidc", "apigAppKey", "apigAppSecret"],
+        "api_routes": ["/action-api/build-artifact/sec-option/report", "/openlibing-cicd/build-artifact/sec-option/report"],
+        "dependencies": ["axios", "@openlibing/huaweicloud-oidc-client"],
+        "inbound_from": ["SecOptionScanner"],
+        "outbound_to": ["ApigSigner", "OpenLibingAPIG", "HuaweiCloudOIDC"],
+        "protocols": ["HTTPS (axios)", "HTTPS (SDK callApig)"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "HuaweiCloudOIDC",
+      "display": "HuaweiCloudOIDC",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.AuthProvider",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["@openlibing/huaweicloud-oidc-client@0.0.5"],
+        "inbound_from": ["CicdUploader"],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "OpenLibingAPIG",
+      "display": "OpenLibingAPIG",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": ["cicdUrl"],
+        "api_routes": ["/action-api/build-artifact/sec-option/report", "/openlibing-cicd/build-artifact/sec-option/report"],
+        "dependencies": [],
+        "inbound_from": ["CicdUploader"],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "PyPIMirror",
+      "display": "PyPIMirror",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["ActionEntryPoint"],
+        "outbound_to": [],
+        "protocols": ["HTTPS (pip)"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "ScanResultFile",
+      "display": "ScanResultFile",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.FS",
+      "boundary": "CIRunner",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": ["output", "sec-option-result.json"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["SecOptionScanScript", "SecOptionScanner"],
+        "outbound_to": ["SecOptionDetector"],
+        "protocols": ["FS (json)"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "SecOptionDetector",
+      "display": "SecOptionDetector",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.OSProcess",
+      "boundary": "CIRunner",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": ["dist/detectors/SecOptionDetector.js"],
+      "source_directories": ["dist/detectors"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": ["dist/detectors/SecOptionDetector.js"],
+        "source_directories": ["dist/detectors"],
+        "class_names": ["SecOptionDetector"],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["child_process"],
+        "inbound_from": ["SecOptionScanner"],
+        "outbound_to": ["SecOptionScanScript", "ScanResultFile"],
+        "protocols": ["process spawn (stdio)", "FS (Node fs)"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "SecOptionScanScript",
+      "display": "SecOptionScanScript",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.OSProcess",
+      "boundary": "CIRunner",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": ["dist/bin/sec_option_scan.py"],
+      "source_directories": ["dist/bin"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": ["dist/bin/sec_option_scan.py"],
+        "source_directories": ["dist/bin"],
+        "class_names": ["scan_directory", "analyze_single", "compute_summary", "try_extract_archive", "_entry_path_unsafe"],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["pyelftools", "tarfile", "zipfile"],
+        "inbound_from": ["SecOptionDetector"],
+        "outbound_to": ["WorkspaceArtifacts", "ScanResultFile"],
+        "protocols": ["FS (Python os/path)"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "SecOptionScanner",
+      "display": "SecOptionScanner",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.OSProcess",
+      "boundary": "CIRunner",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": ["dist/scanner.js"],
+      "source_directories": ["dist"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": ["dist/scanner.js"],
+        "source_directories": ["dist"],
+        "class_names": ["SecOptionScanner"],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["fs", "path"],
+        "inbound_from": ["ActionEntryPoint"],
+        "outbound_to": ["SecOptionDetector", "ScanResultFile", "CicdUploader"],
+        "protocols": ["in-process JS call", "FS (Node fs)"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "WorkspaceArtifacts",
+      "display": "WorkspaceArtifacts",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.FS",
+      "boundary": "CIRunner",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": ["artifact-path"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["PRContributor", "ActionEntryPoint", "SecOptionScanScript"],
+        "outbound_to": [],
+        "protocols": ["FS"]
+      },
+      "sidecars": []
+    }
+  ],
+
+  "boundaries": [
+    {
+      "id": "CIRunner",
+      "display": "CI Runner (Application Boundary)",
+      "kind": "ProcessBoundary",
+      "aliases": [],
+      "contains": ["ActionEntryPoint", "ApigSigner", "CicdUploader", "ScanResultFile", "SecOptionDetector", "SecOptionScanScript", "SecOptionScanner", "WorkspaceArtifacts"],
+      "contains_fingerprint": "ActionEntryPoint|ApigSigner|CicdUploader|ScanResultFile|SecOptionDetector|SecOptionScanScript|SecOptionScanner|WorkspaceArtifacts"
+    },
+    {
+      "id": "External",
+      "display": "External Services Boundary",
+      "kind": "NetworkBoundary",
+      "aliases": [],
+      "contains": ["HuaweiCloudOIDC", "OpenLibingAPIG", "PyPIMirror"],
+      "contains_fingerprint": "HuaweiCloudOIDC|OpenLibingAPIG|PyPIMirror"
+    }
+  ],
+
+  "flows": [
+    {
+      "id": "DF01",
+      "from": "WorkflowAuthor",
+      "to": "ActionEntryPoint",
+      "protocol": "YAML/env vars",
+      "description": "workflow YAML inputs + repo secrets 经 runner 环境变量注入 INPUT_*"
+    },
+    {
+      "id": "DF02",
+      "from": "PRContributor",
+      "to": "WorkspaceArtifacts",
+      "protocol": "git push/obs-upload",
+      "description": "PR 触发的构建产物落盘到 runner 工作区"
+    },
+    {
+      "id": "DF03",
+      "from": "ActionEntryPoint",
+      "to": "WorkspaceArtifacts",
+      "protocol": "FS (Node fs)",
+      "description": "path.resolve + fs.existsSync 校验 artifact-path 多行路径"
+    },
+    {
+      "id": "DF04",
+      "from": "ActionEntryPoint",
+      "to": "PyPIMirror",
+      "protocol": "HTTPS (pip)",
+      "description": "execSync pip install pyelftools --trusted-host mirrors.aliyun.com"
+    },
+    {
+      "id": "DF05",
+      "from": "ActionEntryPoint",
+      "to": "SecOptionScanner",
+      "protocol": "in-process JS call",
+      "description": "new SecOptionScanner(config).scan({sourceDir, output, scanOptions, ...})"
+    },
+    {
+      "id": "DF06",
+      "from": "SecOptionScanner",
+      "to": "SecOptionDetector",
+      "protocol": "in-process JS call",
+      "description": "detector.detect(resolvedSource, outputFile, options.scanOptions)"
+    },
+    {
+      "id": "DF07",
+      "from": "SecOptionScanner",
+      "to": "ScanResultFile",
+      "protocol": "FS (Node fs)",
+      "description": "fs.writeFileSync(outputFile, JSON.stringify(result, null, 2), 'utf8')"
+    },
+    {
+      "id": "DF08",
+      "from": "SecOptionScanner",
+      "to": "CicdUploader",
+      "protocol": "in-process JS call",
+      "description": "uploader.upload(scanResult, { gitUrl, runNumber, pipelineRunId, ... })"
+    },
+    {
+      "id": "DF09",
+      "from": "SecOptionDetector",
+      "to": "SecOptionScanScript",
+      "protocol": "process spawn (stdio)",
+      "description": "spawn('python3', [scriptPath, sourceDir, outputFile, scanOptions.join(',')], { stdio: ['ignore','pipe','pipe'] })"
+    },
+    {
+      "id": "DF10",
+      "from": "SecOptionScanScript",
+      "to": "WorkspaceArtifacts",
+      "protocol": "FS (Python os/path)",
+      "description": "scan_directory(scan_path) 递归扫描 + try_extract_archive 解压归档"
+    },
+    {
+      "id": "DF11",
+      "from": "SecOptionScanScript",
+      "to": "ScanResultFile",
+      "protocol": "FS (Python json.dump)",
+      "description": "Python 端写入 {summary, details} JSON 到 outputFile"
+    },
+    {
+      "id": "DF12",
+      "from": "CicdUploader",
+      "to": "ApigSigner",
+      "protocol": "in-process JS call",
+      "description": "new ApigSigner(ak, sk).sign({ method, url, headers, body }) 返回含 Authorization 的 headers"
+    },
+    {
+      "id": "DF13",
+      "from": "CicdUploader",
+      "to": "OpenLibingAPIG",
+      "protocol": "HTTPS (axios)",
+      "description": "axios.post(url, body, { headers, timeout }) 到 /openlibing-cicd/build-artifact/sec-option/report（AK/SK 模式）"
+    },
+    {
+      "id": "DF14",
+      "from": "CicdUploader",
+      "to": "HuaweiCloudOIDC",
+      "protocol": "HTTPS (SDK callApig)",
+      "description": "callApig('POST', url, headers, body) 完成 ID Token→STS→V11 签名链路后请求 /action-api/build-artifact/sec-option/report"
+    }
+  ],
+
+  "threats": [
+    {
+      "id": "T01.T",
+      "title": "artifact-path 输入未校验路径穿越",
+      "description": "PR 作者通过 build step 输出控制 artifact-path 值使其指向任意路径（含 ../ 穿越）→ action 扫描 runner 工作区外文件",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "对 artifact-path 解析后校验路径必须位于 process.cwd() 子树内",
+      "identity_key": {
+        "component_id": "ActionEntryPoint",
+        "data_flow_id": "DF01_to_ActionEntryPoint",
+        "stride_category": "T",
+        "attack_surface": "artifact-path workflow input via pull_request_target"
+      }
+    },
+    {
+      "id": "T01.I",
+      "title": "git remote URL 清洗正则不完整",
+      "description": "execSync git remote get-url origin 输出经 remoteUrl.replace 仅匹配 https://<token>@ 形式，非标准格式 token 泄露到 gitUrl 并被 core.info 打印与上报",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "改用 new URL(remoteUrl).origin + pathname 剔除 userinfo",
+      "identity_key": {
+        "component_id": "ActionEntryPoint",
+        "data_flow_id": "DF01_to_ActionEntryPoint",
+        "stride_category": "I",
+        "attack_surface": "git remote URL sanitization regex"
+      }
+    },
+    {
+      "id": "T01.D",
+      "title": "产物文件大小无限制导致资源耗尽",
+      "description": "PR 作者让 build step 产出超大单文件或 zip-bomb，使 artifact-path 指向该文件 → pip install + Python 扫描耗尽 runner 磁盘/内存",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "限制 artifact-path 单文件大小、归档解压总大小上限、递归深度上限、解压比上限",
+      "identity_key": {
+        "component_id": "ActionEntryPoint",
+        "data_flow_id": "DF03_to_WorkspaceArtifacts",
+        "stride_category": "D",
+        "attack_surface": "artifact-path file size validation"
+      }
+    },
+    {
+      "id": "T01.A",
+      "title": "pull_request_target 触发场景下 OIDC token 以 base 仓权限签发",
+      "description": "pull_request_target 触发时 master YAML 的 permissions: id-token: write 让 action 以 base 仓权限签发 OIDC token；PR 作者可间接获得 base 仓权限的 OIDC token 流向",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "在 pull_request_target 场景显式拒绝 OIDC 模式或要求 workflow_dispatch/schedule",
+      "identity_key": {
+        "component_id": "ActionEntryPoint",
+        "data_flow_id": "DF14_to_HuaweiCloudOIDC",
+        "stride_category": "A",
+        "attack_surface": "pull_request_target event + OIDC id-token: write"
+      }
+    },
+    {
+      "id": "T01.S",
+      "title": "Runner 环境变量欺骗 OIDC 模式判定",
+      "description": "攻击者通过控制 runner 环境变量 ACTIONS_ID_TOKEN_REQUEST_URL、ATOMGIT_RUN_ID 等欺骗 action 走 OIDC 模式或伪造 pipeline 元数据上报",
+      "stride_category": "S",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "对 ATOMGIT_* 关键元数据加签名校验或要求 OIDC token 内嵌 sub claims 与之匹配",
+      "identity_key": {
+        "component_id": "ActionEntryPoint",
+        "data_flow_id": "DF01_to_ActionEntryPoint",
+        "stride_category": "S",
+        "attack_surface": "runner env vars ACTIONS_ID_TOKEN_REQUEST_URL/ATOMGIT_*"
+      }
+    },
+    {
+      "id": "T01.R",
+      "title": "ActionEntryPoint 缺少 invocation 审计日志",
+      "description": "ActionEntryPoint 仅 core.info 输出执行轨迹，未记录 inputs 哈希、调用方身份、scan 选项到不可篡改的审计日志",
+      "stride_category": "R",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "在 scan result JSON 中写入 invocationContext: { event, actor, runId, inputsSha256 } 字段并上报留痕",
+      "identity_key": {
+        "component_id": "ActionEntryPoint",
+        "data_flow_id": "DF01_to_ActionEntryPoint",
+        "stride_category": "R",
+        "attack_surface": "core.info log only, no persistent audit"
+      }
+    },
+    {
+      "id": "T02.I",
+      "title": "SecOptionScanner catch 块 errorMessage 原样上报",
+      "description": "catch 块 this.logger.error 后调用 uploader.upload({}, { ..., errorMessage: error.message, ... })；若 error.message 含绝对路径、用户名、stack trace 会原样上报与打印",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "对 errorMessage 做截断与路径/敏感字段过滤后再上报",
+      "identity_key": {
+        "component_id": "SecOptionScanner",
+        "data_flow_id": "DF08_to_CicdUploader",
+        "stride_category": "I",
+        "attack_surface": "error.message field uploaded to OpenLibingAPIG"
+      }
+    },
+    {
+      "id": "T02.A",
+      "title": "SecOptionScanner 默认自动上报 PR 内私有产物元数据",
+      "description": "options.upload || this.config.uploader?.enabled 默认 true，PR 触发场景也会把扫描结果（含文件名/路径/开启率）无条件上报到 OpenLibingAPIG",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "在 PR 触发场景下默认禁用上传，要求 workflow 显式 opt-in",
+      "identity_key": {
+        "component_id": "SecOptionScanner",
+        "data_flow_id": "DF08_to_CicdUploader",
+        "stride_category": "A",
+        "attack_surface": "options.upload flag always true via ActionEntryPoint"
+      }
+    },
+    {
+      "id": "T02.R",
+      "title": "SecOptionScanner 缺少调用审计",
+      "description": "SecOptionScanner 未记录每次 scan()/upload() 调用的输入摘要与结果 recordId，事后无法追溯某次上报的来源",
+      "stride_category": "R",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "在 result.uploadInfo 中追加 invocationContext 并在 ScanResultFile 中保留上传 ack 记录",
+      "identity_key": {
+        "component_id": "SecOptionScanner",
+        "data_flow_id": "DF06_to_SecOptionDetector",
+        "stride_category": "R",
+        "attack_surface": "scan/upload invocation not persisted"
+      }
+    },
+    {
+      "id": "T03.T",
+      "title": "Python stdout/stderr 未做控制字符过滤",
+      "description": "Python 子进程 stdout/stderr 被原样捕获并通过 logger.info 写入 winston 日志；恶意 ELF 可触发 Python print 含 ANSI 转义序列实现日志注入",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "对 Python stdout/stderr 做控制字符过滤与长度限制",
+      "identity_key": {
+        "component_id": "SecOptionDetector",
+        "data_flow_id": "DF09_to_SecOptionScanScript",
+        "stride_category": "T",
+        "attack_surface": "Python stdout/stderr to winston log"
+      }
+    },
+    {
+      "id": "T03.D",
+      "title": "SecOptionDetector spawn 无 timeout 选项",
+      "description": "spawn(pythonCmd, args, { stdio: ['ignore', 'pipe', 'pipe'] }) 未设置 timeout；恶意 ELF 让 Python 子进程永不退出，action 卡在 await 直到 runner job 超时",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "在 spawn 后用 setTimeout(() => proc.kill('SIGTERM'), 5*60*1000) 设置硬超时",
+      "identity_key": {
+        "component_id": "SecOptionDetector",
+        "data_flow_id": "DF09_to_SecOptionScanScript",
+        "stride_category": "D",
+        "attack_surface": "spawn timeout option missing"
+      }
+    },
+    {
+      "id": "T03.A",
+      "title": "scan-options 接受任意 key 触发 Python sys.exit(1)",
+      "description": "args.push(scanOptions.join(',')) 把 scanOptions 字符串数组拼成 CLI 第 3 参数；Python 端 analyze_single 会 sys.exit(1) 退出。攻击者可传非法 key 触发非零退出",
+      "stride_category": "A",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "在 JS 端用 set.intersection(scanOptions, ALL_OPTION_KEYS) 过滤非法 key",
+      "identity_key": {
+        "component_id": "SecOptionDetector",
+        "data_flow_id": "DF09_to_SecOptionScanScript",
+        "stride_category": "A",
+        "attack_surface": "scanOptions CLI arg without key validation"
+      }
+    },
+    {
+      "id": "T04.I",
+      "title": "ScanResultFile filePath 绝对路径与调试日志泄露",
+      "description": "analyze_single 在 result 中写入 filePath: os.path.normpath(file_path) 绝对路径，并 print 调试日志到 stderr；filePath 经上报链路泄露到 OpenLibingAPIG 与 CI 日志",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "对绝对路径做相对化处理（path.relpath），调试日志加 SEC_OPTION_DEBUG 开关",
+      "identity_key": {
+        "component_id": "SecOptionScanScript",
+        "data_flow_id": "DF11_to_ScanResultFile",
+        "stride_category": "I",
+        "attack_surface": "filePath absolute path + debug print to stderr"
+      }
+    },
+    {
+      "id": "T04.D",
+      "title": "解压比/总大小/递归深度无限制",
+      "description": "_safe_extract_zip/_safe_extract_tar 仅校验路径穿越，未限制解压比/总大小/递归深度；zip-bomb 或深嵌套归档可耗尽 runner 磁盘/栈/内存",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "在 _safe_extract_zip/_safe_extract_tar 内累计解压字节数，超阈值即 raise；scan_directory 加 depth 参数",
+      "identity_key": {
+        "component_id": "SecOptionScanScript",
+        "data_flow_id": "DF10_to_WorkspaceArtifacts",
+        "stride_category": "D",
+        "attack_surface": "archive extraction without size/depth limits"
+      }
+    },
+    {
+      "id": "T04.A",
+      "title": "Windows 短路径前缀固定可预测",
+      "description": "Windows 平台优先使用 D:\\sec_option_tmp 或 C:\\sec_option_tmp 短路径前缀；恶意 PR 作者可预先 mklink 创建符号链接劫持解压路径",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "改用 tempfile.mkdtemp 默认系统临时目录或校验目录非符号链接",
+      "identity_key": {
+        "component_id": "SecOptionScanScript",
+        "data_flow_id": "DF10_to_WorkspaceArtifacts",
+        "stride_category": "A",
+        "attack_surface": "Windows short path prefix D:\\sec_option_tmp"
+      }
+    },
+    {
+      "id": "T04.T",
+      "title": "_entry_path_unsafe 未拒绝 NUL 与 Unicode 等价字符",
+      "description": "_entry_path_unsafe 校验绝对路径、Windows 盘符、.. 段；但未显式拒绝 NUL 字节与 Unicode 等价字符（如全角 ．．、RTL 覆盖符 U+202E）",
+      "stride_category": "T",
+      "tier": 3,
+      "prerequisites": "Host/OS Access + Authenticated User",
+      "status": "Open",
+      "mitigation": "在 _entry_path_unsafe 中追加拒绝 NUL 字节、对 name 做 unicodedata.normalize NFKC 后再校验",
+      "identity_key": {
+        "component_id": "SecOptionScanScript",
+        "data_flow_id": "DF10_to_WorkspaceArtifacts",
+        "stride_category": "T",
+        "attack_surface": "archive path validation missing NUL/Unicode normalization"
+      }
+    },
+    {
+      "id": "T05.I",
+      "title": "CicdUploader console.log 上报关键字段",
+      "description": "console.log 打印上报关键字段 gitUrl/packageName/pipelineRunId 等到 CI 日志；catch 块 console.error 打印 APIG 错误响应体可能含内部错误细节",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "把 payload 调试日志改为 core.debug，对 error.response.data 做白名单字段提取与截断",
+      "identity_key": {
+        "component_id": "CicdUploader",
+        "data_flow_id": "DF13_to_OpenLibingAPIG",
+        "stride_category": "I",
+        "attack_surface": "console.log payload fields + console.error response body"
+      }
+    },
+    {
+      "id": "T05.D",
+      "title": "OIDC callApig 调用未显式设置超时",
+      "description": "OIDC 模式 await callApig('POST', url, headers, body) 未显式设置超时；若 HuaweiCloudOIDC 端点 hang，action 会卡在 await 直到 SDK 默认超时",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "用 Promise.race([callApig(...), timeout(30000)]) 包装",
+      "identity_key": {
+        "component_id": "CicdUploader",
+        "data_flow_id": "DF14_to_HuaweiCloudOIDC",
+        "stride_category": "D",
+        "attack_surface": "callApig SDK without timeout option"
+      }
+    },
+    {
+      "id": "T05.A",
+      "title": "useOidc 仅依赖 env 变量不校验上下文一致性",
+      "description": "this.useOidc = !!config.useOidc 取自 process.env.ACTIONS_ID_TOKEN_REQUEST_URL；若 runner 环境变量被错误配置会走错认证模式与错上报接口",
+      "stride_category": "A",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "在 ActionEntryPoint 增加 permissions 显式校验，提前 fail 并提示配置不一致",
+      "identity_key": {
+        "component_id": "CicdUploader",
+        "data_flow_id": "DF14_to_HuaweiCloudOIDC",
+        "stride_category": "A",
+        "attack_surface": "useOidc flag from env without context validation"
+      }
+    },
+    {
+      "id": "T06.I",
+      "title": "ApigSigner Authorization 头含 AK 可能泄露",
+      "description": "headers['Authorization'] = SDK-HMAC-SHA256 Access=${this.ak} 把 AK 直接写入 Authorization 头；若 SDK 内部异常或 axios retry 时把 request headers 写入 error 对象被 JSON.stringify，AK 会随错误日志泄露",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "在 CicdUploader catch 中过滤 error.config.headers、error.request.headers 字段",
+      "identity_key": {
+        "component_id": "ApigSigner",
+        "data_flow_id": "DF12_to_ApigSigner",
+        "stride_category": "I",
+        "attack_surface": "AK in Authorization header leakable via error.config.headers"
+      }
+    },
+    {
+      "id": "T06.T",
+      "title": "HMAC 签名无 nonce/jti 存在重放风险",
+      "description": "HMAC 签名包含 X-Sdk-Date 时间戳与 body SHA256 但无 nonce/jti；攻击者截获合法签名请求可在 APIG 时间容忍窗口内重放",
+      "stride_category": "T",
+      "tier": 3,
+      "prerequisites": "Host/OS Access + Authenticated User",
+      "status": "Open",
+      "mitigation": "在签名中追加 nonce 并要求 APIG 服务端基于 (ak, nonce) 去重",
+      "identity_key": {
+        "component_id": "ApigSigner",
+        "data_flow_id": "DF12_to_ApigSigner",
+        "stride_category": "T",
+        "attack_surface": "HMAC signature without nonce/jti"
+      }
+    },
+    {
+      "id": "T07.S",
+      "title": "APIG 端点 DNS 劫持与 MITM 风险",
+      "description": "APIG URL 硬编码且无 TLS 证书指纹固定；若 runner 的 DNS 被劫持或本机 hosts 文件被篡改，域名可能解析到攻击者 IP",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "在 axios/SDK 中显式 pin APIG 证书指纹；或固定 DNS 解析结果",
+      "identity_key": {
+        "component_id": "OpenLibingAPIG",
+        "data_flow_id": "DF13_to_OpenLibingAPIG",
+        "stride_category": "S",
+        "attack_surface": "hardcoded APIG endpoint without cert pinning"
+      }
+    },
+    {
+      "id": "T07.I",
+      "title": "APIG 错误响应体整个打印到 CI 日志",
+      "description": "CicdUploader catch 块 console.error(HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}) 将 APIG 返回体整个打印到 CI 日志；可能含内部堆栈、SQL 片段、AK 关联、其他 tenant 数据",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "对 error.response.data 做白名单字段提取（仅取 code、msg），其余字段不打印或截断到 256 字符",
+      "identity_key": {
+        "component_id": "OpenLibingAPIG",
+        "data_flow_id": "DF13_to_OpenLibingAPIG",
+        "stride_category": "I",
+        "attack_surface": "verbose APIG error response printed to CI log"
+      }
+    },
+    {
+      "id": "T07.D",
+      "title": "APIG 网关不可用导致 action setFailed",
+      "description": "APIG 网关不可用（区域故障、限流 429、实例重启）会让 OIDC/AK-SK 上报均失败；action 会以 core.setFailed 终止，workflow job 失败",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "对 429/503 做指数退避重试；上报失败但扫描成功时改 core.warning 让 workflow 继续",
+      "identity_key": {
+        "component_id": "OpenLibingAPIG",
+        "data_flow_id": "DF13_to_OpenLibingAPIG",
+        "stride_category": "D",
+        "attack_surface": "no retry on 429/503, setFailed on upload failure"
+      }
+    },
+    {
+      "id": "T07.A",
+      "title": "APIG 端点硬编码存在跨仓情报收集风险",
+      "description": "APIG endpoint 硬编码在客户端，所有仓库的所有 workflow 都上报到同一后端；若该 endpoint 被短暂攻陷可批量收集各仓扫描结果",
+      "stride_category": "A",
+      "tier": 3,
+      "prerequisites": "OpenLibingAPIG Compromise",
+      "status": "Open",
+      "mitigation": "客户端对返回的 recordId 做格式校验；服务端签名响应体让客户端可验证响应来源",
+      "identity_key": {
+        "component_id": "OpenLibingAPIG",
+        "data_flow_id": "DF13_to_OpenLibingAPIG",
+        "stride_category": "A",
+        "attack_surface": "hardcoded endpoint single point of failure"
+      }
+    },
+    {
+      "id": "T08.D",
+      "title": "STS endpoint 不可达导致 OIDC 模式 hang",
+      "description": "STS endpoint 不可达时 callApig 会 throw 或长时间挂起；OIDC 模式下 action 无法切换到 AK/SK 兜底，workflow 失败",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "在 OIDC 失败时自动降级到 AK/SK 模式重试一次；或捕获 OIDC 错误并明确提示",
+      "identity_key": {
+        "component_id": "HuaweiCloudOIDC",
+        "data_flow_id": "DF14_to_HuaweiCloudOIDC",
+        "stride_category": "D",
+        "attack_surface": "STS endpoint unreachable no fallback"
+      }
+    },
+    {
+      "id": "T08.S",
+      "title": "ACTIONS_ID_TOKEN_REQUEST_URL 可指向 fake ID Token 服务",
+      "description": "ACTIONS_ID_TOKEN_REQUEST_URL 由 runner 注入，SDK 据此向 runner 的 ID Token mint 服务发起请求；若 runner 进程被攻陷攻击者可设置该 env 指向自己的 fake ID Token 服务",
+      "stride_category": "S",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "客户端对 ACTIONS_ID_TOKEN_REQUEST_URL 做白名单校验；SDK 应固定 STS 域名",
+      "identity_key": {
+        "component_id": "HuaweiCloudOIDC",
+        "data_flow_id": "DF14_to_HuaweiCloudOIDC",
+        "stride_category": "S",
+        "attack_surface": "ACTIONS_ID_TOKEN_REQUEST_URL env without whitelist"
+      }
+    },
+    {
+      "id": "T08.I",
+      "title": "OIDC ID Token 可能通过 SDK error 路径泄露",
+      "description": "OIDC ID Token 是敏感凭证由 SDK 持有并发送给 STS；若 SDK 在 error path 中把 token 写入 error.message 或 error.config.headers，CicdUploader catch 会把 token 打印到 CI 日志",
+      "stride_category": "I",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "对 @openlibing/huaweicloud-oidc-client SDK 做依赖审计；对 error.message 做关键词过滤（Bearer、eyJ）",
+      "identity_key": {
+        "component_id": "HuaweiCloudOIDC",
+        "data_flow_id": "DF14_to_HuaweiCloudOIDC",
+        "stride_category": "I",
+        "attack_surface": "third-party SDK error path may leak token"
+      }
+    },
+    {
+      "id": "T09.S",
+      "title": "pip --trusted-host 削弱 SSL 校验",
+      "description": "ActionEntryPoint 通过 pip install --trusted-host mirrors.aliyun.com 安装依赖；该标志让 pip 在 SSL 校验失败时仍信任该 host，MITM 可注入恶意 pyelftools 包",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "移除 --trusted-host 标志让 pip 严格校验 SSL；或改用官方 PyPI",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "data_flow_id": "DF04_to_PyPIMirror",
+        "stride_category": "S",
+        "attack_surface": "pip --trusted-host flag weakens SSL validation"
+      }
+    },
+    {
+      "id": "T09.D",
+      "title": "PyPI 镜像不可达导致 ImportError 终止",
+      "description": "mirrors.aliyun.com 不可达或 pyelftools 包被下架时 pip install 抛错；ActionEntryPoint 仅 warning 后继续，SecOptionScanScript import pyelftools 时抛 ImportError，action setFailed 终止",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "pip install 失败时 core.setFailed 立即终止并提示；预装 pyelftools 到 runner 镜像",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "data_flow_id": "DF04_to_PyPIMirror",
+        "stride_category": "D",
+        "attack_surface": "pip install failure handling with only core.warning"
+      }
+    },
+    {
+      "id": "T09.A",
+      "title": "pyelftools 未锁定版本存在供应链投毒风险",
+      "description": "pyelftools 包名是合法包但供应链攻击者若短暂攻陷上游 PyPI 包可发布含恶意 setup.py 的 0.0.x 版本；ActionEntryPoint 不锁定版本取最新会立即中招",
+      "stride_category": "A",
+      "tier": 3,
+      "prerequisites": "Host/OS Access + PyPI Compromise",
+      "status": "Open",
+      "mitigation": "在 pip install 中固定版本 + --require-hashes 锁定 SHA256；将 pyelftools vendoring 到 dist",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "data_flow_id": "DF04_to_PyPIMirror",
+        "stride_category": "A",
+        "attack_surface": "unpinned pyelftools dependency"
+      }
+    },
+    {
+      "id": "T10.T",
+      "title": "PR 作者控制 build step 产出恶意产物",
+      "description": "PR 作者控制 PR 中的 build step 代码可让 build step 产出恶意 ELF 文件、伪造的归档、含 zip-slip 路径的 zip；产物被 ActionEntryPoint 校验后传给 SecOptionScanScript 触发后续解压/解析链路",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "在 ActionEntryPoint 中校验 artifact-path 文件大小、类型签名合理性；扫描前对归档做完整性哈希校验",
+      "identity_key": {
+        "component_id": "WorkspaceArtifacts",
+        "data_flow_id": "DF02_to_WorkspaceArtifacts",
+        "stride_category": "T",
+        "attack_surface": "PR-controlled build step output"
+      }
+    },
+    {
+      "id": "T10.I",
+      "title": "ScanResultFile filePath 绝对路径泄露到上报 payload",
+      "description": "ScanResultFile 中 filePath 字段为 os.path.normpath(file_path) 绝对路径，通过 CicdUploader 上报到 OpenLibingAPIG；packageName、artifactDownloadUrl 也泄露产物命名与 OBS 桶路径",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "在 Python 端 result.filePath 改为 path.relpath；artifactDownloadUrl 仅传 OBS object key",
+      "identity_key": {
+        "component_id": "WorkspaceArtifacts",
+        "data_flow_id": "DF07_to_ScanResultFile",
+        "stride_category": "I",
+        "attack_surface": "absolute filePath in upload payload"
+      }
+    },
+    {
+      "id": "T10.D",
+      "title": "WorkspaceArtifacts 超大文件或深嵌套归档 DoS",
+      "description": "PR 作者可让 build step 产出超大单文件或高嵌套归档；ActionEntryPoint fs.existsSync 通过后 SecOptionScanScript 尝试解压/解析 → 占满 runner 磁盘/CPU",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "在 ActionEntryPoint 中对 artifact-path 解析后 fs.statSync 校验大小阈值；SecOptionScanScript 解压前对 os.path.getsize 与归档成员 member.size 校验",
+      "identity_key": {
+        "component_id": "WorkspaceArtifacts",
+        "data_flow_id": "DF02_to_WorkspaceArtifacts",
+        "stride_category": "D",
+        "attack_surface": "no file size validation on build artifacts"
+      }
+    },
+    {
+      "id": "T10.R",
+      "title": "WorkspaceArtifacts 无来源签名",
+      "description": "WorkspaceArtifacts 是文件落盘到 runner 工作区无来源签名；无法事后证明某 .so 文件是哪个 commit/PR build 步骤产出的",
+      "stride_category": "R",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "在 build step 完成后写入 _artifact_provenance.json（记录 commit SHA、build time、source hash），ActionEntryPoint 扫描时附带 provenance 上报",
+      "identity_key": {
+        "component_id": "WorkspaceArtifacts",
+        "data_flow_id": "DF02_to_WorkspaceArtifacts",
+        "stride_category": "R",
+        "attack_surface": "no artifact provenance tracking"
+      }
+    },
+    {
+      "id": "T11.T",
+      "title": "ScanResultFile 存在 TOCTOU 窗口",
+      "description": "SecOptionScanScript 在 analyze_single/compute_summary 后 json.dump 写入；SecOptionDetector 在 _readResult 中 fs.readFileSync + JSON.parse。两步之间无原子替换无签名校验，TOCTOU 窗口可被篡改",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Local Process Access",
+      "status": "Open",
+      "mitigation": "Python 写入时附带 HMAC 签名；Node 读取后校验签名；或用 fs.openSync 加 O_EXCL 写入临时文件再 rename 原子替换",
+      "identity_key": {
+        "component_id": "ScanResultFile",
+        "data_flow_id": "DF11_to_ScanResultFile",
+        "stride_category": "T",
+        "attack_surface": "TOCTOU window between Python write and Node read"
+      }
+    },
+    {
+      "id": "T11.I",
+      "title": "ScanResultFile 默认权限 0644 world-readable",
+      "description": "ScanResultFile 包含 filePath、options 各项计数、summary.averageRate；fs.writeFileSync 未显式设置文件权限，默认 umask Linux 通常 0644 = world-readable",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Local Process Access",
+      "status": "Open",
+      "mitigation": "fs.writeFileSync 第三参数加 { mode: 0o600 } 显式设置仅 owner 可读写；Python 端 json.dump 后 os.chmod(output_path, 0o600)",
+      "identity_key": {
+        "component_id": "ScanResultFile",
+        "data_flow_id": "DF07_to_ScanResultFile",
+        "stride_category": "I",
+        "attack_surface": "writeFileSync without mode option, default 0644"
+      }
+    },
+    {
+      "id": "T11.A",
+      "title": "packageName 输入未做 sanitize 可路径穿越写入工作区外",
+      "description": "多产物场景下 SecOptionScanner 为每个产物写 sec-option-result-<packageName>.json；若 PR 作者让 build step 产出文件名为 ../../etc/cron.d/x.json 这类含路径的产物名会写到工作区外",
+      "stride_category": "A",
+      "tier": 3,
+      "prerequisites": "Host/OS Access + Authenticated User",
+      "status": "Open",
+      "mitigation": "在 SecOptionScanner 中对 target.packageName 做 sanitize：剥离路径分隔符、限制字符集；写文件前校验最终路径必须位于 outputDir 子树内",
+      "identity_key": {
+        "component_id": "ScanResultFile",
+        "data_flow_id": "DF07_to_ScanResultFile",
+        "stride_category": "A",
+        "attack_surface": "packageName input without sanitize in output filename"
+      }
+    }
+  ],
+
+  "findings": [
+    {
+      "id": "FIND-01",
+      "title": "artifact-path 输入未校验路径穿越",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N",
+      "cwe": "CWE-22",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T01.T"],
+      "evidence_files": ["dist/index.js"],
+      "component": "ActionEntryPoint",
+      "identity_key": {
+        "component_id": "ActionEntryPoint",
+        "vulnerability": "CWE-22",
+        "attack_surface": "dist/index.js:54311 path.isAbsolute(line) ? line : path.resolve(process.cwd(), line)"
+      }
+    },
+    {
+      "id": "FIND-02",
+      "title": "git remote URL 清洗正则不完整导致 Token 泄露",
+      "severity": "Moderate",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N",
+      "cwe": "CWE-532",
+      "owasp": "A09:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T01.I", "T05.I", "T06.I"],
+      "evidence_files": ["dist/index.js", "dist/uploaders/CicdUploader.js"],
+      "component": "ActionEntryPoint",
+      "identity_key": {
+        "component_id": "ActionEntryPoint",
+        "vulnerability": "CWE-532",
+        "attack_surface": "dist/index.js:54271 remoteUrl.replace regex + dist/uploaders/CicdUploader.js:296 console.log"
+      }
+    },
+    {
+      "id": "FIND-03",
+      "title": "产物文件大小/解压比/递归深度无限制存在资源耗尽 DoS",
+      "severity": "Moderate",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:H",
+      "cwe": "CWE-770",
+      "owasp": "A10:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T01.D", "T03.D", "T04.D", "T10.D"],
+      "evidence_files": ["dist/index.js", "dist/detectors/SecOptionDetector.js", "dist/bin/sec_option_scan.py"],
+      "component": "ActionEntryPoint",
+      "identity_key": {
+        "component_id": "ActionEntryPoint",
+        "vulnerability": "CWE-770",
+        "attack_surface": "dist/index.js:54311 no fs.statSync size check + dist/detectors/SecOptionDetector.js:78 spawn without timeout"
+      }
+    },
+    {
+      "id": "FIND-04",
+      "title": "pull_request_target 触发场景下 OIDC Token 以 Base 仓权限签发被 PR 作者间接盗用",
+      "severity": "Important",
+      "cvss_score": 7.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N",
+      "cwe": "CWE-863",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T01.A", "T02.A"],
+      "evidence_files": ["dist/index.js", "dist/scanner.js"],
+      "component": "ActionEntryPoint",
+      "identity_key": {
+        "component_id": "ActionEntryPoint",
+        "vulnerability": "CWE-863",
+        "attack_surface": "dist/index.js:54260 useOidc from env + dist/index.js:54328 uploader.enabled always true"
+      }
+    },
+    {
+      "id": "FIND-05",
+      "title": "扫描结果 filePath 绝对路径与错误 message 直接泄露到 CI 日志与上报 payload",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N",
+      "cwe": "CWE-209",
+      "owasp": "A09:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T04.I", "T10.I", "T02.I"],
+      "evidence_files": ["dist/bin/sec_option_scan.py", "dist/scanner.js"],
+      "component": "SecOptionScanScript",
+      "identity_key": {
+        "component_id": "SecOptionScanScript",
+        "vulnerability": "CWE-209",
+        "attack_surface": "dist/bin/sec_option_scan.py filePath absolute + dist/scanner.js:108 error.message upload"
+      }
+    },
+    {
+      "id": "FIND-06",
+      "title": "Python 子进程 stdout/stderr 未做控制字符过滤存在日志注入风险",
+      "severity": "Moderate",
+      "cvss_score": 5.0,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:L/VA:L",
+      "cwe": "CWE-117",
+      "owasp": "A09:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T03.T"],
+      "evidence_files": ["dist/detectors/SecOptionDetector.js", "dist/bin/sec_option_scan.py"],
+      "component": "SecOptionDetector",
+      "identity_key": {
+        "component_id": "SecOptionDetector",
+        "vulnerability": "CWE-117",
+        "attack_surface": "dist/detectors/SecOptionDetector.js:85-91 stdout/stderr raw capture"
+      }
+    },
+    {
+      "id": "FIND-07",
+      "title": "Windows 平台硬编码短路径前缀可被符号链接预植劫持",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:L",
+      "cwe": "CWE-377",
+      "owasp": "A02:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T04.A"],
+      "evidence_files": ["dist/bin/sec_option_scan.py"],
+      "component": "SecOptionScanScript",
+      "identity_key": {
+        "component_id": "SecOptionScanScript",
+        "vulnerability": "CWE-377",
+        "attack_surface": "dist/bin/sec_option_scan.py:137-144 hardcoded D:\\sec_option_tmp/C:\\sec_option_tmp"
+      }
+    },
+    {
+      "id": "FIND-08",
+      "title": "OIDC callApig 调用未显式设置超时 STS endpoint 不可达时 action 长时间挂起",
+      "severity": "Low",
+      "cvss_score": 3.7,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L",
+      "cwe": "CWE-400",
+      "owasp": "A10:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T05.D", "T08.D"],
+      "evidence_files": ["dist/uploaders/CicdUploader.js"],
+      "component": "CicdUploader",
+      "identity_key": {
+        "component_id": "CicdUploader",
+        "vulnerability": "CWE-400",
+        "attack_surface": "dist/uploaders/CicdUploader.js:305 callApig without timeout"
+      }
+    },
+    {
+      "id": "FIND-09",
+      "title": "APIG 端点硬编码且无 TLS 证书指纹固定存在 DNS 劫持与 MITM 风险",
+      "severity": "Moderate",
+      "cvss_score": 5.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N",
+      "cwe": "CWE-547",
+      "owasp": "A02:2025",
+      "tier": 2,
+      "effort": "High",
+      "related_threats": ["T07.S", "T07.I"],
+      "evidence_files": ["dist/index.js", "dist/uploaders/CicdUploader.js"],
+      "component": "OpenLibingAPIG",
+      "identity_key": {
+        "component_id": "OpenLibingAPIG",
+        "vulnerability": "CWE-547",
+        "attack_surface": "dist/index.js:54256 hardcoded cicdUrl + dist/uploaders/CicdUploader.js:328 no cert pinning"
+      }
+    },
+    {
+      "id": "FIND-10",
+      "title": "APIG 网关不可用时 Action 直接 setFailed 无重试与降级策略",
+      "severity": "Low",
+      "cvss_score": 3.7,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L",
+      "cwe": "CWE-754",
+      "owasp": "A10:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T07.D"],
+      "evidence_files": ["dist/index.js", "dist/uploaders/CicdUploader.js"],
+      "component": "OpenLibingAPIG",
+      "identity_key": {
+        "component_id": "OpenLibingAPIG",
+        "vulnerability": "CWE-754",
+        "attack_surface": "dist/index.js:54413 setFailed on upload failure + dist/uploaders/CicdUploader.js:330 no retry"
+      }
+    },
+    {
+      "id": "FIND-11",
+      "title": "pip install 使用 --trusted-host 削弱 SSL 校验存在供应链 MITM 风险",
+      "severity": "Important",
+      "cvss_score": 7.0,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H",
+      "cwe": "CWE-295",
+      "owasp": "A02:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T09.S", "T09.D"],
+      "evidence_files": ["dist/index.js"],
+      "component": "PyPIMirror",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "vulnerability": "CWE-295",
+        "attack_surface": "dist/index.js:54288-54292 pip install --trusted-host mirrors.aliyun.com"
+      }
+    },
+    {
+      "id": "FIND-12",
+      "title": "ScanResultFile 存在 TOCTOU 窗口本地进程可替换扫描结果篡改上报数据",
+      "severity": "Moderate",
+      "cvss_score": 4.0,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:H/AT:N/PR:L/UI:N/VC:N/VI:H/VA:N",
+      "cwe": "CWE-367",
+      "owasp": "A08:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T11.T"],
+      "evidence_files": ["dist/bin/sec_option_scan.py", "dist/detectors/SecOptionDetector.js"],
+      "component": "ScanResultFile",
+      "identity_key": {
+        "component_id": "ScanResultFile",
+        "vulnerability": "CWE-367",
+        "attack_surface": "dist/bin/sec_option_scan.py:943 json.dump + dist/detectors/SecOptionDetector.js:125 readFileSync no signature"
+      }
+    },
+    {
+      "id": "FIND-13",
+      "title": "ScanResultFile 默认权限 0644 self-hosted runner 多租户场景存在信息泄露",
+      "severity": "Low",
+      "cvss_score": 3.1,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N",
+      "cwe": "CWE-732",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T11.I"],
+      "evidence_files": ["dist/scanner.js", "dist/detectors/SecOptionDetector.js", "dist/bin/sec_option_scan.py"],
+      "component": "ScanResultFile",
+      "identity_key": {
+        "component_id": "ScanResultFile",
+        "vulnerability": "CWE-732",
+        "attack_surface": "dist/scanner.js:79 writeFileSync without mode option"
+      }
+    },
+    {
+      "id": "FIND-14",
+      "title": "构建产物来源无完整性校验 PR 作者可投递恶意 ELF 或归档触发后续解析链路",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:N",
+      "cwe": "CWE-345",
+      "owasp": "A08:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T10.T"],
+      "evidence_files": ["dist/index.js", "dist/bin/sec_option_scan.py"],
+      "component": "WorkspaceArtifacts",
+      "identity_key": {
+        "component_id": "WorkspaceArtifacts",
+        "vulnerability": "CWE-345",
+        "attack_surface": "dist/index.js:54311 fs.existsSync only existence check + no magic bytes validation"
+      }
+    },
+    {
+      "id": "FIND-15",
+      "title": "Runner 环境变量可欺骗 OIDC 模式判定与 pipeline 元数据上报",
+      "severity": "Low",
+      "cvss_score": 2.0,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:H/AT:N/PR:H/UI:N/VC:L/VI:L/VA:L",
+      "cwe": "CWE-349",
+      "owasp": "A07:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T01.S", "T05.A", "T08.S"],
+      "evidence_files": ["dist/index.js", "dist/uploaders/CicdUploader.js"],
+      "component": "ActionEntryPoint",
+      "identity_key": {
+        "component_id": "ActionEntryPoint",
+        "vulnerability": "CWE-349",
+        "attack_surface": "dist/index.js:54260 useOidc from ACTIONS_ID_TOKEN_REQUEST_URL env"
+      }
+    },
+    {
+      "id": "FIND-16",
+      "title": "缺少 invocation 审计日志事后无法追溯扫描输入与上报来源",
+      "severity": "Low",
+      "cvss_score": 2.0,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:N/VI:N/VA:N",
+      "cwe": "CWE-778",
+      "owasp": "A09:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T01.R", "T02.R", "T10.R"],
+      "evidence_files": ["dist/index.js", "dist/scanner.js"],
+      "component": "ActionEntryPoint",
+      "identity_key": {
+        "component_id": "ActionEntryPoint",
+        "vulnerability": "CWE-778",
+        "attack_surface": "dist/index.js:54343 core.info only log, no persistent audit"
+      }
+    },
+    {
+      "id": "FIND-17",
+      "title": "scan-options workflow input 接受任意 key 可触发 Python sys.exit(1) 中断扫描",
+      "severity": "Low",
+      "cvss_score": 1.8,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:N/VI:L/VA:N",
+      "cwe": "CWE-20",
+      "owasp": "A03:2025",
+      "tier": 3,
+      "effort": "Low",
+      "related_threats": ["T03.A"],
+      "evidence_files": ["dist/detectors/SecOptionDetector.js", "dist/index.js"],
+      "component": "SecOptionDetector",
+      "identity_key": {
+        "component_id": "SecOptionDetector",
+        "vulnerability": "CWE-20",
+        "attack_surface": "dist/detectors/SecOptionDetector.js:71-74 scanOptions without key validation"
+      }
+    },
+    {
+      "id": "FIND-18",
+      "title": "_entry_path_unsafe 未拒绝 NUL 字节与 Unicode 等价字符存在归档路径校验绕过风险",
+      "severity": "Low",
+      "cvss_score": 2.5,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:H/AT:N/PR:H/UI:N/VC:L/VI:H/VA:N",
+      "cwe": "CWE-182",
+      "owasp": "A08:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T04.T"],
+      "evidence_files": ["dist/bin/sec_option_scan.py"],
+      "component": "SecOptionScanScript",
+      "identity_key": {
+        "component_id": "SecOptionScanScript",
+        "vulnerability": "CWE-182",
+        "attack_surface": "dist/bin/sec_option_scan.py:173-187 _entry_path_unsafe no NUL/Unicode normalization"
+      }
+    },
+    {
+      "id": "FIND-19",
+      "title": "ApigSigner HMAC 签名无 nonce/jti 存在签名重放风险",
+      "severity": "Low",
+      "cvss_score": 2.5,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:H/AT:N/PR:H/UI:N/VC:L/VI:L/VA:N",
+      "cwe": "CWE-294",
+      "owasp": "A07:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T06.T"],
+      "evidence_files": ["dist/uploaders/CicdUploader.js"],
+      "component": "ApigSigner",
+      "identity_key": {
+        "component_id": "ApigSigner",
+        "vulnerability": "CWE-294",
+        "attack_surface": "dist/uploaders/CicdUploader.js:60-63 X-Sdk-Date only, no nonce"
+      }
+    },
+    {
+      "id": "FIND-20",
+      "title": "APIG 端点硬编码在客户端跨仓扫描结果集中上报存在单点情报收集风险",
+      "severity": "Low",
+      "cvss_score": 2.7,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:H/VI:N/VA:N",
+      "cwe": "CWE-1357",
+      "owasp": "A03:2025",
+      "tier": 3,
+      "effort": "High",
+      "related_threats": ["T07.A"],
+      "evidence_files": ["dist/index.js", "dist/uploaders/CicdUploader.js"],
+      "component": "OpenLibingAPIG",
+      "identity_key": {
+        "component_id": "OpenLibingAPIG",
+        "vulnerability": "CWE-1357",
+        "attack_surface": "dist/index.js:54256 hardcoded cicdUrl globally"
+      }
+    },
+    {
+      "id": "FIND-21",
+      "title": "第三方 OIDC SDK error 路径可能泄露 ID Token 未做依赖审计",
+      "severity": "Low",
+      "cvss_score": 3.1,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:H/VI:N/VA:N",
+      "cwe": "CWE-532",
+      "owasp": "A09:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T08.I"],
+      "evidence_files": ["dist/uploaders/CicdUploader.js", "package.json"],
+      "component": "HuaweiCloudOIDC",
+      "identity_key": {
+        "component_id": "HuaweiCloudOIDC",
+        "vulnerability": "CWE-532",
+        "attack_surface": "dist/uploaders/CicdUploader.js:305 third-party SDK callApig error path unaudited"
+      }
+    },
+    {
+      "id": "FIND-22",
+      "title": "pyelftools 依赖未锁定版本存在 PyPI 供应链投毒风险",
+      "severity": "Moderate",
+      "cvss_score": 5.0,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:H/AT:N/PR:H/UI:N/VC:H/VI:H/VA:H",
+      "cwe": "CWE-494",
+      "owasp": "A03:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T09.A"],
+      "evidence_files": ["dist/index.js", "package.json"],
+      "component": "PyPIMirror",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "vulnerability": "CWE-494",
+        "attack_surface": "dist/index.js:54288-54292 pip install pyelftools without version pinning"
+      }
+    },
+    {
+      "id": "FIND-23",
+      "title": "packageName 输入未做 sanitize 多产物场景下可路径穿越写入工作区外文件",
+      "severity": "Low",
+      "cvss_score": 2.7,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:N/VI:H/VA:N",
+      "cwe": "CWE-22",
+      "owasp": "A01:2025",
+      "tier": 3,
+      "effort": "Low",
+      "related_threats": ["T11.A"],
+      "evidence_files": ["dist/index.js", "dist/scanner.js"],
+      "component": "ScanResultFile",
+      "identity_key": {
+        "component_id": "ScanResultFile",
+        "vulnerability": "CWE-22",
+        "attack_surface": "dist/index.js:54365 path.join with unsanitized packageName"
+      }
+    }
+  ],
+
+  "metrics": {
+    "total_components": 11,
+    "total_boundaries": 2,
+    "total_flows": 14,
+    "total_threats": 38,
+    "total_findings": 23,
+    "threats_by_tier": { "T1": 0, "T2": 25, "T3": 13 },
+    "findings_by_tier": { "T1": 0, "T2": 14, "T3": 9 },
+    "threats_by_stride": { "S": 4, "T": 6, "R": 3, "I": 9, "D": 7, "E": 0, "A": 9 },
+    "findings_by_severity": { "Critical": 0, "Important": 2, "Moderate": 11, "Low": 10 }
+  }
+}
