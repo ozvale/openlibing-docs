@@ -29,7 +29,7 @@ Threats are classified into three exploitability tiers based on the prerequisite
 | PyPIMirror          | [Link](#pypimirror)          | 1     | 0     | 0     | 0     | 1     | 0     | 1     | 3      | 0     | 2      | 1      | Moderate |
 | WorkspaceArtifacts  | [Link](#workspaceartifacts)  | 0     | 1     | 1     | 1     | 1     | 0     | 0     | 4      | 0     | 3      | 1      | Elevated |
 | ScanResultFile      | [Link](#scanresultfile)      | 0     | 1     | 0     | 1     | 0     | 0     | 1     | 3      | 0     | 2      | 1      | Moderate |
-| **Totals**          |                              | **4** | **6** | **3** | **9** | **7** | **0** | **9** | **38** | **0** | **25** | **13** |          |
+| **Totals**          |                              | **4** | **6** | **3** | **9** | **8** | **0** | **8** | **38** | **0** | **25** | **13** |          |
 
 ---
 

@@ -37,8 +37,8 @@ The system has two directly-exploitable supply-chain vulnerabilities (CVSS 9.3 e
 | Tier                                                                                | Description                   | Threats | Findings | Priority         |
 | ----------------------------------------------------------------------------------- | ----------------------------- | ------- | -------- | ---------------- |
 | [Tier 1](3-findings.md#tier-1--direct-exposure-no-prerequisites)                    | Directly exploitable          | 4       | 2        | 🔴 Critical Risk |
-| [Tier 2](3-findings.md#tier-2--conditional-risk-authenticated--single-prerequisite) | Requires authenticated access | 62      | 20       | 🟠 Elevated Risk |
-| [Tier 3](3-findings.md#tier-3--defense-in-depth-prior-compromise--host-access)      | Requires prior compromise     | 12      | 4        | 🟡 Moderate Risk |
+| [Tier 2](3-findings.md#tier-2--conditional-risk-authenticated--single-prerequisite) | Requires authenticated access | 62      | 19       | 🟠 Elevated Risk |
+| [Tier 3](3-findings.md#tier-3--defense-in-depth-prior-compromise--host-access)      | Requires prior compromise     | 12      | 5        | 🟡 Moderate Risk |
 | **Total**                                                                           |                               | **78**  | **26**   |                  |
 
 ### Priority by Tier and CVSS Score (Top 10)

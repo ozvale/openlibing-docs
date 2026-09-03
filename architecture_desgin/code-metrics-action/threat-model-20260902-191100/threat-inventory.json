@@ -2579,7 +2579,7 @@
     "total_threats": 78,
     "total_findings": 26,
     "threats_by_tier": { "T1": 4, "T2": 62, "T3": 12 },
-    "findings_by_tier": { "T1": 2, "T2": 20, "T3": 4 },
+    "findings_by_tier": { "T1": 2, "T2": 19, "T3": 5 },
     "threats_by_stride": {
       "S": 7,
       "T": 14,
@@ -2591,8 +2591,8 @@
     },
     "findings_by_severity": {
       "Critical": 3,
-      "Important": 11,
-      "Moderate": 12,
+      "Important": 10,
+      "Moderate": 13,
       "Low": 0
     }
   }

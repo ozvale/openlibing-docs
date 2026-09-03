@@ -1526,15 +1526,15 @@
       "T": 6,
       "R": 3,
       "I": 9,
-      "D": 7,
+      "D": 8,
       "E": 0,
-      "A": 9
+      "A": 8
     },
     "findings_by_severity": {
       "Critical": 0,
       "Important": 2,
-      "Moderate": 11,
-      "Low": 10
+      "Moderate": 10,
+      "Low": 11
     }
   }
 }
