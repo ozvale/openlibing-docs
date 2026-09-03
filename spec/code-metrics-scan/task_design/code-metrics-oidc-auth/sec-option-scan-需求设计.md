@@ -3,7 +3,7 @@
 > FE 需求：【openlibing】GitCode插件流水线交互适配OIDC认证方案
 > 适用插件：openlibing-security-compilation-options-action（sec-option-scan，安全编译选项扫描）
 > 涉及仓库：openlibing/security-compilation-options-action（发布仓）、openlibing/code-metrics-scan（插件源码仓，`.gitcode/actions/sec-option-scan`）
-> SDK：`@openlibing/huaweicloud-oidc-client@0.0.3`
+> SDK：`@openlibing/huaweicloud-oidc-client@0.0.5`
 
 ## 1. 方案设计
 
@@ -62,7 +62,7 @@ APIG（IAM 认证模式）校验签名与安全令牌 → 转发后端 openlibin
 
 ### 1.4 SDK 引入方式
 
-- 依赖 `@openlibing/huaweicloud-oidc-client@0.0.4`（固定小版本），`ncc build` 打包时内联进 `dist/index.js`，插件分发物保持单文件；
+- 依赖 `@openlibing/huaweicloud-oidc-client@0.0.5`（固定小版本），`ncc build` 打包时内联进 `dist/index.js`，插件分发物保持单文件；
 - SDK 内置 openlibing 账号默认配置（accountId、region=cn-southwest-2、提供商 GitCodeActions、委托 gitcode-actions），插件零配置调用。
 
 ## 2. 实现逻辑设计

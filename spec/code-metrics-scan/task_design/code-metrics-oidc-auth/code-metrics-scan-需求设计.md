@@ -3,7 +3,7 @@
 > FE 需求：【openlibing】GitCode插件流水线交互适配OIDC认证方案
 > 适用插件：openlibing-code-metrics-action（code-metrics-scan，代码度量扫描）
 > 涉及仓库：openlibing/code-metrics-action（发布仓）、openlibing/code-metrics-scan（插件源码仓，`.gitcode/actions/code-metrics-scan`）
-> SDK：`@openlibing/huaweicloud-oidc-client@0.0.4`
+> SDK：`@openlibing/huaweicloud-oidc-client@0.0.5`
 > 说明：本插件与 sec-option-scan 插件同属本次 OIDC 认证改造，认证链路、信任委托等通用部分与《sec-option-scan 插件需求设计文档》一致，本文不重复展开，仅描述插件特有设计。
 
 ## 1. 方案设计
@@ -55,7 +55,7 @@ AK/SK 模式（存量兼容）链路保持改造前行为：obsutil 以静态 `o
 
 ### 1.4 SDK 引入方式
 
-与 sec-option-scan 相同：依赖 `@openlibing/huaweicloud-oidc-client@0.0.3`，ncc 内联打包单文件分发。OBS 上传逻辑由插件基于 SDK 提供的临时凭证自行实现（SDK 设计边界：OBS 使用自身签名协议，由 obsutil 承担）。
+与 sec-option-scan 相同：依赖 `@openlibing/huaweicloud-oidc-client@0.0.5`，ncc 内联打包单文件分发。OBS 上传逻辑由插件基于 SDK 提供的临时凭证自行实现（SDK 设计边界：OBS 使用自身签名协议，由 obsutil 承担）。
 
 ## 2. 实现逻辑设计
 
@@ -75,7 +75,7 @@ AK/SK 模式（存量兼容）链路保持改造前行为：obsutil 以静态 `o
 | `dist/uploaders/CoderepoUploader.js` | 保留 `ApigSigner` 类与 `axios`（AK/SK 模式）；新增 `useOidc` 标志与接口前缀常量（`OIDC_API_PREFIX` / `AKSK_API_PREFIX`）；OIDC 分支走 SDK `callApig` + `getCredentials()` 临时凭证，obsutil 参数增加 `-t=<SecurityToken>` |
 | `dist/index.js` | 按 `ACTIONS_ID_TOKEN_REQUEST_URL` 判定 `useOidc`；读取 4 个凭证输入（可选）并透传；输出认证模式日志 |
 | `dist/scanner.js` | 构造 `CoderepoUploader` 时透传双模式配置 |
-| `package.json` | 新增 `@openlibing/huaweicloud-oidc-client@0.0.3`，保留 `axios` |
+| `package.json` | 新增 `@openlibing/huaweicloud-oidc-client@0.0.5`，保留 `axios` |
 | `action.yml`（源码仓 + 发布仓） | 4 个凭证输入声明保留为可选（`required: false`，description 标注仅 AK/SK 模式使用） |
 | `README.md`（源码仓 + 发布仓） | 参数表与使用示例同步，新增「上传认证（双模式自动切换）」章节 |
 | 接入方 workflow | 已适配：新增 permissions 声明（凭证传参可移除）；存量：保持原样零修改 |
