@@ -27,16 +27,25 @@
 {
   "code": 200,
   "data": {
-    "p-001": { "triggerRestricted": true, "canTrigger": false },
-    "p-002": { "triggerRestricted": false, "canTrigger": true }
+    "p-001": {
+      "triggerRestricted": true,
+      "canTrigger": false,
+      "hasRunPermission": true
+    },
+    "p-002": {
+      "triggerRestricted": false,
+      "canTrigger": true,
+      "hasRunPermission": true
+    }
   }
 }
 ```
 
-| 字段                | 类型    | 说明                                      |
-| ------------------- | ------- | ----------------------------------------- |
-| `triggerRestricted` | boolean | 该流水线是否配置了触发人员限制            |
-| `canTrigger`        | boolean | 当前用户是否可触发（后端已算好 AND 结论） |
+| 字段                | 类型    | 说明                                                                              |
+| ------------------- | ------- | --------------------------------------------------------------------------------- |
+| `triggerRestricted` | boolean | 该流水线是否配置了触发人员限制                                                    |
+| `canTrigger`        | boolean | 当前用户是否可触发（后端已算好 AND 结论）                                         |
+| `hasRunPermission`  | boolean | 当前用户是否具备流水线执行权限（第一道门结论，供悬浮提示按拦截原因分流，见 C 节） |
 
 映射中不存在的流水线 = 不限制（保持现状）。因流水线列表响应为华为云 SDK 类型无法直接加字段，标记通过本独立接口获取。
 
@@ -113,18 +122,52 @@
 | 流水线详情页「运行」   | 详情页组件                        |
 | 运行详情「重试」       | 运行详情组件                      |
 
-表现规则：
+置灰条件：`canTrigger === false && triggerRestricted === true`（未配名单的流水线即使 `canTrigger=false` 也不置灰——匿名/无角色用户对公开仓流水线的既有可触发行为保持不变，与后端放行逻辑精确对齐）。
 
-- `canTrigger === false` 且 `triggerRestricted === true` → 按钮置灰（disabled），悬浮显示统一文案：
+`canTrigger === true` → 正常可点，无任何变化（含 `triggerRestricted=true` 但用户在名单内的情况——**不要**对名单内用户做任何额外提示）。
 
-  > 该流水线已限制触发人员，需同时具备流水线执行权限并在触发人员名单内
+flags 接口失败、报错或映射中无该流水线 → 维持现状（按不限制处理，兼容后端未发布/灰度期间）。
 
-- `canTrigger === true` → 正常可点，无任何变化（含 `triggerRestricted=true` 但用户在名单内的情况——**不要**对名单内用户做任何额外提示）
-- flags 接口失败、报错或映射中无该流水线 → 维持现状（按不限制处理，兼容后端未发布/灰度期间）
+### C. 悬浮提示按拦截原因分流（TriggerPermissionTip 组件）
 
-### C. 建议封装统一组件
+被置灰的用户有两种病因，提示必须分流——**缺角色是平台权限问题（走统一角色申请体系），不在名单是流水线业务配置问题（找管理员加名单），申请角色解决不了名单问题，指引错路会造成无效申请**。
 
-参考 `openlibing-web` 仓 `NoPermissionPopover` 的思路，封装一个 `TriggerPermissionTip`（或类似）组件：接收 `canTrigger`（及可选 `triggerRestricted`），内部处理置灰 + tooltip 文案，三处入口统一套用，避免文案/逻辑漂移。
+**前端决策表**（flags 三个布尔 → 表现，四行穷尽，零额外请求）：
+
+| 场景                         | triggerRestricted | hasRunPermission | canTrigger | 表现                                                                                     |
+| ---------------------------- | ----------------- | ---------------- | ---------- | ---------------------------------------------------------------------------------------- |
+| 未配名单（任意用户，含匿名） | false             | \*               | \*         | 与现状完全一致：不置灰、无悬浮提示；点击后若被后端拦（私有仓无角色 403），走既有错误处理 |
+| 配了名单，有角色，在名单内   | true              | true             | true       | 正常可点，无提示                                                                         |
+| 配了名单，有角色，不在名单   | true              | true             | false      | 置灰，**模式二**（联系管理员加名单，只需办一件事）                                       |
+| 配了名单，无角色             | true              | false            | false      | 置灰，**模式一**（并行指引：申请角色 + 联系管理员加名单，一次告知两个条件）              |
+| 未登录且流水线配了名单       | true              | \*               | \*         | 置灰，**文案A**（请登录）                                                                |
+
+（未登录场景 flags 无 userId 可查，`hasRunPermission`/`canTrigger` 恒为 false，直接走文案A；`triggerRestricted=false` 的未登录用户回归第一行，行为不变。）
+
+**文案A（未登录，且该流水线配了名单）**：
+
+> 该流水线已限制触发人员，请登录后确认是否在触发人员名单内
+
+**模式一（无角色，且该流水线配了名单）——并行指引，一次告知两个条件**：视觉与文案对齐主应用 `NoPermissionPopover`（锁图标 + 标题 + 副标题），cicd-web 为 wujie 子应用无法直接复用主应用组件与 store，在本仓内按同款结构实现：
+
+> 🔒 暂无权限 · 启动流水线
+> 触发该流水线需同时满足以下两个条件，请并行办理：
+> ① 申请下列任一角色（按最小权限粒度申请）：pipeline_executor / …（角色清单来源：`GET /user/get-operation-permissions`，权限码 `pipeline_run`，主应用 Content.vue 已在项目就绪时拉取；cicd-web 侧可自行请求一次同接口，或经 wujie props 从主应用透传 `operationPermissions`）
+> ② 联系项目管理员（xx、xxx）在「白名单管理 → 触发人员」中将你加入名单（联系人可点击跳转，同模式二）
+
+并行指引的设计动机：双缺用户若只被告知"申请角色"，办完回来又被拦才知还需名单，"串行踩坑"极易引发恼火；两条件一次摊开，且找的常是同一位管理员，一次沟通可办两件事。
+
+**模式二（有角色但不在名单）**：对齐现有 `TipMemberListComp` 联系人模式：
+
+> 🔒 该流水线已限制触发人员，你不在触发人员名单内
+> 请联系项目管理员（xx、xxx）在「白名单管理 → 触发人员」中添加你
+> （联系人可点击，跳转 `/apps/project?showCurrentProjectManagers=true`；名单数据源复用 `getUserRole({ userRole: 'project_manager' / 'project_cie' })`，同 Detail.vue 的 getCurrentProjectAuth）
+
+**设计约束**：
+
+- 不展示名单内成员（"当前可触发的人是谁"）——关键流水线的触发名单是敏感信息，不向名单外用户暴露
+- 三处入口共用同一组件同一分流逻辑，避免文案/逻辑漂移
+- 后端拦截时返回的统一文案（`该流水线已限制触发人员，需同时具备流水线执行权限并在触发人员名单内`）是接口级兜底，与悬浮提示并存不冲突
 
 ## 注意事项
 

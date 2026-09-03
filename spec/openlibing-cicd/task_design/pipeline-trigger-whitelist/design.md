@@ -50,7 +50,7 @@
 
 ## 权限标记下发
 
-流水线列表接口响应为华为云 SDK 类型（`ListPipelinesResponse`），无法在既有列表/详情响应上直接新增字段。改为提供独立的批量标记接口 `POST /project/pipeline/trigger-users/flags`：入参项目 ID（可选流水线 ID 列表）+ 用户 ID，返回 `Map<pipelineId, {triggerRestricted, canTrigger}>`。前端加载列表/详情页时调用一次，映射中不存在的流水线视为不限制。
+流水线列表接口响应为华为云 SDK 类型（`ListPipelinesResponse`），无法在既有列表/详情响应上直接新增字段。改为提供独立的批量标记接口 `POST /project/pipeline/trigger-users/flags`：入参项目 ID（可选流水线 ID 列表）+ 用户 ID，返回 `Map<pipelineId, {triggerRestricted, canTrigger, hasRunPermission}>`。`canTrigger` 为两道门 AND 结论（置灰判断），`hasRunPermission` 为第一道门单独结论（供前端悬浮提示按"缺角色/不在名单"分流指引：缺角色走统一角色申请体系，不在名单联系项目管理员加名单）。前端加载列表/详情页时调用一次，映射中不存在的流水线视为不限制。
 
 # 3. 类设计
 
@@ -106,8 +106,8 @@ DTO/VO：新增名单接口的 DTO/VO（见类设计）；`TriggerWhiteListRespD
 ## 批量查询触发权限标记
 
 - URL：`POST /project/pipeline/trigger-users/flags`
-- 请求：`{ projectId, pipelineIds? }`，query param `userId`（可选，缺省时 canTrigger 为 false）
-- 响应：`DataResult<Map<pipelineId, {triggerRestricted, canTrigger}>>`
+- 请求：`{ projectId, pipelineIds? }`，query param `userId`（可选，缺省时 canTrigger / hasRunPermission 为 false）
+- 响应：`DataResult<Map<pipelineId, {triggerRestricted, canTrigger, hasRunPermission}>>`
 
 ## 既有接口扩展（兼容性）
 
