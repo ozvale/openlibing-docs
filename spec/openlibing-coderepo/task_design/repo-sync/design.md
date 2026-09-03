@@ -64,16 +64,16 @@ WebHookEventServiceImpl.dispatchEvent（存量，按 supportedEventTypes() 多 h
 
 ## MQS 消息体（MqsReqMessageVO）
 
-| 字段 | 说明 |
-|------|------|
-| repo_type / org_name / repo_name | 平台类型（gitee / gitcode / github）与仓库标识 |
-| pr_id | PR 编号（iid / number），push 流程为空 |
-| br_name / tgt_branch | 目标分支（base）/ 源分支（head），push 流程 br_name 为推送分支 |
-| req_type | open / merge / close / compile / push |
-| title / description | PR 标题 / 描述（push 流程为空） |
-| gitee_account / gitee_name 等 6 字段 | 按平台填充触发人账号 / 昵称 |
-| access_token | 仓库 token（明文），PR / 评论流程携带，push 流程为 null |
-| timestamp / params | 时间戳毫秒字符串 / 预留空 map |
+| 字段                                 | 说明                                                           |
+| ------------------------------------ | -------------------------------------------------------------- |
+| repo_type / org_name / repo_name     | 平台类型（gitee / gitcode / github）与仓库标识                 |
+| pr_id                                | PR 编号（iid / number），push 流程为空                         |
+| br_name / tgt_branch                 | 目标分支（base）/ 源分支（head），push 流程 br_name 为推送分支 |
+| req_type                             | open / merge / close / compile / push                          |
+| title / description                  | PR 标题 / 描述（push 流程为空）                                |
+| gitee_account / gitee_name 等 6 字段 | 按平台填充触发人账号 / 昵称                                    |
+| access_token                         | 仓库 token（明文），PR / 评论流程携带，push 流程为 null        |
+| timestamp / params                   | 时间戳毫秒字符串 / 预留空 map                                  |
 
 - 字段名即 JSON 键名（snake_case），与 cicd 完全一致，黄区消费端免改造
 - 请求头：`X-HW-ID`（mqs.hw.app_id）、`X-HW-APPKEY`（mqs.hw.app_key 解密 part1）、`MsgTopic`（mqs.msg_topic）
@@ -81,11 +81,11 @@ WebHookEventServiceImpl.dispatchEvent（存量，按 supportedEventTypes() 多 h
 
 ## 共享库表（复用 cicd，无 DDL 变更）
 
-| 表 | 用途 | 操作 |
-|----|------|------|
-| yellow_region_pipeline | 黄区流水线记录：预插 START / 中断 / 改失败 | 只写（YelloRegionPipelineMapper 按 prId 查最新记录 + 更新） |
-| gitee_pr_info | PR 信息，黄蓝协同查询经 pipeline.pr_id join 定位 | 只写（ensurePrInfo 插入缺失记录） |
-| gitee_commit_type | 编译触发词 → 类型映射 | 只读（exists / getType） |
+| 表                     | 用途                                             | 操作                                                        |
+| ---------------------- | ------------------------------------------------ | ----------------------------------------------------------- |
+| yellow_region_pipeline | 黄区流水线记录：预插 START / 中断 / 改失败       | 只写（YelloRegionPipelineMapper 按 prId 查最新记录 + 更新） |
+| gitee_pr_info          | PR 信息，黄蓝协同查询经 pipeline.pr_id join 定位 | 只写（ensurePrInfo 插入缺失记录）                           |
+| gitee_commit_type      | 编译触发词 → 类型映射                            | 只读（exists / getType）                                    |
 
 ## 常量（与 cicd 对齐）
 
@@ -97,12 +97,12 @@ WebHookEventServiceImpl.dispatchEvent（存量，按 supportedEventTypes() 多 h
 
 ## 错误处理与幂等
 
-| 场景 | 处理 |
-|------|------|
-| MQS 发送失败 | 预插记录改 FAILURE + `MQS 发送失败`；error 日志，不抛异常 |
-| 预插 / 中断 DB 异常 | catch + warn 日志，发送优先，不阻塞 MQS |
-| Redis 不可用 | 去重放行（保证可用性） |
-| access_token 缺失 / 无效 | error 日志（告警），跳过发送 |
+| 场景                     | 处理                                                                 |
+| ------------------------ | -------------------------------------------------------------------- |
+| MQS 发送失败             | 预插记录改 FAILURE + `MQS 发送失败`；error 日志，不抛异常            |
+| 预插 / 中断 DB 异常      | catch + warn 日志，发送优先，不阻塞 MQS                              |
+| Redis 不可用             | 去重放行（保证可用性）                                               |
+| access_token 缺失 / 无效 | error 日志（告警），跳过发送                                         |
 | 平台标签 / 评论 API 失败 | catch + error 日志，不阻塞主流程；gitee / github 删标签 404 视为成功 |
 
 ## 关键设计决策
