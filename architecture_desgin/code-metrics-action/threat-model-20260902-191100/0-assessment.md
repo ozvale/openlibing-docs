@@ -28,7 +28,7 @@ The analysis covers 19 system elements across 2 trust boundaries.
 
 The system has two directly-exploitable supply-chain vulnerabilities (CVSS 9.3 each) that allow unauthenticated external attackers to inject malicious code via the obsutil download mirror or the aliyun PyPI mirror, both of which disable or weaken TLS verification. Beyond these, the AK/SK legacy authentication path (FIND-16) creates a long-lived credential leakage risk that enables forged APIG signatures and arbitrary bucket access. The OIDC mode mitigates this risk but coexists with the legacy path for存量 compatibility. The risk rating is Elevated rather than Critical because the Tier 1 exposures are confined to two specific download paths (mitigatable with hash pinning or SDK replacement), and the Tier 2 exposures require authenticated access (PR submission) which the GitCode platform already throttles.
 
-> **Note on threat counts:** This analysis identified 78 threats across 17 components. This count reflects comprehensive STRIDE-A coverage, not systemic insecurity. Of these, **4 are directly exploitable** without prerequisites (Tier 1). The remaining 74 represent conditional risks and defense-in-depth considerations.
+> **Note on threat counts:** This analysis identified 78 threats across 17 of 19 components (2 external interactors — GitCodeRunner and WorkflowConfig — are declared in the DFD and components inventory but excluded from STRIDE enumeration per skill convention). This count reflects comprehensive STRIDE-A coverage, not systemic insecurity. Of these, **4 are directly exploitable** without prerequisites (Tier 1). The remaining 74 represent conditional risks and defense-in-depth considerations.
 
 ---
 
