@@ -34,7 +34,7 @@ Threats are classified into three exploitability tiers based on the prerequisite
 | Nacos                    | [Link](#nacos)                    | 1     | 1      | 0     | 1      | 0      | 0     | 0     | 3      | 0     | 1      | 2     | High   |
 | XXLJob                   | [Link](#xxljob)                   | 1     | 0      | 0     | 0      | 0      | 1     | 0     | 2      | 0     | 2      | 0     | Low    |
 | OBS                      | [Link](#obs)                      | 0     | 1      | 0     | 1      | 0      | 1     | 0     | 3      | 0     | 3      | 0     | Medium |
-| **Totals**               |                                   | **8** | **11** | **1** | **16** | **11** | **8** | **4** | **59** | **0** | **55** | **4** |        |
+| **Totals**               |                                   | **8** | **12** | **1** | **16** | **10** | **8** | **4** | **59** | **0** | **55** | **4** |        |
 
 ---
 

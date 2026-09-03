@@ -313,6 +313,58 @@
         "protocols": ["FS"]
       },
       "sidecars": []
+    },
+    {
+      "id": "WorkflowAuthor",
+      "display": "WorkflowAuthor",
+      "type": "external_interactor",
+      "tmt_type": "SE.EI.TMCore.User",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "external_interactor",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [],
+        "outbound_to": ["ActionEntryPoint"],
+        "protocols": ["YAML/env vars"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "PRContributor",
+      "display": "PRContributor",
+      "type": "external_interactor",
+      "tmt_type": "SE.EI.TMCore.User",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "external_interactor",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [],
+        "outbound_to": ["WorkspaceArtifacts"],
+        "protocols": ["git push/obs-upload"]
+      },
+      "sidecars": []
     }
   ],
 
@@ -339,8 +391,8 @@
       "display": "External Services Boundary",
       "kind": "NetworkBoundary",
       "aliases": [],
-      "contains": ["HuaweiCloudOIDC", "OpenLibingAPIG", "PyPIMirror"],
-      "contains_fingerprint": "HuaweiCloudOIDC|OpenLibingAPIG|PyPIMirror"
+      "contains": ["HuaweiCloudOIDC", "OpenLibingAPIG", "PyPIMirror", "WorkflowAuthor", "PRContributor"],
+      "contains_fingerprint": "HuaweiCloudOIDC|OpenLibingAPIG|PyPIMirror|WorkflowAuthor|PRContributor"
     }
   ],
 
@@ -1514,7 +1566,7 @@
   ],
 
   "metrics": {
-    "total_components": 11,
+    "total_components": 13,
     "total_boundaries": 2,
     "total_flows": 14,
     "total_threats": 38,

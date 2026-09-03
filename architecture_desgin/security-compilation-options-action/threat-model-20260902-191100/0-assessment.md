@@ -24,7 +24,7 @@
 
 主要风险集中在 Action 的输入校验薄弱（`artifact-path`/`scan-options`/`package-name` 未做严格白名单/路径校验）、日志与上报 payload 中包含未脱敏的 `gitUrl`/`filePath`/`errorMessage`/APIG 错误响应、`pip install --trusted-host` 削弱 SSL 校验、APIG 端点硬编码无证书固定、`pull_request_target` 触发场景下 OIDC token 以 base 仓权限签发可被 PR 作者间接盗用、产物文件大小/解压比/递归深度无限制存在 DoS 风险。建议优先修复 FIND-11（pip `--trusted-host` 削弱 SSL）与 FIND-04（pull_request_target OIDC 滥用）两个 Important 严重级别的快速修复项。
 
-The analysis covers 11 system elements across 2 trust boundaries.
+The analysis covers 13 system elements across 2 trust boundaries.
 
 ### Risk Rating: Elevated
 
