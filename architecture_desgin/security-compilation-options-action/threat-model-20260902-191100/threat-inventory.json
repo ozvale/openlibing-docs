@@ -391,7 +391,13 @@
       "display": "External Services Boundary",
       "kind": "NetworkBoundary",
       "aliases": [],
-      "contains": ["HuaweiCloudOIDC", "OpenLibingAPIG", "PyPIMirror", "WorkflowAuthor", "PRContributor"],
+      "contains": [
+        "HuaweiCloudOIDC",
+        "OpenLibingAPIG",
+        "PyPIMirror",
+        "WorkflowAuthor",
+        "PRContributor"
+      ],
       "contains_fingerprint": "HuaweiCloudOIDC|OpenLibingAPIG|PyPIMirror|WorkflowAuthor|PRContributor"
     }
   ],
