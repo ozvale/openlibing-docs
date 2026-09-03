@@ -28,7 +28,10 @@
         "namespace": "",
         "config_keys": [],
         "api_routes": [],
-        "dependencies": ["@actions/core", "@openlibing/huaweicloud-oidc-client"],
+        "dependencies": [
+          "@actions/core",
+          "@openlibing/huaweicloud-oidc-client"
+        ],
         "inbound_from": ["WorkflowAuthor", "PRContributor"],
         "outbound_to": ["SecOptionScanner", "PyPIMirror", "WorkspaceArtifacts"],
         "protocols": ["YAML/env vars", "FS (Node fs)", "HTTPS (pip)"]
@@ -79,7 +82,10 @@
         "class_names": ["CicdUploader"],
         "namespace": "",
         "config_keys": ["cicdUrl", "useOidc", "apigAppKey", "apigAppSecret"],
-        "api_routes": ["/action-api/build-artifact/sec-option/report", "/openlibing-cicd/build-artifact/sec-option/report"],
+        "api_routes": [
+          "/action-api/build-artifact/sec-option/report",
+          "/openlibing-cicd/build-artifact/sec-option/report"
+        ],
         "dependencies": ["axios", "@openlibing/huaweicloud-oidc-client"],
         "inbound_from": ["SecOptionScanner"],
         "outbound_to": ["ApigSigner", "OpenLibingAPIG", "HuaweiCloudOIDC"],
@@ -131,7 +137,10 @@
         "class_names": [],
         "namespace": "",
         "config_keys": ["cicdUrl"],
-        "api_routes": ["/action-api/build-artifact/sec-option/report", "/openlibing-cicd/build-artifact/sec-option/report"],
+        "api_routes": [
+          "/action-api/build-artifact/sec-option/report",
+          "/openlibing-cicd/build-artifact/sec-option/report"
+        ],
         "dependencies": [],
         "inbound_from": ["CicdUploader"],
         "outbound_to": [],
@@ -232,7 +241,13 @@
         "boundary_kind": "ProcessBoundary",
         "source_files": ["dist/bin/sec_option_scan.py"],
         "source_directories": ["dist/bin"],
-        "class_names": ["scan_directory", "analyze_single", "compute_summary", "try_extract_archive", "_entry_path_unsafe"],
+        "class_names": [
+          "scan_directory",
+          "analyze_single",
+          "compute_summary",
+          "try_extract_archive",
+          "_entry_path_unsafe"
+        ],
         "namespace": "",
         "config_keys": [],
         "api_routes": [],
@@ -289,7 +304,11 @@
         "config_keys": ["artifact-path"],
         "api_routes": [],
         "dependencies": [],
-        "inbound_from": ["PRContributor", "ActionEntryPoint", "SecOptionScanScript"],
+        "inbound_from": [
+          "PRContributor",
+          "ActionEntryPoint",
+          "SecOptionScanScript"
+        ],
         "outbound_to": [],
         "protocols": ["FS"]
       },
@@ -303,7 +322,16 @@
       "display": "CI Runner (Application Boundary)",
       "kind": "ProcessBoundary",
       "aliases": [],
-      "contains": ["ActionEntryPoint", "ApigSigner", "CicdUploader", "ScanResultFile", "SecOptionDetector", "SecOptionScanScript", "SecOptionScanner", "WorkspaceArtifacts"],
+      "contains": [
+        "ActionEntryPoint",
+        "ApigSigner",
+        "CicdUploader",
+        "ScanResultFile",
+        "SecOptionDetector",
+        "SecOptionScanScript",
+        "SecOptionScanner",
+        "WorkspaceArtifacts"
+      ],
       "contains_fingerprint": "ActionEntryPoint|ApigSigner|CicdUploader|ScanResultFile|SecOptionDetector|SecOptionScanScript|SecOptionScanner|WorkspaceArtifacts"
     },
     {
@@ -1078,7 +1106,11 @@
       "tier": 2,
       "effort": "Medium",
       "related_threats": ["T01.D", "T03.D", "T04.D", "T10.D"],
-      "evidence_files": ["dist/index.js", "dist/detectors/SecOptionDetector.js", "dist/bin/sec_option_scan.py"],
+      "evidence_files": [
+        "dist/index.js",
+        "dist/detectors/SecOptionDetector.js",
+        "dist/bin/sec_option_scan.py"
+      ],
       "component": "ActionEntryPoint",
       "identity_key": {
         "component_id": "ActionEntryPoint",
@@ -1135,7 +1167,10 @@
       "tier": 2,
       "effort": "Low",
       "related_threats": ["T03.T"],
-      "evidence_files": ["dist/detectors/SecOptionDetector.js", "dist/bin/sec_option_scan.py"],
+      "evidence_files": [
+        "dist/detectors/SecOptionDetector.js",
+        "dist/bin/sec_option_scan.py"
+      ],
       "component": "SecOptionDetector",
       "identity_key": {
         "component_id": "SecOptionDetector",
@@ -1249,7 +1284,10 @@
       "tier": 2,
       "effort": "Medium",
       "related_threats": ["T11.T"],
-      "evidence_files": ["dist/bin/sec_option_scan.py", "dist/detectors/SecOptionDetector.js"],
+      "evidence_files": [
+        "dist/bin/sec_option_scan.py",
+        "dist/detectors/SecOptionDetector.js"
+      ],
       "component": "ScanResultFile",
       "identity_key": {
         "component_id": "ScanResultFile",
@@ -1268,7 +1306,11 @@
       "tier": 2,
       "effort": "Low",
       "related_threats": ["T11.I"],
-      "evidence_files": ["dist/scanner.js", "dist/detectors/SecOptionDetector.js", "dist/bin/sec_option_scan.py"],
+      "evidence_files": [
+        "dist/scanner.js",
+        "dist/detectors/SecOptionDetector.js",
+        "dist/bin/sec_option_scan.py"
+      ],
       "component": "ScanResultFile",
       "identity_key": {
         "component_id": "ScanResultFile",
@@ -1344,7 +1386,10 @@
       "tier": 3,
       "effort": "Low",
       "related_threats": ["T03.A"],
-      "evidence_files": ["dist/detectors/SecOptionDetector.js", "dist/index.js"],
+      "evidence_files": [
+        "dist/detectors/SecOptionDetector.js",
+        "dist/index.js"
+      ],
       "component": "SecOptionDetector",
       "identity_key": {
         "component_id": "SecOptionDetector",
@@ -1476,7 +1521,20 @@
     "total_findings": 23,
     "threats_by_tier": { "T1": 0, "T2": 25, "T3": 13 },
     "findings_by_tier": { "T1": 0, "T2": 14, "T3": 9 },
-    "threats_by_stride": { "S": 4, "T": 6, "R": 3, "I": 9, "D": 7, "E": 0, "A": 9 },
-    "findings_by_severity": { "Critical": 0, "Important": 2, "Moderate": 11, "Low": 10 }
+    "threats_by_stride": {
+      "S": 4,
+      "T": 6,
+      "R": 3,
+      "I": 9,
+      "D": 7,
+      "E": 0,
+      "A": 9
+    },
+    "findings_by_severity": {
+      "Critical": 0,
+      "Important": 2,
+      "Moderate": 11,
+      "Low": 10
+    }
   }
 }

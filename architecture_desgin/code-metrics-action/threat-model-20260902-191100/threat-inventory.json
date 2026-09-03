@@ -1,0 +1,2599 @@
+{
+  "schema_version": "1.0",
+  "report_folder": "code-metrics-action",
+  "commit": "1ae6958",
+  "commit_date": "2026-09-02T04:23:50Z",
+  "branch": "code-metrics-oidc-auth",
+  "repository": "https://gitcode.com/openlibing/code-metrics-action.git",
+  "analysis_timestamp": "2026-09-02T11:11:13Z",
+  "model": "GLM-5.2",
+
+  "components": [
+    {
+      "id": "APIG",
+      "display": "APIG",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": ["coderepoUrl"],
+        "api_routes": [
+          "/metrics/code/report",
+          "/openlibing-coderepo/metrics/code/report",
+          "/action-api/metrics/code/report"
+        ],
+        "dependencies": [],
+        "inbound_from": ["CoderepoUploader"],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "ApigSigner",
+      "display": "ApigSigner",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "GitCodeRunner",
+      "boundary_kind": "MachineBoundary",
+      "aliases": [],
+      "source_files": ["dist/uploaders/CoderepoUploader.js"],
+      "source_directories": ["dist/uploaders"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "MachineBoundary",
+        "source_files": ["dist/uploaders/CoderepoUploader.js"],
+        "source_directories": ["dist/uploaders"],
+        "class_names": ["ApigSigner"],
+        "namespace": "",
+        "config_keys": ["apig-app-key", "apig-app-secret"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["CoderepoUploader"],
+        "outbound_to": ["CoderepoUploader"],
+        "protocols": ["function-call"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "CodeMetricsAction",
+      "display": "CodeMetricsAction",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "GitCodeRunner",
+      "boundary_kind": "MachineBoundary",
+      "aliases": [],
+      "source_files": ["dist/index.js", "action.yml"],
+      "source_directories": ["dist"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "MachineBoundary",
+        "source_files": ["dist/index.js", "action.yml"],
+        "source_directories": ["dist"],
+        "class_names": ["CodeMetricsAction"],
+        "namespace": "",
+        "config_keys": [
+          "INPUT_APIG_APP_KEY",
+          "INPUT_APIG_APP_SECRET",
+          "INPUT_OBS_AK",
+          "INPUT_OBS_SK",
+          "ACTIONS_ID_TOKEN_REQUEST_URL",
+          "ATOMGIT_RUN_ID",
+          "PIPELINE_RUN_ID"
+        ],
+        "api_routes": [],
+        "dependencies": [
+          "@actions/core",
+          "@openlibing/huaweicloud-oidc-client"
+        ],
+        "inbound_from": ["GitCodeRunner", "WorkflowConfig"],
+        "outbound_to": [
+          "ConfigLoader",
+          "MetricsScanner",
+          "WorkspaceRepo",
+          "PyPIMirror"
+        ],
+        "protocols": ["env-vars", "function-call", "execSync"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "CoderepoUploader",
+      "display": "CoderepoUploader",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "GitCodeRunner",
+      "boundary_kind": "MachineBoundary",
+      "aliases": [],
+      "source_files": ["dist/uploaders/CoderepoUploader.js"],
+      "source_directories": ["dist/uploaders"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "MachineBoundary",
+        "source_files": ["dist/uploaders/CoderepoUploader.js"],
+        "source_directories": ["dist/uploaders"],
+        "class_names": ["CoderepoUploader"],
+        "namespace": "",
+        "config_keys": [
+          "obs-ak",
+          "obs-sk",
+          "apig-app-key",
+          "apig-app-secret",
+          "coderepoUrl",
+          "obsEndpoint"
+        ],
+        "api_routes": [],
+        "dependencies": ["axios", "@openlibing/huaweicloud-oidc-client"],
+        "inbound_from": ["MetricsScanner"],
+        "outbound_to": [
+          "OBS",
+          "APIG",
+          "HuaweiCloudOIDC",
+          "ApigSigner",
+          "ObsutilDownloadMirror",
+          "TempFiles"
+        ],
+        "protocols": ["HTTPS", "execFileSync", "function-call"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "ConfigLoader",
+      "display": "ConfigLoader",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "GitCodeRunner",
+      "boundary_kind": "MachineBoundary",
+      "aliases": [],
+      "source_files": ["dist/config/loader.js"],
+      "source_directories": ["dist/config"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "MachineBoundary",
+        "source_files": ["dist/config/loader.js"],
+        "source_directories": ["dist/config"],
+        "class_names": ["ConfigLoader"],
+        "namespace": "",
+        "config_keys": ["config-file"],
+        "api_routes": [],
+        "dependencies": ["js-yaml"],
+        "inbound_from": ["CodeMetricsAction"],
+        "outbound_to": ["CodeMetricsAction"],
+        "protocols": ["function-call", "file-read"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "DuplicationDetector",
+      "display": "DuplicationDetector",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "GitCodeRunner",
+      "boundary_kind": "MachineBoundary",
+      "aliases": [],
+      "source_files": ["dist/detectors/DuplicationDetector.js"],
+      "source_directories": ["dist/detectors"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "MachineBoundary",
+        "source_files": ["dist/detectors/DuplicationDetector.js"],
+        "source_directories": ["dist/detectors"],
+        "class_names": ["DuplicationDetector"],
+        "namespace": "",
+        "config_keys": ["exclude-dirs", "allowed-extensions"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["MetricsScanner"],
+        "outbound_to": ["WorkspaceRepo", "MetricsScanner"],
+        "protocols": ["function-call", "file-read"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "FileCollector",
+      "display": "FileCollector",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "GitCodeRunner",
+      "boundary_kind": "MachineBoundary",
+      "aliases": [],
+      "source_files": ["dist/utils/fileCollector.js"],
+      "source_directories": ["dist/utils"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "MachineBoundary",
+        "source_files": ["dist/utils/fileCollector.js"],
+        "source_directories": ["dist/utils"],
+        "class_names": ["FileCollector"],
+        "namespace": "",
+        "config_keys": ["exclude-dirs", "allowed-extensions"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [
+          "SlocDetector",
+          "LizardDetector",
+          "DuplicationDetector"
+        ],
+        "outbound_to": ["WorkspaceRepo"],
+        "protocols": ["function-call", "fs.readdirSync"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "GitCodeRunner",
+      "display": "GitCodeRunner",
+      "type": "external_interactor",
+      "tmt_type": "SE.EI.TMCore.User",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "external_interactor",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [
+          "ATOMGIT_REF_NAME",
+          "ATOMGIT_RUN_ID",
+          "ATOMGIT_SHA",
+          "ACTIONS_ID_TOKEN_REQUEST_URL",
+          "GITHUB_WORKSPACE"
+        ],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [],
+        "outbound_to": ["CodeMetricsAction"],
+        "protocols": ["env-vars", "filesystem"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "HuaweiCloudOIDC",
+      "display": "HuaweiCloudOIDC",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.AuthProvider",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": ["ACTIONS_ID_TOKEN_REQUEST_URL"],
+        "api_routes": [],
+        "dependencies": ["@openlibing/huaweicloud-oidc-client@0.0.5"],
+        "inbound_from": ["CoderepoUploader"],
+        "outbound_to": ["CoderepoUploader"],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "LizardDetector",
+      "display": "LizardDetector",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.OSProcess",
+      "boundary": "GitCodeRunner",
+      "boundary_kind": "MachineBoundary",
+      "aliases": [],
+      "source_files": ["dist/detectors/LizardDetector.js"],
+      "source_directories": ["dist/detectors"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "MachineBoundary",
+        "source_files": ["dist/detectors/LizardDetector.js"],
+        "source_directories": ["dist/detectors"],
+        "class_names": ["LizardDetector"],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["python3", "lizard"],
+        "inbound_from": ["MetricsScanner"],
+        "outbound_to": ["WorkspaceRepo", "TempFiles", "MetricsScanner"],
+        "protocols": ["execSync", "file-read", "function-call"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "MetricsOutputFile",
+      "display": "MetricsOutputFile",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.FS",
+      "boundary": "GitCodeRunner",
+      "boundary_kind": "MachineBoundary",
+      "aliases": [],
+      "source_files": ["dist/utils/fileUtils.js"],
+      "source_directories": ["dist/utils"],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "MachineBoundary",
+        "source_files": ["dist/utils/fileUtils.js"],
+        "source_directories": ["dist/utils"],
+        "class_names": ["FileUtils"],
+        "namespace": "",
+        "config_keys": ["output"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["MetricsScanner"],
+        "outbound_to": [],
+        "protocols": ["fs.writeFileSync"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "MetricsScanner",
+      "display": "MetricsScanner",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "GitCodeRunner",
+      "boundary_kind": "MachineBoundary",
+      "aliases": [],
+      "source_files": ["dist/scanner.js"],
+      "source_directories": ["dist"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "MachineBoundary",
+        "source_files": ["dist/scanner.js"],
+        "source_directories": ["dist"],
+        "class_names": ["MetricsScanner"],
+        "namespace": "",
+        "config_keys": ["sourceDir", "excludeDirs", "allowedExtensions"],
+        "api_routes": [],
+        "dependencies": ["winston"],
+        "inbound_from": ["CodeMetricsAction"],
+        "outbound_to": [
+          "SlocDetector",
+          "LizardDetector",
+          "DuplicationDetector",
+          "CoderepoUploader",
+          "MetricsOutputFile"
+        ],
+        "protocols": ["function-call", "async/await"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "ObsutilDownloadMirror",
+      "display": "ObsutilDownloadMirror",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["CoderepoUploader"],
+        "outbound_to": ["CoderepoUploader"],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "OBS",
+      "display": "OBS",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.CloudStorage",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": ["obsEndpoint", "obsBucket=openlibing-gitcode-action"],
+        "api_routes": [],
+        "dependencies": ["obsutil"],
+        "inbound_from": ["CoderepoUploader"],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "PyPIMirror",
+      "display": "PyPIMirror",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["CodeMetricsAction"],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "SlocDetector",
+      "display": "SlocDetector",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.OSProcess",
+      "boundary": "GitCodeRunner",
+      "boundary_kind": "MachineBoundary",
+      "aliases": [],
+      "source_files": ["dist/detectors/SlocDetector.js"],
+      "source_directories": ["dist/detectors"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "MachineBoundary",
+        "source_files": ["dist/detectors/SlocDetector.js"],
+        "source_directories": ["dist/detectors"],
+        "class_names": ["SlocDetector"],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["scc"],
+        "inbound_from": ["MetricsScanner"],
+        "outbound_to": ["WorkspaceRepo", "MetricsScanner"],
+        "protocols": ["execSync", "file-read", "function-call"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "TempFiles",
+      "display": "TempFiles",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.FS",
+      "boundary": "GitCodeRunner",
+      "boundary_kind": "MachineBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "MachineBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": ["TMPDIR"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["LizardDetector", "CoderepoUploader"],
+        "outbound_to": [],
+        "protocols": ["fs.writeFileSync", "fs.readFileSync", "fs.unlinkSync"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "WorkflowConfig",
+      "display": "WorkflowConfig",
+      "type": "external_interactor",
+      "tmt_type": "SE.EI.TMCore.User",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        ".gitcode/workflows/code-metrics-scan.yml",
+        ".gitcode/workflows/pre-commit.yml",
+        "action.yml"
+      ],
+      "source_directories": [".gitcode/workflows"],
+      "fingerprint": {
+        "component_type": "external_interactor",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          ".gitcode/workflows/code-metrics-scan.yml",
+          ".gitcode/workflows/pre-commit.yml",
+          "action.yml"
+        ],
+        "source_directories": [".gitcode/workflows"],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [
+          "apig-app-key",
+          "apig-app-secret",
+          "obs-ak",
+          "obs-sk",
+          "exclude-dirs",
+          "allowed-extensions",
+          "config-file",
+          "output"
+        ],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [],
+        "outbound_to": ["CodeMetricsAction"],
+        "protocols": ["env-vars", "INPUT_*"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "WorkspaceRepo",
+      "display": "WorkspaceRepo",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.FS",
+      "boundary": "GitCodeRunner",
+      "boundary_kind": "MachineBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "MachineBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [
+          "CodeMetricsAction",
+          "SlocDetector",
+          "LizardDetector",
+          "DuplicationDetector",
+          "FileCollector"
+        ],
+        "outbound_to": [],
+        "protocols": ["fs.readFileSync", "fs.readdirSync", "git"]
+      },
+      "sidecars": []
+    }
+  ],
+
+  "boundaries": [
+    {
+      "id": "GitCodeRunner",
+      "display": "GitCode Runner (CI Runner)",
+      "kind": "MachineBoundary",
+      "aliases": ["CI Runner", "RunnerEnv"],
+      "contains": [
+        "ApigSigner",
+        "CodeMetricsAction",
+        "CoderepoUploader",
+        "ConfigLoader",
+        "DuplicationDetector",
+        "FileCollector",
+        "LizardDetector",
+        "MetricsOutputFile",
+        "MetricsScanner",
+        "SlocDetector",
+        "TempFiles",
+        "WorkspaceRepo"
+      ],
+      "contains_fingerprint": "ApigSigner|CodeMetricsAction|CoderepoUploader|ConfigLoader|DuplicationDetector|FileCollector|LizardDetector|MetricsOutputFile|MetricsScanner|SlocDetector|TempFiles|WorkspaceRepo"
+    },
+    {
+      "id": "External",
+      "display": "External",
+      "kind": "NetworkBoundary",
+      "aliases": ["Ext"],
+      "contains": [
+        "APIG",
+        "GitCodeRunner",
+        "HuaweiCloudOIDC",
+        "OBS",
+        "ObsutilDownloadMirror",
+        "PyPIMirror",
+        "WorkflowConfig"
+      ],
+      "contains_fingerprint": "APIG|GitCodeRunner|HuaweiCloudOIDC|OBS|ObsutilDownloadMirror|PyPIMirror|WorkflowConfig"
+    }
+  ],
+
+  "flows": [
+    {
+      "id": "DF01",
+      "from": "WorkflowConfig",
+      "to": "CodeMetricsAction",
+      "protocol": "env vars (INPUT_*)",
+      "description": "action inputs 与 secrets 通过 INPUT_* 环境变量注入（连字符/下划线兼容）"
+    },
+    {
+      "id": "DF02",
+      "from": "GitCodeRunner",
+      "to": "CodeMetricsAction",
+      "protocol": "env vars + filesystem",
+      "description": "注入 ATOMGIT_REF_NAME/RUN_ID/SHA、ACTIONS_ID_TOKEN_REQUEST_URL、workspace 路径"
+    },
+    {
+      "id": "DF03",
+      "from": "CodeMetricsAction",
+      "to": "ConfigLoader",
+      "protocol": "function call + file read",
+      "description": "传入 config-file 路径，返回合并后的 DEFAULT_CONFIG + 用户配置"
+    },
+    {
+      "id": "DF04",
+      "from": "CodeMetricsAction",
+      "to": "WorkspaceRepo",
+      "protocol": "execSync git + fs.existsSync",
+      "description": "findGitRoot 向上查 .git，调用 git remote get-url / rev-parse --abbrev-ref HEAD"
+    },
+    {
+      "id": "DF05",
+      "from": "CodeMetricsAction",
+      "to": "PyPIMirror",
+      "protocol": "HTTPS (pip install)",
+      "description": "pip install --break-system-packages lizard -i mirrors.aliyun.com --trusted-host"
+    },
+    {
+      "id": "DF06",
+      "from": "CodeMetricsAction",
+      "to": "MetricsScanner",
+      "protocol": "constructor + async scan()",
+      "description": "传入 config 与 scan options（sourceDir、upload、gitUrl、branchName、pipelineRunId、commitId）"
+    },
+    {
+      "id": "DF07",
+      "from": "MetricsScanner",
+      "to": "SlocDetector",
+      "protocol": "async detect(sources)",
+      "description": "调用 scc 统计代码规模，返回 slocResult"
+    },
+    {
+      "id": "DF08",
+      "from": "MetricsScanner",
+      "to": "LizardDetector",
+      "protocol": "async detect(sources)",
+      "description": "调用 lizard 计算函数复杂度，返回 lizardResult"
+    },
+    {
+      "id": "DF09",
+      "from": "MetricsScanner",
+      "to": "DuplicationDetector",
+      "protocol": "async detect(sources, slocResult)",
+      "description": "传入 slocResult 作分母，返回 duplicationResult"
+    },
+    {
+      "id": "DF10",
+      "from": "MetricsScanner",
+      "to": "CoderepoUploader",
+      "protocol": "async upload(metrics, options)",
+      "description": "传入 formattedMetrics + 元数据，返回 {success, obsUrl, recordId}"
+    },
+    {
+      "id": "DF11",
+      "from": "MetricsScanner",
+      "to": "MetricsOutputFile",
+      "protocol": "fs.writeFileSync",
+      "description": "写本地 metrics.json（剥离 snapshotData + 裁剪超长 content）"
+    },
+    {
+      "id": "DF12",
+      "from": "SlocDetector",
+      "to": "WorkspaceRepo",
+      "protocol": "execSync + fs.readFileSync",
+      "description": "调用 scc 二进制 + 后置 FileCollector.isPathExcluded 过滤"
+    },
+    {
+      "id": "DF13",
+      "from": "LizardDetector",
+      "to": "WorkspaceRepo",
+      "protocol": "execSync python3 + fs.readFileSync",
+      "description": "写 lizard_input.txt 调用 python3 -m lizard，再读源文件计算函数体 nloc"
+    },
+    {
+      "id": "DF14",
+      "from": "LizardDetector",
+      "to": "TempFiles",
+      "protocol": "fs.writeFileSync/readFileSync/unlinkSync",
+      "description": "lizard 输入文件 + lizard_output.json"
+    },
+    {
+      "id": "DF15",
+      "from": "DuplicationDetector",
+      "to": "WorkspaceRepo",
+      "protocol": "fs.readFileSync",
+      "description": "逐文件读取（含二进制嗅探），跨文件行级匹配"
+    },
+    {
+      "id": "DF16",
+      "from": "FileCollector",
+      "to": "WorkspaceRepo",
+      "protocol": "fs.readdirSync recursive",
+      "description": "递归遍历，跳过 . 前缀目录，按 exclude-dirs/allowed-extensions 过滤"
+    },
+    {
+      "id": "DF17",
+      "from": "CoderepoUploader",
+      "to": "TempFiles",
+      "protocol": "fs.writeFileSync/unlinkSync",
+      "description": "全量 payload 写 tmp JSON，上传后清理"
+    },
+    {
+      "id": "DF18",
+      "from": "CoderepoUploader",
+      "to": "OBS",
+      "protocol": "HTTPS (obsutil cp)",
+      "description": "execFileSync obsutil cp + STS 临时凭证或静态 AK/SK"
+    },
+    {
+      "id": "DF19",
+      "from": "CoderepoUploader",
+      "to": "APIG",
+      "protocol": "HTTPS POST",
+      "description": "/metrics/code/report，OIDC 模式 callApig 或 AK/SK 模式 axios.post + ApigSigner"
+    },
+    {
+      "id": "DF20",
+      "from": "CoderepoUploader",
+      "to": "HuaweiCloudOIDC",
+      "protocol": "HTTPS (SDK callApig/getCredentials)",
+      "description": "OIDC ID Token → STS 临时凭证 + V11 签名（SDK 内部）"
+    },
+    {
+      "id": "DF21",
+      "from": "CoderepoUploader",
+      "to": "ApigSigner",
+      "protocol": "function call",
+      "description": "传入 {method, url, headers, body}，返回带 Authorization 的 headers"
+    },
+    {
+      "id": "DF22",
+      "from": "CoderepoUploader",
+      "to": "ObsutilDownloadMirror",
+      "protocol": "HTTPS (wget/curl + tar)",
+      "description": "execSync bash 下载 obsutil_linux_amd64.tar.gz 并解压、chmod 755"
+    }
+  ],
+
+  "threats": [
+    {
+      "id": "T01.A",
+      "title": "PIPELINE_RUN_ID environment variable override of run identity",
+      "description": "User can set PIPELINE_RUN_ID env var to override the true ATOMGIT_RUN_ID, causing metrics to be attributed to the wrong pipeline.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Prefer ATOMGIT_RUN_ID; if PIPELINE_RUN_ID fallback is required, add whitelist validation or opt-out flag.",
+      "identity_key": {
+        "component_id": "CodeMetricsAction",
+        "data_flow_id": "DF02",
+        "stride_category": "A",
+        "attack_surface": "env var PIPELINE_RUN_ID fallback"
+      }
+    },
+    {
+      "id": "T01.D",
+      "title": "pip install lizard 120s timeout blocking on slow PyPI mirror",
+      "description": "pip install --break-system-packages lizard 120s timeout + stdio:'inherit' blocking; a malicious or slow PyPI mirror response can exhaust runner resources.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Use execFileSync + --no-input + --require-hashes; reduce timeout to 60s; do not block scan on failure.",
+      "identity_key": {
+        "component_id": "CodeMetricsAction",
+        "data_flow_id": "DF05",
+        "stride_category": "D",
+        "attack_surface": "pip install timeout/buffer"
+      }
+    },
+    {
+      "id": "T01.E",
+      "title": "OIDC URL presence-only check allows forged OIDC provider",
+      "description": "useOidc = !!process.env.ACTIONS_ID_TOKEN_REQUEST_URL relies only on env var existence; attacker controlling runner env can inject forged URL to call attacker-controlled OIDC provider.",
+      "stride_category": "E",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "Validate ACTIONS_ID_TOKEN_REQUEST_URL starts with https:// and host is on GitCode platform whitelist; SDK should do issuer validation.",
+      "identity_key": {
+        "component_id": "CodeMetricsAction",
+        "data_flow_id": "DF02",
+        "stride_category": "E",
+        "attack_surface": "env var ACTIONS_ID_TOKEN_REQUEST_URL"
+      }
+    },
+    {
+      "id": "T01.I",
+      "title": "core.info leaks commitId and gitUrl to console logs",
+      "description": "core.info outputs gitUrl/branchName/pipelineRunId/commitId to console logs; commitId can be cross-referenced to track individual developer behavior.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Only output redacted pipelineRunId; move commitId and gitUrl to debug level (verbose=true only).",
+      "identity_key": {
+        "component_id": "CodeMetricsAction",
+        "data_flow_id": "DF06",
+        "stride_category": "I",
+        "attack_surface": "core.info console output"
+      }
+    },
+    {
+      "id": "T01.R",
+      "title": "Scan failures emit only core.warning without audit log",
+      "description": "scan failures emit core.warning only (no structured audit log);事后无法追溯是谁触发了失败/异常.",
+      "stride_category": "R",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Add audit log reporting to independent endpoint (pipelineRunId + commitId + failure reason), decoupled from metrics upload.",
+      "identity_key": {
+        "component_id": "CodeMetricsAction",
+        "data_flow_id": "DF06",
+        "stride_category": "R",
+        "attack_surface": "core.warning output"
+      }
+    },
+    {
+      "id": "T01.T",
+      "title": "getInput tolerates hyphen/underscore INPUT_* forms allowing env override of secrets",
+      "description": "getInput() supports both hyphen and underscore forms of INPUT_<NAME>; if CI platform env block allows PR comment/branch name to inject env vars, malicious user can construct INPUT_APIG_APP_KEY to override secret input.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "For security-related inputs (apig-app-key/secret, obs-ak/sk), explicitly verify input source is from workflow secrets context.",
+      "identity_key": {
+        "component_id": "CodeMetricsAction",
+        "data_flow_id": "DF01",
+        "stride_category": "T",
+        "attack_surface": "INPUT_* env var namespace"
+      }
+    },
+    {
+      "id": "T02.D",
+      "title": "JSON.stringify(compactResult) can exceed V8 string length limit",
+      "description": "超 large repo + high duplication rate can trigger JSON.stringify(compactResult) exceeding V8 single string limit (Invalid string length).",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Cap fileDetails or use streaming writes; monitor JSON.stringify exceptions and degrade to chunked file writes.",
+      "identity_key": {
+        "component_id": "MetricsScanner",
+        "data_flow_id": "DF11",
+        "stride_category": "D",
+        "attack_surface": "JSON.stringify compactResult"
+      }
+    },
+    {
+      "id": "T02.I",
+      "title": "logger.info leaks file scale info to console",
+      "description": "logger.info outputs 'Local output size approx: ${JSON.stringify(compactResult).length} bytes' + 'Result scale: fileDetails=..., snapshotDataTotal=... bytes', leaking file scale info.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Avoid output when verbose=false; reduce log noise.",
+      "identity_key": {
+        "component_id": "MetricsScanner",
+        "data_flow_id": "DF11",
+        "stride_category": "I",
+        "attack_surface": "logger.info output"
+      }
+    },
+    {
+      "id": "T02.R",
+      "title": "catch block failure path has no structured audit log",
+      "description": "catch block (scanner.js:197-225) on failure only does logger.error + retry upload; logger is winston console transport, no audit persistence.",
+      "stride_category": "R",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Failure fallback upload already includes errorMessage; add structured errorReport field with stack head (12 lines) and persist to audit endpoint.",
+      "identity_key": {
+        "component_id": "MetricsScanner",
+        "data_flow_id": "DF10",
+        "stride_category": "R",
+        "attack_surface": "scanner.js catch block logger"
+      }
+    },
+    {
+      "id": "T03.A",
+      "title": "toRelativePath strips sources prefix allowing workspace-escaping paths",
+      "description": "toRelativePath() uses sources as prefix for剥除; malicious sources=['/tmp'] allows absolute path prefix matching /tmp/secret.txt to be stripped to secret.txt and reported.",
+      "stride_category": "A",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "Constrain sources to within workspace (path.resolve(this.workingDir, src)) before prefix stripping.",
+      "identity_key": {
+        "component_id": "SlocDetector",
+        "data_flow_id": "DF12",
+        "stride_category": "A",
+        "attack_surface": "sources action input"
+      }
+    },
+    {
+      "id": "T03.D",
+      "title": "execSync maxBuffer 100MB + timeout 300s vulnerable to adversarial file count",
+      "description": "execSync maxBuffer: 100*1024*1024 + timeout: 300000; maliciously crafted many files can trigger scc output > 100MB and throw error (caught, fallback iterates all files).",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Add hard cap on file count (e.g., 100k); reject scan and prompt user to split repo when exceeded.",
+      "identity_key": {
+        "component_id": "SlocDetector",
+        "data_flow_id": "DF12",
+        "stride_category": "D",
+        "attack_surface": "scc maxBuffer/timeout"
+      }
+    },
+    {
+      "id": "T03.E",
+      "title": "Bundled scc binary compromise via supply chain attack",
+      "description": "Bundled scc binary dist/bin/scc on Linux first run fs.chmodSync(candidate, 0o755); if dist packaging is compromised (supply chain attack) injecting malicious scc, can execute arbitrary code with runner privileges.",
+      "stride_category": "E",
+      "tier": 3,
+      "prerequisites": "CoderepoUploader Compromise + Host/OS Access",
+      "status": "Open",
+      "mitigation": "SBOM validation or hash signing for scc binary; CI build records sha256 and verifies at runtime.",
+      "identity_key": {
+        "component_id": "SlocDetector",
+        "data_flow_id": "DF12",
+        "stride_category": "E",
+        "attack_surface": "dist/bin/scc binary"
+      }
+    },
+    {
+      "id": "T03.I",
+      "title": "console.log leaks scc command line and absolute file paths",
+      "description": "console.log outputs scc command line + file paths; maliciously crafted filePath containing sensitive paths (e.g., /etc/secrets/...) can enter logs.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Only output relative paths to scan root, not absolute paths.",
+      "identity_key": {
+        "component_id": "SlocDetector",
+        "data_flow_id": "DF12",
+        "stride_category": "I",
+        "attack_surface": "console.log output"
+      }
+    },
+    {
+      "id": "T03.S",
+      "title": "scc binary path spoofing via ancestor directory candidates",
+      "description": "getSccPath() probes path.join(__dirname, 'bin', 'scc') and several ancestor directories; if malicious checkout injects same-named scc binary into ancestor directory, can be优先 selected and executed.",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Strictly use path.join(bundleRoot, 'bin', 'scc') single source; candidate paths must not include ancestor directories.",
+      "identity_key": {
+        "component_id": "SlocDetector",
+        "data_flow_id": "DF12",
+        "stride_category": "S",
+        "attack_surface": "getSccPath candidate paths"
+      }
+    },
+    {
+      "id": "T03.T",
+      "title": "Command injection via shell concatenation in runScc",
+      "description": "runScc() uses const cmd = '\"${this.sccPath}\" ${args.join(\" \")}' + execSync(cmd) string concatenation; if this.sccPath or sources path contains shell metacharacters ($(...), ; rm), can trigger command injection.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Use execFileSync(this.sccPath, args, ...) parameter array, bypassing shell; sources path normalized with fs.realpathSync.",
+      "identity_key": {
+        "component_id": "SlocDetector",
+        "data_flow_id": "DF12",
+        "stride_category": "T",
+        "attack_surface": "runScc execSync string concatenation"
+      }
+    },
+    {
+      "id": "T04.A",
+      "title": "pip install --break-system-packages pollutes system Python",
+      "description": "pip install lizard --break-system-packages system-level install; if runner has other workflow steps using python3, they will be polluted with this lizard version.",
+      "stride_category": "A",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "Use venv isolation (python3 -m venv /tmp/lizard-venv && source /tmp/lizard-venv/bin/activate && pip install lizard).",
+      "identity_key": {
+        "component_id": "LizardDetector",
+        "data_flow_id": "DF13",
+        "stride_category": "A",
+        "attack_surface": "pip install --break-system-packages"
+      }
+    },
+    {
+      "id": "T04.D",
+      "title": "execSync maxBuffer 50MB + timeout 300s vulnerable to function count DoS",
+      "description": "execSync maxBuffer: 50*1024*1024 + timeout: 300000; malicious repo with many functions (e.g., generated code templates) can trigger lizard output > 50MB.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Batch files for lizard (N files per batch); or monitor output size and degrade to sampling above threshold.",
+      "identity_key": {
+        "component_id": "LizardDetector",
+        "data_flow_id": "DF13",
+        "stride_category": "D",
+        "attack_surface": "lizard maxBuffer/timeout"
+      }
+    },
+    {
+      "id": "T04.E",
+      "title": "fs.readFileSync of untrusted lizard output filePath allows arbitrary file read",
+      "description": "runLizard's fs.readFileSync(filePath, 'utf8') + fs.readFileSync(func.filename, 'utf8') allows reading any file readable by runner process; malicious lizard output can let func.filename = '/etc/passwd' be read.",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Same as T04.I: validate func.filename must be within workspace scope.",
+      "identity_key": {
+        "component_id": "LizardDetector",
+        "data_flow_id": "DF13",
+        "stride_category": "E",
+        "attack_surface": "fs.readFileSync of lizard filePath"
+      }
+    },
+    {
+      "id": "T04.I",
+      "title": "Arbitrary file read via untrusted lizard output filePath",
+      "description": "parseTextOutput regex captures filePath as group 9; malicious lizard output can let filePath point to sensitive file, triggering fs.readFileSync(filePath, 'utf8') reading content into functions[].filename, eventually entering metrics.json and OBS upload.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Validate filePath must be within sources/workspace scope, otherwise skip that function; or sign lizard output.",
+      "identity_key": {
+        "component_id": "LizardDetector",
+        "data_flow_id": "DF13",
+        "stride_category": "I",
+        "attack_surface": "parseTextOutput regex filePath capture"
+      }
+    },
+    {
+      "id": "T04.S",
+      "title": "Lizard temp output file spoofing via workspace root path",
+      "description": "tempJsonFile = './lizard_output.json' default writes to workspace root; malicious repo can pre-place same-named file. Although code does unlinkSync first, malicious pre-placed file can still be read when runLizard fails.",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Write tempJsonFile to os.tmpdir() (consistent with writeInputFile), avoiding workspace pollution.",
+      "identity_key": {
+        "component_id": "LizardDetector",
+        "data_flow_id": "DF13",
+        "stride_category": "S",
+        "attack_surface": "tempJsonFile workspace path"
+      }
+    },
+    {
+      "id": "T04.T",
+      "title": "Command injection via TMPDIR-controlled path in execSync lizard",
+      "description": "execSync('python3 -m lizard ' + args.join(' ')) string concatenation; args includes tempInputPath and tempJsonPath. If attacker controls TMPDIR env var, can inject path with shell metacharacters.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Use execFileSync('python3', ['-m', 'lizard', '-f', tempInputPath, '-o', tempJsonPath], ...) parameter array; validate os.tmpdir() does not contain special characters.",
+      "identity_key": {
+        "component_id": "LizardDetector",
+        "data_flow_id": "DF13",
+        "stride_category": "T",
+        "attack_surface": "execSync string concatenation + TMPDIR"
+      }
+    },
+    {
+      "id": "T05.A",
+      "title": "Path traversal via malicious gitUrl in extractOwnerRepo affecting objectKey",
+      "description": "buildObjectKey uses ownerRepo to splice objectKey, but extractOwnerRepo uses regex (?:git@[^:]+:|https?://[^/]+/)(.+)$ to extract; malicious gitUrl containing ../ can let ownerRepo contain path traversal segments, making objectKey write to other owner's directory.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "extractOwnerRepo should replace /\\.\\./g and limit / count; or backend should authenticate by owner before downloading.",
+      "identity_key": {
+        "component_id": "DuplicationDetector",
+        "data_flow_id": "DF09",
+        "stride_category": "A",
+        "attack_surface": "extractOwnerRepo regex"
+      }
+    },
+    {
+      "id": "T05.D",
+      "title": "Cross-file union-find O(n^2) complexity on adversarial input",
+      "description": "Cross-file union-find sliding window matching (detectWithLineLevel) algorithm complexity may be O(n^2) or higher (n=total file lines); maliciously crafted many duplicate blocks can trigger CPU exhaustion.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Add hard cap on single file line count (e.g., 100k lines); skip duplication detection for that file and warn when exceeded.",
+      "identity_key": {
+        "component_id": "DuplicationDetector",
+        "data_flow_id": "DF15",
+        "stride_category": "D",
+        "attack_surface": "detectWithLineLevel algorithm complexity"
+      }
+    },
+    {
+      "id": "T05.I",
+      "title": "Source code snippets in snapshotData transit to OBS via metrics pipeline",
+      "description": "fs.readFileSync(file, 'utf8') reads full source file content; buildContextSegments builds ±5 line context segments (snapshotData) containing plaintext code, eventually encoded Base64 and uploaded to OBS (private object).",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Already mitigated by Base64 encoding + OBS private object; if scanned repo source contains keys/PII, keys will transit this link. Recommend upstream gitleaks/detect-private-key hook interception; optional: regex mask suspected keys in snapshotData before upload.",
+      "identity_key": {
+        "component_id": "DuplicationDetector",
+        "data_flow_id": "DF15",
+        "stride_category": "I",
+        "attack_surface": "fs.readFileSync + buildContextSegments"
+      }
+    },
+    {
+      "id": "T06.D",
+      "title": "Unbounded config file size can exhaust runner memory",
+      "description": "超 large config file can exhaust runner memory (no max size limit).",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "fs.statSync to validate file size before loading (e.g., < 1MB); reject if exceeded.",
+      "identity_key": {
+        "component_id": "ConfigLoader",
+        "data_flow_id": "DF03",
+        "stride_category": "D",
+        "attack_surface": "yaml.load file size"
+      }
+    },
+    {
+      "id": "T06.E",
+      "title": "mergeConfig allows user override of security-critical fields",
+      "description": "mergeConfig recursive merge; user can override detectors.duplication.enabled=false or uploader.coderepoUrl etc. security-related fields in config-file (although coderepoUrl hardcoded in index.js overrides, enabled field can be disabled).",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Whitelist merge for security-related fields (enabled, url, credentials); or validate key fields not modified by userConfig after loading.",
+      "identity_key": {
+        "component_id": "ConfigLoader",
+        "data_flow_id": "DF03",
+        "stride_category": "E",
+        "attack_surface": "mergeConfig recursive merge"
+      }
+    },
+    {
+      "id": "T06.T",
+      "title": "YAML anchor/alias cycle can trigger stack overflow",
+      "description": "yaml.load(fileContent) uses js-yaml ^4.1.0; default SAFE_SCHEMA does not support !!js/function etc. unsafe types; but if user config-file contains malicious YAML anchor/alias cycle, can trigger stack overflow.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Upgrade to latest js-yaml; or limit config-file size (e.g., < 1MB); explicitly set schema: yaml.DEFAULT_SAFE_SCHEMA when loading.",
+      "identity_key": {
+        "component_id": "ConfigLoader",
+        "data_flow_id": "DF03",
+        "stride_category": "T",
+        "attack_surface": "yaml.load anchor/alias"
+      }
+    },
+    {
+      "id": "T07.D",
+      "title": "Unbounded directory recursion can trigger stack overflow",
+      "description": "超 deep directory recursion (e.g., maliciously crafted 1000-level nested directories) can trigger stack overflow; _walkDir recursive call has no depth limit.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Add maxDepth parameter (e.g., 32); skip subdirectory when exceeded.",
+      "identity_key": {
+        "component_id": "FileCollector",
+        "data_flow_id": "DF16",
+        "stride_category": "D",
+        "attack_surface": "_walkDir recursion depth"
+      }
+    },
+    {
+      "id": "T07.I",
+      "title": "console.warn leaks absolute path of runner filesystem",
+      "description": "console.warn('[WARN] 路径不存在: ${absolutePath}') and console.warn('[WARN] 文件扩展名不在允许列表中: ${absolutePath}') output absolute paths, potentially leaking runner filesystem structure.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Output relative paths (relative to this.workingDir) instead of absolute paths.",
+      "identity_key": {
+        "component_id": "FileCollector",
+        "data_flow_id": "DF16",
+        "stride_category": "I",
+        "attack_surface": "console.warn output"
+      }
+    },
+    {
+      "id": "T07.T",
+      "title": "ReDoS via user-supplied glob patterns in globToRegExp",
+      "description": "globToRegExp(glob) converts user exclude-dirs patterns to regex; maliciously crafted glob patterns (e.g., (a+)+ backtracking patterns) can trigger ReDoS, blocking _walkDir.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Use safe-regex library to pre-validate regex after glob conversion; or set hard timeout for single _walkDir.",
+      "identity_key": {
+        "component_id": "FileCollector",
+        "data_flow_id": "DF16",
+        "stride_category": "T",
+        "attack_surface": "globToRegExp regex conversion"
+      }
+    },
+    {
+      "id": "T08.A",
+      "title": "Path traversal via malicious gitUrl in buildObjectKey",
+      "description": "buildObjectKey uses extractOwnerRepo(options.gitUrl) to splice objectKey; malicious gitUrl containing ../ can let ownerRepo path traverse, making OBS objectKey write to other owner's directory; backend may read attacker-crafted malicious data when downloading by objectKey.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "extractOwnerRepo validates ownerRepo does not contain .., //, etc.; or backend authenticates by owner before downloading.",
+      "identity_key": {
+        "component_id": "CoderepoUploader",
+        "data_flow_id": "DF10",
+        "stride_category": "A",
+        "attack_surface": "buildObjectKey + extractOwnerRepo"
+      }
+    },
+    {
+      "id": "T08.D",
+      "title": "execFileSync obsutil has no timeout, can block indefinitely",
+      "description": "execFileSync(obsutil, args, { stdio: 'inherit' }) has no timeout; slow OBS endpoint response or network failure can block indefinitely.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Add timeout: 60000 (60s); clean up tmpFile and return failure on timeout.",
+      "identity_key": {
+        "component_id": "CoderepoUploader",
+        "data_flow_id": "DF18",
+        "stride_category": "D",
+        "attack_surface": "execFileSync obsutil timeout"
+      }
+    },
+    {
+      "id": "T08.E",
+      "title": "AK/SK static credential leak enables forged APIG signatures",
+      "description": "AK/SK mode ApigSigner(this.apigAppKey, this.apigAppSecret); if SK leaks (logs, tmp files, git history), attacker can forge signatures to directly call /openlibing-coderepo/metrics/code/report and upload forged data (overwriting real metrics).",
+      "stride_category": "E",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "Force OIDC mode (deprecate AK/SK); or IP whitelist for AK/SK; monitor abnormal upload sources.",
+      "identity_key": {
+        "component_id": "CoderepoUploader",
+        "data_flow_id": "DF19",
+        "stride_category": "E",
+        "attack_surface": "ApigSigner static AK/SK"
+      }
+    },
+    {
+      "id": "T08.I",
+      "title": "obsutil command line log leaks -i=STS_AK/OBS_AK access key ID",
+      "description": "console.log('[upload] exec obsutil ${maskedArgs.join(\" \")}') outputs command line; -k=***/-t=*** are masked but -i=STS_AK/-i=OBS_AK are not masked; accessKeyId (temporary or permanent AK) enters logs.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Also mask -i= (show only first 4 chars + ***); or do not output obsutil command line at all, only output obsutil version + result.",
+      "identity_key": {
+        "component_id": "CoderepoUploader",
+        "data_flow_id": "DF18",
+        "stride_category": "I",
+        "attack_surface": "console.log obsutil args"
+      }
+    },
+    {
+      "id": "T08.R",
+      "title": "Upload failure console.error has no structured audit",
+      "description": "report() on failure does console.error('Upload error: ${error.code || error.message}, URL: ${url}') to stdout, no structured audit.",
+      "stride_category": "R",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Add structured errorReport reporting (pipelineRunId + commitId + failure reason + timestamp) to independent endpoint.",
+      "identity_key": {
+        "component_id": "CoderepoUploader",
+        "data_flow_id": "DF19",
+        "stride_category": "R",
+        "attack_surface": "console.error upload failure"
+      }
+    },
+    {
+      "id": "T08.T",
+      "title": "Command injection via TMPDIR-controlled path in ensureObsutil",
+      "description": "ensureObsutil() uses execSync('wget -q \"${downloadUrl}\" -O \"${tarball}\" 2>/dev/null || curl -sL \"${downloadUrl}\" -o \"${tarball}\"', { shell: '/bin/bash' }); downloadUrl is hardcoded but tarball/extractedDir contains os.tmpdir() path; if TMPDIR is controlled by attacker with shell metacharacter path, can trigger command injection.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Use execFileSync('wget', ['-q', downloadUrl, '-O', tarball]) parameter array; or use Node.js built-in https.get to download.",
+      "identity_key": {
+        "component_id": "CoderepoUploader",
+        "data_flow_id": "DF22",
+        "stride_category": "T",
+        "attack_surface": "ensureObsutil execSync string + TMPDIR"
+      }
+    },
+    {
+      "id": "T09.A",
+      "title": "_canonicalUri trailing slash can trigger unintended APIG routes",
+      "description": "_canonicalUri(uri) appends / at end (aligned with official SDK); but if some APIG routes are sensitive to trailing / (e.g., redirect to different handler), can be triggered by crafted path to unintended route.",
+      "stride_category": "A",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "Only for known APIG routes (/metrics/code/report); route whitelist; non-whitelist path rejects signing.",
+      "identity_key": {
+        "component_id": "ApigSigner",
+        "data_flow_id": "DF21",
+        "stride_category": "A",
+        "attack_surface": "_canonicalUri trailing slash"
+      }
+    },
+    {
+      "id": "T09.D",
+      "title": "Unbounded URL/query processing can trigger CPU exhaustion",
+      "description": "_canonicalUri/_canonicalQueryString/_urlEncode are all string processing;超 long URL or超 many query parameters can trigger CPU exhaustion.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Add upper limit validation for URL length and query parameter count.",
+      "identity_key": {
+        "component_id": "ApigSigner",
+        "data_flow_id": "DF21",
+        "stride_category": "D",
+        "attack_surface": "URL/query string processing"
+      }
+    },
+    {
+      "id": "T09.E",
+      "title": "Empty ak/sk produces anonymous-style Authorization header",
+      "description": "ApigSigner constructor does not validate ak/sk non-empty; if caller passes empty string, sign() outputs 'Access=, SignedHeaders=..., Signature=...', may be treated as anonymous request by APIG (depending on gateway config).",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Constructor validates 'if (!ak || !sk) throw new Error(\"ApigSigner requires ak/sk\")'; CoderepoUploader.report already has AK/SK mode validation.",
+      "identity_key": {
+        "component_id": "ApigSigner",
+        "data_flow_id": "DF21",
+        "stride_category": "E",
+        "attack_surface": "ApigSigner constructor ak/sk validation"
+      }
+    },
+    {
+      "id": "T09.I",
+      "title": "Authorization header exposes ak in cleartext",
+      "description": "headers['Authorization'] = 'SDK-HMAC-SHA256 Access=${this.ak}, SignedHeaders=..., Signature=...'; ak (access key ID) plaintext in Authorization header; if caller outputs headers to logs, ak will leak.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Caller (CoderepoUploader.report) already uses axios without outputting headers; but console.error outputs URL (not headers). Recommend ak masking in debug logs inside sign().",
+      "identity_key": {
+        "component_id": "ApigSigner",
+        "data_flow_id": "DF21",
+        "stride_category": "I",
+        "attack_surface": "Authorization header ak"
+      }
+    },
+    {
+      "id": "T09.T",
+      "title": "decodeURIComponent can throw URIError on malformed URL",
+      "description": "sign() parses URL (new URL(url)) + decodes query string; maliciously crafted URL with超 long query or special characters can trigger decodeURIComponent exception or URIError, causing signing failure.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Add upper limit validation for URL length (e.g., < 8KB); wrap decodeURIComponent in try/catch (already has but only throws).",
+      "identity_key": {
+        "component_id": "ApigSigner",
+        "data_flow_id": "DF21",
+        "stride_category": "T",
+        "attack_surface": "decodeURIComponent URL parsing"
+      }
+    },
+    {
+      "id": "T10.A",
+      "title": "High-duplication repo abuse can saturate OBS upload and backend ingestion",
+      "description": "Attacker crafts high-duplication files (e.g., 1000 10-line identical code blocks) can trigger large data volume in upload pipeline; although OBS transit mitigates APIG 12MB limit, OBS upload cost and backend ingestion pressure can be abused.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Cap duplicationOccurrences count (e.g., 1000); truncate and warn when exceeded.",
+      "identity_key": {
+        "component_id": "WorkspaceRepo",
+        "data_flow_id": "DF15",
+        "stride_category": "A",
+        "attack_surface": "duplicationOccurrences count"
+      }
+    },
+    {
+      "id": "T10.D",
+      "title": "Adversarial file count/size can exhaust runner resources",
+      "description": "Maliciously crafted超 many files (e.g., 1M empty files) or超 large files can exhaust runner resources (disk/memory/CPU).",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Add hard caps on file count and single file size; reject scan when exceeded.",
+      "identity_key": {
+        "component_id": "WorkspaceRepo",
+        "data_flow_id": "DF12",
+        "stride_category": "D",
+        "attack_surface": "file count/size"
+      }
+    },
+    {
+      "id": "T10.I",
+      "title": "Source code content transits metrics pipeline to OBS",
+      "description": "WorkspaceRepo contains all source code of scanned repo (including possible keys/PII); after SlocDetector/LizardDetector/DuplicationDetector read, fileDetails and duplicationOccurrences content will enter metrics.json and OBS upload.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Upstream gitleaks + detect-private-key hooks already configured (.pre-commit-config.yaml); optional: regex mask keys in fileDetails content before upload.",
+      "identity_key": {
+        "component_id": "WorkspaceRepo",
+        "data_flow_id": "DF12",
+        "stride_category": "I",
+        "attack_surface": "source file content read"
+      }
+    },
+    {
+      "id": "T11.A",
+      "title": "output path can be crafted to overwrite other workflow step inputs",
+      "description": "output path can be crafted as runner上 other workflow step's input file (e.g., .gitcode/workflows/pre-commit.yml referenced file), overwriting it affects subsequent step behavior.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Local Process Access",
+      "status": "Open",
+      "mitigation": "Same as T11.T: validate output path must be within workspace subdirectory.",
+      "identity_key": {
+        "component_id": "MetricsOutputFile",
+        "data_flow_id": "DF11",
+        "stride_category": "A",
+        "attack_surface": "output action input path"
+      }
+    },
+    {
+      "id": "T11.D",
+      "title": "超 large metrics.json can trigger V8 Invalid string length",
+      "description": "超 large metrics.json can trigger V8 Invalid string length (mitigated by clipOversizeContent 15KB裁剪 duplicationOccurrences), but fileDetails list itself can be超 long.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Local Process Access",
+      "status": "Open",
+      "mitigation": "Also batch or裁剪 fileDetails; or use streaming write (fs.createWriteStream + JSON.stringify alternative).",
+      "identity_key": {
+        "component_id": "MetricsOutputFile",
+        "data_flow_id": "DF11",
+        "stride_category": "D",
+        "attack_surface": "metrics.json file size"
+      }
+    },
+    {
+      "id": "T11.I",
+      "title": "metrics.json content leaks scanned repo structure",
+      "description": "metrics.json content contains fileDetails (filePath + line counts + complexity + duplication rate) + duplicationOccurrences metadata (groupId/startLine/endLine/content after裁剪), no full source but still leaks repo structure.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Local Process Access",
+      "status": "Open",
+      "mitigation": "Default output to private path within workspace; or相对 path化 sensitive fields (e.g., filePath).",
+      "identity_key": {
+        "component_id": "MetricsOutputFile",
+        "data_flow_id": "DF11",
+        "stride_category": "I",
+        "attack_surface": "metrics.json content"
+      }
+    },
+    {
+      "id": "T11.T",
+      "title": "output parameter path traversal can overwrite arbitrary files",
+      "description": "output parameter can be crafted as arbitrary path (e.g., /etc/cron.d/malicious); FileUtils.writeJsonFile does fs.mkdirSync(dir, { recursive: true }) creating directory and writing file, may overwrite runner上 other workflow step's output.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Local Process Access",
+      "status": "Open",
+      "mitigation": "Validate output path must be within ${workspace}/ scope; default value metrics.json is already relative path.",
+      "identity_key": {
+        "component_id": "MetricsOutputFile",
+        "data_flow_id": "DF11",
+        "stride_category": "T",
+        "attack_surface": "output action input path"
+      }
+    },
+    {
+      "id": "T12.A",
+      "title": "TMPDIR env var redirect can write temp files to attacker-readable location",
+      "description": "TMPDIR env var can be set by malicious workflow to redirect to attacker-controlled directory (e.g., /home/attacker/tmp); temp files will be written to attacker-readable location.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Local Process Access",
+      "status": "Open",
+      "mitigation": "Do not trust TMPDIR env var; hardcode use of /tmp (Linux) or os.tmpdir() default.",
+      "identity_key": {
+        "component_id": "TempFiles",
+        "data_flow_id": "DF14",
+        "stride_category": "A",
+        "attack_surface": "TMPDIR env var"
+      }
+    },
+    {
+      "id": "T12.D",
+      "title": "tmpdir space can be exhausted by malicious workflow step",
+      "description": "tmpdir space can be exhausted by malicious workflow step (filling /tmp), causing tmp file write failure.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Local Process Access",
+      "status": "Open",
+      "mitigation": "Check fs.statSync(os.tmpdir()) available space before writing; degrade to .tmp directory within workspace when insufficient.",
+      "identity_key": {
+        "component_id": "TempFiles",
+        "data_flow_id": "DF14",
+        "stride_category": "D",
+        "attack_surface": "tmpdir disk space"
+      }
+    },
+    {
+      "id": "T12.I",
+      "title": "Failed unlinkSync leaves full metrics payload residue",
+      "description": "tmp full payload file contains fileDetails full details + duplicationOccurrences plaintext content (Base64 encoded but decodes to plaintext); if fs.unlinkSync cleanup fails (already try/catch), can residue to next run.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Local Process Access",
+      "status": "Open",
+      "mitigation": "Warn on unlink failure; clean up immediately after upload; optional: create tmp files with 0600 permissions.",
+      "identity_key": {
+        "component_id": "TempFiles",
+        "data_flow_id": "DF17",
+        "stride_category": "I",
+        "attack_surface": "fs.unlinkSync cleanup failure"
+      }
+    },
+    {
+      "id": "T12.T",
+      "title": "Predictable tmp filename enables race condition and audit trail clearing",
+      "description": "os.tmpdir() shared by all workflow steps on runner (/tmp); malicious step can pre-place code-metrics-*.json or lizard_input_*.txt files to pollute next run (race condition).",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Local Process Access",
+      "status": "Open",
+      "mitigation": "Use mkstemp or fs.mkdtempSync to create exclusive directory for tmp files; add random suffix to filename (already uses Date.now() but ms granularity predictable).",
+      "identity_key": {
+        "component_id": "TempFiles",
+        "data_flow_id": "DF14",
+        "stride_category": "T",
+        "attack_surface": "predictable tmp filename"
+      }
+    },
+    {
+      "id": "T13.A",
+      "title": "Path traversal via ownerRepo in objectKey",
+      "description": "buildObjectKey splices code-metrics-action/${ownerRepo}/${pipelineRunId}/${ts}-metrics.json; attacker controlling ownerRepo containing ../ can let objectKey write to other owner's directory.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "extractOwnerRepo validates ownerRepo does not contain .., //, empty segments; or backend authenticates by owner before downloading.",
+      "identity_key": {
+        "component_id": "OBS",
+        "data_flow_id": "DF18",
+        "stride_category": "A",
+        "attack_surface": "buildObjectKey + extractOwnerRepo"
+      }
+    },
+    {
+      "id": "T13.E",
+      "title": "AK/SK static credential leak enables arbitrary bucket access",
+      "description": "AK/SK mode obs-ak/obs-sk static credentials (永久 valid); if leaked, attacker can arbitrarily read/write openlibing-gitcode-action bucket (overwrite real metrics or read other owner data).",
+      "stride_category": "E",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "Force OIDC + STS temporary credentials mode; or IP whitelist for AK/SK; bucket-level ACL restrictions.",
+      "identity_key": {
+        "component_id": "OBS",
+        "data_flow_id": "DF18",
+        "stride_category": "E",
+        "attack_surface": "static AK/SK credentials"
+      }
+    },
+    {
+      "id": "T13.I",
+      "title": "objectKey contains ownerRepo/pipelineRunId can be guessed",
+      "description": "Private object, but objectKey contains ownerRepo/pipelineRunId; can be guessed; attacker controlling ownerRepo can craft objectKey path traversal.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "objectKey does not contain sensitive info (only metadata + repo owner); backend authenticates by owner when downloading.",
+      "identity_key": {
+        "component_id": "OBS",
+        "data_flow_id": "DF18",
+        "stride_category": "I",
+        "attack_surface": "objectKey namespace"
+      }
+    },
+    {
+      "id": "T13.S",
+      "title": "DNS spoofing or MitM can forge OBS endpoint",
+      "description": "Attacker controlling DNS or network MitM can forge obs.cn-southwest-2.myhuaweicloud.com endpoint, receiving uploaded payload data (including repo source snippets).",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Force HTTPS + certificate pinning (obsutil already supports); or hash validation for OBS endpoint.",
+      "identity_key": {
+        "component_id": "OBS",
+        "data_flow_id": "DF18",
+        "stride_category": "S",
+        "attack_surface": "OBS endpoint DNS/TLS"
+      }
+    },
+    {
+      "id": "T13.T",
+      "title": "MitM can tamper uploaded content",
+      "description": "If uploaded content is tampered by MitM, backend will get wrong data when downloading by objectKey (forged metrics).",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "OBS server-side validates ETag/MD5; read back after upload to verify hash.",
+      "identity_key": {
+        "component_id": "OBS",
+        "data_flow_id": "DF18",
+        "stride_category": "T",
+        "attack_surface": "OBS upload integrity"
+      }
+    },
+    {
+      "id": "T14.A",
+      "title": "OIDC SDK vulnerability can be abused to bypass APIG authentication",
+      "description": "V11-HMAC-SHA256 signing (OIDC mode) handled by @openlibing/huaweicloud-oidc-client SDK 0.0.5; if SDK implementation has缺陷 (e.g., replay attack window not limited), can be abused to bypass APIG authentication.",
+      "stride_category": "A",
+      "tier": 3,
+      "prerequisites": "HuaweiCloudOIDC Compromise",
+      "status": "Open",
+      "mitigation": "Upgrade SDK to latest; SDK should do nonce + timestamp validation; monitor abnormal signature requests.",
+      "identity_key": {
+        "component_id": "APIG",
+        "data_flow_id": "DF19",
+        "stride_category": "A",
+        "attack_surface": "OIDC SDK V11 signing"
+      }
+    },
+    {
+      "id": "T14.E",
+      "title": "AK/SK leak enables forged SDK-HMAC-SHA256 signatures",
+      "description": "AK/SK mode SK leak后, attacker can forge SDK-HMAC-SHA256 signature to directly call /openlibing-coderepo/metrics/code/report and upload forged data (overwriting real metrics or polluting historical trends).",
+      "stride_category": "E",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "Force OIDC mode; APIG configure IP whitelist; monitor abnormal upload frequency and source.",
+      "identity_key": {
+        "component_id": "APIG",
+        "data_flow_id": "DF19",
+        "stride_category": "E",
+        "attack_surface": "ApigSigner AK/SK"
+      }
+    },
+    {
+      "id": "T14.I",
+      "title": "APIG failure response may contain sensitive error message",
+      "description": "Failure response may contain sensitive error message (resData?.msg || resData?.message), output to console.error.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Mask failure response (do not output raw msg, only output code and short description).",
+      "identity_key": {
+        "component_id": "APIG",
+        "data_flow_id": "DF19",
+        "stride_category": "I",
+        "attack_surface": "APIG response error message"
+      }
+    },
+    {
+      "id": "T14.S",
+      "title": "DNS spoofing or MitM can forge APIG endpoint",
+      "description": "Attacker controlling DNS or network MitM can forge APIG endpoint (coderepoUrl hardcoded), receiving signed report requests (including metadata + obsUrl).",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Force HTTPS + certificate pinning; axios already validates TLS certificate.",
+      "identity_key": {
+        "component_id": "APIG",
+        "data_flow_id": "DF19",
+        "stride_category": "S",
+        "attack_surface": "APIG endpoint DNS/TLS"
+      }
+    },
+    {
+      "id": "T14.T",
+      "title": "MitM can tamper APIG response, misleading recordId extraction",
+      "description": "Response can be tampered by MitM, but code already validates resData?.code !== 200; recordId extraction logic is permissive (multiple field attempts), may be misled by crafted response.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Strictly validate response schema; recordId must be numeric string with reasonable length.",
+      "identity_key": {
+        "component_id": "APIG",
+        "data_flow_id": "DF19",
+        "stride_category": "T",
+        "attack_surface": "APIG response schema"
+      }
+    },
+    {
+      "id": "T15.A",
+      "title": "huaweicloud-oidc-client SDK version pinned without vulnerability monitoring",
+      "description": "@openlibing/huaweicloud-oidc-client SDK 0.0.5 version固定 (package.json:15), no version upgrade or dependency vulnerability scanning; if this version has known vulnerability (e.g., OIDC nonce validation missing), can be abused to bypass authentication.",
+      "stride_category": "A",
+      "tier": 3,
+      "prerequisites": "HuaweiCloudOIDC Compromise",
+      "status": "Open",
+      "mitigation": "Upgrade SDK to latest; integrate dependabot/renovate for dependency vulnerability monitoring.",
+      "identity_key": {
+        "component_id": "HuaweiCloudOIDC",
+        "data_flow_id": "DF20",
+        "stride_category": "A",
+        "attack_surface": "SDK version pin"
+      }
+    },
+    {
+      "id": "T15.E",
+      "title": "permissions:id-token:write + forged URL enables OIDC path hijack",
+      "description": "ACTIONS_ID_TOKEN_REQUEST_URL is runner-injected env var (dist/index.js:62363); useOidc determined only by presence; malicious workflow can declare permissions: id-token: write but also inject forged URL, making plugin go through OIDC path to attacker-controlled endpoint.",
+      "stride_category": "E",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "Same as T15.S: validate URL must be on GitCode platform whitelist.",
+      "identity_key": {
+        "component_id": "HuaweiCloudOIDC",
+        "data_flow_id": "DF02",
+        "stride_category": "E",
+        "attack_surface": "ACTIONS_ID_TOKEN_REQUEST_URL env var"
+      }
+    },
+    {
+      "id": "T15.I",
+      "title": "STS credentials visible in ps output via -i/-k/-t command line args",
+      "description": "STS credentials (cred.accessKeyId/secretAccessKey/securityToken) passed to obsutil via -i/-k/-t command line args, may be visible in ps output (CI platform masks secrets but local ps可见).",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "obsutil supports -i/-k/-t from environment variables (avoid command line args); or use obsutil config file.",
+      "identity_key": {
+        "component_id": "HuaweiCloudOIDC",
+        "data_flow_id": "DF18",
+        "stride_category": "I",
+        "attack_surface": "obsutil -i/-k/-t command line args"
+      }
+    },
+    {
+      "id": "T15.S",
+      "title": "Forged ACTIONS_ID_TOKEN_REQUEST_URL enables OIDC provider spoofing",
+      "description": "Attacker controlling runner env (e.g., malicious self-hosted runner config) can inject forged ACTIONS_ID_TOKEN_REQUEST_URL, making callApig/getCredentials call attacker-controlled 'OIDC provider', getting forged STS credentials后 writing to attacker-controlled OBS bucket.",
+      "stride_category": "S",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "Validate ACTIONS_ID_TOKEN_REQUEST_URL must start with https:// and host must be on GitCode platform whitelist; SDK should do issuer validation internally.",
+      "identity_key": {
+        "component_id": "HuaweiCloudOIDC",
+        "data_flow_id": "DF20",
+        "stride_category": "S",
+        "attack_surface": "ACTIONS_ID_TOKEN_REQUEST_URL env var"
+      }
+    },
+    {
+      "id": "T15.T",
+      "title": "MitM can tamper STS credentials response",
+      "description": "STS credentials response can be tampered by MitM (replacing accessKeyId/secretAccessKey with attacker credentials).",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "SDK internally uses HTTPS + certificate validation; STS credentials expire immediately after use (short-lived).",
+      "identity_key": {
+        "component_id": "HuaweiCloudOIDC",
+        "data_flow_id": "DF20",
+        "stride_category": "T",
+        "attack_surface": "STS credentials response"
+      }
+    },
+    {
+      "id": "T16.A",
+      "title": "Downloaded obsutil has no SBOM validation, supply chain risk",
+      "description": "downloadUrl hardcoded; user cannot configure; downloaded obsutil has no SBOM validation, supply chain risk.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Use OBS Node.js SDK (@huaweicloud/huaweicloud-obs) replacing external obsutil; or hash signature verification for downloaded binary.",
+      "identity_key": {
+        "component_id": "ObsutilDownloadMirror",
+        "data_flow_id": "DF22",
+        "stride_category": "A",
+        "attack_surface": "obsutil binary SBOM"
+      }
+    },
+    {
+      "id": "T16.D",
+      "title": "Download failure fallback to system obsutil can block",
+      "description": "Download failure fallback to system obsutil; if system obsutil does not exist, throws error; maliciously crafted network jitter can trigger download timeout blocking.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Set download timeout (e.g., 60s); do not block on failure, degrade to OBS SDK direct upload.",
+      "identity_key": {
+        "component_id": "ObsutilDownloadMirror",
+        "data_flow_id": "DF22",
+        "stride_category": "D",
+        "attack_surface": "download timeout"
+      }
+    },
+    {
+      "id": "T16.I",
+      "title": "Download URL + tarball/extractedDir path leaked to logs",
+      "description": "Download URL + tarball/extractedDir path output to logs, leaking runner filesystem structure.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Output relative paths or mask tmpdir paths.",
+      "identity_key": {
+        "component_id": "ObsutilDownloadMirror",
+        "data_flow_id": "DF22",
+        "stride_category": "I",
+        "attack_surface": "console.log download paths"
+      }
+    },
+    {
+      "id": "T16.S",
+      "title": "DNS spoofing can forge obsutil download mirror endpoint",
+      "description": "Public HTTPS download source; attacker can initiate request without authentication; if controlling DNS can forge endpoint to return malicious obsutil binary.",
+      "stride_category": "S",
+      "tier": 1,
+      "prerequisites": "None",
+      "status": "Open",
+      "mitigation": "HTTPS certificate validation already mitigates; optional: sha256 validation for downloaded obsutil (known official hash).",
+      "identity_key": {
+        "component_id": "ObsutilDownloadMirror",
+        "data_flow_id": "DF22",
+        "stride_category": "S",
+        "attack_surface": "download mirror DNS/TLS"
+      }
+    },
+    {
+      "id": "T16.T",
+      "title": "MitM can replace downloaded tar.gz with malicious obsutil",
+      "description": "Downloaded tar.gz can be tampered by MitM to malicious obsutil (HTTPS mitigates, but CA trust chain外 risk); after extraction chmod 755 + execFileSync execution, malicious binary can gain runner process privileges.",
+      "stride_category": "T",
+      "tier": 1,
+      "prerequisites": "None",
+      "status": "Open",
+      "mitigation": "sha256 validation for downloaded file; or use OBS SDK (Node.js built-in) replacing obsutil binary.",
+      "identity_key": {
+        "component_id": "ObsutilDownloadMirror",
+        "data_flow_id": "DF22",
+        "stride_category": "T",
+        "attack_surface": "downloaded tar.gz integrity"
+      }
+    },
+    {
+      "id": "T17.A",
+      "title": "--break-system-packages system-level install pollutes subsequent workflow steps",
+      "description": "--break-system-packages system-level install; if runner has other workflow step also using python3, will be polluted with this lizard version, affecting subsequent step behavior.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Use venv isolation (python3 -m venv /tmp/lizard-venv && source /tmp/lizard-venv/bin/activate && pip install lizard).",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "data_flow_id": "DF05",
+        "stride_category": "A",
+        "attack_surface": "pip install --break-system-packages"
+      }
+    },
+    {
+      "id": "T17.D",
+      "title": "pip install 120s timeout can block; failure only warns",
+      "description": "pip install timeout 120s; malicious mirror slow response can block; failure only warns (line 62476-62478) does not block scan, but lizard missing will cause LizardDetector failure.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Reduce timeout to 60s; on failure clearly inform user lizard unavailable + skip lizard detection.",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "data_flow_id": "DF05",
+        "stride_category": "D",
+        "attack_surface": "pip install timeout"
+      }
+    },
+    {
+      "id": "T17.E",
+      "title": "--trusted-host skips TLS cert verification enabling MitM injection",
+      "description": "--trusted-host mirrors.aliyun.com skips TLS certificate verification; network-positioned attacker can initiate MitM to inject malicious lizard package, leading to arbitrary code execution (runner process privileges, may further access secrets).",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Remove --trusted-host; use HTTPS + certificate verification; or interface with Huawei Cloud internal PyPI mirror (VPC内 trusted).",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "data_flow_id": "DF05",
+        "stride_category": "E",
+        "attack_surface": "pip --trusted-host TLS bypass"
+      }
+    },
+    {
+      "id": "T17.I",
+      "title": "pip install stdio:inherit leaks package metadata to console",
+      "description": "pip install command stdio: 'inherit' outputs to console, may leak package name, version, download URL.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Use stdio: 'pipe' + only output errors on failure; only output short summary on success.",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "data_flow_id": "DF05",
+        "stride_category": "I",
+        "attack_surface": "pip install stdio inherit"
+      }
+    },
+    {
+      "id": "T17.S",
+      "title": "Public PyPI mirror accepts unauthenticated package uploads",
+      "description": "Public HTTPS PyPI mirror; attacker can upload lizard package without authentication (needs mirrors.aliyun.com account); if mirror is compromised can inject malicious lizard package.",
+      "stride_category": "S",
+      "tier": 1,
+      "prerequisites": "None",
+      "status": "Open",
+      "mitigation": "pip has --trusted-host enabled but skips certificate validation (weakening TLS); use official PyPI + do not skip certificate validation.",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "data_flow_id": "DF05",
+        "stride_category": "S",
+        "attack_surface": "PyPI mirror package upload"
+      }
+    },
+    {
+      "id": "T17.T",
+      "title": "MitM can tamper downloaded lizard package",
+      "description": "Downloaded lizard package can be tampered by MitM (--trusted-host mirrors.aliyun.com skips certificate validation); malicious lizard can execute arbitrary Python code (runner process privileges).",
+      "stride_category": "T",
+      "tier": 1,
+      "prerequisites": "None",
+      "status": "Open",
+      "mitigation": "Remove --trusted-host; use --require-hashes + lizard package hash whitelist; or use venv isolation.",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "data_flow_id": "DF05",
+        "stride_category": "T",
+        "attack_surface": "lizard package integrity"
+      }
+    }
+  ],
+
+  "findings": [
+    {
+      "id": "FIND-01",
+      "title": "Supply Chain Attack via Untrusted obsutil Binary Download",
+      "severity": "Critical",
+      "cvss_score": 9.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+      "cwe": "CWE-494",
+      "owasp": "A08:2025",
+      "tier": 1,
+      "effort": "Medium",
+      "related_threats": ["T16.S", "T16.T"],
+      "evidence_files": ["dist/uploaders/CoderepoUploader.js"],
+      "component": "ObsutilDownloadMirror",
+      "identity_key": {
+        "component_id": "ObsutilDownloadMirror",
+        "vulnerability": "CWE-494",
+        "attack_surface": "dist/uploaders/CoderepoUploader.js:438-466"
+      }
+    },
+    {
+      "id": "FIND-02",
+      "title": "Supply Chain Attack via pip install lizard with --trusted-host",
+      "severity": "Critical",
+      "cvss_score": 9.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+      "cwe": "CWE-494",
+      "owasp": "A08:2025",
+      "tier": 1,
+      "effort": "Medium",
+      "related_threats": ["T17.S", "T17.T", "T17.E"],
+      "evidence_files": ["dist/index.js", "package.json"],
+      "component": "PyPIMirror",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "vulnerability": "CWE-494",
+        "attack_surface": "dist/index.js:62468-62478"
+      }
+    },
+    {
+      "id": "FIND-03",
+      "title": "Command Injection via Shell Metacharacters in Detector execSync Calls",
+      "severity": "Critical",
+      "cvss_score": 8.8,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+      "cwe": "CWE-78",
+      "owasp": "A03:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T03.T", "T04.T", "T08.T"],
+      "evidence_files": [
+        "dist/detectors/SlocDetector.js",
+        "dist/detectors/LizardDetector.js",
+        "dist/uploaders/CoderepoUploader.js"
+      ],
+      "component": "SlocDetector, LizardDetector, CoderepoUploader",
+      "identity_key": {
+        "component_id": "SlocDetector",
+        "vulnerability": "CWE-78",
+        "attack_surface": "dist/detectors/SlocDetector.js:111-118"
+      }
+    },
+    {
+      "id": "FIND-04",
+      "title": "Path Traversal via Malicious gitUrl in extractOwnerRepo",
+      "severity": "Important",
+      "cvss_score": 7.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:H/SI:N/SA:N",
+      "cwe": "CWE-22",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T05.A", "T08.A", "T13.A"],
+      "evidence_files": ["dist/uploaders/CoderepoUploader.js"],
+      "component": "DuplicationDetector, CoderepoUploader, OBS",
+      "identity_key": {
+        "component_id": "CoderepoUploader",
+        "vulnerability": "CWE-22",
+        "attack_surface": "dist/uploaders/CoderepoUploader.js:475-495"
+      }
+    },
+    {
+      "id": "FIND-05",
+      "title": "Arbitrary File Read via Untrusted lizard Output",
+      "severity": "Important",
+      "cvss_score": 7.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:L/SI:N/SA:N",
+      "cwe": "CWE-22",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T04.I", "T04.E"],
+      "evidence_files": ["dist/detectors/LizardDetector.js"],
+      "component": "LizardDetector",
+      "identity_key": {
+        "component_id": "LizardDetector",
+        "vulnerability": "CWE-22",
+        "attack_surface": "dist/detectors/LizardDetector.js:155,168,269"
+      }
+    },
+    {
+      "id": "FIND-06",
+      "title": "Sensitive Data Leakage in Console Logs",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:L/SI:N/SA:N",
+      "cwe": "CWE-532",
+      "owasp": "A09:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": [
+        "T01.I",
+        "T03.I",
+        "T07.I",
+        "T08.I",
+        "T09.I",
+        "T14.I",
+        "T15.I",
+        "T16.I",
+        "T17.I"
+      ],
+      "evidence_files": [
+        "dist/index.js",
+        "dist/detectors/SlocDetector.js",
+        "dist/utils/fileCollector.js",
+        "dist/uploaders/CoderepoUploader.js"
+      ],
+      "component": "CodeMetricsAction, SlocDetector, FileCollector, CoderepoUploader, ApigSigner, APIG, HuaweiCloudOIDC, ObsutilDownloadMirror, PyPIMirror",
+      "identity_key": {
+        "component_id": "CoderepoUploader",
+        "vulnerability": "CWE-532",
+        "attack_surface": "dist/uploaders/CoderepoUploader.js:425,138"
+      }
+    },
+    {
+      "id": "FIND-07",
+      "title": "Resource Exhaustion DoS via Large Inputs",
+      "severity": "Important",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+      "cwe": "CWE-400",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": [
+        "T03.D",
+        "T04.D",
+        "T05.D",
+        "T06.D",
+        "T07.D",
+        "T10.D",
+        "T11.D",
+        "T12.D"
+      ],
+      "evidence_files": [
+        "dist/detectors/SlocDetector.js",
+        "dist/detectors/LizardDetector.js",
+        "dist/detectors/DuplicationDetector.js",
+        "dist/utils/fileCollector.js",
+        "dist/config/loader.js",
+        "dist/scanner.js"
+      ],
+      "component": "SlocDetector, LizardDetector, DuplicationDetector, ConfigLoader, FileCollector, WorkspaceRepo, MetricsOutputFile, TempFiles",
+      "identity_key": {
+        "component_id": "SlocDetector",
+        "vulnerability": "CWE-400",
+        "attack_surface": "dist/detectors/SlocDetector.js:114-117"
+      }
+    },
+    {
+      "id": "FIND-08",
+      "title": "Missing Timeouts on External Network Calls",
+      "severity": "Moderate",
+      "cvss_score": 4.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-400",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T01.D", "T08.D", "T09.D", "T16.D", "T17.D"],
+      "evidence_files": ["dist/uploaders/CoderepoUploader.js", "dist/index.js"],
+      "component": "CodeMetricsAction, CoderepoUploader, ApigSigner, ObsutilDownloadMirror, PyPIMirror",
+      "identity_key": {
+        "component_id": "CoderepoUploader",
+        "vulnerability": "CWE-400",
+        "attack_surface": "dist/uploaders/CoderepoUploader.js:426,446-450,613-660"
+      }
+    },
+    {
+      "id": "FIND-09",
+      "title": "Output Path Traversal via Unvalidated output Parameter",
+      "severity": "Important",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:L/SC:L/SI:N/SA:N",
+      "cwe": "CWE-22",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T11.T", "T11.A", "T11.I"],
+      "evidence_files": ["dist/utils/fileUtils.js", "dist/index.js"],
+      "component": "MetricsOutputFile",
+      "identity_key": {
+        "component_id": "MetricsOutputFile",
+        "vulnerability": "CWE-22",
+        "attack_surface": "dist/utils/fileUtils.js:7-13"
+      }
+    },
+    {
+      "id": "FIND-10",
+      "title": "Temp File Race Condition and TMPDIR Hijack",
+      "severity": "Moderate",
+      "cvss_score": 5.5,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:L/SC:L/SI:N/SA:N",
+      "cwe": "CWE-377",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T12.T", "T12.A", "T12.I"],
+      "evidence_files": [
+        "dist/uploaders/CoderepoUploader.js",
+        "dist/detectors/LizardDetector.js"
+      ],
+      "component": "TempFiles",
+      "identity_key": {
+        "component_id": "TempFiles",
+        "vulnerability": "CWE-377",
+        "attack_surface": "dist/uploaders/CoderepoUploader.js:380-415"
+      }
+    },
+    {
+      "id": "FIND-11",
+      "title": "Input Environment Variable Override of Security Inputs",
+      "severity": "Important",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:L/SC:L/SI:N/SA:N",
+      "cwe": "CWE-345",
+      "owasp": "A07:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T01.T", "T01.A"],
+      "evidence_files": ["dist/index.js"],
+      "component": "CodeMetricsAction",
+      "identity_key": {
+        "component_id": "CodeMetricsAction",
+        "vulnerability": "CWE-345",
+        "attack_surface": "dist/index.js:62331-62334,62420,62363"
+      }
+    },
+    {
+      "id": "FIND-12",
+      "title": "Missing Audit Logging of Scan Failures",
+      "severity": "Moderate",
+      "cvss_score": 4.0,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:N/SC:L/SI:N/SA:N",
+      "cwe": "CWE-778",
+      "owasp": "A09:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T01.R", "T08.R", "T02.R"],
+      "evidence_files": [
+        "dist/index.js",
+        "dist/scanner.js",
+        "dist/uploaders/CoderepoUploader.js"
+      ],
+      "component": "CodeMetricsAction, MetricsScanner, CoderepoUploader",
+      "identity_key": {
+        "component_id": "CodeMetricsAction",
+        "vulnerability": "CWE-778",
+        "attack_surface": "dist/index.js:62394,62406,62410"
+      }
+    },
+    {
+      "id": "FIND-13",
+      "title": "scc Binary Path Spoofing",
+      "severity": "Important",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:L/SC:L/SI:N/SA:N",
+      "cwe": "CWE-426",
+      "owasp": "A08:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T03.S"],
+      "evidence_files": ["dist/detectors/SlocDetector.js"],
+      "component": "SlocDetector",
+      "identity_key": {
+        "component_id": "SlocDetector",
+        "vulnerability": "CWE-426",
+        "attack_surface": "dist/detectors/SlocDetector.js:22-38"
+      }
+    },
+    {
+      "id": "FIND-14",
+      "title": "Lizard Temp Output File Spoofing",
+      "severity": "Moderate",
+      "cvss_score": 4.5,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:L/SI:N/SA:N",
+      "cwe": "CWE-377",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T04.S"],
+      "evidence_files": ["dist/detectors/LizardDetector.js"],
+      "component": "LizardDetector",
+      "identity_key": {
+        "component_id": "LizardDetector",
+        "vulnerability": "CWE-377",
+        "attack_surface": "dist/detectors/LizardDetector.js:11,81-83,124-135"
+      }
+    },
+    {
+      "id": "FIND-15",
+      "title": "DNS Spoofing and MitM of External Endpoints",
+      "severity": "Important",
+      "cvss_score": 7.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:H/SI:N/SA:N",
+      "cwe": "CWE-345",
+      "owasp": "A02:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T13.S", "T13.T", "T14.S", "T14.T", "T15.T"],
+      "evidence_files": ["dist/uploaders/CoderepoUploader.js", "dist/index.js"],
+      "component": "OBS, APIG, HuaweiCloudOIDC",
+      "identity_key": {
+        "component_id": "OBS",
+        "vulnerability": "CWE-345",
+        "attack_surface": "dist/uploaders/CoderepoUploader.js:438-450,613-660"
+      }
+    },
+    {
+      "id": "FIND-16",
+      "title": "AK/SK Static Credential Risk in Legacy Authentication Mode",
+      "severity": "Important",
+      "cvss_score": 7.0,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-798",
+      "owasp": "A07:2025",
+      "tier": 3,
+      "effort": "High",
+      "related_threats": ["T08.E", "T13.E", "T14.E"],
+      "evidence_files": ["dist/uploaders/CoderepoUploader.js"],
+      "component": "CoderepoUploader, OBS, APIG",
+      "identity_key": {
+        "component_id": "CoderepoUploader",
+        "vulnerability": "CWE-798",
+        "attack_surface": "dist/uploaders/CoderepoUploader.js:627,418,624-626"
+      }
+    },
+    {
+      "id": "FIND-17",
+      "title": "APIG Signer Input Validation Missing",
+      "severity": "Important",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:L/SI:N/SA:N",
+      "cwe": "CWE-20",
+      "owasp": "A03:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T09.T", "T09.D", "T09.E", "T09.A"],
+      "evidence_files": ["dist/uploaders/CoderepoUploader.js"],
+      "component": "ApigSigner",
+      "identity_key": {
+        "component_id": "ApigSigner",
+        "vulnerability": "CWE-20",
+        "attack_surface": "dist/uploaders/CoderepoUploader.js:21-24,32,38-54,153-156"
+      }
+    },
+    {
+      "id": "FIND-18",
+      "title": "pip install System Pollution via --break-system-packages",
+      "severity": "Moderate",
+      "cvss_score": 5.5,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:L/SI:N/SA:N",
+      "cwe": "CWE-732",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T04.A", "T17.A"],
+      "evidence_files": ["dist/index.js"],
+      "component": "LizardDetector, PyPIMirror",
+      "identity_key": {
+        "component_id": "PyPIMirror",
+        "vulnerability": "CWE-732",
+        "attack_surface": "dist/index.js:62468"
+      }
+    },
+    {
+      "id": "FIND-19",
+      "title": "Source Code Disclosure via Metrics Pipeline",
+      "severity": "Moderate",
+      "cvss_score": 4.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:L/SI:N/SA:N",
+      "cwe": "CWE-200",
+      "owasp": "A02:2025",
+      "tier": 2,
+      "effort": "High",
+      "related_threats": ["T05.I", "T10.I", "T10.A"],
+      "evidence_files": [
+        "dist/detectors/DuplicationDetector.js",
+        "dist/uploaders/CoderepoUploader.js"
+      ],
+      "component": "DuplicationDetector, WorkspaceRepo, CoderepoUploader",
+      "identity_key": {
+        "component_id": "DuplicationDetector",
+        "vulnerability": "CWE-200",
+        "attack_surface": "dist/detectors/DuplicationDetector.js:82"
+      }
+    },
+    {
+      "id": "FIND-20",
+      "title": "Config File Override of Security-Critical Fields",
+      "severity": "Moderate",
+      "cvss_score": 5.0,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:L/SC:L/SI:N/SA:N",
+      "cwe": "CWE-639",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T06.T", "T06.D", "T06.E"],
+      "evidence_files": ["dist/config/loader.js", "dist/index.js"],
+      "component": "ConfigLoader",
+      "identity_key": {
+        "component_id": "ConfigLoader",
+        "vulnerability": "CWE-639",
+        "attack_surface": "dist/config/loader.js:46,62-85"
+      }
+    },
+    {
+      "id": "FIND-21",
+      "title": "JSON.stringify DoS via Oversized compactResult",
+      "severity": "Moderate",
+      "cvss_score": 4.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:L/SI:N/SA:N",
+      "cwe": "CWE-400",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T02.D"],
+      "evidence_files": ["dist/scanner.js"],
+      "component": "MetricsScanner",
+      "identity_key": {
+        "component_id": "MetricsScanner",
+        "vulnerability": "CWE-400",
+        "attack_surface": "dist/scanner.js:137,144-167,170"
+      }
+    },
+    {
+      "id": "FIND-22",
+      "title": "ReDoS via User-Supplied Glob Patterns",
+      "severity": "Moderate",
+      "cvss_score": 4.0,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:L/SI:N/SA:N",
+      "cwe": "CWE-1333",
+      "owasp": "A03:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T07.T"],
+      "evidence_files": ["dist/utils/fileCollector.js"],
+      "component": "FileCollector",
+      "identity_key": {
+        "component_id": "FileCollector",
+        "vulnerability": "CWE-1333",
+        "attack_surface": "dist/utils/fileCollector.js:127-180"
+      }
+    },
+    {
+      "id": "FIND-23",
+      "title": "OIDC URL Validation Missing for ACTIONS_ID_TOKEN_REQUEST_URL",
+      "severity": "Important",
+      "cvss_score": 7.0,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:H/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+      "cwe": "CWE-345",
+      "owasp": "A07:2025",
+      "tier": 3,
+      "effort": "Low",
+      "related_threats": ["T01.E", "T15.S", "T15.E"],
+      "evidence_files": [
+        "dist/index.js",
+        "dist/uploaders/CoderepoUploader.js",
+        "package.json"
+      ],
+      "component": "CodeMetricsAction, HuaweiCloudOIDC",
+      "identity_key": {
+        "component_id": "CodeMetricsAction",
+        "vulnerability": "CWE-345",
+        "attack_surface": "dist/index.js:62363"
+      }
+    },
+    {
+      "id": "FIND-24",
+      "title": "scc Binary SBOM and Integrity Verification Missing",
+      "severity": "Moderate",
+      "cvss_score": 4.5,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:H/AT:N/PR:H/UI:N/VC:L/VI:L/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-494",
+      "owasp": "A08:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T03.E"],
+      "evidence_files": ["dist/detectors/SlocDetector.js"],
+      "component": "SlocDetector",
+      "identity_key": {
+        "component_id": "SlocDetector",
+        "vulnerability": "CWE-494",
+        "attack_surface": "dist/detectors/SlocDetector.js:22-38"
+      }
+    },
+    {
+      "id": "FIND-25",
+      "title": "scc toRelativePath Prefix Stripping Abuse via Workspace-Escaping sources",
+      "severity": "Moderate",
+      "cvss_score": 4.5,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:H/AT:N/PR:H/UI:N/VC:L/VI:N/VA:N/SC:L/SI:N/SA:N",
+      "cwe": "CWE-22",
+      "owasp": "A01:2025",
+      "tier": 3,
+      "effort": "Low",
+      "related_threats": ["T03.A"],
+      "evidence_files": ["dist/detectors/SlocDetector.js"],
+      "component": "SlocDetector",
+      "identity_key": {
+        "component_id": "SlocDetector",
+        "vulnerability": "CWE-22",
+        "attack_surface": "dist/detectors/SlocDetector.js:259-271"
+      }
+    },
+    {
+      "id": "FIND-26",
+      "title": "OIDC/HMAC SDK Replay Attack and Version Pin Risk",
+      "severity": "Moderate",
+      "cvss_score": 4.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:H/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-294",
+      "owasp": "A07:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T14.A", "T15.A"],
+      "evidence_files": ["package.json", "dist/uploaders/CoderepoUploader.js"],
+      "component": "APIG, HuaweiCloudOIDC",
+      "identity_key": {
+        "component_id": "HuaweiCloudOIDC",
+        "vulnerability": "CWE-294",
+        "attack_surface": "package.json:15"
+      }
+    }
+  ],
+
+  "metrics": {
+    "total_components": 19,
+    "total_boundaries": 2,
+    "total_flows": 22,
+    "total_threats": 78,
+    "total_findings": 26,
+    "threats_by_tier": { "T1": 4, "T2": 62, "T3": 12 },
+    "findings_by_tier": { "T1": 2, "T2": 20, "T3": 4 },
+    "threats_by_stride": {
+      "S": 7,
+      "T": 14,
+      "R": 3,
+      "I": 16,
+      "D": 14,
+      "E": 10,
+      "A": 14
+    },
+    "findings_by_severity": {
+      "Critical": 3,
+      "Important": 11,
+      "Moderate": 12,
+      "Low": 0
+    }
+  }
+}
