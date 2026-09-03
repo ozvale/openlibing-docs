@@ -1,0 +1,2819 @@
+{
+  "schema_version": "1.0",
+  "report_folder": "openlibing-coderepo-fork",
+  "commit": "1dfaefe5",
+  "commit_date": "2026-09-02 18:51:56 +0800",
+  "branch": "sig-path-dir-recursion",
+  "repository": "https://gitcode.com/yanzhaohong/openlibing-coderepo.git",
+  "analysis_timestamp": "2026-09-02 11:02:48Z",
+  "model": "GLM-5.2",
+
+  "components": [
+    {
+      "id": "CodeMetricsController",
+      "display": "CodeMetricsController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "Application",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/CodeMetricsController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/business/controller/CodeMetricsController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/business/controller"
+        ],
+        "class_names": ["CodeMetricsController"],
+        "namespace": "com.openlibing.coderepo.business.controller",
+        "config_keys": [],
+        "api_routes": ["/code-metrics/file-detail"],
+        "dependencies": ["CodeMetricsServiceImpl"],
+        "inbound_from": ["EndUser"],
+        "outbound_to": ["MongoDB"],
+        "protocols": ["HTTPS", "MongoDB/TLS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "EndUser",
+      "display": "EndUser",
+      "type": "external_interactor",
+      "tmt_type": "SE.EI.TMCore.User",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "external_interactor",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [],
+        "outbound_to": [
+          "RepoController",
+          "CodeMetricsController",
+          "SyncUserController"
+        ],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "GitCode",
+      "display": "GitCode",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/common/utils/GitCode.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/common/utils"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/common/utils/GitCode.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/common/utils"
+        ],
+        "class_names": ["GitCode"],
+        "namespace": "com.openlibing.coderepo.common.utils",
+        "config_keys": ["gitcode.common.access_token"],
+        "api_routes": [],
+        "dependencies": [
+          "PrAccessTokenServiceImpl",
+          "WebhookEventConsumer",
+          "XxlJobHandler"
+        ],
+        "inbound_from": [
+          "WebHookEventController",
+          "WebhookEventConsumer",
+          "PrAccessTokenServiceImpl",
+          "XxlJobHandler"
+        ],
+        "outbound_to": ["WebHookEventController"],
+        "protocols": ["HTTPS", "HMAC-SHA256"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "Gitee",
+      "display": "Gitee",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/common/utils/Gitee.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/common/utils"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/common/utils/Gitee.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/common/utils"
+        ],
+        "class_names": ["Gitee"],
+        "namespace": "com.openlibing.coderepo.common.utils",
+        "config_keys": ["gitee.common.access_token"],
+        "api_routes": [],
+        "dependencies": [
+          "WebhookEventConsumer",
+          "PrAccessTokenServiceImpl",
+          "XxlJobHandler"
+        ],
+        "inbound_from": [
+          "WebHookEventController",
+          "WebhookEventConsumer",
+          "PrAccessTokenServiceImpl",
+          "XxlJobHandler"
+        ],
+        "outbound_to": ["WebHookEventController"],
+        "protocols": ["HTTPS", "HMAC-SHA256"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "Github",
+      "display": "Github",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/common/utils/Github.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/common/utils"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/common/utils/Github.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/common/utils"
+        ],
+        "class_names": ["Github"],
+        "namespace": "com.openlibing.coderepo.common.utils",
+        "config_keys": ["github.common.access_token"],
+        "api_routes": [],
+        "dependencies": [
+          "WebhookEventConsumer",
+          "PrAccessTokenServiceImpl",
+          "XxlJobHandler"
+        ],
+        "inbound_from": [
+          "WebHookEventController",
+          "WebhookEventConsumer",
+          "PrAccessTokenServiceImpl",
+          "XxlJobHandler"
+        ],
+        "outbound_to": ["WebHookEventController"],
+        "protocols": ["HTTPS", "HMAC-SHA256"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "MongoDB",
+      "display": "MongoDB",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.NoSQL",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/common/config/MongoConfig.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/common/config"
+      ],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/common/config/MongoConfig.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/common/config"
+        ],
+        "class_names": ["MongoConfig"],
+        "namespace": "com.openlibing.coderepo.common.config",
+        "config_keys": ["spring.data.mongodb.uri"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["CodeMetricsController", "WebhookEventConsumer"],
+        "outbound_to": [],
+        "protocols": ["MongoDB/TLS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "MySQL",
+      "display": "MySQL",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.SQL",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/common/config/DataSourceConfig.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/common/config"
+      ],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/common/config/DataSourceConfig.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/common/config"
+        ],
+        "class_names": ["DataSourceConfig"],
+        "namespace": "com.openlibing.coderepo.common.config",
+        "config_keys": [
+          "spring.datasource.url",
+          "spring.datasource.username",
+          "spring.datasource.password"
+        ],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [
+          "RepoController",
+          "ProjectConfigController",
+          "SyncUserController",
+          "WebhookEventConsumer",
+          "XxlJobHandler",
+          "PrAccessTokenServiceImpl"
+        ],
+        "outbound_to": [],
+        "protocols": ["JDBC/TLS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "Nacos",
+      "display": "Nacos",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/OpenlibingCoderepoApplication.java"
+      ],
+      "source_directories": ["src/main/java/com/openlibing/coderepo"],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/OpenlibingCoderepoApplication.java"
+        ],
+        "source_directories": ["src/main/java/com/openlibing/coderepo"],
+        "class_names": ["OpenlibingCoderepoApplication"],
+        "namespace": "com.openlibing.coderepo",
+        "config_keys": [
+          "spring.cloud.nacos.server-addr",
+          "spring.cloud.nacos.config.server-addr"
+        ],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [],
+        "outbound_to": ["WebHookEventController"],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "OBS",
+      "display": "OBS",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/common/config/RestTemplateConfig.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/common/config"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/common/config/RestTemplateConfig.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/common/config"
+        ],
+        "class_names": ["RestTemplateConfig"],
+        "namespace": "com.openlibing.coderepo.common.config",
+        "config_keys": ["obs.endpoint", "obs.ak", "obs.sk", "obs.bucket"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["RepoController"],
+        "outbound_to": [],
+        "protocols": ["HTTPS", "AK/SK"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "Operator",
+      "display": "Operator",
+      "type": "external_interactor",
+      "tmt_type": "SE.EI.TMCore.User",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [],
+      "source_directories": [],
+      "fingerprint": {
+        "component_type": "external_interactor",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [],
+        "source_directories": [],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [],
+        "outbound_to": ["ProjectConfigController"],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "PrAccessTokenServiceImpl",
+      "display": "PrAccessTokenServiceImpl",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "Application",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/business/service/impl/PrAccessTokenServiceImpl.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/business/service/impl"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/business/service/impl/PrAccessTokenServiceImpl.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/business/service/impl"
+        ],
+        "class_names": ["PrAccessTokenServiceImpl"],
+        "namespace": "com.openlibing.coderepo.business.service.impl",
+        "config_keys": ["security.part1"],
+        "api_routes": [],
+        "dependencies": [
+          "RepoServiceImpl",
+          "OpenlibingRedis",
+          "GitCode",
+          "Gitee"
+        ],
+        "inbound_from": ["WebhookEventConsumer"],
+        "outbound_to": ["GitCode", "Gitee", "Redis", "MySQL"],
+        "protocols": ["HTTPS", "JDBC/TLS", "TCP/TLS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "ProjectConfigController",
+      "display": "ProjectConfigController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "Application",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/ProjectConfigController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/business/controller/ProjectConfigController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/business/controller"
+        ],
+        "class_names": ["ProjectConfigController"],
+        "namespace": "com.openlibing.coderepo.business.controller",
+        "config_keys": [],
+        "api_routes": ["/project-config", "/global-config"],
+        "dependencies": ["ProjectConfigServiceImpl"],
+        "inbound_from": ["Operator"],
+        "outbound_to": ["MySQL"],
+        "protocols": ["HTTPS", "JDBC/TLS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "RabbitMQ",
+      "display": "RabbitMQ",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.NoSQL",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/common/config/RabbitMQConfig.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/common/config"
+      ],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/common/config/RabbitMQConfig.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/common/config"
+        ],
+        "class_names": ["RabbitMQConfig"],
+        "namespace": "com.openlibing.coderepo.common.config",
+        "config_keys": [
+          "spring.rabbitmq.host",
+          "spring.rabbitmq.username",
+          "spring.rabbitmq.password"
+        ],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["WebHookEventController"],
+        "outbound_to": ["WebhookEventConsumer"],
+        "protocols": ["AMQP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "Redis",
+      "display": "Redis",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.Cache",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/common/config/RedisConfig.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/common/config"
+      ],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/common/config/RedisConfig.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/common/config"
+        ],
+        "class_names": ["RedisConfig"],
+        "namespace": "com.openlibing.coderepo.common.config",
+        "config_keys": [
+          "spring.data.redis.host",
+          "spring.data.redis.password",
+          "spring.data.redis.ssl"
+        ],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["PrAccessTokenServiceImpl"],
+        "outbound_to": [],
+        "protocols": ["TCP/TLS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "RepoController",
+      "display": "RepoController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "Application",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/RepoController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/business/controller/RepoController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/business/controller"
+        ],
+        "class_names": ["RepoController"],
+        "namespace": "com.openlibing.coderepo.business.controller",
+        "config_keys": [],
+        "api_routes": ["/repo", "/repo/export"],
+        "dependencies": ["RepoServiceImpl"],
+        "inbound_from": ["EndUser"],
+        "outbound_to": ["MySQL", "OBS"],
+        "protocols": ["HTTPS", "JDBC/TLS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "SyncUserController",
+      "display": "SyncUserController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "Application",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/SyncUserController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/business/controller/SyncUserController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/business/controller"
+        ],
+        "class_names": ["SyncUserController"],
+        "namespace": "com.openlibing.coderepo.business.controller",
+        "config_keys": [],
+        "api_routes": ["/sync-user"],
+        "dependencies": ["SyncUserServiceImpl"],
+        "inbound_from": ["EndUser"],
+        "outbound_to": ["MySQL"],
+        "protocols": ["HTTPS", "JDBC/TLS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "WebHookEventController",
+      "display": "WebHookEventController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "Application",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/WebHookEventController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/business/controller/WebHookEventController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/business/controller"
+        ],
+        "class_names": ["WebHookEventController"],
+        "namespace": "com.openlibing.coderepo.business.controller",
+        "config_keys": ["webhook.secretKey"],
+        "api_routes": [
+          "/apig/webhook/gitcode/repo",
+          "/apig/webhook/gitee/repo",
+          "/apig/webhook/github/repo"
+        ],
+        "dependencies": ["WebhookAuthUtil", "RabbitMQ"],
+        "inbound_from": ["GitCode", "Gitee", "Github"],
+        "outbound_to": ["RabbitMQ", "Nacos"],
+        "protocols": ["HTTPS", "HMAC-SHA256", "AMQP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "WebhookEventConsumer",
+      "display": "WebhookEventConsumer",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "Application",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/business/consumer/WebhookEventConsumer.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/business/consumer"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/business/consumer/WebhookEventConsumer.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/business/consumer"
+        ],
+        "class_names": ["WebhookEventConsumer"],
+        "namespace": "com.openlibing.coderepo.business.consumer",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [
+          "MergeRequestEventHandler",
+          "PushEventHandler",
+          "PrAccessTokenServiceImpl"
+        ],
+        "inbound_from": ["RabbitMQ"],
+        "outbound_to": ["MySQL", "MongoDB", "GitCode", "Gitee", "Github"],
+        "protocols": ["AMQP", "JDBC/TLS", "MongoDB/TLS", "HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "XXLJob",
+      "display": "XXLJob",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "External",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/common/config/XxlJobConfig.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/common/config"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/common/config/XxlJobConfig.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/common/config"
+        ],
+        "class_names": ["XxlJobConfig"],
+        "namespace": "com.openlibing.coderepo.common.config",
+        "config_keys": ["xxl.job.admin.addresses", "xxl.job.access.token"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [],
+        "outbound_to": ["XxlJobHandler"],
+        "protocols": ["HTTP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "XxlJobHandler",
+      "display": "XxlJobHandler",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "Application",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/coderepo/common/job/XxlJobHandler.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/coderepo/common/job"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/coderepo/common/job/XxlJobHandler.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/coderepo/common/job"
+        ],
+        "class_names": ["XxlJobHandler"],
+        "namespace": "com.openlibing.coderepo.common.job",
+        "config_keys": ["xxl.job.access.token"],
+        "api_routes": [],
+        "dependencies": ["RepoServiceImpl", "SyncUserServiceImpl"],
+        "inbound_from": ["XXLJob"],
+        "outbound_to": ["MySQL", "GitCode", "Gitee", "Github", "XXLJob"],
+        "protocols": ["HTTP", "JDBC/TLS", "HTTPS"]
+      },
+      "sidecars": []
+    }
+  ],
+
+  "boundaries": [
+    {
+      "id": "Application",
+      "display": "Application (Spring Boot, port 8076)",
+      "kind": "ProcessBoundary",
+      "aliases": [],
+      "contains": [
+        "CodeMetricsController",
+        "PrAccessTokenServiceImpl",
+        "ProjectConfigController",
+        "RepoController",
+        "SyncUserController",
+        "WebHookEventController",
+        "WebhookEventConsumer",
+        "XxlJobHandler"
+      ],
+      "contains_fingerprint": "CodeMetricsController|PrAccessTokenServiceImpl|ProjectConfigController|RepoController|SyncUserController|WebHookEventController|WebhookEventConsumer|XxlJobHandler"
+    },
+    {
+      "id": "External",
+      "display": "External (外部服务与数据存储)",
+      "kind": "NetworkBoundary",
+      "aliases": [],
+      "contains": [
+        "EndUser",
+        "GitCode",
+        "Gitee",
+        "Github",
+        "MongoDB",
+        "MySQL",
+        "Nacos",
+        "OBS",
+        "Operator",
+        "RabbitMQ",
+        "Redis",
+        "XXLJob"
+      ],
+      "contains_fingerprint": "EndUser|GitCode|Gitee|Github|MongoDB|MySQL|Nacos|OBS|Operator|RabbitMQ|Redis|XXLJob"
+    }
+  ],
+
+  "flows": [
+    {
+      "id": "DF_EndUser_to_CodeMetricsController",
+      "from": "EndUser",
+      "to": "CodeMetricsController",
+      "protocol": "HTTPS",
+      "description": "研发人员调用代码度量查询 API"
+    },
+    {
+      "id": "DF_EndUser_to_RepoController",
+      "from": "EndUser",
+      "to": "RepoController",
+      "protocol": "HTTPS",
+      "description": "研发人员调用仓库元数据 CRUD API"
+    },
+    {
+      "id": "DF_EndUser_to_SyncUserController",
+      "from": "EndUser",
+      "to": "SyncUserController",
+      "protocol": "HTTPS",
+      "description": "研发人员或上游服务调用用户同步 API"
+    },
+    {
+      "id": "DF_GitCode_to_WebHookEventController",
+      "from": "GitCode",
+      "to": "WebHookEventController",
+      "protocol": "HTTPS",
+      "description": "GitCode 平台转发 push/PR 事件 webhook"
+    },
+    {
+      "id": "DF_Gitee_to_WebHookEventController",
+      "from": "Gitee",
+      "to": "WebHookEventController",
+      "protocol": "HTTPS",
+      "description": "Gitee 平台转发 push/PR 事件 webhook"
+    },
+    {
+      "id": "DF_Github_to_WebHookEventController",
+      "from": "Github",
+      "to": "WebHookEventController",
+      "protocol": "HTTPS",
+      "description": "GitHub 平台转发 push/PR 事件 webhook"
+    },
+    {
+      "id": "DF_Operator_to_ProjectConfigController",
+      "from": "Operator",
+      "to": "ProjectConfigController",
+      "protocol": "HTTPS",
+      "description": "管理员调用项目配置管理 API（网关鉴权）"
+    },
+    {
+      "id": "DF_PrAccessTokenServiceImpl_to_GitCode",
+      "from": "PrAccessTokenServiceImpl",
+      "to": "GitCode",
+      "protocol": "HTTPS",
+      "description": "token 有效性校验调用 /api/v5/user"
+    },
+    {
+      "id": "DF_PrAccessTokenServiceImpl_to_Gitee",
+      "from": "PrAccessTokenServiceImpl",
+      "to": "Gitee",
+      "protocol": "HTTPS",
+      "description": "token 有效性校验调用 /api/v5/user"
+    },
+    {
+      "id": "DF_PrAccessTokenServiceImpl_to_MySQL",
+      "from": "PrAccessTokenServiceImpl",
+      "to": "MySQL",
+      "protocol": "JDBC/TLS",
+      "description": "查询 repo_info 获取加密 token"
+    },
+    {
+      "id": "DF_PrAccessTokenServiceImpl_to_Redis",
+      "from": "PrAccessTokenServiceImpl",
+      "to": "Redis",
+      "protocol": "TCP/TLS",
+      "description": "token 有效性缓存读写（TTL 10 分钟）"
+    },
+    {
+      "id": "DF_RabbitMQ_to_WebhookEventConsumer",
+      "from": "RabbitMQ",
+      "to": "WebhookEventConsumer",
+      "protocol": "AMQP",
+      "description": "异步消费 webhook 事件队列"
+    },
+    {
+      "id": "DF_RepoController_to_MySQL",
+      "from": "RepoController",
+      "to": "MySQL",
+      "protocol": "JDBC/TLS",
+      "description": "仓库元数据 CRUD（repo_info 表）"
+    },
+    {
+      "id": "DF_RepoController_to_OBS",
+      "from": "RepoController",
+      "to": "OBS",
+      "protocol": "HTTPS",
+      "description": "仓库导出产物上传到 OBS bucket"
+    },
+    {
+      "id": "DF_ProjectConfigController_to_MySQL",
+      "from": "ProjectConfigController",
+      "to": "MySQL",
+      "protocol": "JDBC/TLS",
+      "description": "项目配置与全局配置 CRUD"
+    },
+    {
+      "id": "DF_SyncUserController_to_MySQL",
+      "from": "SyncUserController",
+      "to": "MySQL",
+      "protocol": "JDBC/TLS",
+      "description": "用户与权限同步写入（user_basic/role_info 表）"
+    },
+    {
+      "id": "DF_CodeMetricsController_to_MongoDB",
+      "from": "CodeMetricsController",
+      "to": "MongoDB",
+      "protocol": "MongoDB/TLS",
+      "description": "代码度量记录查询"
+    },
+    {
+      "id": "DF_WebHookEventController_to_Nacos",
+      "from": "WebHookEventController",
+      "to": "Nacos",
+      "protocol": "HTTPS",
+      "description": "配置拉取（webhook.secretKey 等敏感配置）"
+    },
+    {
+      "id": "DF_WebHookEventController_to_RabbitMQ",
+      "from": "WebHookEventController",
+      "to": "RabbitMQ",
+      "protocol": "AMQP",
+      "description": "Webhook 事件持久化投递到 webhook_event_queue_beta"
+    },
+    {
+      "id": "DF_WebhookEventConsumer_to_GitCode",
+      "from": "WebhookEventConsumer",
+      "to": "GitCode",
+      "protocol": "HTTPS",
+      "description": "PR 评论/标签/流水线记录操作"
+    },
+    {
+      "id": "DF_WebhookEventConsumer_to_Gitee",
+      "from": "WebhookEventConsumer",
+      "to": "Gitee",
+      "protocol": "HTTPS",
+      "description": "PR 评论/标签/流水线记录操作"
+    },
+    {
+      "id": "DF_WebhookEventConsumer_to_Github",
+      "from": "WebhookEventConsumer",
+      "to": "Github",
+      "protocol": "HTTPS",
+      "description": "PR 评论/标签/流水线记录操作"
+    },
+    {
+      "id": "DF_WebhookEventConsumer_to_MongoDB",
+      "from": "WebhookEventConsumer",
+      "to": "MongoDB",
+      "protocol": "MongoDB/TLS",
+      "description": "操作日志与 PR 流水线记录写入"
+    },
+    {
+      "id": "DF_WebhookEventConsumer_to_MySQL",
+      "from": "WebhookEventConsumer",
+      "to": "MySQL",
+      "protocol": "JDBC/TLS",
+      "description": "事件处理时读写仓库/PR 数据"
+    },
+    {
+      "id": "DF_XxlJobHandler_to_GitCode",
+      "from": "XxlJobHandler",
+      "to": "GitCode",
+      "protocol": "HTTPS",
+      "description": "定时仓库/分支同步"
+    },
+    {
+      "id": "DF_XxlJobHandler_to_Gitee",
+      "from": "XxlJobHandler",
+      "to": "Gitee",
+      "protocol": "HTTPS",
+      "description": "定时仓库/分支同步"
+    },
+    {
+      "id": "DF_XxlJobHandler_to_Github",
+      "from": "XxlJobHandler",
+      "to": "Github",
+      "protocol": "HTTPS",
+      "description": "定时仓库/分支同步"
+    },
+    {
+      "id": "DF_XxlJobHandler_to_MySQL",
+      "from": "XxlJobHandler",
+      "to": "MySQL",
+      "protocol": "JDBC/TLS",
+      "description": "定时任务读写仓库/分支/Token 数据"
+    },
+    {
+      "id": "DF_XxlJobHandler_to_XXLJob",
+      "from": "XxlJobHandler",
+      "to": "XXLJob",
+      "protocol": "HTTP",
+      "description": "XXL-Job 执行器拉取任务调度"
+    }
+  ],
+
+  "threats": [
+    {
+      "id": "T01.1",
+      "title": "HMAC 签名比对非恒定时间",
+      "description": "WebhookAuthUtil.validateSignature 使用 String.equals 进行签名比对，存在时序侧信道攻击风险。",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "改用 MessageDigest.isEqual 进行恒定时间比对。",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "data_flow_id": "DF_GitCode_to_WebHookEventController",
+        "stride_category": "S",
+        "attack_surface": "WebhookAuthUtil.validateSignature:136"
+      }
+    },
+    {
+      "id": "T01.2",
+      "title": "Webhook 密钥存储于 Nacos",
+      "description": "webhook.secretKey 与 security.part1 同源存储于 Nacos，配置中心被入侵后密钥可被解密。",
+      "stride_category": "S",
+      "tier": 3,
+      "prerequisites": "Admin Credentials",
+      "status": "Open",
+      "mitigation": "security.part1 从环境变量或 Vault 注入而非配置文件。",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "data_flow_id": "DF_WebHookEventController_to_Nacos",
+        "stride_category": "S",
+        "attack_surface": "WebhookAuthUtil@Value security.part1"
+      }
+    },
+    {
+      "id": "T01.3",
+      "title": "Webhook 事件无重放保护",
+      "description": "Webhook 事件无时间戳/nonce 重放保护，攻击者截获合法事件后可重放触发重复处理。",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "增加 X-GitCode-Delivery/X-GitHub-Delivery 去重缓存（Redis TTL 窗口内拒绝重复 delivery ID）。",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "data_flow_id": "DF_GitCode_to_WebHookEventController",
+        "stride_category": "T",
+        "attack_surface": "WebHookEventController.apigGitCodeWebhookEvent"
+      }
+    },
+    {
+      "id": "T01.4",
+      "title": "敏感 Token 在 INFO 日志输出",
+      "description": "X-GitCode-Token 等敏感头部在 INFO 日志中输出，日志泄露可暴露平台 token。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "降低日志级别或脱敏 X-GitCode-Token/X-Gitee-Token 头部值。",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "data_flow_id": "DF_GitCode_to_WebHookEventController",
+        "stride_category": "I",
+        "attack_surface": "WebHookEventController LOGGER.info"
+      }
+    },
+    {
+      "id": "T01.5",
+      "title": "签名校验 CPU 耗尽 DoS",
+      "description": "应用层无限流（依赖 APIG），签名校验本身消耗 CPU，大量伪造签名请求可造成 CPU 耗尽。",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "在应用层增加 IP 级别限流或签名校验前的前置过滤。",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "data_flow_id": "DF_GitCode_to_WebHookEventController",
+        "stride_category": "D",
+        "attack_surface": "WebHookEventController no rate limit"
+      }
+    },
+    {
+      "id": "T01.6",
+      "title": "RabbitMQ 投递失败无重试控制",
+      "description": "RabbitMQ 投递失败时仅返回失败不重试，平台侧重发可形成消息洪泛。",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "增加幂等去重 + 背压机制，限制单平台并发投递速率。",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "data_flow_id": "DF_WebHookEventController_to_RabbitMQ",
+        "stride_category": "D",
+        "attack_surface": "WebHookEventController rabbitTemplate.convertAndSend"
+      }
+    },
+    {
+      "id": "T01.7",
+      "title": "Gitee Webhook 鉴权硬编码 false",
+      "description": "Gitee 平台 webhook 鉴权硬编码返回 false，合法 Gitee 事件被全部拒绝，造成 Gitee 仓库告警抑制功能失效。",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "如需停用 Gitee，应在 APIG 层路由级禁用而非应用层硬编码拒绝，避免功能静默失效。",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "data_flow_id": "DF_Gitee_to_WebHookEventController",
+        "stride_category": "A",
+        "attack_surface": "WebhookAuthUtil.webhookAuth:62-65"
+      }
+    },
+    {
+      "id": "T02.1",
+      "title": "导出文件路径遍历风险",
+      "description": "仓库导出文件路径未严格校验，可能存在路径遍历风险（如 ../ 跨目录写入 OBS）。",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "对导出文件名做白名单字符校验，拒绝 .. 与绝对路径。",
+      "identity_key": {
+        "component_id": "RepoController",
+        "data_flow_id": "DF_RepoController_to_OBS",
+        "stride_category": "T",
+        "attack_surface": "RepoController.export filename"
+      }
+    },
+    {
+      "id": "T02.2",
+      "title": "异常响应泄露仓库元数据",
+      "description": "异常处理返回详细错误信息（含仓库 URL、内部 ID），可泄露仓库元数据。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "异常响应统一脱敏，仅返回错误码与简短提示。",
+      "identity_key": {
+        "component_id": "RepoController",
+        "data_flow_id": "DF_EndUser_to_RepoController",
+        "stride_category": "I",
+        "attack_surface": "GlobalExceptionHandler e.getMessage"
+      }
+    },
+    {
+      "id": "T02.3",
+      "title": "大规模导出无并发限制",
+      "description": "大规模仓库导出请求无并发限制，OBS 上传与序列化消耗内存与带宽。",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "限制单用户并发导出数量，导出任务异步化 + 队列削峰。",
+      "identity_key": {
+        "component_id": "RepoController",
+        "data_flow_id": "DF_RepoController_to_OBS",
+        "stride_category": "D",
+        "attack_surface": "RepoController.export no rate limit"
+      }
+    },
+    {
+      "id": "T02.4",
+      "title": "仓库操作 IDOR 越权",
+      "description": "仓库操作仅校验用户登录态，未校验用户对该仓库的归属权限，存在 IDOR（越权访问他人项目下仓库）。",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "在仓库查询/删除接口增加 projectId 与用户角色的联合校验。",
+      "identity_key": {
+        "component_id": "RepoController",
+        "data_flow_id": "DF_RepoController_to_MySQL",
+        "stride_category": "E",
+        "attack_surface": "RepoController /repo/{repoId}"
+      }
+    },
+    {
+      "id": "T02.5",
+      "title": "仓库 URL 录入 SSRF",
+      "description": "仓库 URL 录入未校验内网地址，攻击者可录入 http://127.0.0.1:xxx 或内网服务 URL，后续同步任务触发 SSRF。",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "仓库 URL 录入时校验域名白名单（仅允许 gitcode.com/gitee.com/github.com），拒绝内网 IP 与 localhost。",
+      "identity_key": {
+        "component_id": "RepoController",
+        "data_flow_id": "DF_RepoController_to_MySQL",
+        "stride_category": "A",
+        "attack_surface": "RepoServiceImpl.addRepo repoUrl"
+      }
+    },
+    {
+      "id": "T03.1",
+      "title": "SIG 路径恶意配置注入",
+      "description": "SIG 扫描路径配置可指向恶意仓库 URL，后续扫描任务拉取恶意 sig-info.yaml 注入恶意配置。",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Privileged User",
+      "status": "Open",
+      "mitigation": "SIG 路径录入校验域名白名单，sig-info.yaml 解析增加 schema 校验。",
+      "identity_key": {
+        "component_id": "ProjectConfigController",
+        "data_flow_id": "DF_ProjectConfigController_to_MySQL",
+        "stride_category": "T",
+        "attack_surface": "ProjectConfigController sig path"
+      }
+    },
+    {
+      "id": "T03.2",
+      "title": "全局配置变更无审计",
+      "description": "全局配置修改若未记录操作者身份与变更前后值，事后无法追溯。",
+      "stride_category": "R",
+      "tier": 2,
+      "prerequisites": "Privileged User",
+      "status": "Open",
+      "mitigation": "全局配置变更强制走 SpaceUserLogHandler AOP 记录操作者、字段、旧值新值。",
+      "identity_key": {
+        "component_id": "ProjectConfigController",
+        "data_flow_id": "DF_ProjectConfigController_to_MySQL",
+        "stride_category": "R",
+        "attack_surface": "ProjectConfigController global config"
+      }
+    },
+    {
+      "id": "T03.3",
+      "title": "Token 查询接口返回明文",
+      "description": "项目级 Token 查询接口若返回明文或可解密 token，造成凭证泄露。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Privileged User",
+      "status": "Open",
+      "mitigation": "Token 查询接口仅返回掩码，明文 token 仅在内部服务调用链传递。",
+      "identity_key": {
+        "component_id": "ProjectConfigController",
+        "data_flow_id": "DF_ProjectConfigController_to_MySQL",
+        "stride_category": "I",
+        "attack_surface": "ProjectConfigController getToken"
+      }
+    },
+    {
+      "id": "T03.4",
+      "title": "角色映射可被篡改为高权限",
+      "description": "项目角色映射（GitCodeRoleMapping）可被管理员篡改为高权限角色，实现权限提升。",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Privileged User",
+      "status": "Open",
+      "mitigation": "角色映射变更需双人审批或操作日志告警。",
+      "identity_key": {
+        "component_id": "ProjectConfigController",
+        "data_flow_id": "DF_ProjectConfigController_to_MySQL",
+        "stride_category": "E",
+        "attack_surface": "RoleMappingService update"
+      }
+    },
+    {
+      "id": "T04.1",
+      "title": "用户同步接口返回 PII",
+      "description": "用户同步接口返回用户列表可能包含邮箱、账号等 PII，越权调用可批量获取用户信息。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "用户列表接口按调用方角色脱敏，非管理员仅返回必要字段。",
+      "identity_key": {
+        "component_id": "SyncUserController",
+        "data_flow_id": "DF_SyncUserController_to_MySQL",
+        "stride_category": "I",
+        "attack_surface": "SyncUserController listUsers"
+      }
+    },
+    {
+      "id": "T04.2",
+      "title": "批量用户同步无限制",
+      "description": "批量用户同步无分页与并发限制，大组织全量同步可造成 MySQL 写入压力与连接池耗尽。",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "同步接口强制分页，单次同步上限 + 异步队列削峰。",
+      "identity_key": {
+        "component_id": "SyncUserController",
+        "data_flow_id": "DF_SyncUserController_to_MySQL",
+        "stride_category": "D",
+        "attack_surface": "SyncUserController batchSync"
+      }
+    },
+    {
+      "id": "T04.3",
+      "title": "同步接口接受外部 roleId",
+      "description": "同步接口若接受外部传入的 roleId，攻击者可注入高权限角色 ID 实现权限提升。",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "角色分配需校验调用方权限是否高于目标角色，禁止平级或越级授权。",
+      "identity_key": {
+        "component_id": "SyncUserController",
+        "data_flow_id": "DF_SyncUserController_to_MySQL",
+        "stride_category": "E",
+        "attack_surface": "SyncUserController assignRole"
+      }
+    },
+    {
+      "id": "T05.1",
+      "title": "MongoDB 查询 NoSQL 注入",
+      "description": "MongoDB 查询参数若拼接为查询 JSON，存在 NoSQL 注入风险（如 {$ne: null} 条件注入）。",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "使用 Spring Data MongoDB 的类型安全查询构建器，禁止字符串拼接查询。",
+      "identity_key": {
+        "component_id": "CodeMetricsController",
+        "data_flow_id": "DF_CodeMetricsController_to_MongoDB",
+        "stride_category": "T",
+        "attack_surface": "CodeMetricsServiceImpl query"
+      }
+    },
+    {
+      "id": "T05.2",
+      "title": "文件详情接口源码泄露",
+      "description": "文件详情接口返回源代码内容片段，越权调用可读取他人仓库代码。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "文件内容查询校验用户对该仓库的访问权限，非授权仓库拒绝返回内容。",
+      "identity_key": {
+        "component_id": "CodeMetricsController",
+        "data_flow_id": "DF_CodeMetricsController_to_MongoDB",
+        "stride_category": "I",
+        "attack_surface": "CodeMetricsController file-detail"
+      }
+    },
+    {
+      "id": "T05.3",
+      "title": "度量查询 IDOR",
+      "description": "度量查询仅校验登录态，未校验仓库归属，存在 IDOR（越权查询他人仓库度量）。",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "度量查询接口增加 projectId + 用户角色联合校验。",
+      "identity_key": {
+        "component_id": "CodeMetricsController",
+        "data_flow_id": "DF_CodeMetricsController_to_MongoDB",
+        "stride_category": "E",
+        "attack_surface": "CodeMetricsController query"
+      }
+    },
+    {
+      "id": "T06.1",
+      "title": "GitHub Token 不校验有效性",
+      "description": "GitHub 平台 token 不校验有效性（if (github.equals(platform)) return true;），失效或被撤销的 GitHub token 仍被使用。",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "GitHub token 同样调用 /user 接口校验，或至少捕获 401 后标记失效。",
+      "identity_key": {
+        "component_id": "PrAccessTokenServiceImpl",
+        "data_flow_id": "DF_PrAccessTokenServiceImpl_to_GitCode",
+        "stride_category": "S",
+        "attack_surface": "PrAccessTokenServiceImpl.isTokenValid:184-185"
+      }
+    },
+    {
+      "id": "T06.2",
+      "title": "Token 缓存 hashCode 碰撞",
+      "description": "token 有效性缓存 key 为 webhook:token:valid:{platform}:{token.hashCode()}，hashCode() 可碰撞且为 32 位整数，存在缓存碰撞导致无效 token 被判为有效的风险。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "缓存 key 改用 token 的 SHA-256 摘要（非 hashCode），降低碰撞概率。",
+      "identity_key": {
+        "component_id": "PrAccessTokenServiceImpl",
+        "data_flow_id": "DF_PrAccessTokenServiceImpl_to_Redis",
+        "stride_category": "I",
+        "attack_surface": "PrAccessTokenServiceImpl.isTokenValid:188"
+      }
+    },
+    {
+      "id": "T06.3",
+      "title": "Token 校验失败日志泄露",
+      "description": "token 校验失败的 WARN 日志可能包含 token 片段或平台信息，多次失败日志聚合可泄露 token 模式。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "日志中 token 一律脱敏，仅记录 token:*** 与校验结果。",
+      "identity_key": {
+        "component_id": "PrAccessTokenServiceImpl",
+        "data_flow_id": "DF_PrAccessTokenServiceImpl_to_GitCode",
+        "stride_category": "I",
+        "attack_surface": "PrAccessTokenServiceImpl LOGGER.warn"
+      }
+    },
+    {
+      "id": "T06.4",
+      "title": "Redis 不可用 fallback 触发 API 限流",
+      "description": "Redis 不可用时 fallback 调用外部 API 校验 token，高频 webhook 事件可造成 GitCode/Gitee API 限流耗尽。",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Redis 不可用时直接拒绝 webhook 处理（fail-closed）而非 fallback 到外部 API。",
+      "identity_key": {
+        "component_id": "PrAccessTokenServiceImpl",
+        "data_flow_id": "DF_PrAccessTokenServiceImpl_to_Redis",
+        "stride_category": "D",
+        "attack_surface": "PrAccessTokenServiceImpl fallback"
+      }
+    },
+    {
+      "id": "T07.1",
+      "title": "MyBatis Mapper SQL 注入",
+      "description": "Webhook 事件 body 经 JSON.parseObject 解析后直接用于数据库查询参数，若 MyBatis mapper 使用 ${} 拼接，存在 SQL 注入风险。",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "审计所有 mapper XML，确保使用 #{} 参数化；对 webhook body 字段做白名单校验。",
+      "identity_key": {
+        "component_id": "WebhookEventConsumer",
+        "data_flow_id": "DF_WebhookEventConsumer_to_MySQL",
+        "stride_category": "T",
+        "attack_surface": "mapper XML ${}"
+      }
+    },
+    {
+      "id": "T07.2",
+      "title": "异常栈写入 MongoDB 日志",
+      "description": "事件处理异常栈与 body 内容可能写入 MongoDB 日志集合，含仓库 URL、提交者信息等敏感数据。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "异常日志脱敏，body 内容按字段白名单记录。",
+      "identity_key": {
+        "component_id": "WebhookEventConsumer",
+        "data_flow_id": "DF_WebhookEventConsumer_to_MongoDB",
+        "stride_category": "I",
+        "attack_surface": "WebhookEventConsumer LOGGER.error"
+      }
+    },
+    {
+      "id": "T07.3",
+      "title": "Consumer 调用平台 API 无限流",
+      "description": "消费者调用 GitCode/Gitee/Github PR API 无限流，高频 webhook 事件可触发平台 API 限流（429），导致后续合法 PR 操作失败。",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "消费者侧增加平台 API 调用限流（令牌桶），429 时指数退避重试。",
+      "identity_key": {
+        "component_id": "WebhookEventConsumer",
+        "data_flow_id": "DF_WebhookEventConsumer_to_GitCode",
+        "stride_category": "D",
+        "attack_surface": "MergeRequestEventHandler callGitCode"
+      }
+    },
+    {
+      "id": "T07.4",
+      "title": "Webhook body 反序列化 OOM",
+      "description": "Webhook body 大小仅在 APIG 层限制（16MB），消费者反序列化大 JSON 可造成 OOM。",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "消费者侧增加 body 大小校验，超限消息直接死信队列。",
+      "identity_key": {
+        "component_id": "WebhookEventConsumer",
+        "data_flow_id": "DF_RabbitMQ_to_WebhookEventConsumer",
+        "stride_category": "D",
+        "attack_surface": "WebhookEventConsumer JSON.parseObject"
+      }
+    },
+    {
+      "id": "T07.5",
+      "title": "事件消费无幂等去重",
+      "description": "事件消费无幂等去重，重复投递的 webhook 事件可触发重复 PR 评论/标签，造成 PR 噪音与平台 API 配额浪费。",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "消费者基于 X-GitCode-Delivery + 事件类型做幂等去重（Redis SET NX TTL）。",
+      "identity_key": {
+        "component_id": "WebhookEventConsumer",
+        "data_flow_id": "DF_RabbitMQ_to_WebhookEventConsumer",
+        "stride_category": "A",
+        "attack_surface": "WebhookEventConsumer no idempotency"
+      }
+    },
+    {
+      "id": "T08.1",
+      "title": "XXL-Job 执行器 token 泄露",
+      "description": "XXL-Job 执行器 token 泄露后，攻击者可伪装为调度中心触发任意任务执行。",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "执行器 token 定期轮换，调度中心与执行器双向 mTLS 认证。",
+      "identity_key": {
+        "component_id": "XxlJobHandler",
+        "data_flow_id": "DF_XxlJobHandler_to_XXLJob",
+        "stride_category": "S",
+        "attack_surface": "XxlJobConfig xxl.job.access.token"
+      }
+    },
+    {
+      "id": "T08.2",
+      "title": "定时任务参数未校验",
+      "description": "定时任务参数（如仓库 ID 列表、同步范围）若来自调度中心且未校验，恶意调度可注入超范围参数。",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "任务参数做白名单校验，拒绝超范围仓库 ID 与异常分页大小。",
+      "identity_key": {
+        "component_id": "XxlJobHandler",
+        "data_flow_id": "DF_XxlJobHandler_to_XXLJob",
+        "stride_category": "T",
+        "attack_surface": "XxlJobHandler @XxlJob param"
+      }
+    },
+    {
+      "id": "T08.3",
+      "title": "全量同步任务无限制",
+      "description": "全量仓库同步任务无分页与并发限制，大批量仓库同步可造成 MySQL 读写压力与平台 API 限流。",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "同步任务强制分页，单次同步上限 + 平台 API 调用限流。",
+      "identity_key": {
+        "component_id": "XxlJobHandler",
+        "data_flow_id": "DF_XxlJobHandler_to_MySQL",
+        "stride_category": "D",
+        "attack_surface": "XxlJobHandler syncAllRepos"
+      }
+    },
+    {
+      "id": "T09.1",
+      "title": "MyBatis Mapper ${} SQL 注入",
+      "description": "MyBatis mapper XML 若存在 ${} 拼接（如动态表名、排序字段），可被 SQL 注入。",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "审计所有 mapper XML，${} 仅用于安全白名单字段（如表名），用户输入一律 #{}。",
+      "identity_key": {
+        "component_id": "MySQL",
+        "data_flow_id": "DF_RepoController_to_MySQL",
+        "stride_category": "T",
+        "attack_surface": "mapper XML ${}"
+      }
+    },
+    {
+      "id": "T09.2",
+      "title": "数据库密码工作密钥同源存储",
+      "description": "数据库密码经 SecurityUtil.decrypt(password, part1) 解密，security.part1 工作密钥也存储于 Nacos/Apollo 配置，配置中心被入侵后数据库密码可被解密。",
+      "stride_category": "I",
+      "tier": 3,
+      "prerequisites": "Admin Credentials",
+      "status": "Open",
+      "mitigation": "security.part1 从环境变量或 Vault 注入，不与密码同源存储；数据库账号使用最小权限。",
+      "identity_key": {
+        "component_id": "MySQL",
+        "data_flow_id": "DF_RepoController_to_MySQL",
+        "stride_category": "I",
+        "attack_surface": "DataSourceConfig password decrypt"
+      }
+    },
+    {
+      "id": "T09.3",
+      "title": "MySQL 单账号无 RLS",
+      "description": "数据库为单账号访问，无行级权限控制（RLS），任何已认证应用请求可读取全表数据，存在越权读取风险。",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "应用层在 service 层强制 projectId + 用户角色过滤，避免全表查询暴露。",
+      "identity_key": {
+        "component_id": "MySQL",
+        "data_flow_id": "DF_RepoController_to_MySQL",
+        "stride_category": "E",
+        "attack_surface": "MySQL single account no RLS"
+      }
+    },
+    {
+      "id": "T10.1",
+      "title": "MongoDB 字符串拼接注入",
+      "description": "MongoDB 查询若使用字符串拼接构建查询 JSON，存在 NoSQL 注入风险（如 {$where: ...}）。",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "使用 Spring Data MongoDB 类型安全查询构建器，禁止字符串拼接。",
+      "identity_key": {
+        "component_id": "MongoDB",
+        "data_flow_id": "DF_CodeMetricsController_to_MongoDB",
+        "stride_category": "T",
+        "attack_surface": "MongoDB query string concat"
+      }
+    },
+    {
+      "id": "T10.2",
+      "title": "MongoDB 日志集合敏感数据",
+      "description": "MongoDB 存储操作日志与 PR 流水线记录，可能包含仓库 URL、提交者账号、PR 标题等敏感数据，越权查询可批量获取。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "日志集合按项目隔离，查询强制 projectId 过滤；敏感字段脱敏后写入。",
+      "identity_key": {
+        "component_id": "MongoDB",
+        "data_flow_id": "DF_WebhookEventConsumer_to_MongoDB",
+        "stride_category": "I",
+        "attack_surface": "operation_log collection"
+      }
+    },
+    {
+      "id": "T11.1",
+      "title": "Redis 缓存 key hashCode 碰撞",
+      "description": "token 有效性缓存 key 使用 token.hashCode()，Java String hashCode 为 32 位且可碰撞，攻击者构造碰撞 token 可继承有效 token 的缓存结果。",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "缓存 key 改用 token 的 SHA-256 摘要前 16 字节十六进制，降低碰撞。",
+      "identity_key": {
+        "component_id": "Redis",
+        "data_flow_id": "DF_PrAccessTokenServiceImpl_to_Redis",
+        "stride_category": "T",
+        "attack_surface": "Redis cache key hashCode"
+      }
+    },
+    {
+      "id": "T11.2",
+      "title": "Redis 内存明文存储",
+      "description": "token 有效性缓存值为 1/0，虽不直接存储明文 token，但 key 含 hashCode 可被暴力枚举；Redis 数据在内存中明文存储。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "缓存 key 与值均不含明文 token，Redis 启用 ACL 区分读写权限。",
+      "identity_key": {
+        "component_id": "Redis",
+        "data_flow_id": "DF_PrAccessTokenServiceImpl_to_Redis",
+        "stride_category": "I",
+        "attack_surface": "Redis in-memory plaintext"
+      }
+    },
+    {
+      "id": "T11.3",
+      "title": "Redis 单密码无 ACL",
+      "description": "Redis 单密码认证无 ACL，任何获知密码的客户端可读写全部 key，包括分布式锁 key，可恶意释放锁造成任务重复执行。",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Redis 6+ 启用 ACL，分布式锁 key 与缓存 key 分属不同权限账号。",
+      "identity_key": {
+        "component_id": "Redis",
+        "data_flow_id": "DF_PrAccessTokenServiceImpl_to_Redis",
+        "stride_category": "E",
+        "attack_surface": "Redis single password no ACL"
+      }
+    },
+    {
+      "id": "T12.1",
+      "title": "RabbitMQ 消息未签名",
+      "description": "RabbitMQ 消息未签名，任何有队列写权限的客户端可伪造 webhook 事件消息投递到 webhook_event_queue_beta，触发消费者处理伪造事件。",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "队列写权限仅授予 WebHookEventController 服务账号；消息体增加 HMAC 签名头由消费者校验。",
+      "identity_key": {
+        "component_id": "RabbitMQ",
+        "data_flow_id": "DF_WebHookEventController_to_RabbitMQ",
+        "stride_category": "T",
+        "attack_surface": "RabbitMQ message unsigned"
+      }
+    },
+    {
+      "id": "T12.2",
+      "title": "RabbitMQ 队列无速率限制",
+      "description": "队列无消息速率限制，恶意生产者可投递大量无效消息造成队列堆积与消费者 OOM。",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "队列配置最大长度（max-length）与死信队列，超限消息转入死信。",
+      "identity_key": {
+        "component_id": "RabbitMQ",
+        "data_flow_id": "DF_WebHookEventController_to_RabbitMQ",
+        "stride_category": "D",
+        "attack_surface": "RabbitMQ no max-length"
+      }
+    },
+    {
+      "id": "T12.3",
+      "title": "伪造 webhook 触发 PR 噪音",
+      "description": "伪造的 webhook 事件消息可触发 PR 评论/标签等副作用操作，造成 PR 噪音与平台 API 配额浪费。",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "消费者校验消息来源（如生产者 ID 或签名），拒绝未授权生产者消息。",
+      "identity_key": {
+        "component_id": "RabbitMQ",
+        "data_flow_id": "DF_RabbitMQ_to_WebhookEventConsumer",
+        "stride_category": "A",
+        "attack_surface": "RabbitMQ consumer no auth"
+      }
+    },
+    {
+      "id": "T13.1",
+      "title": "GitCode Token HTTP 头传输",
+      "description": "access token 通过 PRIVATE-TOKEN 请求头传输，若 HTTPS 连接在中间网络被劫持（如企业代理），token 可被截获。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "强制 HTTPS 并启用 HSTS，禁用 HTTP fallback；连接池禁用中间人证书。",
+      "identity_key": {
+        "component_id": "GitCode",
+        "data_flow_id": "DF_WebhookEventConsumer_to_GitCode",
+        "stride_category": "I",
+        "attack_surface": "GitCode PRIVATE-TOKEN header"
+      }
+    },
+    {
+      "id": "T13.2",
+      "title": "GitCode API 限流阻断",
+      "description": "高频 PR 操作与 token 校验调用可触发 GitCode API 限流（429），导致合法 PR 评论失败。",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "应用侧令牌桶限流，429 时指数退避重试，失败消息入死信队列。",
+      "identity_key": {
+        "component_id": "GitCode",
+        "data_flow_id": "DF_WebhookEventConsumer_to_GitCode",
+        "stride_category": "D",
+        "attack_surface": "GitCode API rate limit"
+      }
+    },
+    {
+      "id": "T14.1",
+      "title": "Gitee 端点暴露但鉴权失败",
+      "description": "Gitee webhook 鉴权硬编码返回 false（停用告警抑制扫描），但 /apig/webhook/gitee/repo 端点仍对外开放。",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "若 Gitee 已停用，应在 APIG 路由层直接下线 /apig/webhook/gitee/repo，避免无效端点暴露。",
+      "identity_key": {
+        "component_id": "Gitee",
+        "data_flow_id": "DF_Gitee_to_WebHookEventController",
+        "stride_category": "S",
+        "attack_surface": "Gitee endpoint exposed"
+      }
+    },
+    {
+      "id": "T14.2",
+      "title": "Gitee Token HTTP 头传输",
+      "description": "access token 通过 PRIVATE-TOKEN 请求头传输至 Gitee API，存在与 GitCode 相同的传输截获风险。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "强制 HTTPS 与 HSTS。",
+      "identity_key": {
+        "component_id": "Gitee",
+        "data_flow_id": "DF_WebhookEventConsumer_to_Gitee",
+        "stride_category": "I",
+        "attack_surface": "Gitee PRIVATE-TOKEN header"
+      }
+    },
+    {
+      "id": "T15.1",
+      "title": "GitHub Token 硬编码不校验",
+      "description": "GitHub token 在 PrAccessTokenServiceImpl.isTokenValid 中硬编码 return true 不校验有效性，失效或被撤销的 token 仍被使用。",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "GitHub token 同样调用 /user 接口校验，或至少捕获 401 后标记失效并告警。",
+      "identity_key": {
+        "component_id": "Github",
+        "data_flow_id": "DF_WebhookEventConsumer_to_Github",
+        "stride_category": "S",
+        "attack_surface": "Github token return true"
+      }
+    },
+    {
+      "id": "T15.2",
+      "title": "GitHub Token HTTP 头传输",
+      "description": "access token 通过 PRIVATE-TOKEN 请求头传输至 GitHub API，存在传输截获风险。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "强制 HTTPS 与 HSTS。",
+      "identity_key": {
+        "component_id": "Github",
+        "data_flow_id": "DF_WebhookEventConsumer_to_Github",
+        "stride_category": "I",
+        "attack_surface": "Github PRIVATE-TOKEN header"
+      }
+    },
+    {
+      "id": "T16.1",
+      "title": "Nacos 服务注册无双向认证",
+      "description": "服务注册无双向认证时，攻击者可注册同名恶意实例，流量被路由到恶意节点。",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Nacos 启用鉴权 + 服务注册域名白名单，禁止未授权实例注册。",
+      "identity_key": {
+        "component_id": "Nacos",
+        "data_flow_id": "DF_WebHookEventController_to_Nacos",
+        "stride_category": "S",
+        "attack_surface": "Nacos service registration"
+      }
+    },
+    {
+      "id": "T16.2",
+      "title": "Nacos 配置被篡改注入恶意凭证",
+      "description": "Nacos 配置被入侵或篡改后，可注入恶意 security.part1、webhook.secretKey、数据库密码等配置，导致应用使用攻击者控制的密钥与凭证。",
+      "stride_category": "T",
+      "tier": 3,
+      "prerequisites": "Admin Credentials",
+      "status": "Open",
+      "mitigation": "Nacos 启用配置变更审计与告警；关键配置（security.part1）从环境变量注入，禁止从配置中心覆盖。",
+      "identity_key": {
+        "component_id": "Nacos",
+        "data_flow_id": "DF_WebHookEventController_to_Nacos",
+        "stride_category": "T",
+        "attack_surface": "Nacos config tampering"
+      }
+    },
+    {
+      "id": "T16.3",
+      "title": "Nacos 凭证集中存储",
+      "description": "Nacos 配置集中存储所有敏感凭证（数据库密码、Redis 密码、webhook secret、security.part1），Nacos 账号泄露即等同全部凭证泄露。",
+      "stride_category": "I",
+      "tier": 3,
+      "prerequisites": "Admin Credentials",
+      "status": "Open",
+      "mitigation": "Nacos 启用独立管理员账号 + MFA；敏感凭证改用 Vault 或华为云 DEW 托管。",
+      "identity_key": {
+        "component_id": "Nacos",
+        "data_flow_id": "DF_WebHookEventController_to_Nacos",
+        "stride_category": "I",
+        "attack_surface": "Nacos credential concentration"
+      }
+    },
+    {
+      "id": "T17.1",
+      "title": "XXLJob 调度中心 token 泄露",
+      "description": "XXL-Job 调度中心 token 泄露后，攻击者可伪装为调度中心触发任意定时任务，在非调度时间执行同步任务。",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "调度中心 token 定期轮换，执行器与调度中心双向 mTLS 认证。",
+      "identity_key": {
+        "component_id": "XXLJob",
+        "data_flow_id": "DF_XxlJobHandler_to_XXLJob",
+        "stride_category": "S",
+        "attack_surface": "XXLJob token leak"
+      }
+    },
+    {
+      "id": "T17.2",
+      "title": "XXLJob 参数超范围",
+      "description": "XXL-Job 调度参数若接受任意 JSON，恶意调度可注入超范围仓库 ID 或大分页参数，触发全量数据同步导致数据泄露或 DB 过载。",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "执行器侧对任务参数做白名单校验，拒绝超范围仓库 ID 与异常分页大小。",
+      "identity_key": {
+        "component_id": "XXLJob",
+        "data_flow_id": "DF_XxlJobHandler_to_XXLJob",
+        "stride_category": "E",
+        "attack_surface": "XXLJob param injection"
+      }
+    },
+    {
+      "id": "T18.1",
+      "title": "OBS 导出文件路径遍历",
+      "description": "导出文件上传路径未严格校验，可能存在路径遍历（如 ../ 跨前缀覆盖他人导出文件）。",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "导出文件名做白名单字符校验，按项目 + 用户隔离前缀。",
+      "identity_key": {
+        "component_id": "OBS",
+        "data_flow_id": "DF_RepoController_to_OBS",
+        "stride_category": "T",
+        "attack_surface": "OBS object key"
+      }
+    },
+    {
+      "id": "T18.2",
+      "title": "OBS Bucket 策略宽松",
+      "description": "导出产物若通过公开 URL 或宽松 bucket 策略访问，未授权用户可读取他人导出文件（含仓库元数据）。",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "导出文件使用预签名 URL（短期有效），bucket 策略设为私有。",
+      "identity_key": {
+        "component_id": "OBS",
+        "data_flow_id": "DF_RepoController_to_OBS",
+        "stride_category": "I",
+        "attack_surface": "OBS bucket policy"
+      }
+    },
+    {
+      "id": "T18.3",
+      "title": "OBS AK/SK 同源存储",
+      "description": "OBS AK/SK 若与应用其他凭证同源存储（Nacos），配置中心被入侵后可获取 OBS 写权限，覆盖或删除导出产物。",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "OBS AK/SK 使用最小权限 IAM 账号，仅允许写指定 bucket 前缀。",
+      "identity_key": {
+        "component_id": "OBS",
+        "data_flow_id": "DF_RepoController_to_OBS",
+        "stride_category": "E",
+        "attack_surface": "OBS AK/SK storage"
+      }
+    }
+  ],
+
+  "findings": [
+    {
+      "id": "FIND-01",
+      "title": "Webhook HMAC-SHA256 签名比对使用非恒定时间 String.equals",
+      "severity": "Critical",
+      "cvss_score": 7.4,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+      "cwe": "CWE-208",
+      "owasp": "A02:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T01.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/utils/WebhookAuthUtil.java"
+      ],
+      "component": "WebHookEventController",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "vulnerability": "CWE-208",
+        "attack_surface": "WebhookAuthUtil.java:136"
+      }
+    },
+    {
+      "id": "FIND-02",
+      "title": "Webhook 事件无重放保护",
+      "severity": "Important",
+      "cvss_score": 6.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:L/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-294",
+      "owasp": "A07:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T01.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/WebHookEventController.java"
+      ],
+      "component": "WebHookEventController",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "vulnerability": "CWE-294",
+        "attack_surface": "WebHookEventController.apigGitCodeWebhookEvent"
+      }
+    },
+    {
+      "id": "FIND-03",
+      "title": "敏感平台 Token 在 INFO 日志中输出",
+      "severity": "Important",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:H/SI:N/SA:N",
+      "cwe": "CWE-532",
+      "owasp": "A09:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T01.4"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/WebHookEventController.java",
+        "src/main/java/com/openlibing/coderepo/common/utils/SensitiveDataConverter.java"
+      ],
+      "component": "WebHookEventController",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "vulnerability": "CWE-532",
+        "attack_surface": "WebHookEventController LOGGER.info"
+      }
+    },
+    {
+      "id": "FIND-04",
+      "title": "Webhook 端点应用层无限流导致 CPU/队列耗尽",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-770",
+      "owasp": "A04:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T01.5", "T01.6"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/WebHookEventController.java"
+      ],
+      "component": "WebHookEventController",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "vulnerability": "CWE-770",
+        "attack_surface": "WebHookEventController no rate limit"
+      }
+    },
+    {
+      "id": "FIND-05",
+      "title": "Gitee Webhook 端点对外暴露但鉴权硬编码拒绝",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-1188",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T01.7", "T14.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/utils/WebhookAuthUtil.java"
+      ],
+      "component": "WebHookEventController",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "vulnerability": "CWE-1188",
+        "attack_surface": "WebhookAuthUtil.java:62-65"
+      }
+    },
+    {
+      "id": "FIND-06",
+      "title": "仓库导出文件路径未严格校验存在路径遍历",
+      "severity": "Important",
+      "cvss_score": 6.8,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:L/SC:H/SI:N/SA:N",
+      "cwe": "CWE-22",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T02.1", "T18.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/RepoController.java",
+        "src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java"
+      ],
+      "component": "RepoController",
+      "identity_key": {
+        "component_id": "RepoController",
+        "vulnerability": "CWE-22",
+        "attack_surface": "RepoController.export filename"
+      }
+    },
+    {
+      "id": "FIND-07",
+      "title": "异常处理返回详细错误信息泄露仓库元数据",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:L/SI:N/SA:N",
+      "cwe": "CWE-209",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T02.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/exception/GlobalExceptionHandler.java"
+      ],
+      "component": "RepoController",
+      "identity_key": {
+        "component_id": "RepoController",
+        "vulnerability": "CWE-209",
+        "attack_surface": "GlobalExceptionHandler e.getMessage"
+      }
+    },
+    {
+      "id": "FIND-08",
+      "title": "大规模仓库导出无并发限制造成资源耗尽",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-770",
+      "owasp": "A04:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T02.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/RepoController.java",
+        "src/main/java/com/openlibing/coderepo/common/config/DataSourceConfig.java"
+      ],
+      "component": "RepoController",
+      "identity_key": {
+        "component_id": "RepoController",
+        "vulnerability": "CWE-770",
+        "attack_surface": "RepoController.export no concurrency limit"
+      }
+    },
+    {
+      "id": "FIND-09",
+      "title": "仓库 CRUD 操作未校验用户对该仓库的归属权限存在 IDOR",
+      "severity": "Important",
+      "cvss_score": 6.8,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-639",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T02.4"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/RepoController.java",
+        "src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java"
+      ],
+      "component": "RepoController",
+      "identity_key": {
+        "component_id": "RepoController",
+        "vulnerability": "CWE-639",
+        "attack_surface": "RepoController /repo/{repoId}"
+      }
+    },
+    {
+      "id": "FIND-10",
+      "title": "仓库 URL 录入未校验内网地址导致 SSRF",
+      "severity": "Important",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:H/SC:L/SI:L/SA:N",
+      "cwe": "CWE-918",
+      "owasp": "A10:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T02.5"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java"
+      ],
+      "component": "RepoController",
+      "identity_key": {
+        "component_id": "RepoController",
+        "vulnerability": "CWE-918",
+        "attack_surface": "RepoServiceImpl.addRepo repoUrl"
+      }
+    },
+    {
+      "id": "FIND-11",
+      "title": "SIG 扫描路径配置可指向恶意仓库注入恶意配置",
+      "severity": "Important",
+      "cvss_score": 6.8,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:H/VI:L/VA:N/SC:L/SI:N/SA:N",
+      "cwe": "CWE-829",
+      "owasp": "A08:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T03.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/ProjectConfigController.java",
+        "src/main/java/com/openlibing/coderepo/business/service/impl/ProjectConfigServiceImpl.java"
+      ],
+      "component": "ProjectConfigController",
+      "identity_key": {
+        "component_id": "ProjectConfigController",
+        "vulnerability": "CWE-829",
+        "attack_surface": "ProjectConfigController sig path"
+      }
+    },
+    {
+      "id": "FIND-12",
+      "title": "全局配置变更未强制记录操作者与变更前后值",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-778",
+      "owasp": "A09:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T03.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/ProjectConfigController.java"
+      ],
+      "component": "ProjectConfigController",
+      "identity_key": {
+        "component_id": "ProjectConfigController",
+        "vulnerability": "CWE-778",
+        "attack_surface": "ProjectConfigController global config"
+      }
+    },
+    {
+      "id": "FIND-13",
+      "title": "项目级 Token 查询接口可能返回明文 Token",
+      "severity": "Important",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:H/VI:N/VA:N/SC:H/SI:N/SA:N",
+      "cwe": "CWE-200",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T03.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/ProjectConfigController.java",
+        "src/main/java/com/openlibing/coderepo/business/service/impl/ProjectConfigServiceImpl.java"
+      ],
+      "component": "ProjectConfigController",
+      "identity_key": {
+        "component_id": "ProjectConfigController",
+        "vulnerability": "CWE-200",
+        "attack_surface": "ProjectConfigController getToken"
+      }
+    },
+    {
+      "id": "FIND-14",
+      "title": "项目角色映射可被管理员篡改为高权限角色",
+      "severity": "Important",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-269",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T03.4"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/ProjectConfigController.java"
+      ],
+      "component": "ProjectConfigController",
+      "identity_key": {
+        "component_id": "ProjectConfigController",
+        "vulnerability": "CWE-269",
+        "attack_surface": "RoleMappingService update"
+      }
+    },
+    {
+      "id": "FIND-15",
+      "title": "用户同步接口返回 PII 数据",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:L/SI:N/SA:N",
+      "cwe": "CWE-359",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T04.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/SyncUserController.java",
+        "src/main/java/com/openlibing/coderepo/business/entity/space/UserBasicEntity.java"
+      ],
+      "component": "SyncUserController",
+      "identity_key": {
+        "component_id": "SyncUserController",
+        "vulnerability": "CWE-359",
+        "attack_surface": "SyncUserController listUsers"
+      }
+    },
+    {
+      "id": "FIND-16",
+      "title": "批量用户同步无分页与并发限制",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-770",
+      "owasp": "A04:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T04.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/SyncUserController.java",
+        "src/main/java/com/openlibing/coderepo/business/service/impl/SyncUserServiceImpl.java"
+      ],
+      "component": "SyncUserController",
+      "identity_key": {
+        "component_id": "SyncUserController",
+        "vulnerability": "CWE-770",
+        "attack_surface": "SyncUserController batchSync"
+      }
+    },
+    {
+      "id": "FIND-17",
+      "title": "用户同步接口可能接受外部 roleId 导致权限提升",
+      "severity": "Important",
+      "cvss_score": 6.8,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-269",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T04.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/SyncUserController.java",
+        "src/main/java/com/openlibing/coderepo/business/service/impl/SyncUserServiceImpl.java"
+      ],
+      "component": "SyncUserController",
+      "identity_key": {
+        "component_id": "SyncUserController",
+        "vulnerability": "CWE-269",
+        "attack_surface": "SyncUserController assignRole"
+      }
+    },
+    {
+      "id": "FIND-18",
+      "title": "MongoDB 查询参数若字符串拼接存在 NoSQL 注入",
+      "severity": "Important",
+      "cvss_score": 6.8,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-943",
+      "owasp": "A03:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T05.1", "T10.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/service/impl/CodeMetricsServiceImpl.java"
+      ],
+      "component": "CodeMetricsController",
+      "identity_key": {
+        "component_id": "CodeMetricsController",
+        "vulnerability": "CWE-943",
+        "attack_surface": "CodeMetricsServiceImpl query"
+      }
+    },
+    {
+      "id": "FIND-19",
+      "title": "代码度量与文件详情查询存在 IDOR 与源代码泄露",
+      "severity": "Important",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-639",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T05.2", "T05.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/controller/CodeMetricsController.java",
+        "src/main/java/com/openlibing/coderepo/business/service/impl/CodeMetricsServiceImpl.java"
+      ],
+      "component": "CodeMetricsController",
+      "identity_key": {
+        "component_id": "CodeMetricsController",
+        "vulnerability": "CWE-639",
+        "attack_surface": "CodeMetricsController file-detail"
+      }
+    },
+    {
+      "id": "FIND-20",
+      "title": "GitHub Token 不校验有效性硬编码返回 true",
+      "severity": "Important",
+      "cvss_score": 6.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-1189",
+      "owasp": "A07:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T06.1", "T15.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/service/impl/PrAccessTokenServiceImpl.java"
+      ],
+      "component": "PrAccessTokenServiceImpl",
+      "identity_key": {
+        "component_id": "PrAccessTokenServiceImpl",
+        "vulnerability": "CWE-1189",
+        "attack_surface": "PrAccessTokenServiceImpl.java:184-185"
+      }
+    },
+    {
+      "id": "FIND-21",
+      "title": "Token 缓存 key 使用 hashCode 存在碰撞绕过校验风险",
+      "severity": "Important",
+      "cvss_score": 6.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-328",
+      "owasp": "A02:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T06.2", "T11.1", "T11.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/service/impl/PrAccessTokenServiceImpl.java"
+      ],
+      "component": "PrAccessTokenServiceImpl",
+      "identity_key": {
+        "component_id": "PrAccessTokenServiceImpl",
+        "vulnerability": "CWE-328",
+        "attack_surface": "PrAccessTokenServiceImpl.java:188"
+      }
+    },
+    {
+      "id": "FIND-22",
+      "title": "Token 校验失败 WARN 日志可能泄露 Token 片段",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:L/SI:N/SA:N",
+      "cwe": "CWE-532",
+      "owasp": "A09:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T06.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/service/impl/PrAccessTokenServiceImpl.java"
+      ],
+      "component": "PrAccessTokenServiceImpl",
+      "identity_key": {
+        "component_id": "PrAccessTokenServiceImpl",
+        "vulnerability": "CWE-532",
+        "attack_surface": "PrAccessTokenServiceImpl LOGGER.warn"
+      }
+    },
+    {
+      "id": "FIND-23",
+      "title": "Redis 不可用时 fallback 调用外部 API 可造成限流耗尽",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-754",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T06.4"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/service/impl/PrAccessTokenServiceImpl.java"
+      ],
+      "component": "PrAccessTokenServiceImpl",
+      "identity_key": {
+        "component_id": "PrAccessTokenServiceImpl",
+        "vulnerability": "CWE-754",
+        "attack_surface": "PrAccessTokenServiceImpl fallback"
+      }
+    },
+    {
+      "id": "FIND-24",
+      "title": "MyBatis Mapper 若使用 ${} 拼接存在 SQL 注入",
+      "severity": "Important",
+      "cvss_score": 6.8,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-89",
+      "owasp": "A03:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T07.1", "T09.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/handler/MergeRequestEventHandler.java",
+        "src/main/resources/mapper/"
+      ],
+      "component": "WebhookEventConsumer",
+      "identity_key": {
+        "component_id": "WebhookEventConsumer",
+        "vulnerability": "CWE-89",
+        "attack_surface": "mapper XML ${}"
+      }
+    },
+    {
+      "id": "FIND-25",
+      "title": "Webhook 事件处理异常栈与 body 写入 MongoDB 日志",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:L/SI:N/SA:N",
+      "cwe": "CWE-532",
+      "owasp": "A09:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T07.2", "T10.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/handler/",
+        "src/main/java/com/openlibing/coderepo/business/service/impl/OperationLogServiceImpl.java"
+      ],
+      "component": "WebhookEventConsumer",
+      "identity_key": {
+        "component_id": "WebhookEventConsumer",
+        "vulnerability": "CWE-532",
+        "attack_surface": "WebhookEventConsumer LOGGER.error"
+      }
+    },
+    {
+      "id": "FIND-26",
+      "title": "Consumer 调用平台 PR API 无限流可触发 429 阻断合法操作",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-770",
+      "owasp": "A04:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T07.3", "T13.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/handler/MergeRequestEventHandler.java"
+      ],
+      "component": "WebhookEventConsumer",
+      "identity_key": {
+        "component_id": "WebhookEventConsumer",
+        "vulnerability": "CWE-770",
+        "attack_surface": "MergeRequestEventHandler callGitCode"
+      }
+    },
+    {
+      "id": "FIND-27",
+      "title": "Webhook body 反序列化无大小校验可造成 OOM",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-400",
+      "owasp": "A04:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T07.4"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/consumer/WebhookEventConsumer.java",
+        "src/main/java/com/openlibing/coderepo/common/config/RabbitMQConfig.java"
+      ],
+      "component": "WebhookEventConsumer",
+      "identity_key": {
+        "component_id": "WebhookEventConsumer",
+        "vulnerability": "CWE-400",
+        "attack_surface": "WebhookEventConsumer JSON.parseObject"
+      }
+    },
+    {
+      "id": "FIND-28",
+      "title": "Consumer 事件处理无幂等去重造成 PR 噪音与配额浪费",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:L/SA:N",
+      "cwe": "CWE-1290",
+      "owasp": "A04:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T07.5", "T12.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/consumer/WebhookEventConsumer.java"
+      ],
+      "component": "WebhookEventConsumer",
+      "identity_key": {
+        "component_id": "WebhookEventConsumer",
+        "vulnerability": "CWE-1290",
+        "attack_surface": "WebhookEventConsumer no idempotency"
+      }
+    },
+    {
+      "id": "FIND-29",
+      "title": "XXL-Job 执行器与调度中心 token 泄露可触发任意任务",
+      "severity": "Important",
+      "cvss_score": 6.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-522",
+      "owasp": "A07:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T08.1", "T17.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/config/XxlJobConfig.java"
+      ],
+      "component": "XxlJobHandler",
+      "identity_key": {
+        "component_id": "XxlJobHandler",
+        "vulnerability": "CWE-522",
+        "attack_surface": "XxlJobConfig xxl.job.access.token"
+      }
+    },
+    {
+      "id": "FIND-30",
+      "title": "XXL-Job 任务参数未做白名单校验存在超范围数据同步",
+      "severity": "Important",
+      "cvss_score": 6.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-20",
+      "owasp": "A03:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T08.2", "T17.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/job/XxlJobHandler.java"
+      ],
+      "component": "XxlJobHandler",
+      "identity_key": {
+        "component_id": "XxlJobHandler",
+        "vulnerability": "CWE-20",
+        "attack_surface": "XxlJobHandler @XxlJob param"
+      }
+    },
+    {
+      "id": "FIND-31",
+      "title": "全量仓库同步任务无分页与并发限制",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-770",
+      "owasp": "A04:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T08.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/job/XxlJobHandler.java"
+      ],
+      "component": "XxlJobHandler",
+      "identity_key": {
+        "component_id": "XxlJobHandler",
+        "vulnerability": "CWE-770",
+        "attack_surface": "XxlJobHandler syncAllRepos"
+      }
+    },
+    {
+      "id": "FIND-32",
+      "title": "MySQL 单账号无行级权限控制存在越权读取风险",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-732",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "High",
+      "related_threats": ["T09.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/config/DataSourceConfig.java"
+      ],
+      "component": "MySQL",
+      "identity_key": {
+        "component_id": "MySQL",
+        "vulnerability": "CWE-732",
+        "attack_surface": "MySQL single account no RLS"
+      }
+    },
+    {
+      "id": "FIND-33",
+      "title": "Redis 单密码认证无 ACL 可恶意释放分布式锁",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-732",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T11.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/config/RedisConfig.java"
+      ],
+      "component": "Redis",
+      "identity_key": {
+        "component_id": "Redis",
+        "vulnerability": "CWE-732",
+        "attack_surface": "Redis single password no ACL"
+      }
+    },
+    {
+      "id": "FIND-34",
+      "title": "RabbitMQ 消息未签名可伪造 webhook 事件投递",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:N/SI:L/SA:N",
+      "cwe": "CWE-345",
+      "owasp": "A08:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T12.1", "T12.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/config/RabbitMQConfig.java"
+      ],
+      "component": "RabbitMQ",
+      "identity_key": {
+        "component_id": "RabbitMQ",
+        "vulnerability": "CWE-345",
+        "attack_surface": "RabbitMQ message unsigned"
+      }
+    },
+    {
+      "id": "FIND-35",
+      "title": "仓库导出产物 OBS Bucket 策略宽松未授权可读",
+      "severity": "Important",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:H/SI:N/SA:N",
+      "cwe": "CWE-732",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T18.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java"
+      ],
+      "component": "OBS",
+      "identity_key": {
+        "component_id": "OBS",
+        "vulnerability": "CWE-732",
+        "attack_surface": "OBS bucket policy"
+      }
+    },
+    {
+      "id": "FIND-36",
+      "title": "OBS AK/SK 与应用其他凭证同源存储",
+      "severity": "Important",
+      "cvss_score": 6.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-522",
+      "owasp": "A02:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T18.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/config/RestTemplateConfig.java"
+      ],
+      "component": "OBS",
+      "identity_key": {
+        "component_id": "OBS",
+        "vulnerability": "CWE-522",
+        "attack_surface": "OBS AK/SK storage"
+      }
+    },
+    {
+      "id": "FIND-37",
+      "title": "Nacos 服务注册无双向认证可被注册恶意实例",
+      "severity": "Important",
+      "cvss_score": 6.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-345",
+      "owasp": "A08:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T16.1"],
+      "evidence_files": ["src/main/resources/application.yaml"],
+      "component": "Nacos",
+      "identity_key": {
+        "component_id": "Nacos",
+        "vulnerability": "CWE-345",
+        "attack_surface": "Nacos service registration"
+      }
+    },
+    {
+      "id": "FIND-38",
+      "title": "Access Token 通过 PRIVATE-TOKEN HTTP 头部传输无 HSTS 强制",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:L/SI:N/SA:N",
+      "cwe": "CWE-319",
+      "owasp": "A02:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T13.1", "T14.2", "T15.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/utils/GitCode.java",
+        "src/main/java/com/openlibing/coderepo/common/utils/Gitee.java",
+        "src/main/java/com/openlibing/coderepo/common/utils/Github.java"
+      ],
+      "component": "GitCode",
+      "identity_key": {
+        "component_id": "GitCode",
+        "vulnerability": "CWE-319",
+        "attack_surface": "GitCode PRIVATE-TOKEN header"
+      }
+    },
+    {
+      "id": "FIND-39",
+      "title": "Gitee/GitHub 端点暴露但鉴权异常",
+      "severity": "Moderate",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-1188",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T01.7", "T14.1", "T15.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/utils/WebhookAuthUtil.java",
+        "src/main/java/com/openlibing/coderepo/business/service/impl/PrAccessTokenServiceImpl.java"
+      ],
+      "component": "WebHookEventController",
+      "identity_key": {
+        "component_id": "WebHookEventController",
+        "vulnerability": "CWE-1188",
+        "attack_surface": "WebhookAuthUtil.java:62-65; PrAccessTokenServiceImpl.java:184-185"
+      }
+    },
+    {
+      "id": "FIND-40",
+      "title": "敏感凭证集中存储于 Nacos 未做环境变量或 Vault 隔离",
+      "severity": "Important",
+      "cvss_score": 6.3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:H/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-522",
+      "owasp": "A02:2025",
+      "tier": 3,
+      "effort": "High",
+      "related_threats": ["T01.2", "T09.2", "T16.2", "T16.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/coderepo/common/utils/WebhookAuthUtil.java",
+        "src/main/java/com/openlibing/coderepo/common/config/DataSourceConfig.java",
+        "src/main/java/com/openlibing/coderepo/common/config/RedisConfig.java",
+        "src/main/java/com/openlibing/coderepo/common/config/MongoConfig.java",
+        "src/main/resources/application.yaml"
+      ],
+      "component": "Nacos",
+      "identity_key": {
+        "component_id": "Nacos",
+        "vulnerability": "CWE-522",
+        "attack_surface": "Nacos credential concentration"
+      }
+    }
+  ],
+
+  "metrics": {
+    "total_components": 20,
+    "total_boundaries": 2,
+    "total_flows": 29,
+    "total_threats": 59,
+    "total_findings": 40,
+    "threats_by_tier": { "T1": 0, "T2": 55, "T3": 4 },
+    "findings_by_tier": { "T1": 0, "T2": 39, "T3": 1 },
+    "threats_by_stride": {
+      "S": 8,
+      "T": 12,
+      "R": 1,
+      "I": 16,
+      "D": 10,
+      "E": 8,
+      "A": 4
+    },
+    "findings_by_severity": {
+      "Critical": 1,
+      "Important": 20,
+      "Moderate": 19,
+      "Low": 0
+    }
+  }
+}

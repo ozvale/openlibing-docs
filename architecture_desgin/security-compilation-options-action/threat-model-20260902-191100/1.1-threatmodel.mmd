@@ -1,0 +1,45 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'background': '#ffffff', 'primaryColor': '#ffffff', 'lineColor': '#666666' }}}%%
+flowchart LR
+    classDef process fill:#6baed6,stroke:#2171b5,stroke-width:2px,color:#000000
+    classDef external fill:#fdae61,stroke:#d94701,stroke-width:2px,color:#000000
+    classDef datastore fill:#74c476,stroke:#238b45,stroke-width:2px,color:#000000
+
+    WorkflowAuthor["WorkflowAuthor"]:::external
+    PRContributor["PRContributor"]:::external
+
+    subgraph CIRunner["CI Runner (Application Boundary)"]
+        ActionEntryPoint(("ActionEntryPoint")):::process
+        SecOptionScanner(("SecOptionScanner")):::process
+        SecOptionDetector(("SecOptionDetector")):::process
+        SecOptionScanScript(("SecOptionScanScript")):::process
+        CicdUploader(("CicdUploader")):::process
+        ApigSigner(("ApigSigner")):::process
+        WorkspaceArtifacts[("WorkspaceArtifacts")]:::datastore
+        ScanResultFile[("ScanResultFile")]:::datastore
+    end
+
+    subgraph External["External Services Boundary"]
+        OpenLibingAPIG["OpenLibingAPIG"]:::external
+        HuaweiCloudOIDC["HuaweiCloudOIDC"]:::external
+        PyPIMirror["PyPIMirror"]:::external
+    end
+
+    WorkflowAuthor <-->|"DF01: YAML inputs/secrets"| ActionEntryPoint
+    PRContributor <-->|"DF02: PR build artifacts"| WorkspaceArtifacts
+    ActionEntryPoint <-->|"DF03: resolve paths / fs.existsSync"| WorkspaceArtifacts
+    ActionEntryPoint <-->|"DF04: pip install pyelftools"| PyPIMirror
+    ActionEntryPoint <-->|"DF05: new SecOptionScanner + scan()"| SecOptionScanner
+    SecOptionScanner <-->|"DF06: detect(sourceDir, outputFile, scanOptions)"| SecOptionDetector
+    SecOptionScanner <-->|"DF07: write final JSON result"| ScanResultFile
+    SecOptionScanner <-->|"DF08: upload(scanResult, options)"| CicdUploader
+    SecOptionDetector <-->|"DF09: spawn('python3', [script, src, out, opts])"| SecOptionScanScript
+    SecOptionScanScript <-->|"DF10: read ELF / extract archives"| WorkspaceArtifacts
+    SecOptionScanScript <-->|"DF11: write scan JSON output"| ScanResultFile
+    CicdUploader <-->|"DF12: sign({method, url, headers, body})"| ApigSigner
+    CicdUploader <-->|"DF13: HTTPS POST sec-option/report (AK/SK)"| OpenLibingAPIG
+    CicdUploader <-->|"DF14: callApig OIDC token exchange (V11)"| HuaweiCloudOIDC
+
+    style CIRunner fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+    style External fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+
+    linkStyle default stroke:#666666,stroke-width:2px
