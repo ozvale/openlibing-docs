@@ -53,24 +53,42 @@
   "code": 200,
   "data": {
     "pipelineId": "xxx",
-    "triggerWhiteList": ["cisu42", "zhangsan"],
+    "triggerWhiteList": [
+      { "userId": "65c71434e3a442b89736d1d89f46c246", "userName": "zhuangzt" }
+    ],
+    "selectableMembers": [
+      { "userId": "65c71434e3a442b89736d1d89f46c246", "userName": "zhuangzt" },
+      {
+        "userId": "479378dffe1b429aa1f65bd72dc9ea93",
+        "userName": "jiangzhichao"
+      }
+    ],
     "canEdit": true
   }
 }
 ```
 
-- `triggerWhiteList`：账号（用户名）数组，空数组 = 未配置限制
+- `triggerWhiteList`：已配置的触发人员（`userId` = openlibing 平台用户ID/UUID，`userName` 展示用），空数组 = 未配置限制；userId 查不到对应用户时 `userName` 回退为 userId 本身
+- `selectableMembers`：**当前项目全部成员**（下拉数据源，后端已按项目过滤并去重，前端无需再过滤）
 - `canEdit`：当前用户是否可编辑名单（通过权限校验后恒为 true；无权限时接口直接报错，前端按错误处理隐藏/置灰入口）
 
 ### 3. 保存触发人员名单（全量覆盖语义）
 
 `POST /project/pipeline/trigger-users/save?userId=xxx`
 
-请求体：`{ "projectId": "300033", "pipelineId": "xxx", "triggerWhiteList": ["cisu42", "zhangsan"] }`
+请求体：
 
-- **全量覆盖**：前端提交编辑后的完整名单（不是增量）
+```json
+{
+  "projectId": "300033",
+  "pipelineId": "xxx",
+  "triggerWhiteList": ["65c71434e3a442b89736d1d89f46c246"]
+}
+```
+
+- **全量覆盖**：前端提交编辑后的完整 `userId` 列表（不是增量）
 - 空数组 = 清除限制（等同于关闭）
-- 后端校验：编辑权限（具备流水线运行权限的角色：admin / project_manager / project_cie / pipeline_executor）、目标流水线白名单已开启、账号格式（`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`）、去重、上限 100 个
+- 后端校验：编辑权限（具备流水线运行权限的角色，后端按菜单 URL 动态查询，当前快照：admin / project_manager / project_cie / pipeline_executor）、目标流水线白名单已开启、userId 格式（32 位 UUID）、去重、上限 100 个
 - 校验失败返回明确错误信息，直接 toast 展示即可
 
 ## 期望的前端表现
@@ -80,11 +98,12 @@
 - 每行新增「触发人员」操作入口（与现有白名单开关并列）
 - **仅白名单开关为开启状态的行**展示该入口（后端也校验，前端拦截只是体验层）
 - 点击打开编辑弹窗：
-  - 打开时调用查询接口，**现有名单以 tag 形式展示**，每个 tag 可 × 单个删除
-  - 输入框支持**批量粘贴多个账号**（分隔符：空格/逗号/分号，中英文标点均可）→ 解析、格式校验、去重后追加为 tag——交互可直接参考现有 `pipelineWebhookSettings.vue` 中 `commentWhiteList` 的实现（`parseCommentWhiteListTokens` 等函数）
-  - 无效格式账号给 warning 提示：`账号仅支持字母、数字、下划线和连字符，且需以字母或数字开头`
-  - 保存时全量提交，成功后关闭弹窗并刷新
+  - 打开时调用查询接口，一次性拿到现有名单（`triggerWhiteList`，含 userName）与项目可选成员（`selectableMembers`）
+  - **人员选择器（多选下拉）**：选项来自 `selectableMembers`，展示 `userName`（可带 userId 辅助区分重名），值为 `userId`；已配置名单默认选中
+  - 已配置但已不在 `selectableMembers` 中的成员（如后来退出项目）：仍以 tag/选中项展示（数据来自 `triggerWhiteList`），可删除，避免静默丢失
+  - 保存时全量提交选中项的 `userId` 列表，成功后关闭弹窗并刷新
   - `canEdit=false` 时入口置灰/隐藏（与后端校验对齐）
+- **不做手动输入账号**：名单标识是平台 UUID（非可读账号），手输无意义；增减人员一律走选择器
 
 ### B. 运行/重试按钮统一置灰 + 悬浮提示（三个入口）
 
@@ -113,4 +132,5 @@
 2. **重试与运行用同一套表现**：同一 `pipelineId` 的名单限制，文案相同。
 3. **兼容性**：flags 接口可能失败或未部署（后端灰度期间），失败时按"不限制"处理，不得报错。
 4. 一期**没有**跨流水线批量配置触发人员的能力（勾选多行批量操作不涉及触发人员），不要在批量操作里加相关入口。
-5. 编辑弹窗内名单上限 100 个、去重逻辑前端也做一份（后端兜底），提升体验。
+5. 编辑弹窗内名单上限 100 个（后端兜底校验，选择器场景一般不会触达）。
+6. 名单存的是平台用户ID（UUID）而非 GitCode 账号——openlibing 账号与 GitCode 账号是两个域，**不要**用 GitCode 用户名做任何匹配或展示联想。
