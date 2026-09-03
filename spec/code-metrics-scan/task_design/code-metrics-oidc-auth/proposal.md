@@ -15,15 +15,16 @@ sec-option-scan 插件已完成同构改造并通过线上验证（含网关 IAM
 
 ## 改造范围
 
-| 仓库 | 位置 | 变更 |
-| --- | --- | --- |
-| openlibing/code-metrics-scan | `.gitcode/actions/code-metrics-scan` | 源码双模式改造（CoderepoUploader / index.js / scanner.js / package.json / action.yml / README） |
-| openlibing/code-metrics-action | 仓根 | 发布包装同步（action.yml / README / dist / package.json，SDK 0.0.5）+ ncc 重新打包 |
-| openlibing/security-compilation-options-action | 仓根 | 同构双模式改造（CicdUploader / index.js / scanner.js / package.json / action.yml / README / dist，SDK 0.0.5）+ ncc 重新打包，并修复 timeout 透传、_stack_flag_state 跨段聚合、stackClash 输出名规避 |
-| openlibing/openlibing-cicd | `.gitcode/workflows` | build.yml / code-metrics-scan.yml 增加 `permissions: id-token: write`、移除凭证注入、插件引用固定 SHA |
-| openlibing-docs | `spec/code-metrics-scan/task_design/code-metrics-oidc-auth/` | 两份需求设计文档 + proposal / tasks / archive（本目录） |
+| 仓库                                           | 位置                                                         | 变更                                                                                                                                                                                                |
+| ---------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| openlibing/code-metrics-scan                   | `.gitcode/actions/code-metrics-scan`                         | 源码双模式改造（CoderepoUploader / index.js / scanner.js / package.json / action.yml / README）                                                                                                     |
+| openlibing/code-metrics-action                 | 仓根                                                         | 发布包装同步（action.yml / README / dist / package.json，SDK 0.0.5）+ ncc 重新打包                                                                                                                  |
+| openlibing/security-compilation-options-action | 仓根                                                         | 同构双模式改造（CicdUploader / index.js / scanner.js / package.json / action.yml / README / dist，SDK 0.0.5）+ ncc 重新打包，并修复 timeout 透传、_stack_flag_state 跨段聚合、stackClash 输出名规避 |
+| openlibing/openlibing-cicd                     | `.gitcode/workflows`                                         | build.yml / code-metrics-scan.yml 增加 `permissions: id-token: write`、移除凭证注入、插件引用固定 SHA                                                                                               |
+| openlibing-docs                                | `spec/code-metrics-scan/task_design/code-metrics-oidc-auth/` | 两份需求设计文档 + proposal / tasks / archive（本目录）                                                                                                                                             |
 
 分支安排：
+
 - code-metrics-scan：沿用 `sec-option-oidc-auth` 分支（用户确认不切分支），提交后推送 origin，不走 PR
 - code-metrics-action：新建 `code-metrics-oidc-auth` 分支（基于 origin/master），创建 PR #20 关联 Issue #8
 - security-compilation-options-action：新建 `sec-option-oidc-auth` 分支（基于 origin/master），创建 PR #12 关联 Issue #6
