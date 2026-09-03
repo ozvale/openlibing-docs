@@ -17,7 +17,7 @@
 - [x] YellowRegionPipelineEntity：映射 yellow_region_pipeline，覆盖 prId / taskUrl / status / startTime / execUser / failReason / pipelineStatus 等列
 - [x] GiteePrInfoEntity + GiteePrInfoMapper：映射 gitee_pr_info，ensurePrInfo 缺失插入
 - [x] GiteeCommitTypeEntity + GiteeCommitTypeMapper：映射 gitee_commit_type（只读），exists(content) / getType(content)
-- [x] YelloRegionPipelineMapper：BaseMapper，最新记录查询在服务层用 LambdaQueryWrapper（按 prId 倒序取最新）
+- [x] YelloRegionPipelineMapper：BaseMapper，最新记录查询在服务层用 LambdaQueryWrapper（按 prId 倒序取最新）。类名缺字母 w 为代码实际命名（实体为 YellowRegionPipelineEntity），按此拼写定位，非笔误
 
 ### MQS 消息 DTO
 

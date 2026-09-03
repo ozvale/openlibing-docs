@@ -38,10 +38,11 @@ WebHookEventServiceImpl.dispatchEvent（存量，按 supportedEventTypes() 多 h
    - gitcode / gitee：`create → open`、`merge → merge`、`close → close`；`update + source update(sync)` → 删标签后按 open 处理；`update label` 忽略
    - github：`opened → open`、`closed+merged → merge`、`closed → close`、`synchronize` → 删标签后按 open 处理；其余（edited / labeled 等）忽略
 2. Redis 锁去重（同一 PR 相同动作 30 分钟内不重复），Redis 异常放行
-3. `ensurePrInfo`：`gitee_pr_info` 无记录时插入（流水线记录 join 依赖）
-4. 预插 START 记录：`status=start`、`pipelineStatus=WAIT_START`、taskUrl、execUser、startTime
-5. 发送 MQS（含仓库 access_token 明文）；失败 → 记录改 `failure` + `MQS 发送失败`
-6. 全程 try-catch 记日志不抛异常
+3. `PrAccessTokenService` 校验 access_token：缺失 / 无效 → error 日志（告警）直接结束。校验先于预插 START，不会残留 `WAIT_START` 悬挂记录
+4. `ensurePrInfo`：`gitee_pr_info` 无记录时插入（流水线记录 join 依赖）
+5. 预插 START 记录：`status=start`、`pipelineStatus=WAIT_START`、taskUrl、execUser、startTime
+6. 发送 MQS（含仓库 access_token）；失败 → 预插记录改 `failure` + `MQS 发送失败`，预插后的状态必然闭环
+7. 全程 try-catch 记日志不抛异常
 
 ### 评论事件（PrSyncCommentEventHandler）
 
@@ -51,9 +52,9 @@ WebHookEventServiceImpl.dispatchEvent（存量，按 supportedEventTypes() 多 h
 4. Redis 去重：同 PR 评论 3 分钟内重复 → 回复 `代码同步中，请勿频繁操作！`
 5. CI 检查：org=ascend 且仓库在 MindIE 仓库列表时，无 `ci-pipeline-passed` 标签 → 回复 `CI流水线未通过，禁止触发前冒烟测试！`
 6. reqType 解析：`pre-build → compile`，其余取 `gitee_commit_type.type`
-7. reqType=compile → 中断运行中记录（FAILURE + `主动停止导致中断`）并预插新 START 记录
-8. 发送 MQS；成功 → 打 `SC-START` 标签；失败 → 预插记录改 FAILURE（`MQS 发送失败`）
-9. github `issue_comment` 载荷缺 MR 信息，先按 issue number 调平台 API 补齐 PR 信息
+7. access_token 校验（先于预插）：缺失 / 无效 → error 日志（告警）直接结束；github `issue_comment` 载荷缺分支信息，需先按 issue number 调平台 API 补齐 PR 信息（github 专用，依赖有效 token）
+8. reqType=compile → 中断运行中记录（FAILURE + `主动停止导致中断`）并预插新 START 记录
+9. 发送 MQS；成功 → 打 `SC-START` 标签；失败 → 预插记录改 FAILURE（`MQS 发送失败`）
 
 ### push 事件（PrSyncPushEventHandler）
 
@@ -87,6 +88,9 @@ WebHookEventServiceImpl.dispatchEvent（存量，按 supportedEventTypes() 多 h
 | gitee_pr_info          | PR 信息，黄蓝协同查询经 pipeline.pr_id join 定位 | 只写（ensurePrInfo 插入缺失记录）                           |
 | gitee_commit_type      | 编译触发词 → 类型映射                            | 只读（exists / getType）                                    |
 
+> 命名说明：Mapper 类实际命名为 `YelloRegionPipelineMapper`（缺字母 w），为代码真实类名（entity 为
+> `YellowRegionPipelineEntity`），非文档笔误，实现时按此拼写定位；若后续代码重命名需同步本表与 tasks.md。
+
 ## 常量（与 cicd 对齐）
 
 - 动作 `CooperateAction`：open / merge / close / compile / comment / push
@@ -102,8 +106,18 @@ WebHookEventServiceImpl.dispatchEvent（存量，按 supportedEventTypes() 多 h
 | MQS 发送失败             | 预插记录改 FAILURE + `MQS 发送失败`；error 日志，不抛异常            |
 | 预插 / 中断 DB 异常      | catch + warn 日志，发送优先，不阻塞 MQS                              |
 | Redis 不可用             | 去重放行（保证可用性）                                               |
-| access_token 缺失 / 无效 | error 日志（告警），跳过发送                                         |
+| access_token 缺失 / 无效 | error 日志（告警）直接结束流程；校验先于预插 START，不产生悬挂记录   |
 | 平台标签 / 评论 API 失败 | catch + error 日志，不阻塞主流程；gitee / github 删标签 404 视为成功 |
+
+预插记录只可能出现在 token 校验之后，且其后仅有"发送成功"或"改 FAILURE"两种结局，记录状态闭环、不会永久停留 `WAIT_START`。
+
+## access_token 传输安全说明
+
+PR / 评论 MQS 消息携带仓库 access_token（明文），为与 cicd 黄区消费端既有协议逐字段对齐所致——协议字段加密或换用短期凭证需蓝黄两侧同步改造，超出本分支范围。既有风险缓解与限制：
+
+- **传输范围受限**：仅经蓝黄两区内部 MQS 链路，不落公网；push 流程为最小消息，已不带 token（见设计决策 4）
+- **使用最小化**：token 经 `PrAccessTokenService` 使用点解密并做 API 有效性校验后仅用于当次同步（见设计决策 5）
+- **遗留风险**：链路层一旦暴露仍存在凭证泄露风险，后续可升级为链路层加密或短期签名凭证，需黄区消费端配套改造后另行评估
 
 ## 关键设计决策
 
