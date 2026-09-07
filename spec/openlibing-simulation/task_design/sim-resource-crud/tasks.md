@@ -26,7 +26,7 @@
 - [ ] C3: `controller/QcowResourceController.java`（/simulation/manage/qcow/{add,update,delete}）
 - [ ] C4: `controller/AttachmentResourceController.java`（/simulation/manage/attachment/{add,update,delete}）
 
-> HTTP 方法约定：add/update 用 POST；所有 delete 端点统一 `RequestMethod.DELETE`（@RequestParam 传 id）
+> HTTP 方法约定：add/update/delete 端点统一使用 POST（id 由 @RequestParam 传入）
 
 ### 测试与验证
 

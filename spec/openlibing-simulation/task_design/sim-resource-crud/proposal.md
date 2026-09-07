@@ -17,7 +17,7 @@
   - **引擎域**（t_engine_basic_info，独立增删改端点）
   - **qcow 域**（t_qcow_info，独立增删改端点）
   - **附件域**（t_resource_attachment，独立增删改端点）
-- HTTP 方法：新增/修改为 **POST**，删除统一为 **DELETE**（@RequestParam 传 id）
+- HTTP 方法：所有管理端点（含删除）统一为 **POST**（与库内既有管理端点约定一致；删除端点仍以 @RequestParam 传 id）
 - 删除策略（已确认）：`t_server_basic_info` 有 `is_deleted` 列 → **逻辑删除**（UPDATE `is_deleted='1'`）；其余 4 表无该列 → **物理 DELETE**
 - 新增：id 由应用层 `CommmonUtils.getUuid()` 生成；审计字段显式赋值（create_time/last_modify_time 由 SQL `now()` 或代码补齐）
 - 沿用本库既有编码范式（纯 MyBatis XML、`ResponseEntity(code,msg,data)`、方法级 `@RequestMapping`、creator 从 `X-Openlibing-User` 头解析）
@@ -32,7 +32,7 @@
 ## 验收标准
 
 - [ ] 5 张表均有可用的 新增/修改/删除 端点（新增/修改 200；参数缺失/记录不存在返回 400）
-- [ ] 删除接口统一使用 HTTP DELETE 方法
+- [ ] 删除端点与增/改一致使用 POST（@RequestParam 传 id）
 - [ ] server_basic_info 删除后 `is_deleted='1'`（逻辑删）
 - [ ] engine/qcow/attachment/extend 删除为物理 DELETE
 - [ ] 新增记录 id 为 32 位 UUID，审计字段有值
