@@ -7,14 +7,13 @@
 - [ ] M1: 新建 `mapper/ServerResourceMapper.java` + `resources/mapper/ServerResourceMapper.xml`
        t_server_basic_info：insertServer / updateServer / deleteServer（逻辑删 is_deleted='1'）
        t_server_extend_info：insertExtend / updateExtend / deleteExtend（物理删）
-       t_server_using：insertUsing / updateUsing / deleteUsing（逻辑删）
 - [ ] M2: 扩展 `mapper/EngineBasicInfoMapper.java` + XML：insertEngine / updateEngine / deleteEngine（物理删）
 - [ ] M3: 扩展 `mapper/QcowInfoMapper.java` + XML：insertQcow / updateQcow / deleteQcow（物理删）
 - [ ] M4: 扩展 `mapper/ResourceAttachmentMapper.java` + XML：insertAttachment / updateAttachment / deleteAttachment（物理删）
 
 ### Service 层
 
-- [ ] S1: `service/ServerResourceService.java` + `impl/ServerResourceServiceImpl.java`（basic/extend/using 各 add/update/delete）
+- [ ] S1: `service/ServerResourceService.java` + `impl/ServerResourceServiceImpl.java`（basic/extend 各 add/update/delete）
 - [ ] S2: `service/EngineResourceService.java` + `impl/EngineResourceServiceImpl.java`
 - [ ] S3: `service/QcowResourceService.java` + `impl/QcowResourceServiceImpl.java`
 - [ ] S4: `service/AttachmentResourceService.java` + `impl/AttachmentResourceServiceImpl.java`
@@ -22,10 +21,12 @@
 
 ### Controller 层
 
-- [ ] C1: `controller/ServerResourceController.java`（/simulation/manage/server/basic|extend|using/{add,update,delete}）
+- [ ] C1: `controller/ServerResourceController.java`（/simulation/manage/server/basic|extend/{add,update,delete}）
 - [ ] C2: `controller/EngineResourceController.java`（/simulation/manage/engine/{add,update,delete}）
 - [ ] C3: `controller/QcowResourceController.java`（/simulation/manage/qcow/{add,update,delete}）
 - [ ] C4: `controller/AttachmentResourceController.java`（/simulation/manage/attachment/{add,update,delete}）
+
+> HTTP 方法约定：add/update 用 POST；所有 delete 端点统一 `RequestMethod.DELETE`（@RequestParam 传 id）
 
 ### 测试与验证
 
