@@ -257,7 +257,7 @@
 
 取消（删除）例外备案，取消后由后端重算该（gitUrl + packageName）最新一条扫描记录。**与 `save` 一样需审批人角色（角色码 `security_compilation_options_filing_approver`，纵向鉴权由网关完成）**；服务侧校验当前用户为 `projectId` 对应项目成员，且备案记录 `projectId` 与请求一致。
 
-### 6.1 请求体 `SecOptionFilingDTO`（复用，仅用两个字段）
+### 6.1 请求体 `SecOptionFilingCancelDTO`（独立 DTO，与 save 不共用）
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
