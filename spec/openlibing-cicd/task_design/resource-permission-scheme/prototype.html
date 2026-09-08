@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>资源级权限方案 - 前端原型</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; }
+  body { background: #f0f2f5; padding: 24px; color: #191919; }
+  h1 { font-size: 20px; margin-bottom: 8px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
+  .proto { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 32px; overflow: hidden; }
+  .proto-title { padding: 14px 20px; border-bottom: 1px solid #ebeef5; font-size: 15px; font-weight: 600; background: #fafbfc; }
+  .proto-title .tag { font-size: 12px; font-weight: normal; color: #888; margin-left: 8px; }
+  .proto-note { padding: 10px 20px; background: #fdf6ec; color: #a15c11; font-size: 12.5px; border-bottom: 1px solid #faecd8; }
+  .body { padding: 20px; }
+
+  /* 面包屑 */
+  .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666; margin-bottom: 16px; }
+  .breadcrumb .cur { color: #191919; }
+  .breadcrumb .sep { color: #ccc; }
+
+  /* 页签 */
+  .tabs { display: flex; gap: 4px; border-bottom: 2px solid #e4e7ed; margin-bottom: 16px; }
+  .tab { padding: 8px 18px; font-size: 14px; color: #666; cursor: pointer; border-radius: 4px 4px 0 0; position: relative; }
+  .tab.active { color: #1387ff; font-weight: 600; }
+  .tab.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: #1387ff; }
+  .tab .badge { font-size: 11px; color: #999; margin-left: 4px; }
+  .tab .default-icon { font-size: 11px; background: #f0f9eb; color: #67c23a; padding: 1px 6px; border-radius: 3px; margin-left: 6px; }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .toolbar-left { display: flex; gap: 10px; align-items: center; }
+  .btn-primary { background: #1387ff; color: #fff; border: none; padding: 7px 14px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+  .btn-primary:hover { background: #3c9dff; }
+  .btn-plain { background: #fff; color: #1387ff; border: 1px solid #1387ff; padding: 7px 14px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+  .btn-text { background: none; border: none; color: #1387ff; font-size: 13px; cursor: pointer; padding: 4px 6px; }
+  .btn-text.danger { color: #f56c6c; }
+  .search { border: 1px solid #dcdfe6; border-radius: 4px; padding: 6px 10px; font-size: 13px; color: #999; width: 200px; }
+  .select { border: 1px solid #dcdfe6; border-radius: 4px; padding: 6px 10px; font-size: 13px; background: #fff; color: #666; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #f4f6fa; text-align: left; padding: 10px 12px; color: #191919; font-weight: 600; border-bottom: 1px solid #f0f0f0; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; color: #333; }
+  tr:hover td { background: #f8fbff; }
+
+  .role-pill { display: inline-block; padding: 2px 10px; border-radius: 3px; font-size: 12px; background: #ecf5ff; color: #1387ff; border: 1px solid #d9ecff; }
+  .role-pill.member { background: #f4f4f5; color: #909399; border-color: #e9e9eb; }
+  .role-pill.cie { background: #f0f9eb; color: #67c23a; border-color: #e1f3d8; }
+  .icon-btn { display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; color: #1387ff; font-size: 15px; margin-right: 8px; }
+  .icon-btn.disabled { color: #c0c4cc; cursor: not-allowed; }
+
+  /* tooltip 模拟 */
+  .tip { position: relative; display: inline-block; }
+  .tip .tip-box { display: none; position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%); background: #303133; color: #fff; font-size: 12px; padding: 6px 10px; border-radius: 4px; white-space: nowrap; z-index: 10; }
+  .tip:hover .tip-box { display: block; }
+  .tip .tip-box::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #303133; }
+
+  /* 弹窗 */
+  .dialog-mask { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; align-items: flex-start; justify-content: center; padding-top: 60px; z-index: 100; }
+  .dialog-mask.open { display: flex; }
+  .dialog { background: #fff; border-radius: 8px; width: 720px; max-width: 94vw; box-shadow: 0 4px 24px rgba(0,0,0,.2); }
+  .dialog-header { display: flex; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #ebeef5; font-size: 15px; font-weight: 600; }
+  .dialog-body { padding: 20px; max-height: 60vh; overflow-y: auto; }
+  .dialog-footer { padding: 12px 20px; border-top: 1px solid #ebeef5; text-align: right; display: flex; justify-content: flex-end; gap: 10px; }
+
+  .form-row { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 13px; color: #666; margin-bottom: 6px; }
+  .form-label .req { color: #f56c6c; margin-right: 2px; }
+  .form-input { width: 100%; border: 1px solid #dcdfe6; border-radius: 4px; padding: 8px 10px; font-size: 13px; }
+  .form-input:focus { outline: none; border-color: #1387ff; }
+  .form-hint { font-size: 12px; color: #999; margin-top: 4px; }
+
+  .scheme-info-banner { background: #ecf5ff; border: 1px solid #d9ecff; border-radius: 4px; padding: 10px 14px; font-size: 12.5px; color: #3a6; margin-bottom: 16px; color: #2b6cb0; line-height: 1.7; }
+
+  .switch-row { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 14px; }
+  .switch { width: 36px; height: 18px; background: #1387ff; border-radius: 9px; position: relative; }
+  .switch::after { content: ""; position: absolute; right: 2px; top: 2px; width: 14px; height: 14px; background: #fff; border-radius: 50%; }
+  .switch.off { background: #dcdfe6; }
+  .switch.off::after { left: 2px; right: auto; }
+
+  .radio-card { border: 1px solid #dcdfe6; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; cursor: pointer; font-size: 13px; }
+  .radio-card.selected { border-color: #1387ff; background: #f0f9ff; }
+  .radio-card .rc-title { font-weight: 600; margin-bottom: 4px; }
+  .radio-card .rc-desc { color: #999; font-size: 12px; }
+  .radio-card .rc-desc b { color: #1387ff; font-weight: normal; }
+
+  .arrow-flow { display: flex; align-items: center; gap: 8px; color: #bbb; margin: 6px 0 14px 24px; font-size: 16px; }
+  .step-num { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; background: #1387ff; color: #fff; font-size: 12px; align-items: center; justify-content: center; margin-right: 6px; }
+
+  .col-new { background: #f0f9eb !important; }
+  .col-new-tag { font-size: 11px; background: #f0f9eb; color: #67c23a; padding: 1px 5px; border-radius: 3px; margin-left: 6px; border: 1px solid #e1f3d8; }
+  .legend { font-size: 12px; color: #67c23a; margin-top: 6px; }
+  .scheme-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 3px; font-size: 12px; background: #fdf6ec; color: #a15c11; border: 1px solid #faecd8; }
+  .scheme-tag.default { background: #f4f4f5; color: #909399; border-color: #e9e9eb; }
+  .section-label { font-size: 13px; font-weight: 600; margin: 18px 0 10px; color: #333; }
+</style>
+</head>
+<body>
+
+<h1>资源级权限方案（权限方案 / Permission Scheme）- 前端原型</h1>
+<div class="subtitle">基于现有「项目管理-成员管理」页面（openlibing-web / projectUserManage.vue）与「流水线列表」页面（openlibing-cicd-web / pipeline.vue）的交互模式扩展。绿色底/绿框 = 本次新增元素。</div>
+
+<!-- ==================== 原型1：成员管理页（方案页签） ==================== -->
+<div class="proto">
+  <div class="proto-title">原型 1 <span class="tag">项目管理 → 成员管理（openlibing-web 主应用，新增「权限方案」页签区）</span></div>
+  <div class="proto-body body">
+    <div class="breadcrumb">项目管理 <span class="sep">/</span> <span class="cur">成员管理：openLibing-Platform</span></div>
+
+    <div class="tabs">
+      <div class="tab active">默认方案 <span class="default-icon">当前生效</span><span class="badge">(=项目成员)</span></div>
+      <div class="tab">生产发布管控 <span class="badge">自定义方案</span></div>
+      <div class="tab"> + 新建方案</div>
+    </div>
+
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button class="btn-primary">+ 添加成员</button>
+        <button class="btn-plain" onclick="document.getElementById('dlg-copy').classList.add('open')">基于本方案复制新方案</button>
+        <button class="btn-plain">导出成员</button>
+      </div>
+      <div class="toolbar-left">
+        <input class="search" placeholder="搜索账号 / 姓名">
+        <select class="select"><option>角色：全部</option><option>流水线工程师</option><option>项目成员</option></select>
+        <span style="color:#1387ff;font-size:13px;cursor:pointer">刷新</span>
+      </div>
+    </div>
+
+    <table>
+      <tr><th>用户名</th><th>角色</th><th>gitCode账号用户名</th><th>gitee账号用户名</th><th>创建时间</th><th>备注</th><th>操作</th></tr>
+      <tr>
+        <td>zhangsan</td>
+        <td><span class="role-pill">项目管理员</span></td>
+        <td>zhangsan-gc</td><td>zhangsan</td><td>2026-08-12 10:22</td><td></td>
+        <td><span class="icon-btn">✎</span><span class="icon-btn">🗑</span></td>
+      </tr>
+      <tr>
+        <td>lisi</td>
+        <td><span class="role-pill cie">流水线工程师</span></td>
+        <td>lisi-gc</td><td>lisi</td><td>2026-08-14 09:15</td><td></td>
+        <td><span class="icon-btn">✎</span><span class="icon-btn">🗑</span></td>
+      </tr>
+      <tr>
+        <td>wangwu</td>
+        <td><span class="role-pill cie">流水线工程师</span></td>
+        <td>wangwu-gc</td><td>wangwu</td><td>2026-08-20 14:30</td><td></td>
+        <td><span class="icon-btn">✎</span><span class="icon-btn">🗑</span></td>
+      </tr>
+      <tr>
+        <td>zhaoliu</td>
+        <td><span class="role-pill member">项目成员</span></td>
+        <td>zhaoliu-gc</td><td>zhaoliu</td><td>2026-08-22 16:41</td><td></td>
+        <td><span class="icon-btn">✎</span><span class="icon-btn">🗑</span></td>
+      </tr>
+    </table>
+    <div class="legend" style="color:#888">▲ 默认方案页签即现状成员管理数据（user_role_info），操作仍走现有接口，不允许删除该页签</div>
+  </div>
+</div>
+
+<!-- ==================== 原型2：自定义方案页签 ==================== -->
+<div class="proto">
+  <div class="proto-title">原型 2 <span class="tag">同页面切到「生产发布管控」自定义方案页签</span></div>
+  <div class="proto-body body">
+    <div class="tabs">
+      <div class="tab">默认方案 <span class="badge">(=项目成员)</span></div>
+      <div class="tab active">生产发布管控 <span class="badge">自定义方案</span></div>
+      <div class="tab"> + 新建方案</div>
+    </div>
+
+    <div class="scheme-info-banner">
+      方案说明：仅允许指定人员触发生产发布类流水线（绑定资源见各流水线列表的方案标识）<br>
+      基于「默认方案」复制创建于 2026-09-08，与来源方案互不联动 · 复制来源：<b>默认方案</b>
+    </div>
+
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button class="btn-primary">+ 添加成员</button>
+        <button class="btn-plain">基于本方案复制新方案</button>
+        <span class="tip"><span class="icon-btn disabled" style="color:#f56c6c">🗑</span>
+          <span class="tip-box">该方案已被 2 条流水线绑定，需先在流水线列表解绑后才能删除</span>
+        </span>
+        <span style="font-size:12px;color:#f56c6c;margin-left:-6px">删除方案（被占用，不可点，悬停提示原因）</span>
+      </div>
+      <div class="toolbar-left">
+        <input class="search" placeholder="搜索账号 / 姓名">
+        <select class="select"><option>角色：全部</option></select>
+      </div>
+    </div>
+
+    <table>
+      <tr><th>用户名</th><th>角色</th><th>gitCode账号用户名</th><th>创建时间</th><th>操作</th></tr>
+      <tr>
+        <td>lisi</td>
+        <td><span class="role-pill cie">流水线工程师</span></td>
+        <td>lisi-gc</td><td>2026-09-08 11:02</td>
+        <td><span class="icon-btn">✎</span><span class="icon-btn">🗑</span></td>
+      </tr>
+      <tr>
+        <td>wangwu</td>
+        <td><span class="role-pill member">项目成员</span></td>
+        <td>wangwu-gc</td><td>2026-09-08 11:02</td>
+        <td><span class="icon-btn">✎</span><span class="icon-btn">🗑</span></td>
+      </tr>
+    </table>
+    <div class="legend" style="color:#888">▲ 对比默认方案：wangwu 从「流水线工程师」调整为「项目成员」——lisi 可触发绑定的关键流水线，wangwu 不可以</div>
+  </div>
+</div>
+
+<!-- ==================== 原型3：复制方案弹窗 ==================== -->
+<div class="proto">
+  <div class="proto-title">原型 3 <span class="tag">「新建方案」弹窗（支持空白创建 / 基于已有方案复制，含默认方案）</span></div>
+  <div class="proto-body body">
+    <div class="dialog" style="position:static;box-shadow:none;width:100%">
+      <div class="dialog-header"><span>新建权限方案</span><span style="color:#999;font-weight:normal">✕</span></div>
+      <div class="dialog-body">
+        <div class="form-row">
+          <label class="form-label"><span class="req">*</span>方案名称</label>
+          <input class="form-input" value="生产发布管控">
+          <div class="form-hint">同项目下方案名称不可重复</div>
+        </div>
+        <div class="form-row">
+          <label class="form-label"><span class="req">*</span>方案描述</label>
+          <input class="form-input" value="仅允许指定人员触发生产发布类流水线">
+          <div class="form-hint">标识该方案的用途，方便其他管理员理解</div>
+        </div>
+        <div class="section-label"><span class="step-num">1</span>创建方式</div>
+        <div class="radio-card selected">
+          <div class="rc-title">基于已有方案复制（推荐）</div>
+          <div class="rc-desc">复制来源：<b>默认方案（当前项目成员 128 人）</b> ▾ &nbsp;&nbsp;创建后可自由调整成员与角色，与来源方案互不联动</div>
+        </div>
+        <div class="radio-card">
+          <div class="rc-title">创建空白方案</div>
+          <div class="rc-desc">从一个没有任何成员的方案开始，手动逐个添加</div>
+        </div>
+        <div class="section-label"><span class="step-num">2</span>确认信息</div>
+        <div style="font-size:12.5px;color:#888;line-height:1.8;background:#fafbfc;border-radius:4px;padding:10px 12px">
+          将从「默认方案」复制 <b>128</b> 条成员角色记录 · 复制完成后新方案默认未绑定任何资源 · 可随时在流水线列表将某条流水线切换为本方案
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn-plain" style="border-color:#dcdfe6;color:#666">取 消</button>
+        <button class="btn-primary">创建方案</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 原型4：流水线列表（方案配置入口） ==================== -->
+<div class="proto">
+  <div class="proto-title">原型 4 <span class="tag">流水线列表（openlibing-cicd-web / pipeline.vue，新增「权限方案」列 + 配置入口）</span></div>
+  <div class="proto-note">与现有 NoPermissionPopover 交互保持一致：无权限操作时图标置灰，悬停显示不可操作原因。</div>
+  <div class="proto-body body">
+    <table>
+      <tr>
+        <th>名称</th><th>最近一次执行</th><th>工作流</th><th>开始时间&执行时长</th>
+        <th style="background:#edf7e8">权限方案<span class="col-new-tag">新增列</span></th>
+        <th>操作</th>
+      </tr>
+      <tr>
+        <td>openlibing-cicd-master-CI</td>
+        <td>✅ COMPLETED</td><td>7 个任务</td><td>09-08 10:22 / 3m12s</td>
+        <td class="col-new"><span class="scheme-tag default">默认方案</span></td>
+        <td>
+          <span class="icon-btn">▶</span><span class="icon-btn">⇄</span>
+          <span class="tip"><span class="icon-btn">🛡</span><span class="tip-box">配置该流水线使用的权限方案</span></span>
+        </td>
+      </tr>
+      <tr>
+        <td><b>prod-release-deploy</b></td>
+        <td>✅ COMPLETED</td><td>12 个任务</td><td>09-08 02:00 / 18m45s</td>
+        <td class="col-new"><span class="scheme-tag">生产发布管控</span></td>
+        <td>
+          <span class="tip"><span class="icon-btn disabled">▶</span>
+            <span class="tip-box">该流水线已启用资源级管控（方案：生产发布管控），悬停气泡见下方对照</span></span>
+          <span class="icon-btn disabled">⇄</span>
+          <span class="icon-btn">🛡</span>
+        </td>
+      </tr>
+      <tr>
+        <td>nightly-full-test</td>
+        <td>🔄 RUNNING</td><td>23 个任务</td><td>09-08 06:00 / 2h10m</td>
+        <td class="col-new"><span class="scheme-tag default">默认方案</span></td>
+        <td>
+          <span class="icon-btn">⏸</span><span class="icon-btn">⇄</span>
+          <span class="icon-btn">🛡</span>
+        </td>
+      </tr>
+    </table>
+    <div class="legend">▲ 第 2 行演示关键场景：绑定自定义方案后，非方案成员的运行按钮置灰，悬停提示具体原因（哪个方案、为什么没权限）；权限方案列展示当前生效方案标识，默认方案显示灰色</div>
+  </div>
+</div>
+
+<!-- ==================== 原型5：流水线方案配置弹窗 ==================== -->
+<div class="proto">
+  <div class="proto-title">原型 5 <span class="tag">单条流水线的方案配置弹窗（点击 🛡 图标）</span></div>
+  <div class="proto-body body">
+    <div class="dialog" style="position:static;box-shadow:none;width:100%">
+      <div class="dialog-header"><span>权限方案配置 · prod-release-deploy</span><span style="color:#999;font-weight:normal">✕</span></div>
+      <div class="dialog-body">
+        <div class="switch-row">
+          <div class="switch"></div>
+          <span>启用资源级权限管控（关闭后该流水线走默认方案，全员按角色鉴权）</span>
+        </div>
+        <div class="form-row">
+          <label class="form-label"><span class="req">*</span>选择权限方案</label>
+          <select class="form-input">
+            <option selected>生产发布管控（2 名成员：lisi-流水线工程师、wangwu-项目成员）</option>
+            <option>核心变更审批（5 名成员）</option>
+            <option disabled>已失效方案（被其他资源占用中？否——已删除的方案不会出现在此）</option>
+          </select>
+          <div class="form-hint">仅显示本项目下的自定义方案；方案成员明细可在「项目管理-成员管理」对应页签查看</div>
+        </div>
+        <div class="scheme-info-banner" style="margin-top:14px">
+          ⚠ 绑定后行为变化提示（管理员确认项）：<br>
+          1. 该流水线关联的公开仓不再享受"公开仓免登录"待遇，匿名访问将被拒绝<br>
+          2. 未加入所选方案的项目管理员、流水线工程师将失去该流水线的<b>全部</b>操作权限（含查看详情/日志）<br>
+          3. 系统管理员不受影响
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn-plain" style="border-color:#dcdfe6;color:#666">取 消</button>
+        <button class="btn-primary">保存并生效</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 原型6：无权限气泡双模式对照 ==================== -->
+<div class="proto">
+  <div class="proto-title">原型 6 <span class="tag">无权限气泡双模式（对齐现有 NoPermissionPopover 三段式，新增方案版分支）</span></div>
+  <div class="proto-note">现状气泡引导"申请角色"，但绑定方案的资源上加角色无用——按后端错误码（PERMISSION_DENIED vs PERMISSION_DENIED_BY_SCHEME）切换气泡类型。</div>
+  <div class="proto-body body" style="display:flex;gap:20px;flex-wrap:wrap">
+    <!-- 左：现状角色版气泡（未绑定资源被拒时，保持现状不变） -->
+    <div style="flex:1;min-width:300px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:#888">① 角色版（现状，未绑定资源被拒——用户无感知，与今天完全一致）</div>
+      <div class="no-perm-popover" style="border:1px solid #ebeef5;border-radius:10px;overflow:hidden">
+        <div style="padding:12px 14px 10px;background:linear-gradient(180deg,#fff1f0 0%,#fff 100%);border-bottom:1px solid #ffd6cd">
+          <div style="font-size:13.5px;font-weight:600">🔒 暂无权限 <span style="font-size:11px;background:#eef2fb;color:#3f57b3;padding:0 6px;border-radius:3px">运行流水线</span></div>
+          <div style="margin-top:6px;font-size:12px;color:#4e5969">需要下列任一角色，请按照最小权限粒度进行申请。</div>
+        </div>
+        <div style="padding:10px 14px">
+          <div style="padding:8px 10px;background:#fafbfc;border:1px solid #e5e6eb;border-radius:6px;margin-bottom:5px">
+            <span style="background:#1c7c8a;color:#fff;font-size:11px;padding:2px 8px;border-radius:3px">项目</span>
+            <span style="background:#fff;border:1px solid #e5e6eb;font-size:11.5px;padding:2px 8px;border-radius:12px;margin-left:4px">流水线工程师</span>
+            <span style="background:#fff;border:1px solid #e5e6eb;font-size:11.5px;padding:2px 8px;border-radius:12px;margin-left:4px">流水线执行者</span>
+            <div style="font-size:9.5px;color:#9aa1ac;margin-top:6px;padding-top:6px;border-top:1px dashed #d6dae0">申请指引：<span style="color:#4e5969">联系项目管理员添加角色，项目管理-&gt;成员管理</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 右：新增方案版气泡（绑定资源被拒时，指引精确到方案+角色） -->
+    <div style="flex:1;min-width:300px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:#67c23a">② 方案版（新增，绑定资源被拒——指引精确到"方案 + 角色"两级）</div>
+      <div class="no-perm-popover" style="border:1px solid #ebeef5;border-radius:10px;overflow:hidden">
+        <div style="padding:12px 14px 10px;background:linear-gradient(180deg,#fff1f0 0%,#fff 100%);border-bottom:1px solid #ffd6cd">
+          <div style="font-size:13.5px;font-weight:600">🔒 暂无权限 <span style="font-size:11px;background:#eef2fb;color:#3f57b3;padding:0 6px;border-radius:3px">运行流水线</span></div>
+          <div style="margin-top:6px;font-size:12px;color:#4e5969">该流水线已启用资源级权限管控，申请角色无法直接获得权限。</div>
+        </div>
+        <div style="padding:10px 14px">
+          <div style="padding:8px 10px;background:#fafbfc;border:1px solid #e5e6eb;border-radius:6px;margin-bottom:5px">
+            <span style="background:#a15c11;color:#fff;font-size:11px;padding:2px 8px;border-radius:3px">方案</span>
+            <span style="background:#fdf6ec;border:1px solid #faecd8;color:#a15c11;font-size:11.5px;padding:2px 8px;border-radius:12px;margin-left:4px">生产发布管控</span>
+            <div style="margin-top:6px;font-size:11.5px;color:#4e5969">需由项目管理员在<b>方案「生产发布管控」</b>中为你配置以下角色（仅加入默认方案或项目成员<b>无效</b>）：</div>
+            <div style="margin-top:4px">
+              <span style="background:#fff;border:1px solid #e5e6eb;font-size:11.5px;padding:2px 8px;border-radius:12px;margin-right:4px">流水线工程师</span>
+              <span style="background:#fff;border:1px solid #e5e6eb;font-size:11.5px;padding:2px 8px;border-radius:12px">流水线执行者</span>
+            </div>
+            <div style="font-size:9.5px;color:#9aa1ac;margin-top:6px;padding-top:6px;border-top:1px dashed #d6dae0">申请指引：<span style="color:#4e5969">联系项目管理员，项目管理-&gt;成员管理-&gt;「生产发布管控」方案页签</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 下：匿名访问绑定资源（公开仓场景两步分离） -->
+    <div style="flex-basis:100%">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:#67c23a">③ 匿名提示（新增，匿名访问绑定资源——先引导登录，不做权限判断）</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:280px;border:1px solid #faecd8;border-radius:10px;padding:14px 16px;background:linear-gradient(180deg,#fdf6ec 0%,#fff 100%)">
+          <div style="font-size:13.5px;font-weight:600">🔒 该资源为关键管控资源</div>
+          <div style="margin-top:6px;font-size:12.5px;color:#4e5969;line-height:1.7">
+            此流水线已启用资源级权限管控，请先登录以验证您的身份与访问权限。<br>
+            <span style="color:#a15c11">点击登录后将继续为您判断访问权限</span>
+          </div>
+          <div style="margin-top:10px"><button class="btn-primary" style="font-size:12px;padding:5px 12px">前往登录</button></div>
+          <div style="font-size:11px;color:#c9cdd4;margin-top:8px">注：未配置管控方案的流水线不受影响，公开仓仍可匿名访问</div>
+        </div>
+        <div style="flex:1;min-width:280px;font-size:12px;color:#888;line-height:1.9;align-self:center">
+          处理链路：<br>
+          1. 匿名访问绑定资源 → 返回 <b>LOGIN_REQUIRED_BY_SCHEME</b>（401 语义）→ 展示本卡片"请先登录"<br>
+          2. 登录后不在方案内 → 返回 <b>PERMISSION_DENIED_BY_SCHEME</b>（403）→ 展示上方②方案版气泡<br>
+          3. 未绑定资源 → 完全现状行为（公开仓匿名可看，用户无感知）
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 页签切换演示（原型1/2之间的说明用，静态原型仅示意）
+</script>
+</body>
+</html>
