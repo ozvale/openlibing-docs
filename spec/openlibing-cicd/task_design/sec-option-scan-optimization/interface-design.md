@@ -100,7 +100,7 @@
   "pageSize": 20,
   "records": [
     {
-      "id": 1234567890,
+      "id": "1234567890",
       "repoUrl": "gitcode.com/DrivingSDK/core",
       "pipelineName": "nightly-build",
       "runNumber": "512",
@@ -128,7 +128,7 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `id` | Long | 记录 ID |
+| `id` | String | 记录 ID（字符串传递，避免 64 位 Long 失真后按 id 查询失败） |
 | `repoUrl` | String | 代码仓链接（`gitcode.com/owner/repo`） |
 | `pipelineName` | String | 流水线名称 |
 | `runNumber` | String | 流水线运行编号 |
@@ -230,7 +230,7 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `id` | Long | 否 | 更新时传入（存在则更新该条；不传则按唯一键 upsert） |
+| `id` | String | 否 | 更新时传入（存在则更新该条；不传则按唯一键 upsert）。字符串传递，避免 64 位 Long 失真 |
 | `projectId` | String | 是 | 项目 ID |
 | `gitUrl` | String | 是 | 代码仓完整链接（如 `https://gitcode.com/owner/repo.git`） |
 | `packageName` | String | 是 | 产物包名 |
@@ -244,10 +244,10 @@
 ### 5.2 响应体
 
 ```json
-{ "code": 0, "msg": "success", "data": 1234567890 }
+{ "code": 0, "msg": "success", "data": "1234567890" }
 ```
 
-`data` 为备案记录 ID（Long）。
+`data` 为备案记录 ID（String）。
 
 ---
 
@@ -261,7 +261,7 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `id` | Long | 是 | 备案记录 ID |
+| `id` | String | 是 | 备案记录 ID（字符串传递，避免 64 位 Long 失真） |
 | `projectId` | String | 是 | 项目 ID（用于项目隔离校验，须与备案记录所属项目一致） |
 
 ### 6.2 响应体
@@ -283,7 +283,7 @@
 | 字段 | 类型 | 必填 | 筛选能力 | 说明 |
 |------|------|------|----------|------|
 | `projectId` | String | 是 | 精确（项目隔离） | 项目 ID |
-| `recordId` | Long | 是 | 精确 | 扫描记录 ID（定位该记录下的已备案项） |
+| `recordId` | String | 是 | 精确 | 扫描记录 ID（定位该记录下的已备案项），字符串传递，避免 64 位 Long 失真 |
 | `filePath` | String | 否 | 模糊 | 文件相对路径，对 `file_path` 做 LIKE |
 | `optionKey` | String | 否 | 精确 | 扫描项 key，对虚拟行 `option_key` 做 = |
 | `filerName` | String | 否 | 模糊 | 备案人账号名，对虚拟行 `filer_name` 做 LIKE |
@@ -299,6 +299,7 @@
   "pageSize": 20,
   "records": [
     {
+      "id": "10000001",
       "filePath": "mx_driving/lib/libperception.so",
       "optionKey": "fortify",
       "rawValue": "NO",
@@ -316,6 +317,7 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
+| `id` | String | 备案记录 ID（字符串传递，调用取消备案接口时传入，避免 64 位 Long 失真） |
 | `filePath` | String | 文件相对路径 |
 | `optionKey` | String | 扫描项 key |
 | `rawValue` | String | 原始扫描值（备案前） |
@@ -358,7 +360,7 @@
   "pageSize": 20,
   "records": [
     {
-      "id": 1000001,
+      "id": "1000001",
       "repoUrl": "gitcode.com/DrivingSDK/core",
       "packageName": "DrivingSDK_v2.1.0_3.8_aarch64.tar.gz",
       "filePath": "mx_driving/lib/libperception.so",
@@ -376,7 +378,7 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `id` | Long | 备案记录 ID（删除操作使用） |
+| `id` | String | 备案记录 ID（删除操作使用，字符串传递避免 64 位 Long 失真） |
 | `repoUrl` | String | 代码仓链接（`gitcode.com/owner/repo`） |
 | `packageName` | String | 产物包名 |
 | `filePath` | String | 文件相对路径 |
