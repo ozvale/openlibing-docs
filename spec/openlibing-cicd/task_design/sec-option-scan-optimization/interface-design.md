@@ -48,7 +48,7 @@
 | 角色码 | `security_compilation_options_filing_approver` |
 | 作用写接口 | `/sec-option/filing/save`、`/sec-option/filing/cancel` |
 | 鉴权方式 | 纵向角色鉴权由网关完成（校验当前登录 `userId` 持有该角色或为 `admin`，不足则 403）；服务侧仅做项目级横向鉴权——校验当前登录 `userId` 为 `projectId` 对应项目的成员，否则返回 403 |
-| 业务例外 | 只读/跨项目的接口（`record-list`、`by-record`）不要求专用角色，仅需项目成员校验；`save` 与 `cancel` 均为备案写操作，都需要审批人角色（权限一致），`cancel` 另校验备案记录 `projectId` 与请求一致，防止伪造越权 |
+| 业务例外 | 只读接口（`overview`、`file-detail`、`record-list`、`filing/list`）不要求专用角色，仅需项目成员校验；`save` 与 `cancel` 均为备案写操作，都需要审批人角色（权限一致），`cancel` 另校验备案记录 `projectId` 与请求一致，防止伪造越权 |
 | 备案人/备案时间 | 备案人 ID/姓名由后端取 gateway 注入的 `userId`/`userName` 写入 `sec_option_filing` 表，前端无需也不应传备案人字段；备案时间后端取当前时间写入 |
 
 ---
@@ -61,7 +61,7 @@
 | 文件详情 | `POST /build-artifact/sec-option/file-detail` | 二/三级页的包内文件逐项检测结果 | 增强 |
 | 保存备案 | `POST /build-artifact/sec-option/filing/save` | 创建/更新例外备案 | 新增 |
 | 取消备案 | `POST /build-artifact/sec-option/filing/cancel` | 取消（删除）例外备案，并重算该记录 | 新增 |
-| 扫描记录已备案项 | `POST /build-artifact/sec-option/filing/by-record` | 某产物包扫描记录下的已备案项列表（SQL 分页） | 新增 |
+| 待备案项列表 | `POST /build-artifact/sec-option/filing/list` | 某产物包扫描记录下文件×扫描项扁平行列表（SQL 分页） | 新增 |
 | 备案记录列表 | `POST /build-artifact/sec-option/filing/record-list` | 独立备案记录页（跨包） | 新增 |
 | 扫描结果上报 | `POST /build-artifact/sec-option/report` | 插件调用，前端不涉及 | 不变 |
 
@@ -272,36 +272,52 @@
 
 ---
 
-## 7. 扫描记录已备案项接口
+## 7. 待备案项列表接口
 
-`POST /build-artifact/sec-option/filing/by-record`
+`POST /build-artifact/sec-option/filing/list`
 
-二/三级页：查询**某条扫描记录下已备案的文件×扫描项**（分页）。数据来源为 `sec_option_scan_file_detail.filed_options` JSON 数组经 MySQL `JSON_TABLE` 展开为虚拟行，单表 SQL 分页（无 JOIN 备案表）。**只读，需项目成员校验 + 记录归属校验**。
+三级「待备案项列表」页：把某条扫描记录下的**文件×扫描项**降维为扁平行列表，每行 = 一个"文件×扫描项"组合（已扫描且适用，扫描值 YES/NO），服务端 SQL 分页下推（**非内存分页**）。**每行自动区分备案状态**：未备案行 `id` 为空（可勾选批量备案），已备案行带备案记录 `id`（可取消备案）。数据来源为 `sec_option_scan_file_detail` 与 14 个扫描项 key 笛卡尔展开 + `JSON_TABLE` 关联 `filed_options`，单表 SQL 分页（无 JOIN 备案表）。**只读，需项目成员校验 + 记录归属校验**。
 
-### 7.1 请求体 `SecOptionFiledItemQueryDTO`
+### 7.1 请求体 `SecOptionFilingRowQueryDTO`
 
 | 字段 | 类型 | 必填 | 筛选能力 | 说明 |
 |------|------|------|----------|------|
 | `projectId` | String | 是 | 精确（项目隔离） | 项目 ID |
-| `recordId` | String | 是 | 精确 | 扫描记录 ID（定位该记录下的已备案项），字符串传递，避免 64 位 Long 失真 |
-| `filePath` | String | 否 | 模糊 | 文件相对路径，对 `file_path` 做 LIKE |
-| `optionKey` | String | 否 | 精确 | 扫描项 key，对虚拟行 `option_key` 做 = |
-| `filerName` | String | 否 | 模糊 | 备案人账号名，对虚拟行 `filer_name` 做 LIKE |
+| `recordId` | String | 是 | 精确 | 扫描记录 ID（定位该记录下的文件×扫描项行），字符串传递，避免 64 位 Long 失真 |
+| `filePath` | String | 否 | 模糊 | 文件路径，对 `file_path` 做 LIKE `%value%` |
+| `optionKeys` | Array\<String\> | 否 | **多选** | 扫描项 key 多选，对 `option_key` 做 IN；空则不按扫描项过滤 |
+| `scanValues` | Array\<String\> | 否 | **多选** | 扫描值多选，仅允许 `YES`/`NO`，对 `raw_value` 做 IN；空默认只查 `[NO]`（只看不满足项） |
+| `filedStatus` | String | 否 | 精确 | 备案状态筛：`FILED` 有备案 / `UNFILED` 未备案 / `ALL` 全部；空默认 `ALL` |
 | `pageNum` | Integer | 否 | 分页 | 默认 1 |
 | `pageSize` | Integer | 否 | 分页 | 默认 20 |
 
-### 7.2 响应体 `SecOptionFiledItemVO`
+> 每条扁平行对应一次"文件×扫描项"，跨页/n 条总数为 SQL `COUNT` 下推结果，前端直接以 `total` 展示，跨页勾选可基于 `id` 集合维护。
+
+### 7.2 响应体 `SecOptionFilingRowVO`
+
+`records` 中每行 `SecOptionFilingRow`（未备案行 `id`/`filingValue`/备案人字段为 null）：
 
 ```json
 {
-  "total": 12,
+  "total": 48,
   "pageNum": 1,
   "pageSize": 20,
   "records": [
     {
-      "id": "10000001",
+      "id": null,
       "filePath": "mx_driving/lib/libperception.so",
       "optionKey": "fortify",
+      "rawValue": "NO",
+      "filingValue": null,
+      "filerId": null,
+      "filerName": null,
+      "filingTime": null,
+      "reason": null
+    },
+    {
+      "id": "10000001",
+      "filePath": "mx_driving/lib/libperception.so",
+      "optionKey": "nx",
       "rawValue": "NO",
       "filingValue": "YES",
       "filerId": "10086",
@@ -313,19 +329,21 @@
 }
 ```
 
-`SecOptionFiledItem` 字段：
+`SecOptionFilingRow` 字段：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `id` | String | 备案记录 ID（字符串传递，调用取消备案接口时传入，避免 64 位 Long 失真） |
+| `id` | String | 备案记录 ID（字符串传递；未备案行为 null；已备案行作为取消备案接口入参） |
 | `filePath` | String | 文件相对路径 |
 | `optionKey` | String | 扫描项 key |
-| `rawValue` | String | 原始扫描值（备案前） |
-| `filingValue` | String | 备案值（`YES`/`NO`） |
-| `filerId` | String | 备案人 ID |
-| `filerName` | String | 备案人账号名 |
-| `filingTime` | String | 备案时间（`yyyy-MM-dd HH:mm:ss`） |
-| `reason` | String | 备案理由 |
+| `rawValue` | String | 原始扫描值（上报检测值，`YES`/`NO`） |
+| `filingValue` | String | 备案值（已备案行为 `YES`/`NO`，未备案行为 null） |
+| `filerId` | String | 备案人 ID（未备案行为 null） |
+| `filerName` | String | 备案人账号名（未备案行为 null） |
+| `filingTime` | String | 备案时间（未备案行为 null，`yyyy-MM-dd HH:mm:ss`） |
+| `reason` | String | 备案理由（未备案行为 null） |
+
+> 前端展示约定：`id == null` 为可勾选批量备案行；`id != null` 为已备案行，展示 `rawValue → filingValue` 划线原值并提供"取消备案"。
 
 ---
 
@@ -335,7 +353,7 @@
 
 独立「安全编译选项备案记录」页：跨产物包总览所有备案记录（含备案人、备案时间）。**只读，无需专用角色**（但需登录进入项目）。
 
-### 7.1 请求体 `SecOptionFilingRecordQueryDTO`
+### 8.1 请求体 `SecOptionFilingRecordQueryDTO`
 
 | 字段 | 类型 | 必填 | 筛选/排序能力 | 说明 |
 |------|------|------|--------------|------|
@@ -351,7 +369,7 @@
 | `pageNum` | Integer | 否 | 分页 | 默认 1 |
 | `pageSize` | Integer | 否 | 分页 | 默认 20 |
 
-### 7.2 响应体 `SecOptionFilingRecordVO`
+### 8.2 响应体 `SecOptionFilingRecordVO`
 
 ```json
 {
