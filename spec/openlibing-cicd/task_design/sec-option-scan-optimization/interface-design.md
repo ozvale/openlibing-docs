@@ -114,11 +114,11 @@
       "downloadUrl": "https://...",
       "downloadAccessible": true,
       "detectionCompletedAt": "2026-09-02 15:20:00",
-      "overviewData": {
-        "bindNow": { "totalFiles": 80, "applicableFiles": 79, "yesCount": 68, "rate": "86.08%" },
-        "nx": { "scanned": false },
-        "...": "..."
-      }
+      "overviewData": [
+        { "key": "bindNow", "scanned": true, "totalFiles": 80, "applicableFiles": 79, "yesCount": 68, "rate": "86.08%", "confirmedFiles": 5, "confirmationCoverage": "87.34%" },
+        { "key": "nx", "scanned": false, "totalFiles": 0, "applicableFiles": 0, "yesCount": 0, "rate": "N/A", "confirmedFiles": 0, "confirmationCoverage": "N/A" },
+        "..."
+      ]
     }
   ]
 }
@@ -142,13 +142,25 @@
 | `downloadUrl` | String | 产物下载链接 |
 | `downloadAccessible` | Boolean | 下载是否可访问 |
 | `detectionCompletedAt` | String | 检测完成时间（`yyyy-MM-dd HH:mm:ss`） |
-| `overviewData` | Map | 逐扫描项数据，见下 |
+| `overviewData` | Array\<OverviewOption\> | 逐扫描项数据数组，按固定 14 项顺序排列，见下 |
 
-`overviewData` 每个扫描项（key 固定为 14 项）：
+`overviewData` 数组元素 `OverviewOption`（固定 14 项顺序，前端据此渲染避免对象键序不一致）：
 
-- **已扫描项**：`{ "totalFiles": int, "applicableFiles": int, "yesCount": int, "rate": "86.08%" }`
-  - `rate` 为字符串百分比（`"N/A"` 表示已扫描但不适用），前端直接展示。
-- **未扫描项**：`{ "scanned": false }`，前端应隐藏该扫描项。
+- **已扫描项**：`{ "key": "bindNow", "scanned": true, "totalFiles": int, "applicableFiles": int, "yesCount": int, "rate": "86.08%", "confirmedFiles": int, "confirmationCoverage": "87.34%" }`
+- **未扫描项**：`{ "key": "fstackCheck", "scanned": false, "totalFiles": 0, "applicableFiles": 0, "yesCount": 0, "rate": "N/A", "confirmedFiles": 0, "confirmationCoverage": "N/A" }`，前端应隐藏该扫描项。
+
+`OverviewOption` 字段说明：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `key` | String | 扫描项 key（如 `bindNow`、`nx`），前端据此映射展示 |
+| `scanned` | Boolean | 是否扫描 |
+| `totalFiles` | Integer | 总文件数 |
+| `applicableFiles` | Integer | 实际参与数（排除 N/A 的文件数） |
+| `yesCount` | Integer | 满足数（检测结果为 YES 的文件数） |
+| `rate` | String | 检测结果覆盖率（字符串百分比，如 `"86.08%"`；已扫描但不适用为 `"N/A"`） |
+| `confirmedFiles` | Integer | 已确认文件数（该扫描项有备案记录的文件数） |
+| `confirmationCoverage` | String | 确认结果覆盖率（备案后满足数/实际参与数，如 `"87.34%"` 或 `"N/A"`） |
 
 ---
 
