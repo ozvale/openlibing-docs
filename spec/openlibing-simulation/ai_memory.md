@@ -19,14 +19,14 @@
 
 ### 框架版本
 
-| 组件 | 版本 | 说明 |
-|------|------|------|
-| Java | 21 | 必选 |
-| Spring Boot | 3.4.5 | 必选 |
-| MyBatis | 3.0.4 | ORM 框架 |
-| MyBatis Plus | 3.5.x | 扩展 ORM |
-| Liquibase | - | 数据库迁移 |
-| JSch | 0.2.16 | SSH 连接 |
+| 组件         | 版本   | 说明       |
+| ------------ | ------ | ---------- |
+| Java         | 21     | 必选       |
+| Spring Boot  | 3.4.5  | 必选       |
+| MyBatis      | 3.0.4  | ORM 框架   |
+| MyBatis Plus | 3.5.x  | 扩展 ORM   |
+| Liquibase    | -      | 数据库迁移 |
+| JSch         | 0.2.16 | SSH 连接   |
 
 ### 响应封装
 
@@ -39,18 +39,19 @@ ResponseEntity(code, message, data, total)  // 分页场景
 
 常用响应码定义在 `ResponseCodeEnum` 中：
 
-| 枚举值 | code | messageCn | 使用场景 |
-|--------|------|-----------|---------|
-| SUCCESS | 200 | 成功 | 正常响应 |
-| BAD_REQUEST | 400 | 请求异常 | 参数校验失败 |
-| BAD_REQUEST_PARAM | 40001 | 请求参数异常 | 参数格式错误 |
-| NO_LOGIN | 401 | 没有登录 | 未认证 |
-| NO_PERMISSION | 403 | 没有权限 | 无权限访问 |
-| ERROR | 500 | 系统异常 | 服务器内部错误 |
+| 枚举值            | code  | messageCn    | 使用场景       |
+| ----------------- | ----- | ------------ | -------------- |
+| SUCCESS           | 200   | 成功         | 正常响应       |
+| BAD_REQUEST       | 400   | 请求异常     | 参数校验失败   |
+| BAD_REQUEST_PARAM | 40001 | 请求参数异常 | 参数格式错误   |
+| NO_LOGIN          | 401   | 没有登录     | 未认证         |
+| NO_PERMISSION     | 403   | 没有权限     | 无权限访问     |
+| ERROR             | 500   | 系统异常     | 服务器内部错误 |
 
 ### 代码规范
 
 - 所有 Java 文件必须包含华为版权头：
+
 ```java
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
@@ -83,18 +84,18 @@ ResponseEntity(code, message, data, total)  // 分页场景
 
 ## 常见 AI 错误与规避
 
-| 错误模式 | 规避规则 | 来源需求 |
-| --- | --- | --- |
-| 使用 Spring 原生 `ResponseEntity<T>` 而非项目自定义 | 必须导入 `com.openlibing.simulation.entity.ResponseEntity`，全局搜索确保无残留 | 通用规范 |
-| MyBatis XML mapper 路径配置错误 | 确保 `application.yaml` 中 `mybatis.mapper-locations` 配置正确，路径为 `classpath:mapper/*.xml` | 通用规范 |
-| Liquibase 迁移脚本格式错误 | XML 文件必须包含正确的 `changeSet` 属性（id、author），每个 changeSet 需有唯一标识 | 通用规范 |
-| 使用 JSch 未处理异常导致线程阻塞 | SSH 操作必须使用异步处理或设置超时时间，避免长时间阻塞 | Qemu 任务 |
-| 分布式锁未正确释放 | 确保锁获取和释放成对出现，使用 try-finally 保证锁释放 | 节点管理 |
-| 配置文件敏感信息硬编码 | 使用 `@EnableEncryptableProperties` 和 Jasypt 加密敏感配置 | 通用规范 |
-| 跨域配置遗漏导致前端无法访问 | 确保 Controller 或全局配置中包含 `@CrossOrigin` 注解 | 通用规范 |
-| 分页查询未设置合理的 pageSize 上限 | 分页接口必须校验 pageSize，最大不超过 100 | 通用规范 |
-| 动态 `UPDATE` 的 `<set>+<if>` 全空时生成无 SET 的非法 SQL，被 MyBatis-Plus BlockAttack(jsqlparser) 拦截报 `MybatisPlusException: Failed to process` | Service 层更新接口须校验"至少一个可更新字段非空"，再拼动态 SQL | sim-resource-crud |
-| primitive boolean/double 字段写成 `<if test="xxx != null">` 导致列被跳过/语义错误 | primitive 类型字段应无条件赋值，不能放在 `<if>` 判断里 | sim-resource-crud |
+| 错误模式                                                                                                                                            | 规避规则                                                                                        | 来源需求          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------- |
+| 使用 Spring 原生 `ResponseEntity<T>` 而非项目自定义                                                                                                 | 必须导入 `com.openlibing.simulation.entity.ResponseEntity`，全局搜索确保无残留                  | 通用规范          |
+| MyBatis XML mapper 路径配置错误                                                                                                                     | 确保 `application.yaml` 中 `mybatis.mapper-locations` 配置正确，路径为 `classpath:mapper/*.xml` | 通用规范          |
+| Liquibase 迁移脚本格式错误                                                                                                                          | XML 文件必须包含正确的 `changeSet` 属性（id、author），每个 changeSet 需有唯一标识              | 通用规范          |
+| 使用 JSch 未处理异常导致线程阻塞                                                                                                                    | SSH 操作必须使用异步处理或设置超时时间，避免长时间阻塞                                          | Qemu 任务         |
+| 分布式锁未正确释放                                                                                                                                  | 确保锁获取和释放成对出现，使用 try-finally 保证锁释放                                           | 节点管理          |
+| 配置文件敏感信息硬编码                                                                                                                              | 使用 `@EnableEncryptableProperties` 和 Jasypt 加密敏感配置                                      | 通用规范          |
+| 跨域配置遗漏导致前端无法访问                                                                                                                        | 确保 Controller 或全局配置中包含 `@CrossOrigin` 注解                                            | 通用规范          |
+| 分页查询未设置合理的 pageSize 上限                                                                                                                  | 分页接口必须校验 pageSize，最大不超过 100                                                       | 通用规范          |
+| 动态 `UPDATE` 的 `<set>+<if>` 全空时生成无 SET 的非法 SQL，被 MyBatis-Plus BlockAttack(jsqlparser) 拦截报 `MybatisPlusException: Failed to process` | Service 层更新接口须校验"至少一个可更新字段非空"，再拼动态 SQL                                  | sim-resource-crud |
+| primitive boolean/double 字段写成 `<if test="xxx != null">` 导致列被跳过/语义错误                                                                   | primitive 类型字段应无条件赋值，不能放在 `<if>` 判断里                                          | sim-resource-crud |
 
 ## 模块职责边界
 

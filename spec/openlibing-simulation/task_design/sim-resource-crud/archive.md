@@ -2,13 +2,13 @@
 
 ## 归档信息
 
-| 项目        | 内容                                        |
-| ----------- | ------------------------------------------- |
-| FE 需求名称 | 仿真机器/引擎/qcow/附件资源增删改管理接口   |
-| 业务 Issue  | openlibing/openlibing-simulation#27         |
-| 业务 PR     | openlibing/openlibing-simulation#155        |
-| 开发分支    | feat/sim-resource-crud（已合入，可删除）    |
-| 归档日期    | 2026-09-08                                  |
+| 项目        | 内容                                      |
+| ----------- | ----------------------------------------- |
+| FE 需求名称 | 仿真机器/引擎/qcow/附件资源增删改管理接口 |
+| 业务 Issue  | openlibing/openlibing-simulation#27       |
+| 业务 PR     | openlibing/openlibing-simulation#155      |
+| 开发分支    | feat/sim-resource-crud（已合入，可删除）  |
+| 归档日期    | 2026-09-08                                |
 
 ## 关联（permalink）
 

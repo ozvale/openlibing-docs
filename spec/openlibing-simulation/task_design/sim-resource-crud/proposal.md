@@ -12,6 +12,7 @@
 ## 功能描述
 
 做什么：
+
 - 按资源域新增 Controller / Service / Mapper 三层，均放置于 controller / service / mapper 三类目录：
   - **服务器域**（t_server_basic_info + t_server_extend_info，2 张表各自独立增删改端点）
   - **引擎域**（t_engine_basic_info，独立增删改端点）
@@ -23,6 +24,7 @@
 - 沿用本库既有编码范式（纯 MyBatis XML、`ResponseEntity(code,msg,data)`、方法级 `@RequestMapping`、creator 从 `X-Openlibing-User` 头解析）
 
 不做什么：
+
 - 不新增列表/详情查询接口（仅增删改，已确认）
 - 不改动现有环境分配/释放逻辑（`NodeManageServiceImpl.saveNodeManageTask`/`releaseNodeManageTask`、`QemuTaskServiceImpl` 对 t_server_using 的既有写路径）
 - 不实现文件上传/下载；`t_resource_attachment` 仅维护元数据行
