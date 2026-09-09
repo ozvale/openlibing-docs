@@ -25,7 +25,7 @@
 * **对应task(issueID)链接:**: https://gitcode.com/openlibing/hidevlab-transport-service/issues/76
 * **预期结果**: HiDevLab在线开发容器监控各项采集数据正常，状态切换时正常，容器调度实时监控。
 * **测试结果**：Passed
-* **证明截图**: https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testsuite?branch_id=vb1v00011jhcp8u2&suite_id=vb2100011lkrmfnr&detail=base
+* **证明截图**: https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb1v00011jhcp8u2&case_id=vb1o00011mc94i8l&detail=result
 
 
 ---
