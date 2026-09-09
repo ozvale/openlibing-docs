@@ -93,6 +93,8 @@ ResponseEntity(code, message, data, total)  // 分页场景
 | 配置文件敏感信息硬编码 | 使用 `@EnableEncryptableProperties` 和 Jasypt 加密敏感配置 | 通用规范 |
 | 跨域配置遗漏导致前端无法访问 | 确保 Controller 或全局配置中包含 `@CrossOrigin` 注解 | 通用规范 |
 | 分页查询未设置合理的 pageSize 上限 | 分页接口必须校验 pageSize，最大不超过 100 | 通用规范 |
+| 动态 `UPDATE` 的 `<set>+<if>` 全空时生成无 SET 的非法 SQL，被 MyBatis-Plus BlockAttack(jsqlparser) 拦截报 `MybatisPlusException: Failed to process` | Service 层更新接口须校验"至少一个可更新字段非空"，再拼动态 SQL | sim-resource-crud |
+| primitive boolean/double 字段写成 `<if test="xxx != null">` 导致列被跳过/语义错误 | primitive 类型字段应无条件赋值，不能放在 `<if>` 判断里 | sim-resource-crud |
 
 ## 模块职责边界
 
