@@ -62,6 +62,7 @@
 | 保存备案 | `POST /build-artifact/sec-option/filing/save` | 创建/更新例外备案 | 新增 |
 | 取消备案 | `POST /build-artifact/sec-option/filing/cancel` | 取消（删除）例外备案，并重算该记录 | 新增 |
 | 待备案项列表 | `POST /build-artifact/sec-option/filing/list` | 某产物包扫描记录下文件×扫描项扁平行列表（SQL 分页） | 新增 |
+| 备案人名单 | `POST /build-artifact/sec-option/filing/filer-list` | 备案人精确筛选下拉名单（含每人备案条数，按产物包/项目维度） | 新增 |
 | 备案记录列表 | `POST /build-artifact/sec-option/filing/record-list` | 独立备案记录页（跨包） | 新增 |
 | 扫描结果上报 | `POST /build-artifact/sec-option/report` | 插件调用，前端不涉及 | 不变 |
 
@@ -288,6 +289,9 @@
 | `optionKeys` | Array\<String\> | 否 | **多选** | 扫描项 key 多选，对 `option_key` 做 IN；空则不按扫描项过滤 |
 | `scanValues` | Array\<String\> | 否 | **多选** | 扫描值多选，仅允许 `YES`/`NO`，对 `raw_value` 做 IN；空默认只查 `[NO]`（只看不满足项） |
 | `filedStatus` | String | 否 | 精确 | 备案状态筛：`FILED` 有备案 / `UNFILED` 未备案 / `ALL` 全部；空默认 `ALL` |
+| `filerName` | String | 否 | **精确** | 备案人账号名精确筛选，对已备案行 `filer_name` 做等值匹配（未备案行为空不匹配）；供由 `/filing/filer-list` 返回的名单下拉使用 |
+| `filingStartTime` | String | 否 | 区间下界 | 备案时间起始（`yyyy-MM-dd HH:mm:ss`，闭区间），对已备案行 `filing_time` 过滤 |
+| `filingEndTime` | String | 否 | 区间上界 | 备案时间截止（`yyyy-MM-dd HH:mm:ss`，闭区间） |
 | `pageNum` | Integer | 否 | 分页 | 默认 1 |
 | `pageSize` | Integer | 否 | 分页 | 默认 20 |
 
@@ -361,7 +365,7 @@
 | `repoUrl` | String | 否 | 模糊 | 代码仓链接，对 `git_url` 做 LIKE |
 | `packageName` | String | 否 | 模糊 | 产物包名 |
 | `optionKey` | String | 否 | 精确 | 扫描项 key（如 `fortify`） |
-| `filerName` | String | 否 | 模糊 | 备案人账号名 |
+| `filerName` | String | 否 | **精确** | 备案人账号名精确筛选（对 `filer_name` 做等值匹配）；可配合 `/filing/filer-list` 返回的名单下拉使用 |
 | `filingStartTime` | String | 否 | 区间下界 | 备案时间起始（`yyyy-MM-dd HH:mm:ss`） |
 | `filingEndTime` | String | 否 | 区间上界 | 备案时间截止 |
 | `sortByField` | String | 否 | 排序字段 | 白名单：`filingTime`（默认）、`packageName`、`optionKey`、`filerName` |
@@ -405,6 +409,38 @@
 | `reason` | String | 备案理由 |
 | `filerName` | String | 备案人账号名 |
 | `filingTime` | String | 备案时间（`yyyy-MM-dd HH:mm:ss`） |
+
+### 8.3 备案人名单接口
+
+`POST /build-artifact/sec-option/filing/filer-list`
+
+供「待备案项列表」与「备案记录列表」的**备案人账号名精确筛选**下拉使用。返回备案人名单（含每人备案的数据项数量）。**只读，需项目成员校验**。
+
+#### 8.3.1 请求体 `SecOptionFilerQueryDTO`
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `projectId` | String | 是 | 项目 ID（项目隔离） |
+| `packageName` | String | 否 | 产物包名。**传入则只返回该产物包下的备案人；未传则返回项目（projectId）下全部备案人** |
+
+#### 8.3.2 响应体 `SecOptionFilerVO`
+
+```json
+{
+  "filers": [
+    { "filerId": "10086", "filerName": "zhangsan", "filingCount": 12 },
+    { "filerId": "10087", "filerName": "lisi", "filingCount": 3 }
+  ]
+}
+```
+
+`filers` 数组元素 `FilerItem`（按备案数据项数量降序）：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `filerId` | String | 备案人 ID |
+| `filerName` | String | 备案人账号名 |
+| `filingCount` | Long | 该备案人在当前范围内的备案数据项数量 |
 
 ---
 
