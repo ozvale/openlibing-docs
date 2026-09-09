@@ -38,4 +38,4 @@
 
 - **对应task(issueID)链接:** :
 1.https://gitcode.com/openlibing/hidevlab-transport-service/issues/76
-- **预期结果**: HiDevLab在线开发容器监控各项采集数据正常，状态切换时正常，容器调度实时监控
+- **预期结果**: HiDevLab在线开发容器监控各项采集数据正常，状态切换时正常，容器调度实时监控。
