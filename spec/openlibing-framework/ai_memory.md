@@ -108,3 +108,42 @@ git push origin branch-name
 - 用户权限（拥有该角色的用户）
 
 **结论**: 模块专属角色在模块下线后失去管理入口和功能意义，可安全删除
+
+### 6. 并发重复插入治理
+
+**场景**: 双实例部署下 Check-then-Insert 模式存在并发竞态
+
+**方案**: 优先在数据库层加唯一约束兜底，应用层捕获 `DuplicateKeyException` 返回友好提示。不要仅依赖应用层排他锁或 `SELECT FOR UPDATE`。
+
+**关键点**:
+- 数据库唯一约束是根本兜底，不依赖网络/锁服务
+- 兼容存量重复数据（新增约束不检查已有数据）
+- 异常信息脱敏：使用 `LOG.warn("msg")` 而非 `LOG.error("msg", e)` 避免泄露数据库结构
+
+**来源**: 2026-09-10 duplicate-key-protection
+
+### 7. Maven Liquibase changelog 命名约定
+
+**规则**: 唯一约束的 changelog 文件按 `{table_name}.xml` 命名，放在对应版本的 `vX.Y.Z/` 目录下。主 `db.changelog.xml` 通过 `<include>` 引用。
+
+**来源**: 2026-09-10 duplicate-key-protection
+
+### 8. 防御性拷贝处理集合字段
+
+**场景**: SpotBugs 检测到 DTO/VO 集合字段 `EI_EXPOSE_REP` / `EI_EXPOSE_REP2` 漏洞
+
+**方案**: getter 和 setter 中使用 `new ArrayList<>(field)` 做防御性拷贝，禁止直接返回或赋值内部引用。
+
+```java
+public List<String> getUserRoles() {
+    return userRoles == null ? null : new ArrayList<>(userRoles);
+}
+
+public void setUserRoles(List<String> userRoles) {
+    this.userRoles = userRoles == null ? null : new ArrayList<>(userRoles);
+}
+```
+
+**注意**: `@Data` 生成的 getter/setter 不做防御性拷贝，有集合字段的 DTO 需手动编写 getter/setter。
+
+**来源**: 2026-09-10 PR#436 code review
