@@ -2,18 +2,19 @@
 
 ## 1. 方案设计
 
-pre-commit 检查完成后，将各工具生成的报告统一转成 SARIF 并归档到 OBS + 回调 openlibing 后端。
+pre-commit 检查完成后，各工具的扫描报告经通用链路归档到 OBS + 回调 openlibing 后端。**SARIF 转换由业务仓负责**，插件只做"上传 + 回调"，不绑定任何具体工具。
 
 整体链路：
 
 ```
-CI runner (push/schedule/workflow_dispatch)
-  -> pre-commit 运行钩子（gitleaks 输出 /tmp/pre-commit-reports/gitleaks.json）
-  -> pre-commit-action 读取报告目录
-  -> gitleaks JSON -> SARIF 2.1.0 转换
+CI runner (workflow_dispatch)
+  -> pre-commit 运行钩子（以 detect-secrets 为例：扫描生成 detect-secrets.json）
+  -> 业务仓钩子脚本内转 SARIF（convert-detect-secrets-to-sarif.py -> detect-secrets.sarif，写约定目录）
+  -> pre-commit-action 读取约定目录下所有 *.sarif（不感知工具，不做转换）
   -> OIDC 换取华为云临时凭证（@openlibing/huaweicloud-oidc-client）
-  -> esdk-obs-nodejs 上传 OBS 桶 openlibing-gitcode-action
-  -> APIG 回调 codecheck 接口（V11 签名 + X-Security-Token）
+  -> esdk-obs-nodejs 上传 OBS 桶 openlibing-gitcode-action（ACL: public-read）
+  -> APIG 回调 codecheck 接口（/action-api/...，V11 签名 + X-Security-Token）
+  -> openlibing-codecheck 解析 SARIF（StandardSarifParser，指纹缺失时后端兜底）
 ```
 
 关键决策：
@@ -21,10 +22,14 @@ CI runner (push/schedule/workflow_dispatch)
 | 决策点 | 方案 | 理由 |
 |-------|------|------|
 | 报告目录 | `/tmp/pre-commit-reports/`（input `report-dir` 可覆盖） | CI 机器临时目录，不污染代码仓 |
-| gitleaks 报告格式 | json | 通用性好，插件统一转 SARIF，未来其他工具可复用转换器 |
-| OBS 上传 | OIDC 临时凭证 + esdk-obs-nodejs | 零 Secret，参考 huaweicloud-oidc-sdk-nodejs 的 test-obs-action |
-| OBS 路径 | `pre-commit-reports/<仓库名>/<日期>/<runId>/gitleaks.sarif` | 与 code-arts-check-results 前缀区分 |
-| APIG 回调 | OIDC callApig（V11-HMAC-SHA256 + X-Security-Token） | 凭证统一走 OIDC，禁止 AppCode 明文 |
+| SARIF 转换归属 | **业务仓**（按工具实现转换脚本） | 插件保持通用，不绑定具体工具；转换脚本随业务仓演进 |
+| 上传物 | 约定目录下所有 `*.sarif` | 插件只认 SARIF，不解析任何工具私有格式 |
+| OBS 上传 | OIDC 临时凭证 + esdk-obs-nodejs，对象 `ACL: public-read` | 零 Secret；后端匿名 HTTP GET 下载 |
+| OBS 路径 | `pre-commit-reports/<仓库名>/<runId>/<file>.sarif` | 与 code-arts-check-results 前缀区分 |
+| APIG 回调 | OIDC callApig（V11-HMAC-SHA256 + X-Security-Token） | 凭证统一走 OIDC，禁止 AppCode 明文；回调路径 `/action-api/` 为 IAM 认证分组（`/openlibing-codecheck/` 为 APP 认证分组，OIDC 签名不适用） |
+| 回调成功判定 | HTTP 状态 + 响应体业务码 `code` 均成功 | 后端 DataResult 业务错误恒为 HTTP 200，只看状态会误报成功 |
+| 环境切换 | `env-type`（prod/beta） | beta 走华为云 APIG 实例域名，测试数据不进正式环境 |
+| 指纹 | 后端兜底 sha256(uri\|startLine\|ruleId) | detect-secrets/gitleaks 不带 `primaryLocationLineHash`，缺失会导致 issue 静默丢弃 |
 | PR 触发 | 只检查不回调 | PR 增量检查不产生全量报告，避免噪音 |
 
 ## 2. 实现逻辑设计
@@ -37,37 +42,48 @@ CI runner (push/schedule/workflow_dispatch)
 [3] 定位代码目录
 [4] 检查 .pre-commit-config.yaml
 [5] 构建运行参数
-[6] 运行 pre-commit 检查（记录 checkFailed）
+[6] 运行 pre-commit 检查（记录 checkFailed；钩子负责生成 *.sarif 到约定目录）
 [7] 新增：读取报告目录
     - 目录默认 /tmp/pre-commit-reports/（input report-dir 覆盖）
-    - 扫描目录下 *.json 文件
+    - 只收集 *.sarif 文件（业务仓已转换好），不做任何格式转换
 [8] 新增：PR 类型判断
     - eventName ∈ {mr, pull_request, note} 且有 baseRef -> 跳过上传回调
-[9] 新增：JSON -> SARIF 转换
-[10] 新增：OIDC 换证 + OBS 上传（esdk-obs-nodejs putObject）
-[11] 新增：APIG 回调 codecheck 接口（callApig POST）
-[12] 按 checkFailed 决定退出码（上传失败只 warning）
+[9] 新增：OIDC 换证 + OBS 上传（esdk-obs-nodejs putObject，ACL: public-read）
+    - ObsClient 构造后 await Promise.resolve() 等待 initFactory 完成，避免签名上下文竞态
+[10] 新增：APIG 回调 codecheck 接口（callApig POST）
+    - 校验 HTTP 状态 + 响应体业务码；非成功打 WARN 并输出业务码
+[11] 按 checkFailed 决定退出码（上传失败只 warning）
 ```
 
-### SARIF 转换规则（gitleaks JSON -> SARIF 2.1.0）
+### 业务仓 SARIF 转换（以 detect-secrets 为例，脚本可复用该模式）
 
-gitleaks JSON 数组元素 → SARIF result 映射：
+detect-secrets JSON → SARIF 2.1.0 映射（`scripts/convert-detect-secrets-to-sarif.py`）：
 
-| gitleaks 字段 | SARIF 字段 |
-|--------------|-----------|
-| RuleID | ruleId |
-| Description | rule 的 shortDescription.text |
-| File | locations[0].physicalLocation.artifactLocation.uri |
-| StartLine / EndLine | region.startLine / endLine |
-| StartColumn / EndColumn | region.startColumn / endColumn |
-| Match | message.text（摘要） |
-| Commit | partialFingerprints + properties |
+| detect-secrets 字段 | SARIF 字段 |
+|--------------------|-----------|
+| results 的 file key | locations[0].physicalLocation.artifactLocation.uri |
+| secret.line_number | region.startLine |
+| secret.type | ruleId + rule.shortDescription.text |
+| secret.is_verified | level（true→error，false→warning） |
+| secret.hashed_secret | 参与指纹（保证同位置不同密钥指纹不同） |
 
 SARIF 结构：
 - version: "2.1.0"
-- runs[0].tool.driver: name=gitleaks, version, rules[]
-- runs[0].results[]: ruleId, level(="error"/"warning"), message.text, locations, partialFingerprints, properties
-- runs[0].originalUriBaseIds / invocation：执行上下文（仓库、runId）放入 properties
+- runs[0].tool.driver: name=detect-secrets, rules[]
+- runs[0].results[]: ruleId, level, message.text, locations, partialFingerprints
+- 每个 result 生成 `partialFingerprints.primaryLocationLineHash = sha256(file|line|type|hashed_secret)`（稳定，供后端去重）
+
+**其他工具扩展方式**：新增对应转换脚本，输出 `<tool>.sarif` 到同一约定目录即可，插件与后端零改动。
+
+### 后端指纹兜底（openlibing-codecheck StandardSarifParser）
+
+```
+extractLocationHash(result):
+  if partialFingerprints.primaryLocationLineHash 非空 -> 直接使用（CodeQL 等自带）
+  else -> buildFallbackLocationHash(result) = sha256(uri | startLine | ruleId)
+```
+- 保证任何工具都不因缺指纹而构建不了 `fingerprintKey = sha256(tool|ruleId|filePath|locationHashRaw)`
+- 同一位置同一规则跨扫描稳定，去重/upsert 正确
 
 ### OBS 上传（参考 test-obs-action）
 
@@ -83,7 +99,8 @@ const client = new ObsClient({
   security_token: cred.securityToken,
   server: `https://obs.${region}.myhuaweicloud.com`
 });
-await client.putObject({ Bucket, Key, SourceFile });
+await Promise.resolve(); // 等待 initFactory 完成
+await client.putObject({ Bucket, Key, SourceFile, ACL: 'public-read' });
 ```
 
 ### APIG 回调（参考 SDK callApig）
@@ -97,16 +114,14 @@ payload 复用 upload-sarif 结构：repoUrl / pipelineId / pipelineName / pipel
 
 ## 3. 类设计
 
-不涉及后端类。插件侧模块化拆分：
-
 | 模块 | 职责 |
 |------|------|
-| index.js | 主流程编排（现有 run() 扩展） |
-| sarif-converter.js | gitleaks JSON -> SARIF 2.1.0 转换 |
-| obs-uploader.js | OIDC 换证 + esdk-obs-nodejs 上传 |
-| apig-callback.js | callApig 回调 codecheck（或内联于 index.js） |
+| pre-commit-action/index.js | 主流程编排（读取 `*.sarif` → OIDC 上传 → APIG 回调，**无转换模块**） |
+| openlibing-cicd-test/scripts/convert-detect-secrets-to-sarif.py | 业务仓示例：detect-secrets JSON → SARIF 2.1.0（含指纹） |
+| openlibing-cicd-test/scripts/detect-secrets-report.sh | pre-commit 钩子：扫描 + 调转换脚本 + baseline 拦截 |
+| openlibing-codecheck/StandardSarifParser.java | 指纹解析 + 缺失时兜底计算 |
 
-考虑插件现有风格（单 index.js + ncc 打包），倾向：新增独立模块文件便于单测，ncc 会自动内联。
+插件维持现有风格（单 index.js + ncc 打包），不引入转换器模块。
 
 ## 4. 数据模型设计
 
@@ -116,7 +131,7 @@ SARIF 2.1.0 标准结构（上传物）：
 - `runs`: [{ tool.driver, results[] }]
 
 OBS 对象路径模型：
-`pre-commit-reports/{repoBaseName}/{yyyyMMdd.HH}/{runId}/gitleaks.sarif`
+`pre-commit-reports/{repoBaseName}/{runId}/{tool}.sarif`
 
 APIG 回调 payload（对齐 upload-sarif）：
 `{ repoUrl, pipelineId, pipelineName, pipelineRunId, branch, commitId, obsUrl, category, source: 'GITCODE_ACTION', sourceRunUrl }`
@@ -126,22 +141,26 @@ APIG 回调 payload（对齐 upload-sarif）：
 - 报告文件为小文件（KB 级），putObject 直传即可，无需分段
 - 凭证缓存由 SDK getCredentials 内部处理（1 小时有效期自动刷新）
 - 转换逻辑为单次内存遍历，无性能瓶颈
+- 转换内聚在钩子内，detect-secrets 只扫描一次（无重复扫描）
 
 ## 6. API接口设计
 
 ### OBS 上传（对外可读 URL）
 ```
-GET https://openlibing-gitcode-action.obs.cn-southwest-2.myhuaweicloud.com/pre-commit-reports/<repo>/<date>/<runId>/gitleaks.sarif
+GET https://openlibing-gitcode-action.obs.cn-southwest-2.myhuaweicloud.com/pre-commit-reports/<repo>/<runId>/<tool>.sarif
 ```
 
 ### APIG 回调（插件 -> openlibing 后端）
 ```
-POST https://apig.openlibing.com:443/openlibing-codecheck/codescan/v1/result/receive
+POST <apig-domain>/action-api/codescan/v1/result/receive
 Content-Type: application/json
 Authorization: V11 签名（SDK callApig 自动生成）
 X-Security-Token: <OIDC 临时凭证>
 Body: { repoUrl, pipelineId, pipelineName, pipelineRunId, branch, commitId, obsUrl, category, source, sourceRunUrl }
 ```
+- prod：`apig.openlibing.com`
+- beta：华为云 APIG 实例域名（`*.apic.cn-southwest-2.huaweicloudapis.com`）
+- 路径必须 `/action-api/` 前缀（IAM 认证分组）；`/openlibing-codecheck/` 为 APP 认证分组，OIDC 签名会 401
 
 ## 7. 安全设计
 
@@ -158,5 +177,5 @@ Body: { repoUrl, pipelineId, pipelineName, pipelineRunId, branch, commitId, obsU
 - 不硬编码任何凭证
 
 **审计日志**
-- 记录上传成功/失败、回调成功/失败、报告文件清单
+- 记录上传成功/失败、回调成功/失败（含业务码）、报告文件清单
 - 关键日志使用 sanitizePath 脱敏 IP
