@@ -670,7 +670,10 @@ CREATE TABLE IF NOT EXISTS `t_mcp_tool_call_log` (
 
 **① 鉴权（P0，上线硬门禁）**
 - **对齐公司实际体系（2026-08-24 核实，非 Bearer/SSO）**：Web 用户面唯一认证点是 **openlibing-gateway 的 AuthFilter（JWT + CSRF 双提交）**，ops/metric/sync 服务端零认证；机机接口另有华为云 APIG App 认证（AppCode/AK-SK）。
-- **主方案：`/mcp` 由 openlibing-gateway 路由收口，复用 AuthFilter JWT 校验**——JWT 携带用户上下文，支撑 ② 行级数据权限（服务端解析"谁在查"，传给 `ReportQueryService` 做权限过滤）；机机调用对 CSRF 双提交豁免（API 化处理）。MCP 协议 Authorization 头标准接入。
+- **主方案：MCP OAuth 2.1 授权码流 + refresh token 自动续期（2026-08-24 升级，替代静态 JWT）**：
+  - **为什么**：静态 JWT 有有效期，让客户周期性更换凭证在商业产品不可接受；MCP 规范 2025-06-18 已把 **OAuth 2.1 + PKCE** 定为远程 MCP Server 的标准鉴权，Trae/OpenCode 等 MCP 客户端原生支持（元数据发现 + 动态注册 + PKCE + refresh 轮换）。
+  - **客户体验**：首次配置时浏览器授权一次 → 客户端持 access+refresh token，access 过期由 refresh **自动续期**（换发新 refresh，旧作废）→ 对客户是"**配置一次、一劳永逸**"。附带收益：令牌可撤销、作用域限制、审计。
+  - **落地组件**：openlibing 无现成用户级 OAuth 授权服务器（华为云 OIDC 仅 cicd 机机场景），需 **openlibing-gateway 扩展为 MCP 授权服务器**（`/authorize`、`/token`、`/register` + `/.well-known/oauth-authorization-server` 元数据，可用 Spring Authorization Server 集成）；ops `/mcp` 作为 **OAuth2 Resource Server** 校验 access token（`spring-boot-starter-oauth2-resource-server`，issuer 指向 gateway 授权服务器），并沿用 JWT 携带用户上下文支撑 ② 行级数据权限；机机调用对 CSRF 双提交豁免（API 化处理）。MCP 协议 Authorization 头标准接入。
 - **兜底（响应安全报告 FIND-01 单点失效治理）**：MCP 服务端加**服务端 token 校验**（复用 openlibing-common `FeignAccessTokenInterceptor` 思路做入站校验），网关被绕过时服务端仍拒绝匿名调用。
 - 备选（不推荐为本期主方案）：华为云 APIG App 认证（AppCode/AK-SK）——应用级身份、无用户上下文，做不了行级权限。
 - **硬门禁：MCP 端点上线正式环境前必须完成上述鉴权，不允许裸奔上线**（修订 T8）。
@@ -731,7 +734,7 @@ CREATE TABLE IF NOT EXISTS `t_mcp_tool_call_log` (
 | OBS 凭证 | 只读 AK/SK，存 SeaTunnel 参数（`${OBS_AK}/${OBS_SK}`，与既有工作流一致），不下沉代码 |
 | 动态 SQL（ops 查询） | 表名/列名双重白名单（登记表 + 数据资产列信息） |
 | SeaTunnel transform | `TestReportReader` 复用 `ParseTestcase`/`TestCaseMetadataParser` 的 OBS 读取防护；路径三段 ID 白名单/长度校验防穿越；sdi 清洗为纯配置（无自定义代码） |
-| MCP 端点 | **上线硬门禁：正式环境前必须完成鉴权，不允许裸奔上线**。openlibing-gateway AuthFilter（JWT，机机豁免 CSRF）收口 `/mcp` + 服务端 token 兜底校验 + 工具级 RBAC + 行级数据权限继承（防越权后门）+ 限流 + 审计（调用日志表 8.2.2 + Metrics + 告警），详见 8.2.3 |
+| MCP 端点 | **上线硬门禁：正式环境前必须完成鉴权，不允许裸奔上线**。**MCP OAuth 2.1 授权码流 + refresh 自动续期**（客户配置一次长期有效）：gateway 扩展为授权服务器（`/authorize` `/token` `/register` + 元数据），ops `/mcp` 为 OAuth2 Resource Server + 服务端 token 兜底 + 工具级 RBAC + 行级数据权限继承（防越权后门）+ 限流 + 审计（调用日志表 8.2.2 + Metrics + 告警），详见 8.2.3 |
 
 ## 10. 待确认事项（需用户/PM 确认）
 
@@ -744,7 +747,7 @@ CREATE TABLE IF NOT EXISTS `t_mcp_tool_call_log` (
 | T5 | **DS 工作流创建与发布** | **已确认：由用户负责**。先在测试环境（beta）充分验证（造数联调/幂等/补采），验证通过后发布正式环境；设计文档提供工作流定义、rawScript 与 cron 供创建参考。**正式环境上线门禁：测试环境全链路调通（采集+清洗+ops REST 消费）后才上正式；MCP 除外（可后续迭代单独上）** | 已定（含门禁） |
 | T6 | **上游 JSON schema 完整清单（每模板一份）** | 本期仅 `triton_model_performance`；后续模板按登记制扩展 | 插件/表扩展 |
 | T7 | **模板登记数据维护入口** | **已确认：本期由开发手动 SQL 登记**——INSERT `dm_rd_efc_template_registry`（`table_type='test_report'`，含 `pipeline_ids` 配置）+ 建 raw/sdi 表（DDL 见 6.3/6.4），不做管理页面；登记清单示例见 7.5 | 已定 |
-| T8 | **MCP 端点鉴权/限流方案** | **已修订（2026-08-24）**：按 8.2.3 生产级架构执行——openlibing-gateway AuthFilter（JWT，机机豁免 CSRF）收口 `/mcp` + 服务端 token 兜底 + RBAC + 行级数据权限 + 限流 + 调用日志审计；**上线硬门禁：正式环境前必须完成鉴权，不允许裸奔上线** | 已定 |
+| T8 | **MCP 端点鉴权/限流方案** | **已修订（2026-08-24）**：按 8.2.3 生产级架构执行——**MCP OAuth 2.1（gateway 扩展为授权服务器 + ops `/mcp` 为 OAuth2 Resource Server + refresh 自动续期，客户配置一次长期有效）** + 服务端 token 兜底 + RBAC + 行级数据权限 + 限流 + 调用日志审计；**上线硬门禁：正式环境前必须完成鉴权，不允许裸奔上线** | 已定 |
 | T9 | **是否需平台 UI（ops-web）展示** | 本期仅 API/MCP | 前端排期 |
 | T10 | **报告上传时效确认** | **已确认（暂定）**：窗口默认 **24h**；后续业务有需要可调大 `${report_window_hours}`（DS 参数）重跑补采，无需改代码 | 已定（暂定 24h） |
 | T11 | **采集范围来源（已定）** | **已确认：Doris 专用登记表**（`dm_rd_efc_template_registry` + `table_type='test_report'`，6.1）；采集/消费共读，无 MySQL 依赖、无双处维护。曾评估：Catalog 直连（正式环境无 MySQL 只读账号且实测 `SHOW CATALOGS` 仅 internal）、DS 参数化（双处维护）、MySQL 登记表（语义不符）均被否决 | 已定 |
