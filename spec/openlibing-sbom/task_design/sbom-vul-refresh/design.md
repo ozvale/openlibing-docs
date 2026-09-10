@@ -39,19 +39,20 @@ worker（sbomRefreshExecutor 线程）：
 
 ### 异常与边界
 
-| 场景 | 处理 |
-|------|------|
-| product/sbom 不存在 | 抛 `SbomRuntimeException` |
-| rawSbom 非 FINISH | `NOT_FINISH` 终止 |
-| 同制品同类型重复触发 | 去重锁 → `ALREADY_IN_PROGRESS` |
-| 线程池队列满 | AbortPolicy → 派发层捕获 → 恢复 FINISH + 释放锁 → `BUSY` |
-| UVP 异常/返回空 | 任务捕获告警，finally 恢复 FINISH；空结果 = 计数归 0（覆盖语义） |
-| 统计重算异常 | 事务回滚，finally 恢复 FINISH |
-| 服务重启 | 启动恢复复位状态，用户重新触发 |
+| 场景                 | 处理                                                             |
+| -------------------- | ---------------------------------------------------------------- |
+| product/sbom 不存在  | 抛 `SbomRuntimeException`                                        |
+| rawSbom 非 FINISH    | `NOT_FINISH` 终止                                                |
+| 同制品同类型重复触发 | 去重锁 → `ALREADY_IN_PROGRESS`                                   |
+| 线程池队列满         | AbortPolicy → 派发层捕获 → 恢复 FINISH + 释放锁 → `BUSY`         |
+| UVP 异常/返回空      | 任务捕获告警，finally 恢复 FINISH；空结果 = 计数归 0（覆盖语义） |
+| 统计重算异常         | 事务回滚，finally 恢复 FINISH                                    |
+| 服务重启             | 启动恢复复位状态，用户重新触发                                   |
 
 ## 3. 类设计（openlibing-sbom）
 
 新增（`sbom-web/service/sbom/refresh/` + config）：
+
 - `RefreshType`（enum：VUL；预留 LICENSE）
 - `RefreshContext`（productName/sbomId/product/productType）
 - `SbomRefreshStrategy`（接口：`supportType()` / `occupyingStatus()` / `doRefresh(ctx)`）
@@ -62,6 +63,7 @@ worker（sbomRefreshExecutor 线程）：
 - 启动恢复 ApplicationRunner（复位遗留 VUL_REFRESHING → FINISH）
 
 修改：
+
 - `model/.../constants/SbomConstants.java`：+`TASK_STATUS_VUL_REFRESHING`
 - `sbom-web/.../controller/SbomController.java`：+`POST /refresh`（`@LogApi`）
 - `interface/.../api/sbom/SbomService.java` + `sbom-web/.../impl/SbomServiceImpl.java`：+`refreshSbom(productName, refreshType)`
@@ -70,6 +72,7 @@ worker（sbomRefreshExecutor 线程）：
 ## 4. 数据模型设计
 
 不涉及表结构/字段变更与迁移：
+
 1. raw_sbom.taskStatus 复用既有字符串列，仅新增值 `VUL_REFRESHING`（无枚举约束）；
 2. external_vul_ref 仅数据级 DELETE+INSERT（按 sbomId 经 package 关联）；
 3. package_statistics 仅既有漏洞字段 UPDATE（orphanRemoval 删旧插新为既有机制）。

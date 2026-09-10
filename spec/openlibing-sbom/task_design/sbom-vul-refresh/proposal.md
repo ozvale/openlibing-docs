@@ -12,6 +12,7 @@ gamma 环境 openlibing-web 软件成分数据页（CompositionAnalysis）中，
 用户诉求：提供"漏洞刷新"能力，点击后二次确认（提示刷新后当前漏洞信息将被覆盖），确认后制品级全量重新拉取 UVP 漏洞数据并覆盖旧数据、重算统计。
 
 配套交互（评审确定）：
+
 - 前端移除既有"漏洞依赖刷新"按钮（后端接口保留可直调），新增"漏洞刷新"按钮占据其位置
 - 解析状态非完成态（非 FINISH/FAILED_FINISH）时轮询 `queryScanStatus`，按钮置灰 + loading
 - 状态进入完成态停止轮询，右上角通知"漏洞已刷新完成，请刷新页面"（仅会话内经历过漏洞刷新时弹出）
@@ -21,14 +22,15 @@ gamma 环境 openlibing-web 软件成分数据页（CompositionAnalysis）中，
 
 新增 `POST /sbom-api/refresh`（`productName` + `refreshType`，默认 VUL）：
 
-| 返回 status          | 说明                                       |
-| -------------------- | ------------------------------------------ |
-| `ACCEPTED`           | 受理成功，已提交专用线程池异步执行         |
-| `ALREADY_IN_PROGRESS`| 同制品同类型刷新任务进行中（去重锁）       |
-| `NOT_FINISH`         | rawSbom 非 FINISH，终止触发                |
-| `BUSY`               | 线程池队列满                               |
+| 返回 status           | 说明                                 |
+| --------------------- | ------------------------------------ |
+| `ACCEPTED`            | 受理成功，已提交专用线程池异步执行   |
+| `ALREADY_IN_PROGRESS` | 同制品同类型刷新任务进行中（去重锁） |
+| `NOT_FINISH`          | rawSbom 非 FINISH，终止触发          |
+| `BUSY`                | 线程池队列满                         |
 
 后端核心流程（方案 B：自研刷新服务 + 策略模式）：
+
 1. 同步校验：product/sbom/rawSbom 加载，rawSbom 必须为 FINISH
 2. 去重锁 → rawSbom 置 `VUL_REFRESHING`（新增状态值，页面映射"漏洞信息刷新中"）
 3. 专用线程池（queueCapacity=64）异步执行 `VulRefreshStrategy`：
@@ -57,19 +59,19 @@ gamma 环境 openlibing-web 软件成分数据页（CompositionAnalysis）中，
 
 ## 影响范围
 
-| 文件 | 操作 | 说明 |
-| ---- | ---- | ---- |
-| `model/.../constants/SbomConstants.java` | 修改 | +`TASK_STATUS_VUL_REFRESHING` |
-| `sbom-web/.../controller/SbomController.java` | 修改 | +`POST /refresh` |
-| `interface/.../api/sbom/SbomService.java` | 修改 | +`refreshSbom` |
-| `sbom-web/.../impl/SbomServiceImpl.java` | 修改 | 委托编排服务 |
-| `sbom-web/.../service/sbom/refresh/*`（6 个新类） | 新增 | 策略框架 + 编排 + 漏洞策略 |
-| `sbom-web/.../config/SbomRefreshExecutorConfig.java` | 新增 | 专用线程池 |
-| `sbom-web/.../config/SbomRefreshStartupRecovery.java`（或同类） | 新增 | 启动状态恢复 |
-| `dao/.../ExternalVulRefRepository.java` | 修改 | +`deleteBySbomId` |
-| `test/.../SbomRefreshServiceTest.java` 等 | 新增/修改 | 单元测试 |
-| openlibing-web `CompositionAnalysis/index.vue` | 修改 | 按钮/轮询/通知（跨仓） |
-| openlibing-web `api/sbom/url.ts`、`api.ts` | 修改 | 新增刷新 API（跨仓） |
+| 文件                                                            | 操作      | 说明                          |
+| --------------------------------------------------------------- | --------- | ----------------------------- |
+| `model/.../constants/SbomConstants.java`                        | 修改      | +`TASK_STATUS_VUL_REFRESHING` |
+| `sbom-web/.../controller/SbomController.java`                   | 修改      | +`POST /refresh`              |
+| `interface/.../api/sbom/SbomService.java`                       | 修改      | +`refreshSbom`                |
+| `sbom-web/.../impl/SbomServiceImpl.java`                        | 修改      | 委托编排服务                  |
+| `sbom-web/.../service/sbom/refresh/*`（6 个新类）               | 新增      | 策略框架 + 编排 + 漏洞策略    |
+| `sbom-web/.../config/SbomRefreshExecutorConfig.java`            | 新增      | 专用线程池                    |
+| `sbom-web/.../config/SbomRefreshStartupRecovery.java`（或同类） | 新增      | 启动状态恢复                  |
+| `dao/.../ExternalVulRefRepository.java`                         | 修改      | +`deleteBySbomId`             |
+| `test/.../SbomRefreshServiceTest.java` 等                       | 新增/修改 | 单元测试                      |
+| openlibing-web `CompositionAnalysis/index.vue`                  | 修改      | 按钮/轮询/通知（跨仓）        |
+| openlibing-web `api/sbom/url.ts`、`api.ts`                      | 修改      | 新增刷新 API（跨仓）          |
 
 - 业务仓：`openlibing-sbom`（主）、`openlibing-web`（跨仓）
 - 数据模型：不涉及表结构变更（复用 raw_sbom.taskStatus 新增字符串值）
