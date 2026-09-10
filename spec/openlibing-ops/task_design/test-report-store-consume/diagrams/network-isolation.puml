@@ -1,0 +1,35 @@
+@startuml
+title 内网隔离 + 服务端 token 兜底
+
+actor "公网调用者" as pub
+node "DMZ 区（对外暴露）" {
+  [API 网关 / 负载均衡] as gw
+}
+
+node "内网区（不对公网开放）" {
+  [ops 服务\n内网 IP: 10.x.x.x] as ops
+  database "Doris" as db
+  [授权服务器] as auth
+}
+
+pub --> gw : 公网 HTTPS
+gw --> ops : 转发(白名单路由)
+ops --> db : 内网查询
+ops --> auth : 内网校验 token
+
+note bottom of gw
+网关校验 JWT/限流
+是公网唯一入口
+end note
+
+note bottom of ops
+内网隔离：无公网端口
+攻击者拿不到内网地址
+end note
+
+note bottom of db
+服务端 token 兜底：
+网关被绕过时(SSRF/内网横移)
+ops 仍校验固定 token 拒绝匿名
+end note
+@enduml

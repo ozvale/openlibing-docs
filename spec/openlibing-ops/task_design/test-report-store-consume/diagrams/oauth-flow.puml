@@ -1,0 +1,32 @@
+@startuml
+actor 客户
+participant "AI 客户端" as client
+participant "MCP Server" as mcp
+participant "授权服务器" as auth
+
+== 首次配置：客户只做一次 ==
+客户 -> client : 配置 MCP 地址
+client -> mcp : 连接请求、无凭证
+mcp --> client : 401 并返回授权地址
+client -> auth : 打开浏览器授权页
+客户 -> auth : 登录并同意授权
+auth --> client : 授权码 code
+client -> auth : code 加 PKCE 换 token
+auth --> client : access_token 加 refresh_token
+
+== 日常调用：自动续期、客户无感 ==
+client -> mcp : 携带 access_token 调用
+mcp --> client : 返回数据
+
+== access_token 过期后 ==
+client -> auth : 用 refresh_token 自动换取
+auth --> client : 新 access_token 和新 refresh_token、旧作废
+client -> mcp : 携带新 access_token 调用
+mcp --> client : 返回数据
+
+note over auth
+access_token 短期有效，保证安全
+refresh_token 自动续期，保证体验
+对客户而言配置一次、长期有效
+end note
+@enduml

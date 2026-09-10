@@ -1,0 +1,39 @@
+@startuml
+title 三个方案的鉴权架构对比
+
+package "方案1：gateway 承接（正式理想）" {
+  [gateway\nOAuth 授权服务器] as g1auth
+  [ops /mcp\nResource Server] as g1mcp
+  g1auth ..> g1mcp : 校验 access_token
+}
+
+package "方案2：ops 内嵌（本期临时）" {
+  [ops\nOAuth 授权服务器] as g2auth
+  [ops /mcp\nResource Server] as g2mcp
+  g2auth ..> g2mcp : 校验 access_token
+}
+
+package "方案3：不鉴权（仅 beta 联调）" {
+  [ops /mcp\n无鉴权] as g3mcp
+}
+
+actor "客户 agent" as c1
+actor "客户 agent" as c2
+actor "客户 agent" as c3
+
+c1 --> g1auth : 授权码流
+c1 --> g1mcp : 调用工具
+c2 --> g2auth : 授权码流
+c2 --> g2mcp : 调用工具
+c3 --> g3mcp : 直接调用(任意人)
+
+note bottom of g1auth
+跨团队仓，排期不受控
+end note
+note bottom of g2auth
+本团队可控，安全面扩大需内网隔离
+end note
+note bottom of g3mcp
+正式禁用：无身份、无行级权限、越权风险
+end note
+@enduml

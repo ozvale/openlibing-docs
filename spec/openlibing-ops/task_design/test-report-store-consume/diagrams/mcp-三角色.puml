@@ -1,0 +1,32 @@
+@startuml
+title MCP 是什么（三个角色）
+skinparam actorStyle awesome
+
+actor "使用者（员工/客户）" as user
+actor "AI 客户端（Trae/OpenCode）" as client
+
+package "MCP 生态" {
+  [MCP Client\n（客户端能力）] as mcpclient
+  [MCP Server\n（内嵌在业务服务 ops 里的 /mcp 端点）] as mcpserver
+  [MCP 市场\n（登记信息、发配置）] as market
+}
+
+database "Doris / MySQL" as db
+
+user --> client : 日常使用 AI
+client --> mcpclient : 配置一次
+mcpclient --> mcpserver : MCP 协议\n（tools/list、tools/call）
+mcpserver --> db : 只读查询业务数据
+market ..> mcpserver : 上架登记（不托管、不运行）
+
+note bottom of market
+市场只发"怎么连"的信息，
+不参与实际调用（数据流不经过它）
+end note
+
+note bottom of mcpserver
+这是真正提供能力的一方，
+必须在线、地址可达、有鉴权
+end note
+
+@enduml

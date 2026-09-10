@@ -1,0 +1,22 @@
+@startuml
+left to right direction
+actor "客户 / AI 应用" as client
+package "MCP Server（能力提供方）" {
+  [MCP 工具\n(tools)] as tools
+  database "业务数据库\n(Doris/MySQL)" as db
+}
+package "MCP 市场（仅登记+发配置）" {
+  [条目 + 配置] as market
+}
+
+client --> tools : 调用工具 (JSON-RPC)
+tools --> db : 查询数据
+client --> market : 发现能力 / 获取连接配置
+market ..> client : 返回连接配置（URL/凭证格式）
+
+note bottom of market
+市场不运行你的服务
+只登记信息+发配置
+真正干活的是 Server
+end note
+@enduml

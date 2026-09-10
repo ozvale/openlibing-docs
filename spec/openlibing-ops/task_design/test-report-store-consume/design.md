@@ -38,7 +38,22 @@
    ├── result*.xml          ← 既有链路已解析
    └── <模板名kebab>_xxx.json   ← 测试报告 JSON（本需求采集对象）
 
-DolphinScheduler 工作流①「测试报告原始数据采集」（cron 每小时，正式/测试 openlibing 项目）
+**新增独立编排工作流「测试报告采集编排」**（cron 每小时，与三平台采集编排同整点触发；**不物理塞入现有编排**，见下方架构决策）：
+   ├─ DEPENDENT 任务：依赖 `[workflow][raw->dwi]PR&workflow数据获取`（176230008422726）当前小时成功
+   │      → gitcode/github 的 sdi 执行记录表已更新（编排内 16:00-16:20 完成）
+   │      → codearts 的 sdi 执行记录表同小时已更新（采集在 codearts 编排 169579299839168 开头执行，16:05 完成，时间错位满足）
+   ├─ SUB_WORKFLOW 工作流①「测试报告原始数据采集」
+   └─ SUB_WORKFLOW 工作流②「测试报告数据清洗」（依赖①完成）
+
+   > **架构决策（为什么加 DEPENDENT 且不物理塞入现有编排）**：
+   >
+   > ① **必须跟随采集（DEPENDENT）**：业务要求「流水线执行记录已采集 → 测试报告数据**必然已采集**」。若测试报告采集不依赖三平台采集而独立每小时触发，会与三平台采集**错拍一轮**（16:00 触发时读到上一小时 sdi，流水线记录已入库但测试报告尚未采集）→ 看板/消费侧出现"流水线有记录但报告无数据"，**易被误判为 bug 或缺数问题**。DEPENDENT 保证同小时采集完成后再采测试报告，数据一致性优先。
+   >
+   > ② **不物理塞入现有编排（独立编排）**：codearts 编排（169579299839168）内部含 DEPENDENT 任务依赖 PR&workflow 编排（176230008422726）当前小时完成；若将测试报告采集①物理挂入 PR&workflow 编排，会将其时长从 ~24min 拉长至 24+t（t=OBS 读取，可达 10-20min），进而链式拉长 codearts 编排（已 53min 接近占满整点间隔）至 60min+，与下一小时实例重叠并发冲突。故采用**独立编排 + DEPENDENT 逻辑依赖**：既保证"采集完成后才采集测试报告"（逻辑跟随），又实现职责单一/失败隔离/不影响现有编排时长（物理隔离）。
+   >
+   > ③ **否决备选（不加 DEPENDENT）**：独立编排 + 独立每小时 cron、不做 DEPENDENT——实现最简、零耦合，但固定落后三平台采集一轮（流水线完成 → 报告入库延迟均值 ~1.5h vs 加 DEPENDENT ~50min），且存在"记录已采、报告未采"的错拍窗口。为数据一致性（防误判）否决。
+
+DolphinScheduler 工作流①「测试报告原始数据采集」（独立编排内 SUB_WORKFLOW 节点）
    └─ SeaTunnel 任务（参照 [job][raw->sdi][codearts]获取测试用例数据 的 rawScript 模式）
         source: Jdbc(Doris) 待采集流水线记录（模板范围 + 已采集过滤 + 归属字段）
         transform: TestReportReader（轻量 OBS 读取，复用 ParseTestcase 代码，仅读原文不做展开）
@@ -48,7 +63,7 @@ DolphinScheduler 工作流①「测试报告原始数据采集」（cron 每小�
         ▼
 Doris raw_test_report（原始 JSON 整份落库，仿 raw_workflow_source_github 模式）
 
-DolphinScheduler 工作流②「测试报告数据清洗」（cron 每小时）
+DolphinScheduler 工作流②「测试报告数据清洗」（独立编排内 SUB_WORKFLOW 节点，依赖①完成）
    └─ SeaTunnel 任务（参照既有 raw→sdi 清洗：JsonArrayExpand + Sql 纯配置）
         source: Jdbc(Doris) 读 raw_test_report 未清洗行（时间窗口 + 已清洗过滤）
         transform: JsonArrayExpand（展开外层数组带 record_seq）→ Sql（归属字段提取）
@@ -243,10 +258,13 @@ PROPERTIES (
 
 | 工作流 | 职责 | 调度 |
 | --- | --- | --- |
-| ① `[job][raw->raw][openlibing]测试报告原始数据采集` | OBS 读测试报告 JSON → 原始 JSON 整份写 `raw_test_report` | **每小时**（cron `0 0 * * * ? *`），失败告警 |
-| ② `[job][raw->sdi][openlibing]测试报告数据清洗` | 读 `raw_test_report` → `JsonArrayExpand` 展开 → 写 `sdi_rd_efc_test_report_<模板名>` | **每小时**（cron `0 0 * * * ? *`），失败告警 |
+| 编排 `[workflow][openlibing]测试报告采集编排` | DEPENDENT 等三平台执行记录采集完成 → 串行触发工作流①→② | **每小时**（cron `0 0 * * * ? *`，与三平台采集编排同整点），失败告警 |
+| ① `[job][raw->raw][openlibing]测试报告原始数据采集` | OBS 读测试报告 JSON → 原始 JSON 整份写 `raw_test_report` | 独立编排内 SUB_WORKFLOW，DEPENDENT 通过后执行 |
+| ② `[job][raw->sdi][openlibing]测试报告数据清洗` | 读 `raw_test_report` → `JsonArrayExpand` 展开 → 写 `sdi_rd_efc_test_report_<模板名>` | 独立编排内 SUB_WORKFLOW，依赖①完成 |
 
-- 两工作流 openlibing 项目，正式/测试环境各一；PM 决策：不新增台账表、无后置 SQL、无镜像同步。
+- 独立编排（openlibing 项目，正式环境）DEPENDENT 依赖 `[workflow][raw->dwi]PR&workflow数据获取`（176230008422726）当前小时成功，保证 gitcode/github sdi 表已更新；codearts sdi 表由时间错位保证（同小时 codearts 编排开头即完成采集）。
+- **架构决策：独立编排 + DEPENDENT 逻辑依赖，不物理塞入现有编排**（理由见 3 节：塞入会链式拉长 codearts 编排至 60min+ 引发下小时并发冲突）。
+- 测试环境按既有约定不跑定时，个人调测手动触发工作流①/②。
 - 增量判定 = 时间窗口 + 反查 + 重试时间比较（raw/sdi 两段，见 6.5/7.4）。
 
 ### 7.2 工作流① rawScript（OBS → raw_test_report）
@@ -522,7 +540,7 @@ sink {
 **幂等兜底**：
 
 - 行级：raw 表四元组 UNIQUE KEY + sdi 表五元组 UNIQUE KEY（MOW 覆盖）——重复执行/并发/重试重采均不产生重复行（同键覆盖更新）。
-- 调度：DS cron 每小时 + 失败告警；SeaTunnel checkpoint 容错。
+- 调度：独立编排 `[workflow][openlibing]测试报告采集编排`（cron 每小时 + 失败告警）+ DEPENDENT 依赖三平台采集完成；SeaTunnel checkpoint 容错。
 - 反查子集限窗口内（`create_time/report_upload_time > now-窗口`），避免 `MAX(...) GROUP BY` 全表渐大。
 
 **窗口参数**：`${report_window_hours}`（DS 全局参数，默认 24h）。**需与业务方确认报告上传时效 ≤ 窗口**（超过窗口才上传视为漏采，不补；调大窗口可重跑补采）。
@@ -813,3 +831,5 @@ CREATE TABLE IF NOT EXISTS `t_mcp_tool_call_log` (
 | R7 | SeaTunnel 原生双 source（Doris + MySQL 并行输入） | 多 source schema 不一致无法 union，跨源过滤需自定义 transform，成本高 | Doris 专用登记表 `dm_rd_efc_template_registry`（source 仍为单 Jdbc，JOIN 过滤） |
 | R8 | 报告前缀 = `tableName + "_"`（`sdi_rd_efc_test_report_triton_model_performance_`） | 与上游命名规范不符（模板名 kebab + 下划线） | `kebab(模板名)_`（`triton-model-performance_`） |
 | R9 | **单工作流 OBS 直读解析写 dwr 事实表**（v2 方案：TestReportParser 一次读 OBS + 展开 → 写 `dwr_rd_efc_<模板名>`） | 用户评审：不符合平台既有 **raw→sdi→dwi/dm/dwr 分层惯例**（`raw_workflow_source_github`/`raw_workflow_runs_github` 等均为「原始 JSON 先落 raw，再清洗」）；原始数据不可追溯、无法重放重清洗；解析逻辑耦合在插件中 | **raw→sdi 两段式**（v3）：工作流① 轻量 `TestReportReader`（复用 `ParseTestcase` OBS 读取，仅整份读原文）→ `raw_test_report`；工作流② `JsonArrayExpand` + `Sql` 纯配置清洗（**不新增解析插件**）→ 每模板一张 `sdi_rd_efc_test_report_<模板名>`；消费读 sdi 表 |
+| R10 | **独立编排、不依赖三平台采集**（测试报告采集编排独立每小时 cron，无 DEPENDENT） | 数据一致性：与三平台采集错拍一轮（16:00 触发读到上一小时 sdi），出现"流水线记录已采集但测试报告未采集"，看板/消费侧易误判为 bug 或缺数 | **独立编排 + DEPENDENT 依赖三平台采集**（3 节/7.1）：DEPENDENT 依赖 `PR&workflow数据获取`（176230008422726）当前小时成功后再跑工作流①→②，保证同小时采集完成后再采测试报告 |
+| R11 | **将测试报告采集①物理挂入现有 `PR&workflow数据获取` 编排（176230008422726）** | 链式拉长：codearts 编排（169579299839168）内部含 DEPENDENT 依赖 PR&workflow 编排完成；挂入后 PR&workflow 从 ~24min 拉长至 24+t（OBS 读取 10-20min），codearts 编排（现 53min）→ 60min+ 与下一小时实例重叠并发冲突；且职责耦合、失败传导 | **独立编排 + DEPENDENT 逻辑依赖**（物理隔离，职责单一） |
