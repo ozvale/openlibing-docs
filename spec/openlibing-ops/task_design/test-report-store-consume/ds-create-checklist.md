@@ -25,7 +25,7 @@
 
 | # | 项 | 内容 | 执行方 | 核对点 |
 | --- | --- | --- | --- | --- |
-| 1.1 | Doris 正式库建表 | `dm_rd_efc_template_registry`（design 6.1）、`raw_test_report`（design 6.3，**含 `source_end_time` 列**）、`sdi_rd_efc_test_report_triton_model_performance`（design 6.4，**含 `source_end_time` 列**） | DBA | DDL 含 `source_end_time datetime`；sdi 表唯一键为五元组 |
+| 1.1 | Doris 正式库建表 | `dm_rd_efc_template_registry`（design 6.1，**必含 `DISTRIBUTED BY` + MOW PROPERTIES**，缺省 Doris 3.4.x 报语法错误）、`raw_test_report`（design 6.3，**含 `source_end_time` 列**）、`sdi_rd_efc_test_report_triton_model_performance`（design 6.4，**含 `source_end_time` 列**） | DBA | DDL 含 `source_end_time` 列；dm 表有 `DISTRIBUTED BY HASH(\`table_type\`)`；sdi 表唯一键为五元组 |
 | 1.2 | 模板登记 | INSERT `dm_rd_efc_template_registry`（design 7.5 登记清单），`pipeline_ids` 填实际流水线白名单（逗号分隔） | 开发 | `table_type='test_report'`、`status=1`；漏配 `pipeline_ids` 则采集不生效 |
 | 1.3 | SeaTunnel 插件 jar | `TestReportReader`（`transform/readtestreport`）构建 → 上传 OBS 桶 → SeaTunnel 服务加载/重启（与测试环境验证版 v4 同版） | 开发 | 测试库 raw 采集已用该插件跑通后再上正式 |
 | 1.4 | DS 参数 | 复用既有项目参数（0 节已核实存在）；**新增工作流全局参数 `${report_window_hours}=24`**（工作流①/② 各配一份） | 用户 | 不配则 rawScript 中 `${report_window_hours}` 无值 |

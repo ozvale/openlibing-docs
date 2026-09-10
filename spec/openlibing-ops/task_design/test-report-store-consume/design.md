@@ -149,8 +149,17 @@ CREATE TABLE `dm_rd_efc_template_registry` (
   `pipeline_ids`   VARCHAR(512) COMMENT '采集流水线白名单（逗号分隔，一对多）；为空则该模板不参与采集',
   `create_time`    DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time`    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-) ENGINE=OLAP UNIQUE KEY(`table_type`, `model_code`) COMMENT='模板登记表（按 table_type 区分模板类型）';
+) ENGINE=OLAP UNIQUE KEY(`table_type`, `model_code`) COMMENT='模板登记表（按 table_type 区分模板类型）'
+DISTRIBUTED BY HASH(`table_type`) BUCKETS 10
+PROPERTIES (
+"replication_allocation" = "tag.location.default: 2",
+"storage_format" = "V2",
+"enable_unique_key_merge_on_write" = "true",
+"light_schema_change" = "true"
+);
 ```
+
+> **实测修正（2026-09-10 测试库验证）**：Doris 3.4.x 的 UNIQUE KEY 表**必须显式 `DISTRIBUTED BY`**——缺省直接报语法错误（实测 `Syntax error ... Encountered: INTEGER LITERAL`，报错位置看似在列定义行）。故本表补 `DISTRIBUTED BY HASH(\`table_type\`)` + 与 raw/sdi 一致的 PROPERTIES（`enable_unique_key_merge_on_write`）。raw/sdi 表（6.3/6.4）原本就有 DISTRIBUTED BY，不受影响。
 
 > **字段精简**：不设 `id` 主键——`(table_type, model_code)` 本身唯一（Doris UNIQUE KEY 模型只支持一组 key，避免 id 与业务唯一键并存）；不设 `schema_version`——当前采集/消费两侧均无使用方，后续确有 schema 演进需求再加。
 

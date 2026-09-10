@@ -13,6 +13,8 @@
 - 前端需求完成后，必须在 `archive.md` 记录最终交互、验证方式、AI 错误和人工修正。
 - **测试报告增量采集的重试判定**（test-report-store-consume）：三平台源表（codearts/gitcode/github）均为 Doris UNIQUE KEY（MOW），流水线**重试后三 ID 不变但 `end_time` 更新（覆盖原行，不新增）**；CodeArts 因 `step_daily_build_number` 递增拼接 jobId 变化天然区分。增量判定 =「状态完成 + 时间窗口 + 反查 + **`source_end_time` 时间比较**」：raw 表记采集时源表 `end_time`，工作流①反查 `未落库 OR 源表.end_time > 已落库 source_end_time`；工作流②同样 `未清洗 OR raw.source_end_time > 已清洗 source_end_time`。**三平台 end_time 字段**：codearts=`pipeline_end_time`、github=`updated_at`（run 级）、gitcode=`end_time`。source_end_time 允许 NULL（安全降级为只采一次），但**已落库 NULL 行不会被重采**（`end_time > NULL` 恒不成立）。
 - **SeaTunnel 自定义 transform 透传 Doris datetime 列**：source SQL 从 Doris 读出的 datetime 列是 `LocalDateTime` 对象；transform 输出列若声明为 `BasicType.STRING_TYPE` 透传该值，JDBC sink 会报 `JDBC-10 Data type cast failed`（`ClassCastException: LocalDateTime cannot be cast to String`）。**输出列类型必须用 `LocalTimeType.LOCAL_DATE_TIME_TYPE`**，且入参/透传都用 `Object` 承接。
+- **Doris 3.4.x UNIQUE KEY 表必须显式 `DISTRIBUTED BY`**（test-report-store-consume 实测）：缺省直接报语法错误（`Syntax error ... Encountered: INTEGER LITERAL`，报错位置看似在列定义行，易误判为列语法问题）。所有 Doris UNIQUE KEY 建表 DDL 必须带 `DISTRIBUTED BY HASH(列) BUCKETS n` + MOW PROPERTIES（`enable_unique_key_merge_on_write=true`）。
+- **DS 手动触发工作流必须显式 `tenantCode=dolphinscheduler`**（wl_test 实测）：API 触发（`executors/start-workflow-instance`）不传 tenantCode 时默认 `default` 租户，SEATUNNEL 任务**提交即失败**（任务实例 `startTime=null`、`logPath=null`，工作流 1s 失败，无明显日志）。用 `wuliang` 账号 + `tenantCode=dolphinscheduler` 才能跑 SeaTunnel；同理 POST/PUT DS 接口的 form 参数放 body（`application/x-www-form-urlencoded`）可避免 URL 超长（414）。
 
 ## 常见 AI 错误与规避
 
