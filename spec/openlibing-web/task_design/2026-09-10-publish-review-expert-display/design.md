@@ -6,8 +6,8 @@
 
 ## 改动文件
 
-| 文件 | 改动说明 |
-|------|----------|
+| 文件                                                                                         | 改动说明                                                                  |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `apps/web-openlibing/src/views/Publish/publishReview/detail/components/basicInformation.vue` | `getUserOptions` 的 `.then` 回调中，`data.forEach` 追加 `userName` 格式化 |
 
 ## 核心代码
@@ -15,7 +15,7 @@
 ```javascript
 // getUserOptions 的 .then 回调
 const { code, data } = res;
-data.forEach(item => {
+data.forEach((item) => {
   item.userName = `${item.userName}（${item.userId}）`;
 });
 userList.value = code === 200 ? data : [];
