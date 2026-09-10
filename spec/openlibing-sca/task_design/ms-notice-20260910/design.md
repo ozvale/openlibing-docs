@@ -43,10 +43,10 @@ ProjectNoticeScanController (REST, /project/notice/scan/*)
 
 **数据模型**：`tbl_project_notice_scan_detail` 新增列（Liquibase `20260909_add_tbl_project_notice_scan_detail_manual_flag`，preConditions 幂等 + rollback dropColumn）：
 
-| 列               | 类型          | 说明                                          |
-| ---------------- | ------------- | --------------------------------------------- |
-| `manual_url`     | TINYINT NOT NULL DEFAULT 0 | 下载地址来自人工修正（地址继承标记）       |
-| `manual_content` | TINYINT NOT NULL DEFAULT 0 | NOTICE 内容来自人工补充（内容继承标记）    |
+| 列               | 类型                       | 说明                                    |
+| ---------------- | -------------------------- | --------------------------------------- |
+| `manual_url`     | TINYINT NOT NULL DEFAULT 0 | 下载地址来自人工修正（地址继承标记）    |
+| `manual_content` | TINYINT NOT NULL DEFAULT 0 | NOTICE 内容来自人工补充（内容继承标记） |
 
 注意：`batchInsert` 显式传值时 DB 默认值不生效，明细创建时必须显式初始化为 0，否则插入报 `Column cannot be null`。
 
@@ -147,26 +147,26 @@ replace = replace.replaceAll("(?i)copyright", "");   // 剥离前缀单词
 
 ## Data Model 变更汇总
 
-| 对象                              | 变更                                                                 |
-| --------------------------------- | -------------------------------------------------------------------- |
-| `tbl_project_notice_scan_detail`  | 新增 `manual_url`、`manual_content`（TINYINT NOT NULL DEFAULT 0）    |
-| `TblProjectNoticeScanDetail` 实体 | 新增 `manualUrl`、`manualContent` 字段                               |
+| 对象                              | 变更                                                                                                                                                                         |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tbl_project_notice_scan_detail`  | 新增 `manual_url`、`manual_content`（TINYINT NOT NULL DEFAULT 0）                                                                                                            |
+| `TblProjectNoticeScanDetail` 实体 | 新增 `manualUrl`、`manualContent` 字段                                                                                                                                       |
 | Mapper XML                        | `insert`/`batchInsert` 补列；新增 `selectLatestManualSuccess`、`markSupplementContent`、`markSupplementRescan`；`selectCachedSuccess` 补 `ORDER BY update_time DESC LIMIT 1` |
-| `TblProjectNoticeScanMapper`      | `updateReleaseNameById` 删除，新增 `markSupplementProcessing`（CAS） |
-| db.changelog.xml                  | include `mysql/20260909/add-tbl-project-notice-scan-detail-manual-flag.xml` |
+| `TblProjectNoticeScanMapper`      | `updateReleaseNameById` 删除，新增 `markSupplementProcessing`（CAS）                                                                                                         |
+| db.changelog.xml                  | include `mysql/20260909/add-tbl-project-notice-scan-detail-manual-flag.xml`                                                                                                  |
 
 ## 测试策略
 
-| 测试类                                 | 覆盖点                                                                 |
-| -------------------------------------- | ---------------------------------------------------------------------- |
-| `ProjectNoticeScanServiceImplTest`     | 继承（content/url 优先级、查询失败降级）、补充受理（二选一校验、CAS 冲突、PROCESSING 允许）、exportNotice 全链路、queryScanInfo（null/过滤） |
-| `ProjectNoticeScanAsyncProcessorTest`  | 内容继承明细跳过下载、孤儿 PROCESSING 恢复、processSupplement（就绪登记、重扫失败隔离、合并失败置 FAILED、重读累积） |
-| `ProjectNoticeScanEventListenerTest`   | 补充消息 JSON body + msgType header、发送失败仅记日志                   |
-| `ProjectNoticeScanControllerTest`      | /export、/info（含状态过滤）、/supplement 新契约                        |
-| `CGitPackageUrlResolverTest`           | 白名单主页识别、归档/ref 页面路由与归一化、非白名单不受影响            |
-| `MavenPackageUrlResolverTest`          | 镜像去 `maven2/` 前缀、官方保留前缀                                    |
-| `OpenPersonDMScanDMServiceImplTest`    | Copyright 前缀变体归一化一致性、checkCopyrightMatch 匹配语义           |
-| `ProjectNoticeScanExecutorTest`        | 转存 / Content-Disposition / HTML 拦截                                 |
+| 测试类                                | 覆盖点                                                                                                                                       |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ProjectNoticeScanServiceImplTest`    | 继承（content/url 优先级、查询失败降级）、补充受理（二选一校验、CAS 冲突、PROCESSING 允许）、exportNotice 全链路、queryScanInfo（null/过滤） |
+| `ProjectNoticeScanAsyncProcessorTest` | 内容继承明细跳过下载、孤儿 PROCESSING 恢复、processSupplement（就绪登记、重扫失败隔离、合并失败置 FAILED、重读累积）                         |
+| `ProjectNoticeScanEventListenerTest`  | 补充消息 JSON body + msgType header、发送失败仅记日志                                                                                        |
+| `ProjectNoticeScanControllerTest`     | /export、/info（含状态过滤）、/supplement 新契约                                                                                             |
+| `CGitPackageUrlResolverTest`          | 白名单主页识别、归档/ref 页面路由与归一化、非白名单不受影响                                                                                  |
+| `MavenPackageUrlResolverTest`         | 镜像去 `maven2/` 前缀、官方保留前缀                                                                                                          |
+| `OpenPersonDMScanDMServiceImplTest`   | Copyright 前缀变体归一化一致性、checkCopyrightMatch 匹配语义                                                                                 |
+| `ProjectNoticeScanExecutorTest`       | 转存 / Content-Disposition / HTML 拦截                                                                                                       |
 
 ## 风险与注意事项
 
