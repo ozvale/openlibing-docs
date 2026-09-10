@@ -2,13 +2,13 @@
 
 ## 变更标识
 
-| 字段 | 值 |
-|------|-----|
-| 仓库 | openlibing-framework |
-| Commit | 9a6f479b |
-| 变更类型 | 安全加固（防御性） |
-| 设计师 | AI 安全架构师 |
-| 设计日期 | 2026-09-08 |
+| 字段     | 值                   |
+| -------- | -------------------- |
+| 仓库     | openlibing-framework |
+| Commit   | 9a6f479b             |
+| 变更类型 | 安全加固（防御性）   |
+| 设计师   | AI 安全架构师        |
+| 设计日期 | 2026-09-08           |
 
 ## 1. 认证授权
 
@@ -32,11 +32,11 @@
 
 ### 分类分级
 
-| 表 | 字段 | 分级 | 说明 |
-|----|------|------|------|
-| product_info | product_name | 内部 | 产品名称，业务标识 |
-| project_info | project_name | 内部 | 项目名称，业务标识 |
-| role_type_info | role, role_name | 内部 | 角色标识与名称 |
+| 表             | 字段            | 分级 | 说明               |
+| -------------- | --------------- | ---- | ------------------ |
+| product_info   | product_name    | 内部 | 产品名称，业务标识 |
+| project_info   | project_name    | 内部 | 项目名称，业务标识 |
+| role_type_info | role, role_name | 内部 | 角色标识与名称     |
 
 ### 传输加密
 
@@ -73,6 +73,7 @@ logger.warn("Failed to insert duplicate role names: role={}, roleName={}", roleI
 ```
 
 **日志安全性**：
+
 - 日志级别为 `warn`，可被监控系统捕获告警
 - 重复尝试的 `productName` / `projectName` / `role` / `roleName` 是业务标识，非敏感信息
 - 异常堆栈 `e` 仅记录到日志文件，不返回客户端
@@ -90,11 +91,11 @@ logger.warn("Failed to insert duplicate role names: role={}, roleName={}", roleI
 
 ### Fail Secure
 
-| 场景 | 默认行为 | 安全性 |
-|------|---------|--------|
-| 数据库唯一约束冲突 | 捕获 DuplicateKeyException → 返回 failureMessage | 安全（拒绝，不暴露细节） |
-| 数据库连接异常 | 抛出 DataAccessException，由全局异常处理器处理 | 安全（拒绝，统一错误响应） |
-| 双实例同时插入 | 一个成功，一个 DuplicateKeyException | 安全（数据完整性不受影响） |
+| 场景               | 默认行为                                         | 安全性                     |
+| ------------------ | ------------------------------------------------ | -------------------------- |
+| 数据库唯一约束冲突 | 捕获 DuplicateKeyException → 返回 failureMessage | 安全（拒绝，不暴露细节）   |
+| 数据库连接异常     | 抛出 DataAccessException，由全局异常处理器处理   | 安全（拒绝，统一错误响应） |
+| 双实例同时插入     | 一个成功，一个 DuplicateKeyException             | 安全（数据完整性不受影响） |
 
 ### 应急响应
 
@@ -105,15 +106,15 @@ logger.warn("Failed to insert duplicate role names: role={}, roleName={}", roleI
 
 ### 单元测试
 
-| 用例 | 预期 | 覆盖 |
-|------|------|------|
-| 插入不存在的 product_name | 成功 | ProductServiceImpl |
-| 插入已存在的 product_name | DuplicateKeyException → failureMessage | ProductServiceImpl |
-| 插入不存在的 project_name | 成功 | ProjectServiceImpl |
-| 插入已存在的 project_name | DuplicateKeyException → failureMessage | ProjectServiceImpl |
-| 插入不存在的 role/role_name | 成功 | RoleServiceImpl |
-| 插入已存在的 role | DuplicateKeyException → failureMessage | RoleServiceImpl |
-| 插入已存在的 role_name | DuplicateKeyException → failureMessage | RoleServiceImpl |
+| 用例                        | 预期                                   | 覆盖               |
+| --------------------------- | -------------------------------------- | ------------------ |
+| 插入不存在的 product_name   | 成功                                   | ProductServiceImpl |
+| 插入已存在的 product_name   | DuplicateKeyException → failureMessage | ProductServiceImpl |
+| 插入不存在的 project_name   | 成功                                   | ProjectServiceImpl |
+| 插入已存在的 project_name   | DuplicateKeyException → failureMessage | ProjectServiceImpl |
+| 插入不存在的 role/role_name | 成功                                   | RoleServiceImpl    |
+| 插入已存在的 role           | DuplicateKeyException → failureMessage | RoleServiceImpl    |
+| 插入已存在的 role_name      | DuplicateKeyException → failureMessage | RoleServiceImpl    |
 
 ### 集成测试
 
@@ -126,9 +127,9 @@ logger.warn("Failed to insert duplicate role names: role={}, roleName={}", roleI
 
 ## 8. 设计决策记录
 
-| 决策 | 方案 | 替代方案 | 理由 |
-|------|------|---------|------|
+| 决策     | 方案                                        | 替代方案                               | 理由                                 |
+| -------- | ------------------------------------------- | -------------------------------------- | ------------------------------------ |
 | 并发控制 | 数据库唯一约束 + DuplicateKeyException 捕获 | SELECT ... FOR UPDATE / Redis 分布式锁 | 最轻量、无额外依赖、数据库天然原子性 |
-| 异常提示 | 用户友好的业务提示 | 直接抛异常或返回堆栈 | 符合 Fail Secure，不泄露内部信息 |
-| 日志级别 | warn | error / info | warn 可触发告警但不过度恐慌 |
-| 约束变更 | Liquibase changelog（带 precondition） | 手动 DDL 脚本 | 与现有数据库变更管理流程一致，可回滚 |
+| 异常提示 | 用户友好的业务提示                          | 直接抛异常或返回堆栈                   | 符合 Fail Secure，不泄露内部信息     |
+| 日志级别 | warn                                        | error / info                           | warn 可触发告警但不过度恐慌          |
+| 约束变更 | Liquibase changelog（带 precondition）      | 手动 DDL 脚本                          | 与现有数据库变更管理流程一致，可回滚 |

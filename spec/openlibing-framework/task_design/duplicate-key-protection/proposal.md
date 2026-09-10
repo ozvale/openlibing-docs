@@ -23,9 +23,9 @@
 
 ## 影响范围
 
-| 模块 | 影响 |
-|------|------|
+| 模块               | 影响                            |
+| ------------------ | ------------------------------- |
 | ProductServiceImpl | 新增 DuplicateKeyException 捕获 |
 | ProjectServiceImpl | 新增 DuplicateKeyException 捕获 |
-| RoleServiceImpl | 新增 DuplicateKeyException 捕获 |
-| 数据库 | 3 张表新增唯一约束（兼容存量） |
+| RoleServiceImpl    | 新增 DuplicateKeyException 捕获 |
+| 数据库             | 3 张表新增唯一约束（兼容存量）  |
