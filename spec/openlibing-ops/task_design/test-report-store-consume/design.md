@@ -632,6 +632,82 @@ VALUES
 **⑤（待确认）Doris 默认数据源**
 - 文档称登记表与 sdi 表"均标 DORIS"。metric POC 经验：不标 `@DataSource` 默认即 DORIS（标 MYSQL 才必须）。需确认 ops 默认数据源：若默认即 DORIS，标 DORIS 冗余（无害）；若默认非 DORIS 则必须标，避免查错库。
 
+#### 8.2.2 调用日志表（MCP 可观测性/审计，本期实现）
+
+**定位**：MCP 是面向客户的正式能力面，需记录"谁调了、调了什么、结果如何"，支撑审计/运营分析/故障定位。**作为横切关注点，用 AOP 切面统一记录**，不在每个 `@Tool` 方法内手写。
+
+**设计**：
+- **表**：复用 metric POC 已定结构 `t_mcp_tool_call_log`（库 `openlibing_ops`），DDL 参考 `openlibing-metric/src/main/resources/sql/V2026_08_24__create_mcp_tool_call_log.sql`：
+
+```sql
+CREATE TABLE IF NOT EXISTS `t_mcp_tool_call_log` (
+  `id`             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键，自增',
+  `tool_name`      VARCHAR(64)  NOT NULL COMMENT 'MCP 工具名（如 reportDataQuery）',
+  `args_summary`   VARCHAR(500) DEFAULT NULL COMMENT '参数摘要（JSON，不落敏感值）',
+  `caller`         VARCHAR(64)  DEFAULT NULL COMMENT '调用方标识（账号/应用）',
+  `session_id`     VARCHAR(128) DEFAULT NULL COMMENT 'MCP 会话 ID（Streamable HTTP Mcp-Session-Id）',
+  `success`        TINYINT      NOT NULL DEFAULT 1 COMMENT '是否成功（1：成功，0：失败）',
+  `error_msg`      VARCHAR(500) DEFAULT NULL COMMENT '失败原因摘要',
+  `cost_ms`        BIGINT       DEFAULT NULL COMMENT '耗时（毫秒）',
+  `create_time`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                   ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted`     TINYINT      NOT NULL DEFAULT 0 COMMENT '是否删除（0：否，1：是）',
+  PRIMARY KEY (`id`),
+  KEY `idx_tool_name` (`tool_name`),
+  KEY `idx_caller` (`caller`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='MCP 工具调用日志表';
+```
+
+- **AOP 切面**：`McpCallLogAspect` 环绕 `@Tool` 方法，方法级 `@DataSource(DataSourceEnum.MYSQL)` 写日志表（与业务查询 DORIS 数据源分离，避免污染 Doris）。
+- **敏感值脱敏**：`args_summary` 只记录参数**摘要**（如 `modelCode=triton_model_performance`），不落 token/密钥/内部路径；`error_msg` 同样脱敏。
+- **查询入口**：复用 `McpToolCallLogService.listRecent` 仅内部运维查看（不暴露为 MCP 工具，避免自审计工具被 AI 滥用）。
+
+#### 8.2.3 MCP 生产级架构设计（面向客户，商业项目标准，2026-08-24 评审新增）
+
+> 背景：ops 看板是**正式面向客户**的服务，MCP 作为新暴露能力面，须按商业项目标准设计，不允许"先裸奔再补"。本节固化为设计决策。
+
+**① 鉴权（P0，上线硬门禁）**
+- 接入公司既有 **SSO/网关体系**：`/mcp` 由 API 网关统一收口，Bearer/JWT 鉴权（方案对齐 ops 现有 Web 网关），MCP 协议 Authorization 头标准接入。
+- **硬门禁：MCP 端点上线正式环境前必须完成鉴权，不允许裸奔上线**（修订 T8）。
+
+**② 授权与数据越权（P0）**
+- **工具级权限（RBAC）**：按调用方角色限制可调工具（如普通客户不可调内部统计工具）。
+- **行级数据权限**：MCP 查询**必须继承 REST 既有数据权限**——客户只能查自己可见的 repo/项目数据。⚠️ 这是最容易漏的越权点：工具若直接复用 `ReportQueryService` 而跳过权限上下文，将成为越权后门。实现：工具方法从鉴权上下文取调用方，传入 `ReportQueryService` 做与 REST 一致的权限过滤。
+
+**③ 可观测性（P0）**
+- 调用日志表（8.2.2）+ AOP 切面统一记录。
+- **Metrics**：工具调用量、成功率、P95 延迟 → Prometheus + Grafana（对齐公司监控体系）。
+- **告警**：鉴权失败率突增、工具失败率超阈值、延迟劣化告警。
+- 调用追踪：MDC/traceId 贯通 MCP 调用与内部 DB 查询。
+
+**④ 可靠性（P0/P1）**
+- **限流/配额（P0）**：AI 客户端可能循环调用工具，按调用方/session 秒级限流，防打爆 Doris。
+- **超时控制（P0）**：工具执行超时（DB 慢查询兜底）、MCP 传输超时。
+- **结果上限（P0）**：MCP 工具强制 `pageSize` 上限（如 ≤100）与返回列裁剪，防 AI 拉全表。
+- **降级（P1）**：Doris 不可用时返回结构化错误（AI 可理解并放弃），不挂起。
+
+**⑤ 工具设计（P1）**
+- 工具**宜少而聚合**：每工具覆盖一个完整任务（AI context 有限），对照 REST 6 参数做 **AI 友好参数形态**（见 8.2.1 ①）。
+- **结构化错误返回**：失败返回可读原因（AI 能修正），不抛裸异常。
+- **工具注册清单**：本期仅 report 查询；后续能力登记管理，避免工具泛滥。
+
+**⑥ 测试（P1）**
+- 单测：参数校验、白名单、错误返回。
+- **协议集成测试**：自动化 `initialize → tools/list → tools/call`（非手工 curl）。
+- **越权测试**：不同权限账号调用同一工具必须返回不同数据。
+- 性能：限流阈值、大结果集延迟基准。
+
+**⑦ 架构形态（决策）**
+- **内嵌 + 网关前置**：ops 内嵌 MCP Server，API 网关统一收口 `/mcp`（鉴权/限流/审计/脱敏在网关层），服务端保持简单。
+- **扩展点**：未来 metric 指标数据需进 MCP 时，ops 工具内部**跨服务调 metric REST 聚合**，客户端仍只连一个 `/mcp`——**不做独立 MCP 网关服务**（当前仅 ops 一个提供方，过早）。
+
+**⑧ 仓职责（决策）**
+- **仅 ops 提供 MCP**：看板查询消费统一走 ops `/mcp` 单入口。
+- **metric 不本期开发**：其 POC（`mcp_test` 分支）保留为**团队赋能教材**（含 `MCP搭建指导文档.md`）。
+- **sync 不开发**：采集写入侧无查询消费面，职责不匹配。
+
 ## 9. 安全设计
 
 | 项 | 措施 |
@@ -639,7 +715,7 @@ VALUES
 | OBS 凭证 | 只读 AK/SK，存 SeaTunnel 参数（`${OBS_AK}/${OBS_SK}`，与既有工作流一致），不下沉代码 |
 | 动态 SQL（ops 查询） | 表名/列名双重白名单（登记表 + 数据资产列信息） |
 | SeaTunnel transform | `TestReportReader` 复用 `ParseTestcase`/`TestCaseMetadataParser` 的 OBS 读取防护；路径三段 ID 白名单/长度校验防穿越；sdi 清洗为纯配置（无自定义代码） |
-| MCP 端点 | 本期按 POC 不鉴权；正式环境网关层 Bearer/SSO + 限流 + 审计（待办） |
+| MCP 端点 | **上线硬门禁：正式环境前必须完成鉴权，不允许裸奔上线**。网关层 Bearer/SSO 鉴权 + 工具级 RBAC + 行级数据权限继承（防越权后门）+ 限流 + 审计（调用日志表 8.2.2 + Metrics + 告警），详见 8.2.3 |
 
 ## 10. 待确认事项（需用户/PM 确认）
 
@@ -652,7 +728,7 @@ VALUES
 | T5 | **DS 工作流创建与发布** | **已确认：由用户负责**。先在测试环境（beta）充分验证（造数联调/幂等/补采），验证通过后发布正式环境；设计文档提供工作流定义、rawScript 与 cron 供创建参考。**正式环境上线门禁：测试环境全链路调通（采集+清洗+ops REST 消费）后才上正式；MCP 除外（可后续迭代单独上）** | 已定（含门禁） |
 | T6 | **上游 JSON schema 完整清单（每模板一份）** | 本期仅 `triton_model_performance`；后续模板按登记制扩展 | 插件/表扩展 |
 | T7 | **模板登记数据维护入口** | **已确认：本期由开发手动 SQL 登记**——INSERT `dm_rd_efc_template_registry`（`table_type='test_report'`，含 `pipeline_ids` 配置）+ 建 raw/sdi 表（DDL 见 6.3/6.4），不做管理页面；登记清单示例见 7.5 | 已定 |
-| T8 | **MCP 端点鉴权/限流方案** | **延期处理（不阻塞本期）**：待 API/MCP 调通后再评估；可能需要**先发布 MCP 端点**供消费，再设计网关层鉴权/限流 | 后续迭代 |
+| T8 | **MCP 端点鉴权/限流方案** | **已修订（2026-08-24）**：按 8.2.3 生产级架构执行——网关层 Bearer/SSO 鉴权 + RBAC + 行级数据权限 + 限流 + 调用日志审计；**上线硬门禁：正式环境前必须完成鉴权，不允许裸奔上线**（不再"先发布再补"） | 已定 |
 | T9 | **是否需平台 UI（ops-web）展示** | 本期仅 API/MCP | 前端排期 |
 | T10 | **报告上传时效确认** | **已确认（暂定）**：窗口默认 **24h**；后续业务有需要可调大 `${report_window_hours}`（DS 参数）重跑补采，无需改代码 | 已定（暂定 24h） |
 | T11 | **采集范围来源（已定）** | **已确认：Doris 专用登记表**（`dm_rd_efc_template_registry` + `table_type='test_report'`，6.1）；采集/消费共读，无 MySQL 依赖、无双处维护。曾评估：Catalog 直连（正式环境无 MySQL 只读账号且实测 `SHOW CATALOGS` 仅 internal）、DS 参数化（双处维护）、MySQL 登记表（语义不符）均被否决 | 已定 |
