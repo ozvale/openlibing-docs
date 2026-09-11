@@ -62,7 +62,7 @@ stages:
               cache: true
 
           - name: pre-commit
-            uses: openlibing-pre-commit-action
+            uses: openlibing/pre-commit-action@v1.0.1
             with:
               extra_args: ${{ inputs.extra_args }}
               gc_token: ${{ secrets.ROBOT_TOKEN }}
