@@ -760,6 +760,62 @@ CREATE TABLE IF NOT EXISTS `t_mcp_tool_call_log` (
 - **metric 不本期开发**：其 POC（`mcp_test` 分支）保留为**团队赋能教材**（含 `MCP搭建指导文档.md`）。
 - **sync 不开发**：采集写入侧无查询消费面，职责不匹配。
 
+#### 8.2.4 MCP 鉴权方案 C 开发细化（beta 实现，2026-09-11 确认）
+
+> 依据 study `docs/MCP/MCP方案C开发上下文-beta.md`，方案 C 决策（2026-09-10）落地为开发执行规格；本节为 MCP 部分开发的实现设计，已与用户逐项确认。
+
+**① 总体架构（方案 C）**
+
+- gateway 复用现有长短 token 机制（access 30min + refresh 30 天，`JwtHelper`）**+ 补 OAuth 2.1 协议层**（协议层由 **ops 侧直接在 gateway 仓代码实现**，不依赖网关团队排期；网关团队仅需知晓与配合命名/路由规范）。
+- ops 作为 **OAuth2 Resource Server** 校验 `/mcp` 的 access token + 解析用户上下文。
+- 客户端接入：**动态注册为主（RFC 7591）**——MCP 服务**不限定特定 agent**，任意符合 OAuth 2.1 规范的客户端自助接入；client 记录存 **Redis（零新建表）**。
+
+**② 硬约束（不影响 gateway 现有机制，跨团队仓改动红线）**
+
+| # | 约束 | 说明 |
+| --- | --- | --- |
+| 1 | **只新增、不修改** | 新增 `/.well-known/*`、`/oauth2/*` 端点；**不修改** `JwtHelper`/`AuthFilter`/`LoginServiceImpl` 现有方法、`/plugin/*` 端点、限流、三方 OAuth 发起流程 |
+| 2 | **复用 = 只读调用** | 协议层只**调用**现有零件（`JwtHelper` 签发/验签、`generatePluginAuthByRefreshToken`、`RedisHelper`、三方登录发起），不改既有行为 |
+| 3 | **独立数据** | 动态注册 client 存 Redis（`oauth2:client:*` 前缀）；OAuth refresh 独立 key 前缀（`oauth2:refresh:*`），与插件 refresh 互不串用 |
+| 4 | **配置走 Apollo** | gateway 协议层配置项（如元数据、默认 scope）放 Apollo `gateway` namespace，与现有 `JwtConfig` 一致（gateway 当前配置中心为 Apollo，Nacos 未启用，已核实） |
+
+**③ ops 侧新增（`feat-test-report-mcp` 分支）**
+
+- `api/mcp/McpAuthFilter`（`OncePerRequestFilter`，**不引入 spring-security**）：拦截 `/mcp`，校验 `Authorization: Bearer <token>` → JWT 验签（本地测试密钥，Nacos 配置化；beta 切 gateway `jwtSecret`）→ 解析 userId/accountId → `McpUserContextHolder` 存上下文 → 放行；**无 token/验签失败 → 401**
+- `api/mcp/McpUserContextHolder`（ThreadLocal）
+- 现有 MCP 代码不动：`McpServerConfig` + `ReportMcpTools`（2 工具）已就绪
+
+**④ gateway 侧新增（新分支推 fork，beta 联调；零新建表）**
+
+| 端点 | 职责 |
+| --- | --- |
+| `/.well-known/oauth-authorization-server` | 元数据 JSON（authorization_endpoint / token_endpoint / registration_endpoint / jwks_uri / 支持的 grant 与 code_challenge_methods） |
+| `/oauth2/register`（RFC 7591） | 动态注册：校验 `redirect_uris` 合法性 → 生成随机 `client_id` → 存 Redis（`client_id → redirect_uris/grant_types/token_endpoint_auth_method=none`） |
+| `/oauth2/authorize` | 复用现有三方登录发起（`/oauth2/authorization/gitcode` 等）→ 回调 → consent → 发 code（PKCE S256 校验；redirect_uri ∈ 注册白名单） |
+| `/oauth2/token` | 授权码换 token + refresh_token 换 token（复用 `generatePluginAuthByRefreshToken` 逻辑；**不轮换**，旧 refresh 原样返回，Q6 风险已告知网关团队） |
+
+> **概念澄清（2026-09-11）**：`client_id` 是**应用级**标识（Agent 的 AppID，如 `trae`），**不绑定用户**；用户身份在授权流中由三方登录确认后写入 token claims（`userId/accountId`）。token 同时含 `client_id`（哪个应用）+ `userId`（哪个用户），是阶段 2 工具级 RBAC（按 client_id）与行级数据权限（按 userId → `project_repo_info` 可见仓集合）的数据基础。
+
+**⑤ 阶段划分**
+
+- **阶段 1a（本地验证，先做）**：
+  1. 本地启动 ops（`feat-test-report-mcp`），curl 三步握手（initialize / tools/list / tools/call）验证基础链路
+  2. ops 新增 `McpAuthFilter` + `McpUserContextHolder`
+  3. 本地最小 stub（Python）：模拟元数据 + `/register` + `/authorize` + `/token`，用共享测试密钥签发 access token
+  4. 鉴权闭环验证：带 token 调 `/mcp` 成功；无 token 401
+- **阶段 1b（beta 验证，本地通过后）**：
+  1. gateway 协议层代码开发（新分支推 fork `wl_fork`）
+  2. ops 验签密钥切 gateway `jwtSecret`（Nacos 配置化）
+  3. beta 部署 + 真实客户端联调（Trae/OpenCode 配置 beta 域名 → 动态注册 → 授权码流 → 调工具）
+- **阶段 2（验证通过后，本次不排）**：工具级 RBAC、行级数据权限、限流、审计日志、超时/结果上限
+
+**⑥ 不做（对齐决策）**
+
+- 服务端 token 兜底（可选项，本期不开发；响应 FIND-01：内网隔离 + 网关入口认证为基线）
+- refresh 轮换（复用不轮换，Q6 风险已告知网关团队）
+- 精细 scope（ops 侧权限判断替代）
+- 客户端预注册表（动态注册为主；预注册为未来可选）
+
 ## 9. 安全设计
 
 | 项 | 措施 |
