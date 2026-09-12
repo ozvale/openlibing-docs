@@ -1,0 +1,56 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'background': '#ffffff', 'primaryColor': '#ffffff', 'lineColor': '#666666' }}}%%
+flowchart LR
+    classDef process fill:#6baed6,stroke:#2171b5,stroke-width:2px,color:#000000
+    classDef external fill:#fdae61,stroke:#d94701,stroke-width:2px,color:#000000
+    classDef datastore fill:#74c476,stroke:#238b45,stroke-width:2px,color:#000000
+
+    Operator["Operator"]:::external
+    EndUser["EndUser"]:::external
+
+    subgraph Application["Application (Spring Boot)"]
+        WebHookCtl(("WebHookEventController")):::process
+        RepoCtl(("RepoController")):::process
+        PrTokenSvc(("PrAccessTokenServiceImpl")):::process
+        WebhookConsumer(("WebhookEventConsumer")):::process
+        OtherRESTCtl(("Other REST Controllers<br/>(ProjectConfig, SyncUser, CodeMetrics)")):::process
+        BackgroundJobs(("Background Jobs<br/>(XxlJobHandler)")):::process
+    end
+
+    subgraph External["External"]
+        MySQL[("MySQL")]:::datastore
+        Redis[("Redis")]:::datastore
+        RabbitMQ[("RabbitMQ")]:::datastore
+        MongoDB[("MongoDB")]:::datastore
+        GitCode["GitCode"]:::external
+        OtherExtSvc["Other External Services<br/>(Gitee, Github, Nacos, XXLJob, OBS)"]:::external
+    end
+
+    Operator <-->|"SDF01: HTTPS 管理 API"| OtherRESTCtl
+    EndUser <-->|"SDF02: HTTPS REST API"| RepoCtl
+    EndUser <-->|"SDF02: HTTPS REST API"| OtherRESTCtl
+    GitCode <-->|"SDF03: HTTPS Webhook (HMAC)"| WebHookCtl
+    OtherExtSvc <-->|"SDF03: HTTPS Webhook (HMAC)"| WebHookCtl
+    WebHookCtl <-->|"SDF04: AMQP 持久化"| RabbitMQ
+    RabbitMQ <-->|"SDF05: AMQP 消费"| WebhookConsumer
+    RepoCtl <-->|"SDF06: JDBC/TLS"| MySQL
+    OtherRESTCtl <-->|"SDF06: JDBC/TLS"| MySQL
+    PrTokenSvc <-->|"SDF06: JDBC/TLS"| MySQL
+    WebhookConsumer <-->|"SDF06: JDBC/TLS"| MySQL
+    BackgroundJobs <-->|"SDF06: JDBC/TLS"| MySQL
+    OtherRESTCtl <-->|"SDF07: MongoDB/TLS"| MongoDB
+    WebhookConsumer <-->|"SDF07: MongoDB/TLS"| MongoDB
+    WebhookConsumer <-->|"SDF08: HTTPS PR 操作"| GitCode
+    WebhookConsumer <-->|"SDF08: HTTPS PR 操作"| OtherExtSvc
+    BackgroundJobs <-->|"SDF08: HTTPS 同步"| GitCode
+    BackgroundJobs <-->|"SDF08: HTTPS 同步"| OtherExtSvc
+    PrTokenSvc <-->|"SDF09: HTTPS token 校验"| GitCode
+    PrTokenSvc <-->|"SDF09: HTTPS token 校验"| OtherExtSvc
+    PrTokenSvc <-->|"SDF10: TCP/TLS 缓存"| Redis
+    RepoCtl <-->|"SDF11: HTTPS 导出上传"| OtherExtSvc
+    BackgroundJobs <-->|"SDF12: HTTP 任务拉取"| OtherExtSvc
+    WebHookCtl <-->|"SDF13: HTTPS 配置拉取"| OtherExtSvc
+
+    style Application fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+    style External fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+
+    linkStyle default stroke:#666666,stroke-width:2px

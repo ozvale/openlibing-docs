@@ -1,0 +1,43 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'background': '#ffffff', 'primaryColor': '#ffffff', 'lineColor': '#666666' }}}%%
+flowchart LR
+    classDef process fill:#6baed6,stroke:#2171b5,stroke-width:2px,color:#000000
+    classDef external fill:#fdae61,stroke:#d94701,stroke-width:2px,color:#000000
+    classDef datastore fill:#74c476,stroke:#238b45,stroke-width:2px,color:#000000
+
+    Runner["GitCode Runner"]:::external
+    Workflow["Workflow Config"]:::external
+
+    subgraph RunnerEnv["GitCode Runner (CI Runner)"]
+        CMA(("CodeMetricsAction")):::process
+        Scanner(("MetricsScanner")):::process
+        Detectors(("Detectors<br/>(Sloc, Lizard, Dup, FC)")):::process
+        Cfg(("ConfigLoader")):::process
+        Uploader(("CoderepoUploader<br/>+ ApigSigner")):::process
+        RunnerFiles[("Runner Files<br/>(WorkspaceRepo, MetricsOutputFile, TempFiles)")]:::datastore
+    end
+
+    subgraph Ext["External Services"]
+        HuaweiCloud[("Huawei Cloud<br/>(OBS, APIG, OIDC)")]:::datastore
+        Mirrors["Public Mirrors<br/>(ObsutilDownloadMirror, PyPIMirror)"]:::external
+    end
+
+    Workflow <-->|"SDF01: inputs/secrets (INPUT_*)"| CMA
+    Runner <-->|"SDF02: ATOMGIT_*/ACTIONS_ID_TOKEN_REQUEST_URL"| CMA
+    CMA <-->|"SDF03: config-file"| Cfg
+    CMA <-->|"SDF04: git remote/branch"| RunnerFiles
+    CMA <-->|"SDF05: pip install lizard"| Mirrors
+    CMA <-->|"SDF06: scan options"| Scanner
+    Scanner <-->|"SDF07: source dirs + slocResult"| Detectors
+    Scanner <-->|"SDF08: merged metrics"| Uploader
+    Scanner <-->|"SDF09: compactResult"| RunnerFiles
+    Detectors <-->|"SDF10: read source files + exec scc/python3"| RunnerFiles
+    Detectors <-->|"SDF11: lizard I/O temp"| RunnerFiles
+    Uploader <-->|"SDF12: full payload JSON"| RunnerFiles
+    Uploader <-->|"SDF13: obsutil cp + STS/AK-SK"| HuaweiCloud
+    Uploader <-->|"SDF14: POST /report (OIDC/HMAC)"| HuaweiCloud
+    Uploader <-->|"SDF15: wget/tar obsutil"| Mirrors
+
+    style RunnerEnv fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+    style Ext fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+
+    linkStyle default stroke:#666666,stroke-width:2px

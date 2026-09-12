@@ -1,0 +1,59 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'background': '#ffffff', 'primaryColor': '#ffffff', 'lineColor': '#666666' }}}%%
+flowchart LR
+    classDef process fill:#6baed6,stroke:#2171b5,stroke-width:2px,color:#000000
+    classDef external fill:#fdae61,stroke:#d94701,stroke-width:2px,color:#000000
+    classDef datastore fill:#74c476,stroke:#238b45,stroke-width:2px,color:#000000
+
+    Runner["GitCode Runner"]:::external
+    Workflow["Workflow Config"]:::external
+
+    subgraph RunnerEnv["GitCode Runner (CI Runner)"]
+        CMA(("CodeMetricsAction")):::process
+        Scanner(("MetricsScanner")):::process
+        Sloc(("SlocDetector")):::process
+        Lizard(("LizardDetector")):::process
+        Dup(("DuplicationDetector")):::process
+        Cfg(("ConfigLoader")):::process
+        FC(("FileCollector")):::process
+        Uploader(("CoderepoUploader")):::process
+        Signer(("ApigSigner")):::process
+        Workspace[("WorkspaceRepo")]:::datastore
+        OutFile[("MetricsOutputFile")]:::datastore
+        Tmp[("TempFiles")]:::datastore
+    end
+
+    subgraph Ext["External Services"]
+        OBS[("OBS")]:::datastore
+        APIG["APIG"]:::external
+        OIDC["HuaweiCloudOIDC"]:::external
+        ObsutilDL["ObsutilDownloadMirror"]:::external
+        PyPI["PyPIMirror"]:::external
+    end
+
+    Workflow <-->|"DF01: inputs/secrets (INPUT_*)"| CMA
+    Runner <-->|"DF02: ATOMGIT_*/ACTIONS_ID_TOKEN_REQUEST_URL + workspace path"| CMA
+    CMA <-->|"DF03: config-file path + merged config"| Cfg
+    CMA <-->|"DF04: findGitRoot + git remote/branch"| Workspace
+    CMA <-->|"DF05: pip install lizard"| PyPI
+    CMA <-->|"DF06: config + scan options"| Scanner
+    Scanner <-->|"DF07: source dirs"| Sloc
+    Scanner <-->|"DF08: source dirs"| Lizard
+    Scanner <-->|"DF09: source dirs + slocResult"| Dup
+    Scanner <-->|"DF10: merged metrics + options"| Uploader
+    Scanner <-->|"DF11: compactResult write"| OutFile
+    Sloc <-->|"DF12: read source files + execSync scc"| Workspace
+    Lizard <-->|"DF13: read source files + execSync python3"| Workspace
+    Lizard <-->|"DF14: input/output JSON temp"| Tmp
+    Dup <-->|"DF15: read source files"| Workspace
+    FC <-->|"DF16: walk directory + file list"| Workspace
+    Uploader <-->|"DF17: full payload JSON write/read"| Tmp
+    Uploader <-->|"DF18: execFileSync obsutil cp (STS/AK-SK)"| OBS
+    Uploader <-->|"DF19: POST /metrics/code/report (OIDC/AK-SK signed)"| APIG
+    Uploader <-->|"DF20: callApig/getCredentials (OIDC SDK)"| OIDC
+    Uploader <-->|"DF21: sign request (HMAC-SHA256 + SK)"| Signer
+    Uploader <-->|"DF22: wget/tar obsutil (execSync bash)"| ObsutilDL
+
+    style RunnerEnv fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+    style Ext fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+
+    linkStyle default stroke:#666666,stroke-width:2px
