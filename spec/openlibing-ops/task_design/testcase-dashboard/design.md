@@ -20,17 +20,17 @@
 
 ### 1.1 高保真页面功能拆解
 
-| 页面区域 | 功能 | 数据诉求 | 接口 |
-| --- | --- | --- | --- |
-| 社区/组织总览 | KPI 卡片 | 社区级去重用例数、通过/失败数、执行率、通过率 | `POST /common/card` |
-| 通过率/执行率趋势 | 折线图（整体 + 分社区，双指标） | 按天粒度：通过 / 已执行 / 总次数 | `POST /common/chart` |
-| 各社区测试用例分布 | 堆叠柱图 | 各社区按最新结果拆分：通过 / 失败 / 未执行 | `POST /common/chart` |
-| 用例状态分布 | 环形图 | 全量用例按最新结果：通过 / 失败 / 未执行 | `POST /common/chart` |
-| 社区/组织列表 | 分页表格 | 每个项目 总用例、通过、失败、执行率、通过率（按项目分页，含所属社区信息） | `POST /common/detail` |
-| 项目结构树 | 树形导航（懒加载） | `product→project→repo→branch→dir→file` 逐层展开 | `POST /testcase/path/tree` |
-| 子节点列表 | 表格（点击名称跳转节点详情） | 选中节点的直接子节点：名称、类型、总用例、通过、失败、执行率、通过率 | `POST /common/detail` |
-| 文件下用例列表 | 分页表格 | 文件下用例执行次数、通过/失败、P50/P90 耗时、平均 NPU 消耗 | `POST /common/detail` |
-| 用例执行明细 | 分页表格 | 单次执行的任务/起止时间/结果/时长/NPU 消耗 | `POST /common/detail` |
+| 页面区域           | 功能                            | 数据诉求                                                                  | 接口                       |
+| ------------------ | ------------------------------- | ------------------------------------------------------------------------- | -------------------------- |
+| 社区/组织总览      | KPI 卡片                        | 社区级去重用例数、通过/失败数、执行率、通过率                             | `POST /common/card`        |
+| 通过率/执行率趋势  | 折线图（整体 + 分社区，双指标） | 按天粒度：通过 / 已执行 / 总次数                                          | `POST /common/chart`       |
+| 各社区测试用例分布 | 堆叠柱图                        | 各社区按最新结果拆分：通过 / 失败 / 未执行                                | `POST /common/chart`       |
+| 用例状态分布       | 环形图                          | 全量用例按最新结果：通过 / 失败 / 未执行                                  | `POST /common/chart`       |
+| 社区/组织列表      | 分页表格                        | 每个项目 总用例、通过、失败、执行率、通过率（按项目分页，含所属社区信息） | `POST /common/detail`      |
+| 项目结构树         | 树形导航（懒加载）              | `product→project→repo→branch→dir→file` 逐层展开                           | `POST /testcase/path/tree` |
+| 子节点列表         | 表格（点击名称跳转节点详情）    | 选中节点的直接子节点：名称、类型、总用例、通过、失败、执行率、通过率      | `POST /common/detail`      |
+| 文件下用例列表     | 分页表格                        | 文件下用例执行次数、通过/失败、P50/P90 耗时、平均 NPU 消耗                | `POST /common/detail`      |
+| 用例执行明细       | 分页表格                        | 单次执行的任务/起止时间/结果/时长/NPU 消耗                                | `POST /common/detail`      |
 
 时间筛选：今日 / 近 7 / 30 / 90 天 / 自定义，按 `end_time` 过滤。
 
@@ -40,12 +40,12 @@
 
 复用现有资产，不新建项目/社区维度：
 
-| 表 | 说明 | 复用点 |
-| --- | --- | --- |
-| `dwi_rd_efc_test_case_result` | 用例执行结果明细（源） | 唯一事实来源：`result` 1成功/0失败/2跳过/3未执行，`level` 0:P0/1:P1/2:P2/3:P3，`type` 测试类型（上游新增透传） |
+| 表                                    | 说明                      | 复用点                                                                                                          |
+| ------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `dwi_rd_efc_test_case_result`         | 用例执行结果明细（源）    | 唯一事实来源：`result` 1成功/0失败/2跳过/3未执行，`level` 0:P0/1:P1/2:P2/3:P3，`type` 测试类型（上游新增透传）  |
 | `dm_rd_efc_project_pipeline_relation` | 组织×项目×平台×流水线映射 | 已冗余 `product_name/product_id/project_name/project_id/pipeline_name/pipeline_type`，`pipeline_id → 项目/社区` |
-| `dwi_rd_efc_pipeline_run_step` | 流水线 step 明细 | `testcase_job_id → job_id`，关联资源事实表的中转 |
-| `dwr_rd_efc_pipeline_run_job_fact` | Job 执行事实 | `job_id/job_name/npu_second`（NPU 卡·秒） |
+| `dwi_rd_efc_pipeline_run_step`        | 流水线 step 明细          | `testcase_job_id → job_id`，关联资源事实表的中转                                                                |
+| `dwr_rd_efc_pipeline_run_job_fact`    | Job 执行事实              | `job_id/job_name/npu_second`（NPU 卡·秒）                                                                       |
 
 平台→项目映射主路径：`pipeline_id → dm_rd_efc_project_pipeline_relation`，已含 `platform`（codearts/gitcode/github）。
 
@@ -55,21 +55,21 @@
 
 ## 3. 口径定义
 
-| 项 | 口径 |
-| --- | --- |
-| 用例唯一键 `case_key` | `MD5(repo_url\|repo_branch\|case_file_path\|case_file_name\|class_name\|case_number)`。用原始 `case_file_path+case_file_name`（非归一后的 `full_file_path`）；**含分支**（跨分支视为不同用例）；**不含项目/社区**，隔离由 UNIQUE KEY 前置 `product_id+project_id` 实现 |
-| 总用例数（去重） | `COUNT(DISTINCT case_key)` |
-| 通过/失败/跳过（卡片 / 社区项目列表 / 社区分布 / 状态分布） | **每用例最新结果口径**：窗口内每 `case_key` 取 `end_time` 最新一条，按该条 `result` 计数 |
-| 通过/失败/跳过（文件列表 / 趋势） | 次数口径 `COUNT(IF(result=?,1,NULL))` |
-| 未执行（分布类图表） | 最新结果口径下 `未执行 = 跳过(result=2) + 未执行(result=3)`，与通过/失败并列三态 |
-| 状态枚举 | `1成功 / 0失败 / 2跳过 / 3未执行` |
-| 优先级 | `level`：`0:P0 / 1:P1 / 2:P2 / 3:P3` |
-| 测试类型 | `type`：功能/性能/可靠性/兼容性/精度 |
-| 执行时长 | 单次 `time`(秒)；文件列表 P50/P90 用 `PERCENTILE(time, 0.5/0.9)` 查询期计算，不物化 |
-| 通过率/执行率 | `执行率=已执行/总数`；`通过率=通过/已执行`；`已执行=通过+失败+跳过`（分母为 0 时返回 0） |
-| 时间窗口 | 按 `end_time∈[startTime, endTime]`（UTC，界面 +8h 补偿）过滤 |
-| NPU 资源 | **仅消耗量** `npu_second/3600`(卡时)，取自 `dwr_rd_efc_pipeline_run_job_fact`；不采集 vCPU |
-| 组织名 | 统一 `product_name`（fact / tree_node 两表一致） |
+| 项                                                          | 口径                                                                                                                                                                                                                                                                   |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 用例唯一键 `case_key`                                       | `MD5(repo_url\|repo_branch\|case_file_path\|case_file_name\|class_name\|case_number)`。用原始 `case_file_path+case_file_name`（非归一后的 `full_file_path`）；**含分支**（跨分支视为不同用例）；**不含项目/社区**，隔离由 UNIQUE KEY 前置 `product_id+project_id` 实现 |
+| 总用例数（去重）                                            | `COUNT(DISTINCT case_key)`                                                                                                                                                                                                                                             |
+| 通过/失败/跳过（卡片 / 社区项目列表 / 社区分布 / 状态分布） | **每用例最新结果口径**：窗口内每 `case_key` 取 `end_time` 最新一条，按该条 `result` 计数                                                                                                                                                                               |
+| 通过/失败/跳过（文件列表 / 趋势）                           | 次数口径 `COUNT(IF(result=?,1,NULL))`                                                                                                                                                                                                                                  |
+| 未执行（分布类图表）                                        | 最新结果口径下 `未执行 = 跳过(result=2) + 未执行(result=3)`，与通过/失败并列三态                                                                                                                                                                                       |
+| 状态枚举                                                    | `1成功 / 0失败 / 2跳过 / 3未执行`                                                                                                                                                                                                                                      |
+| 优先级                                                      | `level`：`0:P0 / 1:P1 / 2:P2 / 3:P3`                                                                                                                                                                                                                                   |
+| 测试类型                                                    | `type`：功能/性能/可靠性/兼容性/精度                                                                                                                                                                                                                                   |
+| 执行时长                                                    | 单次 `time`(秒)；文件列表 P50/P90 用 `PERCENTILE(time, 0.5/0.9)` 查询期计算，不物化                                                                                                                                                                                    |
+| 通过率/执行率                                               | `执行率=已执行/总数`；`通过率=通过/已执行`；`已执行=通过+失败+跳过`（分母为 0 时返回 0）                                                                                                                                                                               |
+| 时间窗口                                                    | 按 `end_time∈[startTime, endTime]`（UTC，界面 +8h 补偿）过滤                                                                                                                                                                                                           |
+| NPU 资源                                                    | **仅消耗量** `npu_second/3600`(卡时)，取自 `dwr_rd_efc_pipeline_run_job_fact`；不采集 vCPU                                                                                                                                                                             |
+| 组织名                                                      | 统一 `product_name`（fact / tree_node 两表一致）                                                                                                                                                                                                                       |
 
 要点：
 
@@ -93,12 +93,12 @@ dwr_rd_efc_test_case_fact (事实宽表，一执行一行) ← 卡片/列表/趋
    └─ ETL-3 → dm_rd_efc_test_case_tree_node (目录树结构，不含计数/时间)
 ```
 
-| 层 | 表名 | 粒度 | 用途 | 增/复用 |
-| --- | --- | --- | --- | --- |
-| DWI | `dwi_rd_efc_test_case_result` | 一次执行 | 源明细 | 复用（上游补 `type` 列） |
-| DM | `dm_rd_efc_project_pipeline_relation` | 组织×项目×平台×流水线 | 项目/流水线映射 | 复用维度 |
-| DWR | `dwr_rd_efc_test_case_fact` | 一次执行 | 事实宽表，下游唯一数据源 | **新增** |
-| DM | `dm_rd_efc_test_case_tree_node` | 节点 | 详情页树结构 | **新增** |
+| 层  | 表名                                  | 粒度                  | 用途                     | 增/复用                  |
+| --- | ------------------------------------- | --------------------- | ------------------------ | ------------------------ |
+| DWI | `dwi_rd_efc_test_case_result`         | 一次执行              | 源明细                   | 复用（上游补 `type` 列） |
+| DM  | `dm_rd_efc_project_pipeline_relation` | 组织×项目×平台×流水线 | 项目/流水线映射          | 复用维度                 |
+| DWR | `dwr_rd_efc_test_case_fact`           | 一次执行              | 事实宽表，下游唯一数据源 | **新增**                 |
+| DM  | `dm_rd_efc_test_case_tree_node`       | 节点                  | 详情页树结构             | **新增**                 |
 
 ### 4.2 源明细表 `dwi_rd_efc_test_case_result`（上游提供，本次仅新增 `type` 列透传）
 
@@ -259,14 +259,14 @@ PROPERTIES (
 
 **节点语义**：
 
-| node_type | 含义 | node_path | node_level |
-| --- | --- | --- | --- |
-| product | 社区/组织（顶层） | `''` | 0 |
-| project | 项目 | `''` | 1 |
-| repo | 代码仓 | `''` | 2 |
-| branch | 分支 | `''` | 3 |
-| dir | 目录 | `tests/unit` | ≥4 递增 |
-| file | 文件（叶子） | `tests/unit/test.py` | ≥4 递增 |
+| node_type | 含义              | node_path            | node_level |
+| --------- | ----------------- | -------------------- | ---------- |
+| product   | 社区/组织（顶层） | `''`                 | 0          |
+| project   | 项目              | `''`                 | 1          |
+| repo      | 代码仓            | `''`                 | 2          |
+| branch    | 分支              | `''`                 | 3          |
+| dir       | 目录              | `tests/unit`         | ≥4 递增    |
+| file      | 文件（叶子）      | `tests/unit/test.py` | ≥4 递增    |
 
 - `node_key = MD5(node_type|product_id|project_id|repo_url|repo_branch|node_path)`，UNIQUE KEY 首列，懒加载时父节点等值定位用。
 - `file` 节点 `node_path` 与 `fact.full_file_path` 严格一致，作下钻 key。
@@ -277,7 +277,7 @@ PROPERTIES (
 
 ## 5. ETL 清洗脚本
 
-### 5.1 ETL-1  dwi → dwr 事实宽表
+### 5.1 ETL-1 dwi → dwr 事实宽表
 
 `job_id/job_name/npu_second` 来自 `dwr_rd_efc_pipeline_run_job_fact`（经 `dwi_rd_efc_pipeline_run_step` 由 `testcase_job_id → job_id` 映射）：
 
@@ -320,7 +320,7 @@ SELECT
 FROM base;
 ```
 
-### 5.2 ETL-3  目录树节点清洗
+### 5.2 ETL-3 目录树节点清洗
 
 从事实表去重「文件」集合，逐文件展开祖先链（`product→project→repo→branch→dir…file`），落库由 UNIQUE KEY 自动去重：
 
@@ -626,18 +626,18 @@ public TestCasePathTreeResp queryTree(TestCasePathTreeReq req) {
 
 ### 6.5 接口映射总表
 
-| 页面功能 | 端点 | category | 处理器 | 查询方式 |
-| --- | --- | --- | --- | --- |
-| 总览 KPI 卡片 | `POST /common/card` | `testcase-overview` | `TestCaseOverviewCardService` | fact 聚合（窗口函数） |
-| 通过率/执行率趋势（整体） | `POST /common/chart` | `testcase-pass-rate-trend` | `TestCasePassRateTrendService` | fact 聚合 |
-| 通过率/执行率趋势（各社区） | `POST /common/chart` | `testcase-community-pass-rate-trend` | `TestCaseCommunityPassRateTrendService` | fact 聚合 |
-| 各社区用例分布 | `POST /common/chart` | `testcase-community-distribution` | `TestCaseCommunityDistributionService` | fact 聚合（窗口函数） |
-| 用例状态分布 | `POST /common/chart` | `testcase-status-distribution` | `TestCaseStatusDistributionService` | fact 聚合（窗口函数） |
-| 目录树懒加载 | `POST /testcase/path/tree` | —（独立，无 category） | `TestCasePathTreeService` | tree_node 单表（MyBatis-Plus） |
-| 文件下用例列表 | `POST /common/detail` | `testcase-file-case-list` | `TestCaseFileCaseListDetailService` | fact 聚合（XML） |
-| 用例执行明细 | `POST /common/detail` | `testcase-case-run-detail` | `TestCaseCaseRunDetailService` | fact 单表（MyBatis-Plus） |
-| 社区/项目列表 | `POST /common/detail` | `testcase-community-project-list` | `TestCaseCommunityProjectListService` | fact 聚合（XML） |
-| 子节点列表 | `POST /common/detail` | `testcase-child-node-list` | `TestCaseChildNodeListDetailService` | tree 定位 + fact 聚合（XML 动态分组） |
+| 页面功能                    | 端点                       | category                             | 处理器                                  | 查询方式                              |
+| --------------------------- | -------------------------- | ------------------------------------ | --------------------------------------- | ------------------------------------- |
+| 总览 KPI 卡片               | `POST /common/card`        | `testcase-overview`                  | `TestCaseOverviewCardService`           | fact 聚合（窗口函数）                 |
+| 通过率/执行率趋势（整体）   | `POST /common/chart`       | `testcase-pass-rate-trend`           | `TestCasePassRateTrendService`          | fact 聚合                             |
+| 通过率/执行率趋势（各社区） | `POST /common/chart`       | `testcase-community-pass-rate-trend` | `TestCaseCommunityPassRateTrendService` | fact 聚合                             |
+| 各社区用例分布              | `POST /common/chart`       | `testcase-community-distribution`    | `TestCaseCommunityDistributionService`  | fact 聚合（窗口函数）                 |
+| 用例状态分布                | `POST /common/chart`       | `testcase-status-distribution`       | `TestCaseStatusDistributionService`     | fact 聚合（窗口函数）                 |
+| 目录树懒加载                | `POST /testcase/path/tree` | —（独立，无 category）               | `TestCasePathTreeService`               | tree_node 单表（MyBatis-Plus）        |
+| 文件下用例列表              | `POST /common/detail`      | `testcase-file-case-list`            | `TestCaseFileCaseListDetailService`     | fact 聚合（XML）                      |
+| 用例执行明细                | `POST /common/detail`      | `testcase-case-run-detail`           | `TestCaseCaseRunDetailService`          | fact 单表（MyBatis-Plus）             |
+| 社区/项目列表               | `POST /common/detail`      | `testcase-community-project-list`    | `TestCaseCommunityProjectListService`   | fact 聚合（XML）                      |
+| 子节点列表                  | `POST /common/detail`      | `testcase-child-node-list`           | `TestCaseChildNodeListDetailService`    | tree 定位 + fact 聚合（XML 动态分组） |
 
 ### 6.6 公共路径过滤片段 `testCasePathFilter`
 
@@ -695,13 +695,13 @@ WHERE rn = 1
 
 Service 层由 `total/passed/failed/skip` 计算 `executed = passed + failed + skip`，输出 5 张卡片：
 
-| metric | name | 口径 |
-| --- | --- | --- |
-| `total_cases` | 测试用例总数 | `totalCases` |
-| `passed_cases` | 通过用例数 | `passedCases` |
-| `failed_cases` | 失败用例数 | `failedCases` |
-| `exec_rate` | 执行率 | `executed / totalCases`（百分比，2 位小数） |
-| `pass_rate` | 通过率 | `passedCases / executed`（百分比，2 位小数） |
+| metric         | name         | 口径                                         |
+| -------------- | ------------ | -------------------------------------------- |
+| `total_cases`  | 测试用例总数 | `totalCases`                                 |
+| `passed_cases` | 通过用例数   | `passedCases`                                |
+| `failed_cases` | 失败用例数   | `failedCases`                                |
+| `exec_rate`    | 执行率       | `executed / totalCases`（百分比，2 位小数）  |
+| `pass_rate`    | 通过率       | `passedCases / executed`（百分比，2 位小数） |
 
 **② 整体通过率/执行率趋势 `testcase-pass-rate-trend`（次数口径，逐日，无社区维度）**
 
@@ -955,11 +955,11 @@ Service 层内存合并：`groupKey` 与子节点匹配键（project→`String.v
 
 ## 8. 待确认事项
 
-| 编号 | 事项 | 说明 |
-| --- | --- | --- |
-| T1 | 测试类型来源 | 上游 `dwi_rd_efc_test_case_result` 需新增 `type` 列（SeaTunnel 透传）后方可用 |
-| T2 | 状态 5 态 | 当前为 4 态（`1/0/2/3`）；`running/aborted` 需上游采集层补齐后扩展 |
-| T3 | NPU 使用量/使用率 | 本期仅消耗量 `npu_second`；使用量/使用率待上游补列后再算 |
+| 编号 | 事项              | 说明                                                                          |
+| ---- | ----------------- | ----------------------------------------------------------------------------- |
+| T1   | 测试类型来源      | 上游 `dwi_rd_efc_test_case_result` 需新增 `type` 列（SeaTunnel 透传）后方可用 |
+| T2   | 状态 5 态         | 当前为 4 态（`1/0/2/3`）；`running/aborted` 需上游采集层补齐后扩展            |
+| T3   | NPU 使用量/使用率 | 本期仅消耗量 `npu_second`；使用量/使用率待上游补列后再算                      |
 
 ---
 
@@ -983,63 +983,63 @@ Service 层内存合并：`groupKey` 与子节点匹配键（project→`String.v
 
 ### 10.1 控制器
 
-| 文件 | 说明 |
-| --- | --- |
-| `api/controller/CommonController.java` | 新增 `POST /common/card`、`POST /common/chart`（`/common/detail` 为既有） |
-| `api/controller/TestCaseBoardController.java` | 新增 `POST /testcase/path/tree` |
+| 文件                                          | 说明                                                                      |
+| --------------------------------------------- | ------------------------------------------------------------------------- |
+| `api/controller/CommonController.java`        | 新增 `POST /common/card`、`POST /common/chart`（`/common/detail` 为既有） |
+| `api/controller/TestCaseBoardController.java` | 新增 `POST /testcase/path/tree`                                           |
 
 ### 10.2 请求 / 响应（API）
 
-| 文件 | 说明 |
-| --- | --- |
-| `api/request/common/card/CardReq.java` | 卡片请求基类（仅 `category`） |
-| `api/request/common/card/TestCaseOverviewCardReq.java` | 总览卡片请求 |
-| `api/request/common/chart/ChartReq.java` | 趋势请求基类（仅 `category`） |
-| `api/request/common/chart/TestCasePassRateTrendReq.java` | 通过率趋势请求 |
-| `api/request/common/chart/TestCaseCommunityDistributionReq.java` | 社区分布请求 |
-| `api/request/common/chart/TestCaseStatusDistributionReq.java` | 状态分布请求 |
-| `api/request/common/detail/TestCaseFileCaseListReq.java` | 文件下用例列表请求 |
-| `api/request/common/detail/TestCaseCaseRunDetailReq.java` | 用例执行明细请求 |
-| `api/request/common/detail/TestCaseCommunityProjectListReq.java` | 社区/项目列表请求 |
-| `api/request/testcase/TestCasePathTreeReq.java` | 目录树请求 |
-| `api/response/common/card/CardResp.java` / `CardItem.java` | 卡片响应 |
+| 文件                                                                          | 说明                                       |
+| ----------------------------------------------------------------------------- | ------------------------------------------ |
+| `api/request/common/card/CardReq.java`                                        | 卡片请求基类（仅 `category`）              |
+| `api/request/common/card/TestCaseOverviewCardReq.java`                        | 总览卡片请求                               |
+| `api/request/common/chart/ChartReq.java`                                      | 趋势请求基类（仅 `category`）              |
+| `api/request/common/chart/TestCasePassRateTrendReq.java`                      | 通过率趋势请求                             |
+| `api/request/common/chart/TestCaseCommunityDistributionReq.java`              | 社区分布请求                               |
+| `api/request/common/chart/TestCaseStatusDistributionReq.java`                 | 状态分布请求                               |
+| `api/request/common/detail/TestCaseFileCaseListReq.java`                      | 文件下用例列表请求                         |
+| `api/request/common/detail/TestCaseCaseRunDetailReq.java`                     | 用例执行明细请求                           |
+| `api/request/common/detail/TestCaseCommunityProjectListReq.java`              | 社区/项目列表请求                          |
+| `api/request/testcase/TestCasePathTreeReq.java`                               | 目录树请求                                 |
+| `api/response/common/card/CardResp.java` / `CardItem.java`                    | 卡片响应                                   |
 | `api/response/common/chart/ChartResp.java` / `Series.java` / `RatePoint.java` | 趋势图响应（RatePoint 为趋势双比率数据点） |
-| `api/response/common/detail/TestCaseFileCaseListResp.java` | 文件列表响应 |
-| `api/response/common/detail/TestCaseCaseRunDetailResp.java` | 执行明细响应 |
-| `api/response/common/detail/TestCaseCommunityProjectListResp.java` | 社区/项目列表响应 |
-| `api/response/testcase/TestCasePathTreeResp.java` | 目录树响应 |
+| `api/response/common/detail/TestCaseFileCaseListResp.java`                    | 文件列表响应                               |
+| `api/response/common/detail/TestCaseCaseRunDetailResp.java`                   | 执行明细响应                               |
+| `api/response/common/detail/TestCaseCommunityProjectListResp.java`            | 社区/项目列表响应                          |
+| `api/response/testcase/TestCasePathTreeResp.java`                             | 目录树响应                                 |
 
 ### 10.3 领域模型 / Mapper
 
-| 文件 | 说明 |
-| --- | --- |
-| `domain/model/testcase/DwrRdEfcTestCaseFact.java` | fact 实体 |
-| `domain/model/testcase/DmRdEfcTestCaseTreeNode.java` | 树节点实体 |
-| `domain/model/testcase/aggregate/TestCaseOverviewAggregate.java` | 总览聚合 VO |
-| `domain/model/testcase/aggregate/TestCasePassRateTrendAggregate.java` | 各社区趋势聚合 VO |
-| `domain/model/testcase/aggregate/TestCaseOverallPassRateTrendAggregate.java` | 整体趋势聚合 VO |
-| `domain/model/testcase/aggregate/TestCaseCommunityDistributionAggregate.java` | 分布聚合 VO |
-| `domain/model/testcase/aggregate/TestCaseStatusDistributionAggregate.java` | 状态分布聚合 VO |
-| `domain/model/testcase/aggregate/TestCaseFileCaseAggregate.java` | 文件列表聚合 VO |
-| `domain/model/testcase/aggregate/TestCaseCommunityProjectAggregate.java` | 社区项目聚合 VO |
-| `domain/mapper/testcase/DwrRdEfcTestCaseFactMapper.java` | fact Mapper 接口（聚合走 XML） |
-| `domain/mapper/testcase/DmRdEfcTestCaseTreeNodeMapper.java` | 树节点 Mapper（MyBatis-Plus） |
-| `resources/mapper/DwrRdEfcTestCaseFactMapper.xml` | fact 聚合 SQL（含 `testCasePathFilter` 片段） |
+| 文件                                                                          | 说明                                          |
+| ----------------------------------------------------------------------------- | --------------------------------------------- |
+| `domain/model/testcase/DwrRdEfcTestCaseFact.java`                             | fact 实体                                     |
+| `domain/model/testcase/DmRdEfcTestCaseTreeNode.java`                          | 树节点实体                                    |
+| `domain/model/testcase/aggregate/TestCaseOverviewAggregate.java`              | 总览聚合 VO                                   |
+| `domain/model/testcase/aggregate/TestCasePassRateTrendAggregate.java`         | 各社区趋势聚合 VO                             |
+| `domain/model/testcase/aggregate/TestCaseOverallPassRateTrendAggregate.java`  | 整体趋势聚合 VO                               |
+| `domain/model/testcase/aggregate/TestCaseCommunityDistributionAggregate.java` | 分布聚合 VO                                   |
+| `domain/model/testcase/aggregate/TestCaseStatusDistributionAggregate.java`    | 状态分布聚合 VO                               |
+| `domain/model/testcase/aggregate/TestCaseFileCaseAggregate.java`              | 文件列表聚合 VO                               |
+| `domain/model/testcase/aggregate/TestCaseCommunityProjectAggregate.java`      | 社区项目聚合 VO                               |
+| `domain/mapper/testcase/DwrRdEfcTestCaseFactMapper.java`                      | fact Mapper 接口（聚合走 XML）                |
+| `domain/mapper/testcase/DmRdEfcTestCaseTreeNodeMapper.java`                   | 树节点 Mapper（MyBatis-Plus）                 |
+| `resources/mapper/DwrRdEfcTestCaseFactMapper.xml`                             | fact 聚合 SQL（含 `testCasePathFilter` 片段） |
 
 ### 10.4 服务 / 工厂 / 枚举
 
-| 文件 | 说明 |
-| --- | --- |
-| `domain/service/common/CardService.java` / `ChartService.java` | 卡片/趋势处理器接口 |
-| `app/service/testcase/TestCaseOverviewCardService.java` | 总览卡片 |
-| `app/service/testcase/TestCasePassRateTrendService.java` | 整体通过率/执行率趋势 |
-| `app/service/testcase/TestCaseCommunityPassRateTrendService.java` | 各社区通过率/执行率趋势 |
-| `app/service/testcase/TestCaseCommunityDistributionService.java` | 社区分布（三状态） |
-| `app/service/testcase/TestCaseStatusDistributionService.java` | 状态分布（环形图） |
-| `app/service/testcase/TestCasePathTreeService.java` | 目录树 |
-| `app/service/testcase/TestCaseFileCaseListDetailService.java` | 文件下用例列表 |
-| `app/service/testcase/TestCaseCaseRunDetailService.java` | 用例执行明细 |
-| `app/service/testcase/TestCaseCommunityProjectListService.java` | 社区/项目列表 |
-| `infrastructure/enumeration/common/CardCommonEnum.java` | `testcase-overview` |
-| `infrastructure/enumeration/common/ChartCommonEnum.java` | `testcase-pass-rate-trend` / `testcase-community-pass-rate-trend` / `testcase-community-distribution` / `testcase-status-distribution` |
-| `infrastructure/enumeration/common/DetailCommonEnum.java` | 追加 `testcase-file-case-list` / `testcase-case-run-detail` / `testcase-community-project-list` / `testcase-child-node-list` |
+| 文件                                                              | 说明                                                                                                                                   |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `domain/service/common/CardService.java` / `ChartService.java`    | 卡片/趋势处理器接口                                                                                                                    |
+| `app/service/testcase/TestCaseOverviewCardService.java`           | 总览卡片                                                                                                                               |
+| `app/service/testcase/TestCasePassRateTrendService.java`          | 整体通过率/执行率趋势                                                                                                                  |
+| `app/service/testcase/TestCaseCommunityPassRateTrendService.java` | 各社区通过率/执行率趋势                                                                                                                |
+| `app/service/testcase/TestCaseCommunityDistributionService.java`  | 社区分布（三状态）                                                                                                                     |
+| `app/service/testcase/TestCaseStatusDistributionService.java`     | 状态分布（环形图）                                                                                                                     |
+| `app/service/testcase/TestCasePathTreeService.java`               | 目录树                                                                                                                                 |
+| `app/service/testcase/TestCaseFileCaseListDetailService.java`     | 文件下用例列表                                                                                                                         |
+| `app/service/testcase/TestCaseCaseRunDetailService.java`          | 用例执行明细                                                                                                                           |
+| `app/service/testcase/TestCaseCommunityProjectListService.java`   | 社区/项目列表                                                                                                                          |
+| `infrastructure/enumeration/common/CardCommonEnum.java`           | `testcase-overview`                                                                                                                    |
+| `infrastructure/enumeration/common/ChartCommonEnum.java`          | `testcase-pass-rate-trend` / `testcase-community-pass-rate-trend` / `testcase-community-distribution` / `testcase-status-distribution` |
+| `infrastructure/enumeration/common/DetailCommonEnum.java`         | 追加 `testcase-file-case-list` / `testcase-case-run-detail` / `testcase-community-project-list` / `testcase-child-node-list`           |
