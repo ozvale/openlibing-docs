@@ -76,19 +76,20 @@
 
 ### 3.1 请求体 `SecOptionOverviewQueryDTO`
 
-| 字段           | 类型             | 必填 | 筛选/排序能力    | 说明                                                                                            |
-| -------------- | ---------------- | ---- | ---------------- | ----------------------------------------------------------------------------------------------- |
-| `projectId`    | String           | 是   | 精确（项目隔离） | 项目 ID，只查询该项目下代码仓的产物                                                             |
-| `repoUrl`      | String           | 否   | 模糊             | 代码仓链接（如 `gitcode.com/owner/repo`），后端对完整 gitUrl 做 LIKE                            |
-| `pipelineName` | String           | 否   | 模糊             | 流水线名称（ATOMGIT_WORKFLOW 环境变量值）                                                       |
-| `packageName`  | String           | 否   | 模糊             | 构建产物包名（插件取 `artifact-path` 相对路径，保留子目录前缀，如 `A5/xxx.tar.gz`）             |
-| `startTime`    | String           | 否   | 区间下界         | 检测完成时间起始，ISO 8601 或 `yyyy-MM-dd HH:mm:ss`                                             |
-| `endTime`      | String           | 否   | 区间上界         | 检测完成时间截止                                                                                |
-| `statuses`     | Array\<Integer\> | 否   | 多选             | 扫描状态多选筛选，0-失败，1-成功，2-部分成功，如 `[0,1]`；不传时不按状态过滤（返回所有状态）    |
-| `sort`         | String           | 否   | 排序方向         | `asc`/`desc`，默认 `asc`                                                                        |
-| `sortByField`  | String           | 否   | 排序字段         | `detectionCompletedAt` 或 `指标名.子字段`（如 `bindNow.rate`、`nx.totalFiles`、`pie.yesCount`） |
-| `pageNum`      | Integer          | 否   | 分页             | 默认 1                                                                                          |
-| `pageSize`     | Integer          | 否   | 分页             | 默认 20                                                                                         |
+| 字段           | 类型             | 必填 | 筛选/排序能力    | 说明                                                                                                    |
+| -------------- | ---------------- | ---- | ---------------- | ------------------------------------------------------------------------------------------------------- |
+| `projectId`    | String           | 是   | 精确（项目隔离） | 项目 ID，只查询该项目下代码仓的产物                                                                     |
+| `repoUrl`      | String           | 否   | 模糊             | 代码仓链接（如 `gitcode.com/owner/repo`），后端对完整 gitUrl 做 LIKE                                    |
+| `pipelineName` | String           | 否   | 模糊             | 流水线名称（ATOMGIT_WORKFLOW 环境变量值）                                                               |
+| `runNumber`    | String           | 否   | 模糊             | 流水线运行编号（对应插件上报的 runNumber，支持输入任意数字片段）                                        |
+| `packageName`  | String           | 否   | 模糊             | 构建产物包名（插件取 `artifact-path` 对应的文件名 basename，如 `DrivingSDK_v2.7.1_3.9_aarch64.tar.gz`） |
+| `startTime`    | String           | 否   | 区间下界         | 检测完成时间起始，ISO 8601 或 `yyyy-MM-dd HH:mm:ss`                                                     |
+| `endTime`      | String           | 否   | 区间上界         | 检测完成时间截止                                                                                        |
+| `statuses`     | Array\<Integer\> | 否   | 多选             | 扫描状态多选筛选，0-失败，1-成功，2-部分成功，如 `[0,1]`；不传时不按状态过滤（返回所有状态）            |
+| `sort`         | String           | 否   | 排序方向         | `asc`/`desc`，默认 `asc`                                                                                |
+| `sortByField`  | String           | 否   | 排序字段         | `detectionCompletedAt` 或 `指标名.子字段`（如 `bindNow.rate`、`nx.totalFiles`、`pie.yesCount`）         |
+| `pageNum`      | Integer          | 否   | 分页             | 默认 1                                                                                                  |
+| `pageSize`     | Integer          | 否   | 分页             | 默认 20                                                                                                 |
 
 > 说明：本接口分页与排序已下推数据库（SQL LIMIT/OFFSET + COUNT），不再内存分页。`sortByField` 为数值指标（`xxx.rate`/`xxx.totalFiles`/`xxx.yesCount`）时，若当前记录未扫描该指标，排序兜底按 `detectionCompletedAt` 处理；前端默认不传 `sortByField`，后端按 `detectionCompletedAt` 倒序。
 
