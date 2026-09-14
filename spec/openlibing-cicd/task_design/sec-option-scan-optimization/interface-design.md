@@ -153,7 +153,7 @@
 | `runNumber`            | String                  | 流水线运行编号                                                            |
 | `pipelineLink`         | String                  | 流水线链接                                                                |
 | `packageName`          | String                  | 产物包名                                                                  |
-| `status`               | Integer                 | 扫描状态：0-失败，1-成功，2-部分成功                                      |
+| `status`               | Integer                 | 扫描状态：0-失败，1-成功，2-部分成功（见下方状态说明）                    |
 | `optionCount`          | Integer                 | 扫描项数（`scanOptions` 逗号分隔项的个数）                                |
 | `scanOptions`          | String                  | 实际扫描项 key，逗号分隔                                                  |
 | `totalScannedFiles`    | Integer                 | 实际扫描 ELF 文件总数（新增）                                             |
@@ -162,6 +162,18 @@
 | `downloadAccessible`   | Boolean                 | 下载是否可访问                                                            |
 | `detectionCompletedAt` | String                  | 检测完成时间（`yyyy-MM-dd HH:mm:ss`）                                     |
 | `overviewData`         | Array\<OverviewOption\> | 逐扫描项数据数组，按固定 14 项顺序排列，见下                              |
+
+#### 扫描状态说明
+
+`status` 由扫描插件（security-compilation-options-action）上报，含义如下：
+
+| 值  | 含义     | 触发场景                                                                                                                      |
+| --- | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 0   | 失败     | 扫描过程抛异常（如源目录不存在、扫描脚本报错），仍上传附带 `errorMessage` 的报告                                              |
+| 1   | 成功     | 扫描完整执行并产出结果，正常上传报告                                                                                          |
+| 2   | 部分成功 | **当前插件不产生该值**；为后续预留——当扫描"部分完成但仍产出结果"（如个别选项检测失败但整体继续、部分产物可扫/部分失败）时上报 |
+
+> 说明：当前线上数据仅存在 0/1 两种状态，`statuses: [2]` 筛选会命中空结果。
 
 `overviewData` 数组元素 `OverviewOption`（固定 14 项顺序，前端据此渲染避免对象键序不一致）：
 
