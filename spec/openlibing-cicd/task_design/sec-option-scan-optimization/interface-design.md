@@ -220,7 +220,7 @@
 
 > `SecOptionFileFilter`：`{ "optionKey": string, "scanValues": string[] }`，一个对象记录**一个扫描项**及其可匹配的扫描值集合；多个扫描项之间为**复合（AND）关系**（该行需同时满足所有传的扫描项），同一扫描项的多个扫描值之间为 **IN** 关系；特别地，若某文件未扫描某扫描项，`JSON_EXTRACT` 返回 NULL、`IN` 不命中即该行落选；任一元素的扫描值集合为空则忽略该条件，`optionFilters` 整体不传表示不按扫描项过滤。
 >
-> 文件详情页默认按 `filePath` 升序返回。**`fileName`/`filePath` 与 `optionFilters` 均在服务端 SQL 完成、与分页一起下推**：路径类对 `file_name`/`file_path` 做 LIKE `%value%`；`optionFilters` 内每个扫描项作为独立的 AND 谓词对 `raw_options` JSON 做 IN 筛选（值域 `YES`/`NO`/`N/A`，按原始扫描值过滤，与备案值无关），仍为 SQL 侧 LIMIT/OFFSET + COUNT 分页，非内存分页。分页命中的文件再由 Service 层加载该产物所有备案（按 `projectId + gitUrl + packageName` 一次性查 `sec_option_filing`）后在内存组装 `options`（生效值）与 `rawOptions`（已备案项的原值），故分页 100 行内 JOIN 等价为内存 map 命中，性能无显著影响。
+> 文件详情页默认按 `filePath` 升序返回。**`fileName`/`filePath` 与 `optionFilters` 均在服务端 SQL 完成、与分页一起下推**：路径类对 `file_name`/`file_path` 做 LIKE `%value%`；`optionFilters` 内每个扫描项作为独立的 AND 谓词对**生效值**做 IN 筛选（值域 `YES`/`NO`/`N/A`）：命中备案（按自然键 `gitUrl + packageName + filePath + optionKey` 关联 `sec_option_filing`）时取备案值（`filing_value`），未命中用 `raw_options` 的原始扫描值——即按"备案后最终展示值"过滤，与展示口径一致，而非备案前原始值；分页命中的文件再由 Service 层加载该产物所有备案（按 `projectId + gitUrl + packageName` 一次性查 `sec_option_filing`）后在内存组装 `options`（生效值）与 `rawOptions`（已备案项的原值），故分页 100 行内关联等价为内存 map 命中，性能无显著影响。
 
 ### 4.2 响应体 `SecOptionFileDetailVO`
 
