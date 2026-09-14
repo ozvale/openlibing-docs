@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>代码仓管理优化 + SIG 仓一键同步 - 页面原型</title>
+<style>
+  /* 对齐 openlibing-web Element Plus 风格：主色 #006be6 */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f4f6fa;
+    color: #191919;
+    font-size: 13px;
+    padding: 24px;
+  }
+  .page-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #191919;
+  }
+  .page-desc {
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+  .section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .section-label {
+    display: inline-block;
+    background: #006be6;
+    color: #fff;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 14px;
+    color: #191919;
+  }
+
+  /* 通用按钮 */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 32px;
+    padding: 0 16px;
+    border-radius: 4px;
+    border: 1px solid #006be6;
+    background: #006be6;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 400;
+  }
+  .btn-default { background: #fff; color: #333; border-color: #dcdfe6; }
+  .btn-text { background: transparent; border: none; color: #006be6; padding: 0 4px; height: auto; }
+  .btn-danger { background: #f56c6c; border-color: #f56c6c; }
+  .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+  /* 工具条 */
+  .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+
+  /* 表格 */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td {
+    border: 1px solid #ebeef5;
+    padding: 8px 12px;
+    text-align: left;
+    height: 40px;
+  }
+  th { background: #f4f6fa; font-weight: 600; color: #191919; }
+  td a { color: #006be6; cursor: pointer; text-decoration: none; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; line-height: 18px; }
+  .tag-success { background: #f0f9eb; color: #67c23a; border: 1px solid #c2e7b0; }
+  .tag-info { background: #f4f4f5; color: #909399; border: 1px solid #d3d4d6; }
+  .tag-warning { background: #fdf6ec; color: #e6a23c; border: 1px solid #f5dab1; }
+  .tag-primary { background: #ecf5ff; color: #006be6; border: 1px solid #b3d8ff; }
+  .tag-error { background: #fef0f0; color: #f56c6c; border: 1px solid #fbc4c4; }
+
+  /* 对话框 */
+  .dialog-mask {
+    position: relative;
+    background: rgba(0,0,0,0.05);
+    padding: 40px 0;
+    border-radius: 6px;
+    margin-top: 12px;
+  }
+  .dialog {
+    width: 880px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    overflow: hidden;
+  }
+  .dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #ebeef5;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .dialog-close { cursor: pointer; color: #909399; font-size: 18px; }
+  .dialog-body { padding: 20px; }
+  .dialog-footer {
+    padding: 12px 20px 20px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  /* 提示条 */
+  .alert {
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .alert-warning { background: #fdf6ec; color: #e6a23c; border: 1px solid #f5dab1; }
+  .alert-info { background: #ecf5ff; color: #006be6; border: 1px solid #b3d8ff; }
+  .alert-error { background: #fef0f0; color: #f56c6c; border: 1px solid #fbc4c4; }
+  .alert-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .alert .alert-actions { margin-left: auto; display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* 表单 */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px 16px; }
+  .form-item { display: flex; flex-direction: column; gap: 4px; }
+  .form-item.full { grid-column: 1 / -1; }
+  .form-item label { font-size: 13px; color: #606266; }
+  .form-item label .req { color: #f56c6c; margin-right: 2px; }
+  .form-item .input, .form-item .select {
+    height: 32px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    padding: 0 10px;
+    font-size: 13px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+  }
+  .form-item .input.disabled, .form-item .select.disabled {
+    background: #f5f7fa;
+    color: #909399;
+    cursor: not-allowed;
+  }
+  .form-item .select::after { content: "▾"; margin-left: auto; color: #909399; }
+  .form-hint { font-size: 12px; color: #909399; }
+
+  /* SIG 仓库清单表 */
+  .sig-table th, .sig-table td { text-align: center; }
+  .checkbox { width: 16px; height: 16px; accent-color: #006be6; cursor: pointer; }
+
+  /* 全局配置弹窗：三页签 */
+  .dialog-global { width: 960px; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid #e4e7ed; padding: 0 20px; }
+  .tab {
+    padding: 12px 18px;
+    font-size: 14px;
+    color: #606266;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab.active { color: #006be6; border-bottom-color: #006be6; font-weight: 600; }
+  .gc-section { padding: 18px 0; border-bottom: 1px solid #f0f2f5; }
+  .gc-section:last-of-type { border-bottom: none; }
+  .gc-section-title {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 14px; font-weight: 600; color: #191919; margin-bottom: 12px;
+  }
+  .gc-account-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .gc-account-row .form-item { flex: 1; min-width: 220px; }
+  .gc-loc-card {
+    display: flex; align-items: center; gap: 10px;
+    border: 1px solid #e4e7ed; border-radius: 4px; padding: 8px 10px; margin-bottom: 10px;
+    background: #fafbfc;
+  }
+  .gc-loc-card .loc-info { flex: 1; font-size: 13px; color: #191919; min-width: 0; }
+  .gc-loc-card .loc-info .loc-path { color: #606266; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gc-loc-card .loc-info input {
+    height: 28px; border: 1px solid #dcdfe6; border-radius: 4px; padding: 0 8px;
+    font-size: 12px; vertical-align: middle; margin: 0 4px;
+  }
+  .gc-loc-status { font-size: 12px; flex-shrink: 0; }
+  .ok-tag { color: #67c23a; }
+  .err-tag { color: #f56c6c; }
+  .role-map-table th, .role-map-table td { text-align: center; padding: 6px 12px; height: 34px; }
+  .role-map-table .mini-select {
+    width: 140px; height: 28px; border: 1px solid #dcdfe6; border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: space-between; padding: 0 8px;
+    background: #fff; font-size: 12px;
+  }
+  .role-map-table .mini-select::after { content: "▾"; color: #909399; }
+  .icon-btn { cursor: pointer; color: #909399; font-size: 15px; padding: 0 4px; }
+  .icon-btn:hover { color: #006be6; }
+  .icon-btn.danger:hover { color: #f56c6c; }
+  .btn-text.danger { color: #f56c6c; }
+
+  /* SIG 一键同步任务状态卡片 */
+  .sync-task-card { border: 1px solid #e4e7ed; border-radius: 4px; padding: 10px 12px; margin-top: 12px; background: #fff; }
+  .sync-task-header { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .sync-task-body { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; font-size: 13px; color: #606266; }
+
+  /* 配置不一致项目列表 */
+  .delete-projects {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    background: #f4f6fa; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px;
+  }
+  .delete-projects .dp-title { font-size: 13px; color: #191919; font-weight: 500; width: 100%; margin-bottom: 4px; }
+  .delete-projects label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; }
+  .delete-projects .checkbox { width: 14px; height: 14px; }
+</style>
+</head>
+<body>
+
+<div class="page-title">代码仓管理优化 + SIG 仓一键同步 · 页面原型</div>
+<div class="page-desc">本原型展示关键交互（整体思路：尽量规避多项目下统一代码仓配置项不一致）：①项目级「全局配置」弹窗（三页签公共账号 / GitCode 角色映射 + 代码仓录入配置区：sig-info.yaml 多路径配置（输入后即时校验路径存在性与 sig-info.yaml 文件）+ SIG 仓一键同步按钮（异步 + 分布式锁）与任务状态展示，任务状态在本弹窗内展示）；②手动录入（输入链接 blur 自动检测 → 命中其他项目已录入时表单自动复制上次录入配置、可修改，提交时配置不一致仅提示性告警、不覆盖其他项目行；默认分支从平台获取、只读展示）；③编辑代码仓配置（存在跨项目行且配置不一致时保存前提示性告警，用户确认后仅更新本行，不覆盖；开关类配置按「任一项目开启即生效」OR 聚合）；样式对齐 openlibing-web Element Plus 主色 #006be6。</div>
+
+<!-- ========== 场景一：项目级全局配置（三页签 + 代码仓录入配置区多路径 + 一键同步） ========== -->
+<div class="section">
+  <span class="section-label">场景一</span>
+  <div class="section-title">项目级「全局配置」：三页签（项目公共账号 / GitCode 角色映射）+ 代码仓录入配置区（sig-info.yaml 多路径 + SIG 仓一键同步）</div>
+
+  <div class="toolbar">
+    <button class="btn">+ 录入仓库</button>
+    <button class="btn btn-default">↻ 同步仓库</button>
+    <button class="btn btn-default">⭳ 导出仓库</button>
+    <button class="btn" style="background:#ff7d00; border-color:#ff7d00;">⚙ 全局配置</button>
+  </div>
+  <div class="form-hint" style="margin-bottom:6px;">工具栏「导出仓库」右侧新增「全局配置」按钮，对当前项目下所有代码仓生效；原「gitcode 角色映射」「项目公共账号」两个按钮的能力并入本弹窗。</div>
+  <div class="form-hint" style="margin-bottom:6px;">本弹窗能力由 <b>/project-config/global-config</b> 接口统一读写（ProjectConfigController）：项目公共账号（实现层仍存现有公共账号表）/ 代码仓录入配置（sig-info.yaml 多路径；<b>GET 回显与 POST 提交均按平台分键</b>——gitcode/gitee/github 外层 key，便于前端区分，提交时按平台分组提交 Map）/ GitCode 角色映射；路径输入后经 <b>POST /project-config/validate-sig-path</b> 即时校验；「SIG 仓一键同步」由 <b>POST /project-config/sig-sync</b> 触发（异步 + 分布式锁），任务状态经 <b>GET /project-config/sig-sync/status</b> 轮询（在本弹窗内展示）。</div>
+
+  <div class="dialog-mask">
+    <div class="dialog dialog-global">
+      <div class="dialog-header">
+        <span>全局配置（对项目下所有代码仓生效）</span>
+        <span class="dialog-close">✕</span>
+      </div>
+
+      <!-- 三页签 -->
+      <div class="tabs">
+        <span class="tab active">GitCode</span>
+        <span class="tab">Gitee</span>
+        <span class="tab">GitHub</span>
+      </div>
+
+      <div class="dialog-body">
+        <!-- ① 项目公共账号（可直接配置） -->
+        <div class="gc-section">
+          <div class="gc-section-title">
+            <span>项目公共账号（GitCode）</span>
+            <span class="form-hint">用于仓库私有性判断、同步仓库成员、执行门禁/版本级扫描等；令牌留空则不修改原值</span>
+          </div>
+          <div class="gc-account-row">
+            <div class="form-item">
+              <label>登录名</label>
+              <div class="input">openlibing-gitcode</div>
+            </div>
+            <div class="form-item">
+              <label>令牌</label>
+              <div class="input">••••••••••••</div>
+              <div class="form-hint">留空表示不修改原令牌</div>
+            </div>
+            <button class="btn btn-default" style="height:32px;">保存</button>
+          </div>
+        </div>
+
+        <!-- ② 代码仓录入配置（sig-info.yaml 多路径 + SIG 仓一键同步） -->
+        <div class="gc-section">
+          <div class="gc-section-title">
+            <span>代码仓录入配置（sig-info.yaml 路径，支持多个）</span>
+            <button class="btn" style="height:28px;padding:0 14px;">⟳ SIG 仓一键同步</button>
+          </div>
+          <div class="gc-loc-card" style="align-items:flex-start;">
+            <div class="loc-info" style="flex:1;">
+              <div style="margin-bottom:6px;">路径 1：</div>
+              <input type="text" value="https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private" style="width:100%;">
+            </div>
+            <span class="gc-loc-status ok-tag">● 可用</span>
+            <span class="icon-btn danger" title="删除路径">－</span>
+          </div>
+          <div class="gc-loc-card" style="align-items:flex-start;">
+            <div class="loc-info" style="flex:1;">
+              <div style="margin-bottom:6px;">路径 2：</div>
+              <input type="text" value="https://gitcode.com/openlibing/community/blob/master/sigs/sig-infra" style="width:100%;">
+            </div>
+            <span class="gc-loc-status ok-tag">● 可用</span>
+            <span class="icon-btn danger" title="删除路径">－</span>
+          </div>
+          <button class="btn btn-default" style="height:28px;padding:0 12px;">+ 添加路径</button>
+          <div class="form-hint" style="margin-top:8px;">路径指向代码托管平台上 sig-info.yaml 所在<b>目录</b>（示例：https://gitcode.com/openlibing/community-private/blob/master/openLiBing-private/sigs/openLiBing-private），系统在该目录下查找 sig-info.yaml 文件；可自由配置<b>多个</b>路径、不区分平台（后端根据 URL 域名自动识别 gitcode / gitee / github，统一管理区分）；<b>输入路径后（blur）即时调用 validate-sig-path 校验</b>该路径是否存在、其下是否存在 sig-info.yaml 文件，校验结果就地展示（可用 / 路径不存在 / 文件不存在），不阻断保存。</div>
+
+          <!-- 一键同步任务状态（异步 + 分布式锁；在全局配置弹窗内展示） -->
+          <div class="sync-task-card">
+            <div class="sync-task-header">
+              <span>最近一次同步任务</span>
+              <span class="tag tag-warning">RUNNING</span>
+            </div>
+            <div class="sync-task-body">
+              <span>任务 ID：sig-sync-123456</span>
+              <span>已同步：<b>36</b></span>
+              <span>失败：<b>2</b></span>
+            </div>
+            <div class="form-hint" style="margin-top:8px;">触发后立即返回任务 ID，异步执行（分布式锁 sig_sync:{projectId} 防同一项目并发重复触发，不担心执行时间较长）；任务状态<b>直接在本弹窗内展示</b>（轮询刷新最新状态，完成后展示 SUCCESS / FAILED / PARTIAL 与 imported / failed 计数及失败原因）。</div>
+          </div>
+          <div class="form-hint" style="margin-top:8px;">「SIG 仓一键同步」：从以上全部路径拉取 sig-info.yaml 并合并去重，仅同步<b>尚未录入当前项目</b>的仓库（已录入的不覆盖）；已存在于其他项目的仓库自动复制上次录入配置。默认参数：别名=repoUrl 中的 repo 名（项目内同名冲突依次尝试「repo名-平台名」、加数字递增）、责任人=代码托管平台创建人账号名、用途=自研源码、开源类型=主导开源、默认分支=从平台实时获取（<b>不可修改</b>）、公共账号令牌=项目级公共账号令牌；所有开关除「是否参与运营=是」外均默认为否。</div>
+        </div>
+
+        <!-- ③ 角色映射（仅 GitCode 页签） -->
+        <div class="gc-section">
+          <div class="gc-section-title">
+            <span>角色映射（GitCode 角色 ↔ openLiBing 角色）</span>
+            <span class="form-hint">根据映射关系同步 gitcode 仓库成员，用于功能鉴权</span>
+          </div>
+          <table class="role-map-table" style="max-width:520px;">
+            <thead>
+              <tr><th>GitCode 角色</th><th>openLiBing 角色</th><th style="width:70px;">操作</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>owner</td>
+                <td><span class="mini-select">项目管理员</span></td>
+                <td><span class="icon-btn">＋</span><span class="icon-btn danger">－</span></td>
+              </tr>
+              <tr>
+                <td>master</td>
+                <td><span class="mini-select">仓库管理员</span></td>
+                <td><span class="icon-btn">＋</span><span class="icon-btn danger">－</span></td>
+              </tr>
+              <tr>
+                <td>developer</td>
+                <td><span class="mini-select">开发者</span></td>
+                <td><span class="icon-btn">＋</span><span class="icon-btn danger">－</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn">保存</button>
+        <button class="btn btn-default">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px; font-size:13px; color:#666; line-height:1.8;">
+    <b>Gitee / GitHub 页签</b>：同样支持「项目公共账号」（可直接配置），但不含「角色映射」；「代码仓录入配置」（sig-info.yaml 多路径 + 一键同步）为跨平台独立区域，不归属任何页签。
+  </div>
+</div>
+
+<!-- ========== 场景二：手动录入 - 自动检测 + 复制上次配置 + 提示不覆盖 ========== -->
+<div class="section">
+  <span class="section-label">场景二</span>
+  <div class="section-title">手动录入：输入仓库链接 blur 自动检测；命中其他项目已录入时表单自动复制上次录入配置（可修改）；提交时配置不一致仅提示性告警，不覆盖其他项目行</div>
+  <div class="toolbar">
+    <button class="btn">+ 录入仓库</button>
+    <button class="btn btn-default">↻ 同步仓库</button>
+    <button class="btn btn-default">⭳ 导出仓库</button>
+    <button class="btn btn-default">⚙ 全局配置</button>
+  </div>
+
+  <div class="dialog-mask">
+    <div class="dialog">
+      <div class="dialog-header">
+        <span>录入代码仓</span>
+        <span class="dialog-close">✕</span>
+      </div>
+      <div class="dialog-body">
+        <div class="form-item" style="margin-bottom:14px;">
+          <label><span class="req">*</span>仓库链接</label>
+          <div class="input">https://gitcode.com/openlibing/openlibing-coderepo.git</div>
+          <div class="form-hint">输入链接失焦后自动发起检测请求（<b>check-repo-url</b>，只传基础参数），判断该代码仓是否已在其他项目录入，命中时表单<b>直接使用</b><b>上次录入该代码仓的配置</b>（可修改）；默认分支沿用现有仓库信息获取逻辑、<b>只读展示不可修改</b>；提交前传 <b>formConfig</b>（blur 返回 repoId 非 null 时一并传）再调 check-repo-url 比对，配置不一致时弹窗提示（仅影响当前项目行）</div>
+        </div>
+
+        <!-- 已存在于其他项目：自动复制上次录入配置（仅提示，不覆盖） -->
+        <div class="alert alert-info">
+          <span class="alert-icon">ℹ</span>
+          <div>检测到该代码仓已在 <b>项目A</b>、<b>项目B</b> 录入。表单已按<b>上次录入配置</b>自动同步（可修改）；提交时若检测到配置不一致，将仅提示告警，<b>不会覆盖其他项目下的配置</b>。如需修改之前项目中的配置或删除之前的代码仓，请按提示切换到对应项目手动操作。</div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-item">
+            <label>托管平台</label>
+            <div class="select">gitcode</div>
+          </div>
+          <div class="form-item">
+            <label>代码仓别名</label>
+            <div class="input">openlibing-coderepo</div>
+          </div>
+          <div class="form-item">
+            <label>默认分支</label>
+            <div class="input disabled">master</div>
+            <div class="form-hint">从代码托管平台实时获取，只读不可修改</div>
+          </div>
+          <div class="form-item">
+            <label><span class="req">*</span>仓库责任人</label>
+            <div class="input">sig-owner</div>
+          </div>
+          <div class="form-item">
+            <label><span class="req">*</span>用途</label>
+            <div class="select">自研源码</div>
+          </div>
+          <div class="form-item">
+            <label>语言</label>
+            <div class="select">java</div>
+          </div>
+          <div class="form-item">
+            <label><span class="req">*</span>开源类型</label>
+            <div class="select">主导开源</div>
+          </div>
+          <div class="form-item">
+            <label>接管PR管理</label>
+            <div class="select">是</div>
+          </div>
+          <div class="form-item">
+            <label>自动触发门禁流水线</label>
+            <div class="select">是</div>
+          </div>
+          <div class="form-item">
+            <label>自动触发接口扫描</label>
+            <div class="select">否</div>
+          </div>
+          <div class="form-item">
+            <label>代码风格自动修复</label>
+            <div class="select">否</div>
+          </div>
+          <div class="form-item">
+            <label>告警抑制自动检视</label>
+            <div class="select">否</div>
+          </div>
+          <div class="form-item">
+            <label>是否参与运营</label>
+            <div class="select">是</div>
+          </div>
+        </div>
+        <div class="form-hint" style="margin-top:10px;">保存仅影响当前项目行，不修改其他项目下的代码仓配置；开关类配置在下游使用时按「任一项目开启即生效」聚合（存在重复录入时，任一开启即视为开启，全关闭才关闭）。</div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn">确定</button>
+        <button class="btn btn-default">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 提交时配置不一致：提示性告警（仅保存当前项目行，不覆盖其他项目） -->
+  <div class="dialog-mask">
+    <div class="dialog" style="width:560px;">
+      <div class="dialog-header">
+        <span>配置不一致提示</span>
+        <span class="dialog-close">✕</span>
+      </div>
+      <div class="dialog-body">
+        <div class="alert alert-warning">
+          <span class="alert-icon">⚠</span>
+          <div>当前表单配置与该代码仓在以下项目中的配置不一致：</div>
+        </div>
+        <div class="delete-projects">
+          <div class="dp-title">配置不一致的项目（同 repo_url 组内其他行）</div>
+          <label><span class="tag tag-primary">项目A</span><span class="form-hint">接管PR管理=否（当前=是）</span></label>
+          <label><span class="tag tag-info">项目B</span><span class="form-hint">自动触发门禁流水线=否（当前=是）</span></label>
+          <span class="form-hint" style="width:100%;">继续保存<b>仅写入当前项目行</b>，不修改以上项目下的配置；如需统一配置，请切换到对应项目手动修改。开关类配置在下游使用时按「任一项目开启即生效」聚合：存在重复录入时，任一项目开启即视为开启，全关闭才关闭。</span>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn">继续保存（仅当前项目行）</button>
+        <button class="btn btn-default">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 场景三：编辑代码仓配置（跨项目行配置不一致时提示性告警、不覆盖） ========== -->
+<div class="section">
+  <span class="section-label">场景三</span>
+  <div class="section-title">编辑代码仓配置：保存时若同 repo_url 存在跨项目行且配置不一致 → 弹窗提示性告警，用户确认后仅更新本行（不覆盖其他项目行）；无跨项目行或配置一致时直接保存（SIG 来源仓库同样允许编辑）</div>
+
+  <div class="dialog-mask">
+    <div class="dialog">
+      <div class="dialog-header">
+        <span>编辑代码仓配置（openlibing/openlibing-coderepo）</span>
+        <span class="dialog-close">✕</span>
+      </div>
+      <div class="dialog-body">
+        <div class="form-item" style="margin-bottom:14px;">
+          <label>仓库链接</label>
+          <div class="input disabled">https://gitcode.com/openlibing/openlibing-coderepo.git</div>
+          <div class="form-hint">编辑打开时回显本行当前配置（不预填其他项目数据）；保存前传 <b>repoId + formConfig</b> 调 <b>check-repo-url</b> 比对当前表单配置与同 repo_url 其他项目行（兼容 repo_info 表中跨项目重复代码仓历史数据），配置不一致时弹窗提示性告警</div>
+        </div>
+
+        <!-- 跨项目行存在：保存时提示性告警（不覆盖） -->
+        <div class="alert alert-warning">
+          <span class="alert-icon">⚠</span>
+          <div>检测到该代码仓已在 <b>项目A</b>、<b>项目B</b> 录入。若保存时本行配置与以上项目不一致，将弹窗提示性告警；确认后<b>仅更新本行</b>，<b>不覆盖其他项目行配置</b>。开关类配置在下游使用时按「任一项目开启即生效」聚合（任一开启即视为开启，全关闭才关闭）。</div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-item">
+            <label>托管平台</label>
+            <div class="select">gitcode</div>
+          </div>
+          <div class="form-item">
+            <label>代码仓别名</label>
+            <div class="input">openlibing-coderepo</div>
+          </div>
+          <div class="form-item">
+            <label>默认分支</label>
+            <div class="input disabled">master</div>
+            <div class="form-hint">从代码托管平台实时获取，只读不可修改（不参与配置一致性比对）</div>
+          </div>
+          <div class="form-item">
+            <label><span class="req">*</span>仓库责任人</label>
+            <div class="input">sig-owner</div>
+          </div>
+          <div class="form-item">
+            <label><span class="req">*</span>用途</label>
+            <div class="select">自研源码</div>
+          </div>
+          <div class="form-item">
+            <label>语言</label>
+            <div class="select">java</div>
+          </div>
+          <div class="form-item">
+            <label><span class="req">*</span>开源类型</label>
+            <div class="select">主导开源</div>
+          </div>
+          <div class="form-item">
+            <label>接管PR管理</label>
+            <div class="select">是</div>
+          </div>
+          <div class="form-item">
+            <label>自动触发门禁流水线</label>
+            <div class="select">是</div>
+          </div>
+          <div class="form-item">
+            <label>自动触发接口扫描</label>
+            <div class="select">否</div>
+          </div>
+          <div class="form-item">
+            <label>代码风格自动修复</label>
+            <div class="select">否</div>
+          </div>
+          <div class="form-item">
+            <label>告警抑制自动检视</label>
+            <div class="select">否</div>
+          </div>
+          <div class="form-item">
+            <label>是否参与运营</label>
+            <div class="select">是</div>
+          </div>
+        </div>
+        <div class="form-hint" style="margin-top:10px;">无跨项目行或配置一致时直接保存本行；存在跨项目行且配置不一致时保存前提示性告警，确认后仅更新本行，如需统一配置请手动到对应项目修改。</div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn">保存</button>
+        <button class="btn btn-default">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保存前提示性告警弹窗：仅更新本行，不覆盖其他项目行 -->
+  <div class="dialog-mask">
+    <div class="dialog" style="width:560px;">
+      <div class="dialog-header">
+        <span>配置不一致提示</span>
+        <span class="dialog-close">✕</span>
+      </div>
+      <div class="dialog-body">
+        <div class="alert alert-warning">
+          <span class="alert-icon">⚠</span>
+          <div>本行配置与该代码仓在以下项目中的配置不一致：</div>
+        </div>
+        <div class="delete-projects">
+          <div class="dp-title">配置不一致的项目（同 repo_url 组内其他行）</div>
+          <label><span class="tag tag-primary">项目A</span><span class="form-hint">接管PR管理=否（本行=是）</span></label>
+          <label><span class="tag tag-info">项目B</span><span class="form-hint">自动触发门禁流水线=否（本行=是）</span></label>
+          <span class="form-hint" style="width:100%;">确认后<b>仅更新本行</b>，其他项目行配置保持不变；如需统一配置，请切换到对应项目手动修改。开关类配置按「任一项目开启即生效」聚合：存在重复录入时，任一项目开启即视为开启，全关闭才关闭。</span>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn">继续保存（仅本行生效）</button>
+        <button class="btn btn-default">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
