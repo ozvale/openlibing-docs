@@ -31,12 +31,13 @@
 
 ### 内网通知层（本次新增，纯工程工具）
 
-- [ ] Task 19: 将 `skills/send-welink-card/scripts/send_welink.py` 迁出至独立工具目录（如 `tools/welink/`）
-- [ ] Task 20: 删除 `skills/send-welink-card/`（skill 机制不再使用）
-- [ ] Task 21: 实现 `tools/notify/notify_daily.py`：从 GitCode API 读远端 records 当日 md（A 方案 urllib+PAT）
-- [ ] Task 22: 实现 `{OWNER}` 替换：读取 owner 本地配置（仓库→负责人/群组），未配置仓可跳过/占位
-- [ ] Task 23: 合并为一条群消息，调 `send_welink.py` 发到 owner 群组
-- [ ] Task 24: 支持参数/配置：远端仓库地址、owner 配置文件路径、PAT 配置文件路径
-- [ ] Task 25: 编写 owner/PAT 示例配置文件（`*.example.*`，真实配置不入库）
-- [ ] Task 26: 编写内网定时任务注册（默认 09:30，参照 register_daily_summary.bat）
-- [ ] Task 27: 本地 dry-run 验证读取+替换+合并（不真发消息或发测试群）
+- [x] Task 19: 将 `skills/send-welink-card/scripts/send_welink.py` 迁出至独立工具目录（`tools/welink/`）
+- [x] Task 20: 删除 `skills/send-welink-card/`（skill 机制不再使用）
+- [x] Task 21: 实现 `tools/notify/notify_daily.py`：从 GitCode API 读远端 records 当日 md（A 方案 urllib+PAT）
+- [x] Task 22: 实现 `{OWNER}` 替换：读取 owner 本地配置（仓库→负责人/群组），未配置仓可跳过/占位
+- [x] Task 23: 合并为一条群消息，调 `send_welink.py` 发到 owner 群组
+- [x] Task 24: 支持参数/配置：远端仓库地址（--repo）、owner/PAT 配置文件路径
+- [x] Task 25: 编写 owner/PAT 示例配置文件（`owners.example.yaml` / `pat.example.json`）
+- [x] Task 26: 编写内网定时任务注册 `register_notify.bat`（默认 09:30）
+- [x] Task 27: 本地 dry-run 验证读取+替换+合并（--date 2026-09-13 实测通过）
+- [x] Task 28: 凭证澄清：`pat.json` 仅保留 GitCode token/api_base；WeLink 小鲁班 token 走 `tools/welink/config/token.txt` 独立注入

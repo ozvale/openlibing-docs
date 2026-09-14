@@ -127,11 +127,12 @@ Windows 计划任务（每日 07:30）
 | ---------- | --------------------------------------------------------------------------------- | --------------------------------------------- |
 | 读取方式   | GitCode API `GET /api/v5/repos/{owner}/{repo}/contents/records/...`（urllib+PAT） | 只取当日文件，不 clone 全仓，依赖最少         |
 | 负责人映射 | 内网本地 owner 配置文件（不入库）                                                 | 负责人由内网维护，符合既有 `{OWNER}` 占位设计 |
-| 认证       | 内网本地 PAT 配置文件                                                             | 独立于 workflow secret；脚本从文件读 token    |
+| GitCode 认证 | 内网本地 `pat.json`（api_base + token）                                             | 独立于 workflow secret；仅用于读远端 records    |
+| WeLink 认证 | 小鲁班专属 token（`tools/welink/config/token.txt`，`send_welink.py --setup` 注入） | 与 GitCode PAT 独立，发送专用                   |
 | 发送       | 复用 `send_welink.py`（WeLinkSender.send_card）                                   | 已实测可用的发送实现，迁出 skill 复用         |
-| 消息形式   | 合并成一条群消息发到 owner 群组                                                   | 用户指定                                      |
+| 消息形式   | 合并成一条群消息发到 owner 群组（`owners.yaml` 的 `receivers.default`）             | 用户指定                                      |
 | 触发       | 内网本地定时（默认 09:30）                                                        | 与 AI 总结 07:30 错开，留时间差               |
-| 依赖       | Python 标准库（urllib）+ requests（send_welink 已用）                             | 尽量少                                        |
+| 依赖       | Python 标准库（urllib）+ requests + PyYAML                                        | 尽量少                                        |
 
 ### 涉及新增文件（nightly-notice 仓）
 
@@ -140,7 +141,7 @@ Windows 计划任务（每日 07:30）
 | `tools/welink/send_welink.py`      | 从 `skills/send-welink-card/scripts/send_welink.py` 迁出（复用发送实现） |
 | `tools/notify/notify_daily.py`     | 内网通知主脚本：读远端 records → 替换 {OWNER} → 合并 → 发送              |
 | `tools/notify/owners.example.yaml` | owner 配置示例（本地维护，不入库）                                       |
-| `tools/notify/pat.example.txt`     | PAT 配置示例（本地维护，不入库）                                         |
+| `tools/notify/pat.example.json`    | GitCode PAT 配置示例（api_base + token，本地维护）                       |
 | `tools/notify/register_notify.bat` | 内网定时任务注册（09:30）                                                |
 | `skills/send-welink-card/`         | 删除（skill 机制不再使用）                                               |
 

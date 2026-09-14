@@ -53,10 +53,10 @@ openlibing 各业务仓配置了定时流水线（如 `openlibing-framework` 的
 - [x] AI 汇总能按模板产出 records 日报，`{OWNER}` 占位，问题数不臆造
 - [x] 脚本支持任意位置执行（`--repo-root`），并注册 Windows 计划任务
 - [ ] 内网工具为纯工程实现（不使用 AI），可从远端仓读取对应日期 records
-- [ ] 支持指定远端仓库地址、owner 配置文件、PAT 配置文件（均可配置、不硬编码）
-- [ ] 读取 owner 配置替换 `{OWNER}`，合并为一条群消息发送到 owner 群组
-- [ ] send_welink.py 从 skill 迁出为独立工具复用，skill 删除
-- [ ] 内网定时任务（默认 09:30）可触发执行
+- [x] 支持指定远端仓库地址（--repo）、owner 配置文件、PAT 配置文件（均可配置、不硬编码）
+- [x] 读取 owner 配置替换 `{OWNER}`，合并为一条群消息发送到 owner 群组（dry-run 实测通过）
+- [x] send_welink.py 从 skill 迁出为独立工具复用，skill 删除
+- [ ] 内网定时任务（默认 09:30）可触发执行（依赖内网小鲁班可达性，待内网侧实测）
 
 ## 影响范围
 
