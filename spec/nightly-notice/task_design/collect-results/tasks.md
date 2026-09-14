@@ -1,6 +1,6 @@
-# nightly-notice 定时采集归档 + AI 汇总日报 — 实现任务
+# nightly-notice 定时采集归档 + AI 汇总日报 + 内网通知 — 实现任务
 
-## 进度: 18/18 complete
+## 进度: 18/18 complete（采集/汇总）+ 内网层进行中
 
 ### 采集层（Phase 3，已完成）
 
@@ -28,3 +28,15 @@
 
 - [x] Task 17: 采集 8 仓 dry-run 全通过（4 仓有 nightly run，framework 已归档去重）
 - [x] Task 18: AI 总结生成 records/2026/09/13.md（8 仓，{OWNER} 占位，无数据写"暂无日志"）
+
+### 内网通知层（本次新增，纯工程工具）
+
+- [ ] Task 19: 将 `skills/send-welink-card/scripts/send_welink.py` 迁出至独立工具目录（如 `tools/welink/`）
+- [ ] Task 20: 删除 `skills/send-welink-card/`（skill 机制不再使用）
+- [ ] Task 21: 实现 `tools/notify/notify_daily.py`：从 GitCode API 读远端 records 当日 md（A 方案 urllib+PAT）
+- [ ] Task 22: 实现 `{OWNER}` 替换：读取 owner 本地配置（仓库→负责人/群组），未配置仓可跳过/占位
+- [ ] Task 23: 合并为一条群消息，调 `send_welink.py` 发到 owner 群组
+- [ ] Task 24: 支持参数/配置：远端仓库地址、owner 配置文件路径、PAT 配置文件路径
+- [ ] Task 25: 编写 owner/PAT 示例配置文件（`*.example.*`，真实配置不入库）
+- [ ] Task 26: 编写内网定时任务注册（默认 09:30，参照 register_daily_summary.bat）
+- [ ] Task 27: 本地 dry-run 验证读取+替换+合并（不真发消息或发测试群）
