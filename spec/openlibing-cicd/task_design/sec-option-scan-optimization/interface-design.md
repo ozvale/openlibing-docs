@@ -81,7 +81,7 @@
 | `projectId`    | String           | 是   | 精确（项目隔离） | 项目 ID，只查询该项目下代码仓的产物                                                                     |
 | `repoUrl`      | String           | 否   | 模糊             | 代码仓链接（如 `gitcode.com/owner/repo`），后端对完整 gitUrl 做 LIKE                                    |
 | `pipelineName` | String           | 否   | 模糊             | 流水线名称（ATOMGIT_WORKFLOW 环境变量值）                                                               |
-| `runNumber`    | String           | 否   | 模糊             | 流水线运行编号（对应插件上报的 runNumber，支持输入任意数字片段）                                        |
+| `runNumber`    | String           | 否   | 精确             | 流水线运行编号（对应插件上报的 runNumber，精确匹配）                                                    |
 | `packageName`  | String           | 否   | 模糊             | 构建产物包名（插件取 `artifact-path` 对应的文件名 basename，如 `DrivingSDK_v2.7.1_3.9_aarch64.tar.gz`） |
 | `startTime`    | String           | 否   | 区间下界         | 检测完成时间起始，ISO 8601 或 `yyyy-MM-dd HH:mm:ss`                                                     |
 | `endTime`      | String           | 否   | 区间上界         | 检测完成时间截止                                                                                        |
