@@ -202,21 +202,21 @@
 
 `POST /build-artifact/sec-option/file-detail`
 
-二/三级页：按 `repoUrl + runNumber + packageName` 精确定位一条扫描记录，返回包内所有文件的逐项检测结果（分页）。
+二/三级页：按 `projectId + recordId` 定位一条扫描记录，返回包内所有文件的逐项检测结果（分页）。以 `recordId`（雪花 ID）作为定位键，而非 `repoUrl + runNumber + packageName`：产物包名以 basename 记录后，同一构建可能产出多个目录下的同名包，三元组无法唯一区分。
 
 ### 4.1 请求体 `SecOptionFileDetailQueryDTO`
 
 | 字段            | 类型                         | 必填 | 筛选能力         | 说明                                                 |
 | --------------- | ---------------------------- | ---- | ---------------- | ---------------------------------------------------- |
-| `projectId`     | String                       | 是   | 精确（项目隔离） | 项目 ID                                              |
-| `repoUrl`       | String                       | 是   | 精确             | 代码仓链接                                           |
-| `runNumber`     | String                       | 是   | 精确             | 流水线运行编号                                       |
-| `packageName`   | String                       | 是   | 精确             | 产物包名                                             |
+| `projectId`     | String                       | 是   | 精确（项目隔离） | 项目 ID，仅允许查询本项目下的扫描记录                |
+| `recordId`      | String                       | 是   | 精确             | 扫描记录 ID（雪花 ID，从 overview 行的 `id` 取）     |
 | `fileName`      | String                       | 否   | 模糊             | 文件名模糊搜索（对 `file_name` 做 LIKE `%value%`）   |
 | `filePath`      | String                       | 否   | 模糊             | 文件路径模糊搜索（对 `file_path` 做 LIKE `%value%`） |
 | `optionFilters` | Array\<SecOptionFileFilter\> | 否   | 每扫描项独立多选 | 扫描项+扫描值筛选，结构见下                          |
 | `pageNum`       | Integer                      | 否   | 分页             | 默认 1                                               |
 | `pageSize`      | Integer                      | 否   | 分页             | 默认 20                                              |
+
+> **项目隔离说明**：即使以 `recordId` 定位，后端仍校验该记录所属代码仓（`git_url`）是否属于 `projectId` 对应项目（git 仓名大小写不敏感比较），不属于则返回"未找到对应的扫描记录"，防止越权访问其他项目。
 
 > `SecOptionFileFilter`：`{ "optionKey": string, "scanValues": string[] }`，一个对象记录**一个扫描项**及其可匹配的扫描值集合；多个扫描项之间为**复合（AND）关系**（该行需同时满足所有传的扫描项），同一扫描项的多个扫描值之间为 **IN** 关系；特别地，若某文件未扫描某扫描项，`JSON_EXTRACT` 返回 NULL、`IN` 不命中即该行落选；任一元素的扫描值集合为空则忽略该条件，`optionFilters` 整体不传表示不按扫描项过滤。
 >
