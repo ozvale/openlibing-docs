@@ -59,8 +59,8 @@
 | ------------ | ---------------------------------------------------- | ----------------------------------------------------------- | -------- |
 | 概览列表     | `POST /build-artifact/sec-option/overview`           | 一级概览页（产物包维度分页列表）                            | 增强     |
 | 文件详情     | `POST /build-artifact/sec-option/file-detail`        | 二/三级页的包内文件逐项检测结果                             | 增强     |
-| 保存备案     | `POST /build-artifact/sec-option/filing/save`        | 创建/更新例外备案                                           | 新增     |
-| 取消备案     | `POST /build-artifact/sec-option/filing/cancel`      | 取消（删除）例外备案，并重算该记录                          | 新增     |
+| 保存备案     | `POST /build-artifact/sec-option/filing/save`        | 创建/更新例外备案（支持批量，items 一次携带多条）           | 新增     |
+| 取消备案     | `POST /build-artifact/sec-option/filing/cancel`      | 取消（删除）例外备案（查询时实时关联，无回填）              | 新增     |
 | 待备案项列表 | `POST /build-artifact/sec-option/filing/list`        | 某产物包扫描记录下文件×扫描项扁平行列表（SQL 分页）         | 新增     |
 | 备案人名单   | `POST /build-artifact/sec-option/filing/filer-list`  | 备案人精确筛选下拉名单（含每人备案条数，按产物包/项目维度） | 新增     |
 | 备案记录列表 | `POST /build-artifact/sec-option/filing/record-list` | 独立备案记录页（跨包）                                      | 新增     |
@@ -205,7 +205,7 @@
 
 > `SecOptionFileFilter`：`{ "optionKey": string, "scanValues": string[] }`，一个对象记录**一个扫描项**及其可匹配的扫描值集合；多个扫描项之间为**复合（AND）关系**（该行需同时满足所有传的扫描项），同一扫描项的多个扫描值之间为 **IN** 关系；特别地，若某文件未扫描某扫描项，`JSON_EXTRACT` 返回 NULL、`IN` 不命中即该行落选；任一元素的扫描值集合为空则忽略该条件，`optionFilters` 整体不传表示不按扫描项过滤。
 >
-> 文件详情页默认按 `filePath` 升序返回。**`fileName`/`filePath` 与 `optionFilters` 均在服务端 SQL 完成、与分页一起下推**：路径类对 `file_name`/`file_path` 做 LIKE `%value%`；`optionFilters` 内每个扫描项作为独立的 AND 谓词对 `options` JSON 做 IN 筛选（值域 `YES`/`NO`/`N/A`），仍为 SQL 侧 LIMIT/OFFSET + COUNT 分页，非内存分页。
+> 文件详情页默认按 `filePath` 升序返回。**`fileName`/`filePath` 与 `optionFilters` 均在服务端 SQL 完成、与分页一起下推**：路径类对 `file_name`/`file_path` 做 LIKE `%value%`；`optionFilters` 内每个扫描项作为独立的 AND 谓词对 `raw_options` JSON 做 IN 筛选（值域 `YES`/`NO`/`N/A`，按原始扫描值过滤，与备案值无关），仍为 SQL 侧 LIMIT/OFFSET + COUNT 分页，非内存分页。分页命中的文件再由 Service 层加载该产物所有备案（按 `projectId + gitUrl + packageName` 一次性查 `sec_option_filing`）后在内存组装 `options`（生效值）与 `rawOptions`（已备案项的原值），故分页 100 行内 JOIN 等价为内存 map 命中，性能无显著影响。
 
 ### 4.2 响应体 `SecOptionFileDetailVO`
 
@@ -252,30 +252,53 @@
 
 `POST /build-artifact/sec-option/filing/save`
 
-创建/更新例外备案（upsert）。**需「安全编译选项例外备案审批人」角色（角色码 `security_compilation_options_filing_approver`，纵向鉴权由网关完成）**。
+创建/更新例外备案（upsert，**支持批量**）。**需「安全编译选项例外备案审批人」角色（角色码 `security_compilation_options_filing_approver`，纵向鉴权由网关完成）**。
+
+前端执行批量备案时，一次请求通过 `items` 携带多个（文件×扫描项）备案项，由后端逐项 upsert（按自然键 `projectId + gitUrl + packageName + filePath + optionKey`），无需循环多次调用。**备案写入 `sec_option_filing` 表后不再回填 `sec_option_scan_file_detail.filed_options`**，所有查询接口（file-detail / filing-list / overview）均在查询时实时 `LEFT JOIN sec_option_filing` 按自然键关联出当前最新备案状态——因此对同一产物同一文件同一扫描项备案后，该产物的**历史和未来所有扫描记录**都能看到该备案结果。整个批量写入在同一事务内（失败整体回滚）。
 
 ### 5.1 请求体 `SecOptionFilingDTO`
 
-| 字段          | 类型   | 必填 | 说明                                                                                  |
-| ------------- | ------ | ---- | ------------------------------------------------------------------------------------- |
-| `id`          | String | 否   | 更新时传入（存在则更新该条；不传则按唯一键 upsert）。字符串传递，避免 64 位 Long 失真 |
-| `projectId`   | String | 是   | 项目 ID                                                                               |
-| `gitUrl`      | String | 是   | 代码仓完整链接（如 `https://gitcode.com/owner/repo.git`）                             |
-| `packageName` | String | 是   | 产物包名                                                                              |
-| `filePath`    | String | 是   | 文件相对路径（与 file-detail 返回的 `filePath` 一致）                                 |
-| `optionKey`   | String | 是   | 扫描项 key（如 `fortify`）                                                            |
-| `filingValue` | String | 是   | 备案值，仅 `YES`/`NO`                                                                 |
-| `reason`      | String | 否   | 备案理由                                                                              |
+| 字段          | 类型                              | 必填 | 说明                                                         |
+| ------------- | --------------------------------- | ---- | ------------------------------------------------------------ |
+| `projectId`   | String                            | 是   | 项目 ID（一次批量备案的公共维度）                            |
+| `gitUrl`      | String                            | 是   | 代码仓完整链接（如 `https://gitcode.com/owner/repo.git`）    |
+| `packageName` | String                            | 是   | 产物包名                                                     |
+| `filingValue` | String                            | 是   | 备案值，仅 `YES`（批量统一备案为 YES，确认该安全选项已启用） |
+| `reason`      | String                            | 否   | 备案理由（批量统一理由）                                     |
+| `items`       | Array\<`SecOptionFilingItemDTO`\> | 是   | 待备案项列表，至少一项（空会拒绝并返回失败）                 |
 
-唯一键：`projectId + gitUrl + packageName + filePath + optionKey`。
+### 5.1.1 备案项 `SecOptionFilingItemDTO`
+
+| 字段        | 类型   | 必填 | 说明                                                  |
+| ----------- | ------ | ---- | ----------------------------------------------------- |
+| `filePath`  | String | 是   | 文件相对路径（与 file-detail 返回的 `filePath` 一致） |
+| `optionKey` | String | 是   | 扫描项 key（如 `fortify`）                            |
+
+每个备案项的唯一键：`projectId + gitUrl + packageName + filePath + optionKey`。
+
+请求示例（批量备案 2 条）：
+
+```json
+{
+  "projectId": "p1",
+  "gitUrl": "https://gitcode.com/owner/repo.git",
+  "packageName": "foo.tar.gz",
+  "filingValue": "YES",
+  "reason": "统一理由",
+  "items": [
+    { "filePath": "bin/a", "optionKey": "bindNow" },
+    { "filePath": "bin/b", "optionKey": "fortify" }
+  ]
+}
+```
 
 ### 5.2 响应体
 
 ```json
-{ "code": 0, "msg": "success", "data": "1234567890" }
+{ "code": 0, "msg": "success", "data": ["1234567890", "1234567891"] }
 ```
 
-`data` 为备案记录 ID（String）。
+`data` 为备案记录 ID 列表（Array\<String\>），顺序与请求 `items` 一一对应；前端可用其调用取消备案/二次保存，字符串传递避免 64 位 Long 失真。
 
 ---
 
@@ -283,7 +306,7 @@
 
 `POST /build-artifact/sec-option/filing/cancel`
 
-取消（删除）例外备案，取消后由后端重算该（gitUrl + packageName）最新一条扫描记录。**与 `save` 一样需审批人角色（角色码 `security_compilation_options_filing_approver`，纵向鉴权由网关完成）**；服务侧校验当前用户为 `projectId` 对应项目成员，且备案记录 `projectId` 与请求一致。
+取消（删除）例外备案（按 `id` 批量删除 `sec_option_filing` 表记录）。**与 `save` 一样需审批人角色（角色码 `security_compilation_options_filing_approver`，纵向鉴权由网关完成）**；服务侧校验当前用户为 `projectId` 对应项目成员，且备案记录 `projectId` 与请求一致。**取消后无需重算**：查询接口实时 `LEFT JOIN sec_option_filing`，删除后所有历史和未来扫描记录中该备案自然消失。
 
 ### 6.1 请求体 `SecOptionFilingCancelDTO`（独立 DTO，与 save 不共用）
 
@@ -304,7 +327,7 @@
 
 `POST /build-artifact/sec-option/filing/list`
 
-三级「待备案项列表」页：把某条扫描记录下的**文件×扫描项**降维为扁平行列表，每行 = 一个"文件×扫描项"组合（已扫描且适用，扫描值 YES/NO），服务端 SQL 分页下推（**非内存分页**）。**每行自动区分备案状态**：未备案行 `id` 为空（可勾选批量备案），已备案行带备案记录 `id`（可取消备案）。数据来源为 `sec_option_scan_file_detail` 与 14 个扫描项 key 笛卡尔展开 + `JSON_TABLE` 关联 `filed_options`，单表 SQL 分页（无 JOIN 备案表）。**只读，需项目成员校验 + 记录归属校验**。
+三级「待备案项列表」页：把某条扫描记录下的**文件×扫描项**降维为扁平行列表，每行 = 一个"文件×扫描项"组合（已扫描且适用，扫描值 YES/NO），服务端 SQL 分页下推（**非内存分页**）。**每行自动区分备案状态**：未备案行 `id` 为空（可勾选批量备案），已备案行带备案记录 `id`（可取消备案）。数据来源为 `sec_option_scan_file_detail` 与 14 个扫描项 key 笛卡尔展开后 **`LEFT JOIN sec_option_filing`** 按自然键（`git_url + package_name + file_path + option_key + project_id`）关联当前备案，因此**该产物包历史和未来所有扫描记录都会展示同一份最新备案**（不再依赖 `filed_options` 快照回填）。**只读，需项目成员校验 + 记录归属校验**。
 
 ### 7.1 请求体 `SecOptionFilingRowQueryDTO`
 

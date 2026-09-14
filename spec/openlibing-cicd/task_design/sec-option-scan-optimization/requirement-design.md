@@ -10,12 +10,12 @@
 
 安全编译选项扫描插件（security-compilation-options-action）已具备 14 项扫描 + 上报 + 概览/文件详情查询能力，现有实现存在以下问题：
 
-| 问题 | 现状 | 目标 |
-|------|------|------|
-| 实际扫描数缺失 | 概览展示的 totalFiles 是"参与该项检测的文件总数"，与 yesCount 相除得到的是"满足数/总文件数"，无法得到用户理解的"满足率" | 透出"实际扫描数/实际参与数"，使满足率 = 满足数 / 实际参与数自洽 |
-| 扫描项不可裁剪 | 默认返回全部 14 项结果，项目无法只关注部分项 | 复用插件 scan-options 链路，未扫描项带标识，前端不展示 |
-| 无毒例外的备案 | 后端不涉及任何例外备案/豁免/覆写机制，NO 值每次扫描都原样返回 | 支持按"项目+仓库+产物包+文件+选项"做例外备案，备案值覆盖扫描值参与统计，后续扫描自动生效 |
-| 前端信息过载 | 概览页每个扫描项都展示总文件数/满足数/开启率，信息过多 | 三级页面 + 独立备案记录页：概览（汇总）→ 详情（逐扫描项明细）→ 待备案项列表（批量备案）→ 备案记录页（跨包总览） |
+| 问题           | 现状                                                                                                                    | 目标                                                                                                            |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 实际扫描数缺失 | 概览展示的 totalFiles 是"参与该项检测的文件总数"，与 yesCount 相除得到的是"满足数/总文件数"，无法得到用户理解的"满足率" | 透出"实际扫描数/实际参与数"，使满足率 = 满足数 / 实际参与数自洽                                                 |
+| 扫描项不可裁剪 | 默认返回全部 14 项结果，项目无法只关注部分项                                                                            | 复用插件 scan-options 链路，未扫描项带标识，前端不展示                                                          |
+| 无毒例外的备案 | 后端不涉及任何例外备案/豁免/覆写机制，NO 值每次扫描都原样返回                                                           | 支持按"项目+仓库+产物包+文件+选项"做例外备案，备案值覆盖扫描值参与统计，后续扫描自动生效                        |
+| 前端信息过载   | 概览页每个扫描项都展示总文件数/满足数/开启率，信息过多                                                                  | 三级页面 + 独立备案记录页：概览（汇总）→ 详情（逐扫描项明细）→ 待备案项列表（批量备案）→ 备案记录页（跨包总览） |
 
 **确认结果覆盖率语义**（二级详情页核心对比指标，分母沿用"实际参与数"）：
 
@@ -56,17 +56,17 @@ openlibing-cicd-web（前端，vue3）
 
 ### 1.3 关键设计决策
 
-| 决策点 | 选择 | 理由 |
-|--------|------|------|
-| 关注项裁剪 | 复用插件 scan-options 数据链路，后端出参补全标识，不新建配置表 | scan-options 未扫描项 key 本就不写入 overviewData/fileDetails 的 options，后端已能从 JSON key 提取 scanOptions；零新表、插件零改动，避免额外配置接口 |
-| 未扫描项标识 | overview 未扫描项 `{"scanned":false}`；file-detail 未扫描项值 `"UNSCANNED"` | 标识在查询出参时注入，插件上报数据与存量记录均无需迁移 |
-| 例外备案方式 | 方案一·页面列表筛选批量备案（推荐）；方案二·文件上传解析（备选，见 §1.6） | 方案一直击用户高频场景（处理 NO 项），把"文件×选项矩阵"降维为"NO 项列表"，数据量天然大幅减少，避免大矩阵渲染卡顿；批量场景用筛选+全选跨页保留勾选即可完成 |
-| 备案存储物化 | file_detail 存 rawOptions + options 两列；备案为独立表，查看时动态应用 | 备案增删改只重算最新一条记录，查询路径零额外 JOIN；保留 rawOptions 便于展示"原值→备案值" |
-| 备案匹配键 | 项目 + 仓库(gitUrl) + 产物包(packageName) + 文件相对路径(filePath) + 选项 key | 精确匹配，避免误伤同包内不同文件或不同选项 |
-| filePath 规范化 | 插件源头相对化，后端不做 normalize 存量兜底 | 备案为新功能、不兼容历史数据；源头消除随机临时目录前缀即可保证每次扫描文件名一致 |
-| 产物包覆盖 | 备案按"仓库+产物包+文件相对路径+选项"匹配，不依赖每天具体构建 | 每天同名产物包覆盖后，相对路径仍是稳定的匹配键；产物文件名变化时备案自然失效，不误伤 |
-| 备案审计方式 | 备案人 + 备案时间直接落在 `sec_option_filing` 表，不单独建操作日志表 | 备案记录本身即审计主体，去重冗余日志表、避免双写不一致；字段集中在备案表上，查询/筛选天然支持 |
-| 备案操作鉴权 | 专用角色「安全编译选项例外备案审批人」控制备案写操作 | 备案为豁免敏感操作，需与普通查看权限区分；复用既有 `user_role_info` 角色体系按角色名校验，零新权限表 |
+| 决策点          | 选择                                                                          | 理由                                                                                                                                                      |
+| --------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 关注项裁剪      | 复用插件 scan-options 数据链路，后端出参补全标识，不新建配置表                | scan-options 未扫描项 key 本就不写入 overviewData/fileDetails 的 options，后端已能从 JSON key 提取 scanOptions；零新表、插件零改动，避免额外配置接口      |
+| 未扫描项标识    | overview 未扫描项 `{"scanned":false}`；file-detail 未扫描项值 `"UNSCANNED"`   | 标识在查询出参时注入，插件上报数据与存量记录均无需迁移                                                                                                    |
+| 例外备案方式    | 方案一·页面列表筛选批量备案（推荐）；方案二·文件上传解析（备选，见 §1.6）     | 方案一直击用户高频场景（处理 NO 项），把"文件×选项矩阵"降维为"NO 项列表"，数据量天然大幅减少，避免大矩阵渲染卡顿；批量场景用筛选+全选跨页保留勾选即可完成 |
+| 备案存储物化    | file_detail 存 rawOptions + options 两列；备案为独立表，查看时动态应用        | 备案增删改只重算最新一条记录，查询路径零额外 JOIN；保留 rawOptions 便于展示"原值→备案值"                                                                  |
+| 备案匹配键      | 项目 + 仓库(gitUrl) + 产物包(packageName) + 文件相对路径(filePath) + 选项 key | 精确匹配，避免误伤同包内不同文件或不同选项                                                                                                                |
+| filePath 规范化 | 插件源头相对化，后端不做 normalize 存量兜底                                   | 备案为新功能、不兼容历史数据；源头消除随机临时目录前缀即可保证每次扫描文件名一致                                                                          |
+| 产物包覆盖      | 备案按"仓库+产物包+文件相对路径+选项"匹配，不依赖每天具体构建                 | 每天同名产物包覆盖后，相对路径仍是稳定的匹配键；产物文件名变化时备案自然失效，不误伤                                                                      |
+| 备案审计方式    | 备案人 + 备案时间直接落在 `sec_option_filing` 表，不单独建操作日志表          | 备案记录本身即审计主体，去重冗余日志表、避免双写不一致；字段集中在备案表上，查询/筛选天然支持                                                             |
+| 备案操作鉴权    | 专用角色「安全编译选项例外备案审批人」控制备案写操作                          | 备案为豁免敏感操作，需与普通查看权限区分；复用既有 `user_role_info` 角色体系按角色名校验，零新权限表                                                      |
 
 ### 1.4 流程模式与风险
 
@@ -76,12 +76,12 @@ openlibing-cicd-web（前端，vue3）
 - 无外部接口契约变化（现有上报/查询接口不新增路径，仅扩展字段）；有 schema 变化（新增备案表 + file_detail 新增 rawOptions 列）。
 - 安全影响低（备案为项目内自操作，需专用角色鉴权但无新凭证/无注入风险面扩展）。
 
-| 风险 | 对策 |
-|------|------|
-| 产物文件名跨构建变化（工具链/CANN 版本变化）导致备案失效 | 备案按相对路径精确匹配，失效不误伤；靠备案记录页管理清理失效项 |
-| 备案表与扫描记录不同步 | 备案独立表，key 不依赖 record id；重算逻辑幂等 |
-| 前端 wujie 子应用新标签页跨路由同步失效 | 在 App.vue hostRouteMap 补充新路由映射 |
-| 未配置「安全编译选项例外备案审批人」角色导致无人可备案 | 角色为外部数据（user_role_info），上线前由管理员为相关用户赋权；后端角色校验失败直接返回无权限，前端隐藏备案写操作入口 |
+| 风险                                                     | 对策                                                                                                                   |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 产物文件名跨构建变化（工具链/CANN 版本变化）导致备案失效 | 备案按相对路径精确匹配，失效不误伤；靠备案记录页管理清理失效项                                                         |
+| 备案表与扫描记录不同步                                   | 备案独立表，key 不依赖 record id；重算逻辑幂等                                                                         |
+| 前端 wujie 子应用新标签页跨路由同步失效                  | 在 App.vue hostRouteMap 补充新路由映射                                                                                 |
+| 未配置「安全编译选项例外备案审批人」角色导致无人可备案   | 角色为外部数据（user_role_info），上线前由管理员为相关用户赋权；后端角色校验失败直接返回无权限，前端隐藏备案写操作入口 |
 
 ### 1.5 回滚
 
@@ -99,27 +99,27 @@ openlibing-cicd-web（前端，vue3）
 - **筛选 + 全选当前筛选结果（跨页保留勾选）**：按扫描项筛选（如只看 fortify）→ 全选当前筛选结果 → 批量备案为 YES，三步完成批量场景。
 - **分页每页 50-100 条**，跨页保留勾选状态，顶部批量操作栏显示已选数。
 
-| 维度 | 评价 |
-|------|------|
-| 渲染性能 | 好（NO 项数远小于矩阵单元格数，无需虚拟滚动） |
-| 操作效率 | 高（筛选+全选+批量，直击高频场景） |
-| 即时反馈 | 有（备案后确认覆盖率实时更新） |
-| 增删改对称 | 是（页面增删体验一致） |
-| 基础设施依赖 | 无 |
-| 适用规模 | NO 项百级以内完美；千级仍可分页但优于矩阵 |
+| 维度         | 评价                                          |
+| ------------ | --------------------------------------------- |
+| 渲染性能     | 好（NO 项数远小于矩阵单元格数，无需虚拟滚动） |
+| 操作效率     | 高（筛选+全选+批量，直击高频场景）            |
+| 即时反馈     | 有（备案后确认覆盖率实时更新）                |
+| 增删改对称   | 是（页面增删体验一致）                        |
+| 基础设施依赖 | 无                                            |
+| 适用规模     | NO 项百级以内完美；千级仍可分页但优于矩阵     |
 
 #### 方案二：文件上传解析（备选）
 
 下载含全部扫描结果的模板文件（CSV/Excel）→ 用户离线填写备案列 → 上传到 OBS 桶 → 后端解析应用备案。
 
-| 维度 | 评价 |
-|------|------|
-| 渲染性能 | 好（后端流式解析，前端无渲染压力） |
-| 操作效率 | 低（下载-填写-上传多步，离线填写看不到实时效果；增量操作需重传全量） |
-| 即时反馈 | 无（上传解析完才知道结果） |
-| 增删改对称 | 否（删除备案需重新生成全量文件上传） |
-| 基础设施依赖 | 高（OBS 桶、文件版本管理、失效清理、覆盖冲突） |
-| 适用规模 | 大（千级文件超大批量离线处理才有优势） |
+| 维度         | 评价                                                                 |
+| ------------ | -------------------------------------------------------------------- |
+| 渲染性能     | 好（后端流式解析，前端无渲染压力）                                   |
+| 操作效率     | 低（下载-填写-上传多步，离线填写看不到实时效果；增量操作需重传全量） |
+| 即时反馈     | 无（上传解析完才知道结果）                                           |
+| 增删改对称   | 否（删除备案需重新生成全量文件上传）                                 |
+| 基础设施依赖 | 高（OBS 桶、文件版本管理、失效清理、覆盖冲突）                       |
+| 适用规模     | 大（千级文件超大批量离线处理才有优势）                               |
 
 **选型结论**：方案一直击用户高频场景（处理 NO 项）且无额外基础设施依赖，本期采用方案一。方案二以"用管理复杂度换渲染性能"为代价，且只解决渲染问题不提升操作效率，仅在"产物包文件数千级以上、且需离线批量处理"的极端场景才有优势，作为备选方案记录，本期不实现。如后续出现该场景，方案二的备案数据模型（§4）与重算逻辑（§2.2）可复用，仅需新增"模板下载 + 文件上传 + 解析入库"链路，与方案一不冲突。
 
@@ -173,12 +173,12 @@ openlibing-cicd-web（前端，vue3）
 
 三级页面 + 独立备案记录页：
 
-| 级别 | 路由 | 展示 | 操作 |
-|------|------|------|------|
-| 一级·概览 | `/sec-option` | 每行一个产物包记录：代码仓、流水线、产物包名、扫描时间、扫描状态、扫描项数、总文件数 | 筛选/排序/分页；查看详情；进入备案记录页 |
-| 二级·详情 | `/sec-option-detail` | 基础信息 + 安全编译选项汇总表（描述/满足数/实际参与数/检测覆盖率/已确认文件数/确认覆盖率） | 备案增删改；进入待备案项列表 |
-| 三级·待备案项列表 | `/sec-option-filing-list` | NO 项展开为行（文件路径/扫描项/扫描值/备案值），默认只展示未备案的 NO 项；分页每页 50-100 条，跨页保留勾选状态 | 按扫描项/路径筛选 + 全选当前筛选结果 + 批量备案为 YES（统一理由）；已备案行高亮可取消 |
-| 独立·备案记录 | `/sec-option-filing-records` | 所有产物包的备案记录（代码仓/产物包/文件路径/扫描项/备案值/备案理由/备案人/备案时间） | 按产物包/扫描项/备案时间/备案人筛选 + 排序/分页 |
+| 级别              | 路由                         | 展示                                                                                                           | 操作                                                                                  |
+| ----------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 一级·概览         | `/sec-option`                | 每行一个产物包记录：代码仓、流水线、产物包名、扫描时间、扫描状态、扫描项数、总文件数                           | 筛选/排序/分页；查看详情；进入备案记录页                                              |
+| 二级·详情         | `/sec-option-detail`         | 基础信息 + 安全编译选项汇总表（描述/满足数/实际参与数/检测覆盖率/已确认文件数/确认覆盖率）                     | 备案增删改；进入待备案项列表                                                          |
+| 三级·待备案项列表 | `/sec-option-filing-list`    | NO 项展开为行（文件路径/扫描项/扫描值/备案值），默认只展示未备案的 NO 项；分页每页 50-100 条，跨页保留勾选状态 | 按扫描项/路径筛选 + 全选当前筛选结果 + 批量备案为 YES（统一理由）；已备案行高亮可取消 |
+| 独立·备案记录     | `/sec-option-filing-records` | 所有产物包的备案记录（代码仓/产物包/文件路径/扫描项/备案值/备案理由/备案人/备案时间）                          | 按产物包/扫描项/备案时间/备案人筛选 + 排序/分页                                       |
 
 - 概览页不展示每个扫描项的覆盖率数字，只保留基础信息（含扫描状态/扫描项数/总文件数）。
 - 二级详情页不展示总体的综合开启率/确认覆盖率/需确认项/已确认项，改为逐扫描项对比"检测覆盖率 vs 确认覆盖率"，两个比值均附公式说明；**不再展示本包例外备案列表**（备案记录统一去独立备案记录页查看）。
@@ -193,32 +193,32 @@ openlibing-cicd-web（前端，vue3）
 
 ### 3.1 后端新增/修改类清单
 
-| 类 | 路径 | 改动类型 |
-|----|------|---------|
-| `SecOptionScanServiceImpl` | `business/service/impl/SecOptionScanServiceImpl.java` | 修改（上报应用备案、出参标识注入、备案重算、备案记录查询、/overview 分页下推 SQL） |
-| `SecOptionScanRecordMapper` | `business/mapper/SecOptionScanRecordMapper.java` | 修改（/overview 分页下推 SQL：复用 BaseMapper `selectPage` 或新增分页查询） |
-| `SecOptionScanService` | `business/service/SecOptionScanService.java` | 修改（新增备案方法签名 + 备案记录查询方法签名） |
-| `SecOptionFilingEntity` | `business/entity/secoption/SecOptionFilingEntity.java` | 新增（含 filerId/filerName/filingTime） |
-| `SecOptionFilingMapper` | `business/mapper/SecOptionFilingMapper.java` | 新增 |
-| `SecOptionFilingMapper.xml` | `resources/mapper/SecOptionFilingMapper.xml` | 新增（备案记录分页查询 SQL） |
-| `SecOptionScanFileDetailEntity` | `business/entity/secoption/SecOptionScanFileDetailEntity.java` | 新增 rawOptions 字段 |
-| `SecOptionFileDetailDTO`（内部类） | `dto/secoption/SecOptionScanReportDTO.java` | 无变化（上报仍传 options，rawOptions 后端生成） |
-| `SecOptionFilingDTO` | `dto/secoption/SecOptionFilingDTO.java` | 新增（备案增删请求） |
-| `SecOptionFilingRecordQueryDTO` | `dto/secoption/SecOptionFilingRecordQueryDTO.java` | 新增（备案记录分页查询请求，含筛选/排序字段） |
-| `SecOptionFilingRecordItem` | `vo/secoption/SecOptionFilingRecordVO.java` | 新增（备案记录出参） |
-| `SecOptionRecordItem` | `vo/secoption/SecOptionOverviewVO.java` | 修改（新增 totalScannedFiles/filingCoverage） |
-| `FileSecOptionItem` | `vo/secoption/SecOptionFileDetailVO.java` | 修改（新增 filedOptions） |
-| `BuildArtifactController` | `business/controller/BuildArtifactController.java` | 修改（新增备案接口 + 备案记录查询接口，备案写接口加角色鉴权） |
-| `UserRoleMapper` | `business/mapper/UserRoleMapper.java` | 修改（新增 `hasRole(userId, role)` 查询） |
-| `UserRoleMapper.xml` | `resources/mapper/UserRoleMapper.xml` | 修改（新增按 userId + role 查询 SQL） |
-| `SecOptionRoleConstant` | `common/constants/SecOptionRoleConstant.java`（或复用 ProjectConstant） | 新增（角色名常量 `安全编译选项例外备案审批人`） |
-| Liquibase changeset | `resources/db/changelog/db.changelog.xml` | 新增备案表（含 filerId/filerName/filingTime）+ rawOptions 列 |
+| 类                                 | 路径                                                                    | 改动类型                                                                           |
+| ---------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `SecOptionScanServiceImpl`         | `business/service/impl/SecOptionScanServiceImpl.java`                   | 修改（上报应用备案、出参标识注入、备案重算、备案记录查询、/overview 分页下推 SQL） |
+| `SecOptionScanRecordMapper`        | `business/mapper/SecOptionScanRecordMapper.java`                        | 修改（/overview 分页下推 SQL：复用 BaseMapper `selectPage` 或新增分页查询）        |
+| `SecOptionScanService`             | `business/service/SecOptionScanService.java`                            | 修改（新增备案方法签名 + 备案记录查询方法签名）                                    |
+| `SecOptionFilingEntity`            | `business/entity/secoption/SecOptionFilingEntity.java`                  | 新增（含 filerId/filerName/filingTime）                                            |
+| `SecOptionFilingMapper`            | `business/mapper/SecOptionFilingMapper.java`                            | 新增                                                                               |
+| `SecOptionFilingMapper.xml`        | `resources/mapper/SecOptionFilingMapper.xml`                            | 新增（备案记录分页查询 SQL）                                                       |
+| `SecOptionScanFileDetailEntity`    | `business/entity/secoption/SecOptionScanFileDetailEntity.java`          | 新增 rawOptions 字段                                                               |
+| `SecOptionFileDetailDTO`（内部类） | `dto/secoption/SecOptionScanReportDTO.java`                             | 无变化（上报仍传 options，rawOptions 后端生成）                                    |
+| `SecOptionFilingDTO`               | `dto/secoption/SecOptionFilingDTO.java`                                 | 新增（备案增删请求）                                                               |
+| `SecOptionFilingRecordQueryDTO`    | `dto/secoption/SecOptionFilingRecordQueryDTO.java`                      | 新增（备案记录分页查询请求，含筛选/排序字段）                                      |
+| `SecOptionFilingRecordItem`        | `vo/secoption/SecOptionFilingRecordVO.java`                             | 新增（备案记录出参）                                                               |
+| `SecOptionRecordItem`              | `vo/secoption/SecOptionOverviewVO.java`                                 | 修改（新增 totalScannedFiles/filingCoverage）                                      |
+| `FileSecOptionItem`                | `vo/secoption/SecOptionFileDetailVO.java`                               | 修改（新增 filedOptions）                                                          |
+| `BuildArtifactController`          | `business/controller/BuildArtifactController.java`                      | 修改（新增备案接口 + 备案记录查询接口，备案写接口加角色鉴权）                      |
+| `UserRoleMapper`                   | `business/mapper/UserRoleMapper.java`                                   | 修改（新增 `hasRole(userId, role)` 查询）                                          |
+| `UserRoleMapper.xml`               | `resources/mapper/UserRoleMapper.xml`                                   | 修改（新增按 userId + role 查询 SQL）                                              |
+| `SecOptionRoleConstant`            | `common/constants/SecOptionRoleConstant.java`（或复用 ProjectConstant） | 新增（角色名常量 `安全编译选项例外备案审批人`）                                    |
+| Liquibase changeset                | `resources/db/changelog/db.changelog.xml`                               | 新增备案表（含 filerId/filerName/filingTime）+ rawOptions 列                       |
 
 ### 3.2 新增服务方法
 
 ```java
-// 备案增删改（删除可用 value=null 或独立 delete 方法）
-DataResult<Long> saveFiling(SecOptionFilingDTO request);   // create/update（记录备案人 + 备案时间）
+// 备案增删改（支持批量：request 内通过 items 一次携带多个（文件×扫描项）备案项）
+DataResult<List<String>> saveFiling(SecOptionFilingDTO request);   // 批量 create/update（记录备案人 + 备案时间），返回备案记录ID列表
 DataResult<Void> deleteFiling(Long filingId);              // 或按 key 删除
 // 备案记录跨包查询（独立「安全编译选项备案记录」页）
 DataResult<SecOptionFilingRecordVO> listFilingRecords(SecOptionFilingRecordQueryDTO query);
@@ -230,21 +230,21 @@ DataResult<SecOptionFilingRecordVO> listFilingRecords(SecOptionFilingRecordQuery
 
 ### 4.1 新增表 `sec_option_filing`
 
-| 列 | 类型 | 说明 |
-|----|------|------|
-| id | BIGINT UNSIGNED PK | 雪花 ID |
-| project_id | VARCHAR(64) | 项目隔离 |
-| git_url | VARCHAR(512) | 代码仓链接 |
-| package_name | VARCHAR(512) | 产物包名 |
-| file_path | VARCHAR(512) | 规范化文件相对路径 |
-| option_key | VARCHAR(64) | 扫描项 key（如 fortify） |
-| filing_value | VARCHAR(16) | 备案值（YES/NO） |
-| reason | VARCHAR(512) | 备案理由 |
-| filer_id | VARCHAR(64) | 备案人 ID（当前登录 userId） |
-| filer_name | VARCHAR(64) | 备案人账号名 |
-| filing_time | DATETIME | 备案时间 |
-| created_at | DATETIME | 创建时间 |
-| updated_at | DATETIME | 更新时间 |
+| 列           | 类型               | 说明                         |
+| ------------ | ------------------ | ---------------------------- |
+| id           | BIGINT UNSIGNED PK | 雪花 ID                      |
+| project_id   | VARCHAR(64)        | 项目隔离                     |
+| git_url      | VARCHAR(512)       | 代码仓链接                   |
+| package_name | VARCHAR(512)       | 产物包名                     |
+| file_path    | VARCHAR(512)       | 规范化文件相对路径           |
+| option_key   | VARCHAR(64)        | 扫描项 key（如 fortify）     |
+| filing_value | VARCHAR(16)        | 备案值（YES/NO）             |
+| reason       | VARCHAR(512)       | 备案理由                     |
+| filer_id     | VARCHAR(64)        | 备案人 ID（当前登录 userId） |
+| filer_name   | VARCHAR(64)        | 备案人账号名                 |
+| filing_time  | DATETIME           | 备案时间                     |
+| created_at   | DATETIME           | 创建时间                     |
+| updated_at   | DATETIME           | 更新时间                     |
 
 索引：`uk_filing_project_repo_pkg_file_opt`（project_id, git_url, package_name, file_path, option_key 唯一）；`idx_filing_project_time`（project_id, filing_time）；`idx_filing_repo_pkg`（git_url, package_name）。
 
@@ -267,11 +267,11 @@ DataResult<SecOptionFilingRecordVO> listFilingRecords(SecOptionFilingRecordQuery
 
 ### 6.1 新增备案接口
 
-| 接口 | 说明 |
-|------|------|
-| `POST /build-artifact/sec-option/filing/save` | 创建/更新备案（入参 SecOptionFilingDTO，需「安全编译选项例外备案审批人」角色，记录备案人/备案时间） |
-| `POST /build-artifact/sec-option/filing/delete` | 删除备案（按 filingId 或 key，需同角色） |
-| `POST /build-artifact/sec-option/filing/record-list` | 查询所有产物包的备案记录（独立备案记录页，跨包，支持筛选/排序/分页） |
+| 接口                                                 | 说明                                                                                                                                        |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /build-artifact/sec-option/filing/save`        | 创建/更新备案（**支持批量**，入参 SecOptionFilingDTO 的 items 列表一处携带多条，需「安全编译选项例外备案审批人」角色，记录备案人/备案时间） |
+| `POST /build-artifact/sec-option/filing/delete`      | 删除备案（按 filingId 或 key，需同角色）                                                                                                    |
+| `POST /build-artifact/sec-option/filing/record-list` | 查询所有产物包的备案记录（独立备案记录页，跨包，支持筛选/排序/分页）                                                                        |
 
 ### 6.2 现有接口增强
 
@@ -290,8 +290,8 @@ DataResult<SecOptionFilingRecordVO> listFilingRecords(SecOptionFilingRecordQuery
 
 ### 6.3 新增备案记录查询接口
 
-| 接口 | 说明 |
-|------|------|
+| 接口                                                 | 说明                                                                                                                                            |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POST /build-artifact/sec-option/filing/record-list` | 备案记录分页查询（projectId 隔离，支持 packageName / optionKey / filerName / filingStartTime / filingEndTime / repoUrl 筛选 + filingTime 排序） |
 
 出参字段与展示列对应：代码仓 `repoUrl`、产物包 `packageName`、产物文件 `filePath`、扫描项 `optionKey`、备案值 `filingValue`、备案理由 `reason`、备案人 `filerName`、备案时间 `filingTime`。独立备案记录页复用此接口。
