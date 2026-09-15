@@ -42,6 +42,7 @@ cron 触发
 ```
 Windows 计划任务（每日 07:30）
   → scripts/generate_daily_summary.sh --repo-root <仓库根>
+      → （执行前自动）git fetch 双远端 + fast-forward master，同步远端采集归档
       → opencode run "<prompt>" -f skills/record-summary/SKILL.md
         → 读 archive/ 最新 json → 逐仓逐 job 总结（成败/问题数/链接）
         → 产出 records/YYYY/MM/DD.md（模板 {OWNER} 占位，行尾硬换行）
@@ -49,6 +50,10 @@ Windows 计划任务（每日 07:30）
 ```
 
 注册定时任务：`scripts/register_daily_summary.bat`（schtasks，默认 07:30）。
+
+> **同步远端归档（重要）**：采集由远端 workflow（06:30）push 到远端 master；本机 07:30 任务若不拉取则本地 `archive/<当日>` 缺失、总结失败。脚本执行前自动 `git fetch` origin + openlibing-test，再对任一可用远端 `master` 做 fast-forward；本地领先/冲突时警告后继续（宁可用本地旧数据报错，也不盲改本地）。
+>
+> **改进方向（待定）**：当前方案是"先 fetch+ff 到本地再读"，依赖本地仓库副本与偏快进前进；更彻底方案为直接从远端读取归档（如 `git show origin/master:archive/...` 或 GitCode API），不依赖本地工作区状态、无快进冲突，成本更高，留待需要时评估。
 
 ## API 数据模型（来自 gitcode CLI 源码 `api/queries_actions.go`）
 

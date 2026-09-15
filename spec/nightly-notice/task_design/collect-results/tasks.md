@@ -23,6 +23,7 @@
 - [x] Task 14: 删除 `config/owners.yaml`，报告使用 `{OWNER}` 占位符（负责人移交内网）
 - [x] Task 15: 更新 README 反映全链路
 - [x] Task 16: 更新本 spec（proposal/design/tasks 反映实际实现）
+- [x] Task 16b: 修复"本机定时任务读不到当日 archive"缺陷 —— `generate_daily_summary.sh` 执行前自动 `git fetch` 双远端 + fast-forward master；README/spec 补充同步说明与改进方向（直接读远端归档）
 
 ### 验证（已完成）
 
