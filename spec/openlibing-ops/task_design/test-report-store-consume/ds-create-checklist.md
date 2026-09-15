@@ -17,7 +17,8 @@
 | 项目参数（已存在） | `openlibing_doris_url` / `openlibing_doris_driver` / `openlibing_doris_username` / `openlibing_doris_password` / `OBS_AK` / `OBS_SK`（既有 SeaTunnel 任务「获取测试用例数据」已引用） |
 | DEPENDENT 任务格式参照 | codearts 编排（169579299839168）内任务「PR&workflow数据获取」（176365918863712），见 4.2 |
 | SUB_WORKFLOW 任务格式参照 | PR&workflow 编排（176230008422726）内各 SUB_WORKFLOW 任务，见 4.3 |
-| 测试环境已验证工作流 | ①「测试报告原始数据采集-调试-codearts-20260909」（183798696421280，v4）、②「测试报告数据清洗-调试-codearts-20260909」（183813929879456，v3）——本清单 rawScript 以其为准，仅把窗口参数化 |
+| 测试环境已验证工作流 | ①「测试报告原始数据采集-调试-codearts-20260909」（183798696421280，v4）、②「测试报告数据清洗-调试-codearts-20260909」（183813929879456，v3）——**本清单 rawScript 以 v4 采集方案为蓝本，按 design v4（台账驱动）改写** |
+| 采集台账（PM 确认） | `dwi_rd_efc_test_data_detail`（插件上传成功即写：三 ID 已归一、`obs_path` 完整路径、`update_time` 判重；测试库已有 triton 样本），见 design 4.3 |
 
 ---
 
@@ -26,7 +27,7 @@
 | # | 项 | 内容 | 执行方 | 核对点 |
 | --- | --- | --- | --- | --- |
 | 1.1 | Doris 正式库建表 | `dm_rd_efc_template_registry`（design 6.1，**必含 `DISTRIBUTED BY` + MOW PROPERTIES**，缺省 Doris 3.4.x 报语法错误）、`raw_test_report`（design 6.3，**含 `source_end_time` 列**）、`sdi_rd_efc_test_report_triton_model_performance`（design 6.4，**含 `source_end_time` 列**） | DBA | DDL 含 `source_end_time` 列；dm 表有 `DISTRIBUTED BY HASH(\`table_type\`)`；sdi 表唯一键为五元组 |
-| 1.2 | 模板登记 | INSERT `dm_rd_efc_template_registry`（design 7.5 登记清单），`pipeline_ids` 填实际流水线白名单（逗号分隔） | 开发 | `table_type='test_report'`、`status=1`；漏配 `pipeline_ids` 则采集不生效 |
+| 1.2 | 模板登记 | INSERT `dm_rd_efc_template_registry`（design 7.5 登记清单），`file_name_prefix` 填 kebab 模板名 + 下划线（如 `triton-model-performance_`） | 开发 | `table_type='test_report'`、`status=1`；漏配 `file_name_prefix` 则采集不生效 |
 | 1.3 | SeaTunnel 插件 jar | `TestReportReader`（`transform/readtestreport`）构建 → 上传 OBS 桶 → SeaTunnel 服务加载/重启（与测试环境验证版 v4 同版） | 开发 | 测试库 raw 采集已用该插件跑通后再上正式 |
 | 1.4 | DS 参数 | 复用既有项目参数（0 节已核实存在）；**新增工作流全局参数 `${report_window_hours}=24`**（工作流①/② 各配一份） | 用户 | 不配则 rawScript 中 `${report_window_hours}` 无值 |
 
@@ -42,7 +43,7 @@
 | --- | --- |
 | 项目 | openlibing（169400948446944） |
 | 工作流名称 | `[job][raw->raw][openlibing]测试报告原始数据采集` |
-| 描述 | 测试报告 OBS → raw_test_report（增量：状态完成+时间窗口+反查+重试时间比较） |
+| 描述 | 测试报告上传台账 → 按 obs_path 下载 → raw_test_report（有记录即采 + update_time 判重） |
 | 全局参数 | `report_window_hours = 24` |
 | 租户/worker | tenantCode `dolphinscheduler`、workerGroup `default` |
 | 定时 | **不设置**（子工作流，由编排触发） |
@@ -55,16 +56,15 @@
 | workerGroup / environmentCode | default / `169409665039072`（openlibing-prod） |
 | useCustom / deployMode / startupScript | true / cluster / seatunnel.sh |
 | taskExecuteType / failRetryTimes | BATCH / 0 |
-| rawScript | 见 2.3（基于测试环境 v4，窗口参数化） |
+| rawScript | 见 2.3（台账驱动版，按 design v4） |
 
 ### 2.3 rawScript（正式版）
 
 ```hocon
-# 工作流① 正式版：OBS → raw_test_report
-# 增量判定：状态完成 + 时间窗口 + 反查 + 重试时间比较（source_end_time）
-# 与测试环境验证版（v4）一致；仅反查/时间窗口由硬编码 24 改为 ${report_window_hours}
+# 工作流① 正式版（design v4 台账驱动）：dwi_rd_efc_test_data_detail → 按 obs_path 下载 → raw_test_report
+# 增量判定：有记录即采（台账行=上传成功）+ 窗口（create_time）+ 反查 + update_time 重试比较
 env {
-  execution.parallelism = 1
+  execution.parallelism = 4
   job.mode = "BATCH"
   checkpoint.interval = 30000
   checkpoint.timeout = 900000
@@ -72,115 +72,45 @@ env {
 
 source {
   Jdbc {
-    plugin_output = "pending_pipeline"
+    plugin_output = "pending_report"
     url = "${openlibing_doris_url}"
     driver = "${openlibing_doris_driver}"
     username = "${openlibing_doris_username}"
     password = "${openlibing_doris_password}"
     query = """
-      /* 三平台 UNION：codearts / github / gitcode 各自映射三 ID + 起止时间 + repoUrl */
-      /* 反查 raw_test_report：未落库 OR 源表 end_time > 已落库 source_end_time（重试判定） */
-      SELECT 'codearts' AS platform,
-             t.pipeline_id AS pipelineId, t.pipeline_run_id AS pipelineRunId,
-             CONCAT(t.step_build_job_id, '_', REPLACE(t.step_daily_build_number, '.', '_')) AS jobId,
-             t.git_url AS repoUrl,
-             t.pipeline_start_time AS workflowStartTime, t.pipeline_end_time AS workflowEndTime
-      FROM sdi_rd_efc_pipeline_run_clean_codearts t
-      JOIN ( SELECT model_code, SPLIT_BY_STRING(pipeline_ids, ',') AS pids
-             FROM dm_rd_efc_template_registry
-             WHERE table_type = 'test_report' AND status = 1 AND pipeline_ids IS NOT NULL AND pipeline_ids <> ''
-               AND model_code = 'triton_model_performance'
-      ) cfg
-      LEFT JOIN ( SELECT pipeline_id, pipeline_run_id, job_id,
-                         MAX(source_end_time) AS max_source_end_time
-                  FROM raw_test_report
-                  WHERE create_time > NOW() - INTERVAL ${report_window_hours} HOUR
-                  GROUP BY pipeline_id, pipeline_run_id, job_id
-      ) d
-        ON t.pipeline_id = d.pipeline_id AND t.pipeline_run_id = d.pipeline_run_id
-       AND CONCAT(t.step_build_job_id, '_', REPLACE(t.step_daily_build_number, '.', '_')) = d.job_id
-      WHERE (d.pipeline_id IS NULL OR t.pipeline_end_time > d.max_source_end_time)
-        AND ARRAY_CONTAINS(cfg.pids, t.pipeline_id)
-        AND t.pipeline_start_time > NOW() - INTERVAL ${report_window_hours} HOUR
-        AND t.pipeline_status = 'COMPLETED'
-        AND LOWER(t.job_name) LIKE 'test%'
-
-      UNION ALL
-
-      /* GitHub：workflow 级数字 ID；job 目录 = {workflow_id}/{run_id}/{workflow_job_id} */
-      SELECT 'github' AS platform,
-             CAST(r.workflow_id AS STRING) AS pipelineId,
-             CAST(j.workflow_run_id AS STRING) AS pipelineRunId,
-             CAST(j.workflow_job_id AS STRING) AS jobId,
-             j.repo_url AS repoUrl,
-             r.run_started_at AS workflowStartTime, r.updated_at AS workflowEndTime
-      FROM sdi_rd_efc_workflow_run_job_github j
-      LEFT JOIN sdi_rd_efc_workflow_run_raw_github r ON j.workflow_run_id = r.run_id
-      JOIN ( SELECT model_code, SPLIT_BY_STRING(pipeline_ids, ',') AS pids
-             FROM dm_rd_efc_template_registry
-             WHERE table_type = 'test_report' AND status = 1 AND pipeline_ids IS NOT NULL AND pipeline_ids <> ''
-               AND model_code = 'triton_model_performance'
-      ) cfg
-      LEFT JOIN ( SELECT pipeline_id, pipeline_run_id, job_id,
-                         MAX(source_end_time) AS max_source_end_time
-                  FROM raw_test_report
-                  WHERE create_time > NOW() - INTERVAL ${report_window_hours} HOUR
-                  GROUP BY pipeline_id, pipeline_run_id, job_id
-      ) d
-        ON CAST(r.workflow_id AS STRING) = d.pipeline_id
-       AND CAST(j.workflow_run_id AS STRING) = d.pipeline_run_id
-       AND CAST(j.workflow_job_id AS STRING) = d.job_id
-      WHERE (d.pipeline_id IS NULL OR r.updated_at > d.max_source_end_time)
-        AND ARRAY_CONTAINS(cfg.pids, CAST(r.workflow_id AS STRING))
-        AND r.run_started_at > NOW() - INTERVAL ${report_window_hours} HOUR
-        AND j.status = 'completed'
-        AND LOWER(j.job_name) LIKE 'test%'
-
-      UNION ALL
-
-      /* GitCode：hex ID；job 目录 = {workflow_id}/{workflow_run_id}/{job_id} */
-      SELECT 'gitcode' AS platform,
-             t.workflow_id AS pipelineId, t.workflow_run_id AS pipelineRunId,
-             t.job_id AS jobId,
-             t.repo_url AS repoUrl,
-             t.start_time AS workflowStartTime, t.end_time AS workflowEndTime
-      FROM sdi_rd_efc_workflow_run_raw_gitcode t
-      JOIN ( SELECT model_code, SPLIT_BY_STRING(pipeline_ids, ',') AS pids
-             FROM dm_rd_efc_template_registry
-             WHERE table_type = 'test_report' AND status = 1 AND pipeline_ids IS NOT NULL AND pipeline_ids <> ''
-               AND model_code = 'triton_model_performance'
-      ) cfg
-      LEFT JOIN ( SELECT pipeline_id, pipeline_run_id, job_id,
-                         MAX(source_end_time) AS max_source_end_time
-                  FROM raw_test_report
-                  WHERE create_time > NOW() - INTERVAL ${report_window_hours} HOUR
-                  GROUP BY pipeline_id, pipeline_run_id, job_id
-      ) d
-        ON t.workflow_id = d.pipeline_id AND t.workflow_run_id = d.pipeline_run_id
-       AND t.job_id = d.job_id
-      WHERE (d.pipeline_id IS NULL OR t.end_time > d.max_source_end_time)
-        AND ARRAY_CONTAINS(cfg.pids, t.workflow_id)
-        AND t.start_time > NOW() - INTERVAL ${report_window_hours} HOUR
-        AND t.status = 'COMPLETED'
-        AND LOWER(t.job_name) LIKE 'test%'
+      /* 上传台账驱动：dwi_rd_efc_test_data_detail（插件上传成功即写一行） */
+      /* 有记录=上传成功，无状态过滤；file_name 模板前缀识别；obs_path 直接下载 */
+      SELECT t.platform,
+             t.pipeline_id AS pipelineId, t.pipeline_run_id AS pipelineRunId, t.job_id AS jobId,
+             t.file_name AS reportFileName, t.obs_path AS obsPath,
+             t.update_time AS sourceEndTime
+      FROM dwi_rd_efc_test_data_detail t
+      WHERE EXISTS (                                               /* 登记表 file_name_prefix 驱动采集范围（登记即采） */
+            SELECT 1 FROM dm_rd_efc_template_registry r
+            WHERE r.table_type = 'test_report' AND r.status = 1
+              AND t.file_name LIKE CONCAT(r.file_name_prefix, '%') )
+        AND t.create_time > NOW() - INTERVAL ${report_window_hours} HOUR   /* 窗口兜底：按首次上传 */
+        AND NOT EXISTS (                                            /* 反查已采 + 重试判定（update_time） */
+          SELECT 1 FROM raw_test_report r
+          WHERE r.pipeline_id = t.pipeline_id
+            AND r.pipeline_run_id = t.pipeline_run_id
+            AND r.job_id = t.job_id
+            AND r.report_file_name = t.file_name
+            AND r.source_end_time >= t.update_time
+        )
     """
   }
 }
 
 transform {
-  TestReportReader {
-    plugin_input = ["pending_pipeline"]
+  TestReportReader {                 /* 轻量 OBS transform：按 obs_path 直接下载 */
+    plugin_input = ["pending_report"]
     plugin_output = "raw_report_rows"
     ak = "${OBS_AK}"
     sk = "${OBS_SK}"
     endPoint = "obs.cn-southwest-2.myhuaweicloud.com"
     bucketName = "op-case-result"
-    prefix = "testcase-metadata"
-    templateCode = "triton-model-performance"
-    pipelineIdField = "pipelineId"
-    pipelineRunIdField = "pipelineRunId"
-    jobIdField = "jobId"
-    sourceEndTimeField = "workflowEndTime"
+    obsPathField = "obsPath"
     outputFieldName = "RawJson"
   }
 }

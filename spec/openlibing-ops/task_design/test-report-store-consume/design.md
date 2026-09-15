@@ -1,6 +1,7 @@
 # 测试报告持久化存储与消费 设计文档
 
 > 关联需求：https://gitcode.com/openlibing/openlibing-ops/issues/123
+> 版本：v4（2026-09-14，采集源改为 **`dwi_rd_efc_test_data_detail` 上传台账驱动**（PM 否决三平台源表驱动）：插件上传成功即写台账行，`obs_path` 完整路径直接下载、三 ID 已归一，**有记录即采**，免「状态完成+时间窗口+拼 jobId+反查」复杂判定；判重基于 `update_time`（当前业务不重试，逻辑预留未来重试）；采集范围由 `file_name` 模板名前缀决定，登记表去掉 `pipeline_ids`）
 > 版本：v3.1（2026-09-09，v3 基础上补充**流水线重试判定**：raw/sdi 表各加 `source_end_time` 列，两段反查改为「未处理 OR 源表 end_time 更新」时间比较，解决三平台重试后三 ID 不变导致的漏扫）
 > 版本：v3（2026-09-08，采集改为 **raw→sdi 两段式**：先入 `raw_test_report` 原始 JSON，再清洗成每模板一张 sdi 表）
 > 目标仓：`openlibing-ops`（REST + MCP 消费）、SeaTunnel 插件工程（raw 采集轻量 transform，仓待确认）、openlibing-docs（DS 工作流定义/SQL 归档）
@@ -54,10 +55,10 @@
    > ③ **否决备选（不加 DEPENDENT）**：独立编排 + 独立每小时 cron、不做 DEPENDENT——实现最简、零耦合，但固定落后三平台采集一轮（流水线完成 → 报告入库延迟均值 ~1.5h vs 加 DEPENDENT ~50min），且存在"记录已采、报告未采"的错拍窗口。为数据一致性（防误判）否决。
 
 DolphinScheduler 工作流①「测试报告原始数据采集」（独立编排内 SUB_WORKFLOW 节点）
-   └─ SeaTunnel 任务（参照 [job][raw->sdi][codearts]获取测试用例数据 的 rawScript 模式）
-        source: Jdbc(Doris) 待采集流水线记录（模板范围 + 已采集过滤 + 归属字段）
-        transform: TestReportReader（轻量 OBS 读取，复用 ParseTestcase 代码，仅读原文不做展开）
-                   → 读 OBS testcase-metadata/{p}/{r}/{j}/<模板名>_xxx.json
+   └─ SeaTunnel 任务（source 驱动：`dwi_rd_efc_test_data_detail` 插件上传台账，见 4.3）
+        source: Jdbc(Doris) 上传台账（file_name 模板前缀过滤 + 反查已采 + update_time 判重，见 6.5）
+        transform: TestReportReader（轻量 OBS 读取，按台账 obs_path 直接下载，不做解析展开）
+                   → 下载 OBS `bucketName + obs_path`（= testcase-metadata/{p}/{r}/{j}/<模板名>_xxx.json）
                    → 输出 原始 JSON 整份 + 上下文（pipeline_id/pipeline_run_id/job_id/report_file_name）
         sink: Jdbc(Doris) INSERT raw_test_report
         ▼
@@ -83,7 +84,7 @@ ops  ReportController(/report/*) + 内嵌 MCP Server(/mcp) —— 共用 ReportQ
 | 复用点 | 说明 |
 | --- | --- |
 | 模板→表映射 | 每模板登记一行：`table_type=test_report`，`model_code=模板名`（snake，=JSON schema title），`table_name=sdi_rd_efc_test_report_<模板名>`（数据中台统一 rd_efc 中缀，指向 sdi 清洗表） |
-| 采集范围 | **`pipeline_ids` 列**（逗号分隔，**一个模板可对应多条流水线，一对多**）；为空则该模板不参与采集 |
+| 采集范围 | **`file_name_prefix` 列**（kebab 模板名 + 下划线，如 `triton-model-performance_`）；采集按此前缀过滤上传台账 `dwi_rd_efc_test_data_detail.file_name`（登记即自动采集，见 6.2/7.2）；`pipeline_ids` 已废弃（原白名单语义移除，见 13 章 R12） |
 | ops 查询 | 模板列表/字段元数据、`/report/data/query` 的模板定位 |
 
 > 采集入库不再经过 sync 的 `DynamicDorisService`（迁至 SeaTunnel 直写 Doris）；但「列白名单 + 必填校验」思路保留在 ops 查询侧（动态 WHERE 白名单）与 SeaTunnel 插件侧（按目标表列白名单过滤）。
@@ -107,12 +108,30 @@ DS 正式环境已存在完整测试数据采集链路（测试环境 `sdi_rd_ef
 | 增量机制 | **增量同步**：SeaTunnel source 从 `sdi_rd_efc_pipeline_run_clean_codearts` 查待采集流水线，`LEFT JOIN sdi_rd_efc_pipeline_run_collected_testcase_codearts` 过滤已采集（`c.pipeline_id IS NULL`）→ 只处理未采集过的流水线；后置 SQL 任务回写已采集表 |
 | 归属字段 | 解析出的 repo_url 等已落 `sdi_rd_efc_test_case_result_raw_*`；workflow 起止时间在 `sdi_rd_efc_pipeline_run_clean_codearts`（`pipeline_start_time`/`pipeline_end_time`） |
 
-本需求采集**参考此模式分两段**：
+本需求采集**以 `dwi_rd_efc_test_data_detail` 台账为驱动，分两段**（台账定义见 4.3；原「从三平台源表查待采流水线」方案已被 PM 否决，见 13 章 R12）：
 
-1. **工作流①（raw 采集）**：source 增量过滤 + 定向列举 → **复用 `ParseTestcase` 的 OBS 读取代码，仅输出 JSON 原文**（新增轻量 transform，参照 `ParseTestcaseTransform`/`TestCaseMetadataParser`，只改输出不做解析）→ 原始 JSON 整份写 `raw_test_report`（仿 `raw_workflow_source_github`：原始数据先落库，不展开）。
+1. **工作流①（raw 采集）**：source 读台账（file_name 模板前缀 + 反查已采 + `update_time` 判重）→ **复用 `ParseTestcase` 的 OBS 下载代码，按台账 `obs_path` 直接下载原文**（新增轻量 transform，参照 `ParseTestcaseTransform`/`TestCaseMetadataParser`，只改输出不做解析）→ 原始 JSON 整份写 `raw_test_report`（仿 `raw_workflow_source_github`：原始数据先落库，不展开）。
 2. **工作流②（sdi 清洗）**：source 读 `raw_test_report` → `JsonArrayExpand` 展开外层数组（带 record_seq）+ `Sql` 归属字段提取 → 写 `sdi_rd_efc_test_report_<模板名>`（每模板一张，参考既有 testcase raw→sdi 清洗脚本，如 #21 的 StageParser/JobParser 展开模式）。**纯配置，无新增解析插件**。
 
-**本需求在 `nane/openlibing-seatunnel` 仓新增**：一个**轻量 OBS 读取 transform**（参照 `ParseTestcase` 的 OBS 读取，仅输出 JSON 原文，不做解析展开）；sdi 清洗段不新增插件。
+**本需求在 `nane/openlibing-seatunnel` 仓新增**：一个**轻量 OBS 读取 transform**（按 `obs_path` 精确下载，不做解析展开）；sdi 清洗段不新增插件。
+
+### 4.3 `dwi_rd_efc_test_data_detail` 上传台账（采集驱动源，PM 确认）
+
+插件**上传成功时写入**该表一行（应用层写入），是「有报告」的天然凭证：
+
+| 字段 | 说明 | 采集侧用途 |
+| --- | --- | --- |
+| `platform` | codearts/gitcode/github | 透传（可选） |
+| `data_type` | nightly/perf/report（当前数据均 nightly） | 不依赖（按 file_name 过滤） |
+| `pipeline_id/pipeline_run_id/job_id` | 平台归一后的三 ID | 直接用作 raw 三 ID（免拼 jobId） |
+| `file_name` | 报告文件名（`<kebab模板名>_xxx.json`） | 模板识别：`file_name LIKE '<模板名>\_%'` |
+| `obs_path` | OBS 对象完整路径（**不含桶名**） | `bucketName + obs_path` 直接下载（免目录列举） |
+| `create_time` | 首次上传时间（应用层写入） | 时间窗口兜底 |
+| `update_time` | 最近写入/重传时间（应用层写入，**重试会更新它**） | **判重依据**：`update_time` 变新 → 重采 |
+
+- 唯一键 `(platform, data_type, 三ID, file_name)`（MOW 覆盖）；重试重传覆盖同键行、`update_time` 刷新。
+- **有记录 = 上传成功**：无记录即无报告（测试团队兜底，平台不扫 OBS 找文件）。
+- 实测样本（测试库，gitcode，2026-09-14）：`obs_path=testcase-metadata/3e1115.../beeb.../4b0998.../triton-model-performance_test.json`，三 ID 已归一可直接入库。
 
 ## 5. 数据契约（对上游）
 
@@ -146,7 +165,7 @@ CREATE TABLE `dm_rd_efc_template_registry` (
   `table_name`     VARCHAR(255) NOT NULL COMMENT 'Doris 真实表名',
   `status`         TINYINT      NOT NULL DEFAULT 1 COMMENT '0停用 1启用',
   `description`    VARCHAR(512) COMMENT '描述',
-  `pipeline_ids`   VARCHAR(512) COMMENT '采集流水线白名单（逗号分隔，一对多）；为空则该模板不参与采集',
+  `file_name_prefix` VARCHAR(128) COMMENT '报告文件名前缀（kebab模板名_，如 triton-model-performance_）；采集按此前缀过滤上传台账 file_name',
   `create_time`    DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time`    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=OLAP UNIQUE KEY(`table_type`, `model_code`) COMMENT='模板登记表（按 table_type 区分模板类型）'
@@ -169,7 +188,7 @@ PROPERTIES (
 
 ### 6.2 采集/消费读取登记范围
 
-- **采集（SeaTunnel）**：source JOIN `dm_rd_efc_template_registry`（`table_type='test_report'` 且 `status=1`），`SPLIT_BY_STRING(pipeline_ids, ',')` + `ARRAY_CONTAINS` 白名单过滤（见 7.2）
+- **采集（SeaTunnel）**：source 按 `dm_rd_efc_template_registry` 的 `file_name_prefix` 过滤台账 `dwi_rd_efc_test_data_detail.file_name`（`EXISTS` 子查询 + `LIKE CONCAT(file_name_prefix,'%')`，登记即自动采集，多模板零 SQL 改动，见 7.2）
 - **消费（ops）**：`ReportTemplateModelMapper` 查同一张表定位真实表名（表名白名单），白名单校验逻辑不变
 - **免 MySQL 连接**：登记范围全部落在 Doris，不引入 MySQL 账号/密码暴露面（Catalog 方案已否决，见 13 章 R6）
 
@@ -236,30 +255,28 @@ PROPERTIES (
 - 唯一键 = 五元组（Issue「唯一记录键值组」），Doris MOW 同键覆盖 = 行级幂等兜底。
 - DDL 存档 openlibing-docs（DBA 执行）；后续新增模板复制本 DDL 改表名/业务字段即可。
 
-### 6.5 增量判定：状态完成 + 时间窗口 + 反查 + 重试时间比较（不新增台账表）
+### 6.5 增量判定：台账驱动「有记录即采」+ 反查 + update_time 比较（复用插件上传台账，不自建）
 
-**不新增台账表**（台账表方案已否决，见 13 章 R5），分两段增量判定：
+**采集源是上传台账 `dwi_rd_efc_test_data_detail`（见 4.3）**——有记录即「上传成功」，分两段增量判定：
 
-**① 工作流①（raw 采集）增量**：source 从流水线记录查待采集行，**只采「已完成」执行记录**（codearts `pipeline_status='COMPLETED'`、GitHub `status='completed'`、GitCode `status='COMPLETED'`——执行完成 = 目录报告文件已齐，一次采全，无需担心后续补传），再 `LEFT JOIN raw_test_report` 反查已落库（`d.pipeline_id IS NULL` 才处理）→ 有报告即落库，下轮被反查排除。**重试判定**：`source_end_time` 记录采集时源表执行结束时间，反查条件扩展为「未落库 **OR** 源表 end_time > 已落库 source_end_time」（重试后三 ID 不变但 end_time 更新 → 判定为重试新数据 → 重新采集覆盖）。
+**① 工作流①（raw 采集）增量**：source 直接读台账（`file_name` 模板前缀过滤），**无状态过滤**（台账行 = 上传成功，天然跳过未完成/异常），再 `NOT EXISTS` 反查 `raw_test_report`（四元组：三 ID + file_name）排除已采 → 有台账即落库，下轮被反查排除。**重试判定（预留）**：`source_end_time` 记录采集时台账 `update_time`，反查条件扩展为「未落库 **OR** 台账 update_time > 已落库 source_end_time」（当前业务不支持重试，等价采一次即停；未来重试重传覆盖同键行、`update_time` 刷新 → 自动重采，**零改造成本**）。
 
-**② 工作流②（sdi 清洗）增量**：source 读 `raw_test_report`，`LEFT JOIN sdi_rd_efc_test_report_<模板名>` 反查已清洗（`s.pipeline_id IS NULL` 才处理）→ 已清洗的排除。**重试判定**：`source_end_time` 透传 raw 的值，反查条件扩展为「未清洗 **OR** raw.source_end_time > 已清洗 source_end_time」（重试重采后 raw 更新 → 判定需重清洗）。
+**② 工作流②（sdi 清洗）增量**：source 读 `raw_test_report`，`LEFT JOIN sdi_rd_efc_test_report_<模板名>` 反查已清洗（`s.pipeline_id IS NULL` 才处理）→ 已清洗的排除。**重试判定**：`source_end_time` 透传 raw 的值（=台账 update_time），反查条件扩展为「未清洗 **OR** raw.source_end_time > 已清洗 source_end_time」（raw 重采更新 → 判定需重清洗）。
 
-两段均配合**时间窗口**自然淘汰：
+配合**时间窗口**兜底：
 
-- **重试/封存** = 时间窗口自然淘汰 + **end_time 时间比较**：只扫描 `pipeline_start_time > NOW() - 窗口` 内的流水线；窗口内重试过的（end_time 更新）会被时间比较判定为新数据重新采集，未重试的每轮重扫，出窗口不再扫（等价封存）。
-- **重试语义**：三平台源表均为 Doris UNIQUE KEY（MOW），重试后源表**覆盖原行**（三 ID 不变、end_time 更新，实测 gitcode/github 同键多行=0）；CodeArts 因 `step_daily_build_number` 递增，拼接 jobId 变化天然区分。落到 raw/sdi：同名报告文件同键覆盖（不产生重复行），新增文件则新增行。
-- **正常场景 OBS 开销与台账方案持平**：有报告的 job 落库后即被反查排除（扫 1 次停）；无报告的 job 数量少，窗口内重扫空目录成本低。
-- **状态过滤收益**：跳过未完成/异常执行记录（RUNNING/FAILED/CANCELED 等），不扫它们的 OBS 目录，省无谓开销；同时保证采集到的报告文件完整（执行完成时文件已全部上传）。
-- **实现最简**：无台账表、无后置 SQL、无镜像同步。
+- **窗口**：`dwi.create_time > NOW() - ${report_window_hours}`（按首次上传；晚传超窗视为无报告，由测试团队负责，平台不兜底扫 OBS）。
+- **幂等**：raw 四元组 + sdi 五元组 UNIQUE KEY（MOW 覆盖），重复执行/重采均不产生重复行。
+- **OBS 开销**：按台账 `obs_path` 精确下载，**无目录列举**；已采行被反查排除后不再下载。
+- **无状态/无拼 jobId/无后置 SQL**：实现最简（对比 v3.1 三平台源表驱动，见 13 章 R12）。
 
 **已知代价（业务方确认后接受）**：
 
 | 代价 | 说明 | 缓解 |
 | --- | --- | --- |
-| 无显式状态/审计 | 排障时查不到"哪些 job 超时无报告"（运维视角损失，不影响消费） | 可接受则忽略；需要审计再补台账 |
-| **晚完成 > 窗口漏采** | job 在 run 开始后超过窗口时长才上传报告 → 出窗口漏采 | 窗口参数化 `${report_window_hours}`（默认 24h），**需与业务方确认报告上传时效 ≤ 24h** |
-| **执行完成与文件落盘时间差** | 理论上执行完成时文件已齐；若存在极端异步上传（完成标记早于文件落盘），首轮可能漏采部分文件，但该 job 未落 raw（反查不排除）会在窗口内下轮重扫补齐 | 依赖反查重扫兜底，无需额外处理 |
-| 无显式封存标记 | bug 节点靠窗口自然淘汰，无 status 可查 | 等效淘汰，仅缺标记 |
+| 依赖插件台账 | 插件未写台账 = 平台认为无报告（即使 OBS 实际有文件） | 台账由插件上传成功写入（PM 已确认）；缺数据归测试团队 |
+| **晚传 > 窗口漏采** | 报告上传超过窗口时长才写台账 → 出窗口漏采 | 窗口参数化 `${report_window_hours}`（默认 24h），需与业务方确认上传时效 ≤ 24h；调大窗口可补采 |
+| `update_time` 判重无当前实测 | 当前业务不重试，重试路径未实际发生 | 逻辑已按「update_time 变新重采」实现，未来重试时验证 |
 
 ## 7. 采集设计（DolphinScheduler + SeaTunnel）
 
@@ -268,15 +285,15 @@ PROPERTIES (
 | 工作流 | 职责 | 调度 |
 | --- | --- | --- |
 | 编排 `[workflow][openlibing]测试报告采集编排` | DEPENDENT 等三平台执行记录采集完成 → 串行触发工作流①→② | **每小时**（cron `0 0 * * * ? *`，与三平台采集编排同整点），失败告警 |
-| ① `[job][raw->raw][openlibing]测试报告原始数据采集` | OBS 读测试报告 JSON → 原始 JSON 整份写 `raw_test_report` | 独立编排内 SUB_WORKFLOW，DEPENDENT 通过后执行 |
+| ① `[job][raw->raw][openlibing]测试报告原始数据采集` | 读上传台账 `dwi_rd_efc_test_data_detail` → 按 `obs_path` 下载 → 原始 JSON 整份写 `raw_test_report` | 独立编排内 SUB_WORKFLOW，DEPENDENT 通过后执行 |
 | ② `[job][raw->sdi][openlibing]测试报告数据清洗` | 读 `raw_test_report` → `JsonArrayExpand` 展开 → 写 `sdi_rd_efc_test_report_<模板名>` | 独立编排内 SUB_WORKFLOW，依赖①完成 |
 
-- 独立编排（openlibing 项目，正式环境）DEPENDENT 依赖 `[workflow][raw->dwi]PR&workflow数据获取`（176230008422726）当前小时成功，保证 gitcode/github sdi 表已更新；codearts sdi 表由时间错位保证（同小时 codearts 编排开头即完成采集）。
+- 独立编排（openlibing 项目，正式环境）DEPENDENT 依赖 `[workflow][raw->dwi]PR&workflow数据获取`（176230008422726）当前小时成功，保证 gitcode/github sdi 表已更新（供工作流② 归属字段 JOIN）；codearts sdi 表由时间错位保证（同小时 codearts 编排开头即完成采集）。**台账 `dwi_rd_efc_test_data_detail` 由插件直接写入，不依赖三平台采集**；DEPENDENT 仅为保证归属字段质量。
 - **架构决策：独立编排 + DEPENDENT 逻辑依赖，不物理塞入现有编排**（理由见 3 节：塞入会链式拉长 codearts 编排至 60min+ 引发下小时并发冲突）。
 - 测试环境按既有约定不跑定时，个人调测手动触发工作流①/②。
-- 增量判定 = 时间窗口 + 反查 + 重试时间比较（raw/sdi 两段，见 6.5/7.4）。
+- 增量判定 = 台账驱动「有记录即采」+ 反查 + update_time 比较（raw/sdi 两段，见 6.5/7.4）。
 
-### 7.2 工作流① rawScript（OBS → raw_test_report）
+### 7.2 工作流① rawScript（上传台账 → 按 obs_path 下载 → raw_test_report）
 
 ```hocon
 env {
@@ -288,114 +305,43 @@ env {
 
 source {
   Jdbc {
-    plugin_output = "pending_pipeline"
+    plugin_output = "pending_report"
     url = "${openlibing_doris_url}"
     query = """
-      /* 三平台 UNION：codearts / github / gitcode 各自映射三 ID + 起止时间 + repoUrl */
-      /* 状态过滤：只采「已完成」的执行记录（执行完成 = 目录文件已齐，一次采全，不依赖反查排除兜漏采；同时跳过未完成/异常记录省 OBS 开销） */
-      SELECT 'codearts' AS platform,
-             t.pipeline_id AS pipelineId, t.pipeline_run_id AS pipelineRunId,
-             /* codearts OBS job 目录 = step_build_job_id_日期_当天第N次（20260728.10 → _20260728_10） */
-             CONCAT(t.step_build_job_id, '_', REPLACE(t.step_daily_build_number, '.', '_')) AS jobId,
-             t.git_url AS repoUrl,
-             t.pipeline_start_time AS workflowStartTime, t.pipeline_end_time AS workflowEndTime
-      FROM sdi_rd_efc_pipeline_run_clean_codearts t
-      JOIN ( -- Doris 模板登记表（6.1）：采集范围白名单（Doris 账号，免 MySQL）
-        SELECT model_code, SPLIT_BY_STRING(pipeline_ids, ',') AS pids
-        FROM dm_rd_efc_template_registry
-        WHERE table_type = 'test_report' AND status = 1 AND pipeline_ids IS NOT NULL AND pipeline_ids <> ''
-          AND model_code = 'triton_model_performance'   /* 下推到子查询，只拉 1 行 */
-      ) cfg
-      LEFT JOIN ( -- 反查：窗口内已入 raw 的 job 用数据自身当"已处理"标记（不新增台账表，见 6.5）
-        SELECT pipeline_id, pipeline_run_id, job_id,
-               MAX(source_end_time) AS max_source_end_time   /* 已落库的最新采集源表结束时间 */
-        FROM raw_test_report
-        WHERE create_time > NOW() - INTERVAL ${report_window_hours} HOUR
-        GROUP BY pipeline_id, pipeline_run_id, job_id
-      ) d
-        ON t.pipeline_id = d.pipeline_id AND t.pipeline_run_id = d.pipeline_run_id
-       AND CONCAT(t.step_build_job_id, '_', REPLACE(t.step_daily_build_number, '.', '_')) = d.job_id
-      WHERE (d.pipeline_id IS NULL OR t.pipeline_end_time > d.max_source_end_time)  /* 未落 raw 或重试更新（end_time 变新）才处理 */
-        AND ARRAY_CONTAINS(cfg.pids, t.pipeline_id)        /* 登记范围白名单过滤 */
-        AND t.pipeline_start_time > NOW() - INTERVAL ${report_window_hours} HOUR  /* 时间窗口：晚完成/异常节点出窗口自然淘汰 */
-        AND t.pipeline_status = 'COMPLETED'   /* 只采已完成执行记录 */
-        AND LOWER(t.job_name) LIKE 'test%'
-
-      UNION ALL
-
-      /* GitHub：workflow 级数字 ID；job 目录 = {workflow_id}/{run_id}/{workflow_job_id}（纯数字，无后缀） */
-      SELECT 'github' AS platform,
-             CAST(r.workflow_id AS STRING) AS pipelineId,
-             CAST(j.workflow_run_id AS STRING) AS pipelineRunId,
-             CAST(j.workflow_job_id AS STRING) AS jobId,
-             j.repo_url AS repoUrl,
-             r.run_started_at AS workflowStartTime, r.updated_at AS workflowEndTime
-      FROM sdi_rd_efc_workflow_run_job_github j
-      LEFT JOIN sdi_rd_efc_workflow_run_raw_github r ON j.workflow_run_id = r.run_id
-      JOIN ( SELECT model_code, SPLIT_BY_STRING(pipeline_ids, ',') AS pids
-             FROM dm_rd_efc_template_registry
-             WHERE table_type = 'test_report' AND status = 1 AND pipeline_ids IS NOT NULL AND pipeline_ids <> ''
-               AND model_code = 'triton_model_performance'
-      ) cfg
-      LEFT JOIN ( SELECT pipeline_id, pipeline_run_id, job_id,
-                         MAX(source_end_time) AS max_source_end_time
-                  FROM raw_test_report
-                  WHERE create_time > NOW() - INTERVAL ${report_window_hours} HOUR
-                  GROUP BY pipeline_id, pipeline_run_id, job_id
-      ) d
-        ON CAST(r.workflow_id AS STRING) = d.pipeline_id
-       AND CAST(j.workflow_run_id AS STRING) = d.pipeline_run_id
-       AND CAST(j.workflow_job_id AS STRING) = d.job_id
-      WHERE (d.pipeline_id IS NULL OR r.updated_at > d.max_source_end_time)  /* 重试后 run updated_at 变新 → 重新采集 */
-        AND ARRAY_CONTAINS(cfg.pids, CAST(r.workflow_id AS STRING))
-        AND r.run_started_at > NOW() - INTERVAL ${report_window_hours} HOUR
-        AND j.status = 'completed'   /* 只采已完成 job */
-        AND LOWER(j.job_name) LIKE 'test%'
-
-      UNION ALL
-
-      /* GitCode：hex ID；job 目录 = {workflow_id}/{workflow_run_id}/{job_id} */
-      SELECT 'gitcode' AS platform,
-             t.workflow_id AS pipelineId, t.workflow_run_id AS pipelineRunId,
-             t.job_id AS jobId,
-             t.repo_url AS repoUrl,
-             t.start_time AS workflowStartTime, t.end_time AS workflowEndTime
-      FROM sdi_rd_efc_workflow_run_raw_gitcode t
-      JOIN ( SELECT model_code, SPLIT_BY_STRING(pipeline_ids, ',') AS pids
-             FROM dm_rd_efc_template_registry
-             WHERE table_type = 'test_report' AND status = 1 AND pipeline_ids IS NOT NULL AND pipeline_ids <> ''
-               AND model_code = 'triton_model_performance'
-      ) cfg
-      LEFT JOIN ( SELECT pipeline_id, pipeline_run_id, job_id,
-                         MAX(source_end_time) AS max_source_end_time
-                  FROM raw_test_report
-                  WHERE create_time > NOW() - INTERVAL ${report_window_hours} HOUR
-                  GROUP BY pipeline_id, pipeline_run_id, job_id
-      ) d
-        ON t.workflow_id = d.pipeline_id AND t.workflow_run_id = d.pipeline_run_id
-       AND t.job_id = d.job_id
-      WHERE (d.pipeline_id IS NULL OR t.end_time > d.max_source_end_time)  /* 重试后 end_time 变新 → 重新采集 */
-        AND ARRAY_CONTAINS(cfg.pids, t.workflow_id)
-        AND t.start_time > NOW() - INTERVAL ${report_window_hours} HOUR
-        AND t.status = 'COMPLETED'   /* 只采已完成 workflow */
-        AND LOWER(t.job_name) LIKE 'test%'
+      /* 上传台账驱动：dwi_rd_efc_test_data_detail（插件上传成功即写一行，见 4.3） */
+      /* 有记录=上传成功，无状态过滤；file_name 模板前缀识别；obs_path 直接下载 */
+      SELECT t.platform,
+             t.pipeline_id AS pipelineId, t.pipeline_run_id AS pipelineRunId, t.job_id AS jobId,
+             t.file_name AS reportFileName, t.obs_path AS obsPath,
+             t.update_time AS sourceEndTime
+      FROM dwi_rd_efc_test_data_detail t
+      WHERE EXISTS (                                               /* 登记表 file_name_prefix 驱动采集范围（登记即采，多模板零 SQL 改动） */
+            SELECT 1 FROM dm_rd_efc_template_registry r
+            WHERE r.table_type = 'test_report' AND r.status = 1
+              AND t.file_name LIKE CONCAT(r.file_name_prefix, '%') )
+        AND t.create_time > NOW() - INTERVAL ${report_window_hours} HOUR   /* 窗口兜底：按首次上传 */
+        AND NOT EXISTS (                                            /* 反查已采 + 重试判定（update_time） */
+          SELECT 1 FROM raw_test_report r
+          WHERE r.pipeline_id = t.pipeline_id
+            AND r.pipeline_run_id = t.pipeline_run_id
+            AND r.job_id = t.job_id
+            AND r.report_file_name = t.file_name
+            AND r.source_end_time >= t.update_time
+        )
     """
   }
 }
 
 transform {
-  // 测试报告原文读取（新增轻量 OBS 读取 transform，复用 ParseTestcase 的 OBS 列举/下载代码；不做解析/展开）
-  //    登记范围白名单已在 source SQL 内过滤（ARRAY_CONTAINS），此处无需再过滤
-  //    jobId 语义：codearts=step_build_job_id_日期_当天第N次（source 已 CONCAT 拼好）；GitHub=workflow_job_id
+  // 测试报告原文读取（轻量 OBS transform：按台账 obs_path 直接下载，不做解析/展开）
   TestReportReader {
-    plugin_input = ["pending_pipeline"]
+    plugin_input = ["pending_report"]
     plugin_output = "raw_report_rows"
     ak = "${OBS_AK}"
     sk = "${OBS_SK}"
     endPoint = "obs.cn-southwest-2.myhuaweicloud.com"
     bucketName = "op-case-result"
-    prefix = "testcase-metadata"
-    templateCode = "triton_model_performance"   // 文件名前缀匹配 kebab(模板名)_
+    obsPathField = "obsPath"   /* 完整 OBS 路径（不含桶名），直接 GET */
     outputFieldName = "RawJson"
   }
 }
@@ -416,11 +362,12 @@ sink {
 }
 ```
 
-**`TestReportReader` 轻量 transform**（新增，复用 `ParseTestcase` 的 OBS 读取代码）：
-- 输入：流水线记录行 `(pipeline_id, pipeline_run_id, job_id, workflowEndTime, 模板参数)`
-- 行为：按 `testcase-metadata/{pipeline_id}/{pipeline_run_id}/{job_id}/` 列举并下载文件名匹配 `<kebab(模板名)>_*.json` 的文件 → **输出原始 JSON 整份（不解析、不展开）** + 上下文字段（含文件名）
-- 输出字段：`pipelineId/pipelineRunId/jobId/reportFileName + RawJson + sourceEndTime`（`sourceEndTime` 透传输入行 `workflowEndTime`，sink 写 raw 表 `source_end_time` 列）
-- 实现方式：在 `nane/openlibing-seatunnel` 仓参照 `ParseTestcaseTransform`/`TestCaseMetadataParser` 的 OBS 读取逻辑新建轻量类（仅输出原文，无解析逻辑），**sdi 清洗段不新增插件**（见 7.3 纯配置）
+**`TestReportReader` 轻量 transform**（新增，复用 `ParseTestcase` 的 OBS 下载代码）：
+- 输入：台账行 `(platform, pipeline_id, pipeline_run_id, job_id, reportFileName, obsPath, sourceEndTime)`
+- 行为：按 `bucketName + obs_path` **精确 GET**（不再目录列举/文件名匹配）→ **输出原始 JSON 整份（不解析、不展开）** + 上下文字段
+- 输出字段：`pipelineId/pipelineRunId/jobId/reportFileName + RawJson + sourceEndTime`（`sourceEndTime` 透传输入行 `update_time`，sink 写 raw 表 `source_end_time` 列）
+- 容错：OBS 对象缺失/被删时跳过该行（不整体失败），缺数据归测试团队
+- 实现方式：在 `nane/openlibing-seatunnel` 仓参照 `ParseTestcaseTransform`/`TestCaseMetadataParser` 的 OBS 下载逻辑新建轻量类（仅输出原文，无解析逻辑），**sdi 清洗段不新增插件**（见 7.3 纯配置）
 
 ### 7.3 工作流② rawScript（raw_test_report → sdi 清洗层）
 
@@ -482,7 +429,7 @@ source {
           LATERAL VIEW EXPLODE_JSON_ARRAY_JSON(r.data_json) e AS el
         ) x
       ) y
-      LEFT JOIN ( -- 归属字段兜底：三平台来源表 JOIN（codearts / github / gitcode，只取已完成记录）
+      LEFT JOIN ( -- 归属字段兜底：三平台来源表 JOIN（raw 三 ID 直接匹配；codearts 源表无 job_id 列需 CONCAT 拼接，与台账归一 job_id 一致性待确认，见 T4）
         SELECT pipeline_id, pipeline_run_id,
                CONCAT(step_build_job_id, '_', REPLACE(step_daily_build_number, '.', '_')) AS job_id,
                git_url AS repo_url,
@@ -533,36 +480,34 @@ sink {
 
 > **方案调整（2026-09-08 实测）**：清洗段不再使用 `JsonArrayExpand` transform——测试库实测其 `output_field` 不生成 `recordSeq`（该插件只做字段透传/JSON 取值，无数组下标输出），且 sdi 五元组 UNIQUE KEY 依赖 `record_seq`。改为 **Doris SQL 原生展开**：内层 `LATERAL VIEW EXPLODE_JSON_ARRAY_JSON` 逐元素展开，外层 `ROW_NUMBER() OVER (PARTITION BY 四元组 ORDER BY e.el)` 生成 `record_seq`（= 数组下标 + 1 的等价稳定序号），JSON 字段用 `JSON_EXTRACT_STRING/DOUBLE` 提取，归属字段（repoUrl/起止时间）在子查询内 JOIN 来源表透传。**不新增/不改插件**，纯配置达成。Doris 限制窗口函数须在 LATERAL VIEW 的外层（内层 EXPLODE、外层 ROW_NUMBER），归属 JOIN 也在最外层兜底。
 
-### 7.4 增量与幂等（时间窗口 + 反查 + 重试时间比较）
+### 7.4 增量与幂等（台账驱动 + 反查 + update_time 比较）
 
-**增量判定**（不新增台账表，见 6.5）：
+**增量判定**（见 6.5）：
 
 | 段 | 判定 | 机制 |
 | --- | --- | --- |
-| 工作流①（raw 采集） | 未落 raw **或重试更新** | `raw_test_report` **实际有数据** → source 反查 `LEFT JOIN ... WHERE d.pipeline_id IS NULL OR 源表.end_time > d.max_source_end_time` 排除，不再扫 OBS；**重试后 end_time 变新 → 判定重试 → 重新采集（MOW 覆盖，不重复行）** |
-| 工作流②（sdi 清洗） | 未清洗 **或 raw 更新** | `sdi_rd_efc_test_report_<模板名>` **实际有数据** → source 反查四元组 `LEFT JOIN ... WHERE s.pipeline_id IS NULL OR r.source_end_time > s.max_source_end_time` 排除，不再处理；**重试重采后 raw.source_end_time 变新 → 判定需重清洗** |
-| 待重试/晚完成 | 窗口内未落库/未清洗的每轮重扫；报告出现即处理，下轮被反查排除；**窗口内重试的（end_time 更新）被时间比较捕获重新采集** |
-| 异常封存 | 窗口自然淘汰：出窗口（`>${report_window_hours}`）不再扫描，等价封存（无显式 status） |
+| 工作流①（raw 采集） | 台账有记录且未采 | source 读 `dwi_rd_efc_test_data_detail`（登记表 `file_name_prefix` 过滤 + `create_time` 窗口）→ `NOT EXISTS` 反查 raw 四元组排除已采；**重试（预留）：台账 `update_time` > 已采 `source_end_time` → 重采（MOW 覆盖，不重复行）** |
+| 工作流②（sdi 清洗） | 未清洗或 raw 更新 | 反查四元组 `LEFT JOIN ... WHERE s.pipeline_id IS NULL OR r.source_end_time > s.max_source_end_time`；重采后 raw.source_end_time（=台账 update_time）变新 → 判定需重清洗 |
 
-**重试语义（三平台统一）**：重试后三 ID 不变但源表 `end_time` 更新（Doris UNIQUE KEY MOW 覆盖，实测 gitcode/github 同键多行=0；CodeArts `step_daily_build_number` 递增拼接 jobId 变化天然区分）。`source_end_time` 是判重依据：源表 end_time > 已落库 source_end_time ⇒ 重试新数据 ⇒ 重采/重清洗，同名文件同键覆盖、新文件新增行。
+**重试语义（预留）**：当前业务不支持重试（台账 `update_time` 不变化），等价采一次即排除；未来重试重传覆盖台账同键行、`update_time` 刷新 → 被时间比较判定重采，同名文件同键覆盖、新文件新增行。**零改造成本**。
 
 **幂等兜底**：
 
-- 行级：raw 表四元组 UNIQUE KEY + sdi 表五元组 UNIQUE KEY（MOW 覆盖）——重复执行/并发/重试重采均不产生重复行（同键覆盖更新）。
-- 调度：独立编排 `[workflow][openlibing]测试报告采集编排`（cron 每小时 + 失败告警）+ DEPENDENT 依赖三平台采集完成；SeaTunnel checkpoint 容错。
-- 反查子集限窗口内（`create_time/report_upload_time > now-窗口`），避免 `MAX(...) GROUP BY` 全表渐大。
+- 行级：raw 表四元组 UNIQUE KEY + sdi 表五元组 UNIQUE KEY（MOW 覆盖）——重复执行/并发/重采均不产生重复行。
+- 调度：独立编排（cron 每小时 + 失败告警）+ DEPENDENT 依赖三平台采集完成（保证归属字段 JOIN 质量）；SeaTunnel checkpoint 容错。
+- 反查子集限窗口内（`create_time/report_upload_time > now-窗口`），避免全表渐大。
 
-**窗口参数**：`${report_window_hours}`（DS 全局参数，默认 24h）。**需与业务方确认报告上传时效 ≤ 窗口**（超过窗口才上传视为漏采，不补；调大窗口可重跑补采）。
+**窗口参数**：`${report_window_hours}`（DS 全局参数，默认 24h）。**需与业务方确认上传时效 ≤ 窗口**（超窗视为无报告，由测试团队负责；调大窗口可补采）。
 
-**事后补采支持（最小修改）**：业务要求补采历史/漏采数据时，DS 控制台**手动触发工作流①并覆盖全局参数 `${report_window_hours}`** 为目标回看值（如 720 = 30 天），跑一轮补采窗口内未落 raw 的 job；已落 raw 且未重试的不重采（反查幂等），**窗口内重试过的（end_time 更新）会被时间比较判定重采覆盖**，补传报告按 UNIQUE KEY 同键覆盖更新。工作流②随 raw 更新行自动重清洗。**零代码修改**（时间条件本就参数化）。
+**事后补采支持（最小修改）**：手动触发工作流①并覆盖 `${report_window_hours}` 为目标回看值（如 720 = 30 天），重扫窗口内台账未落 raw 行；已采未重试的不重采（反查幂等），重试过的（update_time 变新）会被时间比较判定重采。工作流②随 raw 更新行自动重清洗。**零代码修改**。
 
-**不依赖文件名时间戳 / OBS lastModified / 登记表 update_time 做增量水位。**
+**不依赖文件名时间戳 / OBS lastModified / 台账 create_time 做增量水位**（判重水位 = 台账 `update_time`）。
 
 ### 7.5 模板登记与范围
 
-- 模板登记（`dm_rd_efc_template_registry`）：`table_type='test_report'`、`model_code=<模板名>`、`table_name=sdi_rd_efc_test_report_<模板名>`、`pipeline_ids=<逗号分隔流水线>`、`status=1`
+- 模板登记（`dm_rd_efc_template_registry`）：`table_type='test_report'`、`model_code=<模板名>`、`table_name=sdi_rd_efc_test_report_<模板名>`、`file_name_prefix=<kebab模板名>_`、`status=1`
 - 登记数据维护：**已确认**——本期由开发手动 SQL 登记（见下方登记清单），不做管理页面
-- **一模板对多流水线（一对多）**：`pipeline_ids` 逗号分隔，SeaTunnel 按白名单过滤
+- **采集范围 = `file_name_prefix`**（kebab 模板名 + 下划线，如 `triton-model-performance_`），source `LIKE CONCAT(file_name_prefix,'%')` 过滤台账 file_name（登记即自动采集，多模板零 SQL 改动）；`pipeline_ids` 白名单已废弃（见 13 章 R12）
 
 **模板登记清单（本期新增模板的手动步骤）**：
 
@@ -571,13 +516,13 @@ sink {
 
 -- ② 建 raw 表 + Doris 模板清洗表（DDL 见 6.3/6.4，由 DBA 执行）
 
--- ③ 登记模板条目 + 配置采集范围（采集与消费共同读取，单写一处）
+-- ③ 登记模板条目 + 配置采集前缀（采集与消费共同读取，单写一处）
 INSERT INTO dm_rd_efc_template_registry
-  (table_type, model_code, model_name, table_name, status, description, pipeline_ids)
+  (table_type, model_code, model_name, table_name, status, description, file_name_prefix)
 VALUES
   ('test_report', 'triton_model_performance', 'Triton模型性能数据',
    'sdi_rd_efc_test_report_triton_model_performance', 1,
-   'Triton模型性能测试报告（模板名=JSON schema title）', 'pipelineA,pipelineB');
+   'Triton模型性能测试报告（模板名=JSON schema title）', 'triton-model-performance_');
 
 -- ④ 数据资产列信息无需手动登记：ops 查询与采集列白名单均读 Doris information_schema（建表后自动可得）
 ```
@@ -829,22 +774,22 @@ CREATE TABLE IF NOT EXISTS `t_mcp_tool_call_log` (
 
 | # | 事项 | 当前假设/建议 | 影响 |
 | --- | --- | --- | --- |
-| T1 | **一个模板对应多条流水线（一对多）** | 已确认，`pipeline_ids` 逗号分隔 | 采集范围过滤 |
-| T2 | **TestReportReader 轻量 transform 开发方式** | 插件仓**已定位**：`nane/openlibing-seatunnel`（`openlibing-seatunnel-plugins` 模块，**独立包 `transform/readtestreport`**，与 `parsetestcase`/`parsefilecoverage` 命名风格一致，仅复用其 OBS 列举/下载逻辑，输出原文，无解析逻辑）；**插件仓为同事个人仓（nane），开发/发布/合入需与仓主确认协作方式** | raw 采集核心，需仓主配合 |
-| T3 | **SeaTunnel 读模板登记范围的方式** | **已确认：Doris 专用登记表 `dm_rd_efc_template_registry`**（`table_type='test_report'`，6.1），采集 source JOIN 它（Doris 账号已有），**免 MySQL 账号**；Catalog 直连/DS 参数化/Doris 配置表候选已收敛（见 T11） | 已定 |
-| T4 | **GitHub/GitCode 流水线来源表** | **已确认（测试库实测）：三平台独立表，数据不混存 codearts 表**。codearts=`sdi_rd_efc_pipeline_run_clean_codearts`（hex 三 ID + `step_build_job_id` + `step_daily_build_number`，OBS job 目录=`CONCAT(step_build_job_id,'_',REPLACE(step_daily_build_number,'.','_'))`）；GitHub=`sdi_rd_efc_workflow_run_job_github`（run/job 为数字 ID，OBS job 目录=纯数字 `workflow_job_id` 无后缀）；GitCode=`sdi_rd_efc_workflow_run_raw_gitcode`（hex ID + `job_id` 字段，OBS 后缀待确认）。工作流①/② source 按平台映射三 ID + 起止时间（字段名以测试库核实为准）；**调试数据（adabab pipeline）实测为 codearts 平台（git_type=codehub）** | 已定（GitCode 后缀待确认） |
+| T1 | **采集范围 = 文件名前缀** | **已确认（PM 否决 pipeline_ids）**：登记表 `file_name_prefix`（kebab 模板名 + `_`），source 按 `LIKE CONCAT(file_name_prefix,'%')` 过滤台账 file_name；登记即自动采集，新流水线自动覆盖，无白名单漏配风险 | 采集范围过滤 |
+| T2 | **TestReportReader 轻量 transform 开发方式** | 插件仓**已定位**：`nane/openlibing-seatunnel`（`openlibing-seatunnel-plugins` 模块，**独立包 `transform/readtestreport`**，与 `parsetestcase`/`parsefilecoverage` 命名风格一致，**按台账 `obs_path` 精确下载**，输出原文，无解析逻辑）；**插件仓为同事个人仓（nane），开发/发布/合入需与仓主确认协作方式** | raw 采集核心，需仓主配合 |
+| T3 | **SeaTunnel 读模板登记范围的方式** | **已确认：Doris 专用登记表 `dm_rd_efc_template_registry`**（`table_type='test_report'`，6.1），采集 source `EXISTS` 子查询读 `file_name_prefix` 过滤台账（Doris 账号已有），**免 MySQL 账号**；Catalog 直连/DS 参数化/Doris 配置表候选已收敛（见 T11） | 已定 |
+| T4 | **台账三 ID 与平台源表一致性（归属 JOIN）** | **已确认（测试库实测）**：采集源 = `dwi_rd_efc_test_data_detail`（插件上传台账，三 ID 已归一，`obs_path` 直接下载，见 4.3）。归属字段（repo_url/起止时间）工作流② JOIN 三平台源表：GitHub=`sdi_rd_efc_workflow_run_job_github`+`sdi_rd_efc_workflow_run_raw_github`（数字 ID 直接匹配）；GitCode=`sdi_rd_efc_workflow_run_raw_gitcode`（hex ID 直接匹配，实测台账 gitcode 样本三 ID 与源表字段一致）；**codearts 源表 `sdi_rd_efc_pipeline_run_clean_codearts` 无 job_id 列，归属 JOIN 需 `CONCAT(step_build_job_id,'_',REPLACE(step_daily_build_number,'.','_'))`，与台账归一 job_id 格式一致性待确认**（JOIN 不到 COALESCE 置 NULL，不影响主数据） | codearts 匹配待确认 |
 | T5 | **DS 工作流创建与发布** | **已确认：由用户负责**。先在测试环境（beta）充分验证（造数联调/幂等/补采），验证通过后发布正式环境；设计文档提供工作流定义、rawScript 与 cron 供创建参考。**正式环境上线门禁：测试环境全链路调通（采集+清洗+ops REST 消费）后才上正式；MCP 除外（可后续迭代单独上）** | 已定（含门禁） |
 | T6 | **上游 JSON schema 完整清单（每模板一份）** | 本期仅 `triton_model_performance`；后续模板按登记制扩展 | 插件/表扩展 |
-| T7 | **模板登记数据维护入口** | **已确认：本期由开发手动 SQL 登记**——INSERT `dm_rd_efc_template_registry`（`table_type='test_report'`，含 `pipeline_ids` 配置）+ 建 raw/sdi 表（DDL 见 6.3/6.4），不做管理页面；登记清单示例见 7.5 | 已定 |
+| T7 | **模板登记数据维护入口** | **已确认：本期由开发手动 SQL 登记**——INSERT `dm_rd_efc_template_registry`（`table_type='test_report'`，含 `file_name_prefix` 配置）+ 建 raw/sdi 表（DDL 见 6.3/6.4），不做管理页面；登记清单示例见 7.5 | 已定 |
 | T8 | **MCP 端点鉴权/限流方案** | **已修订（2026-08-24）**：按 8.2.3 生产级架构执行——**MCP OAuth 2.1（ops 内嵌 Spring Authorization Server + Resource Server，gateway 跨团队不作为依赖；refresh 自动续期客户配置一次长期有效；正式路线为 gateway 承接后迁移）** + 服务端 token 兜底 + RBAC + 行级数据权限 + 限流 + 调用日志审计；beta 联调可先用服务端静态 token 过渡，**上线硬门禁：正式环境前必须完成 OAuth 鉴权，不允许裸奔上线** | 已定 |
 | T9 | **是否需平台 UI（ops-web）展示** | 本期仅 API/MCP | 前端排期 |
 | T10 | **报告上传时效确认** | **已确认（暂定）**：窗口默认 **24h**；后续业务有需要可调大 `${report_window_hours}`（DS 参数）重跑补采，无需改代码 | 已定（暂定 24h） |
-| T11 | **采集范围来源（已定）** | **已确认：Doris 专用登记表**（`dm_rd_efc_template_registry` + `table_type='test_report'`，6.1）；采集/消费共读，无 MySQL 依赖、无双处维护。曾评估：Catalog 直连（正式环境无 MySQL 只读账号且实测 `SHOW CATALOGS` 仅 internal）、DS 参数化（双处维护）、MySQL 登记表（语义不符）均被否决 | 已定 |
+| T11 | **采集范围来源（已定）** | **已确认：Doris 专用登记表**（`dm_rd_efc_template_registry` + `table_type='test_report'`，6.1），采集范围 = `file_name_prefix`（`EXISTS` + `LIKE CONCAT` 过滤台账）；采集/消费共读，无 MySQL 依赖、无双处维护。曾评估：Catalog 直连（正式环境无 MySQL 只读账号且实测 `SHOW CATALOGS` 仅 internal）、DS 参数化（双处维护）、MySQL 登记表（语义不符）均被否决 | 已定 |
 
 ## 11. 验证方式
 
-1. **SeaTunnel transform 单测**：OBS 列举/下载 mock、原始 JSON 整份输出（不解析）、路径三段 ID 构造、XXE 防护。
-2. **链路验证（造数）**：造 `triton-model-performance_test.json`（外层数组）+ 对应流水线记录 → DS 测试环境手动触发工作流① → `raw_test_report` 有原始 JSON → 触发工作流② → `sdi_rd_efc_test_report_<模板名>` 有数 → ops `/report/data/query` 命中 → MCP `initialize → tools/list → tools/call` 三步验证。
+1. **SeaTunnel transform 单测**：按 `obs_path` 精确下载 mock、原始 JSON 整份输出（不解析）、OBS 对象缺失跳过（不整体失败）、XXE 防护。
+2. **链路验证（造数）**：造 `triton-model-performance_test.json`（外层数组）+ 对应 `dwi_rd_efc_test_data_detail` 台账行（模拟插件上传成功）→ DS 测试环境手动触发工作流① → `raw_test_report` 有原始 JSON → 触发工作流② → `sdi_rd_efc_test_report_<模板名>` 有数 → ops `/report/data/query` 命中 → MCP `initialize → tools/list → tools/call` 三步验证。
 3. **幂等验证**：重复触发两个工作流，已采集/已清洗的不再处理、各表行数不翻倍。
 4. **原始数据保留验证**：`raw_test_report.data_json` 与 OBS 文件内容一致（JSON 原文比对），支撑追溯/重放。
 5. **编译**：ops `mvn compile/test` 通过（IDEA 内置 Maven Wrapper 全路径 mvn.cmd）。
@@ -855,7 +800,7 @@ CREATE TABLE IF NOT EXISTS `t_mcp_tool_call_log` (
 
 | 文件 | 说明 |
 | --- | --- |
-| `transform/readtestreport/TestReportReaderTransform.java`（复用 `parsetestcase` 的 OBS 列举/下载逻辑） | 在插件仓**独立包 `transform/readtestreport`** 新增轻量类：OBS 定向列举 + 下载测试报告 JSON → **原始 JSON 整份输出**（不解析、不展开）；sdi 清洗复用既有 `JsonArrayExpandTransform` + Sql 纯配置 |
+| `transform/readtestreport/TestReportReaderTransform.java`（复用 `parsetestcase` 的 OBS 下载逻辑） | 在插件仓**独立包 `transform/readtestreport`** 新增轻量类：按台账 `obs_path` 精确下载测试报告 JSON（`bucketName + obs_path`，**不做目录列举**）→ **原始 JSON 整份输出**（不解析、不展开）；sdi 清洗复用既有 `JsonArrayExpandTransform` + Sql 纯配置 |
 | 插件构建/发布 | 随既有 SeaTunnel 插件部署流程 |
 
 ### 12.2 openlibing-docs（本仓归档）
@@ -898,3 +843,4 @@ CREATE TABLE IF NOT EXISTS `t_mcp_tool_call_log` (
 | R9 | **单工作流 OBS 直读解析写 dwr 事实表**（v2 方案：TestReportParser 一次读 OBS + 展开 → 写 `dwr_rd_efc_<模板名>`） | 用户评审：不符合平台既有 **raw→sdi→dwi/dm/dwr 分层惯例**（`raw_workflow_source_github`/`raw_workflow_runs_github` 等均为「原始 JSON 先落 raw，再清洗」）；原始数据不可追溯、无法重放重清洗；解析逻辑耦合在插件中 | **raw→sdi 两段式**（v3）：工作流① 轻量 `TestReportReader`（复用 `ParseTestcase` OBS 读取，仅整份读原文）→ `raw_test_report`；工作流② `JsonArrayExpand` + `Sql` 纯配置清洗（**不新增解析插件**）→ 每模板一张 `sdi_rd_efc_test_report_<模板名>`；消费读 sdi 表 |
 | R10 | **独立编排、不依赖三平台采集**（测试报告采集编排独立每小时 cron，无 DEPENDENT） | 数据一致性：与三平台采集错拍一轮（16:00 触发读到上一小时 sdi），出现"流水线记录已采集但测试报告未采集"，看板/消费侧易误判为 bug 或缺数 | **独立编排 + DEPENDENT 依赖三平台采集**（3 节/7.1）：DEPENDENT 依赖 `PR&workflow数据获取`（176230008422726）当前小时成功后再跑工作流①→②，保证同小时采集完成后再采测试报告 |
 | R11 | **将测试报告采集①物理挂入现有 `PR&workflow数据获取` 编排（176230008422726）** | 链式拉长：codearts 编排（169579299839168）内部含 DEPENDENT 依赖 PR&workflow 编排完成；挂入后 PR&workflow 从 ~24min 拉长至 24+t（OBS 读取 10-20min），codearts 编排（现 53min）→ 60min+ 与下一小时实例重叠并发冲突；且职责耦合、失败传导 | **独立编排 + DEPENDENT 逻辑依赖**（物理隔离，职责单一） |
+| R12 | **从三平台源表查待采流水线驱动采集（v3.1：三平台 UNION + 拼 jobId + 状态完成/时间窗口/反查/source_end_time 重试比较）** | **PM 否决（2026-09-14）**：判定逻辑复杂（5 个 JOIN + 按平台拼 jobId + 状态/窗口/重试四重判定），「流水线有记录但无报告」需平台扫 OBS 目录兜底，效率受目录列举拖累；`pipeline_ids` 白名单需维护、新流水线有漏配风险 | **`dwi_rd_efc_test_data_detail` 上传台账驱动（v4）**：插件上传成功即写台账（**有记录 = 上传成功**），`obs_path` 直接下载、三 ID 已归一，免状态/窗口/拼 jobId/目录列举；判重 = `update_time`（当前业务不重试，预留未来重试，零改造成本）；采集范围 = 登记表 `file_name_prefix`（弃 `pipeline_ids`，登记即自动采集） |
