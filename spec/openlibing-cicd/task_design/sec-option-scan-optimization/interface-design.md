@@ -218,9 +218,17 @@
 
 > **项目隔离说明**：即使以 `recordId` 定位，后端仍校验该记录所属代码仓（`git_url`）是否属于 `projectId` 对应项目（git 仓名大小写不敏感比较），不属于则返回"未找到对应的扫描记录"，防止越权访问其他项目。
 
-> `SecOptionFileFilter`：`{ "optionKey": string, "scanValues": string[] }`，一个对象记录**一个扫描项**及其可匹配的扫描值集合；多个扫描项之间为**复合（AND）关系**（该行需同时满足所有传的扫描项），同一扫描项的多个扫描值之间为 **IN** 关系；特别地，若某文件未扫描某扫描项，`JSON_EXTRACT` 返回 NULL、`IN` 不命中即该行落选；任一元素的扫描值集合为空则忽略该条件，`optionFilters` 整体不传表示不按扫描项过滤。
+> `SecOptionFileFilter`：`{ "optionKey": string, "scanValues": string[] }`，一个对象记录**一个扫描项**及其可匹配的扫描值集合；多个扫描项之间为**复合（AND）关系**（该行需同时满足所有传的扫描项）。
 >
-> 文件详情页默认按 `filePath` 升序返回。**`fileName`/`filePath` 与 `optionFilters` 均在服务端 SQL 完成、与分页一起下推**：路径类对 `file_name`/`file_path` 做 LIKE `%value%`；`optionFilters` 内每个扫描项作为独立的 AND 谓词对**生效值**做 IN 筛选（值域 `YES`/`NO`/`N/A`）：命中备案（按自然键 `gitUrl + packageName + filePath + optionKey` 关联 `sec_option_filing`）时取备案值（`filing_value`），未命中用 `raw_options` 的原始扫描值——即按"备案后最终展示值"过滤，与展示口径一致，而非备案前原始值；分页命中的文件再由 Service 层加载该产物所有备案（按 `projectId + gitUrl + packageName` 一次性查 `sec_option_filing`）后在内存组装 `options`（生效值）与 `rawOptions`（已备案项的原值），故分页 100 行内关联等价为内存 map 命中，性能无显著影响。
+> 文件详情页默认按 `filePath` 升序返回。**`fileName`/`filePath` 与 `optionFilters` 均在服务端 SQL 完成、与分页一起下推**：
+>
+> - 路径类对 `file_name`/`file_path` 做 LIKE `%value%`；
+> - `optionFilters` 内每个扫描项作为独立的 AND 谓词，扫描值取值语义变更（与 `rawOptions` 展示口径一致）：
+>   - 传 `YES`/`NO`/`N/A`：对该扫描项的**原始扫描值**（`raw_options`，缺失回退 `options`）做 IN 筛选；
+>   - 传 `FILED`：按"是否已备案"筛选（按自然键 `gitUrl + packageName + filePath + optionKey` 判断是否存在 `sec_option_filing` 记录）；
+>   - 两者可同时出现，取并集（满足其一即命中）。
+>
+> 分页命中的文件再由 Service 层加载该产物所有备案（按 `projectId + gitUrl + packageName` 一次性查 `sec_option_filing`）后在内存组装 `options`（仅已备案项）与 `rawOptions`（全部原始值），故分页 100 行内关联等价为内存 map 命中，性能无显著影响。
 
 ### 4.2 响应体 `SecOptionFileDetailVO`
 
@@ -239,12 +247,15 @@
       "filePath": "mx_driving/lib/libperception.so",
       "fileName": "libperception.so",
       "options": {
+        "bindNow": "FILED",
+        "nx": "FILED"
+      },
+      "rawOptions": {
         "bindNow": "YES",
         "nx": "NO",
         "fortify": "YES",
         "...": "..."
-      },
-      "rawOptions": { "fortify": "NO" }
+      }
     }
   ]
 }
@@ -252,14 +263,14 @@
 
 `FileSecOptionItem` 字段：
 
-| 字段         | 类型   | 说明                                                                                                  |
-| ------------ | ------ | ----------------------------------------------------------------------------------------------------- |
-| `filePath`   | String | 包内相对路径（插件已相对化，`/` 分隔）                                                                |
-| `fileName`   | String | 文件名                                                                                                |
-| `options`    | Map    | 逐扫描项**生效值**（备案后值），key 固定 14 项；已扫描为 `YES`/`NO`/`N/A`，未扫描项值为 `"UNSCANNED"` |
-| `rawOptions` | Map    | 已备案项 → 原始扫描值（新增，如 `{ "fortify": "NO" }`），用于展示"备案值 + 划线原值"；无备案为空 `{}` |
+| 字段         | 类型   | 说明                                                                                              |
+| ------------ | ------ | ------------------------------------------------------------------------------------------------- |
+| `filePath`   | String | 包内相对路径（插件已相对化，`/` 分隔）                                                            |
+| `fileName`   | String | 文件名                                                                                            |
+| `options`    | Map    | **仅已备案的扫描项** → 值统一为 `"FILED"`（如 `{ "bindNow": "FILED" }`）；未备案项不返回          |
+| `rawOptions` | Map    | **全部扫描项的原始扫描值**（key 固定 14 项，缺失/未扫描项补齐值为 `"UNSCANNED"`），用于展示原始值 |
 
-> 前端判断展示：`options[key] == "UNSCANNED"` 则隐藏；`rawOptions` 存在该 key 时，以 `options[key]` 为备案生效值、`rawOptions[key]` 为划线原值。
+> 前端判断展示：`options` 为非空 key 即为已备案项（展示"已备案"标识）；`optionFilters` 传 `FILED` 可筛出已备案的行，传 `YES`/`NO`/`N/A` 按 `rawOptions` 的原始值筛选。
 
 ---
 
