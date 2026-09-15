@@ -429,7 +429,7 @@ source {
           LATERAL VIEW EXPLODE_JSON_ARRAY_JSON(r.data_json) e AS el
         ) x
       ) y
-      LEFT JOIN ( -- 归属字段兜底：三平台来源表 JOIN（raw 三 ID 直接匹配；codearts 源表无 job_id 列需 CONCAT 拼接，与台账归一 job_id 一致性待确认，见 T4）
+      LEFT JOIN ( -- 归属字段兜底：三平台来源表 JOIN（raw 三 ID 直接匹配；codearts 源表无 job_id 列需 CONCAT 拼接，格式与台账一致已实测确认，见 T4）
         SELECT pipeline_id, pipeline_run_id,
                CONCAT(step_build_job_id, '_', REPLACE(step_daily_build_number, '.', '_')) AS job_id,
                git_url AS repo_url,
@@ -777,7 +777,7 @@ CREATE TABLE IF NOT EXISTS `t_mcp_tool_call_log` (
 | T1 | **采集范围 = 文件名前缀** | **已确认（PM 否决 pipeline_ids）**：登记表 `file_name_prefix`（kebab 模板名 + `_`），source 按 `LIKE CONCAT(file_name_prefix,'%')` 过滤台账 file_name；登记即自动采集，新流水线自动覆盖，无白名单漏配风险 | 采集范围过滤 |
 | T2 | **TestReportReader 轻量 transform 开发方式** | 插件仓**已定位**：`nane/openlibing-seatunnel`（`openlibing-seatunnel-plugins` 模块，**独立包 `transform/readtestreport`**，与 `parsetestcase`/`parsefilecoverage` 命名风格一致，**按台账 `obs_path` 精确下载**，输出原文，无解析逻辑）；**插件仓为同事个人仓（nane），开发/发布/合入需与仓主确认协作方式** | raw 采集核心，需仓主配合 |
 | T3 | **SeaTunnel 读模板登记范围的方式** | **已确认：Doris 专用登记表 `dm_rd_efc_template_registry`**（`table_type='test_report'`，6.1），采集 source `EXISTS` 子查询读 `file_name_prefix` 过滤台账（Doris 账号已有），**免 MySQL 账号**；Catalog 直连/DS 参数化/Doris 配置表候选已收敛（见 T11） | 已定 |
-| T4 | **台账三 ID 与平台源表一致性（归属 JOIN）** | **已确认（测试库实测）**：采集源 = `dwi_rd_efc_test_data_detail`（插件上传台账，三 ID 已归一，`obs_path` 直接下载，见 4.3）。归属字段（repo_url/起止时间）工作流② JOIN 三平台源表：GitHub=`sdi_rd_efc_workflow_run_job_github`+`sdi_rd_efc_workflow_run_raw_github`（数字 ID 直接匹配）；GitCode=`sdi_rd_efc_workflow_run_raw_gitcode`（hex ID 直接匹配，实测台账 gitcode 样本三 ID 与源表字段一致）；**codearts 源表 `sdi_rd_efc_pipeline_run_clean_codearts` 无 job_id 列，归属 JOIN 需 `CONCAT(step_build_job_id,'_',REPLACE(step_daily_build_number,'.','_'))`，与台账归一 job_id 格式一致性待确认**（JOIN 不到 COALESCE 置 NULL，不影响主数据） | codearts 匹配待确认 |
+| T4 | **台账三 ID 与平台源表一致性（归属 JOIN）** | **已确认（测试库实测）**：采集源 = `dwi_rd_efc_test_data_detail`（插件上传台账，三 ID 已归一，`obs_path` 直接下载，见 4.3）。归属字段（repo_url/起止时间）工作流② JOIN 三平台源表：GitHub=`sdi_rd_efc_workflow_run_job_github`+`sdi_rd_efc_workflow_run_raw_github`（数字 ID 直接匹配）；GitCode=`sdi_rd_efc_workflow_run_raw_gitcode`（hex ID 直接匹配，实测台账 gitcode 样本三 ID 与源表字段一致）；**codearts 已确认（实测台账样本 job_id=`fd064930..._20260914_5` 即 `hex_日期_序号` 拼好格式，与源表 `CONCAT(step_build_job_id,'_',REPLACE(step_daily_build_number,'.','_'))` 一致，OBS 路径同源）**；源表对应 run 未采集时 JOIN 不到 COALESCE 置 NULL，不影响主数据 | 已定 |
 | T5 | **DS 工作流创建与发布** | **已确认：由用户负责**。先在测试环境（beta）充分验证（造数联调/幂等/补采），验证通过后发布正式环境；设计文档提供工作流定义、rawScript 与 cron 供创建参考。**正式环境上线门禁：测试环境全链路调通（采集+清洗+ops REST 消费）后才上正式；MCP 除外（可后续迭代单独上）** | 已定（含门禁） |
 | T6 | **上游 JSON schema 完整清单（每模板一份）** | 本期仅 `triton_model_performance`；后续模板按登记制扩展 | 插件/表扩展 |
 | T7 | **模板登记数据维护入口** | **已确认：本期由开发手动 SQL 登记**——INSERT `dm_rd_efc_template_registry`（`table_type='test_report'`，含 `file_name_prefix` 配置）+ 建 raw/sdi 表（DDL 见 6.3/6.4），不做管理页面；登记清单示例见 7.5 | 已定 |
