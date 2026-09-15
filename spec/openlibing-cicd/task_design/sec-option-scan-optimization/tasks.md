@@ -41,8 +41,8 @@
 - [x] 同步 scanner.js（部分成功状态计算）
 - [x] 同步 SecOptionDetector.js（空结果返回去多余 averageRate）
 - [x] 检查 CicdUploader.js / utils/logger.js 一致
-- [ ] 待确认 index.js 分叉处理（code-metrics 缺失 downloadSubdir 逻辑，含自有 ATOMGIT_OUTPUT overview 特性）
-- [ ] 提交 3 个已同步文件到分支 sync-sec-option-relativize
+- [x] 提交 3 个已同步文件到分支 sync-sec-option-relativize（commit ebcbd76）
+- [x] index.js 分叉处理：code-metrics index.js 保留自有 ATOMGIT_OUTPUT 概览特性，不作为本次改动对象
 
 ## docs 归档 openlibing-docs
 
