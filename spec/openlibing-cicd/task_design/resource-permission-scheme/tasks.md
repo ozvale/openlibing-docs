@@ -1,51 +1,56 @@
-# 任务清单
+# 任务清单（v5 · 双任务结构）
 
-前置（业务决策项已全部定案，见 proposal.md）：
-- 绑定/解绑/方案管理接口上代码前，需在 framework 管理中心完成权限点配置（`role_permission_manager` + `menu_url_info`），建议授予 project_manager
-- 与 framework 团队确认 `user_role_info` 组合索引 changeSet
+> v5 结构：任务一（数据级权限开发）+ 任务二（全仓直查整改，部署门禁）。
+> 分支（已创建，基于 upstream/master）：openlibing-framework → `feat/perm-scheme`、openlibing-cicd → `feat/perm-scheme`。
+> 前端由其他同事开发（文末交接清单）。gateway / codecheck / coderepo 整改属任务二，由各仓负责人认领。
+> 每任务一 commit（`feat(perm-group): ...`）。
 
-## framework 层
+## 任务一：数据级权限开发
 
-- [ ] Liquibase changeSet：新增 `perm_scheme` / `perm_scheme_member` / `perm_scheme_resource_binding` 三张表（字段类型见 design.md 第 4 章；`user_id` 为 varchar(32)、`project_id` 为 int，对齐现状表结构）
-- [ ] `PermSchemeMapper` / `PermSchemeMemberMapper` / `PermSchemeResourceBindingMapper` 接口与 XML
-- [ ] `PermSchemeService`：创建方案（含基于已有方案复制、成员深拷贝）、删除方案（绑定占用校验）、方案列表查询
-- [ ] `PermSchemeResourceBindingService`：绑定/解绑/按资源查询（唯一索引幂等）
-- [ ] `PermSchemeController`：7 个管理接口（见 design.md 第 6 章），写入操作记录审计日志（操作人、时间、变更前后内容）
-- [ ] 方案成员新增时校验项目成员身份（user_role_info 中 project_id 匹配）
-- [ ] `ProjectUserServiceImpl.deleteProjectUser` 移除成员时同步清理该项目下 `perm_scheme_member` 记录（数据卫生，非安全防线）
-- [ ] 与 framework 团队确认 `user_role_info` 组合索引 changeSet（如采纳）
-- [ ] 单测：方案 CRUD、复制、删除保护、绑定解绑、成员校验
+### 前置
 
-## cicd 层
+- [ ] framework 管理中心权限点配置：组 CRUD、绑定/解绑接口（`menu_url_info` + `role_permission_manager`，建议授 project_manager）
 
-- [ ] `PermSchemeResourceBindingLocalMapper`（本地只读）+ 独立 Guava 缓存实例（maximumSize=1000，1min TTL，不与匿名访问结果缓存共用）
-- [ ] `UserRoleMapper.hasPermissionByScheme` 镜像 SQL（UNION ALL：admin 穿透段 + 方案成员段含 EXISTS 校验；join 字段名以 implementation-reference.md 核实结论为准：`rpm.role_id` / `mui.menu_id` / `mui.menu_url`）
-- [ ] `AuthInterceptor.preHandle`：`extractPermissionContext` 之后、`isGitUrlPublic` 之前插入绑定查询；命中绑定跳过公开仓短路与匿名分支（userId 为空直接拒绝）；未命中保持现状逻辑零改动
-- [ ] 方案分支拒绝时返回独立错误码 `PERMISSION_DENIED_BY_SCHEME`（区别于现状 `PERMISSION_DENIED`），供前端切换气泡类型
-- [ ] `POST /project/pipeline/list` 返回结构行级补充 `schemeId` / `schemeName` / `schemeOperations`（为空表示默认方案；`schemeOperations` 为按操作码的权限 map，如 `{"pipeline_run": false, "pipeline_info_sync": true}`，绑定行由后端按 `hasPermissionByScheme` 逐操作码判断，未绑定行不返回该字段、前端走现状角色判断）
-- [ ] `GET /project/pipeline/detailInfo` 返回结构补充同样三字段（详情页有重试/停止/编辑/执行 4 个操作按钮，需要 `schemeOperations`）
-- [ ] `schemeOperations` 的 key 复用现有权限码（`pipeline_run` / `pipeline_stop` / `update-pipeline-config` 等，即前端 `hasOperationPermission` 已在用的 `menu_info.identification`），不新造编码
-- [ ] framework 侧确认：`menu_url_info.triggerPermissionType` 的 403 权限申请弹框对方案类拒绝（`PERMISSION_DENIED_BY_SCHEME`）豁免，避免误导用户走角色申请
-- [ ] 单测：16 个存量单测回归 + 新增绑定分支（绑定命中/未命中、匿名拒绝、admin 穿透、公开仓绑定、EXISTS 兜底）
-- [ ] Phase 3 自检：接口变动检测（列表返回结构新增字段，评估是否触发前端接口文档生成）
+### framework 仓（commit F1~F7）
 
-## 前端（openlibing-cicd-web / openlibing-web）
+| # | 任务 | 验证 | 依赖 |
+|---|------|------|------|
+| F1 | Liquibase：`user_role_info` 加 `perm_group_id INT NOT NULL DEFAULT 0`（INSTANT DDL）+ `perm_group` / `perm_group_resource_binding` 建表 | compile + changeSet 语法 | 无 |
+| F2 | `PermGroup` / `PermGroupResourceBinding` Entity + Mapper + XML；`UserRoleMapper` 加按 perm_group_id 过滤的成员查询/写入方法 | compile + 单测 | F1 |
+| F3 | `PermGroupService`：创建（空白/复制——`INSERT...SELECT` 同表拷贝，来源 0 = 复制默认组全量成员）+ 同项目重名校验 + 删除（绑定占用校验，成员记录连带删） | 单测（复制含默认组来源、占用拒绝、重名拒绝、删除连带清成员） | F2 |
+| F4 | `PermGroupResourceBindingService`：单条绑定/解绑 + 批量 + 按资源查询 + 按组反查 | 单测（唯一索引幂等 upsert、批量） | F2 |
+| F5 | `PermGroupController` + DTO：全部接口（groups CRUD、members GET/PUT、bindings 单条/批量/查询/反查；GET groups 虚拟返回默认组 id=0）+ framework AOP 审计日志 | BETA 冒烟 | F3, F4 |
+| F6 | framework 自身存量 SQL 整改（46 处）：`SyncUserServiceImpl`（三方同步写 0）、成员 CRUD、项目级联删除、`deleteProjectUser` 删全部 perm_group_id 记录——**注意"查全部角色再内存遍历"的高危子类逐一追调用链** | 单测 + 存量功能回归 | F1 |
+| F7 | 收尾：质量门禁五连全绿 + 全量单测 | `run-mvn.py` | 全部 |
 
-前端改造页面实测清单（基于 cicd-web 全量扫描 `hasOperationPermission` 使用点，共 5 个文件 29 处）：
+### cicd 仓（commit C1~C6，C1/C2 可与 F3~F6 并行）
 
-- [ ] `pipeline.vue`（流水线列表）：按 `schemeId` 是否为空切换按钮渲染逻辑——绑定行用 `schemeOperations[操作码]` 控制 run/stop/sync 按钮，未绑定行维持现状 `hasOperationPermission` 角色判断（17 处判断，主改造点）
-- [ ] `pipelineRunDialog.vue`（运行确认弹窗）：运行按钮同模式接入（`pipeline_run`，列表页触发的二级确认）
-- [ ] `PipelineDetail/Detail.vue`（详情页）：重试/停止/编辑/执行按钮接入（6 处判断）；顺带决策：重试按钮现状无任何前端权限判断（reExecute 直连，与停止按钮不一致），本次对齐还是维持现状披露，Phase 2 定
-- [ ] `PipelineManage.vue`（白名单管理页）：白名单开关按行接入（`pipeline_whitelist:update`，每行一个 pipelineId，同属资源级操作，与列表页同模式）
-- [ ] `PipelineEdit/pipelineEditDialog.vue`（编辑弹窗）：不单独接入——编辑入口按钮在列表/详情页被拦截后弹窗进不去，入口接好即可
-- [ ] `NoPermissionPopover` 扩展方案版气泡分支：绑定资源被拒（`PERMISSION_DENIED_BY_SCHEME`）时展示"请联系项目管理员在方案「xxx」中为你配置具备该操作权限的角色"（方案名取自错误响应体，建议角色列表复用现状 `rolesByLevel` 数据源与渲染逻辑，不新做），不展示常规角色申请指引；未绑定资源保持现状角色版气泡
-- [ ] 匿名访问绑定资源：悬浮提示"该资源为关键管控资源，请先登录以验证您的身份与访问权限"并附登录入口（`LOGIN_REQUIRED_BY_SCHEME`），登录后按方案成员判断走方案版气泡；未绑定资源维持现状（公开仓匿名可看）；列表接口匿名可访问且仍返回各行 `schemeId`，`schemeOperations` 对匿名用户所有操作码恒为 false
-- [ ] 成员管理页面扩展页签：默认方案（现状数据，调用现状接口）+ 自定义方案（调用 framework 方案管理接口）
-- [ ] 方案创建支持基于已有方案复制（默认方案或自定义方案）
-- [ ] 流水线列表新增方案配置操作项，展示当前生效方案标识
+| # | 任务 | 验证 | 依赖 |
+|---|------|------|------|
+| C1 | `UserRoleMapper.hasPermissionByGroup` 新方法 + XML（单段 SQL：`(role='admin' OR perm_group_id=#{permGroupId})` + 角色白名单子查询；join 字段 `rpm.role_id`/`mui.menu_id`/`mui.menu_url`） | 单测（admin 穿透/组成员/白名单拦截三 case） | F1 |
+| C2 | `PermGroupResourceBindingLocalMapper` + 独立 Guava 缓存（maximumSize=1000，TTL 5~10 秒）+ `GroupBindingInfo` DTO | 单测（命中/未命中/过期） | F1 |
+| C3 | `AuthInterceptor` 绑定分支：`extractPermissionContext` 后、`isGitUrlPublic` 前插绑定查询；命中 → userId 空抛 `LOGIN_REQUIRED_BY_GROUP`(401)、非成员抛 `PERMISSION_DENIED_BY_GROUP`(403，携 `permGroupName`)；未命中零改动 | **16 个存量单测回归** + 新增分支单测（绑定命中/未命中、匿名、admin、公开仓绑定） | C1, C2 |
+| C4 | cicd 自身存量 SQL 整改（6 处）：`hasPermission`/`hasPublicPermission` 加 `perm_group_id=0`（**admin/visitor 穿透段不滤组，仅项目匹配段加**）；`HwProjectInfoMapper.isProjectAdmin/isProjectMember`（角色过滤判断，project_manager 段加 0、admin 段不滤）与 `OpenUbmcFeatureMapper`（LEFT JOIN 取数，逐处确认是否需滤） | 单测 + 回归 | F1 |
+| C5 | `/list` 行级 + `/detailInfo` 补 `permGroupId`/`permGroupName`/`groupOperations`（key 复用现有权限码；绑定行多操作码合并一次 SQL 判断） | 单测 + BETA 冒烟 | C3 |
+| C6 | 收尾：质量门禁全绿 + 16 存量单测终回归 + `triggerPermissionType` 对方案类 403 豁免核查 | `run-mvn.py` | 全部 |
 
-## 验证
+## 任务二：全仓直查整改（部署门禁，你主导闭环）
 
-- [ ] BETA 环境端到端：绑定关键流水线 → 方案外成员操作被拒、方案内成员放行、admin 放行、匿名拒绝
-- [ ] 未绑定流水线全量回归（含公开仓匿名访问场景）
-- [ ] 成员移出项目（手工移除路径）后方案分支拒绝
+| # | 任务 | 产出 |
+|---|------|------|
+| T1 | **拉取组织内全部仓库**（清单从 GitCode org 获取），四层搜索：表名 / Entity 类名 / MP 泛型签名 / Liquibase changelog | 直查处全集（当前已知 5 服务 92 处，全集待确认） |
+| T2 | 逐处细读分类：使用场景（业务语言）/ R 或 W / A(默认组)/B(需感知组)/C(写入)/D(纯JOIN) | 对齐表（design.md 3.4 模板） |
+| T3 | 为各仓生成现成 patch（`perm_group_id=0` 的 diff） | patch 集 |
+| T4 | 与各服务负责人对齐会：认领 patch；RPC 化作为独立选项（0 / RPC / 0+RPC 排期），不替对方选 | 认领状态表 |
+| T5 | 跟进各仓合入（gateway 12 处 / codecheck 8 处 / coderepo 20 处含写入细查） | 全部"已整改" |
+| T6 | **BETA 混入验证（部署门禁判据）**：造一条 `perm_group_id != 0` 数据 → 跑各服务存量功能（cicd 鉴权、gateway 鉴权、codecheck/coderepo 管理员判断、framework 成员页）确认不混入 | 验证报告 → **放行部署** |
+| T7 | BETA 端到端：绑定关键流水线 → 组外成员被拒、组内放行、admin 放行、匿名（pipeline 路径）拒绝；未绑定全量回归；移出项目（删全部组）后组分支拒绝 | 验收 |
+
+## 前端交接清单（其他同事实施，术语=权限组，字段统一 permGroupId/permGroupName）
+
+- 成员管理页（openlibing-web / projectUserManage.vue）**一页化增强**：`query-project-user` 平铺返回 `permGroupId`/`permGroupName`（每行一条组记录，默认组行 permGroupName 为 null、permGroupId=0）；列表加"权限组"列；**权限组下拉多选筛选**（参数 permGroupIds，不传=全部组）；"管理权限组"按钮弹窗（组列表含成员数/绑定数，listGroups 返回）
+- **行级操作按 permGroupId 路由**：默认组行（permGroupId=0）→ 存量 update/delete-project-user；自定义组行 → 新接口（PUT /perm-group/members 单条编辑、DELETE /perm-group/members 删行）
+- 添加成员弹窗：**多选组**；勾选默认组走存量 add-project-user，勾选自定义组走 POST /perm-group/groups/{permGroupId}/members（增量语义，前端无需先查全量）
+- 删除默认组行/自定义组行：DELETE /perm-group/members + other-group-records 弹窗勾选连带删除（opt-in）
+- 流水线列表（cicd-web 5 文件 29 处实测）：行绑定 permGroupId 非空走 `groupOperations[permGroupId][操作码]` / 空走现状；`NoPermissionPopover` 组版气泡（"请联系项目管理员在权限组「xxx」中配置…"）；匿名（pipeline 路径）"该资源为关键管控资源，请先登录"；批量绑定提示"其中 N 条已从原组切换"；不做延迟生效提示
+- 流水线列表 🛡 入口 + 组选择弹窗（含行为变化三警示）
