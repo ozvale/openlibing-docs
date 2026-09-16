@@ -371,6 +371,43 @@ opencode mcp auth openlibing-report      # 触发浏览器授权
 
 ---
 
+## 7. 部署配置清单（本地 / 测试 / 正式）
+
+> 本章汇总 MCP 鉴权方案（方案 C）引入的**全部新增配置项**（gateway + ops），按本地 / 测试 / 正式三环境给出取值与存放位置。存量配置（三方 OAuth、refreshJwtSecret、JwtConfig 等）复用现有，不在此列。
+
+### 7.1 gateway 新增配置项（OAuth2 授权服务器）
+
+| 配置项 | 说明 | 本地（application-local.yaml / 启动参数） | 测试(beta/gamma) / 正式（Nacos `gateway` dataId） |
+| --- | --- | --- | --- |
+| `oauth2.issuer` | 授权服务器 issuer（元数据声明的权威域名） | `http://localhost:8073`（启动参数 `-D`） | `https://<gateway-域名>`（如 beta.openlibing.com / APIG 域名） |
+| `mcp.oauth.signing.private-key` | RS256 签名私钥（PKCS#8 base64） | 本地测试密钥对（启动参数 `-D`） | **网关团队生成**，私钥用 gateway 自身加密体系加密后存 Nacos |
+| `exempt.paths` | AuthFilter 豁免路径（在既有值上追加） | 原值 + `,/.well-known/,/oauth2/`（启动参数 `-D`） | 同左（Nacos） |
+| `oauth2.mock-user.enabled` | mock 用户模式 | `true`（本地验证用） | `false`（默认即 false，可不配） |
+| `oauth2.mock-user.user-id` / `account-id` / `account-name` | mock 用户身份 | 默认 1 / 1 / mock | 不需要 |
+| `oauth2.mcp-login.platform` | MCP 三方登录平台 | gitcode（默认） | gitcode（默认，按需切 gitee/github 等） |
+| `gitcode.oauth.redirect.uri` | GitCode 三方回调地址 | `http://localhost:8073/oauth2/authorization/callback/gitcode`（Spring 命令行须 `--` 前缀） | 已有（beta 域名），无需新增 |
+| `server.ssl.enabled` | 关闭本地 HTTPS | `-Dserver.ssl.enabled=false`（仅本地） | 不设置（生产走 APIG 正式证书） |
+
+### 7.2 ops 新增配置项（MCP 资源服务器）
+
+| 配置项 | 说明 | 本地（application-local.yaml，gitignore） | 测试(beta/gamma) / 正式（Nacos ops 环境 dataId） |
+| --- | --- | --- | --- |
+| `mcp.auth.enabled` | MCP 鉴权开关 | `true` | `true` |
+| `mcp.auth.public-key` | RSA 验签公钥 | `plain:<明文公钥>`（与本地 gateway 私钥同密钥对） | `<加密串>`（用 ops 加密体系 `security.part1`+keys 加密的公钥 base64） |
+| `mcp.auth.metadata-url` | PRM 地址（401 `resource_metadata` 指向） | `http://localhost:8098/.well-known/oauth-protected-resource` | `https://<MCP-域名>/.well-known/oauth-protected-resource` |
+| `mcp.auth.authorization-server-url` | AS 元数据地址（PRM `authorization_servers` + 转发用） | `http://localhost:8073/.well-known/oauth-authorization-server` | `https://<gateway-域名>/.well-known/oauth-authorization-server` |
+| `spring.ai.mcp.server.base-url` | SSE `endpoint` 事件返回的绝对 URL | `http://localhost:8098`（本地 http 模式） | `https://<MCP-域名>` |
+
+### 7.3 部署要点（跨环境）
+
+1. **公钥分发链路**：gateway 私钥（加密存 gateway Nacos）→ 推导公钥 → 用 ops 加密体系（`security.part1`+keys）加密 → 存 ops Nacos `mcp.auth.public-key`。**本地配对**用 `plain:` 前缀明文（跳过加密，见 2.3.5）。
+2. **MCP 端点暴露形态（待网关团队确认）**：生产 Trae 连 `https://<gateway-域名>/openlibing-ops/mcp/sse`（gateway 路由转发 ops）或 ops 独立域名；`/.well-known/*` 发现端点必须与 MCP URL **同源**（走同一入口，否则客户端发现失败）。
+3. **TLS**：生产走华为云 APIG/ingress 正式 CA 证书（SAN 含对外域名）；本地 http 模式绕过（见 2.3.5）。
+4. **会话/注册存储**：client 注册表、授权码、MCP 会话均存 gateway 现有 Redis（TTL 见 `OAuth2Constants`），无新增中间件。
+5. **存量零改动**：三方 OAuth 配置（`gitcode.oauth.*` 等）、`refreshJwtSecret`、`JwtConfig` 全部复用现有，方案 C 不新增。
+
+---
+
 ## 附：相关文档索引
 
 | 主题 | 位置 |
