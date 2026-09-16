@@ -33,9 +33,21 @@ cron 触发
       → 若最新 run_id 已在归档状态中 → 跳过（不重复写）
       → 取该 run 详情（stages/jobs/steps 全量）→ download_log 拉 step 日志
       → 提取关键字段（status/耗时/message/链接），JSON 瘦身
+  → 启动时按 config 收敛 archive_state（retain：删除已移除仓的过期记录）
   → 生成 archive/YYYY/MM/DD/<时间戳>.json + .md
   → git add -f archive/ + commit + push（回到本仓 master）
 ```
+
+**归档 md 日志渲染收敛（省 token/省空间）**：md 中 step 以 `- **<step>** · <STATUS>` 标记，
+完整日志仅在 json 保留（md 只展示 AI 所需）：
+
+| step 状态 | md 渲染 |
+|---|---|
+| 整个 job 成功（COMPLETED） | step 段整体省略，一行 `#### <job>（任务成功，无 step 日志）` |
+| job 内成功 step（COMPLETED） | 只保留 `- **name** · COMPLETED`，不带日志块 |
+| 失败/未执行 step（FAILED/INIT/IGNORED/CANCELED） | 标题 + 日志块（原处理） |
+
+skill 侧与之配套：job 全成功不读任何 step 日志；job 失败只读失败 step 日志块、成功 step 不读。
 
 ## AI 汇总流程
 
@@ -44,14 +56,16 @@ Windows 计划任务（每日 07:30）
   → scripts/generate_daily_summary.sh --repo-root <仓库根>
       → （执行前自动）git fetch 双远端 + fast-forward master，同步远端采集归档
       → opencode run "<prompt>" -f skills/record-summary/SKILL.md
-        → 读 archive/ 最新 json → 逐仓逐 job 总结（成败/问题数/链接）
+        → 读 archive/<当日>/ 的 md（按需读 step 日志）→ 逐仓逐 job 总结（成败/问题数/链接）
         → 产出 records/YYYY/MM/DD.md（模板 {OWNER} 占位，行尾硬换行）
-      → git commit + push master（遵循仓库 commit 规范）
+      → git commit + push master；脚本末尾对 origin + openlibing-test 双远端做兜底 push
 ```
 
 注册定时任务：`scripts/register_daily_summary.bat`（schtasks，默认 07:30）。
 
 > **同步远端归档（重要）**：采集由远端 workflow（06:30）push 到远端 master；本机 07:30 任务若不拉取则本地 `archive/<当日>` 缺失、总结失败。脚本执行前自动 `git fetch` origin + openlibing-test，再对任一可用远端 `master` 做 fast-forward；本地领先/冲突时警告后继续（宁可用本地旧数据报错，也不盲改本地）。
+>
+> **双远端推送保证**：AI 裸 `git push` 只推 upstream（openlibing-test）会漏推 origin，历史出现过双端不同步。现三层保障——① opencode 指令要求显式 `git push origin master` 与 `git push openlibing-test master`；② 脚本在 opencode 后对双远端兜底 push；③ AGENTS.md 行为约束写明"禁止裸 git push"。
 >
 > **改进方向（待定）**：当前方案是"先 fetch+ff 到本地再读"，依赖本地仓库副本与偏快进前进；更彻底方案为直接从远端读取归档（如 `git show origin/master:archive/...` 或 GitCode API），不依赖本地工作区状态、无快进冲突，成本更高，留待需要时评估。
 
@@ -72,9 +86,10 @@ Windows 计划任务（每日 07:30）
 | `collector/archive_writer.py`            | ✅ 已有 | 归档生成（json+md，东八区时间戳）                 |
 | `collector/archive_state.py`             | ✅ 已有 | run_id 去重                                       |
 | `.gitcode/workflows/collect-archive.yml` | ✅ 已有 | schedule cron + push 触发 + paths-ignore 防自触发 |
-| `skills/record-summary/SKILL.md`         | ✅ 已有 | AI 日报规则：模板/{OWNER} 占位/硬换行/不臆造      |
-| `scripts/generate_daily_summary.sh`      | ✅ 已有 | 每日总结入口（`--repo-root` 任意位置执行）        |
+| `skills/record-summary/SKILL.md`         | ✅ 已有 | AI 日报规则：模板/{OWNER} 占位/硬换行/不臆造 + step 日志按需读取 |
+| `scripts/generate_daily_summary.sh`      | ✅ 已有 | 每日总结入口（fetch+ff 同步、opencode 执行、双远端兜底 push）  |
 | `scripts/register_daily_summary.bat`     | ✅ 已有 | 注册 Windows 计划任务                             |
+| `AGENTS.md`                              | ✅ 已有 | 本仓项目级约束：AI 总结只读 archive、不改脚本、双远端 push、Commit 规范 |
 | `requirements.txt`                       | ✅ 已有 | requests + PyYAML                                 |
 | `archive/Y*`                             | 生成    | 采集归档                                          |
 | `records/Y*`                             | 生成    | AI 日报                                           |

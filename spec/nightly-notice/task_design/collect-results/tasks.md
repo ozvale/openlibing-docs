@@ -42,3 +42,12 @@
 - [x] Task 26: 编写内网定时任务注册 `register_notify.bat`（默认 09:30）
 - [x] Task 27: 本地 dry-run 验证读取+替换+合并（--date 2026-09-13 实测通过）
 - [x] Task 28: 凭证澄清：`pat.json` 仅保留 GitCode token/api_base；WeLink 小鲁班 token 走 `tools/welink/config/token.txt` 独立注入
+
+### 优化与缺陷修复（追加）
+
+- [x] Task 29: 修复本机定时任务读不到当日 archive —— `generate_daily_summary.sh` 执行前 fetch 双远端 + fast-forward
+- [x] Task 30: 修复 ff 循环只同步第一个远端 —— 遍历所有可用远端依次 ff，避免误 break
+- [x] Task 31: archive_state 按 config 收敛 —— 采集启动 `retain()` 删除已移除仓记录；无新 run 也保存清理结果
+- [x] Task 32: 归档 md 日志收敛 —— job 成功整段省略、成功 step 无日志、失败/未执行 step 保留日志块；skill 按需读取 step 日志
+- [x] Task 33: 双远端推送兜底 —— opencode 指令显式推 origin+openlibing-test；脚本末尾兜底 push；AGENTS.md 约束禁止裸 `git push`
+- [x] Task 34: 新增本仓 `AGENTS.md` —— AI 总结只读 archive、不改脚本、Commit 规范、双远端推送约定
