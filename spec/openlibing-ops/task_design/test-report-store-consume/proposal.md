@@ -19,7 +19,7 @@ OpenLibing 平台需要新增「测试报告上报」能力：业务（测试）
 | metadata xml 归属解析 | **既有链路已覆盖** | DS 正式环境已有 SeaTunnel 任务解析存储，归属字段从现有表 JOIN 补齐 |
 | Doris 表 | raw 层 + sdi 清洗层 | raw 层统一 `raw_test_report`（原始 JSON 整份，仿 `raw_workflow_source_github`）；sdi 层一模板一表 `sdi_rd_efc_test_report_<模板名>`（rd_efc 中缀），UNIQUE KEY 兜底幂等 |
 | REST API 消费 | openlibing-ops（8098） | 独立 `ReportController`：模板元数据 + 数据查询（repo/时间/自定义字段过滤、分页），读 sdi 表 |
-| MCP 消费 | openlibing-ops（内嵌 /mcp） | Spring AI 1.1.8 + Streamable HTTP，只读查询 Tool，读 sdi 表 |
+| MCP 消费 | openlibing-ops（内嵌 MCP，**SSE 传输 `/mcp/sse`**） | Spring AI 1.1.8 + SSE（实现演进：先 Streamable HTTP `/mcp`，后因 Trae 仅支持 SSE 走浏览器 OAuth 而切 SSE）+ OAuth2.1 鉴权，只读查询 Tool，读 sdi 表 |
 | 不参与 | openlibing-sync / openlibing-metric | sync 采集迁出；metric 仅 POC 验证 MCP 机制 |
 
 本期以 **1 个模板（`triton_model_performance`）跑通全链路**，按「模板登记制」通用框架实现，后续模板零代码/低代码扩展。
@@ -32,8 +32,8 @@ OpenLibing 平台需要新增「测试报告上报」能力：业务（测试）
 2. **Doris 表**：`raw_test_report`（四元组唯一键）+ `sdi_rd_efc_test_report_triton_model_performance`（五元组唯一键）建表完成（DBA 执行）。
 3. **ops REST**：
    - `POST /report/template/list`：返回模板名 + 字段元数据 + `repoUrls`（DISTINCT 仓库列表），不暴露内部表字段。
-   - `POST /report/data/query`：按 `modelCode` + `repoUrl` + 时间范围 + 自定义字段筛选（数组 + 操作符 eq/ne/gt/gte/lt/lte/like/in，AND 组合）分页查询，字段/操作符白名单校验。
-4. **ops MCP**：`/mcp` Streamable HTTP 端点可用，`tools/list` 可见只读查询工具，`tools/call` 返回与 REST 一致。
+   - `POST /report/data/query`：按 `modelCode` + `repoUrl` + 时间范围 + 自定义字段筛选（数组 + 操作符 eq/ne/gt/gte/lt/lte/like/in/isNull/isNotNull，AND 组合）分页查询，字段/操作符白名单校验。
+4. **ops MCP**：SSE 端点 `/mcp/sse` 可用（无 token 401 + OAuth 发现，带 token 建立 SSE 并 `tools/list` 可见只读查询工具，`tools/call` 返回与 REST 一致）；鉴权走 OAuth2.1 授权码流（详见 MCP 鉴权方案文档）。
 5. **验证**：造测试数据调通「DS 工作流①采集 → raw 落库 → DS 工作流②清洗 → sdi 落库 → REST 查询 → MCP 调用」全链路；`raw_test_report.data_json` 与 OBS 原文一致（可追溯/重放）；ops `mvn compile/test` 通过。
 6. **规则沉淀**：AGENTS.md 补充「后续需求不使用 xxl-job，用 DS + SeaTunnel」规则。
 

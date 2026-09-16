@@ -1,0 +1,48 @@
+@startuml
+' MCP 方案 C 组件图：gateway 授权服务器 + ops 资源服务器
+title MCP 方案 C 系统组件图（非对称 RS256）
+
+actor "MCP 客户端\n(Trae / OpenCode)" as client
+
+package "openlibing-gateway（授权服务器）" {
+  [OAuth2Controller\n/.well-known + /oauth2/*] as gwCtrl
+  [OAuth2ClientService\n动态注册] as gwReg
+  [OAuth2AuthorizationService\nauthorize + PKCE + mock] as gwAuthz
+  [OAuth2TokenService\nRS256 私钥签发 access] as gwToken
+  database "Redis" as gwRedis
+  gwCtrl --> gwReg
+  gwCtrl --> gwAuthz
+  gwCtrl --> gwToken
+  gwReg --> gwRedis : client 注册表
+  gwAuthz --> gwRedis : 授权码（一次性）
+}
+
+package "openlibing-ops（MCP 资源服务器）" {
+  [WellKnownController\n/.well-known 发现端点(PRM/AS)] as opsWk
+  [McpAuthFilter\nRS256 公钥验签 + 401 发现头] as opsFilter
+  [McpServerConfig\nToolCallbackProvider (SSE)] as opsCfg
+  [ReportMcpTools\nlistReportTemplates / queryReportData] as opsTools
+  [ReportQueryService] as opsSvc
+  database "Doris / MySQL" as opsDb
+  opsWk --> opsFilter
+  opsFilter --> opsCfg
+  opsCfg --> opsTools
+  opsTools --> opsSvc
+  opsSvc --> opsDb
+}
+
+note top of gwToken
+  私钥（敏感）仅存 gateway，
+  公钥分发给 ops（可加密存 Nacos）
+end note
+
+note top of opsFilter
+  公钥（非敏感）加密存 Nacos，
+  运行时 security.part1 解密验签
+end note
+
+client --> gwCtrl : OAuth 授权码流（PKCE，注册/授权/token）
+client --> opsWk : 401 后 OAuth 发现（PRM → AS）
+client --> opsFilter : /mcp/sse + Bearer RS256 token
+gwToken ..> opsFilter : 公钥验签配对（同一密钥对）
+@enduml

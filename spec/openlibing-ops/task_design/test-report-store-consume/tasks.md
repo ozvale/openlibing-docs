@@ -24,14 +24,18 @@
 | A8 | `domain/mapper/report/DorisMetaMapper.java` | Doris 查 `information_schema.columns`（列白名单/必填）+ `SELECT DISTINCT repo_url` |
 | A9 | `domain/mapper/report/ReportDataMapper.java` + `resources/mapper/report/ReportDataMapper.xml` | Doris 动态表名查询：`${tableName}`（登记表白名单）+ 白名单列动态 WHERE + LIMIT 分页 |
 
-### B. MCP 消费（内嵌 Spring AI 1.1.8）
+### B. MCP 消费（内嵌 Spring AI 1.1.8，SSE 传输）
+
+> 实现演进：初版 B4 为 `protocol: STREAMABLE`（`/mcp`），后因 Trae 仅对 SSE 传输支持浏览器 OAuth 授权码流，切为 **SSE**（`/mcp/sse` + `/mcp/message`），并新增鉴权/发现端点任务（B5/B6，详见 MCP 鉴权方案文档）。
 
 | # | 文件 | 说明 |
 | --- | --- | --- |
 | B1 | `pom.xml` | `<dependencyManagement>` 加 `spring-ai-bom:1.1.8`；`<dependencies>` 加 `spring-ai-starter-mcp-server-webmvc` |
 | B2 | `api/mcp/McpServerConfig.java` | `@Bean reportMcpToolsProvider`（`MethodToolCallbackProvider`，方法名避开类名） |
 | B3 | `api/mcp/ReportMcpTools.java` | `@Tool` 暴露只读查询（listTemplates/queryReportData），复用 ReportQueryService，**方法级 `@DataSource`** |
-| B4 | `application.yaml` | `spring.ai.mcp.server`（name/protocol=STREAMABLE） |
+| B4 | `application.yaml` | `spring.ai.mcp.server`（name/protocol=**SSE**、sse-endpoint=`/mcp/sse`、sse-message-endpoint=`/mcp/message`、base-url） |
+| B5 | `api/mcp/McpAuthFilter.java` | `/mcp`、`/mcp/sse`、`/mcp/message` 鉴权：RS256 公钥验签 + 401 `WWW-Authenticate` 发现头（含 `plain:` 前缀本地明文公钥支持） |
+| B6 | `api/mcp/WellKnownController.java` | OAuth 发现端点：`/.well-known/oauth-protected-resource`（PRM，RFC 9728）+ `/.well-known/oauth-authorization-server`（RFC 8414，透传 gateway） |
 
 ### C. 测试
 
@@ -49,7 +53,7 @@
 
 ## 生成前约束（自检）
 
-- 动态 SQL：表名仅允许登记表 `table_name` 命中值；列名仅允许 information_schema 白名单；op 白名单 eq/ne/gt/gte/lt/lte/like/in
+- 动态 SQL：表名仅允许登记表 `table_name` 命中值；列名仅允许 information_schema 白名单；op 白名单 eq/ne/gt/gte/lt/lte/like/in/isNull/isNotNull
 - MCP 工具方法级 `@DataSource`（查登记表 MYSQL、查模板表 DORIS）
 - 只修改 openlibing-ops 与 openlibing-docs 范围
 - 注释中文、命名遵循现有风格（google-java-format）

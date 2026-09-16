@@ -1,0 +1,53 @@
+@startuml
+' MCP 真实三方登录链接入时序图（复用现有插件登录模式）
+title MCP authorize 接入三方登录链（复用现有 OAuth 登录基础设施）
+
+actor "浏览器\n(用户)" as browser
+participant "MCP 客户端\n(Trae)" as client
+participant "gateway\nauthorize 端点" as gwAuthz
+participant "gateway\n三方回调端点" as gwCb
+participant "三方平台\n(GitCode)" as third
+participant "ops MCP Server\n(SSE /mcp/sse)" as ops
+database "Redis" as redis
+
+== MCP 授权请求（未登录） ==
+
+client -> gwAuthz : GET /oauth2/authorize\n(client_id+redirect_uri+code_challenge)
+activate gwAuthz
+gwAuthz -> gwAuthz : 校验 client/redirect_uri/PKCE\n（复用现有逻辑）
+gwAuthz -> redis : 存 MCP 会话\n(mcp:{session}: clientId/redirectUri/challenge)
+gwAuthz --> browser : 302 三方授权页\n(state=mcp_login-{session})
+deactivate gwAuthz
+
+== 三方登录确认身份 ==
+
+browser -> third : 302 到 GitCode 授权页\n(state=mcp_login-{session})
+activate third
+third --> browser : 用户登录+同意\n302 回 gateway 回调
+deactivate third
+
+browser -> gwCb : GET /oauth2/authorization/callback/gitcode\n(code+state=mcp_login-{session})
+activate gwCb
+gwCb -> gwCb : state 校验（Redis 防伪，复用现有）
+gwCb -> gwCb : code→access_token→三方用户信息\n（复用 getPlatformAccessToken/…）
+gwCb -> gwCb : checkThreePartyExists\n→ openlibing userId/accountId
+gwCb -> redis : 取 MCP 会话
+gwCb -> gwCb : 签发 MCP 授权码 code_mcp\n（绑定真实 userId/accountId）
+gwCb --> browser : 302 MCP 客户端 redirect_uri\n?code=code_mcp&state=xxx
+deactivate gwCb
+
+browser -> client : 回跳（浏览器自动跟随）
+
+== MCP 客户端换 token 与调用 ==
+
+client -> gwAuthz : POST /oauth2/token\n(code_mcp + code_verifier)
+activate gwAuthz
+gwAuthz --> client : access_token(RS256) + refresh_token
+deactivate gwAuthz
+
+client -> ops : GET /mcp/sse + Bearer access_token
+activate ops
+ops --> client : 200 SSE 建立 + endpoint 事件\n（公钥验签通过）
+deactivate ops
+
+@enduml

@@ -12,7 +12,7 @@
 | 侧 | 职责 | 状态 |
 | --- | --- | --- |
 | **gateway** | OAuth 2.1 协议层：动态注册 / 授权 / 发 token；RS256 私钥签发 access token | 已实现（ops 团队代实现，待网关团队确认/接管） |
-| **ops** | MCP 资源服务器：`/mcp` 端点 + RS256 公钥验签 + 用户上下文 | 已实现并本地闭环验证通过 |
+| **ops** | MCP 资源服务器：`/mcp/sse`（SSE 传输）+ 发现端点 + RS256 公钥验签 + 用户上下文 | 已实现并本地全链路打通 |
 | **MCP 客户端（Trae 等）** | 标准 OAuth 授权码流（PKCE）接入，首次授权后自动续期 | 已用 Trae 端侧联调打通 |
 
 ### 1.1 为什么选非对称（RS256）
@@ -323,7 +323,9 @@ Windows: %APPDATA%\Trae CN\User\mcp.json
 - [x] SSE 端点鉴权与 Streamable HTTP 一致（无 token 401 + `WWW-Authenticate` 发现头）
 - [x] 用 Trae `type: sse` 连接走完整 OAuth 发现 → 浏览器授权 → token → SSE 全链路验证
 
-### 6.4 客户端 TLS 证书校验坑（OpenCode 实测，2026-09-15）
+### 6.4 客户端 TLS 证书校验坑（OpenCode 实测，2026-09-15，历史排查记录）
+
+> ⚠️ **本节为历史排查记录**：本地最终已用 **http 模式**绕过证书问题（见 2.3.5，`-Dserver.ssl.enabled=false` + `http://localhost`），不再需要下面这些 TLS 绕过手段；生产走 APIG 正式证书不受影响。保留本节供理解"为什么本地不能直接 https"。
 
 > 承接 6.1：服务端 401 + `WWW-Authenticate` 行为正确，但换用 OpenCode 联调时又发现新的客户端侧坑——TLS 证书校验。
 
@@ -377,4 +379,4 @@ opencode mcp auth openlibing-report      # 触发浏览器授权
 | 网关责任对齐（完整方案） | `openlibing-db-study/docs/MCP/MCP鉴权方案-gateway责任对齐.md` |
 | PM 决策讲解 | `openlibing-docs/spec/openlibing-ops/task_design/test-report-store-consume/MCP鉴权方案对齐讲解.md` |
 | MCP 生产级架构设计 | `openlibing-docs/spec/openlibing-ops/task_design/test-report-store-consume/design.md` 8.2.3 |
-| 图源文件（.puml，可改可重渲） | 本目录 `diagrams/`（mcp-plan-c-oauth-flow / mcp-plan-c-components / mcp-real-oauth-login-flow） |
+| 图源文件（.puml，可改可重渲） | 本目录 `diagrams/`（mcp-final-oauth-sse-flow / mcp-plan-c-oauth-flow / mcp-plan-c-components / mcp-real-oauth-login-flow） |

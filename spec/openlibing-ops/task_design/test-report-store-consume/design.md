@@ -315,12 +315,12 @@ source {
              t.file_name AS reportFileName, t.obs_path AS obsPath,
              t.update_time AS sourceEndTime
       FROM dwi_rd_efc_test_data_detail t
-      WHERE EXISTS (                                               /* 登记表 file_name_prefix 驱动采集范围（登记即采，多模板零 SQL 改动） */
+      WHERE EXISTS (
             SELECT 1 FROM dm_rd_efc_template_registry r
             WHERE r.table_type = 'test_report' AND r.status = 1
               AND t.file_name LIKE CONCAT(r.file_name_prefix, '%') )
-        AND t.create_time > NOW() - INTERVAL ${report_window_hours} HOUR   /* 窗口兜底：按首次上传 */
-        AND NOT EXISTS (                                            /* 反查已采 + 重试判定（update_time） */
+        AND t.create_time > NOW() - INTERVAL ${report_window_hours} HOUR
+        AND NOT EXISTS (
           SELECT 1 FROM raw_test_report r
           WHERE r.pipeline_id = t.pipeline_id
             AND r.pipeline_run_id = t.pipeline_run_id
@@ -341,7 +341,8 @@ transform {
     sk = "${OBS_SK}"
     endPoint = "obs.cn-southwest-2.myhuaweicloud.com"
     bucketName = "op-case-result"
-    obsPathField = "obsPath"   /* 完整 OBS 路径（不含桶名），直接 GET */
+    obsPathField = "obsPath"
+    sourceEndTimeField = "sourceEndTime"
     outputFieldName = "RawJson"
   }
 }
@@ -415,14 +416,14 @@ source {
             FROM raw_test_report r
             LEFT JOIN ( -- 反查：窗口内已清洗的（四元组）排除 + 重试时间比较（不新增台账表，见 6.5）
               SELECT pipeline_id, pipeline_run_id, job_id, report_file_name,
-                     MAX(source_end_time) AS max_source_end_time   /* 已清洗的最新源表结束时间 */
+                     MAX(source_end_time) AS max_source_end_time
               FROM sdi_rd_efc_test_report_triton_model_performance
               WHERE report_upload_time > NOW() - INTERVAL ${report_window_hours} HOUR
               GROUP BY pipeline_id, pipeline_run_id, job_id, report_file_name
             ) s
               ON r.pipeline_id = s.pipeline_id AND r.pipeline_run_id = s.pipeline_run_id
              AND r.job_id = s.job_id AND r.report_file_name = s.report_file_name
-            WHERE (s.pipeline_id IS NULL OR r.source_end_time > s.max_source_end_time)  /* 未清洗或重试重采（raw 更新）才处理 */
+            WHERE (s.pipeline_id IS NULL OR r.source_end_time > s.max_source_end_time)
               AND r.create_time > NOW() - INTERVAL ${report_window_hours} HOUR
               AND r.model_code = 'triton_model_performance'
           ) r
@@ -571,18 +572,20 @@ VALUES
 - `repoUrls`：仓库地址列表（一个模板可对应多个仓库），**支持多选；不传或空数组 = 查询全部仓库**（不加 repo 过滤条件）
 
 - `timeField` 白名单（workflow_start_time/workflow_end_time/report_upload_time），默认 workflow_end_time
-- `filters[].op` 白名单（eq/ne/gt/gte/lt/lte/like/in）；`filters[].field` 仅限数据资产白名单列；动态 WHERE 全白名单校验，杜绝注入
+- `filters[].op` 白名单（eq/ne/gt/gte/lt/lte/like/in/isNull/isNotNull；isNull/isNotNull 为判空操作符，无需 value，对应 SQL `IS NULL`/`IS NOT NULL`）；`filters[].field` 仅限数据资产白名单列；动态 WHERE 全白名单校验，杜绝注入
 
-### 8.2 MCP（内嵌 MCP Server，Streamable HTTP，端点 /mcp）
+### 8.2 MCP（内嵌 MCP Server；实现演进：Streamable HTTP `/mcp` → **SSE `/mcp/sse`**）
+
+> ⚠️ 实现演进（2026-09-16）：初版按 Streamable HTTP（`/mcp`）实现，后因 **Trae 仅对 SSE 传输支持浏览器 OAuth 授权码流** 切为 SSE（`/mcp/sse` + `/mcp/message`），并新增 OAuth 发现端点（`/.well-known/*`）与鉴权（详见《MCP鉴权方案C实现现状与分工总结》）。本节保留初版设计背景，以下涉及 `/mcp` 与 STREAMABLE 的表述均指初版方案。
 
 - 技术路线（POC 实测）：**Spring AI 1.1.8**（`spring-ai-bom`）+ `spring-ai-starter-mcp-server-webmvc`
 - `mcp/McpServerConfig`（`@Bean reportMcpToolsProvider`，避开类名）+ `mcp/ReportMcpTools`（`@Tool` 只读查询，**方法级 `@DataSource`**：查登记表与 Doris sdi 清洗表均标 DORIS）
-- `application.yaml`：`spring.ai.mcp.server`（name/protocol=STREAMABLE）
+- `application.yaml`：`spring.ai.mcp.server`（初版 name/protocol=STREAMABLE；**现为 protocol=SSE** + sse-endpoint/message-endpoint/base-url）
 - 复刻 metric 仓 `mcp_test` 分支 POC（`McpServerConfig` + `MetricMcpTools`）+ `MCP搭建指导文档.md` 踩坑清单
 
 #### 8.2.1 MCP 设计审查补充（2026-08-24，对照 metric POC 实测）
 
-技术路线（Spring AI 1.1.8 + Streamable HTTP + 方法级 `@DataSource`）正确，但存在以下待优化点，**编码前需补齐设计**：
+技术路线（Spring AI 1.1.8 + Streamable HTTP + 方法级 `@DataSource`，**现切 SSE，见 8.2 头部演进注**）正确，但存在以下待优化点，**编码前需补齐设计**：
 
 **①（严重）MCP 工具接口设计缺失**
 - metric POC 工具仅 `Long metricCode` 单参数，本需求对标 REST `/report/data/query` 是 6 个复杂参数（modelCode / repoUrls / 时间范围 / timeField / filters[] / 分页），复杂度量级不同。

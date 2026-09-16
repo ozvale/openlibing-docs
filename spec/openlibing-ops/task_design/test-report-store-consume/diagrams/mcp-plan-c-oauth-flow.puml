@@ -1,0 +1,58 @@
+@startuml
+' MCP 方案 C 鉴权流程时序图（OAuth 2.1 授权码流 + PKCE + RS256 验签）
+title MCP 方案 C 鉴权流程（OAuth 2.1 + PKCE + RS256）
+
+actor "MCP 客户端\n(Trae)" as client
+participant "gateway\n授权服务器" as gw
+participant "ops\nMCP 资源服务器" as ops
+
+== 1. MCP OAuth 发现（无 token，SSE） ==
+
+client -> ops : GET /mcp/sse（无 Authorization）
+activate ops
+ops --> client : 401 + WWW-Authenticate:\nBearer resource_metadata="…/.well-known/oauth-protected-resource"
+deactivate ops
+
+client -> ops : GET /.well-known/oauth-protected-resource（PRM，RFC 9728）
+activate ops
+ops --> client : {"authorization_servers":[…/.well-known/oauth-authorization-server]}
+deactivate ops
+
+client -> gw : GET /.well-known/oauth-authorization-server
+activate gw
+gw --> client : 授权服务器元数据\n(authorize/token/register 端点)
+deactivate gw
+
+== 2. 动态客户端注册（RFC 7591） ==
+
+client -> gw : POST /oauth2/register\n(redirect_uris=[回环回调])
+activate gw
+gw --> client : 201 + client_id
+deactivate gw
+
+== 3. 授权（PKCE S256 强制） ==
+
+client -> gw : GET /oauth2/authorize\n(client_id + code_challenge)
+activate gw
+note right of gw : 本地验证=mock 用户模式\n生产=真实三方登录
+gw --> client : 302 Location=redirect_uri?code=xxx
+deactivate gw
+
+== 4. 换 token ==
+
+client -> gw : POST /oauth2/token\n(code + code_verifier)
+activate gw
+gw --> client : 200 + access_token(RS256 私钥签名)\n+ refresh_token
+deactivate gw
+
+== 5. MCP 工具调用（公钥验签，SSE 长连接） ==
+
+client -> ops : GET /mcp/sse + Bearer access_token
+activate ops
+note right of ops : RS256 公钥验签\n通过后解析 userId/accountId/clientId\n放入 ThreadLocal
+ops --> client : 200 SSE 建立 + endpoint 事件\n→ POST /mcp/message 调 initialize/tools
+deactivate ops
+
+client -> client : access_token 过期后\n自动用 refresh_token 续期（用户无感）
+
+@enduml
