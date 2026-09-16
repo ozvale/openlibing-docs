@@ -1,0 +1,41 @@
+@startuml
+' MCP OAuth2.1 + PKCE + SSE 最终全链路（Trae 实测打通，2026-09-16）
+title Trae(SSE) 接入 MCP OAuth2.1 全链路（最终方案）
+
+actor "用户" as user
+participant "Trae 客户端" as trae
+participant "ops MCP Server(8098)\nSSE + 发现端点" as ops
+participant "gateway 授权服务器(8073)" as gw
+
+== 1. 连接触发发现（无 token） ==
+trae -> ops : GET /mcp/sse（无 Authorization）
+ops --> trae : 401 + WWW-Authenticate:\nBearer resource_metadata="…/.well-known/oauth-protected-resource"
+trae -> ops : GET /.well-known/oauth-protected-resource（PRM，RFC 9728）
+ops --> trae : {"authorization_servers":["…8073/.well-known/oauth-authorization-server"]}
+trae -> gw : GET /.well-known/oauth-authorization-server（RFC 8414）
+gw --> trae : issuer / authorize / token / register 端点
+
+== 2. 动态注册（RFC 7591） ==
+trae -> gw : POST /oauth2/register（redirect_uris 白名单）
+gw --> trae : 201 {"client_id":"…","client_id_issued_at":…,\n"redirect_uris":[…],"grant_types":[…],\n"token_endpoint_auth_method":"none"}（snake_case）
+
+== 3. 授权（本地 mock / 生产三方） ==
+trae -> user : 提示"前往验证"
+user -> trae : 点击
+trae -> gw : GET /oauth2/authorize（code_challenge=S256 必填）
+gw --> trae : 302 redirect_uri?code=…&state=…\n（mock 模式直接发码；生产 302 GitCode →\n三方回调签发真实用户码）
+
+== 4. 换 token 并建立 SSE ==
+trae -> gw : POST /oauth2/token（code + code_verifier）
+gw --> trae : {"access_token":"<RS256 JWT>","token_type":"Bearer",\n"expires_in":1800,"refresh_token":"…","scope":"report:query"}
+trae -> ops : GET /mcp/sse + Authorization: Bearer access_token
+ops -> ops : RS256 公钥验签（claims→用户上下文）
+ops --> trae : 200 text/event-stream\nevent:endpoint\ndata: /mcp/message?sessionId=…
+trae -> ops : POST /mcp/message（initialize → tools/list → tools/call）
+ops --> trae : MCP 工具结果（复用 ReportQueryService）
+
+== 5. 自动续期（用户无感） ==
+trae -> gw : POST /oauth2/token（grant_type=refresh_token）
+gw --> trae : 新 access_token（refresh 不轮换）
+
+@enduml
