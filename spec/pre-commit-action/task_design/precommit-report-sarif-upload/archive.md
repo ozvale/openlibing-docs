@@ -4,7 +4,7 @@
 
 - 业务 Issue: [openlibing/openlibing-codecheck#190](https://gitcode.com/openlibing/openlibing-codecheck/issues/190)（社区全量代码检查方案落地）
 - 业务 PR: [openlibing/pre-commit-action#7](https://gitcode.com/openlibing/pre-commit-action/merge_requests/7)
-- docs PR: <待创建后补充>
+- docs PR: [openlibing/openlibing-docs#1016](https://gitcode.com/openlibing/openlibing-docs/merge_requests/1016)
 
 ## 交付历程
 
