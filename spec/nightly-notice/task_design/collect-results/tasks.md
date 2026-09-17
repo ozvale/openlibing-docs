@@ -51,3 +51,7 @@
 - [x] Task 32: 归档 md 日志收敛 —— job 成功整段省略、成功 step 无日志、失败/未执行 step 保留日志块；skill 按需读取 step 日志
 - [x] Task 33: 双远端推送兜底 —— opencode 指令显式推 origin+openlibing-test；脚本末尾兜底 push；AGENTS.md 约束禁止裸 `git push`
 - [x] Task 34: 新增本仓 `AGENTS.md` —— AI 总结只读 archive、不改脚本、Commit 规范、双远端推送约定
+
+### 内网通知增强（追加）
+
+- [x] Task 35: 内网工具超长分块 —— 小鲁班 `send_card` text 上限 10000 字符，26 仓合并日报 10717 超限 422；`notify_daily.py` 发送端按仓块自动分片（每片 ≤8500），多片标题带 (1/N) 序号

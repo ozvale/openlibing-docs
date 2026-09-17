@@ -137,8 +137,8 @@ Windows 计划任务（每日 07:30）
   → 内网脚本 notify_daily.py
       → 读远端仓 records/<YYYY>/<MM>/<DD>.md（A 方案：GitCode API + urllib + PAT 读 raw，不 clone）
       → 读 owner 本地配置(仓库→负责人/群组) 替换 {OWNER}
-      → 合并为一条消息
-      → 调 send_welink.py 发到 owner 群组
+      → 合并消息并自动分块（每片 ≤8500 字符，适配小鲁班 10000 上限）
+      → 调 send_welink.py 逐片发到 owner 群组（多片带 (1/N) 序号标题）
 ```
 
 ### 关键决策
@@ -150,7 +150,8 @@ Windows 计划任务（每日 07:30）
 | GitCode 认证 | 内网本地 `pat.json`（api_base + token）                                             | 独立于 workflow secret；仅用于读远端 records    |
 | WeLink 认证 | 小鲁班专属 token（`tools/welink/config/token.txt`，`send_welink.py --setup` 注入） | 与 GitCode PAT 独立，发送专用                   |
 | 发送       | 复用 `send_welink.py`（WeLinkSender.send_card）                                   | 已实测可用的发送实现，迁出 skill 复用         |
-| 消息形式   | 合并成一条群消息发到 owner 群组（`owners.yaml` 的 `receivers.default`）             | 用户指定                                      |
+| 消息形式   | 合并为一条群消息发到 owner 群组（`owners.yaml` 的 `receivers.default`）             | 用户指定                                      |
+| 超长分块   | 发送端按仓块自动分片，每片 ≤8500 字符（上限 10000），多片标题带序号（1/N）        | 26 仓日报约 1.07 万字符超限（422），发送端兜底分块，AI 总结无需压缩 |
 | 触发       | 内网本地定时（默认 09:30）                                                        | 与 AI 总结 07:30 错开，留时间差               |
 | 依赖       | Python 标准库（urllib）+ requests + PyYAML                                        | 尽量少                                        |
 
@@ -172,4 +173,4 @@ Windows 计划任务（每日 07:30）
 | 当日 records 未生成（AI 总结 07:30 失败） | 脚本检查远端文件存在，缺失时明确报错并跳过        |
 | owner 配置缺失某仓                        | 未配置的仓按 `{OWNER}` 原文保留或跳过发送，可配置 |
 | PAT 过期                                  | 读取失败/401 时明确提示重新配置                   |
-| 群消息过长                                | 合并时对超长内容截断/分仓简述                     |
+| 群消息过长（小鲁班 text 上限 10000）      | 发送端自动分块：每片 ≤8500，逐片发送，多片序号标题 |
