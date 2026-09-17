@@ -9,12 +9,14 @@ openlibing 平台使用 pre-commit 对代码仓做静态检查（detect-secrets 
 ## 功能描述
 
 **通用契约（不绑定具体工具）**
+
 - 各工具钩子把原始报告（JSON 等）输出到约定目录（默认 `/tmp/pre-commit-reports/`，插件 input `report-dir` 可覆盖）
 - **SARIF 转换由业务仓负责**：业务仓把原始报告转为 SARIF 2.1.0，文件名 `<tool>.sarif` 写入同一约定目录。转换脚本按工具各自实现（detect-secrets 用 `scripts/convert-detect-secrets-to-sarif.py`，gitleaks / 其他工具同理）
 - `pre-commit-action` 插件**不感知具体工具、不内置任何转换器**，只读取约定目录下所有 `*.sarif` 上传 OBS（public-read）并 APIG 回调后端
 - 后端解析 SARIF：优先取 `partialFingerprints.primaryLocationLineHash` 构建指纹，缺失时**后端兜底计算**（sha256(uri|startLine|ruleId)），保证任何工具都不因缺指纹而静默丢 issue
 
 **做什么**
+
 - `pre-commit-action` 插件改造：
   - 新增 npm 依赖 `@openlibing/huaweicloud-oidc-client@0.0.5` + `esdk-obs-nodejs@3.26.2` + `undici@^5.28.4`（Node16 兜底）
   - pre-commit 运行后读取报告目录（input `report-dir`，默认 `/tmp/pre-commit-reports/`）下所有 `*.sarif`，逐个上传 OBS 并回调
@@ -31,6 +33,7 @@ openlibing 平台使用 pre-commit 对代码仓做静态检查（detect-secrets 
 - `openlibing-codecheck` 后端：`StandardSarifParser.extractLocationHash` 增加指纹兜底（`primaryLocationLineHash` 缺失时按 uri+startLine+ruleId 计算）
 
 **不做什么**
+
 - 插件不提供 JSON→SARIF 转换能力（转换归属业务仓）
 - 不处理不支持报告输出的 pre-commit-hooks 钩子（trailing-whitespace 等）
 - 不做 OBS 桶的新建/权限变更（沿用现有桶）
