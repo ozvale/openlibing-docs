@@ -1,15 +1,22 @@
 # oss-pr-scan-action — 实现任务
 
-## 进度: 0/8 complete
+## 进度: 8/8 complete（PR 级插件已完成并由 workflow 实跑验证）
 
-- [ ] Task 1: 搭建插件目录骨架（oss-pr-scan-action/ + package.json + action.yml + .gitignore）
-- [ ] Task 2: 实现 index.js 核心（inputs 解析 + trivy 探测/扫描 + JSON 解析统计 + 阈值判定 + Step Summary + core.setFailed）
-- [ ] Task 3: 编写单测（mock trivy 输出：有高危/全部通过/空结果/部分字段缺失）
-- [ ] Task 4: ncc 构建 dist/index.js
-- [ ] Task 5: README.md（用法 + 输入参数 + 判定规则）
-- [ ] Task 6: `.pre-commit-config.yaml`（代码规范钩子）
-- [ ] Task 7: `.gitcode/workflows/oss-pr-scan.yml`（push:master + workflow_dispatch + pull_request 自测）
-- [ ] Task 8: 质量门禁（npm test / pre-commit 通过）+ 提交 commit
+- [x] Task 1: 搭建插件目录骨架（oss-pr-scan-action/ + package.json + action.yml + .gitignore）
+- [x] Task 2: 实现 index.js 核心（inputs 解析 + trivy 探测/扫描 + JSON 解析统计 + 阈值判定 + Step Summary + core.setFailed）
+- [x] Task 3: 编写单测（mock trivy 输出：有高危/全部通过/空结果/部分字段缺失）
+- [x] Task 4: ncc 构建 dist/index.js
+- [x] Task 5: README.md（用法 + 输入参数 + 判定规则）
+- [x] Task 6: `.pre-commit-config.yaml`（代码规范钩子）
+- [x] Task 7: `.gitcode/workflows/oss-pr-scan.yml`（push:master + workflow_dispatch + pull_request 自测）
+- [x] Task 8: 质量门禁（npm test 8/8 通过 + pre-commit 通过）+ 提交 commit
+
+### 开发中补充/修正（已并入）
+
+- [x] 执行机 trivy 环境确认（版本级机 a959 vs PR 级机 7dbc，见 design.md）
+- [x] 移除 `--skip-db-update`，对齐原脚本，漏洞库过期由 trivy 自动更新（commit `468b4c8`）
+- [x] 定位老分支漏报根因（详见对话回顾：测试跑错执行机 + 扫全量分支而非预合并）
+- [ ] 版本级插件 `oss-version-scan-action`（待开发，确认分支/是否建 issue 语义）
 
 ## 验证方式
 

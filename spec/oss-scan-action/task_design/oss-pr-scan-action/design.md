@@ -9,14 +9,14 @@
 
 ## 架构决策
 
-| 决策          | 选择                                              | 原因                                                                     |
-| ------------- | ------------------------------------------------- | ------------------------------------------------------------------------ |
-| 插件形态      | `node16` + `dist/index.js`（ncc 打包）            | 与 malicious-code / sca / pre-commit 插件一致，GitCode 当前仅支持 node16 |
-| 调 trivy 方式 | `child_process.execFileSync` 调 runner 预装 trivy | 对齐 pre-commit-action 的 node 调 CLI 范式；runner 已预装 trivy+漏洞库   |
-| 认证          | 无 OIDC / 无 AK/SK                                | 本地 trivy 扫描不调平台 API，无需凭据，规避 OIDC 白名单问题              |
-| 代码获取      | `checkout` 插件（平台自动注入 token）             | `pull_request` 事件默认检出预合并分支，无需明文 git 凭据                 |
-| 漏洞库        | 复用 runner 预置 `cache-dir`，不联网更新          | 与原脚本一致，免首次大库下载、离线快速                                   |
-| 结果输出      | Step Summary（`ATOMGIT_STEP_SUMMARY`）            | 平台支持，展示扫描信息 + 结论 + 明细                                     |
+| 决策          | 选择                                                                                   | 原因                                                                     |
+| ------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 插件形态      | `node16` + `dist/index.js`（ncc 打包）                                                 | 与 malicious-code / sca / pre-commit 插件一致，GitCode 当前仅支持 node16 |
+| 调 trivy 方式 | `child_process.execFileSync` 调 runner 预装 trivy                                      | 对齐 pre-commit-action 的 node 调 CLI 范式；runner 已预装 trivy+漏洞库   |
+| 认证          | 无 OIDC / 无 AK/SK                                                                     | 本地 trivy 扫描不调平台 API，无需凭据，规避 OIDC 白名单问题              |
+| 代码获取      | `checkout` 插件（平台自动注入 token）                                                  | `pull_request` 事件默认检出预合并分支，无需明文 git 凭据                 |
+| 漏洞库        | 复用 runner 预置 `cache-dir`；**不传 `--skip-db-update`，过期时由 trivy 自动联网更新** | 与原脚本 scan_vuls.sh 一致；保证漏洞库常新，无需人工定期下载             |
+| 结果输出      | Step Summary（`ATOMGIT_STEP_SUMMARY`）                                                 | 平台支持，展示扫描信息 + 结论 + 明细                                     |
 
 ## 涉及文件
 
@@ -47,6 +47,7 @@ run():
              --config <trivy-config 或 runner 预置>
              --cache-dir <cache-dir>
              --format json --output <tmp>/result.json <scan-target>
+    不传 --skip-db-update：trivy 检测到缓存库过期时自动联网更新（对齐原脚本，保证库常新）
     （失败重试 10 次，间隔 1s，对齐 scan_vuls.sh MAX_RETRIES）
  4. 解析 result.json:
     HIGH_CRITICAL_VULN = sum(.Results[]?.Vulnerabilities[] where Severity in [HIGH,CRITICAL])
@@ -75,24 +76,49 @@ run():
 
 ## 输入参数默认值
 
-| 参数                   | 默认值（action.yml）                                                                    |
-| ---------------------- | --------------------------------------------------------------------------------------- |
-| `ignore-vuln-count`    | `0`                                                                                     |
-| `ignore-license-count` | `0`                                                                                     |
-| `scan-target`          | `.`                                                                                     |
-| `severity`             | `HIGH,CRITICAL`                                                                         |
-| `trivy-config`         | （取 runner 预置 `/opt/cached_resources/trivy_db/trivy.yaml`，未传时跳过 `--config`）   |
-| `cache-dir`            | 空（未传时交给 trivy，但 runner 通常预置 `--cache-dir /opt/cached_resources/trivy_db`） |
-| `debug`                | `false`                                                                                 |
+| 参数                   | 默认值（action.yml）                                               |
+| ---------------------- | ------------------------------------------------------------------ |
+| `ignore-vuln-count`    | `0`                                                                |
+| `ignore-license-count` | `0`                                                                |
+| `scan-target`          | `.`                                                                |
+| `trivy-config`         | `/opt/cached_resources/trivy_db/trivy.yaml`（存在才加 `--config`） |
+| `cache-dir`            | `/opt/cached_resources/trivy_db`（存在才加 `--cache-dir`）         |
+| `debug`                | `false`                                                            |
+
+## 执行机 trivy 环境确认（2026-09-16 实测）
+
+| 项                                        | 版本级机 ecs-vul-a959                              | PR 级机 ecs-2176-7dbc               |
+| ----------------------------------------- | -------------------------------------------------- | ----------------------------------- |
+| trivy                                     | 0.69.0 @ `/usr/local/bin`                          | 0.69.1 @ `/usr/bin`（apt 安装）     |
+| 默认缓存库 `~/.cache/trivy`               | 有（3-19 旧库）                                    | 空                                  |
+| 插件用库 `/opt/cached_resources/trivy_db` | 有（9-16，1.3G）                                   | 有（9-18，1.4G）                    |
+| 漏洞库自动更新                            | trivy 默认：不带 `--skip-db-update` 时过期自动下载 | 同左（9-18 为新，无额外 cron/脚本） |
+| `ignore-unfixed`                          | `true`（trivy.yaml 预置）                          | `true`（同）                        |
+
+> 诊断结论：`trivy --version` 读的是**默认缓存**（`~/.cache/trivy`），与插件扫描用的
+> `/opt/cached_resources/trivy_db` **不是同一个库**。曾误判"a959 库旧"——实际 a959 插件库
+> 为 9-16 新库。两机均**无独立自动更新机制**，库变新源于"运行 trivy 且不带 `--skip-db-update`"
+> 时触发的自动下载；插件已对齐该行为（不传 `--skip-db-update`）。
+
+## 待确认问题（开发中遗留，需用户拍板）
+
+| #   | 问题                                            | 现状 / 选项                                                                                           |
+| --- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 1   | PR 级执行机 `runs-on` 标签                      | 7dbc 未注册 runner；建议 `["self-hosted","region=overseas","oss-scan"]`（待确认实际标签）             |
+| 2   | `ignore-unfixed: true` 是否保留                 | 原脚本 trivy.yaml 预置 `true`；插件加载同一份 yaml 保持对齐。若需报无修复漏洞，需插件显式覆盖         |
+| 3   | 漏洞库自动更新时机与网络                        | 已改由 trivy 自动更新（不传 skip-db-update）；PR 机需可访问下载源（ghcr.io），实测 a959 可下载        |
+| 4   | 版本级插件是否同期开发                          | 用户已确认同仓增加 `oss-version-scan-action`，共享核心逻辑，仅差异（分支全量 vs 预合并/是否建 issue） |
+| 5   | 多分支 workflow（master 本仓 vs main 多仓测试） | master 只扫本仓；main 保留多仓 `workflow_dispatch` 测试能力（含跨仓 checkout + ROBOT_TOKEN）          |
 
 ## 风险 & 缓解
 
-| 风险                    | 缓解                                                                                |
-| ----------------------- | ----------------------------------------------------------------------------------- |
-| trivy JSON 结构版本差异 | 用 null-safe 遍历 + 字段缺省兜底；单测 mock 真实结构                                |
-| 扫描大仓耗时            | runner 本地执行、skip-version-check、无网上库下载；超时由 workflow job timeout 兜底 |
-| trivy 未预装            | 启动前 `trivy --version` 探测，缺失则报清晰错误（提示 runner 需预置）               |
-| 预合并分支扫描语义      | checkout 默认预合并分支，与 scan_vuls.sh 预合并逻辑等价                             |
+| 风险                    | 缓解                                                                                                     |
+| ----------------------- | -------------------------------------------------------------------------------------------------------- |
+| trivy JSON 结构版本差异 | 用 null-safe 遍历 + 字段缺省兜底；单测 mock 真实结构                                                     |
+| 扫描大仓耗时            | runner 本地执行、skip-version-check；库过期时首次会自动下载（几秒~几十秒）；超时由 workflow timeout 兜底 |
+| trivy 未预装            | 启动前 `trivy --version` 探测，缺失则报清晰错误（提示 runner 需预置）                                    |
+| 预合并分支扫描语义      | checkout 默认预合并分支，与 scan_vuls.sh 预合并逻辑等价                                                  |
+| 漏洞库自动更新依赖网络  | 已对齐原脚本（不传 skip-db-update）；PR 机需可访问 ghcr.io，否则需内网镜像策略                           |
 
 ## 跨仓影响
 
