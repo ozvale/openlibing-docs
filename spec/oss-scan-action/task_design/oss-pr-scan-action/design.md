@@ -9,27 +9,29 @@
 
 ## 架构决策
 
-| 决策          | 选择                                                                                   | 原因                                                                     |
-| ------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| 插件形态      | `node16` + `dist/index.js`（ncc 打包）                                                 | 与 malicious-code / sca / pre-commit 插件一致，GitCode 当前仅支持 node16 |
-| 调 trivy 方式 | `child_process.execFileSync` 调 runner 预装 trivy                                      | 对齐 pre-commit-action 的 node 调 CLI 范式；runner 已预装 trivy+漏洞库   |
-| 认证          | 无 OIDC / 无 AK/SK                                                                     | 本地 trivy 扫描不调平台 API，无需凭据，规避 OIDC 白名单问题              |
-| 代码获取      | `checkout` 插件（平台自动注入 token）                                                  | `pull_request` 事件默认检出预合并分支，无需明文 git 凭据                 |
-| 漏洞库        | 复用 runner 预置 `cache-dir`；**不传 `--skip-db-update`，过期时由 trivy 自动联网更新** | 与原脚本 scan_vuls.sh 一致；保证漏洞库常新，无需人工定期下载             |
-| 结果输出      | Step Summary（`ATOMGIT_STEP_SUMMARY`）                                                 | 平台支持，展示扫描信息 + 结论 + 明细                                     |
+| 决策          | 选择                                                                                   | 原因                                                                          |
+| ------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 插件形态      | `node16` + `dist/index.js`（ncc 打包）                                                 | 与 malicious-code / sca / pre-commit 插件一致，GitCode 当前仅支持 node16      |
+| 调 trivy 方式 | `child_process.execFileSync` 调 runner 预装 trivy                                      | 对齐 pre-commit-action 的 node 调 CLI 范式；runner 已预装 trivy+漏洞库        |
+| 认证          | 无 OIDC / 无 AK/SK                                                                     | 本地 trivy 扫描不调平台 API，无需凭据，规避 OIDC 白名单问题                   |
+| 代码获取      | `checkout` 插件（平台自动注入 token）                                                  | `pull_request` 事件默认检出预合并分支，无需明文 git 凭据                      |
+| 漏洞库        | 复用 runner 预置 `cache-dir`；**不传 `--skip-db-update`，过期时由 trivy 自动联网更新** | 与原脚本 scan_vuls.sh 一致；保证漏洞库常新，无需人工定期下载                  |
+| 结果输出      | Step Summary（`ATOMGIT_STEP_SUMMARY`）                                                 | 平台支持，展示扫描信息 + 结论 + 明细                                          |
+| 共享核心      | 抽取 `shared/index.js`，PR/version 复用                                                | 两插件逻辑一致（版本级不建 issue 后），单一维护点；PR 级重构为薄入口引 shared |
 
 ## 涉及文件
 
-| 文件                                 | 操作             | 说明                                   |
-| ------------------------------------ | ---------------- | -------------------------------------- |
-| `oss-pr-scan-action/action.yml`      | 新增             | 插件元数据（inputs/runs）              |
-| `oss-pr-scan-action/index.js`        | 新增             | 插件源码入口                           |
-| `oss-pr-scan-action/package.json`    | 新增             | `@actions/core` + `@vercel/ncc`        |
-| `oss-pr-scan-action/dist/index.js`   | 新增（构建产物） | ncc 打包结果，供 workflow `uses`       |
-| `oss-pr-scan-action/test/*.test.js`  | 新增             | 核心逻辑单测（mock trivy 输出）        |
-| `oss-pr-scan-action/README.md`       | 新增             | 使用文档                               |
-| `.gitcode/workflows/oss-pr-scan.yml` | 新增             | 本仓自测 workflow（会用插件扫自己）    |
-| `.pre-commit-config.yaml`            | 新增             | 代码规范钩子（对标 malicious-code 仓） |
+| 文件                                 | 操作              | 说明                                    |
+| ------------------------------------ | ----------------- | --------------------------------------- |
+| `shared/index.js`                    | 新增（抽取）      | 共享门禁引擎（扫描/解析/判定/summary）  |
+| `oss-pr-scan-action/action.yml`      | 新增              | 插件元数据（inputs/runs）               |
+| `oss-pr-scan-action/index.js`        | 新增→重构为薄入口 | 引 shared，行为不变                     |
+| `oss-pr-scan-action/package.json`    | 新增              | `@actions/core` + `@vercel/ncc`         |
+| `oss-pr-scan-action/dist/index.js`   | 新增（构建产物）  | ncc 打包结果（内联 shared+core）        |
+| `oss-pr-scan-action/test/*.test.js`  | 新增              | 核心逻辑单测（改引 shared，mock trivy） |
+| `oss-pr-scan-action/README.md`       | 新增              | 使用文档                                |
+| `.gitcode/workflows/oss-pr-scan.yml` | 新增              | 本仓自测 workflow（会用插件扫自己）     |
+| `.pre-commit-config.yaml`            | 新增              | 代码规范钩子（对标 malicious-code 仓）  |
 
 ## 核心逻辑（index.js）
 
