@@ -55,3 +55,4 @@
 ### 内网通知增强（追加）
 
 - [x] Task 35: 内网工具超长分块 —— 小鲁班 `send_card` text 上限 10000 字符，26 仓合并日报 10717 超限 422；`notify_daily.py` 发送端按仓块自动分片（每片 ≤8500），多片标题带 (1/N) 序号
+- [x] Task 36: 按 owner 定向发送 —— `owners.yaml` 支持 `name`（"姓名 工号"完整串替换 {OWNER}）+ `receiver`（个人工号）；`notify_daily.py` 保留总群合并发送，同时按 receiver 聚合每个负责人负责的仓定向发给本人，同一 owner 多仓合并为一条；未配置 receiver 的仓不单独发送（总群仍覆盖）
