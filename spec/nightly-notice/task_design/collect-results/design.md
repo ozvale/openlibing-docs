@@ -136,11 +136,9 @@ Windows 计划任务（每日 07:30）
 内网定时任务(09:30)
   → 内网脚本 notify_daily.py
       → 读远端仓 records/<YYYY>/<MM>/<DD>.md（A 方案：GitCode API + urllib + PAT 读 raw，不 clone）
-      → 读 owner 本地配置(仓库→负责人/群组) 替换 {OWNER}（name = "姓名 工号" 完整串）
-      → 双轨发送：
-          ① 总群：全部仓合并分块（≤8500/片），发到 receivers.default（多片带 (1/N)）
-          ② owner 定向：按 receiver(个人工号) 聚合每个负责人负责的仓，定向发给本人
-      → 调 send_welink.py 逐片发送
+      → 读 owner 本地配置(仓库→负责人/群组) 替换 {OWNER}
+      → 合并消息并自动分块（每片 ≤8500 字符，适配小鲁班 10000 上限）
+      → 调 send_welink.py 逐片发到 owner 群组（多片带 (1/N) 序号标题）
 ```
 
 ### 关键决策
@@ -152,8 +150,7 @@ Windows 计划任务（每日 07:30）
 | GitCode 认证 | 内网本地 `pat.json`（api_base + token）                                             | 独立于 workflow secret；仅用于读远端 records    |
 | WeLink 认证 | 小鲁班专属 token（`tools/welink/config/token.txt`，`send_welink.py --setup` 注入） | 与 GitCode PAT 独立，发送专用                   |
 | 发送       | 复用 `send_welink.py`（WeLinkSender.send_card）                                   | 已实测可用的发送实现，迁出 skill 复用         |
-| 消息形式   | 双轨：总群(`receivers.default`)合并发送 + 按 owner 定向发给个人工号        | 用户指定：总群兜底全员可见，负责人另收自己负责的仓详情         |
-| owner 结构 | `name: "姓名 工号"`（完整串替换 {OWNER}）+ `receiver: 个人工号`（定向目标）| 定向发送需工号私聊，同一 owner 多仓聚合为一条                 |
+| 消息形式   | 合并为一条群消息发到 owner 群组（`owners.yaml` 的 `receivers.default`）             | 用户指定                                      |
 | 超长分块   | 发送端按仓块自动分片，每片 ≤8500 字符（上限 10000），多片标题带序号（1/N）        | 26 仓日报约 1.07 万字符超限（422），发送端兜底分块，AI 总结无需压缩 |
 | 触发       | 内网本地定时（默认 09:30）                                                        | 与 AI 总结 07:30 错开，留时间差               |
 | 依赖       | Python 标准库（urllib）+ requests + PyYAML                                        | 尽量少                                        |
@@ -163,7 +160,7 @@ Windows 计划任务（每日 07:30）
 | 文件                               | 说明                                                                     |
 | ---------------------------------- | ------------------------------------------------------------------------ |
 | `tools/welink/send_welink.py`      | 从 `skills/send-welink-card/scripts/send_welink.py` 迁出（复用发送实现） |
-| `tools/notify/notify_daily.py`     | 内网通知主脚本：读远端 records → 替换 {OWNER} → 总群+owner 定向双轨发送（含超长分块） |
+| `tools/notify/notify_daily.py`     | 内网通知主脚本：读远端 records → 替换 {OWNER} → 合并 → 发送              |
 | `tools/notify/owners.example.yaml` | owner 配置示例（本地维护，不入库）                                       |
 | `tools/notify/pat.example.json`    | GitCode PAT 配置示例（api_base + token，本地维护）                       |
 | `tools/notify/register_notify.bat` | 内网定时任务注册（09:30）                                                |
