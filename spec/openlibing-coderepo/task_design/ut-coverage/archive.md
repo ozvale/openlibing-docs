@@ -7,7 +7,7 @@
   - [openlibing-coderepo #189](https://gitcode.com/openlibing/openlibing-coderepo/merge_requests/189)：head `taohuoquan:feat-ut-coverage` → base `release_20260923_iter2`
   - [openlibing-web #789](https://gitcode.com/openlibing/openlibing-web/merge_requests/789)：head `taohuoquan:feat-ut-coverage` → base `release_20260923`
 - 插件 upload-ut-action：个人仓 `taohuoquan/upload-ut-action`，分支 `feat-ut-coverage` 已推送，未提 PR
-- docs PR: 待合入后回填
+- docs PR: [openlibing-docs #1025](https://gitcode.com/openlibing/openlibing-docs/merge_requests/1025)
 
 ## 交付历程
 
