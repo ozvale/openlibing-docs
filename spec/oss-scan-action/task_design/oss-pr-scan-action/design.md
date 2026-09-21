@@ -36,8 +36,11 @@
 ## 核心逻辑（index.js）
 
 ```
-inputs: scan-target(默认.) / severity(默认HIGH,CRITICAL) / ignore-vuln-count(0)
-        / ignore-license-count(0) / trivy-config / cache-dir / debug
+inputs: scan-target(默认.) / trivy-config / cache-dir / debug
+        / vuln-critical-limit(0) / vuln-high-limit(0)
+        / vuln-medium-limit(1000) / vuln-low-limit(1000)
+        / license-critical-limit(0) / license-high-limit(0)
+        / license-medium-limit(1000) / license-low-limit(1000)
 
 run():
  1. 解析 inputs + ATOMGIT_REPOSITORY/REFSAPP
@@ -57,41 +60,49 @@ run():
              --format json --output <tmp>/result.json <scan-target>
     不传 --skip-db-update：trivy 检测到缓存库过期时自动联网更新（对齐原脚本，保证库常新）
     （失败重试 10 次，间隔 1s，对齐 scan_vuls.sh MAX_RETRIES）
- 5. 解析 result.json:
-    HIGH_CRITICAL_VULN = sum(.Results[]?.Vulnerabilities[] where Severity in [HIGH,CRITICAL])
-    HIGH_CRITICAL_LICENSE = sum(.Results[]?.Licenses[] where Severity in [HIGH,CRITICAL])
-    （空 Results / 缺字段按 0 处理，对齐 jq '.Results[]? ...' 空保护）
- 6. 判定（对齐 scan_vuls.sh 第 85 行）:
-    if 双计数均为 0 -> pass
-    elif vuln < ignore_vuln_count && license < ignore_license_count -> pass
-    else -> no pass
- 7. Step Summary: 扫描信息表 + ✅/❌ 结论 + 明细表（漏洞/license 各一张）
+ 5. 解析 result.json（四级别计数）:
+    counts.vulnCounts = { CRITICAL, HIGH, MEDIUM, LOW } 各级别漏洞数
+    counts.licenseCounts = { CRITICAL, HIGH, MEDIUM, LOW } 各级别 license 数
+    vulnItems/licenseItems = 仅 HIGH/CRITICAL 明细
+    （UNKNOWN 不统计；空 Results / 缺字段按 0 处理，含空保护）
+ 6. 判定（四级别门禁）:
+    block = (CRITICAL|HIGH 漏洞 > 对应门禁) || (CRITICAL|HIGH license > 对应门禁)
+    warnExceeded = (MEDIUM|LOW 漏洞 > 对应门禁) || (MEDIUM|LOW license > 对应门禁)
+    pass = !block        （warnExceeded 仅提示、不阻断）
+ 7. Step Summary: 扫描信息表 + 四级别计数表 + ✅/❌ 结论 + CRITICAL/HIGH 明细表
+    （MEDIUM/LOW 超门禁时追加提示行）
  8. no pass -> core.setFailed，阻断工作流
 ```
 
 ## 细节对齐 scan_vuls.sh
 
-| scan_vuls.sh                                             | 插件实现                                  |
-| -------------------------------------------------------- | ----------------------------------------- |
-| `--severity HIGH,CRITICAL,MEDIUM,LOW,UNKNOWN`            | 扫描全 severity；判定只统计 HIGH/CRITICAL |
-| `--scanners vuln,license`                                | 相同                                      |
-| 结果文件 `result-${codeBranch}-${TIMESTAMP}.json`        | tmp 目录 result.json                      |
-| `jq '.Results[]? ... .Severity == "HIGH" or "CRITICAL"'` | JS 遍历等价；`?` 空保护 = null/empty 安全 |
-| `[ -z "$count" ] → 0`                                    | JS 缺省/NaN → 0                           |
-| `count < IGNORE_COUNT`（严格小于）                       | 相同（`<` 而非 `<=`）                     |
-| 重试 10 次间隔 1s                                        | 相同                                      |
-| `exit 1` 阻断                                            | `core.setFailed`                          |
+| scan_vuls.sh                                             | 插件实现                                        |
+| -------------------------------------------------------- | ----------------------------------------------- |
+| `--severity HIGH,CRITICAL,MEDIUM,LOW,UNKNOWN`            | 扫描全部 severity；按四级别计数                 |
+| `--scanners vuln,license`                                | 相同                                            |
+| 结果文件 `result-${codeBranch}-${TIMESTAMP}.json`        | tmp 目录 result.json                            |
+| `jq '.Results[]? ... .Severity == "HIGH" or "CRITICAL"'` | JS 按级别遍历等价；`?` 空保护 = null/empty 安全 |
+| `[ -z "$count" ] → 0`                                    | JS 缺省/NaN → 0                                 |
+| `count < IGNORE_COUNT`（严格小于）                       | 四级别门禁：`count > limit` 判定超限            |
+| 重试 10 次间隔 1s                                        | 相同                                            |
+| `exit 1` 阻断                                            | `core.setFailed`                                |
 
 ## 输入参数默认值
 
-| 参数                   | 默认值（action.yml）                                               |
-| ---------------------- | ------------------------------------------------------------------ |
-| `ignore-vuln-count`    | `0`                                                                |
-| `ignore-license-count` | `0`                                                                |
-| `scan-target`          | `.`                                                                |
-| `trivy-config`         | `/opt/cached_resources/trivy_db/trivy.yaml`（存在才加 `--config`） |
-| `cache-dir`            | `/opt/cached_resources/trivy_db`（存在才加 `--cache-dir`）         |
-| `debug`                | `false`                                                            |
+| 参数                     | 默认值（action.yml）                                               |
+| ------------------------ | ------------------------------------------------------------------ |
+| `vuln-critical-limit`    | `0`（>门禁阻断）                                                   |
+| `vuln-high-limit`        | `0`（>门禁阻断）                                                   |
+| `vuln-medium-limit`      | `1000`（>门禁仅提示）                                              |
+| `vuln-low-limit`         | `1000`（>门禁仅提示）                                              |
+| `license-critical-limit` | `0`（>门禁阻断）                                                   |
+| `license-high-limit`     | `0`（>门禁阻断）                                                   |
+| `license-medium-limit`   | `1000`（>门禁仅提示）                                              |
+| `license-low-limit`      | `1000`（>门禁仅提示）                                              |
+| `scan-target`            | `.`                                                                |
+| `trivy-config`           | `/opt/cached_resources/trivy_db/trivy.yaml`（存在才加 `--config`） |
+| `cache-dir`              | `/opt/cached_resources/trivy_db`（存在才加 `--cache-dir`）         |
+| `debug`                  | `false`                                                            |
 
 ## 执行机 trivy 环境确认（2026-09-16 实测）
 

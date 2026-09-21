@@ -39,7 +39,7 @@
 module.exports = {
   scan, // async run(meta) 主流程；meta.logPrefix 标识插件
   extractRiskCounts, // 解析 trivy JSON -> {vulnCount, licenseCount, vulnItems, licenseItems}
-  judge, // 阈值判定 -> {pass, limitExceeded}
+  judge, // 四级别门禁判定 -> {pass, block, warnExceeded}
   itemsToMarkdown, // 数组 -> Markdown 表格
   resolveConfig, // scan-target/cache-dir/trivy-config 解析与存在性校验
   buildTrivyArgs, // 组装 trivy fs 参数（对齐 scan_vuls.sh）
@@ -57,15 +57,15 @@ module.exports = {
 ## 核心流程（shared.scan）
 
 ```
-1. 读 inputs（scan-target/trivy-config/cache-dir/ignore-*/debug）+ meta.logPrefix
+1. 读 inputs（scan-target/trivy-config/cache-dir/8 个 *-limit 门禁参数/debug）+ meta.logPrefix
 2. resolveConfig：解析路径 + 存在性校验
 3. checkTrivy（trivy --version 探测）
 4. runMavenResolve（方案 A）：含 pom.xml 时 mvn dependency:resolve 填充 ~/.m2
    （先离线后在线，超时 600s，失败降级）
 5. runTrivyScan：trivy fs（vuln,license，不传 --skip-db-update，重试10次）
-6. extractRiskCounts：统计 HIGH/CRITICAL 漏洞与 license
-7. judge：双0 或 双<阈值 -> pass，否则 no pass
-8. appendSummary：扫描信息表 + 统计表 + 明细表 + 结论
+6. extractRiskCounts：四级别（CRITICAL/HIGH/MEDIUM/LOW）漏洞与 license 计数，UNKNOWN 不统计
+7. judge：CRITICAL/HIGH 超门禁 -> no pass；MEDIUM/LOW 超门禁 -> warnExceeded 仅提示
+8. appendSummary：扫描信息表 + 四级别计数表 + 明细表 + 结论（MEDIUM/LOW 超时加提示行）
 9. no pass -> core.setFailed
 ```
 

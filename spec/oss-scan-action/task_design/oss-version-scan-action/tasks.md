@@ -1,6 +1,6 @@
 # oss-version-scan-action — 实现任务
 
-## 进度: 6/8 complete（共享核心 + PR/version 薄入口 + 单测 + dist + workflow 已完成；余 README/质量门禁待收尾）
+## 进度: 8/8 complete（共享核心 + PR/version 薄入口 + 单测 + dist + workflow + README 已完成）
 
 - [x] Task 1: 抽取 `shared/index.js`（从 oss-pr-scan-action 抽离扫描/解析/判定/summary 纯逻辑）
 - [x] Task 2: 重构 `oss-pr-scan-action/index.js` 为薄入口（引用 shared）+ 跑原单测回归
@@ -11,10 +11,14 @@
       `runMavenResolve` 单测补到 version 测试文件（commit `8cc3159`）
 
 - [x] Task 5: ncc 构建两个插件 dist（commit `8cc3159` 已重建含 mvn 预解析）
-- [ ] Task 6: `oss-version-scan-action/README.md`（已补 maven 环境前提；其余内容待最终评审）
-- [x] Task 7: `.gitcode/workflows/oss-version-scan.yml`（自测：workflow_dispatch）
-- [ ] Task 8: 质量门禁（npm test / pre-commit）+ 提交 commit（version 测试 18 例已绿，
-      待入主分支发布评审）
+- [x] Task 6: `oss-version-scan-action/README.md`（附 maven 环境前提 + 四级别门禁参数）
+- [x] Task 7: `.gitcode/workflows/oss-version-scan.yml`（自测：workflow_dispatch，含 8 个门禁 inputs）
+
+* [x] Task 7.5: 四级别门禁随 shared 下发：judge 四级别判定 + extractRiskCounts 四级别计数 +
+      action.yml/workflow 8 个 `*-limit` 参数 + version 单测（22 例全绿）
+      （commit master `3855f73` / main `e828128`）
+
+- [x] Task 8: 质量门禁（npm test PR 27/version 22 全绿 + pre-commit 通过）+ 提交 commit
 
 ## 验证方式
 

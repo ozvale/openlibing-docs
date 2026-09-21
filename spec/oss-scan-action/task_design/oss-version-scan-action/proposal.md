@@ -15,9 +15,8 @@ openlibing 版本级流水线「开源漏洞 + license 扫描」环节，使用�
    `workflow_dispatch` 手动触发**，schedule 待正式接入时配置。
 2. 由 `checkout` 插件检出目标分支全量代码（`token: ${{ secrets.ROBOT_TOKEN }}`，
    与多仓 checkout 一致），插件不做 git 操作。
-3. 复用共享核心 `shared/`：执行 trivy fs 扫描（vuln + license）→ 解析 JSON →
-   统计 HIGH/CRITICAL 漏洞与 license 数 → 按 ignore 阈值判定 pass/no pass →
-   写入 Step Summary。
+3. 复用共享核心 `shared/`：执行 trivy fs 扫描（vuln + license）→ 解析 JSON → 按四级别
+   统计漏洞与 license 数 → 按门禁判定 pass/no pass → 写入 Step Summary。
 4. **Maven 依赖预解析**：扫描目标下存在 `pom.xml` 时，先执行 `mvn dependency:resolve`
    （先离线 `-o` 试本地 `~/.m2`，失败再在线重试）填充本地依赖仓库，保证 trivy
    能解析出**完整传递依赖**（间接依赖中的漏洞不会被漏检）；mvn 缺失 / 无可用仓库 /
@@ -32,16 +31,23 @@ openlibing 版本级流水线「开源漏洞 + license 扫描」环节，使用�
 
 ## 输入参数（action.yml 草案）
 
-| 参数                   | 必填 | 默认值                                      | 说明                  |
-| ---------------------- | ---- | ------------------------------------------- | --------------------- |
-| `scan-target`          | 否   | `.`（工作区根目录）                         | 待扫描的代码目录路径  |
-| `trivy-config`         | 否   | `/opt/cached_resources/trivy_db/trivy.yaml` | trivy 配置文件        |
-| `cache-dir`            | 否   | `/opt/cached_resources/trivy_db`            | trivy 漏洞库缓存目录  |
-| `ignore-vuln-count`    | 否   | `0`                                         | 高危漏洞豁免个数      |
-| `ignore-license-count` | 否   | `0`                                         | 高危 license 豁免个数 |
-| `debug`                | 否   | `false`                                     | 开启调试日志          |
+| 参数                     | 必填 | 默认值                                      | 说明                               |
+| ------------------------ | ---- | ------------------------------------------- | ---------------------------------- |
+| `scan-target`            | 否   | `.`（工作区根目录）                         | 待扫描的代码目录路径               |
+| `trivy-config`           | 否   | `/opt/cached_resources/trivy_db/trivy.yaml` | trivy 配置文件                     |
+| `cache-dir`              | 否   | `/opt/cached_resources/trivy_db`            | trivy 漏洞库缓存目录               |
+| `vuln-critical-limit`    | 否   | `0`                                         | CRITICAL 漏洞门禁（>门禁阻断）     |
+| `vuln-high-limit`        | 否   | `0`                                         | HIGH 漏洞门禁（>门禁阻断）         |
+| `vuln-medium-limit`      | 否   | `1000`                                      | MEDIUM 漏洞门禁（>门禁仅提示）     |
+| `vuln-low-limit`         | 否   | `1000`                                      | LOW 漏洞门禁（>门禁仅提示）        |
+| `license-critical-limit` | 否   | `0`                                         | CRITICAL license 门禁（>门禁阻断） |
+| `license-high-limit`     | 否   | `0`                                         | HIGH license 门禁（>门禁阻断）     |
+| `license-medium-limit`   | 否   | `1000`                                      | MEDIUM license 门禁（>门禁仅提示） |
+| `license-low-limit`      | 否   | `1000`                                      | LOW license 门禁（>门禁仅提示）    |
+| `debug`                  | 否   | `false`                                     | 开启调试日志                       |
 
-> 与 PR 级插件输入完全一致；版本级不额外引入 repository/branch/create-issue 参数。
+> 与 PR 级插件输入完全一致；旧参数 `ignore-vuln-count` / `ignore-license-count` 已废弃，
+> 由上面 8 个 limit 参数取代。版本级不额外引入 repository/branch/create-issue 参数。
 
 ## 验收标准
 
