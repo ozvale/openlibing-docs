@@ -42,7 +42,13 @@ inputs: scan-target(默认.) / severity(默认HIGH,CRITICAL) / ignore-vuln-count
 run():
  1. 解析 inputs + ATOMGIT_REPOSITORY/REFSAPP
  2. 校验 trivy 存在（execFileSync('trivy','--version')）
- 3. 执行扫描:
+ 3. Maven 依赖预解析（方案 A）:
+    找 scanTarget 下含 pom.xml 的工程根目录（findMavenProjectDir，浅层递归，
+    排除 .git/node_modules/target/dist 等）；
+    存在时先 `mvn -o -q -B dependency:resolve`（离线，优先本地 ~/.m2），
+    失败再 `mvn -q -B dependency:resolve`（在线）；超时 600s；
+    mvn 缺失/无可用依赖仓库/全程失败/超时 → 降级（打日志，不阻断门禁）
+ 4. 执行扫描:
     trivy fs --skip-version-check
              --scanners vuln,license
              --severity HIGH,CRITICAL,MEDIUM,LOW,UNKNOWN  (对齐 scan_vuls.sh)
@@ -51,16 +57,16 @@ run():
              --format json --output <tmp>/result.json <scan-target>
     不传 --skip-db-update：trivy 检测到缓存库过期时自动联网更新（对齐原脚本，保证库常新）
     （失败重试 10 次，间隔 1s，对齐 scan_vuls.sh MAX_RETRIES）
- 4. 解析 result.json:
+ 5. 解析 result.json:
     HIGH_CRITICAL_VULN = sum(.Results[]?.Vulnerabilities[] where Severity in [HIGH,CRITICAL])
     HIGH_CRITICAL_LICENSE = sum(.Results[]?.Licenses[] where Severity in [HIGH,CRITICAL])
     （空 Results / 缺字段按 0 处理，对齐 jq '.Results[]? ...' 空保护）
- 5. 判定（对齐 scan_vuls.sh 第 85 行）:
+ 6. 判定（对齐 scan_vuls.sh 第 85 行）:
     if 双计数均为 0 -> pass
     elif vuln < ignore_vuln_count && license < ignore_license_count -> pass
     else -> no pass
- 6. Step Summary: 扫描信息表 + ✅/❌ 结论 + 明细表（漏洞/license 各一张）
- 7. no pass -> core.setFailed，阻断工作流
+ 7. Step Summary: 扫描信息表 + ✅/❌ 结论 + 明细表（漏洞/license 各一张）
+ 8. no pass -> core.setFailed，阻断工作流
 ```
 
 ## 细节对齐 scan_vuls.sh
@@ -102,6 +108,44 @@ run():
 > 为 9-16 新库。两机均**无独立自动更新机制**，库变新源于"运行 trivy 且不带 `--skip-db-update`"
 > 时触发的自动下载；插件已对齐该行为（不传 `--skip-db-update`）。
 
+## 运行时依赖解析漏检问题（2026-09-20 定位，方案 A 修复）
+
+### 现象
+
+同一份代码（head 370058a8）在 nightly 流水线 oss-version-scan：RUN9 扫出 9 个高危并
+FAILED，RUN12/13 却 0 漏洞 COMPLETED（漏检放行）。oss-pr-scan 同理（RUN1 9 个 vs RUN3 0 个）。
+用户最初观察为"更新漏洞库那次能扫出，nightly 不更新就扫不出"。
+
+### 根因（官方文档 + --debug 日志取证）
+
+- trivy 扫 pom.xml 时，依赖解析顺序为：项目目录 → relativePath → 本地 `~/.m2/repository` → 远程
+  `<repositories>` → **Maven Central**（`repo.maven.apache.org`）。每个依赖需拉取自身 `.pom`
+  递归解析出传递依赖。
+- 两执行机**无 `~/.m2`、无 mvn、无构建产物**，只能实时访问公共 Maven Central。
+- `--debug` 日志实锤：`[pom] Failed to fetch ... statusCode=404`（openlibing-common 等私有构件
+  本就不在公共仓库）+ 大量 `statusCode=429`（同一秒并发拉取触发服务端**限流**）+ `Repository
+error ... not found in local/remote repositories`。
+- 结果：传递依赖（CVE 主要分布处）解析不出 → 包数 10（仅直接依赖）、indirect=0、漏洞 0。
+- "更新漏洞库那次能扫出"是**时序巧合**：下载库的 60~90s 窗口恰好没撞限流；漏洞库与依赖解析是
+  **两条独立网络线**，无因果关系。
+
+### 修复（方案 A：扫描前 mvn 预解析）
+
+- 扫描目标含 pom.xml → `mvn dependency:resolve`（先离线 `-o` 后在线）填充 `~/.m2`，
+  trivy 从本地仓库解析完整传递依赖。
+- 执行机需装 JDK+Maven 并配置内网私仓（settings.xml），a959 已验证效果：包数 10→255、
+  indirect 0→245、漏洞 0→50。
+- 降级语义：mvn 缺失/失败/超时不阻断门禁，仅退回旧行为。commit `8cc3159`。
+
+### 执行机环境补充（方案 A 新增要求）
+
+| 项           | a959（版本级）                                       | 7dbc（PR 级） |
+| ------------ | ---------------------------------------------------- | ------------- |
+| JDK          | 17 @ `/usr/local/jdk-17`                             | 待同步        |
+| Maven        | 3.9.9 @ `/opt/apache-maven-3.9.9`                    | 待同步        |
+| settings.xml | 华为云 ArtGalaxy 私仓 + huaweicloud mirror（已配置） | 待同步        |
+| `~/.m2`      | 已填充（dependency:resolve 全量）                    | 待填充        |
+
 ## 待确认问题（开发中遗留，需用户拍板）
 
 | #   | 问题                                            | 现状 / 选项                                                                                           |
@@ -114,13 +158,14 @@ run():
 
 ## 风险 & 缓解
 
-| 风险                    | 缓解                                                                                                     |
-| ----------------------- | -------------------------------------------------------------------------------------------------------- |
-| trivy JSON 结构版本差异 | 用 null-safe 遍历 + 字段缺省兜底；单测 mock 真实结构                                                     |
-| 扫描大仓耗时            | runner 本地执行、skip-version-check；库过期时首次会自动下载（几秒~几十秒）；超时由 workflow timeout 兜底 |
-| trivy 未预装            | 启动前 `trivy --version` 探测，缺失则报清晰错误（提示 runner 需预置）                                    |
-| 预合并分支扫描语义      | checkout 默认预合并分支，与 scan_vuls.sh 预合并逻辑等价                                                  |
-| 漏洞库自动更新依赖网络  | 已对齐原脚本（不传 skip-db-update）；PR 机需可访问 ghcr.io，否则需内网镜像策略                           |
+| 风险                    | 缓解                                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| trivy JSON 结构版本差异 | 用 null-safe 遍历 + 字段缺省兜底；单测 mock 真实结构                                                                                                   |
+| 扫描大仓耗时            | runner 本地执行、skip-version-check；库过期时首次会自动下载（几秒~几十秒）；超时由 workflow timeout 兜底                                               |
+| trivy 未预装            | 启动前 `trivy --version` 探测，缺失则报清晰错误（提示 runner 需预置）                                                                                  |
+| 预合并分支扫描语义      | checkout 默认预合并分支，与 scan_vuls.sh 预合并逻辑等价                                                                                                |
+| 漏洞库自动更新依赖网络  | 已对齐原脚本（不传 skip-db-update）；PR 机需可访问 ghcr.io，否则需内网镜像策略                                                                         |
+| pom 传递依赖解析漏检    | 公共 Maven Central 高并发限流(429) + 私有构件 404 → 间接依赖漏洞漏检；扫描前 `mvn dependency:resolve` 预填充 `~/.m2`（方案 A，先离线后在线，失败降级） |
 
 ## 跨仓影响
 

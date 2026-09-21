@@ -44,6 +44,8 @@ module.exports = {
   resolveConfig, // scan-target/cache-dir/trivy-config 解析与存在性校验
   buildTrivyArgs, // 组装 trivy fs 参数（对齐 scan_vuls.sh）
   runTrivyScan, // 执行扫描并重试
+  findMavenProjectDir, // 查找含 pom.xml 的工程根目录（方案 A）
+  runMavenResolve, // mvn 预解析传递依赖，先离线后在线，失败降级（方案 A）
   getTimestamp,
   sleepSync,
   trimInput,
@@ -58,11 +60,13 @@ module.exports = {
 1. 读 inputs（scan-target/trivy-config/cache-dir/ignore-*/debug）+ meta.logPrefix
 2. resolveConfig：解析路径 + 存在性校验
 3. checkTrivy（trivy --version 探测）
-4. runTrivyScan：trivy fs（vuln,license，不传 --skip-db-update，重试10次）
-5. extractRiskCounts：统计 HIGH/CRITICAL 漏洞与 license
-6. judge：双0 或 双<阈值 -> pass，否则 no pass
-7. appendSummary：扫描信息表 + 统计表 + 明细表 + 结论
-8. no pass -> core.setFailed
+4. runMavenResolve（方案 A）：含 pom.xml 时 mvn dependency:resolve 填充 ~/.m2
+   （先离线后在线，超时 600s，失败降级）
+5. runTrivyScan：trivy fs（vuln,license，不传 --skip-db-update，重试10次）
+6. extractRiskCounts：统计 HIGH/CRITICAL 漏洞与 license
+7. judge：双0 或 双<阈值 -> pass，否则 no pass
+8. appendSummary：扫描信息表 + 统计表 + 明细表 + 结论
+9. no pass -> core.setFailed
 ```
 
 ## 版本级与 PR 级差异（仅这些）
@@ -76,11 +80,13 @@ module.exports = {
 
 ## 风险 & 缓解
 
-| 风险               | 缓解                                                             |
-| ------------------ | ---------------------------------------------------------------- |
-| 重构 PR 级引入回归 | 抽取后跑 PR 级既有单测回归；行为不变                             |
-| 版本级扫大仓耗时   | 与 PR 级相同重试/超时机制；workflow timeout 兜底                 |
-| schedule 触发权限  | 自测仅 workflow_dispatch；正式 schedule 需注意默认分支与定时配置 |
+| 风险                 | 缓解                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
+| 重构 PR 级引入回归   | 抽取后跑 PR 级既有单测回归；行为不变                                                           |
+| 版本级扫大仓耗时     | 与 PR 级相同重试/超时机制；workflow timeout 兜底                                               |
+| schedule 触发权限    | 自测仅 workflow_dispatch；正式 schedule 需注意默认分支与定时配置                               |
+| pom 传递依赖解析漏检 | 与 PR 级一致：扫描前 `mvn dependency:resolve` 预填充 `~/.m2`（方案 A，先离线后在线，失败降级） |
+| 执行机缺 Maven 环境  | 版本级机 a959 已装 JDK17+Maven3.9.9+ArtGalaxy 私仓配置并填充 `~/.m2`；PR 级机 7dbc 需同步部署  |
 
 ## 跨仓影响
 

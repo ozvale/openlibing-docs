@@ -1,6 +1,6 @@
 # oss-pr-scan-action — 实现任务
 
-## 进度: 8/8 complete（PR 级插件已完成并由 workflow 实跑验证）
+## 进度: 9/9 complete（PR 级插件已完成并由 workflow 实跑验证）
 
 - [x] Task 1: 搭建插件目录骨架（oss-pr-scan-action/ + package.json + action.yml + .gitignore）
 - [x] Task 2: 实现 index.js 核心（inputs 解析 + trivy 探测/扫描 + JSON 解析统计 + 阈值判定 + Step Summary + core.setFailed）
@@ -9,14 +9,21 @@
 - [x] Task 5: README.md（用法 + 输入参数 + 判定规则）
 - [x] Task 6: `.pre-commit-config.yaml`（代码规范钩子）
 - [x] Task 7: `.gitcode/workflows/oss-pr-scan.yml`（push:master + workflow_dispatch + pull_request 自测）
-- [x] Task 8: 质量门禁（npm test 8/8 通过 + pre-commit 通过）+ 提交 commit
+- [x] Task 8: 质量门禁（npm test 通过 + pre-commit 通过）+ 提交 commit
+- [x] Task 9: Maven 依赖预解析（方案 A）：shared 新增 `findMavenProjectDir` + `runMavenResolve`
+      （先离线 -o 后在线，超时 600s，失败/缺失/mvn 不存在均降级不阻断），
+      扫描目标含 pom.xml 时在 trivy 前执行，补齐传递依赖解析；补单测 +
+      重建两插件 dist（commit `8cc3159`）
 
 ### 开发中补充/修正（已并入）
 
 - [x] 执行机 trivy 环境确认（版本级机 a959 vs PR 级机 7dbc，见 design.md）
 - [x] 移除 `--skip-db-update`，对齐原脚本，漏洞库过期由 trivy 自动更新（commit `468b4c8`）
 - [x] 定位老分支漏报根因（详见对话回顾：测试跑错执行机 + 扫全量分支而非预合并）
-- [ ] 版本级插件 `oss-version-scan-action`（待开发，确认分支/是否建 issue 语义）
+- [x] 运行时依赖解析漏检根因定位 + 方案 A 修复：公共 Maven Central 限流(429)/私有构件
+      404 → 传递依赖解析不出 → 漏洞漏检 → maven 预解析填充 `~/.m2`（详见 design.md"运行时
+      依赖解析漏检问题"章节，a959 验证 10→255 包 / 0→50 漏洞，commit `8cc3159`）
+- [ ] 版本级插件 `oss-version-scan-action`（待开发完成，确认分支/是否建 issue 语义）
 
 ## 验证方式
 

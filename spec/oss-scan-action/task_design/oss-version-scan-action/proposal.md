@@ -18,7 +18,11 @@ openlibing 版本级流水线「开源漏洞 + license 扫描」环节，使用�
 3. 复用共享核心 `shared/`：执行 trivy fs 扫描（vuln + license）→ 解析 JSON →
    统计 HIGH/CRITICAL 漏洞与 license 数 → 按 ignore 阈值判定 pass/no pass →
    写入 Step Summary。
-4. 判定逻辑与 `scan_vuls.sh` 完全一致，与 `oss-pr-scan-action` 复用同一套实现。
+4. **Maven 依赖预解析**：扫描目标下存在 `pom.xml` 时，先执行 `mvn dependency:resolve`
+   （先离线 `-o` 试本地 `~/.m2`，失败再在线重试）填充本地依赖仓库，保证 trivy
+   能解析出**完整传递依赖**（间接依赖中的漏洞不会被漏检）；mvn 缺失 / 无可用仓库 /
+   全程失败 / 超时均**降级处理**，不阻断门禁。
+5. 判定逻辑与 `scan_vuls.sh` 完全一致，与 `oss-pr-scan-action` 复用同一套实现。
 
 ### 不做什么
 
@@ -45,6 +49,7 @@ openlibing 版本级流水线「开源漏洞 + license 扫描」环节，使用�
 - [ ] 判定逻辑与 `oss-pr-scan-action` 完全一致（同一 shared 实现）
 - [ ] 不通过时 `core.setFailed` 阻断流水线
 - [ ] workflow_dispatch 手动触发可指定扫描目标（任意分支全量）
+- [ ] 含 pom.xml 时先执行 `mvn dependency:resolve` 填充 `~/.m2`，传递依赖不漏检
 - [ ] 无硬编码凭据；单测覆盖解析与判定核心逻辑
 
 ## 影响范围

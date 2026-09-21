@@ -19,12 +19,16 @@
 1. 在 `pull_request`（预合并分支）/ `push: master` / `workflow_dispatch` 事件下触发。
 2. 由 `checkout` 插件检出代码（依赖平台自动注入 token，无明文 git 凭据）。
 3. 插件内执行 trivy 文件系统扫描（`trivy fs --scanners vuln,license`），复用
-   runner 预置漏洞库 cache-dir，不联网更新漏洞库。
-4. 解析 trivy JSON 结果，统计 HIGH/CRITICAL 漏洞数与 HIGH/CRITICAL license 数
+   runner 预置漏洞库 cache-dir，漏洞库过期时自动联网更新（不传 `--skip-db-update`）。
+4. **Maven 依赖预解析**：扫描目标下存在 `pom.xml` 时，先执行 `mvn dependency:resolve`
+   （先离线 `-o` 试本地 `~/.m2`，失败再在线重试）填充本地依赖仓库，保证 trivy
+   能解析出**完整传递依赖**（间接依赖中的漏洞不会被漏检）；mvn 缺失 / 无可用仓库 /
+   全程失败 / 超时均**降级处理**，不阻断门禁，仅退回"只能解析直接依赖"的旧行为。
+5. 解析 trivy JSON 结果，统计 HIGH/CRITICAL 漏洞数与 HIGH/CRITICAL license 数
    （对齐 `scan_vuls.sh` 的 jq 统计口径，含空结果保护）。
-5. pass/no pass 判定与 `scan_vuls.sh` 一致：双高风险计数均小于对应
+6. pass/no pass 判定与 `scan_vuls.sh` 一致：双高风险计数均小于对应
    ignore 阈值（默认 0）时 pass，否则 no pass 并置流水线失败。
-6. 扫描结论写入 Step Summary：扫描信息表 + 通过/未通过结论 + 高风险明细表
+7. 扫描结论写入 Step Summary：扫描信息表 + 通过/未通过结论 + 高风险明细表
    （在 `scan_vuls.sh` 文本输出的基础上扩展为 summary 表格展示）。
 
 ### 不做什么
@@ -55,6 +59,8 @@
 - [ ] 判定逻辑一致：`count < ignore 阈值` 放行，否则阻断
 - [ ] 不通过时设置 action 失败（`core.setFailed`），阻断 PR 合入
 - [ ] Step Summary 展示扫描结论与明细
+- [ ] 含 pom.xml 时先执行 `mvn dependency:resolve` 填充 `~/.m2`，trivy 能解析出传递依赖漏洞（间接依赖不漏检）
+- [ ] mvn 缺失/失败/超时降级处理，不阻断门禁
 - [ ] 无硬编码凭据、无敏感信息
 - [ ] 单测覆盖解析与判定核心逻辑（mock trivy 输出）
 
