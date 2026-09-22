@@ -5,6 +5,7 @@
 ## Goals / Non-Goals
 
 **Goals:**
+
 - 配置弹窗拆六独立配置项（指标类型/聚合方式/全部列计算/社区列展示开关/目标维度/目标类型），与后端六字段一一对应；聚合方式支持求和/平均/不聚合。
 - 目标值"启用开关（`targetEnabled`）+ 目标维度联动"：community 模式社区子表，feature 模式单值输入；保存载荷按 `targetEnabled` 裁剪目标字段。
 - 比率型禁用"全部列计算"项。
@@ -13,6 +14,7 @@
 - 兼容后端仅返回旧 `aggregationType`/`targetDirection` 的过渡期响应（含缺 `targetEnabled` 时按目标值存在性推导）。
 
 **Non-Goals:**
+
 - 不改 `StatusMatrix.vue` 矩阵状态逻辑与 `index.vue` 统计卡。
 - 不在前端做全部列二次聚合（口径由后端负责）。
 - 不引入新 UI 组件库或新依赖。
