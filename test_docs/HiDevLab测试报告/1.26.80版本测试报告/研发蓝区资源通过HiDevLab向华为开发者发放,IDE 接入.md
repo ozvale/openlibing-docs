@@ -24,8 +24,7 @@
 * **对应task(issueID)链接:**: 不涉及代码提交，没有task链接
 * **预期结果**: 机器的数据正确；发机流程正常，可以连通外网，agent安装成功能够有效的进行监控
 * **测试结果**：Passed
-* **证明截图**: 
-
+* **证明截图**: https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testsuite?branch_id=vb1n00011m6houbb&suite_id=vb1v00011ndmpt76&detail=base
 
 ---
 
