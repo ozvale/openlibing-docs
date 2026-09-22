@@ -37,14 +37,14 @@ openlibing-sbom                              openlibing-framework
 
 ### 1.4 关键技术决策
 
-| 决策点 | 选择 | 原因 |
-|--------|------|------|
-| 统计口径 | `product_statistics` 表 | `CollectStatisticsStep` 走完全流程（解析+漏洞+统计）才写入，不受 `raw_sbom.task_status` 重新触发覆盖影响 |
-| 去重方式 | `COUNT(DISTINCT product_id)` | 同一 product 多次扫描产生多条 `product_statistics` 记录，按 product 去重统计 |
-| 分布式锁 | 按 `lockName` + `FOR UPDATE` | 查询不带 `lockBy`，按锁名全量查所有实例，配合行锁防并发竞态 |
-| Feign 调用 | Eureka 服务发现 | 与已有 `VulViewClient` 同模式，不直连 URL |
-| metric 格式 | key=`involved_product_count`，值=Long | `last_value` 类型接受 bare number |
-| componentCount=0 | 跳过上报 | 减少无效请求 |
+| 决策点           | 选择                                  | 原因                                                                                                     |
+| ---------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 统计口径         | `product_statistics` 表               | `CollectStatisticsStep` 走完全流程（解析+漏洞+统计）才写入，不受 `raw_sbom.task_status` 重新触发覆盖影响 |
+| 去重方式         | `COUNT(DISTINCT product_id)`          | 同一 product 多次扫描产生多条 `product_statistics` 记录，按 product 去重统计                             |
+| 分布式锁         | 按 `lockName` + `FOR UPDATE`          | 查询不带 `lockBy`，按锁名全量查所有实例，配合行锁防并发竞态                                              |
+| Feign 调用       | Eureka 服务发现                       | 与已有 `VulViewClient` 同模式，不直连 URL                                                                |
+| metric 格式      | key=`involved_product_count`，值=Long | `last_value` 类型接受 bare number                                                                        |
+| componentCount=0 | 跳过上报                              | 减少无效请求                                                                                             |
 
 ---
 
@@ -114,13 +114,13 @@ acquireLock("sbom_dashboard_report_quartz_lock", "pod-b", 60)
 
 ### 2.3 异常处理
 
-| 场景 | 处理 |
-|------|------|
-| 单社区统计/上报失败 | `catch (Exception e)` → `logger.error` → 继续下一个社区 |
-| Feign 返回非 200 | `logger.warn` → 继续下一个社区 |
-| acquireLock 返回 false | `logger.info` → 跳过本次执行 |
-| Job 主体抛异常 | `catch (Exception e)` → `logger.error` → finally 释放锁 |
-| 锁过期时间解析失败 | `isExpired` → 返回 true（视为过期，可重入） |
+| 场景                   | 处理                                                    |
+| ---------------------- | ------------------------------------------------------- |
+| 单社区统计/上报失败    | `catch (Exception e)` → `logger.error` → 继续下一个社区 |
+| Feign 返回非 200       | `logger.warn` → 继续下一个社区                          |
+| acquireLock 返回 false | `logger.info` → 跳过本次执行                            |
+| Job 主体抛异常         | `catch (Exception e)` → `logger.error` → finally 释放锁 |
+| 锁过期时间解析失败     | `isExpired` → 返回 true（视为过期，可重入）             |
 
 ---
 
@@ -205,15 +205,15 @@ package: org.opensourceway.sbom.quartz.jobs
 
 ### 3.2 修改类
 
-| 类 | 变更 |
-|----|------|
-| `ScheduleBatchJobConfig` | 新增 `sbomDashboardReportJobDetail` + `sbomDashboardReportJobTrigger` |
-| `SbomController` | 新增 `GET /sbom-api/reportDashboard` |
-| `ProductStatisticsRepository` | 新增 `countByProductType(String)` |
-| `QuartzLockManager` (接口) | `acquireLock` 加 `expireMinutes` 参数，删除 `renewLock` |
-| `QuartzLockManagerImpl` | `acquireLock` 用 `queryLockByLockName` + `FOR UPDATE`，删除 `renewLock` |
-| `QuartzLockRepository` | 新增 `queryLockByLockName`、`deleteLock`，SQL 支持动态过期时间 |
-| `FetchMajunCveJob` | 适配新 `acquireLock` 签名，删除 `renewLock` 死代码 |
+| 类                            | 变更                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| `ScheduleBatchJobConfig`      | 新增 `sbomDashboardReportJobDetail` + `sbomDashboardReportJobTrigger`   |
+| `SbomController`              | 新增 `GET /sbom-api/reportDashboard`                                    |
+| `ProductStatisticsRepository` | 新增 `countByProductType(String)`                                       |
+| `QuartzLockManager` (接口)    | `acquireLock` 加 `expireMinutes` 参数，删除 `renewLock`                 |
+| `QuartzLockManagerImpl`       | `acquireLock` 用 `queryLockByLockName` + `FOR UPDATE`，删除 `renewLock` |
+| `QuartzLockRepository`        | 新增 `queryLockByLockName`、`deleteLock`，SQL 支持动态过期时间          |
+| `FetchMajunCveJob`            | 适配新 `acquireLock` 签名，删除 `renewLock` 死代码                      |
 
 ---
 
@@ -221,13 +221,13 @@ package: org.opensourceway.sbom.quartz.jobs
 
 ### 4.1 涉及的数据库表
 
-| 表 | 数据库 | 用途 |
-|----|--------|------|
-| `product_type` | PostgreSQL (sbom) | 查询激活社区列表 |
-| `product_statistics` | PostgreSQL (sbom) | 统计已扫描制品数（`COUNT(DISTINCT product_id)`） |
-| `product` | PostgreSQL (sbom) | JOIN 获取 `attribute ->> 'productType'` 过滤社区 |
-| `quartz_lock` | PostgreSQL (sbom) | 分布式锁表 |
-| `feature_ops_dashboard_report` | MySQL (framework) | 看板上报数据存储（framework 侧，不改动） |
+| 表                             | 数据库            | 用途                                             |
+| ------------------------------ | ----------------- | ------------------------------------------------ |
+| `product_type`                 | PostgreSQL (sbom) | 查询激活社区列表                                 |
+| `product_statistics`           | PostgreSQL (sbom) | 统计已扫描制品数（`COUNT(DISTINCT product_id)`） |
+| `product`                      | PostgreSQL (sbom) | JOIN 获取 `attribute ->> 'productType'` 过滤社区 |
+| `quartz_lock`                  | PostgreSQL (sbom) | 分布式锁表                                       |
+| `feature_ops_dashboard_report` | MySQL (framework) | 看板上报数据存储（framework 侧，不改动）         |
 
 ### 4.2 核心查询 SQL
 
@@ -278,29 +278,29 @@ DELETE FROM quartz_lock WHERE lock_name = :lockName
 
 ### 5.1 数据库查询优化
 
-| 优化点 | 说明 |
-|--------|------|
-| 查询频率 | 定时任务每日执行一次，非高频查询 |
-| JSONB 操作符 | `attribute ->> 'productType'` 取 Text 比较，非 `@>` 包含查询，减少解析开销 |
-| COUNT DISTINCT | `product_statistics.product_id` 建议建索引加速去重计数 |
-| 锁查询行锁 | `FOR UPDATE` 仅在 `acquireLock` 时短暂持锁，之后 commit 释放 |
+| 优化点         | 说明                                                                       |
+| -------------- | -------------------------------------------------------------------------- |
+| 查询频率       | 定时任务每日执行一次，非高频查询                                           |
+| JSONB 操作符   | `attribute ->> 'productType'` 取 Text 比较，非 `@>` 包含查询，减少解析开销 |
+| COUNT DISTINCT | `product_statistics.product_id` 建议建索引加速去重计数                     |
+| 锁查询行锁     | `FOR UPDATE` 仅在 `acquireLock` 时短暂持锁，之后 commit 释放               |
 
 ### 5.2 并发控制
 
-| 场景 | 处理 |
-|------|------|
-| 多实例定时触发 | `FOR UPDATE` 串行化抢锁，只有一个实例获得执行权 |
-| 定时与手动同时触发 | 同一 `lockName`，先到先得 |
-| 单个社区失败 | 独立 try-catch，不阻塞后续社区 |
+| 场景               | 处理                                            |
+| ------------------ | ----------------------------------------------- |
+| 多实例定时触发     | `FOR UPDATE` 串行化抢锁，只有一个实例获得执行权 |
+| 定时与手动同时触发 | 同一 `lockName`，先到先得                       |
+| 单个社区失败       | 独立 try-catch，不阻塞后续社区                  |
 
 ### 5.3 请求量评估
 
-| 指标 | 估算 |
-|------|------|
-| 激活社区数 | ~6 个（OpenHarmony/openEuler/openUBMC/CANN/MindIE/MindCluster） |
-| 单次 SQL 查询 | 6 次 COUNT（各社区 1 次） |
-| 单次 Feign 调用 | ≤6 次（0 则跳过） |
-| 执行时长 | <5 秒（无大数据量操作） |
+| 指标            | 估算                                                            |
+| --------------- | --------------------------------------------------------------- |
+| 激活社区数      | ~6 个（OpenHarmony/openEuler/openUBMC/CANN/MindIE/MindCluster） |
+| 单次 SQL 查询   | 6 次 COUNT（各社区 1 次）                                       |
+| 单次 Feign 调用 | ≤6 次（0 则跳过）                                               |
+| 执行时长        | <5 秒（无大数据量操作）                                         |
 
 ---
 
@@ -326,13 +326,13 @@ DELETE FROM quartz_lock WHERE lock_name = :lockName
 - **响应体**：`DataResult<Map<String,Object>>`（`code=200` 表示成功）
 - **频率限制**：单社区每日至多 1 次
 
-| 请求字段 | 类型 | 必填 | 说明 |
-|----------|------|------|------|
-| `community` | String | 否 | 社区名称 |
-| `feature` | String | 是 | 特性名（"SBOM"） |
-| `userMetrics` | Map | 是 | 用户指标（{}） |
-| `businessMetrics` | Map | 是 | `{"involved_product_count": <Long>}` |
-| `timestamp` | String | 否 | ISO 8601 时间 |
+| 请求字段          | 类型   | 必填 | 说明                                 |
+| ----------------- | ------ | ---- | ------------------------------------ |
+| `community`       | String | 否   | 社区名称                             |
+| `feature`         | String | 是   | 特性名（"SBOM"）                     |
+| `userMetrics`     | Map    | 是   | 用户指标（{}）                       |
+| `businessMetrics` | Map    | 是   | `{"involved_product_count": <Long>}` |
+| `timestamp`       | String | 否   | ISO 8601 时间                        |
 
 ---
 
@@ -349,18 +349,18 @@ DELETE FROM quartz_lock WHERE lock_name = :lockName
 
 ### 7.3 审计日志
 
-| 日志点 | 内容 |
-|--------|------|
-| Job 启动 | `start sbom dashboard report job, time: {}` |
-| Job 完成 | `finish sbom dashboard report job, coast: {} ms` |
-| 获取锁 | `acquire lock success, lockName: {}, lockBy: {}, expireMinutes: {}` |
-| 锁跳过 | `acquire lock not expire, lockName: {}, held by: {}` |
-| 锁失败 | `acquire lock failed, lockName: {}, lockBy: {}` |
-| 释放锁 | `release lock success, lockName: {}, lockBy: {}` |
-| 各社区上报成功 | `sbom dashboard report success for product type: {}` |
+| 日志点         | 内容                                                                           |
+| -------------- | ------------------------------------------------------------------------------ |
+| Job 启动       | `start sbom dashboard report job, time: {}`                                    |
+| Job 完成       | `finish sbom dashboard report job, coast: {} ms`                               |
+| 获取锁         | `acquire lock success, lockName: {}, lockBy: {}, expireMinutes: {}`            |
+| 锁跳过         | `acquire lock not expire, lockName: {}, held by: {}`                           |
+| 锁失败         | `acquire lock failed, lockName: {}, lockBy: {}`                                |
+| 释放锁         | `release lock success, lockName: {}, lockBy: {}`                               |
+| 各社区上报成功 | `sbom dashboard report success for product type: {}`                           |
 | 各社区上报异常 | `sbom dashboard report unexpected response for product type: {}, response: {}` |
-| 各社区处理失败 | `sbom dashboard report failed for product type: {}` |
-| 0 跳过 | `sbom dashboard report skip for product type: {}, no finished tasks` |
+| 各社区处理失败 | `sbom dashboard report failed for product type: {}`                            |
+| 0 跳过         | `sbom dashboard report skip for product type: {}, no finished tasks`           |
 
 ### 7.4 硬编码检查
 

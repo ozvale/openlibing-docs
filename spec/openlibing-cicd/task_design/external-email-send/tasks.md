@@ -9,11 +9,13 @@
 - [ ] Task 5: 编译验证 + 全量测试通过
 
 ## 验证方式
+
 - Phase 1：编译通过（`mvn compile -pl . -am`）
 - Phase 2：发送测试请求确认邮件送达
 - Phase 3：全量测试通过
 
 ## 生成前约束检查
+
 - [x] 只修改 `openlibing-cicd` 业务仓
 - [x] 遵循既有代码风格（华为版权头、Javadoc、SLF4J 日志）
 - [x] 避免无关重构、无关格式化

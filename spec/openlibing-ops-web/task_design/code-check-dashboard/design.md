@@ -20,13 +20,14 @@
 
 通过 `getCommonDetail<T,U>(data)`（`src/api/index.ts`）按 `category` 路由：
 
-| category | 用途 |
-|----------|------|
-| `codeCheckKpi` | KPI 汇总（8 个卡片） |
+| category         | 用途                                                                                                                               |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `codeCheckKpi`   | KPI 汇总（8 个卡片）                                                                                                               |
 | `codeCheckTrend` | 趋势接口（含 `trendMain` / `topBranch` / `topDuplication` / `duplicationDistribution` / `severityBuckets` / `totalSeverityCount`） |
-| `codeCheckRepo` | 代码仓明细表（支持 `filterKey: 'repoIds'`） |
+| `codeCheckRepo`  | 代码仓明细表（支持 `filterKey: 'repoIds'`）                                                                                        |
 
 辅以：
+
 - `getKpiSummary({ projectId, checkDate })`：单独 KPI 汇总
 - `getTrend({ projectId, checkDate })`：单次返回整个趋势聚合
 - `getRepoList({ projectId })`：代码仓候选列表（注入到明细表表头 `updateFilterList('repoName', repoList)`）
@@ -39,13 +40,13 @@
 
 ### D3: 图表选型
 
-| 分区 | ECharts 类型 | 备注 |
-|------|-------------|------|
-| 12 周增长趋势 | line（smooth，多 series） | 支持 legend scroll |
-| Top10 分支数 | bar（横向） | yAxis 反转；`buildOption` 内 `[...items].reverse()` 修柱图顺序 |
-| Top10 高重复率代码仓 | **不用 ECharts**，用 CSS 进度条 | 排行榜更适合 HTML 表现 |
-| 重复率分布 | bar（分组柱状） | 双系列 + markLine (20% 警戒线) |
-| 告警严重等级 | pie（roseType='radius'） | 玫瑰图 + 右侧图例列表；`total` 内部从 `data` 累加 |
+| 分区                 | ECharts 类型                    | 备注                                                           |
+| -------------------- | ------------------------------- | -------------------------------------------------------------- |
+| 12 周增长趋势        | line（smooth，多 series）       | 支持 legend scroll                                             |
+| Top10 分支数         | bar（横向）                     | yAxis 反转；`buildOption` 内 `[...items].reverse()` 修柱图顺序 |
+| Top10 高重复率代码仓 | **不用 ECharts**，用 CSS 进度条 | 排行榜更适合 HTML 表现                                         |
+| 重复率分布           | bar（分组柱状）                 | 双系列 + markLine (20% 警戒线)                                 |
+| 告警严重等级         | pie（roseType='radius'）        | 玫瑰图 + 右侧图例列表；`total` 内部从 `data` 累加              |
 
 ECharts 6 grid 配置：使用 `outerBoundsMode: 'same'` + `outerBoundsContain: 'axisLabel'`，不再用 `containLabel: true`（已在 6.x 弃用）。
 
@@ -59,12 +60,12 @@ ECharts 6 grid 配置：使用 `outerBoundsMode: 'same'` + `outerBoundsContain: 
   - engineering-capability 的 kpi-card 使用渐变卡背景，本页不采用；两者不复用。
 - **图标语义色映射**（`KPI_ICON_PALETTE` 4 组，循环使用）：
 
-  | idx | bg | color | 用途 |
-  |-----|-----|-------|------|
-  | 0 | `#dbeafe` | `#2563eb` | 代码仓 / 分支数 |
-  | 1 | `#e0f2fe` | `#0ea5e9` | 代码规模 / 平均函数行数 |
-  | 2 | `#fee2e2` | `#ef4444` | 静态告警数 / 代码重复率 |
-  | 3 | `#fef3c7` | `#b45309` | 未确认开源片段 / 文件重复率 |
+  | idx | bg        | color     | 用途                        |
+  | --- | --------- | --------- | --------------------------- |
+  | 0   | `#dbeafe` | `#2563eb` | 代码仓 / 分支数             |
+  | 1   | `#e0f2fe` | `#0ea5e9` | 代码规模 / 平均函数行数     |
+  | 2   | `#fee2e2` | `#ef4444` | 静态告警数 / 代码重复率     |
+  | 3   | `#fef3c7` | `#b45309` | 未确认开源片段 / 文件重复率 |
 
 - **表格**：直接用 `@/components/base-table`。
 - **顶部工具栏**：日期选择 + 刷新按钮（**不**含搜索代码仓与导出）。
@@ -91,8 +92,8 @@ ECharts 6 grid 配置：使用 `outerBoundsMode: 'same'` + `outerBoundsContain: 
 `dashboard-toolbar.vue` 用 Vue 3.5 的 `defineModel`：
 
 ```ts
-const innerDate = defineModel<string>('checkDate', { default: '' });
-const emit = defineEmits<(e: 'refresh') => void>();
+const innerDate = defineModel<string>("checkDate", { default: "" });
+const emit = defineEmits<(e: "refresh") => void>();
 ```
 
 - 日期：`v-model:check-date` 双向绑定到父级
@@ -106,39 +107,39 @@ const emit = defineEmits<(e: 'refresh') => void>();
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `src/router/routes/modules/dashboard.ts` | 修改 | 追加子路由 `code-check` |
-| `src/views/dashboard/code-check/code-check-view.vue` | 新增 | 入口 view（薄入口） |
-| `src/views/dashboard/code-check/components/dashboard-toolbar.vue` | 新增 | 顶部工具栏（日期 + 刷新） |
-| `src/views/dashboard/code-check/components/kpi-cards.vue` | 新增 | KPI 卡片区（含 kpi-card 子组件） |
-| `src/views/dashboard/code-check/components/kpi-card.vue` | 新增 | 单个 KPI 卡片 |
-| `src/views/dashboard/code-check/components/trend-chart.vue` | 新增 | 12 周增长趋势折线图 |
-| `src/views/dashboard/code-check/components/top-branch-chart.vue` | 新增 | Top10 分支数横向条形图 |
-| `src/views/dashboard/code-check/components/top-dup-rank.vue` | 新增 | Top10 高重复率代码仓排行榜 |
-| `src/views/dashboard/code-check/components/dup-rate-chart.vue` | 新增 | 重复率分布柱状图 |
-| `src/views/dashboard/code-check/components/severity-rose-chart.vue` | 新增 | 告警严重等级玫瑰图 |
-| `src/views/dashboard/code-check/components/repo-detail-table.vue` | 新增 | 代码仓明细表（含表头代码仓筛选） |
-| `src/views/dashboard/code-check/config/columns.ts` | 新增 | 表格列配置 |
-| `src/views/dashboard/code-check/style.less` | 新增 | 模块公共样式（骨架、卡片） |
-| `src/views/dashboard/code-check/utils.ts` | 新增 | 调色板（`CHART_PALETTE` / `KPI_ICON_PALETTE`） |
-| `src/api/dashboard/code-check.ts` | 新增 | `getKpiSummary` / `getTrend` |
-| `src/types/code-check.ts` | 新增 | 类型定义 |
-| `src/utils/format-value.ts` | 新增（已上提） | `formatFloat` 共享工具 |
-| `src/constants/index.ts` | 新增（已上提） | `EMPTY_VALUE` 共享常量 |
-| `src/views/dashboard/code-check/__tests__/utils.test.ts` | 新增 | 工具函数 + 调色板单测 |
-| `src/views/dashboard/code-check/__tests__/columns.test.ts` | 新增 | 列配置契约单测 |
-| `src/views/dashboard/code-check/__tests__/dashboard.e2e.test.ts` | 新增 | dashboard e2e |
+| 文件                                                                | 操作           | 说明                                           |
+| ------------------------------------------------------------------- | -------------- | ---------------------------------------------- |
+| `src/router/routes/modules/dashboard.ts`                            | 修改           | 追加子路由 `code-check`                        |
+| `src/views/dashboard/code-check/code-check-view.vue`                | 新增           | 入口 view（薄入口）                            |
+| `src/views/dashboard/code-check/components/dashboard-toolbar.vue`   | 新增           | 顶部工具栏（日期 + 刷新）                      |
+| `src/views/dashboard/code-check/components/kpi-cards.vue`           | 新增           | KPI 卡片区（含 kpi-card 子组件）               |
+| `src/views/dashboard/code-check/components/kpi-card.vue`            | 新增           | 单个 KPI 卡片                                  |
+| `src/views/dashboard/code-check/components/trend-chart.vue`         | 新增           | 12 周增长趋势折线图                            |
+| `src/views/dashboard/code-check/components/top-branch-chart.vue`    | 新增           | Top10 分支数横向条形图                         |
+| `src/views/dashboard/code-check/components/top-dup-rank.vue`        | 新增           | Top10 高重复率代码仓排行榜                     |
+| `src/views/dashboard/code-check/components/dup-rate-chart.vue`      | 新增           | 重复率分布柱状图                               |
+| `src/views/dashboard/code-check/components/severity-rose-chart.vue` | 新增           | 告警严重等级玫瑰图                             |
+| `src/views/dashboard/code-check/components/repo-detail-table.vue`   | 新增           | 代码仓明细表（含表头代码仓筛选）               |
+| `src/views/dashboard/code-check/config/columns.ts`                  | 新增           | 表格列配置                                     |
+| `src/views/dashboard/code-check/style.less`                         | 新增           | 模块公共样式（骨架、卡片）                     |
+| `src/views/dashboard/code-check/utils.ts`                           | 新增           | 调色板（`CHART_PALETTE` / `KPI_ICON_PALETTE`） |
+| `src/api/dashboard/code-check.ts`                                   | 新增           | `getKpiSummary` / `getTrend`                   |
+| `src/types/code-check.ts`                                           | 新增           | 类型定义                                       |
+| `src/utils/format-value.ts`                                         | 新增（已上提） | `formatFloat` 共享工具                         |
+| `src/constants/index.ts`                                            | 新增（已上提） | `EMPTY_VALUE` 共享常量                         |
+| `src/views/dashboard/code-check/__tests__/utils.test.ts`            | 新增           | 工具函数 + 调色板单测                          |
+| `src/views/dashboard/code-check/__tests__/columns.test.ts`          | 新增           | 列配置契约单测                                 |
+| `src/views/dashboard/code-check/__tests__/dashboard.e2e.test.ts`    | 新增           | dashboard e2e                                  |
 
 ## 风险 & 缓解
 
-| 风险 | 缓解 |
-|------|------|
-| ECharts 玫瑰图字段命名易错（`radius` vs `area`） | 按 ECharts v6 官方示例编写 |
-| 页面组件超出 400 行 | 每个分区独立组件，view 层 <100 行 |
-| 骨架样式与已有页面冲突 | 骨架 class 加 `cc-` 前缀命名空间 |
-| 表头筛选的 `filterKey` 与接口字段名不匹配 | 单元测试断言 `filterKey === 'repoIds'` |
-| ECharts 6 `containLabel` 已弃用 | 迁到 `outerBoundsMode` + `outerBoundsContain` |
+| 风险                                             | 缓解                                          |
+| ------------------------------------------------ | --------------------------------------------- |
+| ECharts 玫瑰图字段命名易错（`radius` vs `area`） | 按 ECharts v6 官方示例编写                    |
+| 页面组件超出 400 行                              | 每个分区独立组件，view 层 <100 行             |
+| 骨架样式与已有页面冲突                           | 骨架 class 加 `cc-` 前缀命名空间              |
+| 表头筛选的 `filterKey` 与接口字段名不匹配        | 单元测试断言 `filterKey === 'repoIds'`        |
+| ECharts 6 `containLabel` 已弃用                  | 迁到 `outerBoundsMode` + `outerBoundsContain` |
 
 ## 跨仓影响
 

@@ -22,7 +22,6 @@
 - **测试结果**： Passed
 - **证明截图**: https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb1o00011ca92si9&case_id=vb2100011cpo3er2&detail=result
 
-
 **2.配置扫描过滤目录_扫描结果中对应目录的文件消失**:
 
 - **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-sca/issues/36
@@ -39,8 +38,9 @@
 - **步骤三**：在社区管理页面，编辑openlibing-sca的SCANOSS规则，添加过滤目录src/main/java/com/openlibing/sca/analysis后重启执行对应的版本扫描和pr扫描
 - **预期结果**: 版本扫描和pr扫描结果中对应目录下的风险项不再显示
 - **测试结果**：Passed
-- **证明截图**: 
-https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb1o00011ca92si9&case_id=vb1v00011cppi41v&detail=result
+- **证明截图**:
+  https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb1o00011ca92si9&case_id=vb1v00011cppi41v&detail=result
+
 ---
 
 ## 3. 测试结果汇总表

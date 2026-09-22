@@ -16,17 +16,17 @@
 
 ### 9 个多选字段
 
-| 中文 | DTO List | DTO 单值 | Mapper 列 |
-|------|----------|----------|-----------|
-| 用途 | `purposes` | `purpose` | `purpose` |
-| 可见性 | `visibilities` | `visibility` | `visibility` |
-| 语言 | `repoLanguages` | `repoLanguage` | `repo_language` |
-| 状态 | `statuses` | `status`（新增） | `status` |
-| 平台 | `platforms` | `platform` | `platform` |
-| 接管 PR | `assumePrs` | `assumePr` | `assume_pr` |
-| 自动触发 | `autoTriggers` | `autoTrigger` | `auto_trigger` |
-| 开源类型 | `openSources` | — | `open_source` |
-| Webhook 状态 | `webhookStatuses` | `webhookStatus` | `webhook_status` |
+| 中文         | DTO List          | DTO 单值         | Mapper 列        |
+| ------------ | ----------------- | ---------------- | ---------------- |
+| 用途         | `purposes`        | `purpose`        | `purpose`        |
+| 可见性       | `visibilities`    | `visibility`     | `visibility`     |
+| 语言         | `repoLanguages`   | `repoLanguage`   | `repo_language`  |
+| 状态         | `statuses`        | `status`（新增） | `status`         |
+| 平台         | `platforms`       | `platform`       | `platform`       |
+| 接管 PR      | `assumePrs`       | `assumePr`       | `assume_pr`      |
+| 自动触发     | `autoTriggers`    | `autoTrigger`    | `auto_trigger`   |
+| 开源类型     | `openSources`     | —                | `open_source`    |
+| Webhook 状态 | `webhookStatuses` | `webhookStatus`  | `webhook_status` |
 
 ### 关键设计
 
@@ -37,11 +37,11 @@
 
 ## 关联 Commit
 
-| Commit | 描述 |
-|--------|------|
-| `5f7b495` | feat(repo): support filter and time field sort in query-repo（前置 #56） |
-| `042614f` | chore(repo): import List for upcoming multi-select filter work |
-| `47ace31` | feat(repo): support multi-select filter for purpose/visibility/repoLanguage/status（首批 4 字段） |
+| Commit    | 描述                                                                                                            |
+| --------- | --------------------------------------------------------------------------------------------------------------- |
+| `5f7b495` | feat(repo): support filter and time field sort in query-repo（前置 #56）                                        |
+| `042614f` | chore(repo): import List for upcoming multi-select filter work                                                  |
+| `47ace31` | feat(repo): support multi-select filter for purpose/visibility/repoLanguage/status（首批 4 字段）               |
 | `3ce1d1f` | feat(repo): extend multi-select filter to platform/assumePr/autoTrigger/openSource/webhookStatus（扩展 5 字段） |
 
 ## 修改文件

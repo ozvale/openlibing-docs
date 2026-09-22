@@ -17,6 +17,7 @@
 - commit `0db17b1` (2026-07-30) **webhook推送事件删除同一事件去重逻辑&代码风格修复** — 移除 `PushEventHandler` 的 Redis 限流逻辑（`acquireSyncLock` / `SYNC_RATE_LIMIT_*` 常量 / `OpenlibingRedis` 依赖），改由 `syncSingleBranch` 自身幂等性兜底；同步更新 `PushEventHandlerTest`（移除 `testRateLimitSkipsSync`，新增 `testDuplicatePushEventBothTriggerSync` 与 `testDifferentBranchAndOperationEventsBothTriggerSync`）；代码风格修复。9 文件 +580/-609。
 
 业务分支上还有 2 个 master 合入 commit 与 1 个 codeql workflow 更新（非 webhook 工作范围，不计入交付历程）：
+
 - `4db5805` Merge master（含废弃接口清理）
 - `0e812a3` Merge master
 - `c0f4064` update codeql action
@@ -42,8 +43,8 @@
 
 ## 设计偏差与取舍
 
-| 偏差 | 原方案 | 实际交付 | 原因 |
-|------|--------|----------|------|
+| 偏差     | 原方案                                                         | 实际交付                                                           | 原因                                                                                                                                         |
+| -------- | -------------------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | 去重策略 | Redis `trySet` 3 分钟限流，key = `webhook:push:sync:{repoUrl}` | 依赖 `syncSingleBranch` 自身幂等性（`INSERT IGNORE` + 单分支删除） | Redis 限流 key 仅用 `repoUrl` 粒度过粗，同一仓库不同分支/不同操作事件在 3 分钟窗口内被静默丢失；幂等兜底既保证重复投递安全，又不丢失合法事件 |
 
 其余设计决策与原方案一致，无其他偏差。

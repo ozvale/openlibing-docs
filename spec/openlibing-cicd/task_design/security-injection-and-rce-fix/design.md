@@ -36,11 +36,11 @@ RabbitMQ 消息 → handlePipelineFailEmail
 
 ### 方案对比
 
-| 方案 | 改动量 | 风险 | 推荐度 |
-|---|---|---|---|
-| SafeConstructor | 3 行 | 低，标准做法 | ⭐⭐⭐ 推荐 |
-| LoaderOptions + TagInspector 白名单 | 5 行 | 低 | ⭐⭐ 更强 |
-| 升级 SnakeYAML ≥ 2.0 | 依赖变更 | 传递依赖版本冲突 | ⭐ 不推荐 |
+| 方案                                | 改动量   | 风险             | 推荐度      |
+| ----------------------------------- | -------- | ---------------- | ----------- |
+| SafeConstructor                     | 3 行     | 低，标准做法     | ⭐⭐⭐ 推荐 |
+| LoaderOptions + TagInspector 白名单 | 5 行     | 低               | ⭐⭐ 更强   |
+| 升级 SnakeYAML ≥ 2.0                | 依赖变更 | 传递依赖版本冲突 | ⭐ 不推荐   |
 
 采用 **方案 1：SafeConstructor**（最小改动 + 修复彻底）。
 
@@ -63,15 +63,15 @@ Map<String, Object> root = yaml.load(yamlContent);
 
 ### 7 个测试用例
 
-| 编号 | 场景 | 预期 |
-|---|---|---|
-| 1 | 正常 YAML（含 notifications 块 + pipeline_fail + emails 列表） | 返回邮箱列表 |
-| 2 | 恶意 YAML（`!!javax.script.ScriptEngineManager []`） | 抛异常（被 catch 吞掉返回空列表） |
-| 3 | 恶意 YAML（`!!java.net.URLClassLoader []`） | 抛异常 |
-| 4 | null / 空字符串 | 返回空列表 |
-| 5 | 非法 YAML 语法 | 返回空列表（不抛异常） |
-| 6 | 无 `notifications` 键 | 返回空列表 |
-| 7 | notifications 块不含 `pipeline_fail` 类型 | 返回空列表 |
+| 编号 | 场景                                                           | 预期                              |
+| ---- | -------------------------------------------------------------- | --------------------------------- |
+| 1    | 正常 YAML（含 notifications 块 + pipeline_fail + emails 列表） | 返回邮箱列表                      |
+| 2    | 恶意 YAML（`!!javax.script.ScriptEngineManager []`）           | 抛异常（被 catch 吞掉返回空列表） |
+| 3    | 恶意 YAML（`!!java.net.URLClassLoader []`）                    | 抛异常                            |
+| 4    | null / 空字符串                                                | 返回空列表                        |
+| 5    | 非法 YAML 语法                                                 | 返回空列表（不抛异常）            |
+| 6    | 无 `notifications` 键                                          | 返回空列表                        |
+| 7    | notifications 块不含 `pipeline_fail` 类型                      | 返回空列表                        |
 
 ### 测试方式
 
@@ -79,18 +79,18 @@ Map<String, Object> root = yaml.load(yamlContent);
 
 ## 影响范围
 
-| 文件 | 行数变化 |
-|---|---|
-| `PipelineFailEmailConsumer.java` | +3 / -1（import +2、代码 +1 / -1） |
-| `PipelineFailEmailConsumerTest.java`（新建） | +111 / -0 |
+| 文件                                         | 行数变化                           |
+| -------------------------------------------- | ---------------------------------- |
+| `PipelineFailEmailConsumer.java`             | +3 / -1（import +2、代码 +1 / -1） |
+| `PipelineFailEmailConsumerTest.java`（新建） | +111 / -0                          |
 
 ## 风险与缓解
 
-| 风险 | 缓解 |
-|---|---|
-| SafeConstructor 拒绝过多类型导致正常 YAML 解析失败 | 测试用例 1 已覆盖正常 YAML 路径 |
-| 业务依赖其他 Tag（如自定义 Java Bean） | 本场景业务仅使用 Map/List/String，SafeConstructor 完全满足 |
-| 传递依赖引入更低版本 SnakeYAML | maven-enforcer-plugin 可加，但本次仅做最小修复 |
+| 风险                                               | 缓解                                                       |
+| -------------------------------------------------- | ---------------------------------------------------------- |
+| SafeConstructor 拒绝过多类型导致正常 YAML 解析失败 | 测试用例 1 已覆盖正常 YAML 路径                            |
+| 业务依赖其他 Tag（如自定义 Java Bean）             | 本场景业务仅使用 Map/List/String，SafeConstructor 完全满足 |
+| 传递依赖引入更低版本 SnakeYAML                     | maven-enforcer-plugin 可加，但本次仅做最小修复             |
 
 ## 跨仓影响
 

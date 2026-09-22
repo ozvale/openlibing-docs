@@ -28,11 +28,11 @@
 
 ## 影响范围
 
-| 文件 | 操作 | 说明 |
-|---|---|---|
-| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/service/impl/PipelineServiceImpl.java` | 修改 | `getPRAllLabels` 兼容字符串数组返回 + 兜底路径 WARN 日志 |
+| 文件                                                                                                          | 操作 | 说明                                                                               |
+| ------------------------------------------------------------------------------------------------------------- | ---- | ---------------------------------------------------------------------------------- |
+| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/service/impl/PipelineServiceImpl.java`            | 修改 | `getPRAllLabels` 兼容字符串数组返回 + 兜底路径 WARN 日志                           |
 | `openlibing-cicd/src/main/java/com/openlibing/cicd/common/config/rabbitmq/RabbitConnectionFactoryConfig.java` | 修改 | `pipelineStatusListenerContainerFactory` 加 retry interceptor + 关 default requeue |
-| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/listener/PipelineStatusUpdateConsumer.java` | 修改 | 新增 `maskSensitiveFields` + 替换 3 个日志点 |
+| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/listener/PipelineStatusUpdateConsumer.java`       | 修改 | 新增 `maskSensitiveFields` + 替换 3 个日志点                                       |
 
 ## 关联 Issue
 

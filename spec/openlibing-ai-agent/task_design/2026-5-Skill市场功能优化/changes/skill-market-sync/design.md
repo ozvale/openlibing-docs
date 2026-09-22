@@ -78,8 +78,8 @@ CREATE TABLE ai_agent_sync_tasks (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX idx_sync_task_running 
-    ON ai_agent_sync_tasks (task_type, status) 
+CREATE UNIQUE INDEX idx_sync_task_running
+    ON ai_agent_sync_tasks (task_type, status)
     WHERE status = 'running';
 ```
 
@@ -190,10 +190,10 @@ APScheduler 触发 (每天凌晨1点)
 
 #### 为什么选择粗粒度锁而非细粒度锁
 
-| 方案 | 描述 | 优点 | 缺点 |
-|------|------|------|------|
-| **粗粒度锁（当前方案）** | 任务级锁，一个实例同步全部 Skill | 实现简单；天然避免同一 Skill 被重复更新；API 请求集中在一个实例，便于控制限流 | 单实例承担全部负载；实例中途崩溃需等待 2 小时超时 |
-| 细粒度锁（Per-Skill） | 每个 Skill 一把锁，多实例可并行同步不同 Skill | 负载分散；单 Skill 失败不影响其他 | 实现复杂（需 work-queue 或 skill_lock 表）；多实例并发请求 API 加剧限流风险；需协调邮件汇总 |
+| 方案                     | 描述                                          | 优点                                                                          | 缺点                                                                                        |
+| ------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **粗粒度锁（当前方案）** | 任务级锁，一个实例同步全部 Skill              | 实现简单；天然避免同一 Skill 被重复更新；API 请求集中在一个实例，便于控制限流 | 单实例承担全部负载；实例中途崩溃需等待 2 小时超时                                           |
+| 细粒度锁（Per-Skill）    | 每个 Skill 一把锁，多实例可并行同步不同 Skill | 负载分散；单 Skill 失败不影响其他                                             | 实现复杂（需 work-queue 或 skill_lock 表）；多实例并发请求 API 加剧限流风险；需协调邮件汇总 |
 
 **选择粗粒度锁的理由：**
 
@@ -239,7 +239,7 @@ async def acquire_sync_lock(session, instance_id):
         )
     )
     existing = running.scalars().first()
-    
+
     if existing:
         # 2. 死锁兜底：超过2小时视为死锁，允许接管
         if (datetime.utcnow() - existing.started_at).total_seconds() > 7200:
@@ -250,7 +250,7 @@ async def acquire_sync_lock(session, instance_id):
             # 继续往下创建新记录
         else:
             return None  # 其他实例在执行，跳过
-    
+
     # 3. 创建新的同步任务记录（唯一索引保证只有一个实例成功）
     task = SyncTask(
         task_type="skill_sync",
@@ -287,11 +287,11 @@ async def acquire_sync_lock(session, instance_id):
 
 #### 实例崩溃恢复
 
-| 场景 | 处理方式 |
-|------|---------|
-| 实例在同步过程中崩溃 | `sync_task` 记录保持 `running` 状态，2 小时后新实例检测到超时，标记为 `failed` 并接管 |
-| 实例在同步完成后、更新状态前崩溃 | 同上，2 小时超时后重新执行（幂等，重复同步无副作用） |
-| 实例在发送邮件前崩溃 | 同步结果已写入 `sync_task.result_summary`，新实例接管后可从上次断点继续或重新执行 |
+| 场景                             | 处理方式                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------- |
+| 实例在同步过程中崩溃             | `sync_task` 记录保持 `running` 状态，2 小时后新实例检测到超时，标记为 `failed` 并接管 |
+| 实例在同步完成后、更新状态前崩溃 | 同上，2 小时超时后重新执行（幂等，重复同步无副作用）                                  |
+| 实例在发送邮件前崩溃             | 同步结果已写入 `sync_task.result_summary`，新实例接管后可从上次断点继续或重新执行     |
 
 > **幂等性保证**：同步操作是幂等的——重复拉取同一 Skill 的内容并对比更新，结果一致。因此即使因崩溃导致重新执行，也不会产生数据错误。
 
@@ -331,7 +331,7 @@ class Settings(BaseSettings):
     sync_retry_delays_server_error: str = "10,30,60"
     sync_retry_delays_rate_limited: str = "30,90,120"
     sync_retry_jitter_ratio: float = 0.25
-    
+
     # SMTP
     smtp_host: str = ""
     smtp_port: int = 465
@@ -339,7 +339,7 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_use_tls: bool = True
     admin_emails: str = ""
-    
+
     # API Tokens
     github_token: str = ""
     gitcode_token: str = ""
@@ -372,21 +372,25 @@ class Settings(BaseSettings):
 ## Alternatives Considered
 
 ### A1: 前端计算文件树 URL
+
 - 优点：后端改动最小
 - 缺点：前端需理解 sourceUrl 结构，多平台逻辑重复
 - 决定：不采用，后端计算更可靠
 
 ### A2: Celery 异步任务
+
 - 优点：更健壮的任务队列
 - 缺点：引入 Redis/RabbitMQ 依赖，架构复杂度增加
 - 决定：不采用，APScheduler 足够
 
 ### A3: 全量 clone 同步
+
 - 优点：复用现有 import_service
 - 缺点：开销大，按 Skill 粒度拉取更高效
 - 决定：不采用，按 source_url 逐个更新
 
 ### A4: Redis 分布式锁
+
 - 优点：性能更好
 - 缺点：增加 Redis 依赖
 - 决定：不采用，数据库锁足够且可记录历史

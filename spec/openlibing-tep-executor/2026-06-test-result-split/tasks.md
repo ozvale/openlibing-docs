@@ -32,11 +32,11 @@
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
+| 文件                         | 操作 | 说明                                                                  |
+| ---------------------------- | ---- | --------------------------------------------------------------------- |
 | tepexecor_frame/cte/utils.py | 修改 | get_case_log_urls 函数(约 20 行) + get_test_cases_dict 函数(约 10 行) |
-| tepexecor_frame/executor.py | 修改 | get_results 方法(约 10 行) |
-| tepexecor_frame/uniautos.py | 修改 | build_log_file 方法(约 5 行) |
+| tepexecor_frame/executor.py  | 修改 | get_results 方法(约 10 行)                                            |
+| tepexecor_frame/uniautos.py  | 修改 | build_log_file 方法(约 5 行)                                          |
 
 ## 验证方式
 

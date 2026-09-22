@@ -22,6 +22,7 @@ componentAnalysis/index.vue
 ### 数据契约
 
 `getScanProjectIssue` 接口返回的数据结构包含：
+
 - `fileName` / `file`：文件名
 - `licenseStatus` / `compatible`：兼容性状态
 - `licenseRemark` / `licenseDesc`：许可证描述
@@ -121,6 +122,7 @@ componentAnalysis/index.vue
 ### 5. 复选框列与 `handleSelectionChange`
 
 `openSourceCompliance` 分支表格已绑定 `@selection-change="handleSelectionChange"` 并维护 `multipleSelection`，`projectCompliance` 分支表格（第 450-491 行）当前没有这个绑定。需要在 `projectCompliance` 表格上新增：
+
 - 首列增加 `type="selection"` 的复选框列
 - 绑定 `@selection-change="handleSelectionChange"` 事件
 
@@ -137,11 +139,13 @@ componentAnalysis/index.vue
 ### 7. 接口契约
 
 **导出未确认接口**（后端已明确：`GET /license/export/unconfirmed`，参数仅 `community` / `platform`）：
+
 - 路径：`GET /gateway/openlibing-sca/license/export/unconfirmed`
 - 参数：`community` / `platform`
 - 在 `softWareCompent.js` 中新增 `exportUnconfirmedData` 方法
 
 **批量手动分析接口**（接口已明确：`POST /license/manualAnalysis/batch`）：
+
 - 路径：`POST /gateway/openlibing-sca/license/manualAnalysis/batch`
 - 请求体：`[{ objectId, file, fileHash, manualRiskLevel, manualDescription }]`
 - 在 `softWareCompent.js` 中新增 `batchConfirmProject` 方法
@@ -159,13 +163,13 @@ componentAnalysis/index.vue
 
 ## Risks / Trade-offs
 
-| 风险 | 缓解 |
-|------|------|
-| 「导出未确认」接口调整可能持续 | URL 和请求体集中在 `softWareCompent.js` 中，后续调整仅需改 1-2 处；当前已与后端对齐：`GET /license/export/unconfirmed`，query 参数 `community` / `platform` |
-| 批量手动分析接口请求体依赖 `multipleSelection` 中每行包含 `objectId` / `file` / `fileHash` 字段 | 若后端列表数据未返回这些字段，需补充 `getScanProjectIssue` 的字段透传；当前假定字段已存在 |
-| `projectCompliance` 分支新增复选框列后，表格行高与 `openSourceCompliance` 分支不一致 | 复用 `el-table-column type="selection" width="45"`，行高由 Element Plus 自动处理 |
-| 「导出」合并为下拉按钮后，触发按钮 `loading` 需要同时反映两个导出动作的进度 | 通过 `exportLoading \|\| exportUnconfirmedLoading` 联合判断；任一动作结束都会重置自身 loading 标志，无需额外计时器 |
-| `singleTable` ref 在 `openSourceCompliance` 分支下不存在 | `closeBox` 中通过 `activeName` 判断，未命中分支不调用 `clearSelection` |
+| 风险                                                                                            | 缓解                                                                                                                                                        |
+| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 「导出未确认」接口调整可能持续                                                                  | URL 和请求体集中在 `softWareCompent.js` 中，后续调整仅需改 1-2 处；当前已与后端对齐：`GET /license/export/unconfirmed`，query 参数 `community` / `platform` |
+| 批量手动分析接口请求体依赖 `multipleSelection` 中每行包含 `objectId` / `file` / `fileHash` 字段 | 若后端列表数据未返回这些字段，需补充 `getScanProjectIssue` 的字段透传；当前假定字段已存在                                                                   |
+| `projectCompliance` 分支新增复选框列后，表格行高与 `openSourceCompliance` 分支不一致            | 复用 `el-table-column type="selection" width="45"`，行高由 Element Plus 自动处理                                                                            |
+| 「导出」合并为下拉按钮后，触发按钮 `loading` 需要同时反映两个导出动作的进度                     | 通过 `exportLoading \|\| exportUnconfirmedLoading` 联合判断；任一动作结束都会重置自身 loading 标志，无需额外计时器                                          |
+| `singleTable` ref 在 `openSourceCompliance` 分支下不存在                                        | `closeBox` 中通过 `activeName` 判断，未命中分支不调用 `clearSelection`                                                                                      |
 
 ## Migration Plan
 

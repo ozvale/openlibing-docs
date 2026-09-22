@@ -12,13 +12,13 @@
 
 ### 功能一：scope 参数
 
-| 决策 | 选择 | 原因 |
-|------|------|------|
-| scope 取值 | `SELF` / `DEPENDENCIES` / `ALL` 三值枚举 | 覆盖典型场景：仅看当前包 / 仅看传递依赖 / 全部。`ALL` 内部为前两者并集，不引入第四种「差集」语义，避免接口膨胀 |
-| 默认值 | `SELF` | 向后兼容，既有调用方不传 `scope` 时行为不变 |
-| 实现方式 | 枚举 + `parse(String)` 静态工厂 | 集中处理 null/blank/非法值，非法值抛 `SbomRuntimeException` 由 Controller 兜底为 500；避免在 Controller / Service 多处分散判断 |
-| `VulnerabilityVo` 扩展 | 新增 `name` / `version` 字段 | `DEPENDENCIES` / `ALL` 场景下漏洞来源是多个不同包，前端需要展示漏洞归属的包名与版本；`SELF` 场景下冗余但无害 |
-| scope=ALL 去重 | DB 层 `UNION` + `DISTINCT` | 避免内存合并去重，让 PostgreSQL 完成；同时保证分页正确 |
+| 决策                   | 选择                                     | 原因                                                                                                                           |
+| ---------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| scope 取值             | `SELF` / `DEPENDENCIES` / `ALL` 三值枚举 | 覆盖典型场景：仅看当前包 / 仅看传递依赖 / 全部。`ALL` 内部为前两者并集，不引入第四种「差集」语义，避免接口膨胀                 |
+| 默认值                 | `SELF`                                   | 向后兼容，既有调用方不传 `scope` 时行为不变                                                                                    |
+| 实现方式               | 枚举 + `parse(String)` 静态工厂          | 集中处理 null/blank/非法值，非法值抛 `SbomRuntimeException` 由 Controller 兜底为 500；避免在 Controller / Service 多处分散判断 |
+| `VulnerabilityVo` 扩展 | 新增 `name` / `version` 字段             | `DEPENDENCIES` / `ALL` 场景下漏洞来源是多个不同包，前端需要展示漏洞归属的包名与版本；`SELF` 场景下冗余但无害                   |
+| scope=ALL 去重         | DB 层 `UNION` + `DISTINCT`               | 避免内存合并去重，让 PostgreSQL 完成；同时保证分页正确                                                                         |
 
 ### 功能二：传递依赖预计算缓存
 
@@ -90,40 +90,40 @@
 
 ### 功能三：dependencyCache/refresh 入参重构
 
-| 决策 | 选择 | 原因 |
-|------|------|------|
-| 入参类型 | `productName` (String) 替代 `sbomId` (UUID) | 调用方（前端 / 运维）通常只知道 `productName`，强迫先查 `sbomId` 增加调用成本；`productName` 是业务语义的稳定标识 |
-| sbomId 解析 | Service 层按 `productName` 查询 `sbomId` 后再触发预计算 | Controller 不直接接触 sbomId，保持接口契约的纯业务语义 |
-| 查不到 sbom | 抛 `SbomRuntimeException`，Controller 兜底 500 | 暴露清晰错误，避免 Controller 层分散判断 |
-| 返回体 | `{sbomId, productName, status, message}` | `productName` 让调用方核对入参，`status` 区分 `accepted` / `already_in_progress` |
-| 去重粒度 | 仍按 `sbomId` 去重（而非 `productName`） | 同一 sbomId 可能对应多个 `productName`（罕见但可能），按 sbomId 去重更精确 |
+| 决策        | 选择                                                    | 原因                                                                                                              |
+| ----------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 入参类型    | `productName` (String) 替代 `sbomId` (UUID)             | 调用方（前端 / 运维）通常只知道 `productName`，强迫先查 `sbomId` 增加调用成本；`productName` 是业务语义的稳定标识 |
+| sbomId 解析 | Service 层按 `productName` 查询 `sbomId` 后再触发预计算 | Controller 不直接接触 sbomId，保持接口契约的纯业务语义                                                            |
+| 查不到 sbom | 抛 `SbomRuntimeException`，Controller 兜底 500          | 暴露清晰错误，避免 Controller 层分散判断                                                                          |
+| 返回体      | `{sbomId, productName, status, message}`                | `productName` 让调用方核对入参，`status` 区分 `accepted` / `already_in_progress`                                  |
+| 去重粒度    | 仍按 `sbomId` 去重（而非 `productName`）                | 同一 sbomId 可能对应多个 `productName`（罕见但可能），按 sbomId 去重更精确                                        |
 
 ## 涉及文件
 
-| 文件 | 操作 | 归属功能 | 说明 |
-|------|------|----------|------|
-| `model/.../enums/VulQueryScope.java` | 新增 | 一 | SELF / DEPENDENCIES / ALL 枚举 + `parse()` 容错 |
-| `model/.../entity/PackageDependencyCache.java` | 新增 | 二 | 缓存实体，`uuid[]` 数组列 |
-| `model/.../pojo/dto/PackageIdAndSpdxId.java` | 新增 | 二 | projection DTO |
-| `model/.../pojo/vo/sbom/VulnerabilityVo.java` | 修改 | 一 | 新增 `name` / `version` 字段 |
-| `dao/PackageDependencyCacheRepository.java` | 新增 | 二 | 缓存 Repository |
-| `dao/SbomElementRelationshipRepository.java` | 修改 | 二 | 新增 projection 查询方法 |
-| `dao/PackageRepository.java` | 修改 | 二 | 新增按 spdxId 集合查 packageId 的方法 |
-| `dao/ExternalVulRefRepository.java` | 修改 | 二 | `findByPackageIdsInAndSeverityAndVulId` 改用 `= ANY(uuid[])` |
-| `api/sbom/SbomService.java` | 修改 | 一/三 | 接口签名调整 |
-| `controller/SbomController.java` | 修改 | 一/三 | 接口参数与签名调整 |
-| `service/sbom/impl/SbomServiceImpl.java` | 修改 | 一/二/三 | scope 分发、缓存查询集成、productName → sbomId 解析 |
-| `service/sbom/impl/DependencyCacheService.java` | 新增 | 二 | 缓存管理服务（构建 / 查询 / 失效 / 刷新 + 去重锁） |
-| `service/sbom/impl/DependencyGraphBuilder.java` | 新增 | 二 | BFS 传递依赖闭包计算 |
-| `service/reader/impl/spdx/SpdxReader.java` | 修改 | 二 | hook `precomputeForSbom` + `invalidateBySbom` |
-| `batch/step/PrecomputeDependencyCacheStep.java` | 新增 | 二 | spring-batch 异步预计算 step |
-| `resources/spring-batch/sbom-read-job.xml` | 修改 | 二 | 注册 step 到 job |
-| `test/.../controller/SbomControllerTest.java` | 修改 | 一/三 | 适配参数变化 |
-| `test/.../sbom/impl/DependencyCacheServiceTest.java` | 新增 | 二 | 100% line coverage |
-| `test/.../sbom/impl/DependencyGraphBuilderTest.java` | 新增 | 二 | 100% line coverage |
-| `test/.../sbom/impl/SbomServiceImplTest.java` | 修改 | 一/三 | 适配 scope 分发逻辑 |
-| `test/.../reader/impl/spdx/SpdxReaderTest.java` | 修改 | 二 | mock `DependencyCacheService` |
-| `test/.../reader/impl/spdx/SpdxWriteTest.java` | 修改 | 二 | mock `DependencyCacheService` |
+| 文件                                                 | 操作 | 归属功能 | 说明                                                         |
+| ---------------------------------------------------- | ---- | -------- | ------------------------------------------------------------ |
+| `model/.../enums/VulQueryScope.java`                 | 新增 | 一       | SELF / DEPENDENCIES / ALL 枚举 + `parse()` 容错              |
+| `model/.../entity/PackageDependencyCache.java`       | 新增 | 二       | 缓存实体，`uuid[]` 数组列                                    |
+| `model/.../pojo/dto/PackageIdAndSpdxId.java`         | 新增 | 二       | projection DTO                                               |
+| `model/.../pojo/vo/sbom/VulnerabilityVo.java`        | 修改 | 一       | 新增 `name` / `version` 字段                                 |
+| `dao/PackageDependencyCacheRepository.java`          | 新增 | 二       | 缓存 Repository                                              |
+| `dao/SbomElementRelationshipRepository.java`         | 修改 | 二       | 新增 projection 查询方法                                     |
+| `dao/PackageRepository.java`                         | 修改 | 二       | 新增按 spdxId 集合查 packageId 的方法                        |
+| `dao/ExternalVulRefRepository.java`                  | 修改 | 二       | `findByPackageIdsInAndSeverityAndVulId` 改用 `= ANY(uuid[])` |
+| `api/sbom/SbomService.java`                          | 修改 | 一/三    | 接口签名调整                                                 |
+| `controller/SbomController.java`                     | 修改 | 一/三    | 接口参数与签名调整                                           |
+| `service/sbom/impl/SbomServiceImpl.java`             | 修改 | 一/二/三 | scope 分发、缓存查询集成、productName → sbomId 解析          |
+| `service/sbom/impl/DependencyCacheService.java`      | 新增 | 二       | 缓存管理服务（构建 / 查询 / 失效 / 刷新 + 去重锁）           |
+| `service/sbom/impl/DependencyGraphBuilder.java`      | 新增 | 二       | BFS 传递依赖闭包计算                                         |
+| `service/reader/impl/spdx/SpdxReader.java`           | 修改 | 二       | hook `precomputeForSbom` + `invalidateBySbom`                |
+| `batch/step/PrecomputeDependencyCacheStep.java`      | 新增 | 二       | spring-batch 异步预计算 step                                 |
+| `resources/spring-batch/sbom-read-job.xml`           | 修改 | 二       | 注册 step 到 job                                             |
+| `test/.../controller/SbomControllerTest.java`        | 修改 | 一/三    | 适配参数变化                                                 |
+| `test/.../sbom/impl/DependencyCacheServiceTest.java` | 新增 | 二       | 100% line coverage                                           |
+| `test/.../sbom/impl/DependencyGraphBuilderTest.java` | 新增 | 二       | 100% line coverage                                           |
+| `test/.../sbom/impl/SbomServiceImplTest.java`        | 修改 | 一/三    | 适配 scope 分发逻辑                                          |
+| `test/.../reader/impl/spdx/SpdxReaderTest.java`      | 修改 | 二       | mock `DependencyCacheService`                                |
+| `test/.../reader/impl/spdx/SpdxWriteTest.java`       | 修改 | 二       | mock `DependencyCacheService`                                |
 
 ## 关键代码结构
 
@@ -330,36 +330,36 @@ POST /dependencyCache/refresh?productName=xxx
 
 ### 性能
 
-| 风险 | 缓解 |
-|------|------|
-| SBOM 规模大时同步预计算阻塞导入流程 | 同步入口只算小 SBOM；大 SBOM 走异步 step 兜底，spring-batch 自带 chunk 处理 |
+| 风险                                       | 缓解                                                                                                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| SBOM 规模大时同步预计算阻塞导入流程        | 同步入口只算小 SBOM；大 SBOM 走异步 step 兜底，spring-batch 自带 chunk 处理                                                                |
 | 传递依赖 ID 集合过大导致 `uuid[]` 单行过大 | PostgreSQL `uuid[]` 单行理论上无硬上限（受 `block_size` 约束），传递依赖闭包通常在数百到数千级别，单行可控；超大规模场景后续可考虑分片存储 |
-| BFS 内存爆炸（极深依赖链） | BFS 用迭代队列而非递归，避免栈溢出；后续可加 `visited.size()` 上限阈值告警 |
-| `= ANY(uuid[])` 在集合极大时仍慢 | 已加 `package_id` 索引；超大集合场景可后续引入物化视图或预聚合 |
+| BFS 内存爆炸（极深依赖链）                 | BFS 用迭代队列而非递归，避免栈溢出；后续可加 `visited.size()` 上限阈值告警                                                                 |
+| `= ANY(uuid[])` 在集合极大时仍慢           | 已加 `package_id` 索引；超大集合场景可后续引入物化视图或预聚合                                                                             |
 
 ### 一致性
 
-| 风险 | 缓解 |
-|------|------|
-| SBOM 重新导入后缓存未失效 | `SpdxReader` 在导入开始时调 `invalidateBySbom`，导入完成时调 `precomputeForSbom`，两步都在事务边界内 |
-| 同步入口失败导致缓存缺失 | 异步 step `PrecomputeDependencyCacheStep` 兜底补算；spring-batch 重试机制覆盖瞬时故障 |
-| REST API 重复触发导致重复计算 | `ConcurrentHashMap<sbomId, status>` 进程内去重，同一 sbomId 已在处理时立即返回 `already_in_progress` |
-| 多实例部署时去重失效 | `ConcurrentHashMap` 仅单实例有效；多实例部署由调用方保证幂等（重复触发只会重复计算，不会数据损坏，因为 `upsert` 是幂等的） |
+| 风险                          | 缓解                                                                                                                       |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| SBOM 重新导入后缓存未失效     | `SpdxReader` 在导入开始时调 `invalidateBySbom`，导入完成时调 `precomputeForSbom`，两步都在事务边界内                       |
+| 同步入口失败导致缓存缺失      | 异步 step `PrecomputeDependencyCacheStep` 兜底补算；spring-batch 重试机制覆盖瞬时故障                                      |
+| REST API 重复触发导致重复计算 | `ConcurrentHashMap<sbomId, status>` 进程内去重，同一 sbomId 已在处理时立即返回 `already_in_progress`                       |
+| 多实例部署时去重失效          | `ConcurrentHashMap` 仅单实例有效；多实例部署由调用方保证幂等（重复触发只会重复计算，不会数据损坏，因为 `upsert` 是幂等的） |
 
 ### 接口兼容性
 
-| 风险 | 缓解 |
-|------|------|
-| 既有调用方不传 `scope` 行为变化 | 默认 `SELF` 保持向后兼容，行为与原接口一致 |
+| 风险                                                                      | 缓解                                               |
+| ------------------------------------------------------------------------- | -------------------------------------------------- |
+| 既有调用方不传 `scope` 行为变化                                           | 默认 `SELF` 保持向后兼容，行为与原接口一致         |
 | `dependencyCache/refresh` 入参从 `sbomId` 改为 `productName` 是破坏性变更 | 该接口为本次同期新增，无既有调用方依赖，可安全重构 |
-| `VulnerabilityVo` 新增字段破坏旧前端 | 新增字段是向后兼容的（旧前端忽略未知字段） |
+| `VulnerabilityVo` 新增字段破坏旧前端                                      | 新增字段是向后兼容的（旧前端忽略未知字段）         |
 
 ### 数据完整性
 
-| 风险 | 缓解 |
-|------|------|
-| `package_dependency_cache` 表数据与 `sbom_element_relationship` 漂移 | 缓存失效入口 + 重算机制保证最终一致；运维可通过 REST API 手动触发重算 |
-| BFS 漏算某些传递依赖 | 严格按 `DEPENDS_ON` 关系遍历，排除 `RUNTIME_DEPENDENCY_OF` 是设计决策（非 bug）；测试覆盖多种图结构（链 / 树 / DAG / 环） |
+| 风险                                                                 | 缓解                                                                                                                      |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `package_dependency_cache` 表数据与 `sbom_element_relationship` 漂移 | 缓存失效入口 + 重算机制保证最终一致；运维可通过 REST API 手动触发重算                                                     |
+| BFS 漏算某些传递依赖                                                 | 严格按 `DEPENDS_ON` 关系遍历，排除 `RUNTIME_DEPENDENCY_OF` 是设计决策（非 bug）；测试覆盖多种图结构（链 / 树 / DAG / 环） |
 
 ## 跨仓影响
 

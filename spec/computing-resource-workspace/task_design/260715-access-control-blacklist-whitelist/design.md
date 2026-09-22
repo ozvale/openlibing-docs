@@ -15,23 +15,26 @@
 
 ### 2.1 现有鉴权拦截器
 
-| 拦截器 | 路径 | 用户信息来源 | IP 来源 |
-|--------|------|------------|---------|
-| `OpenlibingAuthInterceptor` | `/api/maas/**`, `/api/project/**`, `/api/monitor/**`（排除 `/api/maas/v1/**`） | JWT → `OpenlibingUserInfo(userId, userName, ...)` | 远程 get-user-info API 返回的 `currentLoginIp`（可信），fallback 为 `X-Forwarded-For` → `RemoteAddr` |
-| `MaasAuthInterceptor` | `/api/maas/v1/**` | API Key → `ApiKeyVo(userId, userName, projectId, ...)` | `X-Real-IP` → `RemoteAddr`（经 APIG，可信） |
+| 拦截器                      | 路径                                                                           | 用户信息来源                                           | IP 来源                                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `OpenlibingAuthInterceptor` | `/api/maas/**`, `/api/project/**`, `/api/monitor/**`（排除 `/api/maas/v1/**`） | JWT → `OpenlibingUserInfo(userId, userName, ...)`      | 远程 get-user-info API 返回的 `currentLoginIp`（可信），fallback 为 `X-Forwarded-For` → `RemoteAddr` |
+| `MaasAuthInterceptor`       | `/api/maas/v1/**`                                                              | API Key → `ApiKeyVo(userId, userName, projectId, ...)` | `X-Real-IP` → `RemoteAddr`（经 APIG，可信）                                                          |
 
 ### 2.2 现有白名单机制（需移除）
 
 当前 `OpenlibingAuthInterceptor` 有一个基于配置的白名单（`lingshu.test.whitelist`），用于：
+
 - 本地开发模式下识别用户
 - 生产环境无 Token 时的 fallback
 
 **本次改造需移除此白名单机制**。原因：
+
 1. 访问控制白名单将由数据库表管理，不再使用配置文件
 2. 无 Token 请求应直接拒绝（返回 401），不再 fallback 放行
 3. 本地开发时也会携带 Token，不需要特殊处理
 
 移除范围：
+
 - `lingshu.test.whitelist` 配置项
 - `isJwtEnabled` 配置项及 `handleLocalDev()` 整个分支
 - `isWhitelistedUser()` 方法
@@ -42,10 +45,10 @@
 
 两个拦截器的 IP 来源不同，但都是可信的：
 
-| 拦截器 | IP 来源 | 可信原因 |
-|--------|--------|---------|
-| `OpenlibingAuthInterceptor` | get-user-info 远程 API 返回的 `currentLoginIp` | 来自认证系统，非客户端伪造 |
-| `MaasAuthInterceptor` | `X-Real-IP` → `RemoteAddr` | 经 APIG 网关，APIG 覆写为真实来源 IP |
+| 拦截器                      | IP 来源                                        | 可信原因                             |
+| --------------------------- | ---------------------------------------------- | ------------------------------------ |
+| `OpenlibingAuthInterceptor` | get-user-info 远程 API 返回的 `currentLoginIp` | 来自认证系统，非客户端伪造           |
+| `MaasAuthInterceptor`       | `X-Real-IP` → `RemoteAddr`                     | 经 APIG 网关，APIG 覆写为真实来源 IP |
 
 **注意**：`OpenlibingAuthInterceptor` 的 `getClientIp()` 方法使用 `X-Forwarded-For` 最后一个 IP，这个在安全场景下不可信（可伪造）。但实际使用中，`resolveUserInfo()` 会优先从远程 API 获取 `currentLoginIp`，`getClientIp()` 仅作为 fallback。对于访问控制校验，应使用 `OpenlibingUserInfo.clientIp()` 字段（优先来自远程 API），而非直接调用 `getClientIp(request)`。
 
@@ -67,13 +70,14 @@
 
 **对访问控制的影响**：
 
-| 场景 | 影响 | 处理方式 |
-|------|------|---------|
-| 缓存命中 | clientIp 来自缓存，可能是 300s 前的登录 IP | 可接受：IP 黑白名单校验允许短暂延迟 |
-| 缓存未命中 + 远程成功 | clientIp 来自远程 API 的 currentLoginIp | 最准确 |
-| 缓存未命中 + 远程失败 | clientIp 来自 `X-Forwarded-For`（不可信） | **风险**：不可信 IP 参与安全决策 |
+| 场景                  | 影响                                       | 处理方式                            |
+| --------------------- | ------------------------------------------ | ----------------------------------- |
+| 缓存命中              | clientIp 来自缓存，可能是 300s 前的登录 IP | 可接受：IP 黑白名单校验允许短暂延迟 |
+| 缓存未命中 + 远程成功 | clientIp 来自远程 API 的 currentLoginIp    | 最准确                              |
+| 缓存未命中 + 远程失败 | clientIp 来自 `X-Forwarded-For`（不可信）  | **风险**：不可信 IP 参与安全决策    |
 
 **风险处理**：当远程 API 不可用且缓存未命中时，`clientIp` fallback 为 `X-Forwarded-For`，此 IP 不可信。访问控制校验应考虑此场景：
+
 - 方案 A：IP 黑白名单校验仍使用 fallback IP，接受风险（简单，但可能被伪造 IP 绕过）
 - 方案 B：远程 API 不可用时跳过 IP 相关校验，仅做账号黑白名单校验（安全，但降低了防护）
 - 方案 C：远程 API 不可用时，仅使用 `RemoteAddr`（TCP 连接 IP，可信但可能是代理 IP）
@@ -140,6 +144,7 @@
 - 如果不在白名单，说明这个组合不合法（可能是其他人盗用了 API Key，或从不允许的 IP 发起请求）
 
 这意味着：
+
 - 同一个用户可以从多个 IP 访问，只要每个「用户-IP」组合都在白名单中
 - 白名单中 IP 字段支持 `*`（所有 IP）和 CIDR（网段）
 - 黑名单仍然是独立的：账号黑名单和 IP 黑名单分别判断
@@ -149,6 +154,7 @@
 当白名单表为空（没有任何记录）时，**允许所有请求通过**。
 
 理由：
+
 1. 系统初始部署时白名单为空，拒绝所有会导致无法配置
 2. 白名单是"允许层"，空则不限制；黑名单是"拒绝层"，两者配合使用
 3. 后续可考虑增加配置开关切换为"默认拒绝"模式（需超级管理员机制配合）
@@ -157,13 +163,14 @@
 
 ### 4.1 核心概念：userId、账号、三方账号
 
-| 概念 | 说明 | 前端可见性 | 存储字段 |
-|------|------|-----------|---------|
-| userId | openLiBing 统一用户 ID（如 `u-20250601xxxx`） | 不可见，前端不使用 | `user_id` |
-| 账号（userName） | openLiBing 用户名（如"张三"） | 可见，前端主要展示 | `user_name` |
-| 三方账号（accountLogin） | 三方平台登录名（如 GitCode 的 `zhangsan`） | 可见，添加用户时搜索用 | 不在黑白名单表中，通过搜索接口查询 |
+| 概念                     | 说明                                          | 前端可见性             | 存储字段                           |
+| ------------------------ | --------------------------------------------- | ---------------------- | ---------------------------------- |
+| userId                   | openLiBing 统一用户 ID（如 `u-20250601xxxx`） | 不可见，前端不使用     | `user_id`                          |
+| 账号（userName）         | openLiBing 用户名（如"张三"）                 | 可见，前端主要展示     | `user_name`                        |
+| 三方账号（accountLogin） | 三方平台登录名（如 GitCode 的 `zhangsan`）    | 可见，添加用户时搜索用 | 不在黑白名单表中，通过搜索接口查询 |
 
 **关键设计**：
+
 - 黑白名单表使用 `user_id` 和 `user_name` 字段，与现有表（如 `workspace_user_info`）命名风格一致
 - 前端所有操作使用 `user_name`（用户名）展示和搜索，后端负责 userName → userId 的转换
 - 添加用户时，前端通过搜索接口输入关键字，后端从 `workspace_user_info` 表查询匹配的用户，返回 userId + userName + accountLogin 供选择
@@ -172,29 +179,30 @@
 
 #### 4.2.1 `workspace_access_whitelist`（白名单表）
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `id` | BIGINT AUTO_INCREMENT | 主键 |
-| `user_id` | VARCHAR(128) | userId |
-| `user_name` | VARCHAR(128) | 用户名（展示用） |
-| `account_platform` | VARCHAR(64) | 三方平台（添加时快照，NULL） |
-| `account_login` | VARCHAR(128) | 三方登录名（添加时快照，NULL） |
-| `ip_pattern` | VARCHAR(256) | IP 匹配模式：具体 IP / `*` / CIDR 网段 |
-| `created_by` | VARCHAR(64) | 操作人 userName |
-| `created_at` | DATETIME | 创建时间 |
-| `updated_at` | DATETIME | 更新时间 |
+| 字段               | 类型                  | 说明                                   |
+| ------------------ | --------------------- | -------------------------------------- |
+| `id`               | BIGINT AUTO_INCREMENT | 主键                                   |
+| `user_id`          | VARCHAR(128)          | userId                                 |
+| `user_name`        | VARCHAR(128)          | 用户名（展示用）                       |
+| `account_platform` | VARCHAR(64)           | 三方平台（添加时快照，NULL）           |
+| `account_login`    | VARCHAR(128)          | 三方登录名（添加时快照，NULL）         |
+| `ip_pattern`       | VARCHAR(256)          | IP 匹配模式：具体 IP / `*` / CIDR 网段 |
+| `created_by`       | VARCHAR(64)           | 操作人 userName                        |
+| `created_at`       | DATETIME              | 创建时间                               |
+| `updated_at`       | DATETIME              | 更新时间                               |
 
 **索引**：
+
 - `uk_whitelist_user_ip` UNIQUE (`user_id`, `ip_pattern`) — 同用户同 IP 模式唯一
 - `idx_whitelist_user_id` (`user_id`)
 
 **ip_pattern 说明**：
 
-| ip_pattern 值 | 含义 | 匹配逻辑 |
-|---------------|------|---------|
-| `*` | 该用户所有 IP 都允许 | 任何 IP 都匹配 |
-| `10.0.0.0/24` | 10.0.0.0/24 CIDR 网段 | CIDR 匹配 |
-| `192.168.1.100` | 具体 IP | 精确匹配 |
+| ip_pattern 值   | 含义                  | 匹配逻辑       |
+| --------------- | --------------------- | -------------- |
+| `*`             | 该用户所有 IP 都允许  | 任何 IP 都匹配 |
+| `10.0.0.0/24`   | 10.0.0.0/24 CIDR 网段 | CIDR 匹配      |
+| `192.168.1.100` | 具体 IP               | 精确匹配       |
 
 **匹配优先级**：精确 IP > CIDR 网段 > 通配符 `*`。同一用户有多条匹配时，取最精确的。
 
@@ -202,31 +210,34 @@
 
 #### 4.2.2 `workspace_access_blacklist`（黑名单表）
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `id` | BIGINT AUTO_INCREMENT | 主键 |
-| `target_type` | VARCHAR(16) | 目标类型：`ACCOUNT` / `IP` |
-| `target_id` | VARCHAR(128) | userId（ACCOUNT 类型）或 IP 地址（IP 类型） |
-| `target_name` | VARCHAR(128) | 用户名（ACCOUNT 类型）或 IP 备注（IP 类型） |
-| `account_platform` | VARCHAR(64) | 三方平台（ACCOUNT 类型添加时快照，NULL） |
-| `account_login` | VARCHAR(128) | 三方登录名（ACCOUNT 类型添加时快照，NULL） |
-| `reason` | VARCHAR(512) | 封禁原因 |
-| `expires_at` | DATETIME NULL | 过期时间，NULL 表示永久 |
-| `created_by` | VARCHAR(64) | 操作人 userName |
-| `created_at` | DATETIME | 创建时间 |
-| `updated_at` | DATETIME | 更新时间 |
+| 字段               | 类型                  | 说明                                        |
+| ------------------ | --------------------- | ------------------------------------------- |
+| `id`               | BIGINT AUTO_INCREMENT | 主键                                        |
+| `target_type`      | VARCHAR(16)           | 目标类型：`ACCOUNT` / `IP`                  |
+| `target_id`        | VARCHAR(128)          | userId（ACCOUNT 类型）或 IP 地址（IP 类型） |
+| `target_name`      | VARCHAR(128)          | 用户名（ACCOUNT 类型）或 IP 备注（IP 类型） |
+| `account_platform` | VARCHAR(64)           | 三方平台（ACCOUNT 类型添加时快照，NULL）    |
+| `account_login`    | VARCHAR(128)          | 三方登录名（ACCOUNT 类型添加时快照，NULL）  |
+| `reason`           | VARCHAR(512)          | 封禁原因                                    |
+| `expires_at`       | DATETIME NULL         | 过期时间，NULL 表示永久                     |
+| `created_by`       | VARCHAR(64)           | 操作人 userName                             |
+| `created_at`       | DATETIME              | 创建时间                                    |
+| `updated_at`       | DATETIME              | 更新时间                                    |
 
 **索引**：
+
 - `uk_blacklist_target` UNIQUE (`target_type`, `target_id`) — 同类型同目标唯一
 - `idx_blacklist_expires` (`expires_at`) — 用于清理过期记录
 
 **说明**：
+
 - 黑名单的 `target_type` 有 `ACCOUNT` 和 `IP` 两种
 - 黑名单的 IP 是精确 IP，不支持通配符和 CIDR（封禁场景需要精确控制影响范围）
 - 黑名单支持过期时间，过期后自动失效
 - 黑名单的 `target_type` 区分两种类型，因为 ACCOUNT 类型存储 userId/user_name，IP 类型存储 IP 地址/备注，字段语义不同
 
 **过期记录清理**（后续实现，当前版本查询时过滤即可）：
+
 - 查询时过滤 `expires_at IS NULL OR expires_at > NOW()`
 - 后续可增加定时任务清理过期记录
 
@@ -235,6 +246,7 @@
 黑白名单数据量预期较小（百级别），但查询频率高（每个请求），需要缓存。
 
 **缓存策略**：
+
 - Redis 缓存，TTL 60s
 - Key 格式：
   - `access:whitelist` → `List<WhitelistEntry>` （全量缓存，数据量小）
@@ -243,6 +255,7 @@
 - 增删改时主动失效缓存
 
 **白名单匹配逻辑**：
+
 - 从缓存获取全量白名单
 - 按 `user_id` 过滤出当前用户的记录
 - 遍历该用户的所有 `ip_pattern`，按优先级匹配当前 IP
@@ -364,12 +377,14 @@ public class AccessControlException extends RuntimeException {
 ### 5.5 拦截器改造
 
 **OpenlibingAuthInterceptor**：
+
 1. 移除 `lingshu.test.whitelist` 相关逻辑
 2. 移除 `isJwtEnabled` 配置项及 `handleLocalDev()` 分支（本地开发也携带 Token）
 3. 无 Token 请求直接返回 401
 4. 在用户信息解析完成后，增加 `AccessControlService.check()` 调用
 
 **MaasAuthInterceptor**：
+
 1. 在 API Key 验证通过后、设置 `MaasAuthContext` 前，增加 `AccessControlService.check()` 调用
 
 **关键决策**：黑白名单校验应在鉴权成功之后执行，因为需要先获取到 userId 和 IP 才能判断。校验失败直接抛出 `AccessControlException`。
@@ -384,12 +399,12 @@ public class AccessControlException extends RuntimeException {
 
 ### 6.1 错误码与消息
 
-| 场景 | HTTP 状态码 | 错误码 | 错误消息 | MaaS error_type |
-|------|-----------|--------|---------|----------------|
-| 不在白名单 | 403 | `ACCESS_DENIED_NOT_IN_WHITELIST` | "您的账号或IP不在访问白名单内，请联系管理员" | `permission_error` |
-| 账号黑名单 | 403 | `ACCESS_DENIED_ACCOUNT_BLACKLISTED` | "您的账号已被封禁，如有疑问请联系管理员" | `permission_error` |
-| IP 黑名单 | 403 | `ACCESS_DENIED_IP_BLACKLISTED` | "您的IP已被封禁，如有疑问请联系管理员" | `permission_error` |
-| 无 Token | 401 | `UNAUTHORIZED` | "未登录，请先登录" | `authentication_error` |
+| 场景       | HTTP 状态码 | 错误码                              | 错误消息                                     | MaaS error_type        |
+| ---------- | ----------- | ----------------------------------- | -------------------------------------------- | ---------------------- |
+| 不在白名单 | 403         | `ACCESS_DENIED_NOT_IN_WHITELIST`    | "您的账号或IP不在访问白名单内，请联系管理员" | `permission_error`     |
+| 账号黑名单 | 403         | `ACCESS_DENIED_ACCOUNT_BLACKLISTED` | "您的账号已被封禁，如有疑问请联系管理员"     | `permission_error`     |
+| IP 黑名单  | 403         | `ACCESS_DENIED_IP_BLACKLISTED`      | "您的IP已被封禁，如有疑问请联系管理员"       | `permission_error`     |
+| 无 Token   | 401         | `UNAUTHORIZED`                      | "未登录，请先登录"                           | `authentication_error` |
 
 ### 6.2 不同接口的错误格式
 
@@ -405,6 +420,7 @@ public class AccessControlException extends RuntimeException {
 **MaaS 接口**（`/api/maas/v1/**`）：
 
 OpenAI 格式：
+
 ```json
 {
   "error": {
@@ -416,6 +432,7 @@ OpenAI 格式：
 ```
 
 Anthropic 格式：
+
 ```json
 {
   "type": "error",
@@ -488,14 +505,15 @@ GET /api/admin/access/check
 
 ### 8.1 白名单管理
 
-| 操作 | 方法 | 路径 | 说明 |
-|------|------|------|------|
-| 查询列表 | GET | `/api/admin/access/whitelist` | 返回全部记录，按创建时间倒序 |
-| 添加 | POST | `/api/admin/access/whitelist` | |
-| 更新 | POST | `/api/admin/access/whitelist/{id}/update` | 更新 IP 规则或用户名 |
-| 删除 | POST | `/api/admin/access/whitelist/{id}/delete` | |
+| 操作     | 方法 | 路径                                      | 说明                         |
+| -------- | ---- | ----------------------------------------- | ---------------------------- |
+| 查询列表 | GET  | `/api/admin/access/whitelist`             | 返回全部记录，按创建时间倒序 |
+| 添加     | POST | `/api/admin/access/whitelist`             |                              |
+| 更新     | POST | `/api/admin/access/whitelist/{id}/update` | 更新 IP 规则或用户名         |
+| 删除     | POST | `/api/admin/access/whitelist/{id}/delete` |                              |
 
 > **设计变更说明**：原设计含"分页查询"接口，实际实现中简化：
+>
 > - 数据量预期百级别，暂不需要分页，直接返回全量列表
 
 **查询响应**：
@@ -528,12 +546,12 @@ GET /api/admin/access/check
 }
 ```
 
-| 字段 | 必填 | 说明 |
-|------|------|------|
-| accountPlatform | 是 | 三方平台 |
-| accountLogin | 是 | 三方登录名 |
-| userName | 否 | 用户名（展示用，不填时后端从用户表抓取） |
-| ipPattern | 是 | IP 规则 |
+| 字段            | 必填 | 说明                                     |
+| --------------- | ---- | ---------------------------------------- |
+| accountPlatform | 是   | 三方平台                                 |
+| accountLogin    | 是   | 三方登录名                               |
+| userName        | 否   | 用户名（展示用，不填时后端从用户表抓取） |
+| ipPattern       | 是   | IP 规则                                  |
 
 > **设计变更（合并自 260727）**：原设计前端传 userId，改为传 accountPlatform + accountLogin，后端通过 `AccountUserResolverService` 调用 `FrameworkUserQueryService` 解析 userId 并同步 user_info。
 
@@ -546,19 +564,19 @@ GET /api/admin/access/check
 }
 ```
 
-| 字段 | 必填 | 说明 |
-|------|------|------|
-| userName | 否 | 用户名（传空或不传则不修改） |
-| ipPattern | 否 | IP 规则（传空或不传则不修改；修改时校验同用户下是否重复） |
+| 字段      | 必填 | 说明                                                      |
+| --------- | ---- | --------------------------------------------------------- |
+| userName  | 否   | 用户名（传空或不传则不修改）                              |
+| ipPattern | 否   | IP 规则（传空或不传则不修改；修改时校验同用户下是否重复） |
 
 ### 8.2 黑名单管理
 
-| 操作 | 方法 | 路径 | 说明 |
-|------|------|------|------|
-| 查询列表 | GET | `/api/admin/access/blacklist` | 返回全部记录，按创建时间倒序 |
-| 添加 | POST | `/api/admin/access/blacklist` | |
-| 更新 | POST | `/api/admin/access/blacklist/{id}/update` | 更新封禁原因、过期时间等 |
-| 删除 | POST | `/api/admin/access/blacklist/{id}/delete` | |
+| 操作     | 方法 | 路径                                      | 说明                         |
+| -------- | ---- | ----------------------------------------- | ---------------------------- |
+| 查询列表 | GET  | `/api/admin/access/blacklist`             | 返回全部记录，按创建时间倒序 |
+| 添加     | POST | `/api/admin/access/blacklist`             |                              |
+| 更新     | POST | `/api/admin/access/blacklist/{id}/update` | 更新封禁原因、过期时间等     |
+| 删除     | POST | `/api/admin/access/blacklist/{id}/delete` |                              |
 
 > **设计变更说明**：同白名单，简化了分页接口。
 
@@ -607,15 +625,15 @@ GET /api/admin/access/check
 }
 ```
 
-| 字段 | 必填 | 说明 |
-|------|------|------|
-| targetType | 是 | `ACCOUNT` 或 `IP` |
-| targetId | 否 | IP 类型时为 IP 地址（仅精确 IP）；ACCOUNT 类型不传 |
-| accountPlatform | ACCOUNT 必填 | 三方平台（ACCOUNT 类型） |
-| accountLogin | ACCOUNT 必填 | 三方登录名（ACCOUNT 类型） |
-| targetName | 否 | ACCOUNT 时不填则后端从用户表抓取；IP 类型忽略此字段 |
-| reason | 否 | 封禁原因 |
-| expiresAt | 否 | 过期时间（ISO 8601），不填表示永久 |
+| 字段            | 必填         | 说明                                                |
+| --------------- | ------------ | --------------------------------------------------- |
+| targetType      | 是           | `ACCOUNT` 或 `IP`                                   |
+| targetId        | 否           | IP 类型时为 IP 地址（仅精确 IP）；ACCOUNT 类型不传  |
+| accountPlatform | ACCOUNT 必填 | 三方平台（ACCOUNT 类型）                            |
+| accountLogin    | ACCOUNT 必填 | 三方登录名（ACCOUNT 类型）                          |
+| targetName      | 否           | ACCOUNT 时不填则后端从用户表抓取；IP 类型忽略此字段 |
+| reason          | 否           | 封禁原因                                            |
+| expiresAt       | 否           | 过期时间（ISO 8601），不填表示永久                  |
 
 > **设计变更（合并自 260727）**：ACCOUNT 类型原设计传 targetId(userId)，改为传 accountPlatform + accountLogin，后端通过 `AccountUserResolverService` 解析 userId 作为 targetId 存储。IP 类型保持原 targetId 逻辑不变。
 
@@ -631,11 +649,11 @@ GET /api/admin/access/check
 }
 ```
 
-| 字段 | 必填 | 说明 |
-|------|------|------|
-| targetName | 否 | 目标名称（传空或不传则不修改） |
-| reason | 否 | 封禁原因（传空或不传则不修改） |
-| expiresAt | 否 | 过期时间（传空或不传则不修改；传 null 表示永久封禁） |
+| 字段       | 必填 | 说明                                                 |
+| ---------- | ---- | ---------------------------------------------------- |
+| targetName | 否   | 目标名称（传空或不传则不修改）                       |
+| reason     | 否   | 封禁原因（传空或不传则不修改）                       |
+| expiresAt  | 否   | 过期时间（传空或不传则不修改；传 null 表示永久封禁） |
 
 ### 8.3 用户搜索接口（后续实现，当前仅设计）
 
@@ -669,6 +687,7 @@ GET /api/admin/access/user-search?keyword=张三
 ### 9.1 OpenlibingAuthInterceptor 改造
 
 **移除内容**：
+
 - `whitelistConfig` 配置项（`lingshu.test.whitelist`）
 - `isJwtEnabled` 配置项及 `handleLocalDev()` 整个分支
 - `cachedWhitelist` / `whitelistCacheTime` 缓存字段
@@ -676,6 +695,7 @@ GET /api/admin/access/user-search?keyword=张三
 - `handleProduction()` 中无 Token 时白名单放行逻辑
 
 **新增内容**：
+
 - 注入 `AccessControlService`
 - 无 Token → 返回 401（不再放行）
 - 用户信息解析完成后，增加访问控制检查
@@ -718,55 +738,55 @@ MaasAuthContext.set(apiKeyVo, apiKeyVo.getUserName(), clientIp);
 
 ### 10.1 新增文件
 
-| 文件 | 说明 |
-|------|------|
-| `db/changelog/v1.0.0/workspace-access-control.xml` | Liquibase 建表 |
-| `entity/AccessWhitelist.java` | 白名单实体 |
-| `entity/AccessBlacklist.java` | 黑名单实体 |
-| `mapper/AccessWhitelistMapper.java` | 白名单 Mapper |
-| `mapper/AccessBlacklistMapper.java` | 黑名单 Mapper |
-| `mapper/xml/AccessWhitelistMapper.xml` | 白名单 Mapper XML |
-| `mapper/xml/AccessBlacklistMapper.xml` | 黑名单 Mapper XML |
-| `service/AccessControlService.java` | 访问控制核心服务 |
-| `service/user/AccountUserResolverService.java` | 三方账号解析公共服务（与系统管理员共用，合并自 260727） |
-| `service/AccessWhitelistService.java` | 白名单管理服务（CRUD） |
-| `service/AccessBlacklistService.java` | 黑名单管理服务（CRUD） |
-| `controller/AccessControlController.java` | 访问控制管理接口（CRUD + 校验） |
-| `exception/AccessControlException.java` | 访问控制异常 |
-| `dto/AccessControlResult.java` | 校验结果 DTO |
-| `dto/AccessWhitelistRequest.java` | 白名单操作请求 |
-| `dto/AccessBlacklistRequest.java` | 黑名单操作请求 |
-| `dto/AccessControlPageQuery.java` | 分页查询请求 |
-| `utils/IpPatternMatcher.java` | IP 模式匹配工具（精确 / CIDR / 通配符） |
+| 文件                                               | 说明                                                    |
+| -------------------------------------------------- | ------------------------------------------------------- |
+| `db/changelog/v1.0.0/workspace-access-control.xml` | Liquibase 建表                                          |
+| `entity/AccessWhitelist.java`                      | 白名单实体                                              |
+| `entity/AccessBlacklist.java`                      | 黑名单实体                                              |
+| `mapper/AccessWhitelistMapper.java`                | 白名单 Mapper                                           |
+| `mapper/AccessBlacklistMapper.java`                | 黑名单 Mapper                                           |
+| `mapper/xml/AccessWhitelistMapper.xml`             | 白名单 Mapper XML                                       |
+| `mapper/xml/AccessBlacklistMapper.xml`             | 黑名单 Mapper XML                                       |
+| `service/AccessControlService.java`                | 访问控制核心服务                                        |
+| `service/user/AccountUserResolverService.java`     | 三方账号解析公共服务（与系统管理员共用，合并自 260727） |
+| `service/AccessWhitelistService.java`              | 白名单管理服务（CRUD）                                  |
+| `service/AccessBlacklistService.java`              | 黑名单管理服务（CRUD）                                  |
+| `controller/AccessControlController.java`          | 访问控制管理接口（CRUD + 校验）                         |
+| `exception/AccessControlException.java`            | 访问控制异常                                            |
+| `dto/AccessControlResult.java`                     | 校验结果 DTO                                            |
+| `dto/AccessWhitelistRequest.java`                  | 白名单操作请求                                          |
+| `dto/AccessBlacklistRequest.java`                  | 黑名单操作请求                                          |
+| `dto/AccessControlPageQuery.java`                  | 分页查询请求                                            |
+| `utils/IpPatternMatcher.java`                      | IP 模式匹配工具（精确 / CIDR / 通配符）                 |
 
 ### 10.2 修改文件
 
-| 文件 | 改动说明 |
-|------|---------|
-| `OpenlibingAuthInterceptor.java` | 移除 `lingshu.test.whitelist` 和 `handleLocalDev()` 相关逻辑；无 Token 返回 401；注入 AccessControlService 增加访问控制检查 |
-| `MaasAuthInterceptor.java` | 注入 AccessControlService，在 API Key 验证后增加访问控制检查 |
-| `GlobalExceptionHandler.java` | 新增 AccessControlException 处理，复用 MaaS 格式化逻辑 |
-| `WebConfig.java` | 可能需要调整拦截器路径（校验接口的鉴权排除） |
-| `db/changelog/db.changelog-master.yaml` | 引入新的 changelog 文件 |
+| 文件                                    | 改动说明                                                                                                                    |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `OpenlibingAuthInterceptor.java`        | 移除 `lingshu.test.whitelist` 和 `handleLocalDev()` 相关逻辑；无 Token 返回 401；注入 AccessControlService 增加访问控制检查 |
+| `MaasAuthInterceptor.java`              | 注入 AccessControlService，在 API Key 验证后增加访问控制检查                                                                |
+| `GlobalExceptionHandler.java`           | 新增 AccessControlException 处理，复用 MaaS 格式化逻辑                                                                      |
+| `WebConfig.java`                        | 可能需要调整拦截器路径（校验接口的鉴权排除）                                                                                |
+| `db/changelog/db.changelog-master.yaml` | 引入新的 changelog 文件                                                                                                     |
 
 ## 11. 风险与待确认问题汇总
 
-| # | 问题 | 影响 | 建议 |
-|---|------|------|------|
-| 1 | 前端管理接口的权限控制：谁可以管理黑白名单？ | 安全性 | 需要系统管理员权限，见独立设计文档 `260610-system-admin` |
-| 2 | 管理接口（`/api/access/**`）本身是否需要排除访问控制检查？ | 管理员被封禁后无法解封 | 不做额外处理，实际存在多个管理员，一个被封禁不影响其他管理员操作 |
-| 3 | 黑名单过期记录的清理策略 | 性能 | 当前版本查询时过滤 `expires_at`，后续可增加定时任务清理（非必要，延后实现） |
-| 4 | 白名单未来是否可能需要纯 IP 白名单（不绑定账号）？ | 数据模型扩展性 | 当前只支持账号-IP 绑定，预留 `target_type` 字段 |
+| #   | 问题                                                       | 影响                   | 建议                                                                        |
+| --- | ---------------------------------------------------------- | ---------------------- | --------------------------------------------------------------------------- |
+| 1   | 前端管理接口的权限控制：谁可以管理黑白名单？               | 安全性                 | 需要系统管理员权限，见独立设计文档 `260610-system-admin`                    |
+| 2   | 管理接口（`/api/access/**`）本身是否需要排除访问控制检查？ | 管理员被封禁后无法解封 | 不做额外处理，实际存在多个管理员，一个被封禁不影响其他管理员操作            |
+| 3   | 黑名单过期记录的清理策略                                   | 性能                   | 当前版本查询时过滤 `expires_at`，后续可增加定时任务清理（非必要，延后实现） |
+| 4   | 白名单未来是否可能需要纯 IP 白名单（不绑定账号）？         | 数据模型扩展性         | 当前只支持账号-IP 绑定，预留 `target_type` 字段                             |
 
 ## 12. 与鉴权设计文档待改造项的关系
 
 鉴权设计文档（`鉴权设计文档.md` 第 5 节）列出的待改造项中，以下与本次需求相关：
 
-| 待改造项 | 本次处理 |
-|---------|---------|
+| 待改造项                                                | 本次处理                                                             |
+| ------------------------------------------------------- | -------------------------------------------------------------------- |
 | 无 Token 时的行为：放行但 UserContext 为空 → 应拒绝请求 | ✅ 本次改造：移除白名单 fallback 和 localDev 分支，无 Token 返回 401 |
-| 一站式作业白名单移除 | ❌ 不在本次范围（`AuthInterceptor` 的白名单） |
-| 三套 UserContext 统一 | ❌ 不在本次范围 |
+| 一站式作业白名单移除                                    | ❌ 不在本次范围（`AuthInterceptor` 的白名单）                        |
+| 三套 UserContext 统一                                   | ❌ 不在本次范围                                                      |
 
 本次改造完成后，需同步更新鉴权设计文档。
 
@@ -777,10 +797,12 @@ MaasAuthContext.set(apiKeyVo, apiKeyVo.getUserName(), clientIp);
 ### 13.1 Redis 缓存序列化/反序列化类型丢失
 
 **问题**：`RedisConfig` 使用 `Jackson2JsonRedisSerializer<>(Object.class)` 序列化，写入 JSON 时不含 Java 类型信息。反序列化时 Jackson 默认将 JSON 对象还原为 `LinkedHashMap`、JSON 数组还原为 `ArrayList`，导致：
+
 - `List<AccessWhitelist>` 缓存读回实际为 `List<LinkedHashMap>`，遍历时触发 `ClassCastException`
 - `Set<String>` 缓存读回实际为 `ArrayList<String>`，`instanceof Set` 判断为 false，每次都查库
 
 **修复**：
+
 1. `RedisConfig` 注册 `JavaTimeModule`，支持 `LocalDateTime` 序列化（之前缓存对象不含时间类型，未暴露此问题）
 2. `AccessControlService` 使用 `ObjectMapper.convertValue()` 将 `List<LinkedHashMap>` 转回 `List<AccessWhitelist>`
 3. `AccessControlService.toStringSet()` 统一处理 `Collection` → `Set<String>` 转换，兼容 `List`/`Set` 两种反序列化结果
@@ -793,6 +815,7 @@ MaasAuthContext.set(apiKeyVo, apiKeyVo.getUserName(), clientIp);
 **问题**：原 `OpenlibingAuthInterceptor.handleProduction()` 在无 Token 时仅打印 warn 日志并 `return true`（放行），JWT 解析失败时同样放行。这导致未认证请求可以到达业务逻辑，`UserContext` 为空。
 
 **修复**：
+
 1. 无 Token → 写 401 响应 + `return false`
 2. JWT 解析失败 → 同样 401
 3. JWT 解出 userId 为空 → 401（防御性校验）

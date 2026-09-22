@@ -3,6 +3,7 @@
 ## 1. 需求背景
 
 当前 `openlibing-tep-executor` 测试执行器的日志系统存在以下问题：
+
 1. 缺少独立的 tep-executor.log 日志文件
 2. 部分日志直接打印到控制台在流水线打屏日志，对业务测试日志定位有干扰，框架日志仅保留关键进度日志，其他日志单独落盘保存
 3. 日志文件 URL 未统一打印
@@ -20,12 +21,12 @@
 
 需要收集并打印到 `tep-executor.log` 的日志场景：
 
-| 场景 | 打印内容 | 打印位置 |
-|-----|---------|---------|
-| `get_metadata_info_from_testset` | `process testset file {testset_file}` | utils.py |
-| `TestSet.gen` | `Valid testset files: {file_list}` | test_set.py |
-| `_get_all_testset_files` | `_tmp_testset_files` 文件列表 | executor.py |
-| `zip_files_in_conf_log` | 压缩文件列表/跳过文件列表 | executor.py |
+| 场景                             | 打印内容                              | 打印位置    |
+| -------------------------------- | ------------------------------------- | ----------- |
+| `get_metadata_info_from_testset` | `process testset file {testset_file}` | utils.py    |
+| `TestSet.gen`                    | `Valid testset files: {file_list}`    | test_set.py |
+| `_get_all_testset_files`         | `_tmp_testset_files` 文件列表         | executor.py |
+| `zip_files_in_conf_log`          | 压缩文件列表/跳过文件列表             | executor.py |
 
 ### 2.3 日志文件 URL 打印
 
@@ -191,30 +192,30 @@ def generate_logs(self):
 
 ### 4.1 修改的文件
 
-| 文件 | 操作 | 说明 |
-|-----|------|------|
-| `tepexecor_frame/cte/log.py` | 修改 | 新增 tep_executor_logger、文件处理器、`change_tep_executor_logger_file_handler` 函数 |
-| `tepexecor_frame/executor.py` | 修改 | 增强日志收集、_get_all_testset_files、generate_logs |
-| `tepexecor_frame/test_set.py` | 修改 | TestSet.gen 增加文件列表打印 |
-| `tepexecor_frame/cte/utils.py` | 修改 | get_metadata_info_from_testset 增加 tep_executor_logger |
+| 文件                           | 操作 | 说明                                                                                 |
+| ------------------------------ | ---- | ------------------------------------------------------------------------------------ |
+| `tepexecor_frame/cte/log.py`   | 修改 | 新增 tep_executor_logger、文件处理器、`change_tep_executor_logger_file_handler` 函数 |
+| `tepexecor_frame/executor.py`  | 修改 | 增强日志收集、_get_all_testset_files、generate_logs                                  |
+| `tepexecor_frame/test_set.py`  | 修改 | TestSet.gen 增加文件列表打印                                                         |
+| `tepexecor_frame/cte/utils.py` | 修改 | get_metadata_info_from_testset 增加 tep_executor_logger                              |
 
 ### 4.2 日志文件清单
 
-| 日志文件 | 路径 | 说明 |
-|---------|------|------|
-| `tep-executor.log` | `tepexecor_frame/logs/` | 新增，独立日志 |
-| `{group_id}_tep-executor.log` | `tepexecor_frame/logs/` | 动态修改后，按执行组隔离 |
-| `hutafagent.log` | `tepexecor_frame/logs/` | 原有日志，保持不变 |
-| `{group_id}_hutafagent.log` | `tepexecor_frame/logs/` | 原有动态修改后，按执行组隔离 |
-| `all_conf_log.zip` | `cases_log/` | 压缩的配置文件日志 |
+| 日志文件                      | 路径                    | 说明                         |
+| ----------------------------- | ----------------------- | ---------------------------- |
+| `tep-executor.log`            | `tepexecor_frame/logs/` | 新增，独立日志               |
+| `{group_id}_tep-executor.log` | `tepexecor_frame/logs/` | 动态修改后，按执行组隔离     |
+| `hutafagent.log`              | `tepexecor_frame/logs/` | 原有日志，保持不变           |
+| `{group_id}_hutafagent.log`   | `tepexecor_frame/logs/` | 原有动态修改后，按执行组隔离 |
+| `all_conf_log.zip`            | `cases_log/`            | 压缩的配置文件日志           |
 
 ## 5. 风险与缓解
 
-| 风险 | 影响 | 缓解措施 |
-|-----|------|---------|
-| 日志文件过大 | 磁盘空间消耗 | 使用 RotatingFileHandler，20MB 轮转，保留 25 份 |
-| 日志重复打印 | 日志膨胀 | tep_executor_logger.propagate = False |
-| 权限问题 | 无法创建日志目录 | 使用 try-except 捕获，优雅降级 |
+| 风险         | 影响             | 缓解措施                                        |
+| ------------ | ---------------- | ----------------------------------------------- |
+| 日志文件过大 | 磁盘空间消耗     | 使用 RotatingFileHandler，20MB 轮转，保留 25 份 |
+| 日志重复打印 | 日志膨胀         | tep_executor_logger.propagate = False           |
+| 权限问题     | 无法创建日志目录 | 使用 try-except 捕获，优雅降级                  |
 
 ## 6. 验收标准
 
@@ -228,9 +229,9 @@ def generate_logs(self):
 
 ## 7. 测试计划
 
-| 测试场景 | 预期结果 |
-|---------|---------|
-| 正常执行流程 | tep-executor.log 生成，包含所有增强日志 |
+| 测试场景         | 预期结果                                                                                  |
+| ---------------- | ----------------------------------------------------------------------------------------- |
+| 正常执行流程     | tep-executor.log 生成，包含所有增强日志                                                   |
 | 动态修改日志文件 | 调用 `change_tep_executor_logger_file_handler` 后，日志写入 `{group_id}_tep-executor.log` |
-| 文件超限 | 跳过文件并打印 [SKIP] 日志 |
-| URL 打印 | generate_logs 后所有 URL 打印到 tep-executor.log |
+| 文件超限         | 跳过文件并打印 [SKIP] 日志                                                                |
+| URL 打印         | generate_logs 后所有 URL 打印到 tep-executor.log                                          |

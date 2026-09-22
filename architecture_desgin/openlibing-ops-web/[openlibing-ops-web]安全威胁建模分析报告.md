@@ -10,13 +10,13 @@
 
 ## 文档信息与元数据
 
-| 字段 | 值 |
-| --- | --- |
-| 分析模型 | DeepSeek-V4-Flash（threat-model-analyst skill 驱动）；补充 3 项缺口（sync Python 采集脚本、Dockerfile 构建供应链完整性、镜像 SBOM/cosign/seccomp）证据合并自 MiniMax-M3 独立分析报告，本仓相关项为 FIND-35 跨仓构建供应链 |
-| 分析基线类型 | 远程仓主干分支（git worktree 独立检出，detached HEAD，分析完成后已清理） |
-| 仓库 | `openlibing-ops-web`，远程主干 `origin/main`，HEAD `7ca9554` |
-| 分析范围 | 本仓源码 + nginx 配置 + 部署脚本 + CI 工作流；信任边界证据来自 `openlibing-gateway`/`openlibing-common` 相关代码与 docs 记录 |
-| 输出位置（归档） | `openlibing-docs/architecture_desgin/openlibing-ops-web/[openlibing-ops-web]安全威胁建模分析报告.md`（PR 合入主仓 master 后生效） |
+| 字段             | 值                                                                                                                                                                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 分析模型         | DeepSeek-V4-Flash（threat-model-analyst skill 驱动）；补充 3 项缺口（sync Python 采集脚本、Dockerfile 构建供应链完整性、镜像 SBOM/cosign/seccomp）证据合并自 MiniMax-M3 独立分析报告，本仓相关项为 FIND-35 跨仓构建供应链 |
+| 分析基线类型     | 远程仓主干分支（git worktree 独立检出，detached HEAD，分析完成后已清理）                                                                                                                                                  |
+| 仓库             | `openlibing-ops-web`，远程主干 `origin/main`，HEAD `7ca9554`                                                                                                                                                              |
+| 分析范围         | 本仓源码 + nginx 配置 + 部署脚本 + CI 工作流；信任边界证据来自 `openlibing-gateway`/`openlibing-common` 相关代码与 docs 记录                                                                                              |
+| 输出位置（归档） | `openlibing-docs/architecture_desgin/openlibing-ops-web/[openlibing-ops-web]安全威胁建模分析报告.md`（PR 合入主仓 master 后生效）                                                                                         |
 
 ---
 
@@ -34,9 +34,9 @@ OpenLibing 运营域 `openlibing-ops-web` 仓（远程主干基线）的**工程
 
 ### 1.2 威胁计数总览（ops-web）
 
-| 仓库 | Tier 1 | Tier 2 | Tier 3 | 发现合计 | 最突出弱点 |
-| --- | --- | --- | --- | --- | --- |
-| openlibing-ops-web | 0 | 6 | 1 | 7 | nginx 无安全响应头 + 无 lockfile 供应链完整性缺失 |
+| 仓库               | Tier 1 | Tier 2 | Tier 3 | 发现合计 | 最突出弱点                                        |
+| ------------------ | ------ | ------ | ------ | -------- | ------------------------------------------------- |
+| openlibing-ops-web | 0      | 6      | 1      | 7        | nginx 无安全响应头 + 无 lockfile 供应链完整性缺失 |
 
 > 注：FIND-32 为本仓 Tier 3 发现；FIND-35（跨仓构建供应链完整性）单列"跨仓"行，与本仓前端构建链直接相关，详见第四章。
 
@@ -124,23 +124,23 @@ flowchart LR
 
 **信任边界说明（ops-web 视角）：**
 
-| 边界 | 含义 | 关键事实 |
-| --- | --- | --- |
-| `External` | 浏览器、第三方脚本 | uem.js 第三方脚本在主域加载（无 SRI） |
-| `FrontendContext` | ops-web 本仓 | nginx 无安全响应头；前端零鉴权；`/gateway` 同源代理 |
-| `Perimeter` | 网关边界 | AuthFilter 是唯一认证执行点（[AuthFilter.java](file:///c:/w30060144/develop/repositories/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java)） |
-| `SiblingServices` | ops / metric / sync | 后端接口权限全部依赖网关 |
+| 边界              | 含义                | 关键事实                                                                                                                                                                                       |
+| ----------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `External`        | 浏览器、第三方脚本  | uem.js 第三方脚本在主域加载（无 SRI）                                                                                                                                                          |
+| `FrontendContext` | ops-web 本仓        | nginx 无安全响应头；前端零鉴权；`/gateway` 同源代理                                                                                                                                            |
+| `Perimeter`       | 网关边界            | AuthFilter 是唯一认证执行点（[AuthFilter.java](file:///c:/w30060144/develop/repositories/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java)） |
+| `SiblingServices` | ops / metric / sync | 后端接口权限全部依赖网关                                                                                                                                                                       |
 
 ### 2.4 跨仓信任边界与攻击路径（ops-web 相关）
 
 > 本单仓版保留跨仓视角，便于定位 ops-web 在体系中的受信位置与风险传导。
 
-| 跨仓关系 | 信任方向 | 风险传导路径 | 本仓受影响威胁 |
-| --- | --- | --- | --- |
-| ops-web → 网关（/gateway 代理） | 完全信任网关 | 网关绕过（豁免遗漏、SSRF）→ 前端可发起任意后端操作；前端零鉴权放大后端依赖 | T31 |
-| ops-web → 后端（ops/metric/sync） | 经网关 | 后端服务端零认证时，网关一旦被绕过后端全部接口匿名可达 | T31 |
-| ops-web → uem.js（第三方） | 主域加载 | uem.js 源站被控/传输劫持 → 主域任意 JS，可读 CSRF cookie、发起带会话请求 | T32/T36 |
-| ops-web 构建链 → 后端 | CI | 无 lockfile + 主干无 nightly 扫描 → 依赖投毒可随发布进入生产（跨仓供应链） | T35/T38/FIND-32 |
+| 跨仓关系                          | 信任方向     | 风险传导路径                                                               | 本仓受影响威胁  |
+| --------------------------------- | ------------ | -------------------------------------------------------------------------- | --------------- |
+| ops-web → 网关（/gateway 代理）   | 完全信任网关 | 网关绕过（豁免遗漏、SSRF）→ 前端可发起任意后端操作；前端零鉴权放大后端依赖 | T31             |
+| ops-web → 后端（ops/metric/sync） | 经网关       | 后端服务端零认证时，网关一旦被绕过后端全部接口匿名可达                     | T31             |
+| ops-web → uem.js（第三方）        | 主域加载     | uem.js 源站被控/传输劫持 → 主域任意 JS，可读 CSRF cookie、发起带会话请求   | T32/T36         |
+| ops-web 构建链 → 后端             | CI           | 无 lockfile + 主干无 nightly 扫描 → 依赖投毒可随发布进入生产（跨仓供应链） | T35/T38/FIND-32 |
 
 ---
 
@@ -148,28 +148,28 @@ flowchart LR
 
 ### 3.1 组件与攻击面
 
-| 组件 ID | 锚点（证据文件） | 暴露面 |
-| --- | --- | --- |
-| nginx 网关层 | `nginx/nginx_prod.conf` + `nginx_beta.conf` | 静态站点、TLS1.2/1.3、`limit_conn`/`limit_req`、隐藏文件 deny、**无安全响应头** |
-| http 客户端 | `src/api/http.ts` | 同源 `/gateway` 代理；CSRF 双提交（`Csrf-Token-Open-Li-Bing`） |
-| 第三方埋点 | `src/plugins/uem.js` | 动态加载 `https://hwa.his.huawei.com/dist/uem_f.js`，**无 SRI**，localStorage 埋点 |
-| 富文本 / XSS 面 | `package.json`（tinymce 6.8.6、dompurify、element-plus） | 指标描述/参考链接/富文本渲染 DOM XSS 面 |
-| 依赖与供应链 | `package.json`（`^` 浮动版本）+ `.gitignore` | **无 lockfile**，构建期依赖树无完整性 pin |
-| CI 供应链扫描 | `.gitcode/workflows/`（远程主干仅 `codeql.yaml` + `pre-commit.yml`） | **主干无 nightly 防投毒/SCA 扫描**（该工作流仅存在于本地开发分支，未合入主干），供应链事后扫描缓解缺失 |
+| 组件 ID         | 锚点（证据文件）                                                     | 暴露面                                                                                                 |
+| --------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| nginx 网关层    | `nginx/nginx_prod.conf` + `nginx_beta.conf`                          | 静态站点、TLS1.2/1.3、`limit_conn`/`limit_req`、隐藏文件 deny、**无安全响应头**                        |
+| http 客户端     | `src/api/http.ts`                                                    | 同源 `/gateway` 代理；CSRF 双提交（`Csrf-Token-Open-Li-Bing`）                                         |
+| 第三方埋点      | `src/plugins/uem.js`                                                 | 动态加载 `https://hwa.his.huawei.com/dist/uem_f.js`，**无 SRI**，localStorage 埋点                     |
+| 富文本 / XSS 面 | `package.json`（tinymce 6.8.6、dompurify、element-plus）             | 指标描述/参考链接/富文本渲染 DOM XSS 面                                                                |
+| 依赖与供应链    | `package.json`（`^` 浮动版本）+ `.gitignore`                         | **无 lockfile**，构建期依赖树无完整性 pin                                                              |
+| CI 供应链扫描   | `.gitcode/workflows/`（远程主干仅 `codeql.yaml` + `pre-commit.yml`） | **主干无 nightly 防投毒/SCA 扫描**（该工作流仅存在于本地开发分支，未合入主干），供应链事后扫描缓解缺失 |
 
 ### 3.2 STRIDE-A 威胁表（ops-web）
 
-| 威胁 ID | STRIDE 类别 | 威胁描述 | 前置条件 | Tier |
-| --- | --- | --- | --- | --- |
-| T31.S | S 欺骗 | 前端零鉴权（权限纯 UI 层：路由守卫/按钮 `v-if`），接口权限完全依赖网关，网关绕过即任意操作 | `Internal Network` | T2 |
-| T32.T | T 篡改 | uem.js 第三方脚本在主域加载、无 SRI 完整性校验，源站被入侵/传输劫持即主域任意 JS | `Host/OS Access` | T2 |
-| T33.T | T 篡改 | 富文本（TinyMCE）与指标描述/参考链接渲染存在 DOM XSS 面，dompurify 未覆盖全部渲染路径 | `Authenticated User` | T2 |
-| T34.I | I 信息泄露 | nginx 无 CSP/HSTS/X-Frame-Options/X-Content-Type-Options 等安全响应头，XSS 后无纵深兜底、无点击劫持防护、可被协议降级 | `Authenticated User` | T2 |
-| T35.I | I 信息泄露 | `package-lock.json` 被 gitignore，依赖树无完整性 pin，供应链投毒面（**主干无 nightly 扫描兜底，风险上浮**） | `Host/OS Access` | T3 |
-| T36.I | I 信息泄露 | uem.js 用 localStorage 存埋点数据（页面 URL/用户标识），采集范围与留存未审计 | `Host/OS Access` | T3 |
-| T37.D | D 拒绝服务 | nginx `limit_req`/`limit_conn` 基于 `$http_x_real_ip`（客户端/前置可控）且速率 1000r/s 过高，防刷可被绕过/形同虚设 | `None` | T2 |
-| T38.D | D 拒绝服务 | `^` 浮动版本 + 无 lockfile，一次依赖升级引入兼容性/安全回归即可致站点不可用 | `Host/OS Access` | T3 |
-| T39.A | A 滥用 | 参考链接/指标链接（metric 表单、open-source-project）无域名白名单校验，可被用于钓鱼/恶意跳转 | `Authenticated User` | T2 |
+| 威胁 ID | STRIDE 类别 | 威胁描述                                                                                                              | 前置条件             | Tier |
+| ------- | ----------- | --------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- |
+| T31.S   | S 欺骗      | 前端零鉴权（权限纯 UI 层：路由守卫/按钮 `v-if`），接口权限完全依赖网关，网关绕过即任意操作                            | `Internal Network`   | T2   |
+| T32.T   | T 篡改      | uem.js 第三方脚本在主域加载、无 SRI 完整性校验，源站被入侵/传输劫持即主域任意 JS                                      | `Host/OS Access`     | T2   |
+| T33.T   | T 篡改      | 富文本（TinyMCE）与指标描述/参考链接渲染存在 DOM XSS 面，dompurify 未覆盖全部渲染路径                                 | `Authenticated User` | T2   |
+| T34.I   | I 信息泄露  | nginx 无 CSP/HSTS/X-Frame-Options/X-Content-Type-Options 等安全响应头，XSS 后无纵深兜底、无点击劫持防护、可被协议降级 | `Authenticated User` | T2   |
+| T35.I   | I 信息泄露  | `package-lock.json` 被 gitignore，依赖树无完整性 pin，供应链投毒面（**主干无 nightly 扫描兜底，风险上浮**）           | `Host/OS Access`     | T3   |
+| T36.I   | I 信息泄露  | uem.js 用 localStorage 存埋点数据（页面 URL/用户标识），采集范围与留存未审计                                          | `Host/OS Access`     | T3   |
+| T37.D   | D 拒绝服务  | nginx `limit_req`/`limit_conn` 基于 `$http_x_real_ip`（客户端/前置可控）且速率 1000r/s 过高，防刷可被绕过/形同虚设    | `None`               | T2   |
+| T38.D   | D 拒绝服务  | `^` 浮动版本 + 无 lockfile，一次依赖升级引入兼容性/安全回归即可致站点不可用                                           | `Host/OS Access`     | T3   |
+| T39.A   | A 滥用      | 参考链接/指标链接（metric 表单、open-source-project）无域名白名单校验，可被用于钓鱼/恶意跳转                          | `Authenticated User` | T2   |
 
 **STRIDE-A 汇总（ops-web）**：S=1，T=2，R=0，I=3，D=2，E=0，A=1，共 **9 条**（T31~T39）。R（否认）与 E（权限提升）为空：前端无写权限语义、无服务端特权面，记不适用。
 
@@ -177,10 +177,10 @@ flowchart LR
 
 **nginx —— 安全响应头缺失 + 限流可绕过：**
 
-| 威胁 | 证据 | 影响 |
-| --- | --- | --- |
-| 安全响应头缺失 | [nginx_prod.conf](file:///c:/w30060144/tmp-tm-ops-web/nginx/nginx_prod.conf) server 块无 `add_header` CSP/HSTS/X-Frame-Options/X-Content-Type-Options；已配 `server_tokens off`、`proxy_hide_header X-Powered-By`、TLS1.2/1.3 + OCSP、隐藏文件 `deny all`、仅 GET/POST、`limit_conn limitperip 10` | XSS 无 CSP 兜底、无 HSTS（可被降级）、可被 iframe 点击劫持、MIME 嗅探 |
-| 限流基于可伪造头 | [nginx_prod.conf:58-60,86](file:///c:/w30060144/tmp-tm-ops-web/nginx/nginx_prod.conf#L58-L60) `limit_conn_zone $http_x_real_ip`、`limit_req_zone $http_x_real_ip rate=1000r/s`；`X-Real-IP` 由调用方/前置代理可控，1000r/s 无实际意义 | 防刷形同虚设，配合后端无限流可被刷爆 |
+| 威胁             | 证据                                                                                                                                                                                                                                                                                               | 影响                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 安全响应头缺失   | [nginx_prod.conf](file:///c:/w30060144/tmp-tm-ops-web/nginx/nginx_prod.conf) server 块无 `add_header` CSP/HSTS/X-Frame-Options/X-Content-Type-Options；已配 `server_tokens off`、`proxy_hide_header X-Powered-By`、TLS1.2/1.3 + OCSP、隐藏文件 `deny all`、仅 GET/POST、`limit_conn limitperip 10` | XSS 无 CSP 兜底、无 HSTS（可被降级）、可被 iframe 点击劫持、MIME 嗅探 |
+| 限流基于可伪造头 | [nginx_prod.conf:58-60,86](file:///c:/w30060144/tmp-tm-ops-web/nginx/nginx_prod.conf#L58-L60) `limit_conn_zone $http_x_real_ip`、`limit_req_zone $http_x_real_ip rate=1000r/s`；`X-Real-IP` 由调用方/前置代理可控，1000r/s 无实际意义                                                              | 防刷形同虚设，配合后端无限流可被刷爆                                  |
 
 **第三方埋点 uem.js —— 主域脚本注入：** [uem.js:31](file:///c:/w30060144/tmp-tm-ops-web/src/plugins/uem.js#L31) 动态向主域注入 `src: 'https://hwa.his.huawei.com/dist/uem_f.js'`，无 SRI、无完整性校验；[uem.js:33](file:///c:/w30060144/tmp-tm-ops-web/src/plugins/uem.js#L33) `storageType: 'localStorage'`。该脚本拥有主域同源能力（可读 CSRF cookie、发起带会话请求），源站被入侵即主域恶意 JS（FIND-27 对应）。
 
@@ -208,15 +208,15 @@ flowchart LR
 
 ## 五、发现清单（ops-web，FIND-26 ~ FIND-32）
 
-| 发现 | 仓库 | Tier | STRIDE | 对应威胁 | 摘要与处置方向 |
-| --- | --- | --- | --- | --- | --- |
-| FIND-26 | ops-web | T2 | S | T31 | 前端零鉴权，权限纯 UI 层，接口权限完全依赖网关 |
-| FIND-27 | ops-web | T2 | T | T32 | uem.js 第三方脚本主域注入、无 SRI 完整性 |
-| FIND-28 | ops-web | T2 | T | T33 | 富文本（TinyMCE）/描述/链接 DOM XSS 面 |
-| FIND-29 | ops-web | T2 | I | T34 | nginx 安全响应头缺失（CSP/HSTS/XFO/XCTO） |
-| FIND-30 | ops-web | T2 | D | T37 | nginx 限流基于可伪造 `X-Real-IP` 且 1000r/s 过高，防刷失效 |
-| FIND-31 | ops-web | T2 | A | T39 | 参考链接无域名白名单，可被用于钓鱼/恶意跳转 |
-| FIND-32 | ops-web | T3 | I/T/D | T35,T36,T38 | 供应链完整性缺失：无 lockfile、`^` 浮动版本、uem.js localStorage 埋点采集未审计；**主干无 nightly 防投毒/SCA 扫描兜底，风险较开发分支上浮** |
+| 发现    | 仓库    | Tier | STRIDE | 对应威胁    | 摘要与处置方向                                                                                                                              |
+| ------- | ------- | ---- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| FIND-26 | ops-web | T2   | S      | T31         | 前端零鉴权，权限纯 UI 层，接口权限完全依赖网关                                                                                              |
+| FIND-27 | ops-web | T2   | T      | T32         | uem.js 第三方脚本主域注入、无 SRI 完整性                                                                                                    |
+| FIND-28 | ops-web | T2   | T      | T33         | 富文本（TinyMCE）/描述/链接 DOM XSS 面                                                                                                      |
+| FIND-29 | ops-web | T2   | I      | T34         | nginx 安全响应头缺失（CSP/HSTS/XFO/XCTO）                                                                                                   |
+| FIND-30 | ops-web | T2   | D      | T37         | nginx 限流基于可伪造 `X-Real-IP` 且 1000r/s 过高，防刷失效                                                                                  |
+| FIND-31 | ops-web | T2   | A      | T39         | 参考链接无域名白名单，可被用于钓鱼/恶意跳转                                                                                                 |
+| FIND-32 | ops-web | T3   | I/T/D  | T35,T36,T38 | 供应链完整性缺失：无 lockfile、`^` 浮动版本、uem.js localStorage 埋点采集未审计；**主干无 nightly 防投毒/SCA 扫描兜底，风险较开发分支上浮** |
 
 > 注：FIND-35（跨仓构建供应链，Tier 3）与本仓前端构建链直接相关，详见第四章。
 
@@ -268,12 +268,12 @@ flowchart LR
 
 ## 九、附录：STRIDE-A 汇总矩阵（ops-web）
 
-| 仓库 | S 欺骗 | T 篡改 | R 否认 | I 信息泄露 | D 拒绝服务 | E 权限提升 | A 滥用 | 威胁数 | Tier1 | Tier2 | Tier3 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| openlibing-ops-web | 1 | 2 | 0 | 3 | 2 | 0 | 1 | 9 | 0 | 6 | 3 |
+| 仓库               | S 欺骗 | T 篡改 | R 否认 | I 信息泄露 | D 拒绝服务 | E 权限提升 | A 滥用 | 威胁数 | Tier1 | Tier2 | Tier3 |
+| ------------------ | ------ | ------ | ------ | ---------- | ---------- | ---------- | ------ | ------ | ----- | ----- | ----- |
+| openlibing-ops-web | 1      | 2      | 0      | 3          | 2          | 0          | 1      | 9      | 0     | 6     | 3     |
 
 > 说明：威胁层 Tier 分布（Tier2=6 / Tier3=3，合计 9 条）与发现层 Tier 分布（Tier2=6 / Tier3=1，合计 7 条）不同，系跨仓/同主题威胁合并归类所致（FIND-32 合并 T35/T36/T38 三条），属预期差异。R（否认）与 E（权限提升）为空：前端无写权限语义、无服务端特权面，记不适用。
 
 ---
 
-*报告生成：threat-model-analyst skill（STRIDE-A + 零信任 + 纵深防御），基线=远程仓主干分支（ops-web=origin/main），2026-08-21。本报告由《[openlibing-ops、ops-web、metric、sync]安全威胁建模分析报告》拆分而来，用于归档 openlibing-docs/architecture_desgin/openlibing-ops-web。*
+_报告生成：threat-model-analyst skill（STRIDE-A + 零信任 + 纵深防御），基线=远程仓主干分支（ops-web=origin/main），2026-08-21。本报告由《[openlibing-ops、ops-web、metric、sync]安全威胁建模分析报告》拆分而来，用于归档 openlibing-docs/architecture_desgin/openlibing-ops-web。_

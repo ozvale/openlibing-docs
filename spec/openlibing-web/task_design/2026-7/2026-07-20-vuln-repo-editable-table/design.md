@@ -3,6 +3,7 @@
 当前漏洞公告的仓库输入使用 textarea，用户以逗号分隔输入仓库名。后端接口已升级，返回 `repoStatusList`（对象数组，每行有独立 `id`、`pushStatus`、`repoUrl`、`failReason`），提交接口 `repos` 参数改为 `{repoName: branchName}` object。前端需要将 textarea 改造为可编辑表格以匹配后端新数据结构。
 
 现有项目模式参考：
+
 - `runParameterConfiguration.vue`：始终编辑模式的 el-table（v-model 直接绑定行数据）
 - `releaseArtifacts.vue`：非表格的 v-for 可编辑列表
 - `publishTable.vue`：配置驱动的展示型表格
@@ -11,6 +12,7 @@
 ## Goals / Non-Goals
 
 **Goals:**
+
 - 将仓库 textarea 替换为 6 列可编辑表格（仓库名称、分支名、发布结果、发布地址、失败原因、操作）
 - 支持行内编辑（编辑/保存/取消切换），仅允许一行处于编辑态
 - 支持新增行（直接进入编辑态）和删除行
@@ -19,6 +21,7 @@
 - 公告级状态和表单禁用逻辑保持不变
 
 **Non-Goals:**
+
 - 不改造公告级状态展示（legend statusIcon、isVulnFormDisabled）
 - 不改造 fixedProduct 输入框
 - 不改造发布决策等其他模块
@@ -64,12 +67,12 @@
 **选择**: 提交时将 vulnRepoList 转换为 `{repoName: branchName}` object
 
 ```typescript
-const reposMap = {}
-vulnRepoList.forEach(row => {
+const reposMap = {};
+vulnRepoList.forEach((row) => {
   if (row.repo) {
-    reposMap[row.repo] = row.branch || ''
+    reposMap[row.repo] = row.branch || "";
   }
-})
+});
 ```
 
 **理由**: 后端接口要求 repos 为 key-value object，key=仓库名，value=分支名。repo 名称允许重复，object 中同名 key 会自然合并（后端需处理此情况）。
@@ -80,12 +83,12 @@ vulnRepoList.forEach(row => {
 
 ```typescript
 const pushStatusConfig = ref({
-  0: 'can_execute',    // 待发布
-  1: 'executing',      // 执行中
-  3: 'execute_failed', // 发布失败
-  4: 'executing',      // 发布中
-  5: 'execute_success', // 发布成功
-})
+  0: "can_execute", // 待发布
+  1: "executing", // 执行中
+  3: "execute_failed", // 发布失败
+  4: "executing", // 发布中
+  5: "execute_success", // 发布成功
+});
 ```
 
 **理由**: 与项目现有状态配置模式一致（reviewStatusConfig、virusScanStatusConfig 等）

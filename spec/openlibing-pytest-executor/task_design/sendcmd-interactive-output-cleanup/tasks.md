@@ -26,11 +26,11 @@
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
+| 文件                                          | 操作 | 说明                                    |
+| --------------------------------------------- | ---- | --------------------------------------- |
 | pytest_testkit/pytest_testkit/lib/base/ssh.py | 修改 | 新增清理方法 + 调用清理逻辑（约 30 行） |
-| pytest-testkit/tests/test_ssh_success.py | 修改 | 新增测试用例（约 15 行） |
-| pytest-testkit/README.md | 修改 | 更新函数说明（约 5 行） |
+| pytest-testkit/tests/test_ssh_success.py      | 修改 | 新增测试用例（约 15 行）                |
+| pytest-testkit/README.md                      | 修改 | 更新函数说明（约 5 行）                 |
 
 ## 验证方式
 

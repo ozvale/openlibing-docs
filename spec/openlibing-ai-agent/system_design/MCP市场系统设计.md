@@ -32,11 +32,11 @@ MCP 市场不负责以下业务：
 
 核心表包括：
 
-| 表 | 源码模型 | 说明 |
-| --- | --- | --- |
-| `ai_agent_mcp_servers` | `MCPServer` | MCP Server 主数据，保存名称、展示信息、分类、团队、源码地址、README、远程和本地配置模板、参数 Schema、点赞数。 |
-| `ai_agent_mcp_server_tags` | `MCPServerTag` | 标签表，支撑标签筛选和热门标签展示。 |
-| `ai_agent_mcp_server_user_configs` | `MCPServerUserConfig` | 用户配置表，按 `user_id + mcp_server_name` 唯一保存远程或本地配置生成结果。 |
+| 表                                 | 源码模型              | 说明                                                                                                           |
+| ---------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `ai_agent_mcp_servers`             | `MCPServer`           | MCP Server 主数据，保存名称、展示信息、分类、团队、源码地址、README、远程和本地配置模板、参数 Schema、点赞数。 |
+| `ai_agent_mcp_server_tags`         | `MCPServerTag`        | 标签表，支撑标签筛选和热门标签展示。                                                                           |
+| `ai_agent_mcp_server_user_configs` | `MCPServerUserConfig` | 用户配置表，按 `user_id + mcp_server_name` 唯一保存远程或本地配置生成结果。                                    |
 
 其中 MCP Server 的配置模板分为两类：
 

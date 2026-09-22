@@ -60,13 +60,13 @@
 
 ### 3.2 白名单配置
 
-| 项 | 值 |
-|---|---|
-| 配置键 | `maas.instance.url-whitelist` |
-| 位置 | Apollo `application` namespace（与 `maas.gateway.*`、`maas.apig.*` 一致） |
-| 格式 | 逗号分隔的允许主机列表（仅精确域名/精确 IP） |
-| 默认值 | 空 |
-| 空/未配置 | 不校验（功能关闭，向后兼容） |
+| 项        | 值                                                                        |
+| --------- | ------------------------------------------------------------------------- |
+| 配置键    | `maas.instance.url-whitelist`                                             |
+| 位置      | Apollo `application` namespace（与 `maas.gateway.*`、`maas.apig.*` 一致） |
+| 格式      | 逗号分隔的允许主机列表（仅精确域名/精确 IP）                              |
+| 默认值    | 空                                                                        |
+| 空/未配置 | 不校验（功能关闭，向后兼容）                                              |
 
 配置示例：
 
@@ -81,10 +81,10 @@ maas.instance.url-whitelist=10.0.0.1,10.0.0.2,model.internal.com,api.internal.co
 1. 用 `java.net.URI(url).getHost()` 提取主机，转小写。
 2. 白名单条目只支持**精确主机名/IP**，host 与条目完全相等即放行：
 
-   | 条目形态 | 示例 | 匹配逻辑 |
-   |---|---|---|
+   | 条目形态 | 示例                 | 匹配逻辑      |
+   | -------- | -------------------- | ------------- |
    | 精确域名 | `model.internal.com` | host 完全相等 |
-   | 精确 IP | `10.0.0.1` | host 完全相等 |
+   | 精确 IP  | `10.0.0.1`           | host 完全相等 |
 
 3. host 为空（URL 解析不出主机，如格式异常）-> 拒绝。
 4. 匹配大小写不敏感（host 与条目统一小写比较）。
@@ -170,6 +170,7 @@ changeSet 内容：
 ```
 
 > 取舍：
+>
 > - `<delete>` 是 DML，**只清数据、不删表**（删表是 `<dropTable>`）；表结构由 `20260423-005` / `20260519-012` 建，保持不变。
 > - 清空而非「按白名单筛选保留」：存量多为测试/历史数据、且无法判断哪些地址在集群白名单内，直接清空最简。
 > - `preConditions` 加 `tableExists`（`onFail=MARK_RAN`）：与该文件其他 changeSet 风格一致，表不存在时跳过而非报错，保证环境兼容/幂等。
@@ -177,13 +178,13 @@ changeSet 内容：
 
 ## 4. 涉及文件
 
-| 类型 | 文件 | 改动 |
-|---|---|---|
-| 新增 | `business/service/maas/InstanceUrlWhitelistValidator.java` | 白名单校验组件（@Value + 解析 + 精确匹配） |
-| 修改 | `business/service/maas/impl/ModelInstanceServiceImpl.java` | 注入 validator；`validateUrlFields` 增加白名单校验调用 |
-| 修改 | `src/main/resources/db/changelog/v1.0.0/maas-tables.xml` | 新增 `20260723-017` changeSet，清空存量 instance + health_history 数据（见 3.8） |
-| 配置 | Apollo `application` namespace | 新增 `maas.instance.url-whitelist`（空默认值） |
-| 测试 | `InstanceUrlWhitelistValidatorTest`（新增） | 覆盖精确域名/精确IP/空配置/host 异常等场景 |
+| 类型 | 文件                                                       | 改动                                                                             |
+| ---- | ---------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 新增 | `business/service/maas/InstanceUrlWhitelistValidator.java` | 白名单校验组件（@Value + 解析 + 精确匹配）                                       |
+| 修改 | `business/service/maas/impl/ModelInstanceServiceImpl.java` | 注入 validator；`validateUrlFields` 增加白名单校验调用                           |
+| 修改 | `src/main/resources/db/changelog/v1.0.0/maas-tables.xml`   | 新增 `20260723-017` changeSet，清空存量 instance + health_history 数据（见 3.8） |
+| 配置 | Apollo `application` namespace                             | 新增 `maas.instance.url-whitelist`（空默认值）                                   |
+| 测试 | `InstanceUrlWhitelistValidatorTest`（新增）                | 覆盖精确域名/精确IP/空配置/host 异常等场景                                       |
 
 无接口变化、无表结构变化、无 controller 改动；含一个一次性数据清理 changeSet。
 
@@ -196,18 +197,18 @@ maas.instance.url-whitelist=10.0.0.1,10.0.0.2,model.internal.com,api.internal.co
 
 匹配示例（该配置下）：
 
-| 用户配置的地址 | host | 结果 |
-|---|---|---|
-| `http://10.0.0.1:8080/v1` | `10.0.0.1` | 通过（精确命中） |
-| `http://model.internal.com/health` | `model.internal.com` | 通过（精确命中） |
-| `http://10.0.0.3:8080/v1` | `10.0.0.3` | 拒绝（未在白名单） |
-| `http://evil.com/health` | `evil.com` | 拒绝 |
+| 用户配置的地址                     | host                 | 结果               |
+| ---------------------------------- | -------------------- | ------------------ |
+| `http://10.0.0.1:8080/v1`          | `10.0.0.1`           | 通过（精确命中）   |
+| `http://model.internal.com/health` | `model.internal.com` | 通过（精确命中）   |
+| `http://10.0.0.3:8080/v1`          | `10.0.0.3`           | 拒绝（未在白名单） |
+| `http://evil.com/health`           | `evil.com`           | 拒绝               |
 
 ## 6. 风险与待确认
 
-| # | 项 | 说明 / 取舍 |
-|---|---|---|
-| 1 | IPv6 字面量的方括号 | `URI.getHost()` 对 `http://[::1]:8080/` 返回的 host 字符串需与白名单条目精确一致；内部模型服务器以 IPv4 为主，IPv6 极少，若出现由 ops 按实际 host 字符串配置即可。 |
-| 2 | 存量数据清理是破坏性操作 | `20260723-017` changeSet 会在下次启动时清空 `workspace_model_instance` 和 `workspace_model_instance_health_history`。上线前需确认存量数据可弃；若需保留某些实例，先导出再上线。 |
-| 3 | Apollo 白名单与集群实际白名单需人工保持一致 | 由 ops 维护，本系统只保证「配置的 Apollo 白名单」即允许集合。 |
-| 4 | 是否需要独立 enabled 开关 | 当前「空 = 关闭」已满足开关需求。若希望「保留白名单内容但临时关闭」，可再加 `maas.instance.url-whitelist-enabled`（可选，非必要）。 |
+| #   | 项                                          | 说明 / 取舍                                                                                                                                                                     |
+| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | IPv6 字面量的方括号                         | `URI.getHost()` 对 `http://[::1]:8080/` 返回的 host 字符串需与白名单条目精确一致；内部模型服务器以 IPv4 为主，IPv6 极少，若出现由 ops 按实际 host 字符串配置即可。              |
+| 2   | 存量数据清理是破坏性操作                    | `20260723-017` changeSet 会在下次启动时清空 `workspace_model_instance` 和 `workspace_model_instance_health_history`。上线前需确认存量数据可弃；若需保留某些实例，先导出再上线。 |
+| 3   | Apollo 白名单与集群实际白名单需人工保持一致 | 由 ops 维护，本系统只保证「配置的 Apollo 白名单」即允许集合。                                                                                                                   |
+| 4   | 是否需要独立 enabled 开关                   | 当前「空 = 关闭」已满足开关需求。若希望「保留白名单内容但临时关闭」，可再加 `maas.instance.url-whitelist-enabled`（可选，非必要）。                                             |

@@ -1,11 +1,13 @@
 # dependency-type-identification — SBOM 软件包主被动依赖标识
 
 ## 需求背景
+
 openlibing-sbom 软件成分分析页面中，当前未区分软件包的直接依赖与间接依赖属性。开源管理中，主被动依赖管理原则差异较大，需在 SBOM 解析阶段从 spdx-json 元数据层面识别每个软件包的依赖类型（直接/间接），并在包查询接口支持按依赖类型过滤，便于前端展示与运营筛选。
 
 关联 Issue: https://gitcode.com/openlibing/openlibing-sbom/issues/51
 
 ## 功能描述
+
 1. `PackageStatistics` 实体新增 `dependencyType` 字段（`Integer`，0=直接依赖，1=间接依赖，3=直接/间接依赖，可扩展）
 2. `CollectStatisticsStep` 在统计阶段解析每个软件包的依赖类型，解析规则：
    - 识别根包：通过 `SPDXRef-DOCUMENT` 与 `DESCRIBES` 关系找到根包集合
@@ -17,6 +19,7 @@ openlibing-sbom 软件成分分析页面中，当前未区分软件包的直接�
 5. `PackageRepository` 的 `getPackageInfoByNameForPage` / `getPackagesByGroupPage` / `countPackageGroups` 三个 SQL 方法同步新增 `dependencyType` 过滤条件
 
 不做：
+
 - 不修改前端代码（前端组处理）
 - 不修改 `SpdxReader` 解析层（已持久化所有 relationships 到 `SbomElementRelationship` 表）
 - 不创建 schema 迁移脚本（依赖 Hibernate auto DDL 自动建列）
@@ -24,6 +27,7 @@ openlibing-sbom 软件成分分析页面中，当前未区分软件包的直接�
 - 不修改其他统计字段逻辑
 
 ## 验收标准
+
 - [ ] `package_statistics` 表新增 `dependency_type` 列（Hibernate 自动建列）
 - [ ] 解析 spdx-json 后，每个 `PackageStatistics` 都有正确的 `dependencyType` 值（0 或 1）
 - [ ] 根包通过 `SPDXRef-DOCUMENT` 与 `DESCRIBES` 关系识别
@@ -38,6 +42,7 @@ openlibing-sbom 软件成分分析页面中，当前未区分软件包的直接�
 - [ ] Phase 4 阶段补充 `CollectStatisticsStepTest` 测试覆盖根包/直接依赖/间接依赖/无依赖/既直接又间接等场景
 
 ## 影响范围
+
 - 后端：`openlibing-sbom` 仓
   - `model` 模块
     - `PackageStatistics`：新增 `dependencyType` 字段 + getter/setter + Javadoc

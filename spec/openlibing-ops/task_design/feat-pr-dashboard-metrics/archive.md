@@ -10,25 +10,25 @@
 
 业务仓 `openlibing-ops` 在 `feat/pr-dashboard-metrics` 分支自 `release_20260611_iter1` (`d6b00bf`) 起的提交：
 
-| commit | 类型 | 概要 |
-|---|---|---|
-| `68322ff` | fix | DWI 项目统计排序白名单补齐 `avgCheckDuration`（Refs #43） |
-| `7a48485` | fix | 修正版本可用度汇总的 N 倍笛卡尔积（Refs #38） |
-| `5d7c4dd` | merge | rebase `origin/release_20260611_iter1` 同步 |
-| `5340b5d` | refactor | `ExternalRepoResp` 构造方法 62 行 → 4 行，满足 G.MET.01 |
-| `9347db8` | style | import 分组补空行，满足 G.FMT.03 |
+| commit    | 类型     | 概要                                                      |
+| --------- | -------- | --------------------------------------------------------- |
+| `68322ff` | fix      | DWI 项目统计排序白名单补齐 `avgCheckDuration`（Refs #43） |
+| `7a48485` | fix      | 修正版本可用度汇总的 N 倍笛卡尔积（Refs #38）             |
+| `5d7c4dd` | merge    | rebase `origin/release_20260611_iter1` 同步               |
+| `5340b5d` | refactor | `ExternalRepoResp` 构造方法 62 行 → 4 行，满足 G.MET.01   |
+| `9347db8` | style    | import 分组补空行，满足 G.FMT.03                          |
 
 外加同分支此前已合入的：
 
-| commit | 类型 | 概要 |
-|---|---|---|
-| `9d7dc41` | feat | 仪表盘新增 NPU/Memory/vCPU、版本可用度、P0 通过率（Refs #38） |
-| `68322ff`（同表上一项） | fix | 排序白名单补齐 `avgCheckDuration` |
+| commit                                                                                                                                         | 类型 | 概要                                                          |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------- |
+| `9d7dc41`                                                                                                                                      | feat | 仪表盘新增 NPU/Memory/vCPU、版本可用度、P0 通过率（Refs #38） |
+| `68322ff`（同表上一项）                                                                                                                        | fix  | 排序白名单补齐 `avgCheckDuration`                             |
 | `68322ff` 之上的 `fix(project): 改用 p0_latest CTE 替代 p0_rank 计算 P0 通过率`、`fix(project): 修复 P0 通过率 null / 分母为 0` 等也属本次范围 |
 
 ## 用户自测反馈
 
-- 现象：MindIE（projectId=300036）汇总接口 `version_availability_rate` 80% 多，与详情接口各 pipeline 加权平均 ~10% 不一致，差 8~9 倍；P0 通过数同样 9 倍膨胀。
+- 现象：MindIE（projectId=300036）汇总接口 `version_availability_rate` 80% 多，与详情接口各 pipeline 加权平均 ~~10% 不一致，差 8~~9 倍；P0 通过数同样 9 倍膨胀。
 - 根因：`version_availability_per_pipeline` / 等价 CTE 写库侧起表用了 `sdi_repo_info` JOIN `sdi_version_pipeline_base_info`，引入 N×M 笛卡尔积；`SUM(可加项)` 不去重被 ×N（N=项目下仓库数），详情接口无此 JOIN 故正常。
 - 修复：`DwiProjectStatisticsMapper.xml` 的 `version_availability_per_pipeline` CTE 改用 `sdi_version_pipeline_base_info` 起表，`open_source` 用 `#{req.openSource}` 透传；与详情接口 `NightlyPipelineDashboardMapper.xml` `version_availability_stats` 口径一致。
 - 验证：用户灰度验证后确认修复后数值与详情接口按 pipeline 加权平均一致，反馈"结果验证正确"。

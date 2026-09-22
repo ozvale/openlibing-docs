@@ -12,11 +12,13 @@
 - [ ] Task 8: 编译验证 + 全量测试通过
 
 ## 验证方式
+
 - Phase 1：编译通过（`mvn compile -pl . -am`）
 - Phase 2：调用 `POST /pipelineInfo` 验证返回正确状态 VO
 - Phase 3：全量测试通过
 
 ## 生成前约束检查
+
 - [x] 只修改 `openlibing-cicd` 业务仓
 - [x] 遵循既有代码风格（华为版权头、Javadoc、SLF4J 日志、MyBatis XML 风格）
 - [x] 避免无关重构、无关格式化

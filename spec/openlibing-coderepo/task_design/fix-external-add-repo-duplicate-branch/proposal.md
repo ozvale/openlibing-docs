@@ -3,6 +3,7 @@
 ## 需求背景
 
 `/external/add-repo` 接口在传参包含 `branchName` 时，会在 `repo_branch` 表中创建两条相同的分支记录。根因是现有实现中存在两条路径同时写入分支：
+
 1. `externalAddRepoBranchInfo` 方法：当 `branchName` 非空时，直接 `insertRepoBranch` 插入一条分支记录
 2. `syncRepoBranchInfo` 方法：异步调用 `syncRepoBranch` 从平台 API 同步所有分支，也会包含该 `branchName`
 

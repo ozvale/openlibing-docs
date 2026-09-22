@@ -19,13 +19,13 @@ V1 方案中，workspace 通过本地 `GetLogsMapper.insert()` 直接将日志�
 
 **V2 解决方案**：将日志表建在 framework 数据库中，workspace 通过 framework 提供的内部微服务接口 `/internal-server/add/microservices/log` 写入日志。
 
-| 项目 | V1 | V2 |
-|------|----|----|
-| 日志表名 | `log_workspace_project` | `log_computing_resource_workspace_project` |
-| 日志表所在数据库 | workspace 数据库 | framework 数据库 |
-| 建表方式 | workspace Liquibase | framework Liquibase |
-| 日志写入方式 | `GetLogsMapper.insert()` 直接写 DB | Feign 调用 `/internal-server/add/microservices/log` |
-| 入湖方式 | `ManageLogHelper.writeLog()` | `ManageLogHelper.writeLog()`（不变，workspace 本地入湖） |
+| 项目             | V1                                 | V2                                                       |
+| ---------------- | ---------------------------------- | -------------------------------------------------------- |
+| 日志表名         | `log_workspace_project`            | `log_computing_resource_workspace_project`               |
+| 日志表所在数据库 | workspace 数据库                   | framework 数据库                                         |
+| 建表方式         | workspace Liquibase                | framework Liquibase                                      |
+| 日志写入方式     | `GetLogsMapper.insert()` 直接写 DB | Feign 调用 `/internal-server/add/microservices/log`      |
+| 入湖方式         | `ManageLogHelper.writeLog()`       | `ManageLogHelper.writeLog()`（不变，workspace 本地入湖） |
 
 ## 三、改造范围
 

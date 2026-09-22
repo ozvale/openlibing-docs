@@ -25,5 +25,3 @@
 - [x] 4.2 测试：matched 升序、无排序参数（scanFile ASC）、非法 sortColumn 回退
 - [x] 4.3 测试：`parseMatchedScore` 对 `"90%"`、空值、非法字符串的处理
 - [x] 4.4 运行相关模块单元测试通过
-
-

@@ -41,7 +41,6 @@
 - **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-sca/issues/36
 - **预期结果**: 添加规则表单中出现过滤目录字段。
 
-
 **2.配置扫描过滤目录_扫描结果中对应目录的文件消失**: 配置扫描过滤目录
 
 - **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-sca/issues/36
@@ -51,4 +50,3 @@
 - **预期结果**: 确认风险项中存在如`src/main/java/com/openlibing/sca/analysis`目录下的文件
 - **步骤三**：在社区管理页面，编辑openlibing-sca的SCANOSS规则，添加过滤目录src/main/java/com/openlibing/sca/analysis后重启执行对应的版本扫描和pr扫描
 - **预期结果**: 版本扫描和pr扫描结果中对应目录下的风险项不再显示
-

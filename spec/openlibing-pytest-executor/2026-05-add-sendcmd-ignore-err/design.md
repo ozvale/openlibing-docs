@@ -138,27 +138,27 @@ def _direct_exec_cmd(self, cmd, timeout=None, environment=None, cwd=None, ignore
         cmd = f"cd {shlex.quote(cwd)} && {cmd}"
     quoted_cmd = shlex.quote(cmd)
     cmd_prefix = f"bash -l -c {quoted_cmd}"
-    
+
     _, stdout, stderr = self.client.exec_command(
         cmd_prefix, timeout=timeout, environment=environment
     )
-    
+
     stdout_content = stdout.read().decode('utf-8').strip()
     stderr_content = stderr.read().decode('utf-8').strip()
     exit_code = stdout.channel.recv_exit_status()
-    
+
     self.logger.info(f"[Ssh._direct_exec_cmd] executed: {cmd}, exit_code={exit_code}")
-    
+
     if exit_code != 0:
         self.logger.warning(f"[Ssh._direct_exec_cmd] error: {stderr_content}")
-    
+
     if exit_code == 0:
         success = True
     elif ignore_err:
         success = True
     else:
         success = False
-    
+
     return {
         'success': success,
         'stdout': stdout_content,
@@ -171,27 +171,27 @@ def _jump_exec_command(self, cmd, timeout=None, environment=None, cwd=None, igno
         cmd = f"cd {shlex.quote(cwd)} && {cmd}"
     quoted_cmd = shlex.quote(cmd)
     cmd_prefix = f"bash -l -c {quoted_cmd}"
-    
+
     stdin, stdout, stderr = self.target_client.exec_command(
         cmd_prefix, timeout=timeout, environment=environment
     )
-    
+
     stdout_content = stdout.read().decode('utf-8').strip()
     stderr_content = stderr.read().decode('utf-8').strip()
     exit_code = stdout.channel.recv_exit_status()
-    
+
     self.logger.info(f"[Ssh._jump_exec_command] executed: {cmd}, exit_code={exit_code}")
-    
+
     if exit_code != 0:
         self.logger.warning(f"[Ssh._jump_exec_command] error: {stderr_content}")
-    
+
     if exit_code == 0:
         success = True
     elif ignore_err:
         success = True
     else:
         success = False
-    
+
     return {
         'success': success,
         'stdout': stdout_content,
@@ -201,13 +201,13 @@ def _jump_exec_command(self, cmd, timeout=None, environment=None, cwd=None, igno
 
 **Key changes:**
 
-| Aspect | Before | After |
-|--------|--------|-------|
-| Error detection | Different between methods | Unified: `exit_code != 0` |
-| Exception | Thrown on failure | **Never thrown** |
-| success calculation | N/A | `exit_code == 0` OR `ignore_err=True` |
-| Return type | `str` | `dict` |
-| Logging | Inconsistent | Unified: info + warning |
+| Aspect              | Before                    | After                                 |
+| ------------------- | ------------------------- | ------------------------------------- |
+| Error detection     | Different between methods | Unified: `exit_code != 0`             |
+| Exception           | Thrown on failure         | **Never thrown**                      |
+| success calculation | N/A                       | `exit_code == 0` OR `ignore_err=True` |
+| Return type         | `str`                     | `dict`                                |
+| Logging             | Inconsistent              | Unified: info + warning               |
 
 ### 4. Interactive Mode with matched_prompt - No Exceptions
 
@@ -218,11 +218,11 @@ def _direct_exec_cmd_interactive(self, cmd, expect_prompt, timeout=30, cwd=None,
             self.channel.send(f"cd {shlex.quote(cwd)} && {cmd}\n")
         else:
             self.channel.send(cmd + '\n')
-        
+
         output = ''
         matched_prompt = False
         start_time = time.time()
-        
+
         if expect_prompt is None:
             prompt_patterns = [
                 r'[$#%>]\s*$',
@@ -230,9 +230,9 @@ def _direct_exec_cmd_interactive(self, cmd, expect_prompt, timeout=30, cwd=None,
                 r'\]\s*#\s*$',
             ]
             expect_prompt = '|'.join(prompt_patterns)
-        
+
         prompt_regex = re.compile(expect_prompt, re.MULTILINE)
-        
+
         while time.time() - start_time < timeout:
             if self.channel.recv_ready():
                 output += self.channel.recv(1024).decode("utf-8")
@@ -241,21 +241,21 @@ def _direct_exec_cmd_interactive(self, cmd, expect_prompt, timeout=30, cwd=None,
                     break
             else:
                 time.sleep(0.1)
-        
+
         self.logger.info(f"[Ssh._direct_exec_cmd_interactive] matched_prompt={matched_prompt}")
-        
+
         if not matched_prompt:
             self.logger.warning(
                 f"[Ssh._direct_exec_cmd_interactive] prompt not matched"
             )
-        
+
         if matched_prompt:
             success = True
         elif ignore_err:
             success = True
         else:
             success = False
-        
+
         return {
             'success': success,
             'stdout': output,
@@ -268,15 +268,15 @@ def _direct_exec_cmd_interactive(self, cmd, expect_prompt, timeout=30, cwd=None,
 
 ### 5. Edge Cases
 
-| Case | success | stdout | stderr | Exception |
-|------|---------|--------|--------|-----------|
-| `exit_code == 0` | `True` | stdout_content | stderr_content | **No** |
-| `exit_code != 0`, `ignore_err=False` | `False` | stdout_content | stderr_content | **No** |
-| `exit_code != 0`, `ignore_err=True` | `True` | stdout_content | stderr_content | **No** |
-| Prompt matched | `True` | collected output | `""` | **No** |
-| Prompt not matched, `ignore_err=False` | `False` | collected output | `""` | **No** |
-| Prompt not matched, `ignore_err=True` | `True` | collected output | `""` | **No** |
-| Connection lost | N/A | N/A | N/A | **Yes** (not affected by ignore_err) |
+| Case                                   | success | stdout           | stderr         | Exception                            |
+| -------------------------------------- | ------- | ---------------- | -------------- | ------------------------------------ |
+| `exit_code == 0`                       | `True`  | stdout_content   | stderr_content | **No**                               |
+| `exit_code != 0`, `ignore_err=False`   | `False` | stdout_content   | stderr_content | **No**                               |
+| `exit_code != 0`, `ignore_err=True`    | `True`  | stdout_content   | stderr_content | **No**                               |
+| Prompt matched                         | `True`  | collected output | `""`           | **No**                               |
+| Prompt not matched, `ignore_err=False` | `False` | collected output | `""`           | **No**                               |
+| Prompt not matched, `ignore_err=True`  | `True`  | collected output | `""`           | **No**                               |
+| Connection lost                        | N/A     | N/A              | N/A            | **Yes** (not affected by ignore_err) |
 
 ### 6. Usage Examples
 
@@ -297,17 +297,20 @@ result = device.sendcmd("ls", ignore_err=False)
 ## Success Criteria Mapping
 
 **需求 1**: 增加 ignore_err 参数
+
 - ✅ 支持忽略预期内的报错
 - ✅ `ignore_err=True` 时，`success=True`（成功忽略错误）
 - ✅ stderr 打印日志，同时返回在字典中
 
 **需求 2**: 返回命令是否成功
+
 - ✅ 返回字典包含 `success` 字段
 - ✅ **永不抛异常**，调用者检查 `result['success']`
 - ✅ `success=True`：命令成功 或 成功忽略错误
 - ✅ `success=False`：命令失败且不忽略
 
 **新增特性**: matched_prompt tracking
+
 - ✅ 交互式命令跟踪 prompt 匹配状态
 - ✅ `matched_prompt=True` → `success=True`
 - ✅ `matched_prompt=False` + `ignore_err=True` → `success=True`
@@ -316,6 +319,7 @@ result = device.sendcmd("ls", ignore_err=False)
 ## File Changes
 
 ### `pytest_testkit/lib/base/ssh.py`
+
 - Add `ignore_err=False` parameter to `ssh_cmd()` and `ssh_cmd_interactive()`
 - Change return type from `str` to `dict`
 - **Remove all RuntimeError raises** - use `success` field instead
@@ -323,6 +327,7 @@ result = device.sendcmd("ls", ignore_err=False)
 - Add `matched_prompt` tracking in interactive commands
 
 ### `pytest_testkit/lib/common/environment/device.py`
+
 - Add `ignore_err=False` parameter to `sendcmd()` and `sendcmd_interactive()`
 - Update return type handling (pass through dict from ssh methods)
 - Update docstrings

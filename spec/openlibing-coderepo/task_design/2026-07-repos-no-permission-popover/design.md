@@ -11,6 +11,7 @@
 **选择**：framework
 
 **原因**：
+
 - framework 是权限基础设施仓，RoleInfoMapper / RolePermissionMapper / MenuInfoMapper 已存在
 - 接口可被多业务仓复用（cicd / ops 等也可接入）
 - coderepo 已有反查链路（CommonServiceImpl.verifyPermissionsByProduct）作为实现参考，但暴露为 HTTP 接口更适合放 framework
@@ -20,6 +21,7 @@
 **选择**：全量返回（前端一次拉取）
 
 **原因**：
+
 - 避免每个按钮发一次请求（Repos 目录有 10+ 个权限码）
 - 操作元数据量小（预计 < 200 条），全量返回 < 50KB
 - 前端缓存后页面切换无需重复请求
@@ -32,6 +34,7 @@
 **选择**：后端计算
 
 **原因**：
+
 - 前端已有 `user.permissions`（来自 `/user/get-user-permission`），本可前端计算
 - 但后端计算可保证一致性（避免前端两个接口数据不同步）
 - 后端可复用 Redis 缓存的 permissions，性能开销小
@@ -41,6 +44,7 @@
 **选择**：前端常量 `permissions-meta.ts`
 
 **原因**：
+
 - 文案迭代频繁，前端硬编码改最快
 - 无需 DB 变更 + 后台管理页
 - 若未来需运营可配，可扩展 menu_info 表字段后端兜底
@@ -50,6 +54,7 @@
 **选择**：现有 `v-if` 隐藏的按钮改为显示+气泡
 
 **原因**：
+
 - 需求要求「让用户知道功能存在但需要何种角色」
 - v-if 隐藏会让用户以为功能不存在
 - 显示+气泡可引导用户申请权限
@@ -61,6 +66,7 @@
 **选择**：hover 触发（默认）
 
 **原因**：
+
 - 轻量，不打断操作流
 - 符合 Element Plus el-tooltip / el-popover 既有体验
 - 点击气泡内「申请权限」按钮时通过 popover 的 `enterable` 保持显示
@@ -89,40 +95,37 @@
           {
             "level": "project",
             "levelLabel": "项目",
-            "roles": [
-              { "role": "project_manager", "roleName": "项目管理员" }
-            ]
+            "roles": [{ "role": "project_manager", "roleName": "项目管理员" }],
           },
           {
             "level": "repo",
             "levelLabel": "仓库",
-            "roles": [
-              { "role": "repo_owner", "roleName": "仓库责任人" }
-            ]
-          }
-        ]
-      }
+            "roles": [{ "role": "repo_owner", "roleName": "仓库责任人" }],
+          },
+        ],
+      },
       // ... 更多操作
-    ]
-  }
+    ],
+  },
 }
 ```
 
 **字段说明**：
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `identification` | string | 权限码，对应 menu_info.identification，如 `repo_manage:update` |
-| `operationName` | string | 操作名，来自 menu_info.menu_name |
-| `hasPermission` | boolean | 当前用户是否有此操作权限 |
-| `rolesByLevel` | array | 该操作有权限的角色，按 5 级分组 |
-| `rolesByLevel[].level` | string | 级别码：`system`/`product`/`project`/`repo`/`general` |
-| `rolesByLevel[].levelLabel` | string | 级别中文名：平台/组织/项目/仓库/通用 |
-| `rolesByLevel[].roles[]` | array | 角色列表 |
-| `rolesByLevel[].roles[].role` | string | 角色码，如 `repo_owner` |
-| `rolesByLevel[].roles[].roleName` | string | 角色中文名，如 `仓库责任人` |
+| 字段                              | 类型    | 说明                                                           |
+| --------------------------------- | ------- | -------------------------------------------------------------- |
+| `identification`                  | string  | 权限码，对应 menu_info.identification，如 `repo_manage:update` |
+| `operationName`                   | string  | 操作名，来自 menu_info.menu_name                               |
+| `hasPermission`                   | boolean | 当前用户是否有此操作权限                                       |
+| `rolesByLevel`                    | array   | 该操作有权限的角色，按 5 级分组                                |
+| `rolesByLevel[].level`            | string  | 级别码：`system`/`product`/`project`/`repo`/`general`          |
+| `rolesByLevel[].levelLabel`       | string  | 级别中文名：平台/组织/项目/仓库/通用                           |
+| `rolesByLevel[].roles[]`          | array   | 角色列表                                                       |
+| `rolesByLevel[].roles[].role`     | string  | 角色码，如 `repo_owner`                                        |
+| `rolesByLevel[].roles[].roleName` | string  | 角色中文名，如 `仓库责任人`                                    |
 
 **异常处理**：
+
 - 用户未登录：返回 401
 - 服务异常：返回 500，前端降级为现有行为（无权限按钮 `:disabled`）
 
@@ -130,17 +133,17 @@
 
 ### framework
 
-| 文件 | 操作 | 说明 |
-|---|---|---|
-| `UserBasicController.java` | 修改 | 新增 `GET /user/get-operation-permissions` 接口 |
-| `UserBasicService.java` | 修改 | 新增 `getOperationPermissions()` 方法签名 |
-| `UserBasicServiceImpl.java` | 修改 | 实现反查 + 分组 + hasPermission 计算 |
-| `OperationPermissionDTO.java` | 新增 | 响应 DTO |
-| `RoleByLevelDTO.java` | 新增 | 角色分组 DTO |
-| `RoleBriefDTO.java` | 新增 | 角色简要 DTO |
-| `MenuInfoMapper.java` | 修改 | 新增 `queryAllIdentifications()` 方法 |
-| `MenuInfoMapper.xml` | 修改 | 新增对应 SQL |
-| `UserBasicServiceImplTest.java` | 新增/修改 | 单元测试 |
+| 文件                            | 操作      | 说明                                            |
+| ------------------------------- | --------- | ----------------------------------------------- |
+| `UserBasicController.java`      | 修改      | 新增 `GET /user/get-operation-permissions` 接口 |
+| `UserBasicService.java`         | 修改      | 新增 `getOperationPermissions()` 方法签名       |
+| `UserBasicServiceImpl.java`     | 修改      | 实现反查 + 分组 + hasPermission 计算            |
+| `OperationPermissionDTO.java`   | 新增      | 响应 DTO                                        |
+| `RoleByLevelDTO.java`           | 新增      | 角色分组 DTO                                    |
+| `RoleBriefDTO.java`             | 新增      | 角色简要 DTO                                    |
+| `MenuInfoMapper.java`           | 修改      | 新增 `queryAllIdentifications()` 方法           |
+| `MenuInfoMapper.xml`            | 修改      | 新增对应 SQL                                    |
+| `UserBasicServiceImplTest.java` | 新增/修改 | 单元测试                                        |
 
 ### coderepo
 
@@ -148,39 +151,39 @@
 
 ### web-openlibing
 
-| 文件 | 操作 | 说明 |
-|---|---|---|
-| `src/components/NoPermissionPopover.vue` | 新增 | 三段式气泡组件 |
-| `src/constants/permissions-meta.ts` | 新增 | 权限码 → 操作名/介绍/指引文案 |
-| `src/api/api.ts` | 修改 | 新增 `getOperationPermissions` API |
-| `src/api/url.ts` | 修改 | 新增 URL 常量 |
-| `src/stores/app.ts` | 修改 | 扩展 `operationPermissions` 状态 |
-| `src/views/Content.vue` | 修改 | 并行调用新接口 |
-| `src/views/Repos/index.vue` | 修改 | 改造 canHandle 调用点 |
-| `src/views/Repos/branches.vue` | 修改 | 改造 canHandle 调用点 |
-| `src/views/Repos/repoUserManage.vue` | 修改 | 改造 canHandle 调用点 |
-| `src/views/Repos/tagManagement.vue` | 修改 | 改造 canHandle 调用点 |
+| 文件                                     | 操作 | 说明                               |
+| ---------------------------------------- | ---- | ---------------------------------- |
+| `src/components/NoPermissionPopover.vue` | 新增 | 三段式气泡组件                     |
+| `src/constants/permissions-meta.ts`      | 新增 | 权限码 → 操作名/介绍/指引文案      |
+| `src/api/api.ts`                         | 修改 | 新增 `getOperationPermissions` API |
+| `src/api/url.ts`                         | 修改 | 新增 URL 常量                      |
+| `src/stores/app.ts`                      | 修改 | 扩展 `operationPermissions` 状态   |
+| `src/views/Content.vue`                  | 修改 | 并行调用新接口                     |
+| `src/views/Repos/index.vue`              | 修改 | 改造 canHandle 调用点              |
+| `src/views/Repos/branches.vue`           | 修改 | 改造 canHandle 调用点              |
+| `src/views/Repos/repoUserManage.vue`     | 修改 | 改造 canHandle 调用点              |
+| `src/views/Repos/tagManagement.vue`      | 修改 | 改造 canHandle 调用点              |
 
 ## 风险 & 缓解
 
-| 风险 | 等级 | 缓解 |
-|---|---|---|
-| 新接口失败导致页面卡死 | 中 | 前端 try-catch + 降级为现有行为 |
-| hasPermission 与前端 canHandle 不一致 | 中 | 后端复用同一 Redis permissions 缓存 |
-| 5 级分组中文映射错误 | 低 | 沿用 ProjectConstant.RoleType + 前端常量双重校验 |
-| v-if 改为显示后页面灰按钮过多 | 低 | 气泡提示解释原因，视觉冲击可接受 |
-| 气泡定位在表格边缘异常 | 低 | 自动定位 + 边界保护 + 滚动关闭 |
-| 跨仓发布顺序不当导致功能不可用 | 中 | 先发 framework，再发 web；web 降级容错 |
-| super_admin 用户 permissions 缓存与接口不一致 | 低 | super_admin 直接 hasPermission=true |
+| 风险                                          | 等级 | 缓解                                             |
+| --------------------------------------------- | ---- | ------------------------------------------------ |
+| 新接口失败导致页面卡死                        | 中   | 前端 try-catch + 降级为现有行为                  |
+| hasPermission 与前端 canHandle 不一致         | 中   | 后端复用同一 Redis permissions 缓存              |
+| 5 级分组中文映射错误                          | 低   | 沿用 ProjectConstant.RoleType + 前端常量双重校验 |
+| v-if 改为显示后页面灰按钮过多                 | 低   | 气泡提示解释原因，视觉冲击可接受                 |
+| 气泡定位在表格边缘异常                        | 低   | 自动定位 + 边界保护 + 滚动关闭                   |
+| 跨仓发布顺序不当导致功能不可用                | 中   | 先发 framework，再发 web；web 降级容错           |
+| super_admin 用户 permissions 缓存与接口不一致 | 低   | super_admin 直接 hasPermission=true              |
 
 ## 跨仓影响
 
-| 协调点 | 说明 |
-|---|---|
-| 接口契约 | framework 响应结构需与 web 前端对齐，本 design 已固化 |
-| 权限码清单 | 前端 permissions-meta.ts 需覆盖 Repos 目录所有权限码，后端返回全量无需对齐 |
-| 发布顺序 | framework 先发布（向后兼容，新接口不影响现有功能）→ web 发布 |
-| 跨仓引用 | web PR body 引用 `openlibing/openlibing-coderepo#73`；framework PR 同样引用 |
+| 协调点     | 说明                                                                        |
+| ---------- | --------------------------------------------------------------------------- |
+| 接口契约   | framework 响应结构需与 web 前端对齐，本 design 已固化                       |
+| 权限码清单 | 前端 permissions-meta.ts 需覆盖 Repos 目录所有权限码，后端返回全量无需对齐  |
+| 发布顺序   | framework 先发布（向后兼容，新接口不影响现有功能）→ web 发布                |
+| 跨仓引用   | web PR body 引用 `openlibing/openlibing-coderepo#73`；framework PR 同样引用 |
 
 ## 关键实现参考
 
@@ -219,6 +222,7 @@ for (MenuInfoEntity menu : menus) {
 ```
 
 组件内部：
+
 - 从 store 取 `operationPermissions[auth]`
 - 若 `hasPermission === true` → 透传 slot 的点击
 - 若 `hasPermission === false` → 用 `el-popover` 包裹，hover 显示三段式气泡

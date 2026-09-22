@@ -1,9 +1,8 @@
-#  [优化github、huggingface连接] 测试策略
+# [优化github、huggingface连接] 测试策略
 
 ## 1. 基本信息
 
-- **需求链接**: 
-1.https://gitcode.com/openlibing/hidevlab-transport-service/issues/83
+- **需求链接**: 1.https://gitcode.com/openlibing/hidevlab-transport-service/issues/83
 - **需求名称**: 优化github、huggingface连接
 - **核心目标**:
   验证功能正确性，以及架构设计中定义的安全与隐私、可靠性与韧性、可服务性与可观测性和性能与伸缩性等非功能专项任务的闭环验收。
@@ -36,6 +35,5 @@
 
 **1. 优化github、huggingface连接**:验证在线开发环境连接github（白天、夜晚）速度>300kb/s， 验证在线开发环境支持两种下载huggingerface模型的方法
 
-- **对应task(issueID)链接:** :
-1.https://gitcode.com/openlibing/hidevlab-transport-service/issues/83
+- **对应task(issueID)链接:** : 1.https://gitcode.com/openlibing/hidevlab-transport-service/issues/83
 - **预期结果**: 在线开发环境连接github（白天、夜晚）速度>300kb/s， 在线开发环境支持两种下载huggingerface模型的方法

@@ -6,26 +6,26 @@ QEMU任务调度系统是 `openlibing-simulation` 的核心任务执行模块，
 
 ## 2. 业务边界
 
-| 边界类型 | 说明 |
-| --- | --- |
-| 上游依赖 | 节点管理模块、YAML配置管理模块 |
+| 边界类型 | 说明                            |
+| -------- | ------------------------------- |
+| 上游依赖 | 节点管理模块、YAML配置管理模块  |
 | 下游依赖 | SSH执行器、分布式锁服务、数据库 |
-| 外部接口 | 远程服务器SSH连接 |
+| 外部接口 | 远程服务器SSH连接               |
 | 内部接口 | 提供QEMU任务的CRUD和脚本管理API |
 
 ## 3. 领域模型
 
 ### 3.1 核心实体
 
-| 实体 | 说明 | 关键字段 |
-| --- | --- | --- |
-| `QemuTaskEntity` | QEMU任务实体 | id, taskName, status, createTime, updateTime |
-| `QemuTaskConfigEntity` | QEMU任务配置 | taskId, configJson, scriptPath, parameters |
-| `QemuRunScriptEntity` | 运行脚本实体 | id, taskId, scriptContent, scriptType, createTime |
-| `QemuContext` | QEMU上下文 | taskId, nodeInfo, portInfo, processId |
-| `QemuPort` | 端口信息 | port, protocol, status, description |
-| `QemuRemoteConnect` | 远程连接信息 | host, port, username, password, privateKey |
-| `LockEntity` | 分布式锁实体 | lockName, createdAt, expiredAt |
+| 实体                   | 说明         | 关键字段                                          |
+| ---------------------- | ------------ | ------------------------------------------------- |
+| `QemuTaskEntity`       | QEMU任务实体 | id, taskName, status, createTime, updateTime      |
+| `QemuTaskConfigEntity` | QEMU任务配置 | taskId, configJson, scriptPath, parameters        |
+| `QemuRunScriptEntity`  | 运行脚本实体 | id, taskId, scriptContent, scriptType, createTime |
+| `QemuContext`          | QEMU上下文   | taskId, nodeInfo, portInfo, processId             |
+| `QemuPort`             | 端口信息     | port, protocol, status, description               |
+| `QemuRemoteConnect`    | 远程连接信息 | host, port, username, password, privateKey        |
+| `LockEntity`           | 分布式锁实体 | lockName, createdAt, expiredAt                    |
 
 ### 3.2 任务状态机
 
@@ -60,31 +60,31 @@ sequenceDiagram
 
     Client->>Controller: POST /simulation/qemu/auto/task
     Controller->>Service: saveAutoQemuTask(task)
-    
+
     Service->>Lock: acquireLock(taskId, expireSeconds)
-    
+
     alt 获取锁成功
         Service->>Mapper: insertQemuTask(task)
         Mapper->>DB: INSERT INTO qemu_task ...
-        
+
         Service->>Service: prepareEnvironment(task)
         Service->>SSH: connect(host, port, username, password)
         SSH->>Node: 建立SSH连接
-        
+
         Service->>SSH: execute(prepareScript)
         SSH->>Node: 执行环境准备脚本
-        
+
         Service->>SSH: execute(startQemuCommand)
         SSH->>Node: 启动QEMU进程
-        
+
         Service->>Mapper: updateTaskStatus(taskId, "RUNNING")
-        
+
         Service->>Lock: releaseLock(taskId)
         Service-->>Controller: ResponseEntity(200, "success", task)
     else 获取锁失败
         Service-->>Controller: ResponseEntity(400, "Task is running")
     end
-    
+
     Controller-->>Client: 返回响应
 ```
 
@@ -103,32 +103,32 @@ sequenceDiagram
 
     Client->>Controller: PUT /simulation/qemu/auto/task
     Controller->>Service: closeAutoQemuTask(map)
-    
+
     Service->>Lock: acquireLock(taskId, expireSeconds)
-    
+
     alt 获取锁成功
         Service->>Mapper: getQemuTask(taskId)
         Mapper->>DB: SELECT * FROM qemu_task WHERE id = ?
         DB-->>Mapper: 返回任务信息
-        
+
         Service->>SSH: connect(host, port, username, password)
-        
+
         Service->>SSH: execute(stopQemuCommand)
         SSH->>Node: 停止QEMU进程
-        
+
         Service->>SSH: execute(cleanupScript)
         SSH->>Node: 执行清理脚本
-        
+
         SSH->>Node: 断开SSH连接
-        
+
         Service->>Mapper: updateTaskStatus(taskId, "STOPPED")
-        
+
         Service->>Lock: releaseLock(taskId)
         Service-->>Controller: ResponseEntity(200, "success")
     else 获取锁失败
         Service-->>Controller: ResponseEntity(400, "Task is locked")
     end
-    
+
     Controller-->>Client: 返回响应
 ```
 
@@ -144,10 +144,10 @@ QEMU任务调度系统使用分布式锁确保同一任务在集群环境中不�
 public String acquireLock(String lockName, int expireSeconds) {
     // 清理过期锁（可选：定期清理，可通过定时任务单独执行）
     // qemuTaskMapper.deleteExpiredLocks(LocalDateTime.now());
-    
+
     LocalDateTime now = LocalDateTime.now();
     LocalDateTime expiredAt = now.plusSeconds(expireSeconds);
-    
+
     // 使用单一原子操作获取锁：INSERT ... ON DUPLICATE KEY UPDATE
     // 锁不存在则插入，锁存在且已过期则更新，锁存在且未过期则不操作
     LockEntity lock = new LockEntity();
@@ -155,9 +155,9 @@ public String acquireLock(String lockName, int expireSeconds) {
     lock.setCreatedAt(now);
     lock.setExpiredAt(expiredAt);
     lock.setId(CommonUtils.getUuid());
-    
+
     int result = qemuTaskMapper.acquireLockAtomic(lock);
-    
+
     // result > 0 表示成功获取锁（插入新锁或更新过期锁）
     // result == 0 表示锁已被其他线程持有（未过期）
     return result > 0 ? lockName : "";
@@ -181,12 +181,12 @@ public boolean renewLock(String lockName, int expireSeconds) {
 
 ### 6.1 脚本类型
 
-| 脚本类型 | 用途 | 示例 |
-| --- | --- | --- |
-| PREPARE | 环境准备脚本 | 安装依赖、创建目录 |
-| START | QEMU启动脚本 | 执行qemu-system命令 |
-| STOP | QEMU停止脚本 | 发送kill信号 |
-| CLEANUP | 清理脚本 | 删除临时文件 |
+| 脚本类型 | 用途         | 示例                |
+| -------- | ------------ | ------------------- |
+| PREPARE  | 环境准备脚本 | 安装依赖、创建目录  |
+| START    | QEMU启动脚本 | 执行qemu-system命令 |
+| STOP     | QEMU停止脚本 | 发送kill信号        |
+| CLEANUP  | 清理脚本     | 删除临时文件        |
 
 ### 6.2 脚本存储结构
 
@@ -205,12 +205,12 @@ public boolean renewLock(String lockName, int expireSeconds) {
 
 ### 7.1 端口分配策略
 
-| 端口范围 | 用途 |
-| --- | --- |
-| 22000-22999 | QEMU SSH端口 |
-| 5900-5999 | VNC端口 |
-| 8000-8999 | 应用服务端口 |
-| 9000-9999 | 自定义服务端口 |
+| 端口范围    | 用途           |
+| ----------- | -------------- |
+| 22000-22999 | QEMU SSH端口   |
+| 5900-5999   | VNC端口        |
+| 8000-8999   | 应用服务端口   |
+| 9000-9999   | 自定义服务端口 |
 
 ### 7.2 端口状态管理
 
@@ -226,58 +226,58 @@ stateDiagram-v2
 
 ## 8. 接口列表
 
-| API 路径 | HTTP方法 | 功能描述 |
-| --- | --- | --- |
-| `/simulation/qemu/auto/task` | POST | 创建自动化QEMU任务 |
-| `/simulation/qemu/auto/task` | GET | 查询自动化任务详情 |
-| `/simulation/qemu/auto/task` | PUT | 关闭自动化任务 |
-| `/simulation/qemu/auto/task/env` | GET | 查询仿真环境信息 |
-| `/simulation/qemu/runScript` | POST | 保存运行脚本 |
-| `/simulation/qemu/runScript` | DELETE | 删除运行脚本 |
-| `/simulation/qemu/uploadLock` | PUT | 更新锁时间 |
+| API 路径                         | HTTP方法 | 功能描述           |
+| -------------------------------- | -------- | ------------------ |
+| `/simulation/qemu/auto/task`     | POST     | 创建自动化QEMU任务 |
+| `/simulation/qemu/auto/task`     | GET      | 查询自动化任务详情 |
+| `/simulation/qemu/auto/task`     | PUT      | 关闭自动化任务     |
+| `/simulation/qemu/auto/task/env` | GET      | 查询仿真环境信息   |
+| `/simulation/qemu/runScript`     | POST     | 保存运行脚本       |
+| `/simulation/qemu/runScript`     | DELETE   | 删除运行脚本       |
+| `/simulation/qemu/uploadLock`    | PUT      | 更新锁时间         |
 
 ## 9. 数据库表设计
 
 ### 9.1 qemu_task（QEMU任务表）
 
-| 字段名 | 类型 | 说明 |
-| --- | --- | --- |
-| id | VARCHAR(64) | 主键ID |
-| task_name | VARCHAR(255) | 任务名称 |
-| status | VARCHAR(32) | 任务状态 |
-| node_id | VARCHAR(64) | 关联节点ID |
-| config_json | TEXT | 配置JSON |
-| create_time | DATETIME | 创建时间 |
-| update_time | DATETIME | 更新时间 |
+| 字段名      | 类型         | 说明       |
+| ----------- | ------------ | ---------- |
+| id          | VARCHAR(64)  | 主键ID     |
+| task_name   | VARCHAR(255) | 任务名称   |
+| status      | VARCHAR(32)  | 任务状态   |
+| node_id     | VARCHAR(64)  | 关联节点ID |
+| config_json | TEXT         | 配置JSON   |
+| create_time | DATETIME     | 创建时间   |
+| update_time | DATETIME     | 更新时间   |
 
 ### 9.2 qemu_run_script（运行脚本表）
 
-| 字段名 | 类型 | 说明 |
-| --- | --- | --- |
-| id | VARCHAR(64) | 主键ID |
-| task_id | VARCHAR(64) | 关联任务ID |
-| script_content | TEXT | 脚本内容 |
-| script_type | VARCHAR(32) | 脚本类型 |
-| create_time | DATETIME | 创建时间 |
+| 字段名         | 类型        | 说明       |
+| -------------- | ----------- | ---------- |
+| id             | VARCHAR(64) | 主键ID     |
+| task_id        | VARCHAR(64) | 关联任务ID |
+| script_content | TEXT        | 脚本内容   |
+| script_type    | VARCHAR(32) | 脚本类型   |
+| create_time    | DATETIME    | 创建时间   |
 
 ### 9.3 lock_entity（分布式锁表）
 
-| 字段名 | 类型 | 说明 |
-| --- | --- | --- |
-| id | VARCHAR(64) | 主键ID |
-| lock_name | VARCHAR(255) | 锁名称 |
-| created_at | DATETIME | 创建时间 |
-| expired_at | DATETIME | 过期时间 |
+| 字段名     | 类型         | 说明     |
+| ---------- | ------------ | -------- |
+| id         | VARCHAR(64)  | 主键ID   |
+| lock_name  | VARCHAR(255) | 锁名称   |
+| created_at | DATETIME     | 创建时间 |
+| expired_at | DATETIME     | 过期时间 |
 
 ## 10. 错误处理与日志
 
 ### 10.1 错误分类
 
-| 错误类型 | 处理策略 |
-| --- | --- |
-| 连接错误 | 重试连接，记录错误日志 |
-| 执行超时 | 强制终止进程，标记任务失败 |
-| 脚本错误 | 记录错误输出，标记任务失败 |
+| 错误类型 | 处理策略                     |
+| -------- | ---------------------------- |
+| 连接错误 | 重试连接，记录错误日志       |
+| 执行超时 | 强制终止进程，标记任务失败   |
+| 脚本错误 | 记录错误输出，标记任务失败   |
 | 资源不足 | 释放已分配资源，返回错误信息 |
 
 ### 10.2 日志记录

@@ -3,6 +3,7 @@
 ## 方案概述
 
 在 `Device` 类中新增 `DockerProxy` 代理类，通过 `set_docker` 方法注册容器名后，`Device.__getitem__` 返回该代理对象。代理对象提供：
+
 - `sendcmd`：每次独立执行 `docker exec`（非交互式）
 - `sendcmd_interactive`：持久 session 模式，第一次进入容器后后续命令在同一 session 执行
 - `exit_docker`：退出 docker session 回到主机 shell
@@ -14,6 +15,7 @@
 **决策**：`DockerProxy` 作为 `Device` 类的同模块类，不继承 `Device`。
 
 **原因**：
+
 - `DockerProxy` 只需实现 `sendcmd`、`sendcmd_interactive` 和 `exit_docker` 方法，继承 `Device` 会带来不必要的属性和方法
 - 代理对象持有对父 `Device` 的引用，通过父 Device 执行实际的 SSH 命令
 - 保持接口一致性但避免继承复杂性
@@ -23,12 +25,14 @@
 **决策**：在 `Device` 类中使用 `_registered_dockers: dict[str, DockerProxy]` 存储已注册容器。
 
 **原因**：
+
 - 简单直接，无需额外数据结构
 - 每个容器名对应一个预创建的 `DockerProxy` 实例，避免重复创建
 
 ### 3. docker exec 命令格式
 
 **决策**：
+
 - 非交互式（`sendcmd`）：`docker exec {docker_name} {cmd}`，每次独立执行
 - 交互式（`sendcmd_interactive`）：持久 session 模式
   - 第一次调用：`docker exec -it {docker_name} {cmd}`，进入容器
@@ -36,6 +40,7 @@
   - 退出 session：调用 `exit_docker()`，执行 `exit` 回到主机
 
 **原因**：
+
 - 持久 session 模式符合用户实际使用习惯：进入容器后执行多条命令
 - 非交互式 `sendcmd` 保持每次独立执行，适合单条命令场景
 - 与标准 docker exec 用法一致
@@ -45,16 +50,17 @@
 **决策**：`DockerProxy` 内部维护 `_in_docker_session` 状态。
 
 **原因**：
+
 - 需要区分是否已进入 docker session，决定是否包装命令
 - 状态由 `sendcmd_interactive` 和 `exit_docker` 管理
 - 每个代理对象独立维护自己的 session 状态
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
+| 文件                                              | 操作 | 说明                                                         |
+| ------------------------------------------------- | ---- | ------------------------------------------------------------ |
 | `pytest_testkit/lib/common/environment/device.py` | 修改 | 新增 `DockerProxy` 类、`set_docker` 方法、修改 `__getitem__` |
-| `tests/test_docker_proxy.py` | 新增 | 单元测试 |
+| `tests/test_docker_proxy.py`                      | 新增 | 单元测试                                                     |
 
 ## 类设计
 
@@ -138,11 +144,11 @@ container.sendcmd("ls")  # docker exec my_container ls（独立进程）
 
 ## 风险 & 缓解
 
-| 风险 | 缓解措施 |
-|------|---------|
-| docker_name 重复注册 | 允许重复调用 `set_docker`，不会创建新的代理对象 |
-| 容器不存在时执行命令 | 不做前置检查，由 `docker exec` 返回错误，用户自行处理 |
-| 命令中含特殊字符（引号、管道） | 直接拼接，docker exec 会正确处理，复杂命令建议用户自行测试 |
+| 风险                              | 缓解措施                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------------- |
+| docker_name 重复注册              | 允许重复调用 `set_docker`，不会创建新的代理对象                                  |
+| 容器不存在时执行命令              | 不做前置检查，由 `docker exec` 返回错误，用户自行处理                            |
+| 命令中含特殊字符（引号、管道）    | 直接拼接，docker exec 会正确处理，复杂命令建议用户自行测试                       |
 | session 状态与实际 SSH 状态不一致 | 用户需正确调用 `exit_docker()` 退出；若 SSH 断开重连，session 状态可能需手动重置 |
 
 ## 跨仓影响

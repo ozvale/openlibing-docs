@@ -31,11 +31,11 @@
 
 ## 影响范围
 
-| 文件 | 变更类型 | 说明 |
-|------|---------|------|
-| Queue.vue | 功能新增 | 增加 hasAuth + TipMemberListComp 权限判断 |
-| Detail.vue | 逻辑修正 | 移除 Turing 项目限制；增加未登录保护 |
-| ApiClient.ts | 重构 | 提取 getHostBus / navigateToRoute；补全 needCheck=2 路由跳转；类型安全 |
+| 文件         | 变更类型 | 说明                                                                   |
+| ------------ | -------- | ---------------------------------------------------------------------- |
+| Queue.vue    | 功能新增 | 增加 hasAuth + TipMemberListComp 权限判断                              |
+| Detail.vue   | 逻辑修正 | 移除 Turing 项目限制；增加未登录保护                                   |
+| ApiClient.ts | 重构     | 提取 getHostBus / navigateToRoute；补全 needCheck=2 路由跳转；类型安全 |
 
 ## 无破坏性变更
 

@@ -4,10 +4,10 @@
 
 ### 修改文件
 
-| 文件 | 修改内容 |
-|------|---------|
-| TestResult.vue | 引入 Refresh 图标，摘要栏新增"执行中"计数与刷新按钮 |
-| useTestResultData.ts | 补充 running 状态映射与 getStateDotClass 颜色 |
+| 文件                 | 修改内容                                            |
+| -------------------- | --------------------------------------------------- |
+| TestResult.vue       | 引入 Refresh 图标，摘要栏新增"执行中"计数与刷新按钮 |
+| useTestResultData.ts | 补充 running 状态映射与 getStateDotClass 颜色       |
 
 ### 状态映射变更
 
@@ -29,6 +29,7 @@ getStateDotClass 新增 running 颜色映射，与执行中的语义保持一致
 ```
 
 刷新按钮：
+
 - 使用 el-button + Refresh 图标
 - 绑定 tableLoading 状态，加载中显示 loading 动画
 - 点击调用 loadData 方法

@@ -9,6 +9,7 @@
 **位置**: `__init__()` 方法（约第 25 行）
 
 **改动**:
+
 ```python
 self.test_paths = []
 ```
@@ -22,6 +23,7 @@ self.test_paths = []
 **位置**: `accept_para()` 方法（约第 296 行，处理 `config_json_data` 区域）
 
 **改动**:
+
 ```python
 test_paths_raw = config_json_data.get("testPaths", [])
 self.test_paths = [p if p.endswith("/") else p + "/" for p in test_paths_raw]
@@ -36,6 +38,7 @@ self.test_paths = [p if p.endswith("/") else p + "/" for p in test_paths_raw]
 **位置**: 类的静态方法区域（实例方法之前）
 
 **改动**:
+
 ```python
 @staticmethod
 def _is_file_path_in_test_paths(file_path: str, test_paths: list) -> bool:

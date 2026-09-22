@@ -87,10 +87,10 @@
 
 ### 跨仓改动
 
-| 仓 | 改动范围 |
-|----|---------|
-| `openlibing-coderepo` | webhook 入口、MergeRequestEventHandler、RepoServiceImpl、CommonService、ApplyRepoServiceImpl、新增评论记录表 |
-| `openlibing-codecheck` | SuppressionScanServiceImpl 支持 github、SuppressionScanResult 扩展字段、CodePlateHelper 增加 GitHubHelper |
+| 仓                     | 改动范围                                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `openlibing-coderepo`  | webhook 入口、MergeRequestEventHandler、RepoServiceImpl、CommonService、ApplyRepoServiceImpl、新增评论记录表 |
+| `openlibing-codecheck` | SuppressionScanServiceImpl 支持 github、SuppressionScanResult 扩展字段、CodePlateHelper 增加 GitHubHelper    |
 
 ### 配置项新增
 

@@ -1,11 +1,11 @@
 # 安全威胁分析报告：openlibing-eureka
 
-| 项 | 内容 |
-|---|---|
-| 仓库路径 | `D:\skill\skill收集\repo\openlibing-eureka` |
-| 分析日期 | 2026-09-02 |
-| 分析方法 | 静态代码审计（STRIDE-A 威胁建模 + 配置/依赖/部署检查） |
-| 报告语言 | 中文 |
+| 项       | 内容                                                                                                     |
+| -------- | -------------------------------------------------------------------------------------------------------- |
+| 仓库路径 | `D:\skill\skill收集\repo\openlibing-eureka`                                                              |
+| 分析日期 | 2026-09-02                                                                                               |
+| 分析方法 | 静态代码审计（STRIDE-A 威胁建模 + 配置/依赖/部署检查）                                                   |
+| 报告语言 | 中文                                                                                                     |
 | 部署分类 | 容器化基础设施服务（K8s 集群内服务注册中心，强制 HTTPS，监听 9000 端口，hostname `*.svc.cluster.local`） |
 
 ---
@@ -22,14 +22,14 @@ OpenLiBing 平台的 **Eureka 服务注册发现中心**（`@EnableEurekaServer`
 
 ### 1.2 组件与信任边界
 
-| 组件 ID | 锚点 | 职责 | 信任边界 |
-|---|---|---|---|
-| EurekaServer | `EurekaServerApplication.java:23` | 注册中心服务端 | 集群内基础设施 |
-| SecurityConfig | `SecurityConfig.java:24` | HTTP Basic + CSRF 禁用 | 认证边界 |
-| HealthCheckController | `HealthCheckController.java:17` | `/health-check`、`/health-beat` | K8s 探针 → 服务 |
-| EurekaClients | 各微服务（eureka client） | 注册/拉取/心跳，共享 Basic 凭据 | 服务 ↔ 注册中心 |
-| Dashboard | Eureka 内置首页 `/` + `/eureka/apps` | 服务拓扑展示 | 运维/浏览器 → 注册中心 |
-| K8sCluster | 部署环境 | 网络可达性边界 | 集群网络 |
+| 组件 ID               | 锚点                                 | 职责                            | 信任边界               |
+| --------------------- | ------------------------------------ | ------------------------------- | ---------------------- |
+| EurekaServer          | `EurekaServerApplication.java:23`    | 注册中心服务端                  | 集群内基础设施         |
+| SecurityConfig        | `SecurityConfig.java:24`             | HTTP Basic + CSRF 禁用          | 认证边界               |
+| HealthCheckController | `HealthCheckController.java:17`      | `/health-check`、`/health-beat` | K8s 探针 → 服务        |
+| EurekaClients         | 各微服务（eureka client）            | 注册/拉取/心跳，共享 Basic 凭据 | 服务 ↔ 注册中心        |
+| Dashboard             | Eureka 内置首页 `/` + `/eureka/apps` | 服务拓扑展示                    | 运维/浏览器 → 注册中心 |
+| K8sCluster            | 部署环境                             | 网络可达性边界                  | 集群网络               |
 
 **关键信任边界**：注册中心写接口（注册/注销/下架）是内网信任的核心——任何能向其写数据的主体都能篡改服务路由。当前仅靠一对**所有微服务共享的静态 HTTP Basic 凭据**保护，且无 mTLS。
 
@@ -37,15 +37,15 @@ OpenLiBing 平台的 **Eureka 服务注册发现中心**（`@EnableEurekaServer`
 
 ## 二、STRIDE-A 威胁分析汇总
 
-| STRIDE 类别 | 威胁数 | 代表性威胁 |
-|---|---|---|
-| S 仿冒 | 2 | 无 mTLS，凭据泄露即可冒充合法节点注册；Basic 无账号粒度 |
-| T 篡改 | 3 | 注册恶意实例/摘除合法实例（注册表投毒）；CSRF 关闭；单节点自注册配置错误 |
-| R 抵赖 | 1 | 共享凭据无法区分/审计调用方 |
-| I 信息泄露 | 2 | Dashboard/`/eureka/apps` 暴露全量内网拓扑；actuator 未显式收敛 |
-| D 拒绝服务 | 3 | 暴力破解无限速；摘除实例致服务中断；自我保护关闭 + 短租约误摘 |
-| E 权限提升 | 2 | 凭据泄露后注册恶意服务劫持内网调用流量；Dashboard 被爆破 |
-| A 业务滥用 | 1 | 注册大量伪造实例消耗注册表/干扰发现 |
+| STRIDE 类别 | 威胁数 | 代表性威胁                                                               |
+| ----------- | ------ | ------------------------------------------------------------------------ |
+| S 仿冒      | 2      | 无 mTLS，凭据泄露即可冒充合法节点注册；Basic 无账号粒度                  |
+| T 篡改      | 3      | 注册恶意实例/摘除合法实例（注册表投毒）；CSRF 关闭；单节点自注册配置错误 |
+| R 抵赖      | 1      | 共享凭据无法区分/审计调用方                                              |
+| I 信息泄露  | 2      | Dashboard/`/eureka/apps` 暴露全量内网拓扑；actuator 未显式收敛           |
+| D 拒绝服务  | 3      | 暴力破解无限速；摘除实例致服务中断；自我保护关闭 + 短租约误摘            |
+| E 权限提升  | 2      | 凭据泄露后注册恶意服务劫持内网调用流量；Dashboard 被爆破                 |
+| A 业务滥用  | 1      | 注册大量伪造实例消耗注册表/干扰发现                                      |
 
 ### 关键威胁场景
 
@@ -63,16 +63,16 @@ OpenLiBing 平台的 **Eureka 服务注册发现中心**（`@EnableEurekaServer`
 
 #### FIND-01：注册写接口与 Dashboard 仅靠"单一共享 HTTP Basic 凭据"保护，CSRF 全局关闭
 
-| 属性 | 内容 |
-|---|---|
-| STRIDE | S / T / E |
-| CWE | [CWE-522](https://cwe.mitre.org/data/definitions/522.html) 凭据保护不足（共享凭据）；[CWE-352](https://cwe.mitre.org/data/definitions/352.html) CSRF；[CWE-307](https://cwe.mitre.org/data/definitions/307.html) 认证尝试未限制 |
-| OWASP | A01:2025 – Broken Access Control；A07:2025 |
-| 利用前提 | 集群网络可达注册中心 9000 端口，且获取/爆破出共享凭据 |
-| 证据 | `SecurityConfig.java:36-38` `anyRequest().authenticated()` + `httpBasic()` + `csrf.disable()`；`application.yml:10-11` 与 `application-beta.yml:23-27` 服务端凭据与 eureka client 复制凭据同为 `${eureka_name}/${eureka_password}`；Dashboard `/` 与 `/eureka/apps` 同域，无限流 |
-| 风险 | 注册/注销/下架等改写操作仅靠一对全服务共享的静态凭据；任一服务/环境泄露凭据即可注册恶意实例、摘除合法实例（注册表投毒/DoS），进而劫持内网调用；Basic 无账号粒度、无审计、无登录失败锁定，可暴力破解；Dashboard 泄露全量内网拓扑。 |
-| 修复建议 | ① 启用 **mTLS**（`client-auth: need`）以证书身份做服务认证，替代/叠加静态密码；② 为注册与拉取使用独立凭据；③ 写操作在网络层限制内网网段/来源，并监控异常注册/下架；④ Dashboard 加 IP 白名单与登录限速，考虑表单登录 + 失败锁定。 |
-| 修复成本 | 中 |
+| 属性     | 内容                                                                                                                                                                                                                                                                             |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| STRIDE   | S / T / E                                                                                                                                                                                                                                                                        |
+| CWE      | [CWE-522](https://cwe.mitre.org/data/definitions/522.html) 凭据保护不足（共享凭据）；[CWE-352](https://cwe.mitre.org/data/definitions/352.html) CSRF；[CWE-307](https://cwe.mitre.org/data/definitions/307.html) 认证尝试未限制                                                  |
+| OWASP    | A01:2025 – Broken Access Control；A07:2025                                                                                                                                                                                                                                       |
+| 利用前提 | 集群网络可达注册中心 9000 端口，且获取/爆破出共享凭据                                                                                                                                                                                                                            |
+| 证据     | `SecurityConfig.java:36-38` `anyRequest().authenticated()` + `httpBasic()` + `csrf.disable()`；`application.yml:10-11` 与 `application-beta.yml:23-27` 服务端凭据与 eureka client 复制凭据同为 `${eureka_name}/${eureka_password}`；Dashboard `/` 与 `/eureka/apps` 同域，无限流 |
+| 风险     | 注册/注销/下架等改写操作仅靠一对全服务共享的静态凭据；任一服务/环境泄露凭据即可注册恶意实例、摘除合法实例（注册表投毒/DoS），进而劫持内网调用；Basic 无账号粒度、无审计、无登录失败锁定，可暴力破解；Dashboard 泄露全量内网拓扑。                                                |
+| 修复建议 | ① 启用 **mTLS**（`client-auth: need`）以证书身份做服务认证，替代/叠加静态密码；② 为注册与拉取使用独立凭据；③ 写操作在网络层限制内网网段/来源，并监控异常注册/下架；④ Dashboard 加 IP 白名单与登录限速，考虑表单登录 + 失败锁定。                                                 |
+| 修复成本 | 中                                                                                                                                                                                                                                                                               |
 
 ### 中危
 
@@ -144,20 +144,20 @@ OpenLiBing 平台的 **Eureka 服务注册发现中心**（`@EnableEurekaServer`
 
 ### Quick Wins（低成本快速修复）
 
-| 编号 | 事项 | 成本 |
-|---|---|---|
-| FIND-03 | 单节点关闭自注册/自拉取，恢复合理租约与自我保护 | 低 |
-| FIND-04 | 显式收敛 actuator 暴露为 health,info | 低 |
-| FIND-05 | 清理/修正 monitor.sh 危险命令 | 低 |
-| FIND-06 | 固定基础镜像版本、JRE 校验 SHA256 | 低 |
-| FIND-07 | 健康探针与安全链对齐 | 低 |
-| FIND-08 | commons-lang 迁移 lang3 | 低 |
+| 编号    | 事项                                            | 成本 |
+| ------- | ----------------------------------------------- | ---- |
+| FIND-03 | 单节点关闭自注册/自拉取，恢复合理租约与自我保护 | 低   |
+| FIND-04 | 显式收敛 actuator 暴露为 health,info            | 低   |
+| FIND-05 | 清理/修正 monitor.sh 危险命令                   | 低   |
+| FIND-06 | 固定基础镜像版本、JRE 校验 SHA256               | 低   |
+| FIND-07 | 健康探针与安全链对齐                            | 低   |
+| FIND-08 | commons-lang 迁移 lang3                         | 低   |
 
 ### 需专项处理
 
-| 编号 | 事项 | 成本 |
-|---|---|---|
-| FIND-01/02 | 启用 mTLS 服务身份认证、独立凭据、Dashboard 限速与白名单、写操作网络限制与监控 | 中 |
+| 编号       | 事项                                                                           | 成本 |
+| ---------- | ------------------------------------------------------------------------------ | ---- |
+| FIND-01/02 | 启用 mTLS 服务身份认证、独立凭据、Dashboard 限速与白名单、写操作网络限制与监控 | 中   |
 
 ---
 

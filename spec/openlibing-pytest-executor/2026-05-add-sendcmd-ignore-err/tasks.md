@@ -3,6 +3,7 @@
 ## Implementation Tasks
 
 ### Task 1: Update `_direct_exec_cmd()` method
+
 **File**: `pytest_testkit/lib/base/ssh.py`
 
 - [ ] Add `ignore_err=False` parameter to method signature
@@ -35,6 +36,7 @@
 ---
 
 ### Task 2: Update `_jump_exec_command()` method
+
 **File**: `pytest_testkit/lib/base/ssh.py`
 
 - [ ] Add `ignore_err=False` parameter to method signature
@@ -50,6 +52,7 @@
 ---
 
 ### Task 3: Update `ssh_cmd()` method
+
 **File**: `pytest_testkit/lib/base/ssh.py`
 
 - [ ] Add `ignore_err=False` parameter to method signature
@@ -61,6 +64,7 @@
 ---
 
 ### Task 4: Update `_direct_exec_cmd_interactive()` method
+
 **File**: `pytest_testkit/lib/base/ssh.py`
 
 - [ ] Add `ignore_err=False` parameter to method signature
@@ -97,6 +101,7 @@
 ---
 
 ### Task 5: Update `_jump_exec_cmd_interactive()` method
+
 **File**: `pytest_testkit/lib/base/ssh.py`
 
 - [ ] Add `ignore_err=False` parameter to method signature
@@ -110,6 +115,7 @@
 ---
 
 ### Task 6: Update `ssh_cmd_interactive()` method
+
 **File**: `pytest_testkit/lib/base/ssh.py`
 
 - [ ] Add `ignore_err=False` parameter to method signature
@@ -121,6 +127,7 @@
 ---
 
 ### Task 7: Update `Device.sendcmd()` method
+
 **File**: `pytest_testkit/lib/common/environment/device.py`
 
 - [ ] Add `ignore_err=False` parameter to method signature
@@ -131,6 +138,7 @@
 ---
 
 ### Task 8: Update `Device.sendcmd_interactive()` method
+
 **File**: `pytest_testkit/lib/common/environment/device.py`
 
 - [ ] Add `ignore_err=False` parameter to method signature

@@ -22,25 +22,25 @@
 
 ## 2. 关键决策（设计 vs 实现对照）
 
-| 维度 | 原设计 | **当前实现** |
-|------|--------|-------------|
-| 集成位置 | `manageCenter` →「运营运维」 | ✅ 一致 |
-| 主视图 | 社区 × 特性 状态矩阵 | **特性 × 社区**（行=特性，列=社区 + **末列「全部」**，首列固定） |
-| 矩阵状态 | 已使用 / 未使用 两态 | **三态**：`active`（已接入）、`inactive`（未接入）、`not_involve`（不涉及） |
-| 矩阵「全部」列 | 无 | **末列固定「全部」**；状态取自 `matrix['ALL'][featureName]`；`active` 可点击，打开详情时 `community=ALL` |
-| 矩阵交互 | 仅「已使用」可点击 | ✅ 仅 `active` 可点击 → 打开详情抽屉 |
-| 指标配置入口 | 表头特性名后 ⚙ 按钮 | ✅ 首列特性名旁 ⚙ 按钮，`emit('openConfig', feature)` |
-| 详情面板 | 右侧抽屉，无趋势图 | ✅ **`size="50%"` 抽屉**（非固定 720px）；**指标卡片三列网格**，无趋势图 |
-| 详情社区筛选 | 单社区下拉 | 下拉含 **「全部」**（`ALL_COMMUNITY = 'ALL'`），不传 `community` 参数 |
-| 时间粒度 | 日/周/月/年 + 联动日期框 | ✅ 一致；**默认粒度为「月」** |
-| 指标卡片 | metricName + ⓘ 描述 + 当前/目标 | **metricName + ⓘ tooltip 描述 + 聚合类型 Tag + 当前值/目标 + 目标达成率进度条**（描述不在卡片正文展示） |
-| 聚合类型 | count / rate | **count / rate / last_value（时点）**；配置表头 tooltip 说明三种含义 |
-| 指标分类 | 用户指标 + 业务指标 | ✅ 一致；用户指标 **下拉新增**（自定义 / 用户数 / 访问量）+ **aggregationUrls** |
-| 指标配置编辑 | 内嵌表单 dialog | **表格行内编辑**（单行锁定；保存/取消在操作列；无嵌套 dialog） |
-| 架构 | 多 composable + mock 层 | **单文件 `useDashboard.ts`**；API 在 `@/api/api.ts`，**无 mock / USE_MOCK** |
-| 社区来源 | `get-project-select` | **矩阵接口 `GET /matrix` 返回的 `communities` 字段**（前端过滤掉 `ALL`） |
-| 特性标识 | `featureKey`（如 `gate_check`） | **特性名称字符串**（`features` 与 `matrix` 内层 key 均为中文特性名） |
-| 用户指标数据来源 | 路由守卫 debounce 上报 | **UEM SDK 自动采集 + Collector 镜像** → `/record-pv`（payload 含 `operationUrl` + `projectId`） |
+| 维度             | 原设计                          | **当前实现**                                                                                             |
+| ---------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 集成位置         | `manageCenter` →「运营运维」    | ✅ 一致                                                                                                  |
+| 主视图           | 社区 × 特性 状态矩阵            | **特性 × 社区**（行=特性，列=社区 + **末列「全部」**，首列固定）                                         |
+| 矩阵状态         | 已使用 / 未使用 两态            | **三态**：`active`（已接入）、`inactive`（未接入）、`not_involve`（不涉及）                              |
+| 矩阵「全部」列   | 无                              | **末列固定「全部」**；状态取自 `matrix['ALL'][featureName]`；`active` 可点击，打开详情时 `community=ALL` |
+| 矩阵交互         | 仅「已使用」可点击              | ✅ 仅 `active` 可点击 → 打开详情抽屉                                                                     |
+| 指标配置入口     | 表头特性名后 ⚙ 按钮             | ✅ 首列特性名旁 ⚙ 按钮，`emit('openConfig', feature)`                                                    |
+| 详情面板         | 右侧抽屉，无趋势图              | ✅ **`size="50%"` 抽屉**（非固定 720px）；**指标卡片三列网格**，无趋势图                                 |
+| 详情社区筛选     | 单社区下拉                      | 下拉含 **「全部」**（`ALL_COMMUNITY = 'ALL'`），不传 `community` 参数                                    |
+| 时间粒度         | 日/周/月/年 + 联动日期框        | ✅ 一致；**默认粒度为「月」**                                                                            |
+| 指标卡片         | metricName + ⓘ 描述 + 当前/目标 | **metricName + ⓘ tooltip 描述 + 聚合类型 Tag + 当前值/目标 + 目标达成率进度条**（描述不在卡片正文展示）  |
+| 聚合类型         | count / rate                    | **count / rate / last_value（时点）**；配置表头 tooltip 说明三种含义                                     |
+| 指标分类         | 用户指标 + 业务指标             | ✅ 一致；用户指标 **下拉新增**（自定义 / 用户数 / 访问量）+ **aggregationUrls**                          |
+| 指标配置编辑     | 内嵌表单 dialog                 | **表格行内编辑**（单行锁定；保存/取消在操作列；无嵌套 dialog）                                           |
+| 架构             | 多 composable + mock 层         | **单文件 `useDashboard.ts`**；API 在 `@/api/api.ts`，**无 mock / USE_MOCK**                              |
+| 社区来源         | `get-project-select`            | **矩阵接口 `GET /matrix` 返回的 `communities` 字段**（前端过滤掉 `ALL`）                                 |
+| 特性标识         | `featureKey`（如 `gate_check`） | **特性名称字符串**（`features` 与 `matrix` 内层 key 均为中文特性名）                                     |
+| 用户指标数据来源 | 路由守卫 debounce 上报          | **UEM SDK 自动采集 + Collector 镜像** → `/record-pv`（payload 含 `operationUrl` + `projectId`）          |
 
 ## 3. 目录结构与组件职责
 
@@ -84,28 +84,28 @@ API 封装位于全局层（非模块内独立文件）：
 
 ### 组件职责
 
-| 组件 / 模块 | 职责 |
-|------------|------|
-| `index.vue` | 页头（标题 + 副标题 + 刷新）、四张统计卡片、协调矩阵/抽屉/配置弹窗；`onMounted` 加载矩阵 |
-| `StatusMatrix.vue` | `el-table` 渲染特性×社区矩阵 + **末列「全部」**；首列固定；`max-height: calc(100vh - 220px)`；列 hover 高亮（30ms 防抖清除）；`active` 单元格可点击；tooltip 显示「社区 · 特性 · 状态」 |
-| `DetailDrawer.vue` | 粒度 radio + 联动日期框 + 社区下拉；按 `metricConfigs` + `reports` 组装用户/业务指标区；**三列**卡片网格；空态 `el-empty` |
-| `MetricCard.vue` | 展示指标名、**ⓘ tooltip 描述**、聚合类型 Tag、当前值/目标值、目标达成率进度条（蓝/绿 variant） |
-| `MetricConfigDialog.vue` | 按特性加载指标列表；用户/业务分组表格；**行内编辑**（单行锁定，保存/取消在操作列）；用户指标 **下拉新增** |
-| `useDashboard.ts` | 矩阵/详情/指标 CRUD 数据加载；`communities` 过滤 `ALL`；请求均带 `silentRequest`（`disabledLoading: true`） |
+| 组件 / 模块              | 职责                                                                                                                                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.vue`              | 页头（标题 + 副标题 + 刷新）、四张统计卡片、协调矩阵/抽屉/配置弹窗；`onMounted` 加载矩阵                                                                                                |
+| `StatusMatrix.vue`       | `el-table` 渲染特性×社区矩阵 + **末列「全部」**；首列固定；`max-height: calc(100vh - 220px)`；列 hover 高亮（30ms 防抖清除）；`active` 单元格可点击；tooltip 显示「社区 · 特性 · 状态」 |
+| `DetailDrawer.vue`       | 粒度 radio + 联动日期框 + 社区下拉；按 `metricConfigs` + `reports` 组装用户/业务指标区；**三列**卡片网格；空态 `el-empty`                                                               |
+| `MetricCard.vue`         | 展示指标名、**ⓘ tooltip 描述**、聚合类型 Tag、当前值/目标值、目标达成率进度条（蓝/绿 variant）                                                                                          |
+| `MetricConfigDialog.vue` | 按特性加载指标列表；用户/业务分组表格；**行内编辑**（单行锁定，保存/取消在操作列）；用户指标 **下拉新增**                                                                               |
+| `useDashboard.ts`        | 矩阵/详情/指标 CRUD 数据加载；`communities` 过滤 `ALL`；请求均带 `silentRequest`（`disabledLoading: true`）                                                                             |
 
 ### 工具模块（`constants.ts` / `utils.ts`）
 
-| 符号 / 函数 | 用途 |
-|------------|------|
-| `ALL_COMMUNITY` | 矩阵末列与详情社区下拉的「全部」标识（`'ALL'`） |
-| `silentRequest` | `{ disabledLoading: true }`，避免 ApiClient 全局 loading 与局部 `v-loading` 叠加 |
-| `AGGREGATION_TYPE_LABEL` / `DESCRIPTION` / `TIPS` | 聚合类型展示文案与配置表头 tooltip 内容 |
-| `getAggregationTypeTagType` | MetricCard / 配置表只读态 Tag 颜色（count→primary, rate→success, last_value→warning） |
-| `USER_METRIC_PRESET_OPTIONS` | 用户数（`unique_visitor`）、访问量（`page_view`）预设模板 |
-| `isValidAggregateUrl` | 聚合 URL 必须以 `/` 开头的应用路径，最长 256 字符 |
-| `formatMetricValue` / `resolveMetricNumeric` | 指标值展示与达成率计算（含 rate 分子分母对象） |
-| `buildFeatureDetailQueryParams` | 详情接口参数组装；`ALL` 时不传 `community` |
-| `buildStatusMatrixRows` | 将 `features × communities` 拍平为 `el-table` 行数据 |
+| 符号 / 函数                                       | 用途                                                                                  |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `ALL_COMMUNITY`                                   | 矩阵末列与详情社区下拉的「全部」标识（`'ALL'`）                                       |
+| `silentRequest`                                   | `{ disabledLoading: true }`，避免 ApiClient 全局 loading 与局部 `v-loading` 叠加      |
+| `AGGREGATION_TYPE_LABEL` / `DESCRIPTION` / `TIPS` | 聚合类型展示文案与配置表头 tooltip 内容                                               |
+| `getAggregationTypeTagType`                       | MetricCard / 配置表只读态 Tag 颜色（count→primary, rate→success, last_value→warning） |
+| `USER_METRIC_PRESET_OPTIONS`                      | 用户数（`unique_visitor`）、访问量（`page_view`）预设模板                             |
+| `isValidAggregateUrl`                             | 聚合 URL 必须以 `/` 开头的应用路径，最长 256 字符                                     |
+| `formatMetricValue` / `resolveMetricNumeric`      | 指标值展示与达成率计算（含 rate 分子分母对象）                                        |
+| `buildFeatureDetailQueryParams`                   | 详情接口参数组装；`ALL` 时不传 `community`                                            |
+| `buildStatusMatrixRows`                           | 将 `features × communities` 拍平为 `el-table` 行数据                                  |
 
 ## 4. 页面布局
 
@@ -133,20 +133,20 @@ API 封装位于全局层（非模块内独立文件）：
 
 **统计卡片计算规则**（`index.vue` `stats` computed）：
 
-| 指标 | 计算方式 |
-|------|---------|
-| 接入社区 | `communities.length`（**不含** `ALL`；接口若返回 `ALL` 会被前端过滤） |
-| 关键特性 | `features.length` |
+| 指标       | 计算方式                                                                    |
+| ---------- | --------------------------------------------------------------------------- |
+| 接入社区   | `communities.length`（**不含** `ALL`；接口若返回 `ALL` 会被前端过滤）       |
+| 关键特性   | `features.length`                                                           |
 | 已接入特性 | 矩阵中 `status === 'active'` 的单元格数（**仅统计社区列，不含「全部」列**） |
-| 整体接入率 | `active / applicable × 100`（**排除 `not_involve` 单元格**） |
+| 整体接入率 | `active / applicable × 100`（**排除 `not_involve` 单元格**）                |
 
 **矩阵状态样式**：
 
-| 状态 | 文案 | 样式 | 可点击 |
-|------|------|------|--------|
-| `active` | 已接入 | 绿色渐变圆 + ✓ | ✅ |
-| `inactive` | 未接入 | 灰色圆 + — | ❌ |
-| `not_involve` | 不涉及 | 虚线边框圆 + — | ❌ |
+| 状态          | 文案   | 样式           | 可点击 |
+| ------------- | ------ | -------------- | ------ |
+| `active`      | 已接入 | 绿色渐变圆 + ✓ | ✅     |
+| `inactive`    | 未接入 | 灰色圆 + —     | ❌     |
+| `not_involve` | 不涉及 | 虚线边框圆 + — | ❌     |
 
 **矩阵「全部」列**（`StatusMatrix.vue`）：
 
@@ -186,12 +186,12 @@ API 封装位于全局层（非模块内独立文件）：
 
 时间粒度与日期格式：
 
-| 粒度 | 日期框 type | 存储格式 | 接口 date 参数 |
-|------|------------|---------|---------------|
-| 日 | `date` | `YYYY-MM-DD` | 当天 |
-| 周 | `week` | `YYYY-MM-DD` | 该周某天 |
-| 月 | `month` | `YYYY-MM` | 该月 1 日 `YYYY-MM-DD` |
-| 年 | `year` | `YYYY` | 该年 1 月 1 日 `YYYY-MM-DD` |
+| 粒度 | 日期框 type | 存储格式     | 接口 date 参数              |
+| ---- | ----------- | ------------ | --------------------------- |
+| 日   | `date`      | `YYYY-MM-DD` | 当天                        |
+| 周   | `week`      | `YYYY-MM-DD` | 该周某天                    |
+| 月   | `month`     | `YYYY-MM`    | 该月 1 日 `YYYY-MM-DD`      |
+| 年   | `year`      | `YYYY`       | 该年 1 月 1 日 `YYYY-MM-DD` |
 
 ### 4.3 指标卡片（MetricCard）
 
@@ -217,11 +217,11 @@ API 封装位于全局层（非模块内独立文件）：
 
 **聚合类型含义**（`constants.ts`，配置表头 tooltip 与 Tag 共用）：
 
-| 类型 | 展示文案 | 含义 |
-|------|---------|------|
-| `count` | 计数 | 统计周期内各次上报数值的累加，如 UV、PV |
-| `rate` | 比率 | 分子与分母分别累加后再计算百分比，如成功率 |
-| `last_value` | 时点 | 取统计周期内最后一次上报的数值，适用于瞬时状态类指标 |
+| 类型         | 展示文案 | 含义                                                 |
+| ------------ | -------- | ---------------------------------------------------- |
+| `count`      | 计数     | 统计周期内各次上报数值的累加，如 UV、PV              |
+| `rate`       | 比率     | 分子与分母分别累加后再计算百分比，如成功率           |
+| `last_value` | 时点     | 取统计周期内最后一次上报的数值，适用于瞬时状态类指标 |
 
 ### 4.4 指标配置弹窗（MetricConfigDialog，width = 1200px）
 
@@ -256,15 +256,15 @@ API 封装位于全局层（非模块内独立文件）：
 
 ```typescript
 /** 矩阵单元格状态 */
-type FeatureStatus = 'active' | 'inactive' | 'not_involve';
+type FeatureStatus = "active" | "inactive" | "not_involve";
 
 /** 聚合类型 */
-type AggregationType = 'count' | 'rate' | 'last_value';
+type AggregationType = "count" | "rate" | "last_value";
 
 /** GET /matrix 响应 data */
 interface MatrixData {
-  communities?: string[];           // 社区列顺序；含可选 'ALL'（前端展示末列并过滤出 communities 列表）
-  features: string[];               // 特性行顺序（特性名称）
+  communities?: string[]; // 社区列顺序；含可选 'ALL'（前端展示末列并过滤出 communities 列表）
+  features: string[]; // 特性行顺序（特性名称）
   matrix: Record<string, Record<string, FeatureStatus>>;
   // matrix[community][featureName] = status
   // matrix['ALL'][featureName] = 该特性跨社区汇总状态（矩阵末列）
@@ -288,25 +288,26 @@ interface FeatureReportItem {
 /** 指标配置（query-metrics / 详情 / CRUD 共用） */
 interface MetricConfigItem {
   metricId?: string;
-  metricType: 'user_metric' | 'business_metric';
+  metricType: "user_metric" | "business_metric";
   metricName: string;
   metricKey: string;
-  aggregationType: 'count' | 'rate' | 'last_value';
+  aggregationType: "count" | "rate" | "last_value";
   targetValue: string;
   description: string;
-  aggregationUrls?: string[];       // 用户指标聚合路径
+  aggregationUrls?: string[]; // 用户指标聚合路径
 }
 
 /** rate 原始值可为分子分母对象 */
-type MetricRawValue = number | string | { numerator: number; denominator: number };
+type MetricRawValue =
+  number | string | { numerator: number; denominator: number };
 
 /** 详情卡片展示项（前端组装） */
 interface MetricDisplay {
   metricName: string;
   metricKey: string;
   description?: string;
-  aggregationType: 'count' | 'rate' | 'last_value';
-  currentValue: MetricRawValue | '--';
+  aggregationType: "count" | "rate" | "last_value";
+  currentValue: MetricRawValue | "--";
   targetValue?: number | string;
 }
 ```
@@ -342,11 +343,11 @@ flowchart TB
 
 **事件与状态协调**（`index.vue`）：
 
-| 事件 | 行为 |
-|------|------|
+| 事件              | 行为                                               |
+| ----------------- | -------------------------------------------------- |
 | 矩阵 `openDetail` | 设置 `activeCommunity` + `activeFeature`，打开抽屉 |
-| 矩阵 `openConfig` | 设置 `activeFeature`，打开配置弹窗 |
-| 刷新按钮 | 重新调用 `useFeatureMatrix.load()` |
+| 矩阵 `openConfig` | 设置 `activeFeature`，打开配置弹窗                 |
+| 刷新按钮          | 重新调用 `useFeatureMatrix.load()`                 |
 
 **详情抽屉加载时机**（`DetailDrawer.vue` `watch`）：`visible` 变为 true 或 `feature`/`community` props 变化时，重置粒度为月、日期为当前月、社区为 props 传入值，并调用 `load`。
 
@@ -362,16 +363,16 @@ flowchart TB
 
 封装于 `@/api/url.ts` + `@/api/api.ts`：
 
-| 用途 | 方法 | 路径 | 前端函数 |
-|------|------|------|---------|
-| 矩阵总览 | GET | `/matrix` | `getFeatureDashboardMatrix`（响应含 `features` 字段，作为特性行数据源） |
-| 特性详情 | GET | `/query-features/detail?feature&period&date[&community]` | `getFeatureDashboardDetail` |
-| 指标列表 | GET | `/features/query-metrics/detail?feature=` | `getFeatureDashboardMetrics` |
-| 指标创建 | POST | `/metrics`（body: `{ metrics: [...] }`） | `addFeatureDashboardMetric` |
-| 指标更新 | POST | `/update-metrics?metricId=` | `updateFeatureDashboardMetric` |
-| 指标删除 | POST | `/delete-metrics?metricId=` | `deleteFeatureDashboardMetric` |
-| PV 上报（特性看板） | POST | `/record-pv` | `recordFeatureDashboardPv` |
-| 操作埋点（UEM 通用） | POST | `/gateway/pv-record/record` | `sendUemRecord`（`v-uem-record` 指令） |
+| 用途                 | 方法 | 路径                                                     | 前端函数                                                                |
+| -------------------- | ---- | -------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 矩阵总览             | GET  | `/matrix`                                                | `getFeatureDashboardMatrix`（响应含 `features` 字段，作为特性行数据源） |
+| 特性详情             | GET  | `/query-features/detail?feature&period&date[&community]` | `getFeatureDashboardDetail`                                             |
+| 指标列表             | GET  | `/features/query-metrics/detail?feature=`                | `getFeatureDashboardMetrics`                                            |
+| 指标创建             | POST | `/metrics`（body: `{ metrics: [...] }`）                 | `addFeatureDashboardMetric`                                             |
+| 指标更新             | POST | `/update-metrics?metricId=`                              | `updateFeatureDashboardMetric`                                          |
+| 指标删除             | POST | `/delete-metrics?metricId=`                              | `deleteFeatureDashboardMetric`                                          |
+| PV 上报（特性看板）  | POST | `/record-pv`                                             | `recordFeatureDashboardPv`                                              |
+| 操作埋点（UEM 通用） | POST | `/gateway/pv-record/record`                              | `sendUemRecord`（`v-uem-record` 指令）                                  |
 
 ## 8. UEM 与用户指标数据采集
 
@@ -398,13 +399,13 @@ flowchart LR
 
 **启动顺序**（关键：镜像必须早于 SDK 脚本）：
 
-| 步骤 | 位置 | 行为 |
-|------|------|------|
-| 1 | `bootstrap.ts` 首行 | `import '@/utils/uem.js'` |
-| 2 | `uem.js` | `installUemCollectorMirror()` 安装拦截器 |
-| 3 | `uem.js` | 动态插入 `<script id="uem_f">` 加载 `uem_f.js` |
-| 4 | SDK `onload` | `hwa('setEnable', false)` — 初始禁用自动采集 |
-| 5 | `Container.vue` | 获取用户信息后 `hwa('setEnable', true)` + `hwa('setUserId', userId)` |
+| 步骤 | 位置                | 行为                                                                 |
+| ---- | ------------------- | -------------------------------------------------------------------- |
+| 1    | `bootstrap.ts` 首行 | `import '@/utils/uem.js'`                                            |
+| 2    | `uem.js`            | `installUemCollectorMirror()` 安装拦截器                             |
+| 3    | `uem.js`            | 动态插入 `<script id="uem_f">` 加载 `uem_f.js`                       |
+| 4    | SDK `onload`        | `hwa('setEnable', false)` — 初始禁用自动采集                         |
+| 5    | `Container.vue`     | 获取用户信息后 `hwa('setEnable', true)` + `hwa('setUserId', userId)` |
 
 **SDK 配置**（`getUemTrackerConfig()`）：
 
@@ -424,31 +425,31 @@ flowchart LR
 
 拦截华为 UEM SDK 发往 collector 的请求（含 `enableActivityTracking` 自动采集），镜像到自研 PV 接口，**不阻断**原始 SDK 上报。
 
-| 维度 | 实现 |
-|------|------|
-| 拦截目标 | `hwa.his.huawei.com/hwa/p`；运行时动态扩展 `*.his.huawei.com/hwa/*` |
-| 拦截手段 | patch `navigator.sendBeacon`、`window.fetch`、`XMLHttpRequest`；`PerformanceObserver(resource)` 兜底 |
-| 去重 | 同一 URL 300ms 内不重复镜像（`MIRROR_DEDUPE_MS = 300`） |
-| URL 提取 | 优先读 SDK query 的 `url` / `pageUrl` / `page` / `dp`；其次解析 body JSON 的 `url` / `page`；兜底取 `window.location` |
-| 镜像 payload | `{ operationUrl: pathname+search+hash, projectId }` — 从 `useAppStore().projectInfo.projectId` 读取 |
-| 上报函数 | `recordPvEvent()` → `recordFeatureDashboardPv`（静默、`disabledLoading`、失败不弹窗） |
+| 维度         | 实现                                                                                                                  |
+| ------------ | --------------------------------------------------------------------------------------------------------------------- |
+| 拦截目标     | `hwa.his.huawei.com/hwa/p`；运行时动态扩展 `*.his.huawei.com/hwa/*`                                                   |
+| 拦截手段     | patch `navigator.sendBeacon`、`window.fetch`、`XMLHttpRequest`；`PerformanceObserver(resource)` 兜底                  |
+| 去重         | 同一 URL 300ms 内不重复镜像（`MIRROR_DEDUPE_MS = 300`）                                                               |
+| URL 提取     | 优先读 SDK query 的 `url` / `pageUrl` / `page` / `dp`；其次解析 body JSON 的 `url` / `page`；兜底取 `window.location` |
+| 镜像 payload | `{ operationUrl: pathname+search+hash, projectId }` — 从 `useAppStore().projectInfo.projectId` 读取                   |
+| 上报函数     | `recordPvEvent()` → `recordFeatureDashboardPv`（静默、`disabledLoading`、失败不弹窗）                                 |
 
 ### 8.4 与指标配置的关联
 
-| 指标预设 | metricKey | 说明 | 前端配置要求 |
-|---------|-----------|------|-------------|
-| 用户数 | `unique_visitor` | 所选周期内访问用户数（UV） | 需配置 `aggregationUrls`（页面路径列表） |
-| 访问量 | `page_view` | 所选周期内访问量（PV） | 需配置 `aggregationUrls`（页面路径列表） |
-| 自定义 | 用户定义 | 自定义 count 指标 | 无 aggregationUrls 时不走 UEM 路径聚合 |
+| 指标预设 | metricKey        | 说明                       | 前端配置要求                             |
+| -------- | ---------------- | -------------------------- | ---------------------------------------- |
+| 用户数   | `unique_visitor` | 所选周期内访问用户数（UV） | 需配置 `aggregationUrls`（页面路径列表） |
+| 访问量   | `page_view`      | 所选周期内访问量（PV）     | 需配置 `aggregationUrls`（页面路径列表） |
+| 自定义   | 用户定义         | 自定义 count 指标          | 无 aggregationUrls 时不走 UEM 路径聚合   |
 
 后端将镜像上报的 `operationUrl` 与指标配置中的 `aggregationUrls` 做路径匹配，按 `projectId` + 时间粒度聚合后，通过详情接口 `reports[].userMetrics` 返回给看板展示。
 
 ### 8.5 两条上报链路（勿混淆）
 
-| 链路 | 触发方式 | 接口 | payload 要点 | 用途 |
-|------|---------|------|-------------|------|
-| **特性看板 PV（自动）** | UEM SDK 页面采集 → Collector 镜像 | `POST .../feature-dashboard/record-pv` | `operationUrl`, `projectId` | 特性看板用户指标数据源 |
-| **操作埋点（手动）** | `v-uem-record` 指令绑定的 click 事件 | `POST /gateway/pv-record/record` | `operationUrl`, `operationModule`, ... | 全局操作行为记录（仓库/发布/PR 等页面按钮），**与看板用户指标无直接耦合** |
+| 链路                    | 触发方式                             | 接口                                   | payload 要点                           | 用途                                                                      |
+| ----------------------- | ------------------------------------ | -------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------- |
+| **特性看板 PV（自动）** | UEM SDK 页面采集 → Collector 镜像    | `POST .../feature-dashboard/record-pv` | `operationUrl`, `projectId`            | 特性看板用户指标数据源                                                    |
+| **操作埋点（手动）**    | `v-uem-record` 指令绑定的 click 事件 | `POST /gateway/pv-record/record`       | `operationUrl`, `operationModule`, ... | 全局操作行为记录（仓库/发布/PR 等页面按钮），**与看板用户指标无直接耦合** |
 
 > 初版设计中的 `routePvGuard.ts`（路由 debounce 上报）**已移除**，用户指标采集统一走 UEM Collector 镜像链路。
 
@@ -457,7 +458,7 @@ flowchart LR
 ```typescript
 // recordPvEvent.ts
 interface FeatureDashboardPvPayload {
-  operationUrl: string;       // 页面路径，如 /apps/entryCheckNew?tab=1
+  operationUrl: string; // 页面路径，如 /apps/entryCheckNew?tab=1
   projectId: string | number; // 当前社区 projectId（非 projectName）
 }
 ```
@@ -498,10 +499,10 @@ interface FeatureDashboardPvPayload {
 
 ## 11. 测试
 
-| 文件 | 覆盖范围 |
-|------|---------|
-| `__tests__/utils.spec.ts` | `formatMetricValue`（含 `last_value`）、`formatDecimal`、`formatRatePercent`、`resolveMetricNumeric`、`calcAttainmentRate`、`normalizeDetailQueryDate`、`buildFeatureDetailQueryParams`、`buildStatusMatrixRows` |
-| `__tests__/constants.spec.ts` | `isValidAggregateUrl` 路径格式校验 |
+| 文件                          | 覆盖范围                                                                                                                                                                                                         |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `__tests__/utils.spec.ts`     | `formatMetricValue`（含 `last_value`）、`formatDecimal`、`formatRatePercent`、`resolveMetricNumeric`、`calcAttainmentRate`、`normalizeDetailQueryDate`、`buildFeatureDetailQueryParams`、`buildStatusMatrixRows` |
+| `__tests__/constants.spec.ts` | `isValidAggregateUrl` 路径格式校验                                                                                                                                                                               |
 
 ## 12. 待澄清 / 后续
 

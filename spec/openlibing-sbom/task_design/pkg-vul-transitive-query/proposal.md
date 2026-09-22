@@ -24,11 +24,11 @@
 
 在 `GET /queryPackageVulnerability` 接口新增 `scope` 查询参数，控制漏洞查询的覆盖范围：
 
-| scope 取值 | 含义 | 数据来源 |
-|-----------|------|---------|
-| `SELF`（默认） | 仅当前包自身的漏洞 | 直接按 `packageId` 查 `package_vulnerability` |
-| `DEPENDENCIES` | 仅传递依赖包的漏洞 | 读 `package_dependency_cache` 拿到传递依赖 ID 集合，按集合查漏洞 |
-| `ALL` | 当前包 + 传递依赖包的漏洞 | 上述两者并集 |
+| scope 取值     | 含义                      | 数据来源                                                         |
+| -------------- | ------------------------- | ---------------------------------------------------------------- |
+| `SELF`（默认） | 仅当前包自身的漏洞        | 直接按 `packageId` 查 `package_vulnerability`                    |
+| `DEPENDENCIES` | 仅传递依赖包的漏洞        | 读 `package_dependency_cache` 拿到传递依赖 ID 集合，按集合查漏洞 |
+| `ALL`          | 当前包 + 传递依赖包的漏洞 | 上述两者并集                                                     |
 
 - `scope` 参数可选，缺省 `SELF`，保持对既有调用方的兼容
 - 非法 `scope` 值由 `VulQueryScope.parse()` 抛 `SbomRuntimeException`，Controller 兜底为 500
@@ -108,30 +108,30 @@
 
 ## 影响范围
 
-| 文件 | 操作 | 归属功能 | 说明 |
-|------|------|----------|------|
-| `model/.../enums/VulQueryScope.java` | 新增 | 功能一 | SELF / DEPENDENCIES / ALL 枚举 + `parse()` 容错 |
-| `model/.../entity/PackageDependencyCache.java` | 新增 | 功能二 | 缓存实体（`uuid[]` 数组列） |
-| `model/.../pojo/dto/PackageIdAndSpdxId.java` | 新增 | 功能二 | projection DTO，避免 N+1 |
-| `model/.../pojo/vo/sbom/VulnerabilityVo.java` | 修改 | 功能一 | 新增 `name` / `version` 字段 |
-| `dao/PackageDependencyCacheRepository.java` | 新增 | 功能二 | 缓存 Repository |
-| `dao/SbomElementRelationshipRepository.java` | 修改 | 功能二 | 新增 BFS 用的 projection 查询 |
-| `dao/PackageRepository.java` | 修改 | 功能二 | 新增按 spdxId 集合查 packageId 的查询 |
-| `dao/ExternalVulRefRepository.java` | 新增/修改 | 功能二 | `findByPackageIdsInAndSeverityAndVulId` 改用 `= ANY(uuid[])` |
-| `api/sbom/SbomService.java` | 修改 | 一/三 | `queryPackageVulnerability` 增 `scope` 形参；`refreshDependencyCache` 改 `productName` 形参 |
-| `controller/SbomController.java` | 修改 | 一/三 | `/queryPackageVulnerability` 增 `scope` 参数；`/dependencyCache/refresh` 改 `productName` |
-| `service/sbom/impl/SbomServiceImpl.java` | 修改 | 一/二/三 | scope 分发逻辑、缓存查询集成、productName → sbomId 解析 |
-| `service/sbom/impl/DependencyCacheService.java` | 新增 | 功能二 | 缓存管理服务（构建 / 查询 / 失效 / 刷新 + 去重锁） |
-| `service/sbom/impl/DependencyGraphBuilder.java` | 新增 | 功能二 | BFS 传递依赖闭包计算 |
-| `service/reader/impl/spdx/SpdxReader.java` | 修改 | 功能二 | hook `precomputeForSbom` + `invalidateBySbom` |
-| `batch/step/PrecomputeDependencyCacheStep.java` | 新增 | 功能二 | spring-batch 异步预计算 step |
-| `resources/spring-batch/sbom-read-job.xml` | 修改 | 功能二 | 注册 `PrecomputeDependencyCacheStep` 到 job |
-| `test/.../controller/SbomControllerTest.java` | 修改 | 一/三 | 适配 scope 参数与 productName 入参 |
-| `test/.../sbom/impl/DependencyCacheServiceTest.java` | 新增 | 功能二 | 100% line coverage |
-| `test/.../sbom/impl/DependencyGraphBuilderTest.java` | 新增 | 功能二 | 100% line coverage |
-| `test/.../sbom/impl/SbomServiceImplTest.java` | 修改 | 一/三 | 适配 scope 分发逻辑 |
-| `test/.../reader/impl/spdx/SpdxReaderTest.java` | 修改 | 功能二 | mock `DependencyCacheService` |
-| `test/.../reader/impl/spdx/SpdxWriteTest.java` | 修改 | 功能二 | mock `DependencyCacheService` |
+| 文件                                                 | 操作      | 归属功能 | 说明                                                                                        |
+| ---------------------------------------------------- | --------- | -------- | ------------------------------------------------------------------------------------------- |
+| `model/.../enums/VulQueryScope.java`                 | 新增      | 功能一   | SELF / DEPENDENCIES / ALL 枚举 + `parse()` 容错                                             |
+| `model/.../entity/PackageDependencyCache.java`       | 新增      | 功能二   | 缓存实体（`uuid[]` 数组列）                                                                 |
+| `model/.../pojo/dto/PackageIdAndSpdxId.java`         | 新增      | 功能二   | projection DTO，避免 N+1                                                                    |
+| `model/.../pojo/vo/sbom/VulnerabilityVo.java`        | 修改      | 功能一   | 新增 `name` / `version` 字段                                                                |
+| `dao/PackageDependencyCacheRepository.java`          | 新增      | 功能二   | 缓存 Repository                                                                             |
+| `dao/SbomElementRelationshipRepository.java`         | 修改      | 功能二   | 新增 BFS 用的 projection 查询                                                               |
+| `dao/PackageRepository.java`                         | 修改      | 功能二   | 新增按 spdxId 集合查 packageId 的查询                                                       |
+| `dao/ExternalVulRefRepository.java`                  | 新增/修改 | 功能二   | `findByPackageIdsInAndSeverityAndVulId` 改用 `= ANY(uuid[])`                                |
+| `api/sbom/SbomService.java`                          | 修改      | 一/三    | `queryPackageVulnerability` 增 `scope` 形参；`refreshDependencyCache` 改 `productName` 形参 |
+| `controller/SbomController.java`                     | 修改      | 一/三    | `/queryPackageVulnerability` 增 `scope` 参数；`/dependencyCache/refresh` 改 `productName`   |
+| `service/sbom/impl/SbomServiceImpl.java`             | 修改      | 一/二/三 | scope 分发逻辑、缓存查询集成、productName → sbomId 解析                                     |
+| `service/sbom/impl/DependencyCacheService.java`      | 新增      | 功能二   | 缓存管理服务（构建 / 查询 / 失效 / 刷新 + 去重锁）                                          |
+| `service/sbom/impl/DependencyGraphBuilder.java`      | 新增      | 功能二   | BFS 传递依赖闭包计算                                                                        |
+| `service/reader/impl/spdx/SpdxReader.java`           | 修改      | 功能二   | hook `precomputeForSbom` + `invalidateBySbom`                                               |
+| `batch/step/PrecomputeDependencyCacheStep.java`      | 新增      | 功能二   | spring-batch 异步预计算 step                                                                |
+| `resources/spring-batch/sbom-read-job.xml`           | 修改      | 功能二   | 注册 `PrecomputeDependencyCacheStep` 到 job                                                 |
+| `test/.../controller/SbomControllerTest.java`        | 修改      | 一/三    | 适配 scope 参数与 productName 入参                                                          |
+| `test/.../sbom/impl/DependencyCacheServiceTest.java` | 新增      | 功能二   | 100% line coverage                                                                          |
+| `test/.../sbom/impl/DependencyGraphBuilderTest.java` | 新增      | 功能二   | 100% line coverage                                                                          |
+| `test/.../sbom/impl/SbomServiceImplTest.java`        | 修改      | 一/三    | 适配 scope 分发逻辑                                                                         |
+| `test/.../reader/impl/spdx/SpdxReaderTest.java`      | 修改      | 功能二   | mock `DependencyCacheService`                                                               |
+| `test/.../reader/impl/spdx/SpdxWriteTest.java`       | 修改      | 功能二   | mock `DependencyCacheService`                                                               |
 
 - 业务仓：`openlibing-sbom`
 - **涉及数据模型变更**：新增 `package_dependency_cache` 表（PostgreSQL `uuid[]` 数组列）

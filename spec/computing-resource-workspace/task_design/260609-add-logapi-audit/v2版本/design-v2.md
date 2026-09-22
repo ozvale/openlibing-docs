@@ -10,16 +10,16 @@ V1 方案中，workspace 通过本地 `GetLogsMapper.insert()` 直接将日志�
 
 ## 二、变更对比
 
-| 项目 | V1（原方案） | V2（本方案） |
-|------|-------------|-------------|
-| 日志表名 | `log_workspace_project` | `log_computing_resource_workspace_project` |
-| 日志表所在数据库 | workspace 数据库 | framework 数据库 |
-| 建表方式 | workspace Liquibase | framework Liquibase |
-| 日志写入方式 | `GetLogsMapper.insert()` 直接写 DB | Feign 调用 `/internal-server/add/microservices/log` |
-| workspace 本地 GetLogsMapper | 保留（insert） | 删除（不再需要） |
-| workspace 本地 GetLogsMapper.xml | 保留（insert + 白名单） | 删除（不再需要） |
-| 入湖方式 | `ManageLogHelper.writeLog()` | `ManageLogHelper.writeLog()`（V1 已完成，V2 无变化） |
-| Framework 侧注册 | MANAGEMENT_LOG + 白名单 | MANAGEMENT_LOG + 白名单 + Liquibase 建表 |
+| 项目                             | V1（原方案）                       | V2（本方案）                                         |
+| -------------------------------- | ---------------------------------- | ---------------------------------------------------- |
+| 日志表名                         | `log_workspace_project`            | `log_computing_resource_workspace_project`           |
+| 日志表所在数据库                 | workspace 数据库                   | framework 数据库                                     |
+| 建表方式                         | workspace Liquibase                | framework Liquibase                                  |
+| 日志写入方式                     | `GetLogsMapper.insert()` 直接写 DB | Feign 调用 `/internal-server/add/microservices/log`  |
+| workspace 本地 GetLogsMapper     | 保留（insert）                     | 删除（不再需要）                                     |
+| workspace 本地 GetLogsMapper.xml | 保留（insert + 白名单）            | 删除（不再需要）                                     |
+| 入湖方式                         | `ManageLogHelper.writeLog()`       | `ManageLogHelper.writeLog()`（V1 已完成，V2 无变化） |
+| Framework 侧注册                 | MANAGEMENT_LOG + 白名单            | MANAGEMENT_LOG + 白名单 + Liquibase 建表             |
 
 ## 三、整体流程
 
@@ -124,6 +124,7 @@ Framework /internal-server/add/microservices/log
 ```
 
 **作用**：
+
 - 前端日志页面业务日志分类下显示"灵枢"选项
 - `LoggingServiceImpl` 根据 `operationModule="灵枢"` 找到表名 `log_computing_resource_workspace_project`
 - `/internal-server/add/microservices/log` 接口根据 `tableDescription="灵枢"` + `tableFlag=2` 找到表名写入
@@ -182,14 +183,14 @@ logsDetailVO.setHttpUserAgent(request.getHeader("User-Agent"));
 
 **数据来源对比**：
 
-| 字段 | `AbstractLogHandler` 从 JWT 解析 | `UserContext` (ThreadLocal) | `workspace_user_info` 表 |
-|------|------|------|------|
-| `userId` | ✅ JWT 有 | ✅ 有 | ✅ 有 |
-| `userName` | ✅ JWT 有 | ✅ 有 | ✅ 有 |
-| `accountId` | ✅ JWT 有 | ✅ 有（来自 /get-user-info） | ✅ 有 |
-| `accountName` | ✅ JWT 有 | ✅ 有（来自 /get-user-info） | ✅ 有 |
-| `accountPlatform` | ❌ **JWT 没有** | ✅ 有（来自 /get-user-info） | ✅ 有 |
-| `operatorIp` | ✅ `request.getRemoteAddr()` | ✅ `clientIp` | ❌ 没有 |
+| 字段              | `AbstractLogHandler` 从 JWT 解析 | `UserContext` (ThreadLocal)  | `workspace_user_info` 表 |
+| ----------------- | -------------------------------- | ---------------------------- | ------------------------ |
+| `userId`          | ✅ JWT 有                        | ✅ 有                        | ✅ 有                    |
+| `userName`        | ✅ JWT 有                        | ✅ 有                        | ✅ 有                    |
+| `accountId`       | ✅ JWT 有                        | ✅ 有（来自 /get-user-info） | ✅ 有                    |
+| `accountName`     | ✅ JWT 有                        | ✅ 有（来自 /get-user-info） | ✅ 有                    |
+| `accountPlatform` | ❌ **JWT 没有**                  | ✅ 有（来自 /get-user-info） | ✅ 有                    |
+| `operatorIp`      | ✅ `request.getRemoteAddr()`     | ✅ `clientIp`                | ❌ 没有                  |
 
 **解决方案**：在 `buildMicroservicesLogDTO` 中，三方账号字段**优先从 `LogsDetailVO` 取，缺失时从 `UserContext` 补全**：
 
@@ -211,53 +212,53 @@ dto.setOperatorIp(StringUtils.isNotBlank(vo.getOperatorIp())
 
 **DB 字段**（18 列，会入库）：
 
-| 字段 | 值来源 | framework insert 对应列 |
-|------|--------|----------------------|
-| `operationDate` | `LogsDetailVO.operationDate` | `operation_date` |
-| `logCode` | `LogsDetailVO.logCode` | `log_code` |
-| `logResult` | `LogsDetailVO.logResult` | `log_result` |
-| `operationModule` | `LogsDetailVO.operationModule` | `operation_module` |
-| `userName` | `LogsDetailVO.userName` | `user_name` |
-| `userId` | `LogsDetailVO.userId` | `user_id` |
-| `operation` | `LogsDetailVO.operation` | `operation` |
-| `oldData` | `LogsDetailVO.oldData` | `old_data` |
-| `newData` | `LogsDetailVO.newData` | `new_data` |
-| `remark` | `LogsDetailVO.remark` | `remark` |
-| `logMessage` | `LogsDetailVO.logMessage` | `log_message` |
-| `isDetail` | `LogsDetailVO.isDetail` | `is_detail` |
-| `exMessage` | `LogsDetailVO.exMessage` | `ex_message` |
-| `params` | `LogsDetailVO.params` | `params` |
-| `accountId` | `LogsDetailVO` 降级 `UserContext` | `account_id` |
-| `accountPlatform` | `LogsDetailVO` 降级 `UserContext` | `account_platform` |
-| `accountName` | `LogsDetailVO` 降级 `UserContext` | `account_name` |
-| `operatorIp` | `LogsDetailVO` 降级 `UserContext` | —（不入库） |
+| 字段              | 值来源                            | framework insert 对应列 |
+| ----------------- | --------------------------------- | ----------------------- |
+| `operationDate`   | `LogsDetailVO.operationDate`      | `operation_date`        |
+| `logCode`         | `LogsDetailVO.logCode`            | `log_code`              |
+| `logResult`       | `LogsDetailVO.logResult`          | `log_result`            |
+| `operationModule` | `LogsDetailVO.operationModule`    | `operation_module`      |
+| `userName`        | `LogsDetailVO.userName`           | `user_name`             |
+| `userId`          | `LogsDetailVO.userId`             | `user_id`               |
+| `operation`       | `LogsDetailVO.operation`          | `operation`             |
+| `oldData`         | `LogsDetailVO.oldData`            | `old_data`              |
+| `newData`         | `LogsDetailVO.newData`            | `new_data`              |
+| `remark`          | `LogsDetailVO.remark`             | `remark`                |
+| `logMessage`      | `LogsDetailVO.logMessage`         | `log_message`           |
+| `isDetail`        | `LogsDetailVO.isDetail`           | `is_detail`             |
+| `exMessage`       | `LogsDetailVO.exMessage`          | `ex_message`            |
+| `params`          | `LogsDetailVO.params`             | `params`                |
+| `accountId`       | `LogsDetailVO` 降级 `UserContext` | `account_id`            |
+| `accountPlatform` | `LogsDetailVO` 降级 `UserContext` | `account_platform`      |
+| `accountName`     | `LogsDetailVO` 降级 `UserContext` | `account_name`          |
+| `operatorIp`      | `LogsDetailVO` 降级 `UserContext` | —（不入库）             |
 
 **路由字段**（不入库，用于 framework 内部路由）：
 
-| 字段 | 值 | 说明 |
-|------|-----|------|
-| `tableFlag` | 固定 `2` | 业务日志 |
+| 字段               | 值            | 说明                              |
+| ------------------ | ------------- | --------------------------------- |
+| `tableFlag`        | 固定 `2`      | 业务日志                          |
 | `tableDescription` | 固定 `"灵枢"` | 对应 MANAGEMENT_LOG JSON 中的 key |
 
 **用户面字段**（不入库，`AbstractLogHandler` 已从 `HttpServletRequest` 提取到 `LogsDetailVO`）：
 
-| 字段 | 来源 | 说明 |
-|------|------|------|
-| `requestMethod` | `request.getMethod()` | 已在 `LogsDetailVO` 中 |
-| `requestUri` | `request.getRequestURI()` | 同上 |
-| `requestLength` | `request.getContentLength()` | 同上 |
-| `bodyBytesSent` | — | 同上 |
-| `requestTime` | — | 同上 |
-| `httpUserAgent` | `request.getHeader("User-Agent")` | 同上 |
-| `upstreamResponseLength` | — | 同上 |
-| `contentLength` | — | 同上 |
-| `host` | — | 同上 |
-| `upstreamAddr` | — | 同上 |
-| `timeLocal` | — | 同上 |
-| `serverProtocol` | — | 同上 |
-| `contentType` | — | 同上 |
-| `scheme` | — | 同上 |
-| `httpXForwardedFor` | — | 同上 |
+| 字段                     | 来源                              | 说明                   |
+| ------------------------ | --------------------------------- | ---------------------- |
+| `requestMethod`          | `request.getMethod()`             | 已在 `LogsDetailVO` 中 |
+| `requestUri`             | `request.getRequestURI()`         | 同上                   |
+| `requestLength`          | `request.getContentLength()`      | 同上                   |
+| `bodyBytesSent`          | —                                 | 同上                   |
+| `requestTime`            | —                                 | 同上                   |
+| `httpUserAgent`          | `request.getHeader("User-Agent")` | 同上                   |
+| `upstreamResponseLength` | —                                 | 同上                   |
+| `contentLength`          | —                                 | 同上                   |
+| `host`                   | —                                 | 同上                   |
+| `upstreamAddr`           | —                                 | 同上                   |
+| `timeLocal`              | —                                 | 同上                   |
+| `serverProtocol`         | —                                 | 同上                   |
+| `contentType`            | —                                 | 同上                   |
+| `scheme`                 | —                                 | 同上                   |
+| `httpXForwardedFor`      | —                                 | 同上                   |
 
 ### 4.6 Workspace 侧：WorkspaceProjectLogHandler.saveLog 改造
 
@@ -349,10 +350,10 @@ private MicroservicesLogDTO buildMicroservicesLogDTO(LogsDetailVO vo) {
 
 以下 V1 中新增的组件在 V2 中不再需要：
 
-| 文件 | 操作 | 原因 |
-|------|------|------|
-| `GetLogsMapper.java` | 删除 | 不再直接写 DB |
-| `GetLogsMapper.xml` | 删除 | 不再直接写 DB |
+| 文件                                                        | 操作 | 原因                    |
+| ----------------------------------------------------------- | ---- | ----------------------- |
+| `GetLogsMapper.java`                                        | 删除 | 不再直接写 DB           |
+| `GetLogsMapper.xml`                                         | 删除 | 不再直接写 DB           |
 | `project-tables.xml` 中的 `log_workspace_project` changeSet | 删除 | 表建在 framework 数据库 |
 
 ### 4.8 Workspace 侧：常量更新
@@ -383,35 +384,35 @@ public static final String LOG_WORKSPACE_PROJECT = "log_computing_resource_works
 
 ### Framework 仓库
 
-| 文件 | 改动类型 | 说明 |
-|------|---------|------|
-| `db/changelog/v1.0.1/log_computing_resource_workspace_project.xml` | 新增 | Liquibase 建表脚本 |
-| `db/changelog/db.changelog.xml` | 修改 | include 新建表脚本 |
-| `LogDataCollectionName.java` | 修改 | MANAGEMENT_LOG 新增 `"灵枢": "log_computing_resource_workspace_project"` |
-| `GetLogsMapper.xml` | 修改 | 白名单新增 `log_computing_resource_workspace_project` |
+| 文件                                                               | 改动类型 | 说明                                                                     |
+| ------------------------------------------------------------------ | -------- | ------------------------------------------------------------------------ |
+| `db/changelog/v1.0.1/log_computing_resource_workspace_project.xml` | 新增     | Liquibase 建表脚本                                                       |
+| `db/changelog/db.changelog.xml`                                    | 修改     | include 新建表脚本                                                       |
+| `LogDataCollectionName.java`                                       | 修改     | MANAGEMENT_LOG 新增 `"灵枢": "log_computing_resource_workspace_project"` |
+| `GetLogsMapper.xml`                                                | 修改     | 白名单新增 `log_computing_resource_workspace_project`                    |
 
 ### Workspace 仓库
 
-| 文件 | 改动类型 | 说明 |
-|------|---------|------|
-| `FrameworkClient.java` | 修改 | 新增 `addMicroservicesLog()` 方法 |
-| `MicroservicesLogDTO.java` | 新增 | Feign 请求 DTO（镜像 framework） |
-| `WorkspaceProjectLogHandler.java` | 修改 | saveLog 改为 Feign 调用，删除 GetLogsMapper 依赖，新增 FrameworkClient 依赖 |
-| `LogOperationConstants.java` | 修改 | `LOG_WORKSPACE_PROJECT` 值改为 `log_computing_resource_workspace_project` |
-| `ProjectSpaceServiceImpl.java` | 修改 | @LogApi tableName 更新 |
-| `ApiKeyServiceImpl.java` | 修改 | @LogApi tableName 更新 |
-| `GetLogsMapper.java` | 删除 | 不再需要 |
-| `GetLogsMapper.xml` | 删除 | 不再需要 |
-| `project-tables.xml` | 修改 | 删除 `log_workspace_project` changeSet |
+| 文件                              | 改动类型 | 说明                                                                        |
+| --------------------------------- | -------- | --------------------------------------------------------------------------- |
+| `FrameworkClient.java`            | 修改     | 新增 `addMicroservicesLog()` 方法                                           |
+| `MicroservicesLogDTO.java`        | 新增     | Feign 请求 DTO（镜像 framework）                                            |
+| `WorkspaceProjectLogHandler.java` | 修改     | saveLog 改为 Feign 调用，删除 GetLogsMapper 依赖，新增 FrameworkClient 依赖 |
+| `LogOperationConstants.java`      | 修改     | `LOG_WORKSPACE_PROJECT` 值改为 `log_computing_resource_workspace_project`   |
+| `ProjectSpaceServiceImpl.java`    | 修改     | @LogApi tableName 更新                                                      |
+| `ApiKeyServiceImpl.java`          | 修改     | @LogApi tableName 更新                                                      |
+| `GetLogsMapper.java`              | 删除     | 不再需要                                                                    |
+| `GetLogsMapper.xml`               | 删除     | 不再需要                                                                    |
+| `project-tables.xml`              | 修改     | 删除 `log_workspace_project` changeSet                                      |
 
 ## 六、风险点
 
-| 风险 | 应对 |
-|------|------|
+| 风险                                                                   | 应对                                                                                  |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | JWT 中不含 `accountPlatform`，导致 `LogsDetailVO.accountPlatform` 为空 | `buildMicroservicesLogDTO` 中降级从 `UserContext` 获取（`/get-user-info` 接口已补全） |
-| Feign 调用失败导致日志丢失 | catch 异常 + WARN 日志，不影响业务主流程；入湖仍由本地 `operate.log` 保障 |
-| 两个仓库需协调发布顺序 | framework 先发布（建表 + 注册），workspace 后发布（调用接口） |
-| `log_computing_resource_workspace_project` 表名较长 | 与 framework 其他表命名风格一致（如 `log_platform_release_open_euler`），可接受 |
+| Feign 调用失败导致日志丢失                                             | catch 异常 + WARN 日志，不影响业务主流程；入湖仍由本地 `operate.log` 保障             |
+| 两个仓库需协调发布顺序                                                 | framework 先发布（建表 + 注册），workspace 后发布（调用接口）                         |
+| `log_computing_resource_workspace_project` 表名较长                    | 与 framework 其他表命名风格一致（如 `log_platform_release_open_euler`），可接受       |
 
 ## 七、发布顺序
 

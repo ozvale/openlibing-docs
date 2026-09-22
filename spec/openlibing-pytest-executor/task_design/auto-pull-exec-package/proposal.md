@@ -3,10 +3,12 @@
 ## 需求背景
 
 在昇腾 CANN 测试场景中，测试执行前需要准备大量依赖资源，包括：
+
 - 存储在共享存储中的模型或数据集
 - 测试用例依赖的资源文件（Bash脚本、可执行文件、CPP代码等）
 
 目前：
+
 - 共享存储挂载仅支持单数据源，无法满足复杂测试场景
 - 测试用例依赖的资源需要用户手动准备，效率低且容易遗漏
 
@@ -23,22 +25,28 @@
 **目标**：支持挂载多个数据源，挂载的数据源和目标路径按顺序对应。
 
 **当前配置格式**：
+
 ```json
 {
-    "mount_source_data": "DeepSeek_V4",
-    "mount_dest_dir": "/mnt/ascend/"
+  "mount_source_data": "DeepSeek_V4",
+  "mount_dest_dir": "/mnt/ascend/"
 }
 ```
 
 **新配置格式**：
+
 ```json
 {
-    "mount_source_data": ["deepseek_v4_pro", "baai_taco"],
-    "mount_dest_dir": ["/mnt/ascend/models/deepseek_v4_pro", "/mnt/ascend/dataset/baai_taco"]
+  "mount_source_data": ["deepseek_v4_pro", "baai_taco"],
+  "mount_dest_dir": [
+    "/mnt/ascend/models/deepseek_v4_pro",
+    "/mnt/ascend/dataset/baai_taco"
+  ]
 }
 ```
 
 **执行逻辑**：
+
 - 挂载脚本路径从 scheduler_config.py 读取（统一配置）
 - 挂载的数据和目标路径按顺序一一对应
 - 如果需要挂载的数据是多个，需要多次执行挂载命令
@@ -50,6 +58,7 @@
 **执行时机**：测试环境初始化阶段（本地执行模式和远程执行模式）
 
 **执行逻辑**：
+
 - 拷贝前先清除 `/home` 下的同名目录（避免冲突）
 - 使用 `scp.put(str(self.test_dir), recursive=True, remote_path=remote_path)` 拷贝
 - 用户将测试用例依赖的资源放在测试工程代码中即可
@@ -59,6 +68,7 @@
 **目标**：共享存储挂载和测试工程代码拷贝在远程执行模式下也需要执行。
 
 **执行逻辑**：
+
 - 在调度机上准备所需依赖资源
 - 挂载共享存储（多数据源）
 - 拷贝测试工程代码到 `/home` 目录
@@ -75,9 +85,9 @@
 
 ## 影响范围
 
-| 模块 | 文件 | 变更类型 |
-|------|------|----------|
-| pytest-executor | `pytest_executor/src/executor/pytest_executor.py` | 修改 |
+| 模块            | 文件                                                | 变更类型                     |
+| --------------- | --------------------------------------------------- | ---------------------------- |
+| pytest-executor | `pytest_executor/src/executor/pytest_executor.py`   | 修改                         |
 | pytest-executor | `pytest_executor/src/scheduler/scheduler_config.py` | 修改（新增挂载脚本路径配置） |
 
 ## 关联 Issue

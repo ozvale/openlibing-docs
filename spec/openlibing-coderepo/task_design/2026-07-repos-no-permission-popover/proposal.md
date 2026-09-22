@@ -3,6 +3,7 @@
 ## 需求背景
 
 代码仓管理页面（涉及 openlibing-coderepo、openlibing-framework、openlibing-web 三仓）的操作按钮，当前对无权限用户采用 `v-if` 隐藏或 `:disabled` 禁用，用户无法得知「该功能存在但需要何种角色」，导致：
+
 - 用户不知道某功能是否存在
 - 用户不知道需要什么角色才能使用某功能
 - 用户不知道如何申请对应权限
@@ -18,6 +19,7 @@ UI Demo 已审核确认：`ui-demo/no-permission-dialog.html`（三段式气泡�
 ### 后端（framework）
 
 新增 1 个 HTTP 接口 `GET /user/get-operation-permissions`，一次性返回所有操作的权限元数据，包含：
+
 - 操作权限码（identification）
 - 操作名（operationName，来自 menu_info.menu_name）
 - 当前用户对该操作是否有权限（hasPermission）
@@ -61,12 +63,12 @@ UI Demo 已审核确认：`ui-demo/no-permission-dialog.html`（三段式气泡�
 
 ## 影响范围
 
-| 仓 | 改动类型 | 估算行数 |
-|---|---|---|
+| 仓                   | 改动类型                                    | 估算行数   |
+| -------------------- | ------------------------------------------- | ---------- |
 | openlibing-framework | 新增 controller 方法 + service + DTO + 单测 | 100-150 行 |
-| openlibing-coderepo | 0 改动 | 0 |
-| openlibing-web | 新增组件 + 常量 + store 扩展 + 4 个页面改造 | 250-350 行 |
-| openlibing-docs | spec 三件套 + archive | 本文档 |
+| openlibing-coderepo  | 0 改动                                      | 0          |
+| openlibing-web       | 新增组件 + 常量 + store 扩展 + 4 个页面改造 | 250-350 行 |
+| openlibing-docs      | spec 三件套 + archive                       | 本文档     |
 
 **跨仓契约**：framework 新接口响应结构需与 web 前端对齐。
 

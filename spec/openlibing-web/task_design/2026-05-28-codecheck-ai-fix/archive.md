@@ -2,15 +2,15 @@
 
 ## 归档信息
 
-| 项目 | 内容 |
-|------|------|
-| **需求名称** | CodeCheck AI 修复完成 |
-| **PR 链接** | [#492](https://gitcode.com/openLiBing/openlibing-web/pulls/492) |
-| **源分支** | `jiangzhichao:jzc_2026_04_iter21` |
-| **目标分支** | `openLiBing:release_20260528` |
-| **状态** | ✅ 已完成并合并 |
-| **归档日期** | 2026-05-28 |
-| **作者** | jiangzhichao |
+| 项目         | 内容                                                            |
+| ------------ | --------------------------------------------------------------- |
+| **需求名称** | CodeCheck AI 修复完成                                           |
+| **PR 链接**  | [#492](https://gitcode.com/openLiBing/openlibing-web/pulls/492) |
+| **源分支**   | `jiangzhichao:jzc_2026_04_iter21`                               |
+| **目标分支** | `openLiBing:release_20260528`                                   |
+| **状态**     | ✅ 已完成并合并                                                 |
+| **归档日期** | 2026-05-28                                                      |
+| **作者**     | jiangzhichao                                                    |
 
 ## 变更摘要
 

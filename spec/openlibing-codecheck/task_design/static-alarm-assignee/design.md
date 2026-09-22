@@ -280,19 +280,19 @@ public class StaticAlarmAssignAuditEntity {
 
 ### 3.4 现有类修改
 
-| 类 | 修改内容 |
-|---|---|
-| `StaticAlarmIssueEntity` | 新增字段 `private List<String> assignees;` |
-| `StaticAlarmIssueListVO` | 新增字段 `private List<String> assignees;` |
-| `StaticAlarmIssueDetailVO` | 新增字段 `private List<String> assignees;` |
-| `StaticAlarmQueryDTO` | 新增字段 `private List<String> assignees;`（多选筛选） |
-| `StaticAlarmFilterOptionsQueryDTO` | 无需修改，筛选项根据实际数据动态返回 |
-| `StaticAlarmController` | 新增 3 个端点：`GET /assignee/search`、`POST /issue/assign`、`POST /issue/assign-by-filter` |
-| `StaticAlarmService` (接口) | 新增 3 个方法签名 |
-| `StaticAlarmServiceImpl` | 新增 3 个方法实现，注入 MyBatis Mapper 查询 `repo_user_role_info` |
-| `StaticAlarmOperation` | 新增 `batchUpdateAssignees()`、`findIssueIdsByFilter()` 方法 |
-| `UserRoleMapper` (MyBatis) | 新增 `searchRepoUsers()` 查询方法，参数 repoIds + accountLogin + accountPlatform |
-| `CodeCheckCollectionName` | 新增 `STATIC_ALARM_ASSIGN_AUDIT` 常量 |
+| 类                                 | 修改内容                                                                                    |
+| ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `StaticAlarmIssueEntity`           | 新增字段 `private List<String> assignees;`                                                  |
+| `StaticAlarmIssueListVO`           | 新增字段 `private List<String> assignees;`                                                  |
+| `StaticAlarmIssueDetailVO`         | 新增字段 `private List<String> assignees;`                                                  |
+| `StaticAlarmQueryDTO`              | 新增字段 `private List<String> assignees;`（多选筛选）                                      |
+| `StaticAlarmFilterOptionsQueryDTO` | 无需修改，筛选项根据实际数据动态返回                                                        |
+| `StaticAlarmController`            | 新增 3 个端点：`GET /assignee/search`、`POST /issue/assign`、`POST /issue/assign-by-filter` |
+| `StaticAlarmService` (接口)        | 新增 3 个方法签名                                                                           |
+| `StaticAlarmServiceImpl`           | 新增 3 个方法实现，注入 MyBatis Mapper 查询 `repo_user_role_info`                           |
+| `StaticAlarmOperation`             | 新增 `batchUpdateAssignees()`、`findIssueIdsByFilter()` 方法                                |
+| `UserRoleMapper` (MyBatis)         | 新增 `searchRepoUsers()` 查询方法，参数 repoIds + accountLogin + accountPlatform            |
+| `CodeCheckCollectionName`          | 新增 `STATIC_ALARM_ASSIGN_AUDIT` 常量                                                       |
 
 ---
 
@@ -300,27 +300,27 @@ public class StaticAlarmAssignAuditEntity {
 
 ### 4.1 `static_alarm_issue` 新增字段
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
+| 字段      | 类型           | 说明                          |
+| --------- | -------------- | ----------------------------- |
 | assignees | List\<String\> | 责任人列表（用户 ID），可为空 |
 
 ### 4.2 新增集合 `static_alarm_assign_audit`（审计表）
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | String | 主键 |
-| issueId | String | 关联的问题 ID |
-| operation | String | 操作类型：ASSIGN |
-| oldAssignees | List\<String\> | 操作前的责任人列表 |
-| newAssignees | List\<String\> | 操作后的责任人列表 |
-| operator | String | 操作人 userId |
-| source | String | 操作来源：BY_IDS / BY_FILTER |
-| operatedAt | Date | 操作时间 |
+| 字段         | 类型           | 说明                         |
+| ------------ | -------------- | ---------------------------- |
+| id           | String         | 主键                         |
+| issueId      | String         | 关联的问题 ID                |
+| operation    | String         | 操作类型：ASSIGN             |
+| oldAssignees | List\<String\> | 操作前的责任人列表           |
+| newAssignees | List\<String\> | 操作后的责任人列表           |
+| operator     | String         | 操作人 userId                |
+| source       | String         | 操作来源：BY_IDS / BY_FILTER |
+| operatedAt   | Date           | 操作时间                     |
 
 索引设计：
 
-| 索引名 | 字段 | 类型 | 用途 |
-|--------|------|------|------|
+| 索引名                 | 字段                    | 类型 | 用途             |
+| ---------------------- | ----------------------- | ---- | ---------------- |
 | idx_assign_audit_issue | issueId, operatedAt(-1) | 普通 | 按问题查指定历史 |
 
 ---
@@ -329,19 +329,19 @@ public class StaticAlarmAssignAuditEntity {
 
 ### 5.1 精确指定责任人
 
-| 项目 | 内容 |
-|------|------|
-| 方法 | POST |
-| 路径 | `/static-alarm/v1/issue/assign` |
+| 项目 | 内容                               |
+| ---- | ---------------------------------- |
+| 方法 | POST                               |
+| 路径 | `/static-alarm/v1/issue/assign`    |
 | 描述 | 对指定 ID 列表的问题批量指定责任人 |
-| 鉴权 | 需登录态，需仓库管理员权限 |
+| 鉴权 | 需登录态，需仓库管理员权限         |
 
 **请求参数**：
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|------|------|------|------|------|
-| userId | Query | String | 是 | 操作人 ID |
-| StaticAlarmAssignDTO | Body | JSON | 是 | issueIds + assignees |
+| 参数                 | 位置  | 类型   | 必填 | 说明                 |
+| -------------------- | ----- | ------ | ---- | -------------------- |
+| userId               | Query | String | 是   | 操作人 ID            |
+| StaticAlarmAssignDTO | Body  | JSON   | 是   | issueIds + assignees |
 
 **请求示例**：
 
@@ -363,7 +363,11 @@ public class StaticAlarmAssignAuditEntity {
     "details": [
       { "issueId": "abc123", "success": true },
       { "issueId": "def456", "success": true },
-      { "issueId": "ghi789", "success": false, "errorMsg": "问题不存在或已删除" }
+      {
+        "issueId": "ghi789",
+        "success": false,
+        "errorMsg": "问题不存在或已删除"
+      }
     ]
   }
 }
@@ -371,19 +375,19 @@ public class StaticAlarmAssignAuditEntity {
 
 ### 5.2 条件批量指定责任人
 
-| 项目 | 内容 |
-|------|------|
-| 方法 | POST |
+| 项目 | 内容                                      |
+| ---- | ----------------------------------------- |
+| 方法 | POST                                      |
 | 路径 | `/static-alarm/v1/issue/assign-by-filter` |
-| 描述 | 对满足筛选条件的问题批量指定责任人 |
-| 鉴权 | 需登录态，需仓库管理员权限 |
+| 描述 | 对满足筛选条件的问题批量指定责任人        |
+| 鉴权 | 需登录态，需仓库管理员权限                |
 
 **请求参数**：
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|------|------|------|------|------|
-| userId | Query | String | 是 | 操作人 ID |
-| StaticAlarmAssignByFilterDTO | Body | JSON | 是 | 筛选条件 + assignees |
+| 参数                         | 位置  | 类型   | 必填 | 说明                 |
+| ---------------------------- | ----- | ------ | ---- | -------------------- |
+| userId                       | Query | String | 是   | 操作人 ID            |
+| StaticAlarmAssignByFilterDTO | Body  | JSON   | 是   | 筛选条件 + assignees |
 
 **请求示例**：
 
@@ -412,6 +416,7 @@ public class StaticAlarmAssignAuditEntity {
 ```
 
 **约束**：
+
 - 至少提供一个筛选维度（`repoType+owner+repo`、`branch`、`tool`、`severities`、`statuses` 等任意组合）
 - 匹配数量超过 5000 条时返回错误：`"匹配问题过多（{count}），请缩小筛选范围"`
 
@@ -435,21 +440,21 @@ public class StaticAlarmAssignAuditEntity {
 
 ### 5.4 责任人来源搜索
 
-| 项目 | 内容 |
-|------|------|
-| 方法 | GET |
-| 路径 | `/static-alarm/v1/assignee/search` |
+| 项目 | 内容                                                             |
+| ---- | ---------------------------------------------------------------- |
+| 方法 | GET                                                              |
+| 路径 | `/static-alarm/v1/assignee/search`                               |
 | 描述 | 按仓库 ID 集合搜索具备角色的用户，作为责任人候选列表（自动补全） |
-| 鉴权 | 需登录态，无需仓库管理员权限（仅读取候选列表） |
+| 鉴权 | 需登录态，无需仓库管理员权限（仅读取候选列表）                   |
 
 **请求参数**：
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|------|------|------|------|------|
-| repoIds | Query | String[] | 是 | 仓库 ID 列表 |
-| accountLogin | Query | String | 否 | 账号关键字，模糊匹配（LIKE %xxx%） |
-| accountPlatform | Query | String | 否 | 账号平台 |
-| limit | Query | Integer | 否 | 返回条数上限，默认 20 |
+| 参数            | 位置  | 类型     | 必填 | 说明                               |
+| --------------- | ----- | -------- | ---- | ---------------------------------- |
+| repoIds         | Query | String[] | 是   | 仓库 ID 列表                       |
+| accountLogin    | Query | String   | 否   | 账号关键字，模糊匹配（LIKE %xxx%） |
+| accountPlatform | Query | String   | 否   | 账号平台                           |
+| limit           | Query | Integer  | 否   | 返回条数上限，默认 20              |
 
 **数据源**：`repo_user_role_info` 表（MySQL），通过 MyBatis 查询。
 
@@ -494,13 +499,13 @@ GET /static-alarm/v1/assignee/search?repoIds=123&repoIds=456&accountLogin=zhang&
 
 ### 6.2 输入校验
 
-| 校验项 | 规则 |
-|--------|------|
-| issueIds | 非空，单次不超过 200 条 |
+| 校验项    | 规则                                                                             |
+| --------- | -------------------------------------------------------------------------------- |
+| issueIds  | 非空，单次不超过 200 条                                                          |
 | assignees | 非空，每个元素为有效 userId 格式（字母、数字、下划线、中划线），单次不超过 20 个 |
-| 筛选条件 | 至少一个维度非空，防止全表更新 |
-| 匹配上限 | 条件批量模式匹配超过 5000 条时拒绝执行，要求缩小范围 |
-| userId | 非空，与当前登录态一致 |
+| 筛选条件  | 至少一个维度非空，防止全表更新                                                   |
+| 匹配上限  | 条件批量模式匹配超过 5000 条时拒绝执行，要求缩小范围                             |
+| userId    | 非空，与当前登录态一致                                                           |
 
 ### 6.3 审计追溯
 

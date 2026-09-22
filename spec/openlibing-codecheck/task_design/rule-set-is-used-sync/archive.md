@@ -5,6 +5,7 @@
 `codecheck_rule_set` 集合的 `is_used` 字段本应反映"该规则集是否被 ≥1 个代码仓配置"，但实际长期不同步。`openlibing-coderepo` 配置/解绑/删除仓库时**没有任何回写**到该字段；`openlibing-codecheck` 端 `updateRuleSetUsed` 本身也只置 "1"、不置 "0"、且用 `updateFirst` 在 `template_id` 重复时只更新一条。导致 `delRuleSet` 误判"正在使用"、规则集被卡住无法删除。
 
 本次修复分三仓：
+
 - **A 仓** `openlibing-codecheck`：把 `is_used` 从"事件式更新"改为"重算"语义，新增机机接口
 - **B 仓** `openlibing-coderepo`：在写 `sig_rule_set` 前后收集 affected templateIds，回调 A 仓重算接口
 - **C 仓** `openlibing-docs`：本目录 + 一次性 Mongo 修复脚本
@@ -13,47 +14,49 @@
 
 ### 2.1 A 仓（`openlibing-codecheck`，分支 `fix/codecheck-rule-set-is-used-sync`）
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `src/main/java/com/openlibing/codecheck/business/operation/rule/SigRuleSetOperation.java` | 修改 | 新增 `findInUseTemplateIds(List<String>)` 用 aggregation 查仍在使用的 templateId |
-| `src/main/java/com/openlibing/codecheck/business/operation/rule/RuleSetOperation.java` | 修改 | 新增 `recomputeIsUsedByTemplateIds(List<String>)`；旧 `updateRuleSetUsed` 改为委托此方法（消除 `updateFirst` 隐患） |
-| `src/main/java/com/openlibing/codecheck/business/impl/RuleDelegateImpl.java` | 修改 | 新增 `recomputeRuleSetUsed(List<String>)`；`updateRule` 改走新方法 |
-| `src/main/java/com/openlibing/codecheck/business/controller/RuleController.java` | 修改 | 新增 `POST /ci-portal/v2/grant/auth/rule-set/recompute-used`（机机接口） |
-| `src/test/java/com/openlibing/codecheck/business/operation/rule/RuleSetOperationTest.java` | 修改 | 覆盖多 template 命中走 `updateMulti`；`is_used` 1→0 分支 |
-| `src/test/java/com/openlibing/codecheck/business/impl/RuleDelegateImplTest.java` | 修改 | 覆盖 `updateRule` 调度新方法 |
+| 文件                                                                                       | 操作 | 说明                                                                                                                |
+| ------------------------------------------------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------- |
+| `src/main/java/com/openlibing/codecheck/business/operation/rule/SigRuleSetOperation.java`  | 修改 | 新增 `findInUseTemplateIds(List<String>)` 用 aggregation 查仍在使用的 templateId                                    |
+| `src/main/java/com/openlibing/codecheck/business/operation/rule/RuleSetOperation.java`     | 修改 | 新增 `recomputeIsUsedByTemplateIds(List<String>)`；旧 `updateRuleSetUsed` 改为委托此方法（消除 `updateFirst` 隐患） |
+| `src/main/java/com/openlibing/codecheck/business/impl/RuleDelegateImpl.java`               | 修改 | 新增 `recomputeRuleSetUsed(List<String>)`；`updateRule` 改走新方法                                                  |
+| `src/main/java/com/openlibing/codecheck/business/controller/RuleController.java`           | 修改 | 新增 `POST /ci-portal/v2/grant/auth/rule-set/recompute-used`（机机接口）                                            |
+| `src/test/java/com/openlibing/codecheck/business/operation/rule/RuleSetOperationTest.java` | 修改 | 覆盖多 template 命中走 `updateMulti`；`is_used` 1→0 分支                                                            |
+| `src/test/java/com/openlibing/codecheck/business/impl/RuleDelegateImplTest.java`           | 修改 | 覆盖 `updateRule` 调度新方法                                                                                        |
 
 提交记录（origin/master..HEAD）：
+
 - 1 commit ahead of master
 
 ### 2.2 B 仓（`openlibing-coderepo`，分支 `fix/coderepo-notify-rule-set-used`）
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `src/main/java/com/openlibing/coderepo/business/feign/OpenlibingCodeCheckClient.java` | 修改 | 新增 `recomputeRuleSetUsed(List<String>)` Feign 方法 |
-| `src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java` | 修改 | 3 个入口加回调：`addRepoInfo`→`defaultCodecheckRuleSet`、`updateRepoInfo`→`addCodececkRuleSet`（空+非空分支）、`deleteRepoInfo` |
-| `src/test/java/com/openlibing/coderepo/business/service/impl/RepoServiceImplTest.java` | 未改 | 用户临时决定不补新测试；现有 89 个测试全量通过 |
+| 文件                                                                                   | 操作 | 说明                                                                                                                            |
+| -------------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main/java/com/openlibing/coderepo/business/feign/OpenlibingCodeCheckClient.java`  | 修改 | 新增 `recomputeRuleSetUsed(List<String>)` Feign 方法                                                                            |
+| `src/main/java/com/openlibing/coderepo/business/service/impl/RepoServiceImpl.java`     | 修改 | 3 个入口加回调：`addRepoInfo`→`defaultCodecheckRuleSet`、`updateRepoInfo`→`addCodececkRuleSet`（空+非空分支）、`deleteRepoInfo` |
+| `src/test/java/com/openlibing/coderepo/business/service/impl/RepoServiceImplTest.java` | 未改 | 用户临时决定不补新测试；现有 89 个测试全量通过                                                                                  |
 
 提交记录：
+
 - 1 commit ahead of master（待人工 commit）
 
 ### 2.3 C 仓（`openlibing-docs`，分支 `spec/openlibing-codecheck/rule-set-is-used-sync`）
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `spec/openlibing-codecheck/task_design/rule-set-is-used-sync/proposal.md` | 新增 | 需求背景 + 验收标准 |
-| `spec/openlibing-codecheck/task_design/rule-set-is-used-sync/design.md` | 新增 | 技术方案 + 影响范围 |
-| `spec/openlibing-codecheck/task_design/rule-set-is-used-sync/tasks.md` | 新增 | 实现任务清单（含 checkbox 进度） |
-| `spec/openlibing-codecheck/task_design/rule-set-is-used-sync/archive.md` | 新增 | 本文件 |
+| 文件                                                                      | 操作 | 说明                             |
+| ------------------------------------------------------------------------- | ---- | -------------------------------- |
+| `spec/openlibing-codecheck/task_design/rule-set-is-used-sync/proposal.md` | 新增 | 需求背景 + 验收标准              |
+| `spec/openlibing-codecheck/task_design/rule-set-is-used-sync/design.md`   | 新增 | 技术方案 + 影响范围              |
+| `spec/openlibing-codecheck/task_design/rule-set-is-used-sync/tasks.md`    | 新增 | 实现任务清单（含 checkbox 进度） |
+| `spec/openlibing-codecheck/task_design/rule-set-is-used-sync/archive.md`  | 新增 | 本文件                           |
 
 > C 仓**未**包含一次性 Mongo 修复脚本，理由见 §4 备注。
 
 ## 3. 关联 PR
 
-| 仓 | PR | 状态 |
-|------|------|------|
+| 仓                     | PR                                                               | 状态              |
+| ---------------------- | ---------------------------------------------------------------- | ----------------- |
 | `openlibing-codecheck` | https://gitcode.com/taohuoquan/openlibing-codecheck/pulls/<待填> | 待创建（Phase 4） |
-| `openlibing-coderepo` | https://gitcode.com/taohuoquan/openlibing-coderepo/pulls/<待填> | 待创建（Phase 4） |
-| `openlibing-docs` | https://gitcode.com/taohuoquan/openlibing-docs/pulls/<待填> | 待创建（Phase 5） |
+| `openlibing-coderepo`  | https://gitcode.com/taohuoquan/openlibing-coderepo/pulls/<待填>  | 待创建（Phase 4） |
+| `openlibing-docs`      | https://gitcode.com/taohuoquan/openlibing-docs/pulls/<待填>      | 待创建（Phase 5） |
 
 > PR 创建后请把 permalink（commit SHA 形式）回填本节，确保分支删除后 URL 仍可访问。
 
@@ -89,10 +92,10 @@ curl -X POST "https://codecheck-host/ci-portal/v2/grant/auth/rule-set/recompute-
 
 ## 6. 测试覆盖摘要
 
-| 仓 | 新增/修改的测试类 | 通过情况 |
-|------|------|------|
-| `openlibing-codecheck` | `RuleSetOperationTest` + `RuleDelegateImplTest` | 全部通过（具体数见 CI 报告） |
-| `openlibing-coderepo` | 无新增（用户决定） | 既有 89 个 `RepoServiceImplTest` 全部通过 |
+| 仓                     | 新增/修改的测试类                               | 通过情况                                  |
+| ---------------------- | ----------------------------------------------- | ----------------------------------------- |
+| `openlibing-codecheck` | `RuleSetOperationTest` + `RuleDelegateImplTest` | 全部通过（具体数见 CI 报告）              |
+| `openlibing-coderepo`  | 无新增（用户决定）                              | 既有 89 个 `RepoServiceImplTest` 全部通过 |
 
 > 临时决定：B 仓未补新测试。已在 tasks.md 标记 B5 未完成，留作后续 PR 补齐。
 
@@ -101,6 +104,7 @@ curl -X POST "https://codecheck-host/ci-portal/v2/grant/auth/rule-set/recompute-
 ### 7.1 派生量应"重算"而非"事件同步"
 
 `is_used` 是 `sig_rule_set` 的派生量。任何派生量都应：
+
 - 设唯一定义来源（`sig_rule_set` 是 source of truth）
 - 在不确定的状态变更时**重算**而非补丁
 - 提供"重算"接口供跨服务调用
@@ -114,6 +118,7 @@ curl -X POST "https://codecheck-host/ci-portal/v2/grant/auth/rule-set/recompute-
 ### 7.3 跨服务的"派生量同步"应走"回调 + 重算"而非"事件总线"
 
 事件总线方案需要 coderepo 和 codecheck 共享事件源、增加中间件依赖。回调 + 重算的方案：
+
 - 接口契约简单（一个 POST + List）
 - 失败不影响主流程（重算是幂等的，下次写还会触发）
 - 易于测试（mock Feign client 即可）
@@ -121,6 +126,7 @@ curl -X POST "https://codecheck-host/ci-portal/v2/grant/auth/rule-set/recompute-
 ### 7.4 历史脏数据修复要权衡"一次性脚本"与"自然收敛"
 
 本次没做一次性 Mongo 修复脚本，理由：
+
 - 历史脏数据（`is_used=1` 但实际无引用）会随业务自然操作逐步收敛
 - 一次性脚本需要 DBA 协调、停机窗口、备份，**收益与成本不匹配**
 - 若业务侧长期不操作导致脏数据积压，再单独提一次性脚本任务即可

@@ -86,6 +86,7 @@
 ## 实现顺序建议
 
 **推荐顺序**:
+
 1. Task 1-5: 先完成UniAutosPython3框架仓修改和发布
 2. Task 6-9: 再完成openlibing-tep-executor业务仓修改
 3. Task 10-11: 最后集成测试和文档同步
@@ -150,6 +151,7 @@ cat tepexecor_frame/config/cases_log/metadata_test.xml
 提交: `a5f6a753493860c01f83043ca519974fd3e3e5bb`
 
 已完成任务:
+
 - [x] Task 1: _read_static_file方法已实现
 - [x] Task 2: formatHtmlHead和formatHtmlBodyScript方法已实现
 - [x] Task 3: Appender.py已修改

@@ -7,6 +7,7 @@
 在 4 个核心字段（用途 / 可见性 / 语言 / 状态）已支持多选后，**业务侧继续提出扩展诉求**：5 个原本仅支持单值的字段也需要多选能力（平台、接管 PR、自动触发、开源类型、Webhook 状态）。本次 spec 在初版基础上扩展到 **9 个多选维度**，与单值字段双轨保留。
 
 前置依赖：
+
 - filter/sort 能力（[#56](https://gitcode.com/openlibing/openlibing-coderepo/issues/56)）已在 `feat-repo-query-filter-sort` 分支
 - 排序白名单与 Mapper 动态排序已就位
 - 首批 4 字段多选（commit `47ace31`）已落地并通过 PR #76 评审
@@ -17,17 +18,17 @@
 
 ### 新增多选字段（首批 4 + 扩展 5 = 共 9 个）
 
-| 中文 | DTO 新增 List 字段 | DTO 保留 String 字段 | Mapper 列 | 批次 |
-|------|-------------------|----------------------|----------|------|
-| 用途 | `purposes` | `purpose` | `purpose` | 首批 |
-| 可见性 | `visibilities` | `visibility` | `visibility` | 首批 |
-| 语言 | `repoLanguages` | `repoLanguage` | `repo_language` | 首批 |
-| 状态 | `statuses` | `status`（新增） | `status` | 首批 |
-| 平台 | `platforms` | `platform` | `platform` | 扩展 |
-| 接管 PR | `assumePrs` | `assumePr` | `assume_pr` | 扩展 |
-| 自动触发 | `autoTriggers` | `autoTrigger` | `auto_trigger` | 扩展 |
-| 开源类型 | `openSources` | — | `open_source` | 扩展（仅有 List） |
-| Webhook 状态 | `webhookStatuses` | `webhookStatus` | `webhook_status` | 扩展 |
+| 中文         | DTO 新增 List 字段 | DTO 保留 String 字段 | Mapper 列        | 批次              |
+| ------------ | ------------------ | -------------------- | ---------------- | ----------------- |
+| 用途         | `purposes`         | `purpose`            | `purpose`        | 首批              |
+| 可见性       | `visibilities`     | `visibility`         | `visibility`     | 首批              |
+| 语言         | `repoLanguages`    | `repoLanguage`       | `repo_language`  | 首批              |
+| 状态         | `statuses`         | `status`（新增）     | `status`         | 首批              |
+| 平台         | `platforms`        | `platform`           | `platform`       | 扩展              |
+| 接管 PR      | `assumePrs`        | `assumePr`           | `assume_pr`      | 扩展              |
+| 自动触发     | `autoTriggers`     | `autoTrigger`        | `auto_trigger`   | 扩展              |
+| 开源类型     | `openSources`      | —                    | `open_source`    | 扩展（仅有 List） |
+| Webhook 状态 | `webhookStatuses`  | `webhookStatus`      | `webhook_status` | 扩展              |
 
 ### 语义与优先级
 

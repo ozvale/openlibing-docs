@@ -50,12 +50,12 @@ _direct_exec_cmd_interactive() _jump_exec_cmd_interactive()
 
 ### 1. Parameter Addition
 
-| Method | Location | New Parameter |
-|--------|----------|---------------|
-| `Ssh.ssh_cmd()` | `ssh.py:121` | `cwd=None` |
-| `Ssh.ssh_cmd_interactive()` | `ssh.py:131` | `cwd=None` |
-| `Device.sendcmd()` | `device.py:220` | `cwd=None` |
-| `Device.sendcmd_interactive()` | `device.py:252` | `cwd=None` |
+| Method                         | Location        | New Parameter |
+| ------------------------------ | --------------- | ------------- |
+| `Ssh.ssh_cmd()`                | `ssh.py:121`    | `cwd=None`    |
+| `Ssh.ssh_cmd_interactive()`    | `ssh.py:131`    | `cwd=None`    |
+| `Device.sendcmd()`             | `device.py:220` | `cwd=None`    |
+| `Device.sendcmd_interactive()` | `device.py:252` | `cwd=None`    |
 
 ### 2. Command Transformation (Non-Interactive)
 
@@ -88,12 +88,12 @@ def _direct_exec_cmd_interactive(self, cmd, expect_prompt, send_input,
 
 ### 4. Edge Cases
 
-| Case | Handling |
-|------|----------|
-| `cwd=None` | No transformation, existing behavior |
-| `cwd="/path with spaces"` | Properly quoted via `shlex.quote()` |
-| `cwd="/nonexistent"` | Shell returns error, propagated to caller |
-| `cwd=""` (empty string) | Treated as `None`, no transformation |
+| Case                      | Handling                                  |
+| ------------------------- | ----------------------------------------- |
+| `cwd=None`                | No transformation, existing behavior      |
+| `cwd="/path with spaces"` | Properly quoted via `shlex.quote()`       |
+| `cwd="/nonexistent"`      | Shell returns error, propagated to caller |
+| `cwd=""` (empty string)   | Treated as `None`, no transformation      |
 
 ## File Changes
 

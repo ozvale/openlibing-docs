@@ -45,6 +45,7 @@
 - **Command**: `mvn test -Dtest=JwtUtilsTest`
 
 ### Expected Result
+
 - Tests run: 7, Failures: 0, Errors: 0
 
 ---
@@ -56,6 +57,7 @@
 - **Command**: 项目的流水线安全扫描
 
 ### Expected Result
+
 - `CT_CONSTRUCTOR_THROW` 警告消除
 
 ---
@@ -78,10 +80,10 @@ Step 4: Task 4 ──▶ 运行 SpotBugs 验证
 
 ## Summary
 
-| Task | Priority | Effort | Status |
-|------|----------|--------|--------|
-| Task 1 | High | 0.5h | ✅ 已完成 |
-| Task 2 | High | 0.1h | ✅ 已完成 |
-| Task 3 | High | 0.1h | ✅ 已完成 |
-| Task 4 | High | 0.1h | ⏳ 待流水线验证 |
-| **Total** | - | **0.8h** | **3/4 完成** |
+| Task      | Priority | Effort   | Status          |
+| --------- | -------- | -------- | --------------- |
+| Task 1    | High     | 0.5h     | ✅ 已完成       |
+| Task 2    | High     | 0.1h     | ✅ 已完成       |
+| Task 3    | High     | 0.1h     | ✅ 已完成       |
+| Task 4    | High     | 0.1h     | ⏳ 待流水线验证 |
+| **Total** | -        | **0.8h** | **3/4 完成**    |

@@ -2,13 +2,13 @@
 
 ### 当前状态
 
-| 层级 | 现状 |
-|------|------|
+| 层级                       | 现状                                                                                                              |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | 前端 `PoisoningDetail.vue` | 表头 `filterDropdown` 单选；`handleFilter` 将选中值以 `tableFilters[name] = data[0].value`（`0`/`1`）合并进请求体 |
-| 前端 API | 版本级 `getScanResult`；门禁级 `get-scan-pr-result-group`（`GET_INC_POISONING`） |
-| 后端 `ParamModel` | 无 `isSuccess`/`isPass` 字段，JSON 反序列化时丢弃 |
-| 后端查询 | `getScanResult`、`getScanPRResultGroup` 仅按 project/repo/branch/时间过滤 |
-| MongoDB | `TaskEntity`/`PRTaskEntity` 存 `is_success`、`is_pass` 为 **Boolean** |
+| 前端 API                   | 版本级 `getScanResult`；门禁级 `get-scan-pr-result-group`（`GET_INC_POISONING`）                                  |
+| 后端 `ParamModel`          | 无 `isSuccess`/`isPass` 字段，JSON 反序列化时丢弃                                                                 |
+| 后端查询                   | `getScanResult`、`getScanPRResultGroup` 仅按 project/repo/branch/时间过滤                                         |
+| MongoDB                    | `TaskEntity`/`PRTaskEntity` 存 `is_success`、`is_pass` 为 **Boolean**                                             |
 
 ### 约束
 
@@ -78,11 +78,11 @@ isPass 同理映射 is_pass
 
 ## Risks / Trade-offs
 
-| 风险 | 缓解 |
-|------|------|
-| 前端传字符串 `"0"`/`"1"` | Jackson 通常可反序列化为 Integer；单测覆盖；必要时加 `@JsonDeserialize` |
-| 聚合 count 性能 | 筛选在 `$match` 缩小数据集，影响可控；与现网无筛选路径相比仅多索引友好条件 |
-| 仅改 PR 分组接口、漏改 getScanResult | tasks 明确要求两接口同步；单测各一条 |
+| 风险                                 | 缓解                                                                       |
+| ------------------------------------ | -------------------------------------------------------------------------- |
+| 前端传字符串 `"0"`/`"1"`             | Jackson 通常可反序列化为 Integer；单测覆盖；必要时加 `@JsonDeserialize`    |
+| 聚合 count 性能                      | 筛选在 `$match` 缩小数据集，影响可控；与现网无筛选路径相比仅多索引友好条件 |
+| 仅改 PR 分组接口、漏改 getScanResult | tasks 明确要求两接口同步；单测各一条                                       |
 
 ## Migration Plan
 

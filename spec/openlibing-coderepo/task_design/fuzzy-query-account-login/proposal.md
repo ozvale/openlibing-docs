@@ -12,6 +12,7 @@ query-repo-user 接口入参 accountLogin 目前使用精确匹配（`=`）查�
 - SQL 查询从精确匹配（`=`）改为模糊匹配（`LIKE`），支持部分匹配搜索
 
 不做：
+
 - 不修改接口入参定义（UserDTO 字段不变）
 - 不修改其他查询条件（accountPlatform、roles 等）的匹配逻辑
 

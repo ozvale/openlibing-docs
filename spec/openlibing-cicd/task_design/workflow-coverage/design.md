@@ -52,39 +52,39 @@ openlibing-cicd
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `openlibing-cicd/src/main/java/com/openlibing/cicd/common/job/XxlJobHandler.java` | 修改 | 新增 `@XxlJob("reportWorkflowCoverageHandler")` 方法 |
-| `openlibing-cicd/src/main/java/com/openlibing/cicd/common/config/WorkflowCoverageConfig.java` | 新增 | 静态配置：coderepo systemUserId、默认分支、gitcode api base、matrix 缓存 TTL |
-| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/feign/FrameworkProjectClient.java` | 新增 | Feign：framework 全部 3 个调用（`/select/only-one/get-project-by-name`、`/manage/feature-dashboard/matrix`、`/manage/feature-dashboard/report`） |
-| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/feign/CodeRepoClient.java` | 修改 | 在已有 sec-option 客户端上新增 `queryRepo` 方法（同一 coderepo 服务的所有 Feign 调用集中在本接口） |
-| `openlibing-cicd/src/main/java/com/openlibing/cicd/common/utils/GitCodeContentsClient.java` | 新增 | 调 GitCode contents API（外部 API，raw HTTP） |
-| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/service/WorkflowCoverageService.java` | 新增 | 接口 |
-| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/service/impl/WorkflowCoverageServiceImpl.java` | 新增 | 编排 + 社区缓存 + 指标聚合 + 上报 |
-| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/dto/dashboard/RepoWorkflowFile.java` | 新增 | 仓库级 workflow 文件 DTO |
-| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/dto/dashboard/CommunityWorkflowReport.java` | 新增 | 社区级指标聚合 DTO |
-| `openlibing-cicd/src/test/java/com/openlibing/cicd/business/service/impl/WorkflowCoverageServiceImplTest.java` | 新增 | 单元测试 |
+| 文件                                                                                                           | 操作 | 说明                                                                                                                                             |
+| -------------------------------------------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `openlibing-cicd/src/main/java/com/openlibing/cicd/common/job/XxlJobHandler.java`                              | 修改 | 新增 `@XxlJob("reportWorkflowCoverageHandler")` 方法                                                                                             |
+| `openlibing-cicd/src/main/java/com/openlibing/cicd/common/config/WorkflowCoverageConfig.java`                  | 新增 | 静态配置：coderepo systemUserId、默认分支、gitcode api base、matrix 缓存 TTL                                                                     |
+| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/feign/FrameworkProjectClient.java`                 | 新增 | Feign：framework 全部 3 个调用（`/select/only-one/get-project-by-name`、`/manage/feature-dashboard/matrix`、`/manage/feature-dashboard/report`） |
+| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/feign/CodeRepoClient.java`                         | 修改 | 在已有 sec-option 客户端上新增 `queryRepo` 方法（同一 coderepo 服务的所有 Feign 调用集中在本接口）                                               |
+| `openlibing-cicd/src/main/java/com/openlibing/cicd/common/utils/GitCodeContentsClient.java`                    | 新增 | 调 GitCode contents API（外部 API，raw HTTP）                                                                                                    |
+| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/service/WorkflowCoverageService.java`              | 新增 | 接口                                                                                                                                             |
+| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/service/impl/WorkflowCoverageServiceImpl.java`     | 新增 | 编排 + 社区缓存 + 指标聚合 + 上报                                                                                                                |
+| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/dto/dashboard/RepoWorkflowFile.java`               | 新增 | 仓库级 workflow 文件 DTO                                                                                                                         |
+| `openlibing-cicd/src/main/java/com/openlibing/cicd/business/dto/dashboard/CommunityWorkflowReport.java`        | 新增 | 社区级指标聚合 DTO                                                                                                                               |
+| `openlibing-cicd/src/test/java/com/openlibing/cicd/business/service/impl/WorkflowCoverageServiceImplTest.java` | 新增 | 单元测试                                                                                                                                         |
 
 ## 风险 & 缓解
 
-| 风险 | 缓解 |
-|------|------|
-| GitCode 限流 | 仓库级并发 5 + 重试 1 次（指数退避 1s） |
-| 大社区仓库数大 | 分页 + 仅过滤 platform=gitcode、status=normal；如单社区 >200 仓库则只取前 200（与 coderepo 默认 pageSize 对齐） |
-| framework/coderepo 不可用 | 单仓 / 单社区失败 warn，不中断；最终任务返回 SUCCESS |
-| metric 预注册遗漏 | 文档明示需在 framework 端 `feature_ops_dashboard_metric_config` 表手工 INSERT 4 条 |
-| `getRepoAccessToken` 返回 null | 该仓跳过 + warn，不纳入分子分母 |
+| 风险                           | 缓解                                                                                                            |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| GitCode 限流                   | 仓库级并发 5 + 重试 1 次（指数退避 1s）                                                                         |
+| 大社区仓库数大                 | 分页 + 仅过滤 platform=gitcode、status=normal；如单社区 >200 仓库则只取前 200（与 coderepo 默认 pageSize 对齐） |
+| framework/coderepo 不可用      | 单仓 / 单社区失败 warn，不中断；最终任务返回 SUCCESS                                                            |
+| metric 预注册遗漏              | 文档明示需在 framework 端 `feature_ops_dashboard_metric_config` 表手工 INSERT 4 条                              |
+| `getRepoAccessToken` 返回 null | 该仓跳过 + warn，不纳入分子分母                                                                                 |
 
 ## 跨仓影响
 
 - `openlibing-framework`：无代码改动；需手工预注册 4 条 `feature_ops_dashboard_metric_config` 记录（feature=`流水线`，key=见下表，aggregationType 见下表）
 
-| metric_key | aggregationType | 含义 |
-|------------|----------------|------|
-| `config_repo_count` | count | 配置了 .yaml 文件的仓库数 |
-| `config_coverage` | rate | 流水线配置覆盖率（0-1） |
-| `pre_commit_action_repo_count` | count | pre-commit action 仓库数 |
-| `pre_commit_action_coverage` | rate | pre-commit action 覆盖率（0-1） |
+| metric_key                     | aggregationType | 含义                            |
+| ------------------------------ | --------------- | ------------------------------- |
+| `config_repo_count`            | count           | 配置了 .yaml 文件的仓库数       |
+| `config_coverage`              | rate            | 流水线配置覆盖率（0-1）         |
+| `pre_commit_action_repo_count` | count           | pre-commit action 仓库数        |
+| `pre_commit_action_coverage`   | rate            | pre-commit action 覆盖率（0-1） |
 
 - `openlibing-coderepo`：无代码改动；仅调用 `/project-repo/query-repo` 既有接口
 - `openlibing-docs`：本 spec 文档

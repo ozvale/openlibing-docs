@@ -14,4 +14,3 @@
 - [x] 3.1 为 `applySuccessPassFilter` 或 `getScanResult` 补充单测：`isSuccess=1/0`、未传参、`isPass=1/0`、组合条件
 - [x] 3.2 为 `getScanPRResultGroup` 补充单测：验证 `$match` 含 `is_success`/`is_pass` 条件（可 mock `MongoTemplate.aggregate`）
 - [x] 3.3 更新/新增 `ParamModelTest` 覆盖新字段序列化
-

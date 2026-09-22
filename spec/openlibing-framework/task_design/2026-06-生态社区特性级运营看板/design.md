@@ -2,15 +2,15 @@
 
 ## 技术选型
 
-| 技术 | 版本 | 说明 |
-|------|------|------|
-| Java | 21 | 项目统一版本 |
-| Spring Boot | 3.4.4 | 项目统一版本 |
-| MyBatis | - | 数据持久层 |
-| MySQL | 8.0+ | 数据存储 |
-| Redis | 6.0+ | 缓存（暂不使用） |
-| JUnit 5 | - | 单元测试框架 |
-| Mockito | - | Mock 框架 |
+| 技术        | 版本  | 说明             |
+| ----------- | ----- | ---------------- |
+| Java        | 21    | 项目统一版本     |
+| Spring Boot | 3.4.4 | 项目统一版本     |
+| MyBatis     | -     | 数据持久层       |
+| MySQL       | 8.0+  | 数据存储         |
+| Redis       | 6.0+  | 缓存（暂不使用） |
+| JUnit 5     | -     | 单元测试框架     |
+| Mockito     | -     | Mock 框架        |
 
 ## 架构设计
 
@@ -89,19 +89,20 @@ src/main/java/com/openlibing/framework/
 
 ### 表一：feature_ops_dashboard_report（数据上报表）
 
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 主键 |
-| report_id | VARCHAR(36) | UNIQUE, NOT NULL | 上报 ID（UUID） |
-| community | VARCHAR(100) | INDEX | 社区名称 |
-| feature | VARCHAR(100) | NOT NULL, INDEX | 特性名称 |
-| user_metrics | JSON | NOT NULL | 用户指标（JSON） |
-| business_metrics | JSON | NOT NULL | 业务指标（JSON） |
-| reported_at | DATETIME | NOT NULL | 上报时间 |
-| created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间 |
-| updated_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新时间 |
+| 字段名           | 类型         | 约束                                                            | 说明             |
+| ---------------- | ------------ | --------------------------------------------------------------- | ---------------- |
+| id               | BIGINT       | PK, AUTO_INCREMENT                                              | 主键             |
+| report_id        | VARCHAR(36)  | UNIQUE, NOT NULL                                                | 上报 ID（UUID）  |
+| community        | VARCHAR(100) | INDEX                                                           | 社区名称         |
+| feature          | VARCHAR(100) | NOT NULL, INDEX                                                 | 特性名称         |
+| user_metrics     | JSON         | NOT NULL                                                        | 用户指标（JSON） |
+| business_metrics | JSON         | NOT NULL                                                        | 业务指标（JSON） |
+| reported_at      | DATETIME     | NOT NULL                                                        | 上报时间         |
+| created_at       | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP                             | 创建时间         |
+| updated_at       | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新时间         |
 
 **索引：**
+
 - PRIMARY KEY (id)
 - UNIQUE KEY uk_report_id (report_id)
 - INDEX idx_community (community)
@@ -110,21 +111,22 @@ src/main/java/com/openlibing/framework/
 
 ### 表二：feature_ops_dashboard_metric_config（指标配置表）
 
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 主键 |
-| metric_id | VARCHAR(36) | UNIQUE, NOT NULL | 指标 ID（UUID） |
-| feature | VARCHAR(100) | NOT NULL, INDEX | 特性名称 |
-| metric_type | VARCHAR(20) | NOT NULL | 指标类型（user_metric/business_metric） |
-| metric_name | VARCHAR(50) | NOT NULL | 指标名称 |
-| metric_key | VARCHAR(50) | NOT NULL | 指标标识 |
-| aggregation_type | VARCHAR(20) | NOT NULL | 统计方式（count/rate） |
-| target_value | TEXT | NOT NULL | 目标值（JSON 字符串） |
-| description | VARCHAR(500) | | 指标说明 |
-| created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 创建时间 |
-| updated_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新时间 |
+| 字段名           | 类型         | 约束                                                            | 说明                                    |
+| ---------------- | ------------ | --------------------------------------------------------------- | --------------------------------------- |
+| id               | BIGINT       | PK, AUTO_INCREMENT                                              | 主键                                    |
+| metric_id        | VARCHAR(36)  | UNIQUE, NOT NULL                                                | 指标 ID（UUID）                         |
+| feature          | VARCHAR(100) | NOT NULL, INDEX                                                 | 特性名称                                |
+| metric_type      | VARCHAR(20)  | NOT NULL                                                        | 指标类型（user_metric/business_metric） |
+| metric_name      | VARCHAR(50)  | NOT NULL                                                        | 指标名称                                |
+| metric_key       | VARCHAR(50)  | NOT NULL                                                        | 指标标识                                |
+| aggregation_type | VARCHAR(20)  | NOT NULL                                                        | 统计方式（count/rate）                  |
+| target_value     | TEXT         | NOT NULL                                                        | 目标值（JSON 字符串）                   |
+| description      | VARCHAR(500) |                                                                 | 指标说明                                |
+| created_at       | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP                             | 创建时间                                |
+| updated_at       | DATETIME     | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新时间                                |
 
 **索引：**
+
 - PRIMARY KEY (id)
 - UNIQUE KEY uk_metric_id (metric_id)
 - UNIQUE KEY uk_feature_metric_key (feature, metric_key)
@@ -288,15 +290,15 @@ CREATE TABLE feature_ops_dashboard_metric_config (
 ```java
 @Service
 public class FeatureOpsDashboardServiceImpl implements FeatureOpsDashboardService {
-    
+
     @Override
     public DashboardReportResponseDTO reportData(DashboardReportRequestDTO request) {
         // 1. 参数校验与预处理
         validateRequest(request);
-        
+
         // 2. Community 推断逻辑
         String community = inferCommunity(request.getCommunity(), request.getRepo());
-        
+
         // 3. 数据存储
         String reportId = UUID.randomUUID().toString();
         FeatureOpsDashboardReport report = new FeatureOpsDashboardReport();
@@ -306,13 +308,13 @@ public class FeatureOpsDashboardServiceImpl implements FeatureOpsDashboardServic
         report.setUserMetrics(toJsonString(request.getUserMetrics()));
         report.setBusinessMetrics(toJsonString(request.getBusinessMetrics()));
         report.setReportedAt(parseTimestamp(request.getTimestamp()));
-        
+
         mapper.insertReport(report);
-        
+
         // 4. 构建响应
         return buildResponse(report);
     }
-    
+
     private String inferCommunity(String community, String repo) {
         if (StringUtils.hasText(community)) {
             return community;
@@ -332,23 +334,23 @@ public class FeatureOpsDashboardServiceImpl implements FeatureOpsDashboardServic
 ```java
 @Service
 public class FeatureOpsDashboardServiceImpl implements FeatureOpsDashboardService {
-    
+
     @Override
     @Transactional
     public DashboardMetricConfigResponseDTO defineMetrics(DashboardMetricConfigRequestDTO request) {
         // 1. 参数校验
         validateMetrics(request.getMetrics());
-        
+
         // 2. 批量处理指标配置
         String batchId = UUID.randomUUID().toString();
         List<MetricItemDTO> createdMetrics = new ArrayList<>();
-        
+
         for (MetricDTO metric : request.getMetrics()) {
             // 检查唯一性
             if (mapper.selectByFeatureAndKey(metric.getFeature(), metric.getMetricKey()) != null) {
                 throw new BusinessException(ErrorCode.METRIC_ALREADY_EXISTS);
             }
-            
+
             // 插入配置
             String metricId = UUID.randomUUID().toString();
             FeatureOpsDashboardMetricConfig config = new FeatureOpsDashboardMetricConfig();
@@ -360,11 +362,11 @@ public class FeatureOpsDashboardServiceImpl implements FeatureOpsDashboardServic
             config.setAggregationType(metric.getAggregationType());
             config.setTargetValue(metric.getTargetValue());
             config.setDescription(metric.getDescription());
-            
+
             mapper.insertMetricConfig(config);
             createdMetrics.add(buildMetricItemDTO(config));
         }
-        
+
         // 3. 构建响应
         return buildResponse(batchId, createdMetrics);
     }
@@ -381,21 +383,21 @@ public Map<String, Object> aggregateMetrics(String feature, String startTime, St
     List<FeatureOpsDashboardReport> reports = mapper.selectByFeatureAndTimeRange(
         feature, startTime, endTime
     );
-    
+
     // 2. 查询指标配置
     List<FeatureOpsDashboardMetricConfig> configs = mapper.selectByFeature(feature);
-    
+
     // 3. 应用层聚合
     Map<String, Object> result = new HashMap<>();
     for (FeatureOpsDashboardMetricConfig config : configs) {
         Object value = aggregateByType(reports, config);
         result.put(config.getMetricKey(), value);
     }
-    
+
     return result;
 }
 
-private Object aggregateByType(List<FeatureOpsDashboardReport> reports, 
+private Object aggregateByType(List<FeatureOpsDashboardReport> reports,
                                 FeatureOpsDashboardMetricConfig config) {
     if ("count".equals(config.getAggregationType())) {
         // count 类型：求和
@@ -425,22 +427,22 @@ public enum ErrorCode {
     // 通用错误 (1000-1999)
     INVALID_PARAMETER(1001, "参数校验失败"),
     INVALID_JSON_FORMAT(1002, "JSON 格式错误"),
-    
+
     // 数据上报错误 (2000-2999)
     REPORT_FEATURE_EMPTY(2001, "feature 不能为空"),
     REPORT_USER_METRICS_EMPTY(2002, "userMetrics 不能为空"),
     REPORT_BUSINESS_METRICS_EMPTY(2003, "businessMetrics 不能为空"),
-    
+
     // 指标配置错误 (3000-3999)
     METRIC_TYPE_INVALID(3001, "metricType 不合法，仅支持 user_metric 或 business_metric"),
     AGGREGATION_TYPE_INVALID(3002, "aggregationType 不合法，仅支持 count 或 rate"),
     METRIC_ALREADY_EXISTS(3003, "指标配置已存在"),
     METRIC_BATCH_EXCEEDED(3004, "批量指标数量超过限制，最多 50 条"),
-    
+
     // 系统错误 (5000-5999)
     DATABASE_ERROR(5001, "数据库操作失败"),
     INTERNAL_ERROR(5000, "系统内部错误");
-    
+
     private final Integer code;
     private final String message;
 }
@@ -451,7 +453,7 @@ public enum ErrorCode {
 ```java
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponseDTO> handleValidationException(
         MethodArgumentNotValidException ex
@@ -459,12 +461,12 @@ public class GlobalExceptionHandler {
         List<FieldError> errors = ex.getBindingResult().getFieldErrors().stream()
             .map(e -> new FieldError(e.getField(), e.getDefaultMessage()))
             .collect(Collectors.toList());
-        
+
         return ResponseEntity.badRequest().body(
             new ErrorResponseDTO(1001, "参数校验失败", errors)
         );
     }
-    
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponseDTO> handleBusinessException(
         BusinessException ex
@@ -473,7 +475,7 @@ public class GlobalExceptionHandler {
             new ErrorResponseDTO(ex.getCode(), ex.getMessage(), null)
         );
     }
-    
+
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ErrorResponseDTO> handleDataAccessException(
         DataAccessException ex
@@ -493,16 +495,17 @@ public class GlobalExceptionHandler {
 
 ### 测试范围
 
-| 测试层级 | 测试类 | 覆盖内容 |
-|---------|--------|---------|
-| Controller | FeatureOpsDashboardControllerTest | 接口调用、参数校验、响应格式 |
-| Service | FeatureOpsDashboardServiceTest | 业务逻辑、异常处理、边界情况 |
-| Mapper | FeatureOpsDashboardMapperTest | 数据库操作、唯一约束、查询逻辑 |
-| Integration | FeatureOpsDashboardIntegrationTest | 端到端流程 |
+| 测试层级    | 测试类                             | 覆盖内容                       |
+| ----------- | ---------------------------------- | ------------------------------ |
+| Controller  | FeatureOpsDashboardControllerTest  | 接口调用、参数校验、响应格式   |
+| Service     | FeatureOpsDashboardServiceTest     | 业务逻辑、异常处理、边界情况   |
+| Mapper      | FeatureOpsDashboardMapperTest      | 数据库操作、唯一约束、查询逻辑 |
+| Integration | FeatureOpsDashboardIntegrationTest | 端到端流程                     |
 
 ### 关键测试用例
 
 **Controller 层：**
+
 - 所有字段完整上报 → 200
 - 仅必填字段上报 → 200
 - feature 为空 → 400 (2001)
@@ -516,6 +519,7 @@ public class GlobalExceptionHandler {
 - 重复 metricKey → 400 (3003)
 
 **Service 层：**
+
 - 数据上报成功，验证 Mapper 调用
 - Community 推断逻辑正确
 - timestamp 为空时使用当前时间
@@ -524,6 +528,7 @@ public class GlobalExceptionHandler {
 - JSON 序列化成功
 
 **Mapper 层：**
+
 - 插入上报数据成功
 - 按 feature 查询上报数据
 - 按时间范围查询上报数据
@@ -549,6 +554,7 @@ mvn test jacoco:report
 ### 数据库变更
 
 执行 SQL 脚本创建两张表：
+
 - `feature_ops_dashboard_report`
 - `feature_ops_dashboard_metric_config`
 
@@ -576,9 +582,9 @@ mvn test jacoco:report
 
 ## 待办事项（TODO）
 
-| TODO | 说明 | 优先级 |
-|------|------|--------|
-| 认证权限集成 | 确认现有 RBAC 集成方式，验证 Token 和 Admin 角色 | 高 |
-| 代码仓映射 | 集成到现有配置表（repo → community 映射） | 中 |
-| 时间段统计接口 | 暂未实现，后续根据运营需求添加 | 中 |
-| 监控告警 | 添加接口调用监控和异常告警 | 低 |
+| TODO           | 说明                                             | 优先级 |
+| -------------- | ------------------------------------------------ | ------ |
+| 认证权限集成   | 确认现有 RBAC 集成方式，验证 Token 和 Admin 角色 | 高     |
+| 代码仓映射     | 集成到现有配置表（repo → community 映射）        | 中     |
+| 时间段统计接口 | 暂未实现，后续根据运营需求添加                   | 中     |
+| 监控告警       | 添加接口调用监控和异常告警                       | 低     |

@@ -142,21 +142,21 @@ Task 5 ⏸️──▶ Task 12 ✅──▶ Task 13 ✅
 
 ## 实际工作量统计
 
-| 任务 | 仓库 | 实际行数 | 提交 | 备注 |
-|------|------|----------|------|------|
-| Task 1 | openlibing-tep-executor | ~403 行 | c123aa5 | libing_api.py 新增（完整实现） |
-| Task 2 | openlibing-tep-executor | ~12 行 | c123aa5 | PYTHONPATH 设置（两处） |
-| Task 3 | openlibing-tep-executor | ~15 行 | c123aa5 | testcase_map 构建 + uuid 生成 |
-| Task 4 | openlibing-tep-executor | ~41 行 | c123aa5 | 环境变量设置 + OBS 配置 |
-| Task 5 | openlibing-tep-executor | - | - | 单元测试（待执行） |
-| Task 6 | UniAutosPython3 | ~6 行 | 5ed7e5b | Engine.py 条件导入 |
-| Task 7 | UniAutosPython3 | ~7 行 | 5ed7e5b | 静态方法定义 |
-| Task 8 | UniAutosPython3 | ~10 行 | 5ed7e5b | Engine._runTest 上报 |
-| Task 9 | UniAutosPython3 | ~10 行 | 5ed7e5b | Engine._runConfiguration 上报 |
-| Task 10 | UniAutosPython3 | ~6 行 | 5ed7e5b | BBTEngine.py 条件导入 |
-| Task 11 | UniAutosPython3 | ~10 行 | 5ed7e5b | BBTEngine._runTest 上报 |
-| Task 12 | UniAutosPython3 | - | 5ed7e5b | 测试验证（已完成） |
-| Task 13 | 跨仓 | - | c123aa5 + 5ed7e5b | 集成测试（已完成） |
+| 任务    | 仓库                    | 实际行数 | 提交              | 备注                           |
+| ------- | ----------------------- | -------- | ----------------- | ------------------------------ |
+| Task 1  | openlibing-tep-executor | ~403 行  | c123aa5           | libing_api.py 新增（完整实现） |
+| Task 2  | openlibing-tep-executor | ~12 行   | c123aa5           | PYTHONPATH 设置（两处）        |
+| Task 3  | openlibing-tep-executor | ~15 行   | c123aa5           | testcase_map 构建 + uuid 生成  |
+| Task 4  | openlibing-tep-executor | ~41 行   | c123aa5           | 环境变量设置 + OBS 配置        |
+| Task 5  | openlibing-tep-executor | -        | -                 | 单元测试（待执行）             |
+| Task 6  | UniAutosPython3         | ~6 行    | 5ed7e5b           | Engine.py 条件导入             |
+| Task 7  | UniAutosPython3         | ~7 行    | 5ed7e5b           | 静态方法定义                   |
+| Task 8  | UniAutosPython3         | ~10 行   | 5ed7e5b           | Engine._runTest 上报           |
+| Task 9  | UniAutosPython3         | ~10 行   | 5ed7e5b           | Engine._runConfiguration 上报  |
+| Task 10 | UniAutosPython3         | ~6 行    | 5ed7e5b           | BBTEngine.py 条件导入          |
+| Task 11 | UniAutosPython3         | ~10 行   | 5ed7e5b           | BBTEngine._runTest 上报        |
+| Task 12 | UniAutosPython3         | -        | 5ed7e5b           | 测试验证（已完成）             |
+| Task 13 | 跨仓                    | -        | c123aa5 + 5ed7e5b | 集成测试（已完成）             |
 
 **实际总行数**：约 520 行代码修改（不含测试代码），远超预估的 160 行。
 **原因**：实际实现了完整的 libing API 对接（真实接口调用、认证、日志上传），而非占位符实现。

@@ -2,10 +2,10 @@
 
 ### 前端已落地（openlibing-web）
 
-| 文件 | 改动 |
-|------|------|
-| `analysisTable.config.js` | `matched` 列 `sortable: 'custom'` |
-| `gitUrlList.vue` | `sortParams`、`handleCustomSort`、`resetSortParams`、`queryRiskData` 透传 |
+| 文件                      | 改动                                                                      |
+| ------------------------- | ------------------------------------------------------------------------- |
+| `analysisTable.config.js` | `matched` 列 `sortable: 'custom'`                                         |
+| `gitUrlList.vue`          | `sortParams`、`handleCustomSort`、`resetSortParams`、`queryRiskData` 透传 |
 
 前端传参示例（有排序时）：
 
@@ -21,14 +21,14 @@
 
 ### 后端现状（openlibing-sca）
 
-| 项 | 现状 |
-|---|---|
-| 入口 | `OpenScanController.getScanIssueQuery` → `OpenScanServiceImpl.getScanIssue` |
-| DTO | `ScanIssueQueryVO`：无排序字段 |
-| 排序 | 固定 `query.with(Sort.by(Sort.Order.asc("scanFile")))`（约 1116 行） |
-| 分页 | `mongoTemplate.find(query.skip(start).limit(pageSize), ...)` |
-| 匹配度 | Mongo/VO 字段 `matched`，值如 `"90%"`、`"100%"` |
-| 数值解析 | `FileUtil.getMatchedScore`（private，去 `%` 转 double，空值 -1.0） |
+| 项       | 现状                                                                        |
+| -------- | --------------------------------------------------------------------------- |
+| 入口     | `OpenScanController.getScanIssueQuery` → `OpenScanServiceImpl.getScanIssue` |
+| DTO      | `ScanIssueQueryVO`：无排序字段                                              |
+| 排序     | 固定 `query.with(Sort.by(Sort.Order.asc("scanFile")))`（约 1116 行）        |
+| 分页     | `mongoTemplate.find(query.skip(start).limit(pageSize), ...)`                |
+| 匹配度   | Mongo/VO 字段 `matched`，值如 `"90%"`、`"100%"`                             |
+| 数值解析 | `FileUtil.getMatchedScore`（private，去 `%` 转 double，空值 -1.0）          |
 
 ### 参考模式
 
@@ -113,19 +113,19 @@ $match(criteria)
 
 **备选（弃用）**：
 
-| 方案 | 原因 |
-|------|------|
-| 全量查出后内存排序 | scanId 下 issue 量大，OOM/超时 |
-| 直接 Sort.by("matched") | 字符串排序错误 |
-| 写入时冗余 matchedScore | 改动面大，非本期目标 |
+| 方案                    | 原因                           |
+| ----------------------- | ------------------------------ |
+| 全量查出后内存排序      | scanId 下 issue 量大，OOM/超时 |
+| 直接 Sort.by("matched") | 字符串排序错误                 |
+| 写入时冗余 matchedScore | 改动面大，非本期目标           |
 
 ### 5. 默认排序与非 matched 列
 
-| 条件 | 行为 |
-|------|------|
+| 条件                              | 行为                                   |
+| --------------------------------- | -------------------------------------- |
 | `sortColumn`/`sortOrder` 任一为空 | `Sort.by(asc("scanFile"))`（保持现状） |
-| `sortColumn` 不在白名单 | 同上，忽略非法参数 |
-| `sortColumn=matched` 且合法 | Aggregation 数值排序 |
+| `sortColumn` 不在白名单           | 同上，忽略非法参数                     |
+| `sortColumn=matched` 且合法       | Aggregation 数值排序                   |
 
 ### 6. `getScanIssue` 重构结构
 
@@ -154,12 +154,12 @@ Aggregation 的 `$match` 阶段复用现有 `buildQuery` 生成的 `Criteria`（
 
 ## Risks / Trade-offs
 
-| 风险 | 缓解 |
-|------|------|
-| Aggregation 比简单 find 慢 | 仅 matched 排序走聚合；默认路径不变；scanId 通常有索引 |
-| matched 格式异常（非数字+%） | 解析失败视为 -1.0，排到最后 |
-| count 与 list 条件不一致 | count 仍用原 Query，与 $match 相同 criteria |
-| 缺少 matched 索引 | 本期可接受；后续可加 computed index 或冗余字段 |
+| 风险                         | 缓解                                                   |
+| ---------------------------- | ------------------------------------------------------ |
+| Aggregation 比简单 find 慢   | 仅 matched 排序走聚合；默认路径不变；scanId 通常有索引 |
+| matched 格式异常（非数字+%） | 解析失败视为 -1.0，排到最后                            |
+| count 与 list 条件不一致     | count 仍用原 Query，与 $match 相同 criteria            |
+| 缺少 matched 索引            | 本期可接受；后续可加 computed index 或冗余字段         |
 
 ## Migration Plan
 

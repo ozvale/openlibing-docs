@@ -112,32 +112,32 @@
 
 ### 新增文件（18 个）
 
-| 序号 | 文件路径 | 说明 |
-|------|---------|------|
-| 1 | `src/main/resources/db/migration/V{version}__create_feature_ops_dashboard_tables.sql` | 数据库迁移脚本 |
-| 2 | `src/main/java/com/openlibing/framework/business/entity/FeatureOpsDashboardReport.java` | 数据上报实体 |
-| 3 | `src/main/java/com/openlibing/framework/business/entity/FeatureOpsDashboardMetricConfig.java` | 指标配置实体 |
-| 4 | `src/main/java/com/openlibing/framework/business/dto/DashboardReportRequestDTO.java` | 数据上报请求 DTO |
-| 5 | `src/main/java/com/openlibing/framework/business/dto/DashboardReportResponseDTO.java` | 数据上报响应 DTO |
-| 6 | `src/main/java/com/openlibing/framework/business/dto/DashboardMetricConfigRequestDTO.java` | 指标配置请求 DTO |
-| 7 | `src/main/java/com/openlibing/framework/business/dto/DashboardMetricConfigResponseDTO.java` | 指标配置响应 DTO |
-| 8 | `src/main/java/com/openlibing/framework/business/dto/ErrorResponseDTO.java` | 错误响应 DTO |
-| 9 | `src/main/java/com/openlibing/framework/business/mapper/FeatureOpsDashboardMapper.java` | Mapper 接口 |
-| 10 | `src/main/resources/mapper/FeatureOpsDashboardMapper.xml` | Mapper XML |
-| 11 | `src/main/java/com/openlibing/framework/business/service/FeatureOpsDashboardService.java` | Service 接口 |
-| 12 | `src/main/java/com/openlibing/framework/business/service/impl/FeatureOpsDashboardServiceImpl.java` | Service 实现 |
-| 13 | `src/main/java/com/openlibing/framework/business/controller/FeatureOpsDashboardController.java` | Controller |
-| 14 | `src/main/java/com/openlibing/framework/common/exception/BusinessException.java` | 业务异常类 |
-| 15 | `src/main/java/com/openlibing/framework/common/enums/ErrorCode.java` | 错误码枚举（新增错误码） |
-| 16 | `src/test/java/com/openlibing/framework/business/controller/FeatureOpsDashboardControllerTest.java` | Controller 测试 |
-| 17 | `src/test/java/com/openlibing/framework/business/service/FeatureOpsDashboardServiceTest.java` | Service 测试 |
-| 18 | `src/test/java/com/openlibing/framework/business/mapper/FeatureOpsDashboardMapperTest.java` | Mapper 测试 |
+| 序号 | 文件路径                                                                                            | 说明                     |
+| ---- | --------------------------------------------------------------------------------------------------- | ------------------------ |
+| 1    | `src/main/resources/db/migration/V{version}__create_feature_ops_dashboard_tables.sql`               | 数据库迁移脚本           |
+| 2    | `src/main/java/com/openlibing/framework/business/entity/FeatureOpsDashboardReport.java`             | 数据上报实体             |
+| 3    | `src/main/java/com/openlibing/framework/business/entity/FeatureOpsDashboardMetricConfig.java`       | 指标配置实体             |
+| 4    | `src/main/java/com/openlibing/framework/business/dto/DashboardReportRequestDTO.java`                | 数据上报请求 DTO         |
+| 5    | `src/main/java/com/openlibing/framework/business/dto/DashboardReportResponseDTO.java`               | 数据上报响应 DTO         |
+| 6    | `src/main/java/com/openlibing/framework/business/dto/DashboardMetricConfigRequestDTO.java`          | 指标配置请求 DTO         |
+| 7    | `src/main/java/com/openlibing/framework/business/dto/DashboardMetricConfigResponseDTO.java`         | 指标配置响应 DTO         |
+| 8    | `src/main/java/com/openlibing/framework/business/dto/ErrorResponseDTO.java`                         | 错误响应 DTO             |
+| 9    | `src/main/java/com/openlibing/framework/business/mapper/FeatureOpsDashboardMapper.java`             | Mapper 接口              |
+| 10   | `src/main/resources/mapper/FeatureOpsDashboardMapper.xml`                                           | Mapper XML               |
+| 11   | `src/main/java/com/openlibing/framework/business/service/FeatureOpsDashboardService.java`           | Service 接口             |
+| 12   | `src/main/java/com/openlibing/framework/business/service/impl/FeatureOpsDashboardServiceImpl.java`  | Service 实现             |
+| 13   | `src/main/java/com/openlibing/framework/business/controller/FeatureOpsDashboardController.java`     | Controller               |
+| 14   | `src/main/java/com/openlibing/framework/common/exception/BusinessException.java`                    | 业务异常类               |
+| 15   | `src/main/java/com/openlibing/framework/common/enums/ErrorCode.java`                                | 错误码枚举（新增错误码） |
+| 16   | `src/test/java/com/openlibing/framework/business/controller/FeatureOpsDashboardControllerTest.java` | Controller 测试          |
+| 17   | `src/test/java/com/openlibing/framework/business/service/FeatureOpsDashboardServiceTest.java`       | Service 测试             |
+| 18   | `src/test/java/com/openlibing/framework/business/mapper/FeatureOpsDashboardMapperTest.java`         | Mapper 测试              |
 
 ### 修改文件（1 个）
 
-| 序号 | 文件路径 | 修改说明 |
-|------|---------|---------|
-| 1 | `src/main/java/com/openlibing/framework/common/exception/GlobalExceptionHandler.java` | 新增 BusinessException 处理逻辑 |
+| 序号 | 文件路径                                                                              | 修改说明                        |
+| ---- | ------------------------------------------------------------------------------------- | ------------------------------- |
+| 1    | `src/main/java/com/openlibing/framework/common/exception/GlobalExceptionHandler.java` | 新增 BusinessException 处理逻辑 |
 
 ## 验证方式
 
@@ -210,34 +210,34 @@ curl -X POST http://localhost:8080/openlibing-framework/manage/feature-dashboard
 
 ## 预估工作量
 
-| 任务 | 预估时间 | 复杂度 |
-|------|---------|--------|
-| 数据库准备 | 0.5 小时 | 低 |
-| Entity + DTO 层 | 1 小时 | 低 |
-| Mapper 层 | 1 小时 | 中 |
-| Service 层 | 2 小时 | 中 |
-| 异常处理 | 0.5 小时 | 低 |
-| Controller 层 | 1 小时 | 低 |
-| 单元测试 | 3 小时 | 中 |
-| 集成测试 | 1 小时 | 低 |
-| 验证与文档 | 0.5 小时 | 低 |
-| **总计** | **10.5 小时** | - |
+| 任务            | 预估时间      | 复杂度 |
+| --------------- | ------------- | ------ |
+| 数据库准备      | 0.5 小时      | 低     |
+| Entity + DTO 层 | 1 小时        | 低     |
+| Mapper 层       | 1 小时        | 中     |
+| Service 层      | 2 小时        | 中     |
+| 异常处理        | 0.5 小时      | 低     |
+| Controller 层   | 1 小时        | 低     |
+| 单元测试        | 3 小时        | 中     |
+| 集成测试        | 1 小时        | 低     |
+| 验证与文档      | 0.5 小时      | 低     |
+| **总计**        | **10.5 小时** | -      |
 
 ## 风险与依赖
 
-| 风险项 | 缓解措施 | 负责人 |
-|--------|---------|--------|
-| 数据库表结构变更需要 DBA 审核 | 提前准备 SQL 脚本，与 DBA 沟通 | 开发 |
-| 认证权限集成方式未确认 | 标记 TODO，后续对接 | 开发 |
-| 测试覆盖率可能不足 | 编写充分的单元测试 | 开发 |
+| 风险项                        | 缓解措施                       | 负责人 |
+| ----------------------------- | ------------------------------ | ------ |
+| 数据库表结构变更需要 DBA 审核 | 提前准备 SQL 脚本，与 DBA 沟通 | 开发   |
+| 认证权限集成方式未确认        | 标记 TODO，后续对接            | 开发   |
+| 测试覆盖率可能不足            | 编写充分的单元测试             | 开发   |
 
 ## 里程碑
 
-| 阶段 | 内容 | 状态 |
-|------|------|------|
-| Phase 1 | 头脑风暴与需求确认 | ✅ 已完成 |
-| Phase 2 | 轻量设计与计划 | ✅ 已完成 |
-| Phase 3 | AI 编码交付 | ✅ 已完成 |
-| 用户自测 | 用户验收测试 | 🔄 进行中 |
-| Phase 4 | 业务 PR 交付 | 待开始 |
-| Phase 5 | 最终归档 | 用户触发 |
+| 阶段     | 内容               | 状态      |
+| -------- | ------------------ | --------- |
+| Phase 1  | 头脑风暴与需求确认 | ✅ 已完成 |
+| Phase 2  | 轻量设计与计划     | ✅ 已完成 |
+| Phase 3  | AI 编码交付        | ✅ 已完成 |
+| 用户自测 | 用户验收测试       | 🔄 进行中 |
+| Phase 4  | 业务 PR 交付       | 待开始    |
+| Phase 5  | 最终归档           | 用户触发  |

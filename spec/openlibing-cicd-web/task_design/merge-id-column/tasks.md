@@ -22,9 +22,9 @@
 
 ## Commit 记录
 
-| Commit | 说明 |
-|--------|------|
-| `5ac25d6` | feat(pipeline): add Merge ID column with text filter in history table |
+| Commit    | 说明                                                                    |
+| --------- | ----------------------------------------------------------------------- |
+| `5ac25d6` | feat(pipeline): add Merge ID column with text filter in history table   |
 | `5286cc7` | fix(pipeline): omit mergeId param from API request when filter is empty |
-| `431c81b` | feat(pipeline): add click-to-navigate for Merge ID column |
-| `39b733e` | feat(pipeline): prefix Merge ID display with hash symbol |
+| `431c81b` | feat(pipeline): add click-to-navigate for Merge ID column               |
+| `39b733e` | feat(pipeline): prefix Merge ID display with hash symbol                |

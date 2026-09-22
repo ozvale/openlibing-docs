@@ -13,29 +13,29 @@
 
 ## 2. 业务边界
 
-| 边界类型 | 说明 |
-| --- | --- |
-| 上游依赖 | BMS Agent 服务（经 APIG 网关下发装机请求） |
-| 下游依赖 | Foreman REST API、Apollo 配置中心、APIG 鉴权服务 |
-| 外部接口 | Foreman API（创建/删除 Host）、APIG（token 校验、回调通知） |
+| 边界类型 | 说明                                                          |
+| -------- | ------------------------------------------------------------- |
+| 上游依赖 | BMS Agent 服务（经 APIG 网关下发装机请求）                    |
+| 下游依赖 | Foreman REST API、Apollo 配置中心、APIG 鉴权服务              |
+| 外部接口 | Foreman API（创建/删除 Host）、APIG（token 校验、回调通知）   |
 | 内部接口 | 对外暴露创建/删除 Host、装机完成回调、健康检查 4 个 REST 接口 |
 
 ## 3. 分层结构
 
 本项目为 Python Flask 轻分层单体，非 Spring MVC 式严格 controller/service/entity/mapper 划分，职责对应如下：
 
-| 分层 | 文件 | 关键单元 |
-| --- | --- | --- |
-| 入口/路由 | `foreman.py` | `APP`、`before_request`、`bms_delivery`、`bms_delete_host`、`install_complete`、`health_check` |
-| 鉴权/过滤器 | `base/auth_filter.py` | `auth_filter()`、`sign_request()`、`get_sign()`、`get_uri()` |
-| 配置 | `base/config.py` | `ReturnCode`、Apollo 配置常量、命名空间 `NS_SERVICE_CONF/NS_APIG/NS_FOREMAN/NS_SECURITY` |
-| 配置中心客户端 | `base/apollo_manager.py` | `SecureApolloClient`、`init_apollo()`、`get_bool_value()` |
-| 解密 | `base/decrypt.py` | `decrypt()`、`decryptbyroot()` |
-| 日志 | `base/logging_handler.py` | `JsonFormatter`、`DailyLogFileHandler`、`get_logger()`、`set_request_context()` |
-| 通用响应 | `base/common.py` | `return_post()`、`return_post_data()` |
-| 业务 | `service/host_manage.py` | `create()`、`delete()`、`_build_request_body/_build_host/_build_interfaces_attributes/_build_puppet_attributes`、`BusinessException` |
-| 业务 | `service/bms_agent_manage.py` | `delivery_complete()`、`BusinessException` |
-| 工具 | `utils/mask_string.py` / `random_string.py` / `regex_util.py` | `mask()`、`get_random_string()`、`verify_ip()` |
+| 分层           | 文件                                                          | 关键单元                                                                                                                             |
+| -------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 入口/路由      | `foreman.py`                                                  | `APP`、`before_request`、`bms_delivery`、`bms_delete_host`、`install_complete`、`health_check`                                       |
+| 鉴权/过滤器    | `base/auth_filter.py`                                         | `auth_filter()`、`sign_request()`、`get_sign()`、`get_uri()`                                                                         |
+| 配置           | `base/config.py`                                              | `ReturnCode`、Apollo 配置常量、命名空间 `NS_SERVICE_CONF/NS_APIG/NS_FOREMAN/NS_SECURITY`                                             |
+| 配置中心客户端 | `base/apollo_manager.py`                                      | `SecureApolloClient`、`init_apollo()`、`get_bool_value()`                                                                            |
+| 解密           | `base/decrypt.py`                                             | `decrypt()`、`decryptbyroot()`                                                                                                       |
+| 日志           | `base/logging_handler.py`                                     | `JsonFormatter`、`DailyLogFileHandler`、`get_logger()`、`set_request_context()`                                                      |
+| 通用响应       | `base/common.py`                                              | `return_post()`、`return_post_data()`                                                                                                |
+| 业务           | `service/host_manage.py`                                      | `create()`、`delete()`、`_build_request_body/_build_host/_build_interfaces_attributes/_build_puppet_attributes`、`BusinessException` |
+| 业务           | `service/bms_agent_manage.py`                                 | `delivery_complete()`、`BusinessException`                                                                                           |
+| 工具           | `utils/mask_string.py` / `random_string.py` / `regex_util.py` | `mask()`、`get_random_string()`、`verify_ip()`                                                                                       |
 
 ## 4. 核心流程
 
@@ -100,12 +100,12 @@ sequenceDiagram
 
 统一响应格式：`{"code": int, "msg": str, "data": ...}`，业务异常通过 `@APP.errorhandler(BusinessException)` 统一封装。
 
-| API 路径 | HTTP方法 | 功能描述 |
-| --- | --- | --- |
-| `/health` | GET | 健康检查（免鉴权） |
-| `/hidevlabforemanagent/v1/bms/delivery` | POST | 创建 Foreman Host（触发裸金属装机交付） |
-| `/hidevlabforemanagent/v1/bms/delete/host` | POST | 删除 Foreman Host |
-| `/hidevlabforemanagent/v1/foreman/callback/install/complete` | POST | Foreman 装机完成回调入口（免鉴权，表单参数 `ip`） |
+| API 路径                                                     | HTTP方法 | 功能描述                                          |
+| ------------------------------------------------------------ | -------- | ------------------------------------------------- |
+| `/health`                                                    | GET      | 健康检查（免鉴权）                                |
+| `/hidevlabforemanagent/v1/bms/delivery`                      | POST     | 创建 Foreman Host（触发裸金属装机交付）           |
+| `/hidevlabforemanagent/v1/bms/delete/host`                   | POST     | 删除 Foreman Host                                 |
+| `/hidevlabforemanagent/v1/foreman/callback/install/complete` | POST     | Foreman 装机完成回调入口（免鉴权，表单参数 `ip`） |
 
 `/bms/delivery` 请求体必填字段：`mac`、`foremanAccount`/`foremanPassword`、`foremanArchitectureId`/`operateSystemId`/`subnetId`/`mediumId`/`locationId`/`domainId`/`ptableId`/`organizationId`/`puppetProxyId`/`puppetCaProxyId`/`environmentId`、`defaultBmsPassword`。
 
@@ -136,12 +136,12 @@ Foreman Host 创建请求体涉及的关键 Foreman 实体字段（来自 `host_
 
 **配置来源**：Apollo 配置中心，4 个 namespace：
 
-| namespace | 关键配置项 |
-| --- | --- |
-| `service_conf` | `SERVICE_HOST`(0.0.0.0)、`SERVICE_PORT`(18080)、`ENABLE_AUTH`(true)、`EXCLUDE_PATH`、`LAB_REGION` |
-| `apig` | `API_GATEWAY_DOMAIN`、`REFERER`、`X_HW_ID`、`ENC_X_HW_APPKEY`(密文)、`TOKEN_VALID_URL`、`DELIVERY_COMPLETE_URI` |
-| `foreman` | `FOREMAN_DOMAIN`、`FOREMAN_INNER_NET_DOMAIN` |
-| `security` | `AES_KEY1_PATH`/`AES_KEY2_PATH`/`WORK_KEY_PATH`、`ENC_SSL_CERT_CONTENT`/`ENC_SSL_KEY_CONTENT`(密文证书) |
+| namespace      | 关键配置项                                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------- |
+| `service_conf` | `SERVICE_HOST`(0.0.0.0)、`SERVICE_PORT`(18080)、`ENABLE_AUTH`(true)、`EXCLUDE_PATH`、`LAB_REGION`               |
+| `apig`         | `API_GATEWAY_DOMAIN`、`REFERER`、`X_HW_ID`、`ENC_X_HW_APPKEY`(密文)、`TOKEN_VALID_URL`、`DELIVERY_COMPLETE_URI` |
+| `foreman`      | `FOREMAN_DOMAIN`、`FOREMAN_INNER_NET_DOMAIN`                                                                    |
+| `security`     | `AES_KEY1_PATH`/`AES_KEY2_PATH`/`WORK_KEY_PATH`、`ENC_SSL_CERT_CONTENT`/`ENC_SSL_KEY_CONTENT`(密文证书)         |
 
 部署环境由 `DEPLOY_ENV` 环境变量拼接到 Apollo app_id（如 `{base}-prod`）。
 
@@ -164,10 +164,10 @@ Foreman Host 创建请求体涉及的关键 Foreman 实体字段（来自 `host_
 
 ## 10. 异常处理
 
-| 异常场景 | 处理策略 | 返回码 |
-| --- | --- | --- |
-| token 非法 | 直接拦截 | 401 |
-| 必填字段缺失 | 返回参数错误 | 400 |
-| Foreman 创建 Host 失败 | 最多重试 3 次，仍失败抛 BusinessException | 500 |
-| 回调通知 BMS Agent 失败 | 最多重试 3 次，间隔 1s，仍失败抛 BusinessException | 500 |
-| 回调 IP 非法 | `verify_ip` 校验失败返回错误 | 400 |
+| 异常场景                | 处理策略                                           | 返回码 |
+| ----------------------- | -------------------------------------------------- | ------ |
+| token 非法              | 直接拦截                                           | 401    |
+| 必填字段缺失            | 返回参数错误                                       | 400    |
+| Foreman 创建 Host 失败  | 最多重试 3 次，仍失败抛 BusinessException          | 500    |
+| 回调通知 BMS Agent 失败 | 最多重试 3 次，间隔 1s，仍失败抛 BusinessException | 500    |
+| 回调 IP 非法            | `verify_ip` 校验失败返回错误                       | 400    |

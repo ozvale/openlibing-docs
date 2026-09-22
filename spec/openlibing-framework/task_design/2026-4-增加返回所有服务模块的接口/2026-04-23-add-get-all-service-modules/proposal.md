@@ -11,9 +11,11 @@
 ## Capabilities
 
 ### New Capabilities
+
 - `get-all-service-modules`: 查询全量服务模块名称（一级菜单下的二级菜单 menuType=0），返回去重后的 menuName 集合
 
 ### Modified Capabilities
+
 - 无
 
 ## Impact

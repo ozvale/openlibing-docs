@@ -30,15 +30,15 @@
   - `apps/web-openlibing/src/components/TableColumnSetting.vue`
 - **已接入页面**（分支 `vul/list-usability-improvement`）：
 
-  | 页面 | storageKey | 表格组件 |
-  |------|------------|----------|
-  | `cve/cveData.vue` | `cve-data` | my-table |
-  | `cve/cveRepair.vue`（修复详情 Tab） | `cve-repair-detail` | my-table |
-  | `cve/cveAbnormal.vue` | `cve-abnormal` | my-table |
-  | `cve/cveDuplicateReport.vue` | `cve-duplicate-report` | my-table |
-  | `cve/cveTerm.vue`（超期预警 Tab） | `cve-term-overdue-warning` | my-table |
-  | `cve/cveTerm.vue`（超期告警 Tab） | `cve-term-overdue-alarm` | my-table |
-  | `Vulnerability0Day/vulnerabilityView/created.vue` | `vuln-created` | vulnTable |
+  | 页面                                              | storageKey                 | 表格组件  |
+  | ------------------------------------------------- | -------------------------- | --------- |
+  | `cve/cveData.vue`                                 | `cve-data`                 | my-table  |
+  | `cve/cveRepair.vue`（修复详情 Tab）               | `cve-repair-detail`        | my-table  |
+  | `cve/cveAbnormal.vue`                             | `cve-abnormal`             | my-table  |
+  | `cve/cveDuplicateReport.vue`                      | `cve-duplicate-report`     | my-table  |
+  | `cve/cveTerm.vue`（超期预警 Tab）                 | `cve-term-overdue-warning` | my-table  |
+  | `cve/cveTerm.vue`（超期告警 Tab）                 | `cve-term-overdue-alarm`   | my-table  |
+  | `Vulnerability0Day/vulnerabilityView/created.vue` | `vuln-created`             | vulnTable |
 
 - **待接入 eligible 页面**（扁平列 >10、无 children）：`cveStock.vue`、`cvePendingReport.vue`、`cveOperationLog.vue` 等
 - **不修改**：`my-table.vue` / `vulnTable.vue` 内部渲染逻辑、`columns.js` 导出接口、含嵌套表头的列集页面

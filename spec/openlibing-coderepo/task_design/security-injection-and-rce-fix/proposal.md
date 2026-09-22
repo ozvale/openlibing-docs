@@ -6,13 +6,13 @@
 
 经真实性复核（Source 真实性 → 可达性 → 净化有效性三重验证）与必要性评估，确认 **3 处需要修复**，2 处当前不可利用暂不修改：
 
-| 编号 | 严重度 | CWE | 问题 | 修复状态 |
-|------|--------|-----|------|---------|
-| V1 | 🔴 高 | CWE-502 | SnakeYAML 不安全反序列化 RCE | ✅ 已修复 |
-| V2 | 🟡 中 | CWE-89 | MyBatis `${}` ORDER BY SQL 注入 | ✅ 已修复 |
-| V3 | 🟡 中 | CWE-233 | URL 查询参数拼接参数污染 | ✅ 已修复 |
-| V4 | 🟡 中 | — | Webhook owner/repo 路径拼接 | ❌ 不修复（三层防护） |
-| V5 | 🟡 中 | CWE-117 | 日志注入 CRLF | ❌ 不修复（已有 logback 缓解） |
+| 编号 | 严重度 | CWE     | 问题                            | 修复状态                       |
+| ---- | ------ | ------- | ------------------------------- | ------------------------------ |
+| V1   | 🔴 高  | CWE-502 | SnakeYAML 不安全反序列化 RCE    | ✅ 已修复                      |
+| V2   | 🟡 中  | CWE-89  | MyBatis `${}` ORDER BY SQL 注入 | ✅ 已修复                      |
+| V3   | 🟡 中  | CWE-233 | URL 查询参数拼接参数污染        | ✅ 已修复                      |
+| V4   | 🟡 中  | —       | Webhook owner/repo 路径拼接     | ❌ 不修复（三层防护）          |
+| V5   | 🟡 中  | CWE-117 | 日志注入 CRLF                   | ❌ 不修复（已有 logback 缓解） |
 
 ### V1: SnakeYAML 不安全反序列化 RCE
 
@@ -21,6 +21,7 @@
 **问题**：`new Yaml()` 默认使用 `Constructor`，会通过 `!!javax.script.ScriptEngineManager` 等 YAML tag 触发任意 Java 类实例化（CWE-502 反序列化 RCE）。
 
 **数据流**：
+
 ```
 Webhook Merge Request Hook
   → WebHookEventController.handleGitCodeEvent (HMAC 签名校验)
@@ -43,6 +44,7 @@ Webhook Merge Request Hook
 **当前缓解**：`RepoServiceImpl.queryRepoInfo` 已使用 `resolveRepoSortField()` 白名单映射 DTO 字段名到 DB 列名；但内部接口 `doInternalQueryRepoInfo` 未调用白名单，存在"安全债务"。
 
 **修复方式**：MyBatis XML 改用 `<choose>/<when>` 白名单，彻底消除 `${}` sink。白名单键名必须与 Java 层 `resolveRepoSortField` 的输出（DB 列名）一致：
+
 - `create_at`、`update_at`、`platform_create_time`、`last_sync_time`
 - sortOrder 仅匹配 `asc`（Java 层 `resolveRepoSortOrder` 已做小写归一化）
 
@@ -53,6 +55,7 @@ Webhook Merge Request Hook
 **问题**：`sigUserUrl + "?community=" + community + "&repo=" + repo + ...` 未做 URL 编码，参数边界（`&`、`#`、`?`）绕过可导致参数污染。
 
 **数据流**：
+
 ```
 repoInfoEntity.getRepoUrl() → split("/") 解析出 community/repo
   → getSigUser(community, community + "/" + repo, "committer", "repo")
@@ -65,10 +68,10 @@ repoInfoEntity.getRepoUrl() → split("/") 解析出 community/repo
 
 ### V4/V5 不修复理由
 
-| 编号 | 不修复理由 |
-|------|-----------|
-| V4 | 三层防护（HMAC-SHA256 签名 + 平台规范化 + HTTP 客户端校验）已足够；已通过 1536 条现有仓库数据 100% 符合 `[A-Za-z0-9_.-]+` 规范 |
-| V5 | logback-spring.xml 已配置 `%replace` 替换控制字符；本地日志文件不直接对外暴露 |
+| 编号 | 不修复理由                                                                                                                     |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------ |
+| V4   | 三层防护（HMAC-SHA256 签名 + 平台规范化 + HTTP 客户端校验）已足够；已通过 1536 条现有仓库数据 100% 符合 `[A-Za-z0-9_.-]+` 规范 |
+| V5   | logback-spring.xml 已配置 `%replace` 替换控制字符；本地日志文件不直接对外暴露                                                  |
 
 ## 验收标准
 

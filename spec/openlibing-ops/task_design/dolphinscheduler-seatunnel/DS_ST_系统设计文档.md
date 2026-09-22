@@ -2,7 +2,7 @@
 
 > **本文档只提供初次部署内容，与线上环境不一致请以线上为准**
 
-***
+---
 
 ## 1. 系统概述
 
@@ -18,16 +18,16 @@
 
 ### 1.2 技术选型
 
-| 组件     | 选型                      | 版本     | 说明                           |
-| ------ | ----------------------- | ------ | ---------------------------- |
-| 任务调度引擎 | Apache DolphinScheduler | 3.4.2  | 分布式 DAG 工作流调度                |
-| 数据集成引擎 | Apache SeaTunnel        | 2.3.13 | 高性能数据同步（Zeta 引擎分离集群模式）       |
-| 元数据库   | MySQL（现有）               | 8.0+   | DS 元数据存储，直接连接现有实例            |
-| 注册中心   | ZooKeeper               | 3.8.3  | DS 集群协调、服务发现                 |
-| 部署平台   | 华为云 CCE                 | -      | Kubernetes StatefulSet 有状态负载 |
-| JDK    | OpenJDK                 | 11     | 运行环境（容器镜像内置）                 |
+| 组件         | 选型                    | 版本   | 说明                                    |
+| ------------ | ----------------------- | ------ | --------------------------------------- |
+| 任务调度引擎 | Apache DolphinScheduler | 3.4.2  | 分布式 DAG 工作流调度                   |
+| 数据集成引擎 | Apache SeaTunnel        | 2.3.13 | 高性能数据同步（Zeta 引擎分离集群模式） |
+| 元数据库     | MySQL（现有）           | 8.0+   | DS 元数据存储，直接连接现有实例         |
+| 注册中心     | ZooKeeper               | 3.8.3  | DS 集群协调、服务发现                   |
+| 部署平台     | 华为云 CCE              | -      | Kubernetes StatefulSet 有状态负载       |
+| JDK          | OpenJDK                 | 11     | 运行环境（容器镜像内置）                |
 
-***
+---
 
 ## 2. 系统架构设计
 
@@ -85,34 +85,34 @@
 
 ### 2.2 CCE 资源规划总览
 
-| 有状态负载 (StatefulSet) | 副本数 | 容器规格   | 存储      | 说明                      |
-| ------------------- | --- | ------ | ------- | ----------------------- |
-| `ds-master`         | 2   | 4C/8G  | 20G 数据盘 | DS Master + API + Alert |
-| `ds-worker`         | 4   | 8C/16G | 50G 数据盘 | DS Worker               |
-| `zk`                | 3   | 2C/4G  | 20G 数据盘 | ZooKeeper 集群            |
-| `st-master`         | 2   | 4C/8G  | 20G 数据盘 | SeaTunnel Zeta Master   |
-| `st-worker`         | 4   | 8C/16G | 50G 数据盘 | SeaTunnel Zeta Worker   |
+| 有状态负载 (StatefulSet) | 副本数 | 容器规格 | 存储       | 说明                    |
+| ------------------------ | ------ | -------- | ---------- | ----------------------- |
+| `ds-master`              | 2      | 4C/8G    | 20G 数据盘 | DS Master + API + Alert |
+| `ds-worker`              | 4      | 8C/16G   | 50G 数据盘 | DS Worker               |
+| `zk`                     | 3      | 2C/4G    | 20G 数据盘 | ZooKeeper 集群          |
+| `st-master`              | 2      | 4C/8G    | 20G 数据盘 | SeaTunnel Zeta Master   |
+| `st-worker`              | 4      | 8C/16G   | 50G 数据盘 | SeaTunnel Zeta Worker   |
 
 ### 2.3 核心组件说明
 
 #### 2.3.1 DolphinScheduler 组件
 
-| 组件               | 职责                     | CCE 部署方式                       |
-| ---------------- | ---------------------- | ------------------------------ |
+| 组件             | 职责                                     | CCE 部署方式                       |
+| ---------------- | ---------------------------------------- | ---------------------------------- |
 | **MasterServer** | DAG 任务切分、任务提交监控、集群健康管理 | StatefulSet 2 副本，含 API + Alert |
-| **WorkerServer** | 实际任务执行、日志服务            | StatefulSet 4 副本，支持标签分组        |
-| **API Server**   | RESTful API 接口、前端请求处理  | 与 Master 同 Pod 部署              |
-| **Alert Server** | 告警通知（邮件、钉钉、飞书、企业微信等）   | 与 Master 同 Pod 部署              |
-| **ZooKeeper**    | 服务注册与发现、分布式锁、领导者选举     | StatefulSet 3 副本               |
+| **WorkerServer** | 实际任务执行、日志服务                   | StatefulSet 4 副本，支持标签分组   |
+| **API Server**   | RESTful API 接口、前端请求处理           | 与 Master 同 Pod 部署              |
+| **Alert Server** | 告警通知（邮件、钉钉、飞书、企业微信等） | 与 Master 同 Pod 部署              |
+| **ZooKeeper**    | 服务注册与发现、分布式锁、领导者选举     | StatefulSet 3 副本                 |
 
 #### 2.3.2 SeaTunnel 组件
 
-| 组件                   | 职责                           | CCE 部署方式         |
-| -------------------- | ---------------------------- | ---------------- |
+| 组件                 | 职责                                    | CCE 部署方式       |
+| -------------------- | --------------------------------------- | ------------------ |
 | **Zeta Master**      | 任务调度、REST API、元数据管理          | StatefulSet 2 副本 |
-| **Zeta Worker**      | 任务执行、数据同步                    | StatefulSet 4 副本 |
-| **Source Connector** | 数据源读取（MySQL、Kafka、HDFS 等）    | 内置于 Worker 镜像    |
-| **Sink Connector**   | 数据目标写入（ClickHouse、ES、Hive 等） | 内置于 Worker 镜像    |
+| **Zeta Worker**      | 任务执行、数据同步                      | StatefulSet 4 副本 |
+| **Source Connector** | 数据源读取（MySQL、Kafka、HDFS 等）     | 内置于 Worker 镜像 |
+| **Sink Connector**   | 数据目标写入（ClickHouse、ES、Hive 等） | 内置于 Worker 镜像 |
 
 ### 2.4 数据流架构
 
@@ -131,25 +131,25 @@
                      (定时/依赖/手动触发)
 ```
 
-***
+---
 
 ## 3. CCE 集群部署规划
 
 ### 3.1 CCE 集群规格
 
-| 配置项           | 规格                  |
-| ------------- | ------------------- |
-| 集群类型          | CCE Standard/Turbo  |
-| Kubernetes 版本 | 1.25+               |
-| 网络模型          | VPC 网络 / 容器隧道网络     |
-| 节点规格          | 通用计算增强型 (C6s/C7)    |
-| 节点数量          | 4-6 个 Worker 节点     |
-| 容器运行时         | Docker / containerd |
+| 配置项          | 规格                    |
+| --------------- | ----------------------- |
+| 集群类型        | CCE Standard/Turbo      |
+| Kubernetes 版本 | 1.25+                   |
+| 网络模型        | VPC 网络 / 容器隧道网络 |
+| 节点规格        | 通用计算增强型 (C6s/C7) |
+| 节点数量        | 4-6 个 Worker 节点      |
+| 容器运行时      | Docker / containerd     |
 
 ### 3.2 命名空间规划
 
-| 命名空间               | 用途                               |
-| ------------------ | -------------------------------- |
+| 命名空间           | 用途                                   |
+| ------------------ | -------------------------------------- |
 | `dolphinscheduler` | DS 所有组件（Master/Worker/ZooKeeper） |
 | `seatunnel`        | SeaTunnel 所有组件（Master/Worker）    |
 
@@ -157,23 +157,23 @@
 
 使用华为云 CCE 的 **云硬盘 EVS** 作为持久化存储，通过 StorageClass 动态创建 PVC：
 
-| 组件        | 存储类型 | 容量   | 挂载路径                         | 说明      |
-| --------- | ---- | ---- | ---------------------------- | ------- |
-| ZooKeeper | SSD  | 20Gi | `/data/zookeeper`            | 事务日志+快照 |
-| DS Master | SSD  | 20Gi | `/opt/dolphinscheduler/logs` | 日志持久化   |
-| DS Worker | SSD  | 50Gi | `/opt/dolphinscheduler/logs` | 日志+临时文件 |
-| ST Master | SSD  | 20Gi | `/opt/seatunnel/logs`        | 日志持久化   |
-| ST Worker | SSD  | 50Gi | `/opt/seatunnel/logs`        | 日志+数据缓存 |
+| 组件      | 存储类型 | 容量 | 挂载路径                     | 说明          |
+| --------- | -------- | ---- | ---------------------------- | ------------- |
+| ZooKeeper | SSD      | 20Gi | `/data/zookeeper`            | 事务日志+快照 |
+| DS Master | SSD      | 20Gi | `/opt/dolphinscheduler/logs` | 日志持久化    |
+| DS Worker | SSD      | 50Gi | `/opt/dolphinscheduler/logs` | 日志+临时文件 |
+| ST Master | SSD      | 20Gi | `/opt/seatunnel/logs`        | 日志持久化    |
+| ST Worker | SSD      | 50Gi | `/opt/seatunnel/logs`        | 日志+数据缓存 |
 
 ### 3.4 网络规划
 
-| 服务类型              | 用途                     | 说明             |
-| ----------------- | ---------------------- | -------------- |
+| 服务类型          | 用途                         | 说明                |
+| ----------------- | ---------------------------- | ------------------- |
 | Headless Service  | ZooKeeper/DS/ST 集群内部通信 | Pod 间直连 DNS 发现 |
-| ClusterIP Service | DS API Server 对外暴露     | 供前端 UI 访问      |
-| ClusterIP Service | ST Master REST API     | 供 DS 任务提交调用    |
+| ClusterIP Service | DS API Server 对外暴露       | 供前端 UI 访问      |
+| ClusterIP Service | ST Master REST API           | 供 DS 任务提交调用  |
 
-***
+---
 
 ## 4. Docker 镜像构建
 
@@ -239,7 +239,7 @@ WORKDIR ${ST_HOME}
 
 使用官方镜像 `bitnami/zookeeper:3.8.3` 或 `apache/zookeeper:3.8.3`。
 
-***
+---
 
 ## 5. Kubernetes 资源清单
 
@@ -977,7 +977,7 @@ spec:
         storageClassName: csi-disk-sas
 ```
 
-***
+---
 
 ## 6. 部署流程
 
@@ -1081,7 +1081,7 @@ kubectl -n seatunnel get pods -l app=st-worker
      ```
 4. 在 **Worker 分组** 中关联该环境
 
-***
+---
 
 ## 7. 系统配置优化
 
@@ -1116,9 +1116,9 @@ worker.task.dir=/tmp/dolphinscheduler/exec
 
 # 任务并行度配置
 env {
-  parallelism = 4
-  job.mode = "BATCH"
-  checkpoint.interval = 60000
+parallelism = 4
+job.mode = "BATCH"
+checkpoint.interval = 60000
 }
 ```
 
@@ -1134,7 +1134,7 @@ autopurge.snapRetainCount=5
 autopurge.purgeInterval=1
 ```
 
-***
+---
 
 ## 8. 任务编排设计
 
@@ -1264,46 +1264,46 @@ sink {
 
 ### 8.3 定时调度策略
 
-| 场景      | 调度频率      | 说明                    |
-| ------- | --------- | --------------------- |
-| 全量数据同步  | 每日凌晨（T+1） | 低峰期执行，如 02:00         |
-| 增量数据同步  | 每 5-15 分钟 | 使用 CDC 或时间戳增量         |
-| 实时数据同步  | 持续运行      | CDC 流模式，配合 Checkpoint |
-| 数据质量校验  | 每日同步完成后   | 自动触发                  |
-| 报表数据预计算 | 每小时       | 汇总中间结果                |
+| 场景           | 调度频率        | 说明                        |
+| -------------- | --------------- | --------------------------- |
+| 全量数据同步   | 每日凌晨（T+1） | 低峰期执行，如 02:00        |
+| 增量数据同步   | 每 5-15 分钟    | 使用 CDC 或时间戳增量       |
+| 实时数据同步   | 持续运行        | CDC 流模式，配合 Checkpoint |
+| 数据质量校验   | 每日同步完成后  | 自动触发                    |
+| 报表数据预计算 | 每小时          | 汇总中间结果                |
 
-***
+---
 
 ## 9. 监控与告警
 
 ### 9.1 CCE 集群监控
 
-| 监控项    | 方式                           | 说明             |
-| ------ | ---------------------------- | -------------- |
-| Pod 状态 | CCE 控制台 / `kubectl get pods` | 查看 Pod 运行状态    |
-| 资源使用   | CCE 监控中心 / Prometheus        | CPU、内存、磁盘      |
-| 容器日志   | CCE 日志中心 / kubectl logs      | 查看容器标准输出       |
-| 事件监控   | CCE 事件中心                     | Pod 创建、调度、重启事件 |
+| 监控项   | 方式                            | 说明                     |
+| -------- | ------------------------------- | ------------------------ |
+| Pod 状态 | CCE 控制台 / `kubectl get pods` | 查看 Pod 运行状态        |
+| 资源使用 | CCE 监控中心 / Prometheus       | CPU、内存、磁盘          |
+| 容器日志 | CCE 日志中心 / kubectl logs     | 查看容器标准输出         |
+| 事件监控 | CCE 事件中心                    | Pod 创建、调度、重启事件 |
 
 ### 9.2 DS 集群监控
 
-| 指标         | 说明              | 告警阈值      |
-| ---------- | --------------- | --------- |
-| Master 存活数 | 活跃 Master Pod 数 | < 2 告警    |
-| Worker 存活数 | 活跃 Worker Pod 数 | < 2 告警    |
-| 等待执行任务数    | 队列中等待的任务数       | > 1000 告警 |
-| 任务失败率      | 最近 1 小时任务失败比例   | > 5% 告警   |
+| 指标           | 说明                    | 告警阈值    |
+| -------------- | ----------------------- | ----------- |
+| Master 存活数  | 活跃 Master Pod 数      | < 2 告警    |
+| Worker 存活数  | 活跃 Worker Pod 数      | < 2 告警    |
+| 等待执行任务数 | 队列中等待的任务数      | > 1000 告警 |
+| 任务失败率     | 最近 1 小时任务失败比例 | > 5% 告警   |
 
 ### 9.3 告警配置
 
 DolphinScheduler 支持多种告警通道：
 
-| 告警方式  | 配置方式        | 适用场景   |
-| ----- | ----------- | ------ |
-| 邮件告警  | SMTP 配置     | 任务失败通知 |
-| 钉钉机器人 | Webhook URL | 即时通知   |
-| 飞书机器人 | Webhook URL | 即时通知   |
-| 企业微信  | Webhook URL | 即时通知   |
+| 告警方式   | 配置方式    | 适用场景     |
+| ---------- | ----------- | ------------ |
+| 邮件告警   | SMTP 配置   | 任务失败通知 |
+| 钉钉机器人 | Webhook URL | 即时通知     |
+| 飞书机器人 | Webhook URL | 即时通知     |
+| 企业微信   | Webhook URL | 即时通知     |
 
 ### 9.4 日志查看
 
@@ -1324,19 +1324,19 @@ kubectl -n seatunnel logs -f st-master-0
 kubectl -n seatunnel logs -f st-worker-0
 ```
 
-***
+---
 
 ## 10. 高可用设计
 
 ### 10.1 组件高可用策略
 
-| 组件        | 高可用策略                           | 故障恢复           |
-| --------- | ------------------------------- | -------------- |
-| DS Master | StatefulSet 2 副本 + ZooKeeper 选举 | Pod 自动重启，< 60s |
-| DS Worker | StatefulSet 4 副本 + 任务自动迁移       | Pod 自动重启，任务迁移  |
-| ZooKeeper | StatefulSet 3 副本 + 奇数节点         | 多数节点存活即可用      |
-| ST Master | StatefulSet 2 副本 + Hazelcast 集群 | Pod 自动重启       |
-| ST Worker | StatefulSet 4 副本 + 弹性扩展         | Pod 自动重启       |
+| 组件      | 高可用策略                          | 故障恢复               |
+| --------- | ----------------------------------- | ---------------------- |
+| DS Master | StatefulSet 2 副本 + ZooKeeper 选举 | Pod 自动重启，< 60s    |
+| DS Worker | StatefulSet 4 副本 + 任务自动迁移   | Pod 自动重启，任务迁移 |
+| ZooKeeper | StatefulSet 3 副本 + 奇数节点       | 多数节点存活即可用     |
+| ST Master | StatefulSet 2 副本 + Hazelcast 集群 | Pod 自动重启           |
+| ST Worker | StatefulSet 4 副本 + 弹性扩展       | Pod 自动重启           |
 
 ### 10.2 故障转移流程
 
@@ -1365,7 +1365,7 @@ kubectl -n seatunnel logs -f st-worker-0
 - **SeaTunnel 层面**: Checkpoint 机制保证 Exactly-Once 语义
 - **数据库层面**: 现有 MySQL 主从复制
 
-***
+---
 
 ## 11. 运维管理
 
@@ -1422,24 +1422,24 @@ kubectl -n dolphinscheduler rollout undo statefulset/ds-master
 
 ### 11.4 备份策略
 
-| 备份内容         | 频率   | 方式                   |
-| ------------ | ---- | -------------------- |
-| MySQL 元数据库   | 每日全量 | mysqldump 或 CCE 定时任务 |
-| ZooKeeper 数据 | 每日快照 | PVC 快照               |
-| K8s 资源清单     | 每次变更 | Git 版本管理             |
+| 备份内容       | 频率     | 方式                      |
+| -------------- | -------- | ------------------------- |
+| MySQL 元数据库 | 每日全量 | mysqldump 或 CCE 定时任务 |
+| ZooKeeper 数据 | 每日快照 | PVC 快照                  |
+| K8s 资源清单   | 每次变更 | Git 版本管理              |
 
-***
+---
 
 ## 12. 安全设计
 
 ### 12.1 访问控制
 
-| 安全维度   | 措施                      |
-| ------ | ----------------------- |
+| 安全维度   | 措施                          |
+| ---------- | ----------------------------- |
 | 用户认证   | DS 内置用户系统 / LDAP / OIDC |
-| 权限管理   | 项目级、工作流级权限控制            |
-| API 安全 | Token 认证、IP 白名单         |
-| 数据源安全  | 密码加密存储、敏感信息脱敏           |
+| 权限管理   | 项目级、工作流级权限控制      |
+| API 安全   | Token 认证、IP 白名单         |
+| 数据源安全 | 密码加密存储、敏感信息脱敏    |
 
 ### 12.2 网络安全
 
@@ -1454,43 +1454,43 @@ kubectl -n dolphinscheduler rollout undo statefulset/ds-master
 - 敏感数据源使用专用只读账号
 - 日志中过滤敏感信息
 
-***
+---
 
 ## 13. 常见问题与解决方案
 
 ### 13.1 部署问题
 
-| 问题                     | 原因               | 解决方案                           |
-| ---------------------- | ---------------- | ------------------------------ |
-| Pod 启动失败               | 镜像拉取失败           | 检查 SWR 镜像地址和权限                 |
-| ZooKeeper 集群无法选举       | Pod 间 DNS 解析失败   | 确认 Headless Service 配置正确       |
-| DS Master 无法连接数据库      | MySQL 连接串或白名单错误  | 检查 CCE Pod CIDR 是否在 MySQL 白名单中 |
-| DS Worker 无法注册到 Master | ZooKeeper 地址配置错误 | 确认 `zk-cs` Service DNS 可解析     |
+| 问题                        | 原因                     | 解决方案                                |
+| --------------------------- | ------------------------ | --------------------------------------- |
+| Pod 启动失败                | 镜像拉取失败             | 检查 SWR 镜像地址和权限                 |
+| ZooKeeper 集群无法选举      | Pod 间 DNS 解析失败      | 确认 Headless Service 配置正确          |
+| DS Master 无法连接数据库    | MySQL 连接串或白名单错误 | 检查 CCE Pod CIDR 是否在 MySQL 白名单中 |
+| DS Worker 无法注册到 Master | ZooKeeper 地址配置错误   | 确认 `zk-cs` Service DNS 可解析         |
 
 ### 13.2 运行问题
 
-| 问题               | 原因               | 解决方案                          |
-| ---------------- | ---------------- | ----------------------------- |
-| 任务一直处于提交状态       | Master 负载过高或线程池满 | 增加 Master 副本数或调整 exec.threads |
-| SeaTunnel 任务 OOM | 并行度过高或数据量过大      | 降低 parallelism，增加 JVM 内存      |
-| Pod OOMKilled    | 容器内存超限           | 调整 resources.limits.memory    |
-| Pod 频繁重启         | 健康检查失败           | 调整 livenessProbe 参数           |
+| 问题                 | 原因                      | 解决方案                              |
+| -------------------- | ------------------------- | ------------------------------------- |
+| 任务一直处于提交状态 | Master 负载过高或线程池满 | 增加 Master 副本数或调整 exec.threads |
+| SeaTunnel 任务 OOM   | 并行度过高或数据量过大    | 降低 parallelism，增加 JVM 内存       |
+| Pod OOMKilled        | 容器内存超限              | 调整 resources.limits.memory          |
+| Pod 频繁重启         | 健康检查失败              | 调整 livenessProbe 参数               |
 
-***
+---
 
 ## 14. 附录
 
 ### 14.1 端口列表
 
-| 组件               | 端口    | 说明                   |
+| 组件             | 端口  | 说明                 |
 | ---------------- | ----- | -------------------- |
 | DS API Server    | 12345 | RESTful API / Web UI |
-| DS Master Server | 5678  | Master 通信            |
-| DS Worker Server | 1234  | Worker 通信            |
-| ZooKeeper        | 2181  | 客户端连接                |
-| ZooKeeper        | 2888  | 集群通信                 |
-| ZooKeeper        | 3888  | 选举通信                 |
-| SeaTunnel Zeta   | 5801  | Hazelcast 集群通信       |
+| DS Master Server | 5678  | Master 通信          |
+| DS Worker Server | 1234  | Worker 通信          |
+| ZooKeeper        | 2181  | 客户端连接           |
+| ZooKeeper        | 2888  | 集群通信             |
+| ZooKeeper        | 3888  | 选举通信             |
+| SeaTunnel Zeta   | 5801  | Hazelcast 集群通信   |
 | SeaTunnel REST   | 8080  | REST API             |
 
 ### 14.2 一键部署脚本
@@ -1558,13 +1558,12 @@ echo "默认账号: admin / dolphinscheduler123"
 ### 14.4 版本兼容性矩阵
 
 | DS 版本 | SeaTunnel 版本 | MySQL 版本 | ZooKeeper 版本 | JDK 版本 |
-| ----- | ------------ | -------- | ------------ | ------ |
-| 3.4.2 | 2.3.13       | 8.0+     | 3.8+         | 11     |
-| 3.4.1 | 2.3.13       | 8.0+     | 3.8+         | 11     |
-| 3.4.0 | 2.3.12+      | 8.0+     | 3.8+         | 11     |
+| ------- | -------------- | ---------- | -------------- | -------- |
+| 3.4.2   | 2.3.13         | 8.0+       | 3.8+           | 11       |
+| 3.4.1   | 2.3.13         | 8.0+       | 3.8+           | 11       |
+| 3.4.0   | 2.3.12+        | 8.0+       | 3.8+           | 11       |
 
-***
+---
 
 > **文档维护**: 本文档应根据实际部署和运维经验持续更新。\
 > **版本记录**: v2.0 - 2026-06-16 更新为华为云 CCE StatefulSet 容器化部署方案
-

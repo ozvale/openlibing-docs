@@ -1,6 +1,7 @@
 # sbom-package-dedup — 技术设计
 
 ## 方案概述
+
 在 SQL 层通过嵌套子查询 + GROUP BY + OFFSET/FETCH 完成分页分组，应用层仅做小批量数据的内存聚合和 VO 转换。
 
 ## 架构决策
@@ -17,21 +18,23 @@
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `model/.../PackageGroupVo.java` | 新增 | 分组 VO：name + version + packages 列表 |
-| `model/.../PackageWithStatisticsVo.java` | 修改 | 新增 sourceInfo 字段 |
-| `model/.../QuerySbomPackagesRequest.java` | 修改 | 新增 isGroupByPackage 字段（G.NAM.08 命名） |
-| `dao/.../PackageRepository.java` | 修改 | 新增 countPackageGroups + getPackagesByGroupPage（SQL 分页） |
-| `interface/.../SbomService.java` | 修改 | 新增 getPackageGroupByNameForPage 接口方法 |
-| `sbom-web/.../SbomController.java` | 修改 | 新增 isGroupByPackage 参数（name="groupByPackage"）+ 分支逻辑 |
-| `sbom-web/.../SbomServiceImpl.java` | 修改 | 新增 getPackageGroupByNameForPage 实现（SQL count + SQL 分页 + 小批量内存分组） |
-| `sbom-web/.../SbomControllerTest.java` | 修改 | 新增分组查询接口测试 |
-| `sbom-web/.../SbomServiceImplTest.java` | 修改 | 新增分组业务逻辑单元测试（mock countPackageGroups + getPackagesByGroupPage） |
+| 文件                                      | 操作 | 说明                                                                            |
+| ----------------------------------------- | ---- | ------------------------------------------------------------------------------- |
+| `model/.../PackageGroupVo.java`           | 新增 | 分组 VO：name + version + packages 列表                                         |
+| `model/.../PackageWithStatisticsVo.java`  | 修改 | 新增 sourceInfo 字段                                                            |
+| `model/.../QuerySbomPackagesRequest.java` | 修改 | 新增 isGroupByPackage 字段（G.NAM.08 命名）                                     |
+| `dao/.../PackageRepository.java`          | 修改 | 新增 countPackageGroups + getPackagesByGroupPage（SQL 分页）                    |
+| `interface/.../SbomService.java`          | 修改 | 新增 getPackageGroupByNameForPage 接口方法                                      |
+| `sbom-web/.../SbomController.java`        | 修改 | 新增 isGroupByPackage 参数（name="groupByPackage"）+ 分支逻辑                   |
+| `sbom-web/.../SbomServiceImpl.java`       | 修改 | 新增 getPackageGroupByNameForPage 实现（SQL count + SQL 分页 + 小批量内存分组） |
+| `sbom-web/.../SbomControllerTest.java`    | 修改 | 新增分组查询接口测试                                                            |
+| `sbom-web/.../SbomServiceImplTest.java`   | 修改 | 新增分组业务逻辑单元测试（mock countPackageGroups + getPackagesByGroupPage）    |
 
 ## 风险 & 缓解
+
 - **SQL 复杂度**：嵌套子查询重复过滤条件，需与 `getPackageInfoByNameForPage` 同步维护。通过代码审查和测试覆盖缓解。
 - **性能**：SQL 层 GROUP BY + OFFSET 性能远优于全量内存分页，且 count 使用高效 `COUNT(*)`。
 
 ## 跨仓影响
+
 - 无。仅 `openlibing-sbom` 单仓变更。

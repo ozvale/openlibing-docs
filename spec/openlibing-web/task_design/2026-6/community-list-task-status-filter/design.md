@@ -40,10 +40,10 @@
 
 ```javascript
 filters: [
-  { label: '成功', value: '1' },
-  { label: '失败', value: '-1' },
-  { label: '执行中', value: '0' },
-]
+  { label: "成功", value: "1" },
+  { label: "失败", value: "-1" },
+  { label: "执行中", value: "0" },
+];
 ```
 
 `filterDropdown` 在 `options` 有值时本地过滤，不触发 `getOptions` 事件。
@@ -82,12 +82,12 @@ filters: [
 
 ## Risks / Trade-offs
 
-| 风险 | 缓解 |
-|------|------|
-| 后端尚未支持 `scanResult` 过滤，筛选无效 | spec 明确参数契约；联调前在 proposal/tasks 标注后端前置；前端可先完成 UI 与参数透传 |
-| Options API 与 `filterDropdown`（Options API 组件）混用 | 直接 import 注册组件，事件用 methods 处理，无需 ref/setOptions |
-| 逗号分隔格式与后端预期不一致 | Open Questions 中记录，联调时按后端反馈调整为数组或 List |
-| 筛选后排序：排序列与筛选叠加 | 保持现有 `sortParams` 逻辑，筛选变更时保留排序状态（与 publishReview 行为一致）；若产品要求筛选时清排序可后续调整 |
+| 风险                                                    | 缓解                                                                                                              |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 后端尚未支持 `scanResult` 过滤，筛选无效                | spec 明确参数契约；联调前在 proposal/tasks 标注后端前置；前端可先完成 UI 与参数透传                               |
+| Options API 与 `filterDropdown`（Options API 组件）混用 | 直接 import 注册组件，事件用 methods 处理，无需 ref/setOptions                                                    |
+| 逗号分隔格式与后端预期不一致                            | Open Questions 中记录，联调时按后端反馈调整为数组或 List                                                          |
+| 筛选后排序：排序列与筛选叠加                            | 保持现有 `sortParams` 逻辑，筛选变更时保留排序状态（与 publishReview 行为一致）；若产品要求筛选时清排序可后续调整 |
 
 ## Migration Plan
 

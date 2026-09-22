@@ -13,6 +13,7 @@
 ### 任务 1：添加 PyYAML 依赖
 
 **文件：**
+
 - 修改：`pyproject.toml`
 
 **步骤 1：在依赖列表中添加 pyyaml**
@@ -35,6 +36,7 @@ git commit -m "chore(deps): add pyyaml for mcp-rpm.yaml parsing"
 ### 任务 2：创建 MCP Server 配置解析工具
 
 **文件：**
+
 - 新建：`app/utils/mcp_parser.py`
 - 测试：`tests/test_mcp_parser.py`
 
@@ -42,7 +44,7 @@ git commit -m "chore(deps): add pyyaml for mcp-rpm.yaml parsing"
 
 创建 `tests/test_mcp_parser.py`：
 
-```python
+````python
 import json
 import tempfile
 from pathlib import Path
@@ -294,7 +296,7 @@ class TestParseMcpServerDir:
         result = parse_mcp_server_dir(server_dir)
         assert result is not None
         assert result["local_server_config"] is not None
-```
+````
 
 **步骤 2：运行测试确认失败**
 
@@ -304,6 +306,7 @@ class TestParseMcpServerDir:
 **步骤 3：实现 mcp_parser.py**
 
 创建 `app/utils/mcp_parser.py`，实现以下函数：
+
 - `parse_mcp_rpm_yaml(yaml_path) -> dict | None` — 解析 name + description
 - `parse_mcp_config_json(json_path, server_name) -> dict | None` — 解析配置并校正 key
 - `find_readme_content(server_dir) -> str | None` — 先外层目录再 src 目录查找 README
@@ -313,6 +316,7 @@ class TestParseMcpServerDir:
 - `_find_config_in_readme(server_dir) -> dict | None` — 在 README 中搜索 mcpServers 的 json 块
 
 配置解析核心逻辑：
+
 1. 搜索 mcp_config.json（外层目录优先，然后内层目录）
 2. 未找到 → 搜索其他 .json 文件中含 "mcpServers" 的
 3. 未找到 → 搜索 README.md/readme.md/README_EN.md 中含 mcpServers 的 json 块
@@ -335,9 +339,10 @@ git commit -m "feat(mcp-parser): add MCP Server config parsing utility"
 ### 任务 3：添加 MCP Server 导入数据模型
 
 **文件：**
+
 - 修改：`app/schemas/import_.py`
 
-**步骤 1：在 import_.py 中添加 MCP Server 导入相关 schema**
+**步骤 1：在 import\_.py 中添加 MCP Server 导入相关 schema**
 
 在已有 schema 之后添加：
 
@@ -393,6 +398,7 @@ git commit -m "feat(schemas): add MCP Server import preview and confirm schemas"
 ### 任务 4：实现 MCP Server 导入服务
 
 **文件：**
+
 - 修改：`app/services/import_service.py`
 - 测试：`tests/test_mcp_import.py`
 
@@ -500,6 +506,7 @@ class TestImportMCPServers:
 - `import_mcp_servers(repo_url, branch, root_dir, mcp_server_names, category, team, mcp_repo)` — 预览后对选中的服务器执行新增或更新
 
 关键实现细节：
+
 - 使用已有的 `_clone_repo` 克隆仓库
 - 列出 root_dir 路径下的所有子目录
 - 对每个子目录调用 mcp_parser 的 `parse_mcp_server_dir`
@@ -524,10 +531,11 @@ git commit -m "feat(import): add MCP Server preview and import service"
 ### 任务 5：添加 MCP Server 导入 API 端点
 
 **文件：**
+
 - 新建：`app/routers/mcp_import.py`
 - 修改：`app/main.py`（注册新路由）
 
-**步骤 1：新建 mcp_import.py，参照 import_.py 的 Skill 导入模式**
+**步骤 1：新建 mcp_import.py，参照 import\_.py 的 Skill 导入模式**
 
 创建 `app/routers/mcp_import.py`，路由前缀 `/api/admin/import-mcp-servers`，与 Skill 导入的 `import_.py`（前缀 `/api/admin/import-skills`）对称：
 
@@ -619,6 +627,7 @@ git commit -m "feat(mcp-import): add MCP Server import preview and confirm endpo
 ### 任务 6：实现 MCP Server 同步服务
 
 **文件：**
+
 - 修改：`app/services/sync_service.py`
 - 测试：`tests/test_mcp_sync_service.py`
 
@@ -797,6 +806,7 @@ class TestMCPServerSyncServer:
 - `sync_mcp_server(server, repo_path)`：用 mcp_parser 重新解析，比较字段，有变化则调用 mcp_repo.update_server
 
 关键实现细节：
+
 - 解析 source_url 提取 (platform, owner, repo, branch, dir_path)
 - 按 (platform, owner, repo, branch) 分组
 - 每组：克隆仓库一次，遍历该仓库下的所有服务器
@@ -820,6 +830,7 @@ git commit -m "feat(sync): add MCPServerSyncService with independent lock and cr
 ### 任务 7：添加 MCP Server 同步邮件报告
 
 **文件：**
+
 - 修改：`app/services/email_service.py`
 
 **步骤 1：添加 build_mcp_sync_report 函数**
@@ -845,6 +856,7 @@ git commit -m "feat(email): add MCP Server sync report email template"
 ### 任务 8：添加 MCP Server 同步 cron 配置
 
 **文件：**
+
 - 修改：`app/config.py`
 
 **步骤 1：添加 MCP Server 同步 cron 设置**
@@ -871,6 +883,7 @@ git commit -m "feat(config): add MCP Server sync cron settings"
 ### 任务 9：在 main.py 中注册 MCP Server 同步调度器
 
 **文件：**
+
 - 修改：`app/main.py`
 
 **步骤 1：在 APScheduler 中添加 MCP Server 同步任务**
@@ -920,6 +933,7 @@ git commit -m "feat(scheduler): register MCP Server sync cron job"
 ### 任务 10：添加 MCP Server 目录的 source_url 解析工具
 
 **文件：**
+
 - 修改：`app/utils/platform.py`
 
 **步骤 1：添加 parse_mcp_source_url 函数**
@@ -961,6 +975,7 @@ git commit -m "feat(platform): add parse_mcp_source_url for directory URLs"
 ### 任务 11：最终集成测试与清理
 
 **文件：**
+
 - 测试：`tests/test_mcp_import.py`、`tests/test_mcp_sync_service.py`
 
 **步骤 1：运行完整测试套件**

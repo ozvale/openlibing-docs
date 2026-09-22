@@ -113,5 +113,3 @@
 
 - **步骤二**：点击进入发布issue页面
 - **预期结果**: 统计bugfix的issues列表，新增统计requires的issues列表
-
-

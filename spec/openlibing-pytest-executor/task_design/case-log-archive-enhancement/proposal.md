@@ -16,6 +16,7 @@
 **目标**：为用例提供独立的归档目录，支持业务自行收集算子执行日志等文件。
 
 **当前目录结构**：
+
 ```
 logs/                          -- 根目录，可自定义指定
 └── TestCases/                 -- 固定目录
@@ -23,6 +24,7 @@ logs/                          -- 根目录，可自定义指定
 ```
 
 **新目录结构**：
+
 ```
 logs/                                          -- 根目录，可自定义指定
 └── TestCases/                                 -- 固定 TestCases 目录
@@ -34,6 +36,7 @@ logs/                                          -- 根目录，可自定义指定
 ```
 
 **新增能力**：
+
 - 每个用例可根据 `logger.path` 获取当前用例的归档目录（如 `logs/TestCases/2026-06-02/test_npu_info_11-38-05`）
 - 用例可自行收集算子执行日志等，归档到 `logger.path` 中
 
@@ -42,6 +45,7 @@ logs/                                          -- 根目录，可自定义指定
 **目标**：测试结束后自动打包并上传用例归档目录中除插件生成的 HTML 之外的其他文件。
 
 **实现要求**：
+
 1. **适配新的日志目录结构**：如果用例在多环境执行，用例需要环境信息转换时，将 `testcase_id1.html` 转换为 `testcase_id1_env_name.html`（此功能 `xmlprocessor.convert_case_name_for_results_and_log` 已实现），此时需要适配新的目录结构
 2. **自动打包非插件生成的文件**：将 `test_npu_info_11-38-05` 目录下除 pytest-testkit 插件生成的 `testcase_id1.html` 之外的所有文件（包括用例自行生成的其他 HTML 文件）打包到 `testcase_id1_log.zip` 或 `testcase_id1_env_name_log.zip` 中；如果没有多余文件则不打包
 3. **上传并生成下载链接**：仅当存在打包文件时，在最后的 `result_json_list` 中，将打包的 zip 文件路径按照 `testcase_id1.html` 同样的路径拼接方式，放到 `json_item` 的 `envDownloadUrl` 属性中
@@ -57,11 +61,11 @@ logs/                                          -- 根目录，可自定义指定
 
 ## 影响范围
 
-| 模块 | 文件 | 变更类型 |
-|------|------|----------|
-| pytest-testkit | `pytest_testkit/lib/common/log/log_factory.py` | 修改 |
-| pytest-executor | `pytest_executor/src/report/xml_processor.py` | 修改 |
-| pytest-executor | `pytest_executor/src/report/report_uploader.py` | 修改 |
+| 模块            | 文件                                            | 变更类型 |
+| --------------- | ----------------------------------------------- | -------- |
+| pytest-testkit  | `pytest_testkit/lib/common/log/log_factory.py`  | 修改     |
+| pytest-executor | `pytest_executor/src/report/xml_processor.py`   | 修改     |
+| pytest-executor | `pytest_executor/src/report/report_uploader.py` | 修改     |
 
 ## 关联 Issue
 

@@ -16,13 +16,13 @@ MindCluster 作为公司内部产品，其二进制包的许可证信息需要�
 
 ### 涉及文件
 
-| 文件 | 角色 |
-|------|------|
-| `common/schedule/MindClusterLicenseSchedule.java` | 定时任务入口，调度与编排 |
+| 文件                                                 | 角色                           |
+| ---------------------------------------------------- | ------------------------------ |
+| `common/schedule/MindClusterLicenseSchedule.java`    | 定时任务入口，调度与编排       |
 | `analysis/utils/binary/BinaryLicenseEnterUtils.java` | 许可证录入与合规性检查核心工具 |
-| `common/feign/OpenlibingSbomClient.java` | SBOM 平台 Feign 客户端 |
-| `common/config/DistributedLockService.java` | 分布式锁服务 |
-| `common/domain/MindClusterBinaryLicenseDto.java` | 版本组合 DTO |
+| `common/feign/OpenlibingSbomClient.java`             | SBOM 平台 Feign 客户端         |
+| `common/config/DistributedLockService.java`          | 分布式锁服务                   |
+| `common/domain/MindClusterBinaryLicenseDto.java`     | 版本组合 DTO                   |
 
 ### 核心方法
 

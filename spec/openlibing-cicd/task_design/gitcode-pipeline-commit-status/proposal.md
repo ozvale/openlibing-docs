@@ -16,14 +16,14 @@ openLiBing 配置的流水线需要在 GitCode PR 的检查（Check）中正常�
 
 ### 状态映射
 
-| openLiBing 状态 | GitCode Commit Status |
-|---|---|
-| QUEUED / INIT / PAUSED / SUSPEND / 空值 | pending |
-| RUNNING | running |
-| COMPLETED | success |
-| FAILED | failed |
-| CANCELED | canceled |
-| SKIPPED / IGNORED | success |
+| openLiBing 状态                         | GitCode Commit Status |
+| --------------------------------------- | --------------------- |
+| QUEUED / INIT / PAUSED / SUSPEND / 空值 | pending               |
+| RUNNING                                 | running               |
+| COMPLETED                               | success               |
+| FAILED                                  | failed                |
+| CANCELED                                | canceled              |
+| SKIPPED / IGNORED                       | success               |
 
 ## 不做什么
 
@@ -47,30 +47,30 @@ openLiBing 配置的流水线需要在 GitCode PR 的检查（Check）中正常�
 
 ### 业务仓 `openlibing-cicd`
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `business/dto/pipeline/PipelineParamDTO.java` | 修改 | 新增 `gitcodeRepoId` / `gitcodeHookId` / `sourceBranch` / `userName` / `pipelineName` |
-| `business/dto/pipeline/PipelineStatusUpdateMessage.java` | 修改 | 同上 |
-| `business/dto/pipeline/GitCodePipelineStatusDTO.java` | 新增 | GitCode 提交状态请求体 + 嵌套 `PipelineDetail` |
-| `business/dto/webhooks/PullRequestEvent.java` | 修改 | 新增 `gitcodeRepoId` / `gitcodeHookId` / `sourceBranch`；GitCode 路径下填充 |
-| `business/dto/webhooks/NoteEvent.java` | 修改 | 新增 `gitcodeRepoId` / `gitcodeHookId` / `sourceBranch`；GitCode 路径下填充 |
-| `business/vo/PrStartPipelineVo.java` | 修改 | 新增 `gitcodeRepoId` / `gitcodeHookId` / `sourceBranch` |
-| `business/listener/PipelineStartEventHandler.java` | 修改 | PR open / update / note 三个分支填充 `sourceBranch` / `userName` / `pipelineName`，并在 `reflashPipelineInfo` 中透传到 `PipelineParamDTO` |
-| `business/listener/PipelineStatusUpdateConsumer.java` | 修改 | `buildPipelineParamFromMessage` 透传新增字段 |
-| `business/service/impl/PipelineServiceImpl.java` | 修改 | 新增 `pushGitCodeCommitStatus` / `mapToGitCodeCommitStatus`；在 `recordQueuedPipeline` 和 `recordPipelineInfo` 非排队路径中各调一次 |
-| `src/test/java/.../PipelineParamDtoBuilder.java` | 修改 | 新增对应字段的链式构造 |
-| `src/test/java/.../PipelineServiceImplTest.java` | 修改 | 覆盖 `mapToGitCodeCommitStatus` 全部状态分支 + `pushGitCodeCommitStatus` 跳过/成功/失败/异常 4 类场景 |
+| 文件                                                     | 操作 | 说明                                                                                                                                      |
+| -------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `business/dto/pipeline/PipelineParamDTO.java`            | 修改 | 新增 `gitcodeRepoId` / `gitcodeHookId` / `sourceBranch` / `userName` / `pipelineName`                                                     |
+| `business/dto/pipeline/PipelineStatusUpdateMessage.java` | 修改 | 同上                                                                                                                                      |
+| `business/dto/pipeline/GitCodePipelineStatusDTO.java`    | 新增 | GitCode 提交状态请求体 + 嵌套 `PipelineDetail`                                                                                            |
+| `business/dto/webhooks/PullRequestEvent.java`            | 修改 | 新增 `gitcodeRepoId` / `gitcodeHookId` / `sourceBranch`；GitCode 路径下填充                                                               |
+| `business/dto/webhooks/NoteEvent.java`                   | 修改 | 新增 `gitcodeRepoId` / `gitcodeHookId` / `sourceBranch`；GitCode 路径下填充                                                               |
+| `business/vo/PrStartPipelineVo.java`                     | 修改 | 新增 `gitcodeRepoId` / `gitcodeHookId` / `sourceBranch`                                                                                   |
+| `business/listener/PipelineStartEventHandler.java`       | 修改 | PR open / update / note 三个分支填充 `sourceBranch` / `userName` / `pipelineName`，并在 `reflashPipelineInfo` 中透传到 `PipelineParamDTO` |
+| `business/listener/PipelineStatusUpdateConsumer.java`    | 修改 | `buildPipelineParamFromMessage` 透传新增字段                                                                                              |
+| `business/service/impl/PipelineServiceImpl.java`         | 修改 | 新增 `pushGitCodeCommitStatus` / `mapToGitCodeCommitStatus`；在 `recordQueuedPipeline` 和 `recordPipelineInfo` 非排队路径中各调一次       |
+| `src/test/java/.../PipelineParamDtoBuilder.java`         | 修改 | 新增对应字段的链式构造                                                                                                                    |
+| `src/test/java/.../PipelineServiceImplTest.java`         | 修改 | 覆盖 `mapToGitCodeCommitStatus` 全部状态分支 + `pushGitCodeCommitStatus` 跳过/成功/失败/异常 4 类场景                                     |
 
 ### docs 仓 `openlibing-docs`
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `spec/openlibing-cicd/task_design/gitcode-pipeline-commit-status/proposal.md` | 重写 | 本文件 |
-| `spec/openlibing-cicd/task_design/gitcode-pipeline-commit-status/design.md` | 重写 | 详见 `design.md` |
-| `spec/openlibing-cicd/task_design/gitcode-pipeline-commit-status/tasks.md` | 重写 | 详见 `tasks.md` |
+| 文件                                                                          | 操作 | 说明             |
+| ----------------------------------------------------------------------------- | ---- | ---------------- |
+| `spec/openlibing-cicd/task_design/gitcode-pipeline-commit-status/proposal.md` | 重写 | 本文件           |
+| `spec/openlibing-cicd/task_design/gitcode-pipeline-commit-status/design.md`   | 重写 | 详见 `design.md` |
+| `spec/openlibing-cicd/task_design/gitcode-pipeline-commit-status/tasks.md`    | 重写 | 详见 `tasks.md`  |
 
 ### 业务仓 `openlibing-codecheck`
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
+| 文件                                    | 操作 | 说明                                                                                                              |
+| --------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------- |
 | `business/model/PrStartPipelineVo.java` | 修改 | 同步新增 `gitcodeRepoId` / `gitcodeHookId` / `sourceBranch`，与 `openlibing-cicd` 侧 `PrStartPipelineVo` 字段对齐 |

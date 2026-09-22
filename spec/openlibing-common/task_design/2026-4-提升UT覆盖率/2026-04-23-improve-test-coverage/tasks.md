@@ -7,6 +7,7 @@
 ## ✅ 可直接完成（不改动原代码）
 
 ### Task 1.1: 新增 CsvValidatorTest [✅ 可执行]
+
 - **Priority**: High
 - **Effort**: 0.5h
 - **File**: `src/test/java/com/openlibing/common/validator/CsvValidatorTest.java`
@@ -22,6 +23,7 @@
   - `testConvertToHalfWidth_MixedChars` - 混合字符
 
 ### Task 1.2: 增强 ImageCheckUtilTest [✅ 可执行]
+
 - **Priority**: High
 - **Effort**: 1h
 - **File**: `src/test/java/com/openlibing/common/utils/ImageCheckUtilTest.java`
@@ -38,6 +40,7 @@
   - `testUploadFileCheckString_EmptyInput` - 空字符串返回false
 
 ### Task 1.3: 增强 ExternalLinkCheckUtilsTest [✅ 可执行]
+
 - **Priority**: High
 - **Effort**: 0.5h
 - **File**: `src/test/java/com/openlibing/common/utils/ExternalLinkCheckUtilsTest.java`
@@ -49,6 +52,7 @@
   - `testReplaceMarkdown_NoMarkdownFormat` - 非markdown文本保持不变
 
 ### Task 1.4: 增强 AESCipherTest [✅ 可执行]
+
 - **Priority**: High
 - **Effort**: 0.5h
 - **File**: `src/test/java/com/openlibing/common/security/cipher/AESCipherTest.java`
@@ -60,6 +64,7 @@
   - `testToXor_AsymmetricXor` - 不对称异或测试
 
 ### Task 1.5: 增强 SecurityRandomTest [✅ 可执行]
+
 - **Priority**: Medium
 - **Effort**: 0.5h
 - **File**: `src/test/java/com/openlibing/common/security/security/SecurityRandomTest.java`
@@ -71,6 +76,7 @@
   - `testGetRandomBytes_ConcurrentSafety` - 并发安全测试
 
 ### Task 1.6: 重构 ObsUtilTest [✅ 可执行]
+
 - **Priority**: High
 - **Effort**: 1h
 - **File**: `src/test/java/com/openlibing/common/utils/ObsUtilTest.java`
@@ -90,10 +96,12 @@
 ## ⚠️ 需mockito-inline静态Mock（添加依赖即可）
 
 ### Task 2.1: 添加 mockito-inline 依赖 [⚠️ 需添加依赖]
+
 - **Priority**: High (阻塞后续任务)
 - **Effort**: 0.1h
 - **File**: `pom.xml`
 - **Action**: 添加依赖声明（改动pom.xml是正常的）
+
 ```xml
 <dependency>
     <groupId>org.mockito</groupId>
@@ -104,6 +112,7 @@
 ```
 
 ### Task 2.2: 重构 SecurityUtilTest [⚠️ 需mockito-inline]
+
 - **Priority**: High
 - **Effort**: 1h
 - **File**: `src/test/java/com/openlibing/common/security/security/SecurityUtilTest.java`
@@ -114,6 +123,7 @@
   - `testDecrypt_NullData` - null数据处理
 
 ### Task 2.3: 增强 AESCipherTest (密钥链路) [⚠️ 需mockito-inline]
+
 - **Priority**: High
 - **Effort**: 0.5h
 - **File**: `src/test/java/com/openlibing/common/security/cipher/AESCipherTest.java`
@@ -127,6 +137,7 @@
 ## ✅ Spring Mock（使用ReflectionTestUtils）
 
 ### Task 3.1: 新增 ConfigContextInitializerTest [✅ 可执行]
+
 - **Priority**: Medium
 - **Effort**: 0.5h
 - **File**: `src/test/java/com/openlibing/common/config/ConfigContextInitializerTest.java`
@@ -135,6 +146,7 @@
   - `testInitialize_WithoutTrustStore` - 无环境变量
 
 ### Task 3.2: 新增 JasyptConfigTest [✅ 可执行]
+
 - **Priority**: Medium
 - **Effort**: 0.5h
 - **File**: `src/test/java/com/openlibing/common/config/JasyptConfigTest.java`
@@ -143,6 +155,7 @@
   - `testJasyptStringEncryptor_EncryptDecrypt` - 测试StringEncryptor接口
 
 ### Task 3.3: 新增 LoggerAspectTest [✅ 可执行]
+
 - **Priority**: High
 - **Effort**: 2h
 - **File**: `src/test/java/com/openlibing/common/aspect/logapi/LoggerAspectTest.java`
@@ -157,6 +170,7 @@
   - `testBuildRequestParamsMap_WithMethodSignature` - 参数映射
 
 ### Task 3.4: 新增 AbstractLogHandlerTest [✅ 可执行]
+
 - **Priority**: High
 - **Effort**: 2h
 - **File**: `src/test/java/com/openlibing/common/aspect/logapi/AbstractLogHandlerTest.java`
@@ -175,11 +189,13 @@
 ## ❌ 需跳过（无法在不改动原代码情况下测试）
 
 ### Task SKIP.1: PublishMessageUtilsTest [❌ 跳过]
+
 - **Reason**: 静态方法内部直接构造 `SmnClient.newBuilder()...build()`
 - **Note**: mockito-inline的MockConstruction理论上可以mock，但复杂度高，建议跳过
 - **Alternative**: 如果后续必须测试，需重构源码增加依赖注入点
 
 ### Task SKIP.2: ObsUtil.createObsClient [❌ 跳过]
+
 - **Reason**: 静态方法内部直接 `new ObsClient(ak, sk, endPoint)`
 - **Note**: 同上，MockConstruction复杂度高
 - **Coverage Impact**: 低，ObsUtil实例方法已通过Task 1.6覆盖
@@ -189,6 +205,7 @@
 ## Phase 4: 边界补充
 
 ### Task 4.1: 补充边界测试 [✅ 可执行]
+
 - **Priority**: Low
 - **Effort**: 1h
 - **Files**: 多个测试文件
@@ -198,6 +215,7 @@
   - KeyComponentUtilTest - 边界参数测试
 
 ### Task 4.2: 更新JaCoCo配置 [✅ 可执行]
+
 - **Priority**: High
 - **Effort**: 0.1h
 - **File**: `pom.xml`
@@ -247,16 +265,17 @@ Step 5: 收尾
 
 ## Summary
 
-| Category | Tasks | Effort | Coverage Impact |
-|----------|-------|--------|-----------------|
-| ✅ 可执行 | 11 | 8h | +35-40% |
-| ⚠️ mockito-inline | 3 | 1.5h | +5-8% |
-| ❌ 跳过 | 2 | - | - |
-| **Total 可执行** | **14** | **9.5h** | **+40-48%** |
+| Category          | Tasks  | Effort   | Coverage Impact |
+| ----------------- | ------ | -------- | --------------- |
+| ✅ 可执行         | 11     | 8h       | +35-40%         |
+| ⚠️ mockito-inline | 3      | 1.5h     | +5-8%           |
+| ❌ 跳过           | 2      | -        | -               |
+| **Total 可执行**  | **14** | **9.5h** | **+40-48%**     |
 
 **Expected Final Coverage**: 26% + 40-48% = **66%-74%**
 
 **跳过影响分析**:
+
 - PublishMessageUtils: 约20行代码，影响约1-2%
 - ObsUtil.createObsClient: 约3行代码，影响约0.5%
 - **总跳过影响 < 3%，不影响目标达成**

@@ -43,11 +43,11 @@
 
 ## 影响范围
 
-| 模块/文件 | 操作 | 说明 |
-|-----------|------|------|
-| `pytest_testkit/lib/common/environment/device.py` | 修改 | 新增 `set_docker` 方法、扩展 `__getitem__`、新增 `DockerProxy` 类 |
-| `pytest_testkit/plugin.py` | 无修改 | fixture 返回的 Device 对象已具备新能力 |
-| `tests/test_docker_proxy.py` | 新增 | 单元测试验证功能 |
+| 模块/文件                                         | 操作   | 说明                                                              |
+| ------------------------------------------------- | ------ | ----------------------------------------------------------------- |
+| `pytest_testkit/lib/common/environment/device.py` | 修改   | 新增 `set_docker` 方法、扩展 `__getitem__`、新增 `DockerProxy` 类 |
+| `pytest_testkit/plugin.py`                        | 无修改 | fixture 返回的 Device 对象已具备新能力                            |
+| `tests/test_docker_proxy.py`                      | 新增   | 单元测试验证功能                                                  |
 
 ## 使用示例
 

@@ -20,21 +20,21 @@ openlibing 已提供运营数据看板（feature-dashboard），需要接入 sbo
 
 ## 影响范围
 
-| 模块 | 文件 | 操作 |
-|------|------|------|
-| sbom-web/feign | FrameworkClient.java | 新增（返回 `com.openlibing.common.pojo.response.DataResult`） |
-| sbom-web/service | SbomDashboardReportServiceImpl.java | 新增 |
-| interface/api | SbomDashboardReportService.java | 新增（接口定义） |
-| model/pojo | DashboardReportRequest.java | 新增（请求 DTO，对齐 framework 字段） |
-| quartz/jobs | SbomDashboardReportJob.java | 新增（含分布式锁 + 可配置过期时间） |
-| quartz/config | ScheduleBatchJobConfig.java | 修改（注册 Job，cron: UTC 17:00 = 北京 1:00） |
-| sbom-web/controller | SbomController.java | 修改（新增 `/reportDashboard` 端点） |
-| dao | ProductStatisticsRepository.java | 修改（新增 `countByProductType()`） |
-| sbom-web/resources | application.properties | 修改（新增 `feign.framework.name`） |
-| dao | QuartzLockRepository.java | 修改（`queryLockByLockName` + `FOR UPDATE`，`acquireLock` 支持过期时间参数） |
-| clients | QuartzLockManagerImpl.java | 修改（`acquireLock` 按 `lockName` 全量查，删除 `renewLock`） |
-| interface/api | QuartzLockManager.java | 修改（`acquireLock` 加 `expireMinutes`，删除 `renewLock`） |
-| quartz/jobs | FetchMajunCveJob.java | 修改（适配新 `acquireLock` 签名，删除 `renewLock` 死代码） |
+| 模块                | 文件                                | 操作                                                                         |
+| ------------------- | ----------------------------------- | ---------------------------------------------------------------------------- |
+| sbom-web/feign      | FrameworkClient.java                | 新增（返回 `com.openlibing.common.pojo.response.DataResult`）                |
+| sbom-web/service    | SbomDashboardReportServiceImpl.java | 新增                                                                         |
+| interface/api       | SbomDashboardReportService.java     | 新增（接口定义）                                                             |
+| model/pojo          | DashboardReportRequest.java         | 新增（请求 DTO，对齐 framework 字段）                                        |
+| quartz/jobs         | SbomDashboardReportJob.java         | 新增（含分布式锁 + 可配置过期时间）                                          |
+| quartz/config       | ScheduleBatchJobConfig.java         | 修改（注册 Job，cron: UTC 17:00 = 北京 1:00）                                |
+| sbom-web/controller | SbomController.java                 | 修改（新增 `/reportDashboard` 端点）                                         |
+| dao                 | ProductStatisticsRepository.java    | 修改（新增 `countByProductType()`）                                          |
+| sbom-web/resources  | application.properties              | 修改（新增 `feign.framework.name`）                                          |
+| dao                 | QuartzLockRepository.java           | 修改（`queryLockByLockName` + `FOR UPDATE`，`acquireLock` 支持过期时间参数） |
+| clients             | QuartzLockManagerImpl.java          | 修改（`acquireLock` 按 `lockName` 全量查，删除 `renewLock`）                 |
+| interface/api       | QuartzLockManager.java              | 修改（`acquireLock` 加 `expireMinutes`，删除 `renewLock`）                   |
+| quartz/jobs         | FetchMajunCveJob.java               | 修改（适配新 `acquireLock` 签名，删除 `renewLock` 死代码）                   |
 
 ## 设计决策
 

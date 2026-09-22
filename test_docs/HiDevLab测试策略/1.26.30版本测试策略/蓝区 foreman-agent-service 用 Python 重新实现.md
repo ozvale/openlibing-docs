@@ -1,4 +1,4 @@
-#  [蓝区 foreman-agent-service 用 Python 重新实现] 测试策略
+# [蓝区 foreman-agent-service 用 Python 重新实现] 测试策略
 
 ## 1. 基本信息
 

@@ -24,14 +24,14 @@
 
 ### 1.3 请求参数
 
-| 参数名 | 类型 | 必填 | 说明 | 示例值 |
-|--------|------|------|------|--------|
-| userId | String | 是 | 用户ID | "user123" |
-| projectId | String | 是 | 项目ID | "project456" |
-| repoUrl | String | 是 | 仓库URL | "https://gitcode.com/openlibing/openlibing-platform-release.git" |
-| keyword | String | 否 | 搜索关键字，用于过滤Tag名称 | "v1.0" |
-| pageNum | Integer | 否 | 页码，从1开始，默认1 | 1 |
-| pageSize | Integer | 否 | 返回数量，默认20，最大100 | 20 |
+| 参数名    | 类型    | 必填 | 说明                        | 示例值                                                           |
+| --------- | ------- | ---- | --------------------------- | ---------------------------------------------------------------- |
+| userId    | String  | 是   | 用户ID                      | "user123"                                                        |
+| projectId | String  | 是   | 项目ID                      | "project456"                                                     |
+| repoUrl   | String  | 是   | 仓库URL                     | "https://gitcode.com/openlibing/openlibing-platform-release.git" |
+| keyword   | String  | 否   | 搜索关键字，用于过滤Tag名称 | "v1.0"                                                           |
+| pageNum   | Integer | 否   | 页码，从1开始，默认1        | 1                                                                |
+| pageSize  | Integer | 否   | 返回数量，默认20，最大100   | 20                                                               |
 
 ### 1.4 返回数据结构
 
@@ -76,21 +76,21 @@
 
 #### TagInfoVO - Tag信息对象
 
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| tagName | String | Tag名称 |
-| commitId | String | Tag对应的commitId |
-| createTime | String | Tag创建时间 |
+| 字段名     | 类型   | 说明              |
+| ---------- | ------ | ----------------- |
+| tagName    | String | Tag名称           |
+| commitId   | String | Tag对应的commitId |
+| createTime | String | Tag创建时间       |
 
 #### TagSearchResultVO - Tag搜索结果对象
 
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| tagList | List<TagInfoVO> | Tag列表 |
-| total | Integer | 总数量（过滤后） |
-| pageNum | Integer | 当前页码 |
-| pageSize | Integer | 每页大小 |
-| totalPages | Integer | 总页数 |
+| 字段名     | 类型            | 说明             |
+| ---------- | --------------- | ---------------- |
+| tagList    | List<TagInfoVO> | Tag列表          |
+| total      | Integer         | 总数量（过滤后） |
+| pageNum    | Integer         | 当前页码         |
+| pageSize   | Integer         | 每页大小         |
+| totalPages | Integer         | 总页数           |
 
 ### 1.6 请求示例
 
@@ -160,12 +160,12 @@ Tag校验集成在病毒扫描流程（`executeVirusScan`）中，校验逻辑�
 
 ### 2.3 校验结果枚举
 
-| 枚举值 | 代码 | 中文描述 | 英文描述 | 说明 |
-|--------|------|----------|----------|------|
-| MATCH_SUCCESS | 1 | 匹配成功 | match success | Tag commitId与制品包commitId完全匹配 |
-| MISMATCH | 2 | 不匹配 | mismatch | Tag commitId与制品包commitId不匹配，发布会失败 |
-| TAG_NOT_EXIST | 3 | Tag不存在 | tag not exist | 用户选择的Tag在仓库中不存在，发布时会自动创建 |
-| VALIDATION_ERROR | 4 | 校验异常 | validation error | 校验过程出现异常（如获取commitId失败） |
+| 枚举值           | 代码 | 中文描述  | 英文描述         | 说明                                           |
+| ---------------- | ---- | --------- | ---------------- | ---------------------------------------------- |
+| MATCH_SUCCESS    | 1    | 匹配成功  | match success    | Tag commitId与制品包commitId完全匹配           |
+| MISMATCH         | 2    | 不匹配    | mismatch         | Tag commitId与制品包commitId不匹配，发布会失败 |
+| TAG_NOT_EXIST    | 3    | Tag不存在 | tag not exist    | 用户选择的Tag在仓库中不存在，发布时会自动创建  |
+| VALIDATION_ERROR | 4    | 校验异常  | validation error | 校验过程出现异常（如获取commitId失败）         |
 
 ### 2.4 校验详情数据结构
 
@@ -183,22 +183,22 @@ Tag校验集成在病毒扫描流程（`executeVirusScan`）中，校验逻辑�
 
 #### 字段说明
 
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| tagName | String | 用户选择的Tag名称 |
-| tagCommitId | String | Tag对应的commitId（Tag不存在时为空） |
-| artifactCommitId | String | 制品包的commitId |
-| repoUrl | String | 仓库URL |
-| message | String | 校验结果描述信息 |
+| 字段名           | 类型   | 说明                                 |
+| ---------------- | ------ | ------------------------------------ |
+| tagName          | String | 用户选择的Tag名称                    |
+| tagCommitId      | String | Tag对应的commitId（Tag不存在时为空） |
+| artifactCommitId | String | 制品包的commitId                     |
+| repoUrl          | String | 仓库URL                              |
+| message          | String | 校验结果描述信息                     |
 
 ### 2.5 数据库字段变更
 
 在`release_review_virus_scan`表中新增两个字段：
 
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| tagValidationResult | Integer | Tag校验结果代码（1-4） |
-| tagValidationDetail | String | Tag校验详情（JSON格式） |
+| 字段名              | 类型    | 说明                    |
+| ------------------- | ------- | ----------------------- |
+| tagValidationResult | Integer | Tag校验结果代码（1-4）  |
+| tagValidationDetail | String  | Tag校验详情（JSON格式） |
 
 ### 2.6 前端展示建议
 
@@ -240,6 +240,7 @@ Tag commitId: a1b2c3d4e5f6g7h8i9j0
 #### 步骤3：病毒扫描与Tag校验
 
 后端在执行病毒扫描时，自动进行Tag校验：
+
 - 获取制品包的commitId
 - 校验Tag commitId是否匹配
 - 将校验结果保存到数据库
@@ -251,6 +252,7 @@ Tag commitId: a1b2c3d4e5f6g7h8i9j0
 #### 步骤5：发布执行
 
 根据校验结果决定发布策略：
+
 - **匹配成功**: 直接使用已有Tag发布
 - **Tag不存在**: 自动创建Tag后发布
 - **不匹配**: 阻止发布，提示用户重新选择
@@ -284,21 +286,21 @@ Tag commitId: a1b2c3d4e5f6g7h8i9j0
 
 ### 4.1 Tag搜索接口错误
 
-| 错误场景 | 错误信息 | 处理建议 |
-|----------|----------|----------|
-| 仓库URL无效 | "搜索Tag失败: 仓库URL格式错误" | 检查仓库URL格式 |
-| 权限不足 | "搜索Tag失败: 无权限访问仓库" | 检查项目配置的Git token |
-| Git平台API异常 | "搜索Tag失败: API调用失败" | 检查Git平台服务状态 |
-| 网络异常 | "搜索Tag失败: 网络连接失败" | 检查网络连接 |
+| 错误场景       | 错误信息                       | 处理建议                |
+| -------------- | ------------------------------ | ----------------------- |
+| 仓库URL无效    | "搜索Tag失败: 仓库URL格式错误" | 检查仓库URL格式         |
+| 权限不足       | "搜索Tag失败: 无权限访问仓库"  | 检查项目配置的Git token |
+| Git平台API异常 | "搜索Tag失败: API调用失败"     | 检查Git平台服务状态     |
+| 网络异常       | "搜索Tag失败: 网络连接失败"    | 检查网络连接            |
 
 ### 4.2 Tag校验错误
 
-| 错误场景 | 校验结果代码 | 错误信息 | 处理建议 |
-|----------|--------------|----------|----------|
-| 制品包无commitId | 4 | "制品包无commitId信息" | 检查制品包构建数据 |
-| 获取Tag commitId失败 | 4 | "获取Tag commitId失败" | 检查Git平台API和权限 |
-| Tag与制品包不匹配 | 2 | "Tag与制品包commitId不匹配" | 重新选择Tag或制品包 |
-| 校验异常 | 4 | "校验异常: 具体错误信息" | 检查仓库配置和网络 |
+| 错误场景             | 校验结果代码 | 错误信息                    | 处理建议             |
+| -------------------- | ------------ | --------------------------- | -------------------- |
+| 制品包无commitId     | 4            | "制品包无commitId信息"      | 检查制品包构建数据   |
+| 获取Tag commitId失败 | 4            | "获取Tag commitId失败"      | 检查Git平台API和权限 |
+| Tag与制品包不匹配    | 2            | "Tag与制品包commitId不匹配" | 重新选择Tag或制品包  |
+| 校验异常             | 4            | "校验异常: 具体错误信息"    | 检查仓库配置和网络   |
 
 ---
 
@@ -395,8 +397,8 @@ public class ReleaseReviewVirusScanVo {
 
 ### 6.3 API版本历史
 
-| 版本 | 日期 | 变更说明 |
-|------|------|----------|
+| 版本 | 日期       | 变更说明                     |
+| ---- | ---------- | ---------------------------- |
 | v1.0 | 2026-05-09 | 新增Tag搜索接口和Tag校验功能 |
 
 ---

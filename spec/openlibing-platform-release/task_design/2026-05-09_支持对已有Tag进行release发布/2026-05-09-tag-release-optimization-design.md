@@ -78,12 +78,12 @@
 
 ### 2.2 与现有流程对比
 
-| 环节 | 现有流程 | 优化后流程 |
-|------|----------|------------|
-| Tag输入 | 仅支持手动输入新Tag | 支持搜索已有Tag + 手动输入新Tag |
-| Tag校验 | 已存在同名Tag则报错 | 已存在Tag时校验commitId匹配 |
-| Tag创建 | 完整性验证阶段创建 | 发布前重新校验并创建 |
-| 校验结果 | 简单错误提示 | 详细对比信息返回 |
+| 环节     | 现有流程            | 优化后流程                      |
+| -------- | ------------------- | ------------------------------- |
+| Tag输入  | 仅支持手动输入新Tag | 支持搜索已有Tag + 手动输入新Tag |
+| Tag校验  | 已存在同名Tag则报错 | 已存在Tag时校验commitId匹配     |
+| Tag创建  | 完整性验证阶段创建  | 发布前重新校验并创建            |
+| 校验结果 | 简单错误提示        | 详细对比信息返回                |
 
 ---
 
@@ -97,37 +97,38 @@
 
 **请求参数**:
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| projectId | String | 是 | 项目ID |
-| repoUrl | String | 是 | 仓库URL |
-| keyword | String | 否 | 搜索关键字（模糊匹配） |
-| pageNum | Integer | 否 | 页码，从1开始，默认1 |
-| pageSize | Integer | 否 | 返回数量，默认20，最大100 |
+| 参数名    | 类型    | 必填 | 说明                      |
+| --------- | ------- | ---- | ------------------------- |
+| projectId | String  | 是   | 项目ID                    |
+| repoUrl   | String  | 是   | 仓库URL                   |
+| keyword   | String  | 否   | 搜索关键字（模糊匹配）    |
+| pageNum   | Integer | 否   | 页码，从1开始，默认1      |
+| pageSize  | Integer | 否   | 返回数量，默认20，最大100 |
 
 **响应结构**:
 
 ```json
 {
-    "code": 200,
-    "msg": "success",
-    "data": {
-        "tagList": [
-            {
-                "tagName": "v1.0.0",
-                "commitId": "abc123...",
-                "createTime": "2024-01-01 10:00:00"
-            }
-        ],
-        "total": 100,
-        "pageNum": 1,
-        "pageSize": 20,
-        "totalPages": 5
-    }
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "tagList": [
+      {
+        "tagName": "v1.0.0",
+        "commitId": "abc123...",
+        "createTime": "2024-01-01 10:00:00"
+      }
+    ],
+    "total": 100,
+    "pageNum": 1,
+    "pageSize": 20,
+    "totalPages": 5
+  }
 }
 ```
 
 **业务逻辑**：
+
 1. 获取所有Tag列表
 2. 按关键字过滤（如果keyword不为空）
 3. 按ASCII码升序排序
@@ -142,6 +143,7 @@
 完整性验证在 [SafeScanServiceImpl.java:230](file:///d:/Code/openlibing-platform-release/src/main/java/com/openlibing/platformrelease/business/service/impl/SafeScanServiceImpl.java#L230) 的 `executeVirusScan` 方法中实现。
 
 现有流程：
+
 1. 防止路径穿越校验
 2. 下载软件包
 3. 获取软件包信息
@@ -192,11 +194,11 @@ private String tagValidationDetail;
 
 ```json
 {
-    "tagName": "v1.0.0",
-    "tagCommitId": "abc123def456",
-    "artifactCommitId": "xyz789uvw123",
-    "repoUrl": "https://gitcode.com/xxx/xxx.git",
-    "message": "Tag与制品包commitId不匹配"
+  "tagName": "v1.0.0",
+  "tagCommitId": "abc123def456",
+  "artifactCommitId": "xyz789uvw123",
+  "repoUrl": "https://gitcode.com/xxx/xxx.git",
+  "message": "Tag与制品包commitId不匹配"
 }
 ```
 
@@ -212,22 +214,22 @@ private String tagValidationDetail;
 
 ### 4.1 后端改动
 
-| 序号 | 改动项 | 改动文件 | 说明 |
-|------|--------|----------|------|
-| 1 | 新增Tag搜索API | ReleaseTagController.java | 新增Controller和搜索方法 |
-| 2 | Tag搜索Service | ReleaseRepoTagHandleServiceImpl.java | 新增搜索方法，支持模糊匹配 |
-| 3 | 获取Tag详情方法 | ReleaseRepoTagHandleServiceImpl.java | 新增获取Tag commitId的方法 |
-| 4 | 完整性验证增强 | SafeScanServiceImpl.java | 在executeVirusScan方法中，病毒扫描后、SHA256校验前增加Tag commitId校验 |
-| 5 | 新增校验结果字段 | ReleaseReviewVirusScanEntity.java | 增加tagValidationResult、tagValidationDetail字段 |
-| 6 | 数据库表变更 | release_review_virus_scan表 | 新增2个字段 |
+| 序号 | 改动项           | 改动文件                             | 说明                                                                   |
+| ---- | ---------------- | ------------------------------------ | ---------------------------------------------------------------------- |
+| 1    | 新增Tag搜索API   | ReleaseTagController.java            | 新增Controller和搜索方法                                               |
+| 2    | Tag搜索Service   | ReleaseRepoTagHandleServiceImpl.java | 新增搜索方法，支持模糊匹配                                             |
+| 3    | 获取Tag详情方法  | ReleaseRepoTagHandleServiceImpl.java | 新增获取Tag commitId的方法                                             |
+| 4    | 完整性验证增强   | SafeScanServiceImpl.java             | 在executeVirusScan方法中，病毒扫描后、SHA256校验前增加Tag commitId校验 |
+| 5    | 新增校验结果字段 | ReleaseReviewVirusScanEntity.java    | 增加tagValidationResult、tagValidationDetail字段                       |
+| 6    | 数据库表变更     | release_review_virus_scan表          | 新增2个字段                                                            |
 
 ### 4.2 前端改动
 
-| 序号 | 改动项 | 说明 |
-|------|--------|------|
-| 1 | Tag输入组件 | 改为支持搜索选择的组合组件 |
-| 2 | Tips提示 | 输入新Tag时显示"发布时自动创建"提示 |
-| 3 | 校验结果展示 | 展示详细对比信息（Tag.commitId vs 制品包.commitId） |
+| 序号 | 改动项       | 说明                                                |
+| ---- | ------------ | --------------------------------------------------- |
+| 1    | Tag输入组件  | 改为支持搜索选择的组合组件                          |
+| 2    | Tips提示     | 输入新Tag时显示"发布时自动创建"提示                 |
+| 3    | 校验结果展示 | 展示详细对比信息（Tag.commitId vs 制品包.commitId） |
 
 ---
 
@@ -235,34 +237,34 @@ private String tagValidationDetail;
 
 ### 5.1 功能测试
 
-| 测试场景 | 预期结果 |
-|----------|----------|
-| 搜索已有Tag并选择 | 正确返回匹配的Tag列表 |
-| 选择已有Tag，commitId匹配 | 病毒扫描后Tag校验成功，SHA256校验继续执行 |
-| 选择已有Tag，commitId不匹配 | 病毒扫描后Tag校验失败，记录详细对比信息 |
-| 输入新Tag | 病毒扫描后Tag校验通过（Tag不存在），SHA256校验继续执行 |
-| 输入已存在的Tag名称 | 按已有Tag处理，进行commitId校验 |
+| 测试场景                    | 预期结果                                               |
+| --------------------------- | ------------------------------------------------------ |
+| 搜索已有Tag并选择           | 正确返回匹配的Tag列表                                  |
+| 选择已有Tag，commitId匹配   | 病毒扫描后Tag校验成功，SHA256校验继续执行              |
+| 选择已有Tag，commitId不匹配 | 病毒扫描后Tag校验失败，记录详细对比信息                |
+| 输入新Tag                   | 病毒扫描后Tag校验通过（Tag不存在），SHA256校验继续执行 |
+| 输入已存在的Tag名称         | 按已有Tag处理，进行commitId校验                        |
 
 ### 5.2 边界测试
 
-| 测试场景 | 预期结果 |
-|----------|----------|
-| Tag搜索关键字为空 | 返回全部Tag（限制数量） |
-| Tag搜索无匹配结果 | 返回空列表 |
-| 仓库无Tag | 搜索返回空列表 |
-| 制品包无commitId信息 | 记录校验异常 |
-| Git API获取Tag commitId失败 | 记录校验异常 |
+| 测试场景                    | 预期结果                |
+| --------------------------- | ----------------------- |
+| Tag搜索关键字为空           | 返回全部Tag（限制数量） |
+| Tag搜索无匹配结果           | 返回空列表              |
+| 仓库无Tag                   | 搜索返回空列表          |
+| 制品包无commitId信息        | 记录校验异常            |
+| Git API获取Tag commitId失败 | 记录校验异常            |
 
 ---
 
 ## 6. 风险评估
 
-| 风险项 | 风险等级 | 应对措施 |
-|--------|----------|----------|
-| Git API调用超时 | 中 | 增加超时配置，异步处理 |
-| Tag数量过多导致搜索慢 | 低 | 限制返回数量，支持分页 |
-| commitId获取失败 | 中 | 增加异常处理，记录校验异常 |
-| 病毒扫描流程变长 | 低 | Tag校验放在病毒扫描后，不影响扫描结果 |
+| 风险项                | 风险等级 | 应对措施                              |
+| --------------------- | -------- | ------------------------------------- |
+| Git API调用超时       | 中       | 增加超时配置，异步处理                |
+| Tag数量过多导致搜索慢 | 低       | 限制返回数量，支持分页                |
+| commitId获取失败      | 中       | 增加异常处理，记录校验异常            |
+| 病毒扫描流程变长      | 低       | Tag校验放在病毒扫描后，不影响扫描结果 |
 
 ---
 

@@ -25,10 +25,10 @@
 
 ## 修改文件清单
 
-| 文件 | 变更类型 | 说明 |
-|------|---------|------|
-| `SuppressionScanServiceImpl.java` | 修改 | 重构 `extractSimpleCodeSnippet`，新增 `findNonBlankLineInDirection` |
-| `SuppressionScanServiceImplTest.java` | 新增 | 新增稀疏行号和空行上下文的测试用例 |
+| 文件                                  | 变更类型 | 说明                                                                |
+| ------------------------------------- | -------- | ------------------------------------------------------------------- |
+| `SuppressionScanServiceImpl.java`     | 修改     | 重构 `extractSimpleCodeSnippet`，新增 `findNonBlankLineInDirection` |
+| `SuppressionScanServiceImplTest.java` | 新增     | 新增稀疏行号和空行上下文的测试用例                                  |
 
 ## 验证方式
 

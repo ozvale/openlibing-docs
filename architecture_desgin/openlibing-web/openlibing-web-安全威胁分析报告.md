@@ -1,11 +1,11 @@
 # 安全威胁分析报告：openlibing-web
 
-| 项 | 内容 |
-|---|---|
-| 仓库路径 | `D:\skill\skill收集\repo\openlibing-web` |
-| 分析日期 | 2026-09-02 |
-| 分析方法 | 静态代码审计（STRIDE-A 威胁建模 + 前端/Nginx/构建配置检查） |
-| 报告语言 | 中文 |
+| 项       | 内容                                                                                                                                                                                   |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 仓库路径 | `D:\skill\skill收集\repo\openlibing-web`                                                                                                                                               |
+| 分析日期 | 2026-09-02                                                                                                                                                                             |
+| 分析方法 | 静态代码审计（STRIDE-A 威胁建模 + 前端/Nginx/构建配置检查）                                                                                                                            |
+| 报告语言 | 中文                                                                                                                                                                                   |
 | 部署分类 | 前端单页应用（Vue 3 + Vite 7 + TypeScript，vben-admin fork，pnpm + Turborepo monorepo；主应用 `apps/web-openlibing`，openEuler + Nginx 1.24 容器，端口 8075，反代后端 k8s 微服务网关） |
 
 ---
@@ -22,16 +22,16 @@ OpenLiBing **平台前端**：openEuler 开放原子平台的管理控制台 SPA
 
 ### 1.2 组件与信任边界
 
-| 组件 ID | 锚点 | 职责 | 信任边界 |
-|---|---|---|---|
-| Nginx 反代 | `apps/web-openlibing/nginx/nginx_prod*.conf` | 静态托管 + 反向代理 + CORS/限流/TLS | 外部 ↔ 平台边界 |
-| 路由守卫 | `apps/web-openlibing/src/router/guard.ts` | 三层路由守卫、动态菜单 | 前端访问控制（UX 层） |
-| accessStore | `packages/stores/src/modules/access.ts:102` | token/锁屏密码持久化（SecureLS AES） | 凭证存储边界 |
-| ApiClient | `apps/web-openlibing/src/api/ApiClient.ts:80` | Cookie 会话 + CSRF 双提交令牌 | 浏览器 ↔ 网关 |
-| request.ts | `apps/web-openlibing/src/api/request.ts:59` | vben Bearer 通道，baseURL 来自 env | 浏览器 ↔ API |
-| xssFilter | `apps/web-openlibing/src/utils/until.js:267` | `xss` 库白名单消毒 | XSS 防线 |
-| 环境配置 | `.env.production:8` / `.env.gamma:8` | API 基址（**指向外部 mock 域名**） | 构建边界 |
-| 华为客服脚本 | `src/utils/loadHuaweiCS.ts:10` | 运行时注入第三方脚本 | 供应链边界 |
+| 组件 ID      | 锚点                                          | 职责                                 | 信任边界              |
+| ------------ | --------------------------------------------- | ------------------------------------ | --------------------- |
+| Nginx 反代   | `apps/web-openlibing/nginx/nginx_prod*.conf`  | 静态托管 + 反向代理 + CORS/限流/TLS  | 外部 ↔ 平台边界       |
+| 路由守卫     | `apps/web-openlibing/src/router/guard.ts`     | 三层路由守卫、动态菜单               | 前端访问控制（UX 层） |
+| accessStore  | `packages/stores/src/modules/access.ts:102`   | token/锁屏密码持久化（SecureLS AES） | 凭证存储边界          |
+| ApiClient    | `apps/web-openlibing/src/api/ApiClient.ts:80` | Cookie 会话 + CSRF 双提交令牌        | 浏览器 ↔ 网关         |
+| request.ts   | `apps/web-openlibing/src/api/request.ts:59`   | vben Bearer 通道，baseURL 来自 env   | 浏览器 ↔ API          |
+| xssFilter    | `apps/web-openlibing/src/utils/until.js:267`  | `xss` 库白名单消毒                   | XSS 防线              |
+| 环境配置     | `.env.production:8` / `.env.gamma:8`          | API 基址（**指向外部 mock 域名**）   | 构建边界              |
+| 华为客服脚本 | `src/utils/loadHuaweiCS.ts:10`                | 运行时注入第三方脚本                 | 供应链边界            |
 
 **关键信任边界**：① 浏览器 → Nginx（TLS/CORS/安全头）；② Nginx → 内网网关/微服务（`proxy_ssl_verify off`）；③ 前端路由守卫（**不可作为授权边界**，最终鉴权在后端）；④ 第三方脚本/iframe（华为客服、wujie 子应用、AI 工具）。
 
@@ -39,15 +39,15 @@ OpenLiBing **平台前端**：openEuler 开放原子平台的管理控制台 SPA
 
 ## 二、STRIDE-A 威胁分析汇总
 
-| STRIDE 类别 | 威胁数 | 代表性威胁 |
-|---|---|---|
-| S 仿冒 | 1 | 演示弱口令组件在生产布局中被引用 |
-| T 篡改 | 4 | CORS 反射任意 Origin；第三方脚本无 SRI；Nginx→后端 TLS 不校验；v-html/markdown 注入面 |
-| R 抵赖 | 0 | — |
-| I 信息泄露 | 4 | token/锁屏密码存 localStorage（硬编码密钥"加密"）；生产 API 指向外部 mock 域；console 打印 userInfo；内网 IP/服务名入库 |
-| D 拒绝服务 | 1 | 限流 key 基于可伪造的 `X-Real-IP` |
-| E 权限提升 | 2 | 路由守卫 fail-open + 默认 super 角色；CORS+Credentials 跨站读取数据 |
-| A 业务滥用 | 1 | 文件上传仅客户端校验 |
+| STRIDE 类别 | 威胁数 | 代表性威胁                                                                                                              |
+| ----------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
+| S 仿冒      | 1      | 演示弱口令组件在生产布局中被引用                                                                                        |
+| T 篡改      | 4      | CORS 反射任意 Origin；第三方脚本无 SRI；Nginx→后端 TLS 不校验；v-html/markdown 注入面                                   |
+| R 抵赖      | 0      | —                                                                                                                       |
+| I 信息泄露  | 4      | token/锁屏密码存 localStorage（硬编码密钥"加密"）；生产 API 指向外部 mock 域；console 打印 userInfo；内网 IP/服务名入库 |
+| D 拒绝服务  | 1      | 限流 key 基于可伪造的 `X-Real-IP`                                                                                       |
+| E 权限提升  | 2      | 路由守卫 fail-open + 默认 super 角色；CORS+Credentials 跨站读取数据                                                     |
+| A 业务滥用  | 1      | 文件上传仅客户端校验                                                                                                    |
 
 ### 关键威胁场景
 
@@ -65,27 +65,27 @@ OpenLiBing **平台前端**：openEuler 开放原子平台的管理控制台 SPA
 
 #### FIND-01：Nginx CORS 反射任意 Origin 且允许凭证（跨站数据窃取）
 
-| 属性 | 内容 |
-|---|---|
-| STRIDE | I / E（S） |
-| CWE | [CWE-942](https://cwe.mitre.org/data/definitions/942.html) 过度宽松的跨域策略；[CWE-668](https://cwe.mitre.org/data/definitions/668.html) |
-| OWASP | A05:2025 – Security Misconfiguration |
-| 证据 | `apps/web-openlibing/nginx/nginx_prod.conf:120-124`（`nginx_prod_new.conf:120-124`、`nginx_beta.conf:116-120` 同样）：`add_header 'Access-Control-Allow-Origin' '$http_origin' always;` + `Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS'` + `Access-Control-Allow-Credentials 'true'`；Cookie 会话见 `ApiClient.ts:90` `withCredentials: true` |
-| 风险 | `$http_origin` 原样回显 = 反射任意第三方网站 Origin，且允许凭证。恶意页面可代用户向 `/gateway/**` 发带 Cookie 的跨域请求并读取响应，窃取漏洞/发布/仓库/用户数据；配合放行的自定义头，CSRF 防护边界被削弱 |
-| 修复建议 | 改 Origin 白名单：`map $http_origin $cors_origin { default ""; "~^https://([a-z0-9-]+\.)?openlibing\.com$" $http_origin; }` 后输出 `$cors_origin`；非白名单不输出 CORS 头；`Allow-Credentials` 仅对白名单域生效 |
-| 修复成本 | 低 |
+| 属性     | 内容                                                                                                                                                                                                                                                                                                                                                            |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| STRIDE   | I / E（S）                                                                                                                                                                                                                                                                                                                                                      |
+| CWE      | [CWE-942](https://cwe.mitre.org/data/definitions/942.html) 过度宽松的跨域策略；[CWE-668](https://cwe.mitre.org/data/definitions/668.html)                                                                                                                                                                                                                       |
+| OWASP    | A05:2025 – Security Misconfiguration                                                                                                                                                                                                                                                                                                                            |
+| 证据     | `apps/web-openlibing/nginx/nginx_prod.conf:120-124`（`nginx_prod_new.conf:120-124`、`nginx_beta.conf:116-120` 同样）：`add_header 'Access-Control-Allow-Origin' '$http_origin' always;` + `Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS'` + `Access-Control-Allow-Credentials 'true'`；Cookie 会话见 `ApiClient.ts:90` `withCredentials: true` |
+| 风险     | `$http_origin` 原样回显 = 反射任意第三方网站 Origin，且允许凭证。恶意页面可代用户向 `/gateway/**` 发带 Cookie 的跨域请求并读取响应，窃取漏洞/发布/仓库/用户数据；配合放行的自定义头，CSRF 防护边界被削弱                                                                                                                                                        |
+| 修复建议 | 改 Origin 白名单：`map $http_origin $cors_origin { default ""; "~^https://([a-z0-9-]+\.)?openlibing\.com$" $http_origin; }` 后输出 `$cors_origin`；非白名单不输出 CORS 头；`Allow-Credentials` 仅对白名单域生效                                                                                                                                                 |
+| 修复成本 | 低                                                                                                                                                                                                                                                                                                                                                              |
 
 #### FIND-02：路由守卫鉴权被注释、默认 super 角色、权限判定 fail-open
 
-| 属性 | 内容 |
-|---|---|
-| STRIDE | E |
-| CWE | [CWE-862](https://cwe.mitre.org/data/definitions/862.html) 缺失授权；[CWE-285](https://cwe.mitre.org/data/definitions/285.html) 不当授权 |
-| OWASP | A01:2025 – Broken Access Control |
-| 证据 | `apps/web-openlibing/src/router/guard.ts`：`:66-86` accessToken 检查整段被注释；`:95-100` `userStore.userInfo || { id:0, realName:'Vben', roles:['super'], username:'vben' }`；`:149-151` `if (!to.meta || !to.meta.auth) { next(); }`；`:167` `(permissions.length === 0 || permissions.includes(to.meta.auth))` |
-| 风险 | 前端访问控制多处"默认允许"：未登录不跳登录、无 auth 标记页面直接放行、权限空数组通过、super 角色兜底可能使动态菜单越权生成。前端守卫本为 UX 层，但此 fail-open 写法在后端接口遗漏鉴权时直接暴露功能页 |
-| 修复建议 | 恢复 token 存在性检查；移除 super 兜底（未登录跳登录）；权限判定改 fail-close（空数组拒绝）；**所有敏感后端接口必须独立鉴权，不依赖前端** |
-| 修复成本 | 低 |
+| 属性     | 内容                                                                                                                                                                                                  |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| STRIDE   | E                                                                                                                                                                                                     |
+| CWE      | [CWE-862](https://cwe.mitre.org/data/definitions/862.html) 缺失授权；[CWE-285](https://cwe.mitre.org/data/definitions/285.html) 不当授权                                                              |
+| OWASP    | A01:2025 – Broken Access Control                                                                                                                                                                      |
+| 证据     | `apps/web-openlibing/src/router/guard.ts`：`:66-86` accessToken 检查整段被注释；`:95-100` `userStore.userInfo                                                                                         |     | { id:0, realName:'Vben', roles:['super'], username:'vben' }`；`:149-151` `if (!to.meta |     | !to.meta.auth) { next(); }`；`:167` `(permissions.length === 0 |     | permissions.includes(to.meta.auth))` |
+| 风险     | 前端访问控制多处"默认允许"：未登录不跳登录、无 auth 标记页面直接放行、权限空数组通过、super 角色兜底可能使动态菜单越权生成。前端守卫本为 UX 层，但此 fail-open 写法在后端接口遗漏鉴权时直接暴露功能页 |
+| 修复建议 | 恢复 token 存在性检查；移除 super 兜底（未登录跳登录）；权限判定改 fail-close（空数组拒绝）；**所有敏感后端接口必须独立鉴权，不依赖前端**                                                             |
+| 修复成本 | 低                                                                                                                                                                                                    |
 
 ### 中危
 
@@ -203,26 +203,26 @@ OpenLiBing **平台前端**：openEuler 开放原子平台的管理控制台 SPA
 
 ### Quick Wins（低成本快速修复）
 
-| 编号 | 事项 | 成本 |
-|---|---|---|
-| FIND-01 | Nginx CORS 改 Origin 白名单，禁止反射 `$http_origin` + credentials | 低 |
-| FIND-02 | 恢复路由 token 校验、权限 fail-close、移除 super 兜底 | 低 |
-| FIND-04 | 启用 CSP / `frame-ancestors`（X-Frame-Options） | 低 |
-| FIND-06 | 生产/gamma API 地址移除外部 mock，改同源相对路径 | 低 |
-| FIND-08 | 移除敏感 console.log，生产 drop console | 低 |
-| FIND-09 | 第三方脚本改 https + SRI / CSP 白名单 | 低 |
-| FIND-10 | 限流 key 改 `$binary_remote_addr` | 低 |
-| FIND-12 | 生产剔除 demo 弱口令登录组件 | 低 |
+| 编号    | 事项                                                               | 成本 |
+| ------- | ------------------------------------------------------------------ | ---- |
+| FIND-01 | Nginx CORS 改 Origin 白名单，禁止反射 `$http_origin` + credentials | 低   |
+| FIND-02 | 恢复路由 token 校验、权限 fail-close、移除 super 兜底              | 低   |
+| FIND-04 | 启用 CSP / `frame-ancestors`（X-Frame-Options）                    | 低   |
+| FIND-06 | 生产/gamma API 地址移除外部 mock，改同源相对路径                   | 低   |
+| FIND-08 | 移除敏感 console.log，生产 drop console                            | 低   |
+| FIND-09 | 第三方脚本改 https + SRI / CSP 白名单                              | 低   |
+| FIND-10 | 限流 key 改 `$binary_remote_addr`                                  | 低   |
+| FIND-12 | 生产剔除 demo 弱口令登录组件                                       | 低   |
 
 ### 需专项处理
 
-| 编号 | 事项 | 成本 |
-|---|---|---|
-| FIND-03 | 凭证改 HttpOnly Cookie 或缩短有效期、不持久化锁屏密码、移除硬编码密钥 | 中 |
-| FIND-05 | 全量核查 v-html（尤其 emailInfo.content）与 markdown 渲染均过消毒 | 低 |
-| FIND-11 | Nginx→后端启用证书校验/mTLS | 中 |
-| FIND-07 | 内网 IP/服务名改环境变量注入 | 低 |
-| FIND-13 | 后端补文件类型/魔数/病毒校验（前端仅体验层） | 低（前端侧） |
+| 编号    | 事项                                                                  | 成本         |
+| ------- | --------------------------------------------------------------------- | ------------ |
+| FIND-03 | 凭证改 HttpOnly Cookie 或缩短有效期、不持久化锁屏密码、移除硬编码密钥 | 中           |
+| FIND-05 | 全量核查 v-html（尤其 emailInfo.content）与 markdown 渲染均过消毒     | 低           |
+| FIND-11 | Nginx→后端启用证书校验/mTLS                                           | 中           |
+| FIND-07 | 内网 IP/服务名改环境变量注入                                          | 低           |
+| FIND-13 | 后端补文件类型/魔数/病毒校验（前端仅体验层）                          | 低（前端侧） |
 
 ---
 

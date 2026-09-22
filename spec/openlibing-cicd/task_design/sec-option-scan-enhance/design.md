@@ -22,14 +22,15 @@ openlibing-cicd-fork
 
 在 `sec_option_scan_record` 表新增 4 列：
 
-| 列名 | 类型 | 说明 |
-|------|------|------|
-| pipeline_name | VARCHAR(255) | 流水线名称（ATOMGIT_WORKFLOW 环境变量值） |
-| package_download_accessible | TINYINT(1) | 下载URL可访问性：NULL=无URL，1=可下载，0=不可下载 |
-| repo_url | VARCHAR(512) | 代码仓链接（gitcode.com/owner/repo） |
-| scan_options | VARCHAR(512) | 实际扫描项列表（逗号分隔，不传=全部13项） |
+| 列名                        | 类型         | 说明                                              |
+| --------------------------- | ------------ | ------------------------------------------------- |
+| pipeline_name               | VARCHAR(255) | 流水线名称（ATOMGIT_WORKFLOW 环境变量值）         |
+| package_download_accessible | TINYINT(1)   | 下载URL可访问性：NULL=无URL，1=可下载，0=不可下载 |
+| repo_url                    | VARCHAR(512) | 代码仓链接（gitcode.com/owner/repo）              |
+| scan_options                | VARCHAR(512) | 实际扫描项列表（逗号分隔，不传=全部13项）         |
 
 新增索引：
+
 - `idx_sec_option_record_repo_url` (repo_url)
 - `idx_sec_option_record_pipeline_name` (pipeline_name)
 
@@ -40,6 +41,7 @@ openlibing-cicd-fork
 POST /openlibing-cicd/build-artifact/sec-option/report
 
 新增请求字段：
+
 - `pipelineName` (String, 可选) - 流水线名称
 - `repoUrl` (String, 可选) - 代码仓链接（格式 gitcode.com/owner/repo）
 - `scanOptions` (List<String>, 可选) - 实际扫描项列表
@@ -49,11 +51,13 @@ POST /openlibing-cicd/build-artifact/sec-option/report
 POST /openlibing-cicd/build-artifact/sec-option/overview
 
 筛选字段变更为：
+
 - `repoUrl` (模糊匹配) - 代码仓链接
 - `pipelineName` (模糊匹配) - 流水线名称
 - `packageName` (模糊匹配) - 构建产物包名
 
 返回 VO 新增字段：
+
 - `repoUrl` - 代码仓链接
 - `pipelineName` - 流水线名称
 - `scanOptions` - 实际扫描项列表
@@ -65,6 +69,7 @@ POST /openlibing-cicd/build-artifact/sec-option/overview
 POST /openlibing-cicd/build-artifact/sec-option/dropdown
 
 返回三个维度：
+
 - `repoUrls` (List<String>) - 代码仓链接列表
 - `pipelineNames` (List<String>) - 流水线名称列表
 - `packageNames` (List<String>) - 构建产物包名列表
@@ -83,13 +88,13 @@ POST /openlibing-cicd/build-artifact/sec-option/file-detail
 
 新增 5 个检测函数：
 
-| 函数 | key | 检测方式 |
-|------|-----|----------|
-| fortify | fortify | 检测 .dynsym 中 __*_chk 函数（_FORTIFY_SOURCE 宏） |
-| fvisibility | fvisibility | 统计 .dynsym 中 STV_HIDDEN vs STV_DEFAULT 符号数 |
-| ftrapv | ftrapv | 检测 __addvsi3/__subvsi3/__mulvsi3 等溢出陷阱函数 |
-| stack_clash | stackClash | 检测 PT_GNU_STACK 段存在性（简化策略，暂返回 NO） |
-| aslr | aslr | 复用 PIE 检测逻辑（ASLR 二进制侧支持等价于 PIE） |
+| 函数        | key         | 检测方式                                           |
+| ----------- | ----------- | -------------------------------------------------- |
+| fortify     | fortify     | 检测 .dynsym 中 __*_chk 函数（_FORTIFY_SOURCE 宏） |
+| fvisibility | fvisibility | 统计 .dynsym 中 STV_HIDDEN vs STV_DEFAULT 符号数   |
+| ftrapv      | ftrapv      | 检测 __addvsi3/__subvsi3/__mulvsi3 等溢出陷阱函数  |
+| stack_clash | stackClash  | 检测 PT_GNU_STACK 段存在性（简化策略，暂返回 NO）  |
+| aslr        | aslr        | 复用 PIE 检测逻辑（ASLR 二进制侧支持等价于 PIE）   |
 
 CLI 接口扩展：`python3 sec_option_scan.py <scan-dir> <output-file> [scan-options]`
 
@@ -123,6 +128,7 @@ ORDER BY detection_completed_at DESC
 ### 下拉框级联
 
 查询去重值时，选中的维度作为 WHERE 条件过滤，不按自身过滤：
+
 - queryDistinctRepoUrls：按 pipelineName + packageName 过滤，SELECT DISTINCT repo_url
 - queryDistinctPipelineNames：按 repoUrl + packageName 过滤，SELECT DISTINCT pipeline_name
 - queryDistinctPackageNames：按 repoUrl + pipelineName 过滤，SELECT DISTINCT package_name

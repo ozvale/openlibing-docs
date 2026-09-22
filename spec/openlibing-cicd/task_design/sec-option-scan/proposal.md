@@ -5,6 +5,7 @@
 配合 test-devops 仓的 sec-option-scan 插件，需要在 openlibing-cicd 项目中新增安全编译选项扫描结果的上报接口、数据入库和查询接口。
 
 扫描的 8 项安全编译选项：
+
 - BIND_NOW
 - NX
 - PIC

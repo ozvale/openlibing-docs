@@ -7,11 +7,13 @@
 ## 功能描述
 
 ### 1. 环境状态判断优化
+
 - 18s 场景下判断环境状态
 - `status=rejected` 时不再重试
 - **实现位置**: `pytest-executor/src/scheduler/env_manager.py`
 
 ### 2. 软件部署状态检查
+
 - 若 device 中有 `softwares` 参数（数组）且不为空，需判断部署状态
 - 状态类型：
   - `deploying`：继续轮询等待
@@ -21,26 +23,31 @@
 - **新增辅助方法**: `_check_software_deployment_status()`
 
 ### 3. 共享存储挂载检查
+
 - 若有 `mount_data_source` 但无 `use_nfs:true`，自动补全
 - 检查 `/mnt/weight`、`/mnt/share` 目录存在性及节点使用情况
 - **实现位置**: `pytest-testkit/pytest_testkit/lib/common/environment/allocator.py`
 
 ### 4. TTL 参数优化
+
 - 将 `ttl` 参数从 device 提升到外层，与 `env_definition` 同级
 - 取 device 列表中 `ttl` 的最大值
 - **实现位置**: `pytest-testkit/pytest_testkit/lib/common/environment/allocator.py`
 
 ### 5. 环境名称统一
+
 - 调用 k8s 时传入统一 name 格式：`{Config.platform}-{Config.job_unique_id}`
 - **实现位置**: `pytest-executor/src/scheduler/env_manager.py`
 
 ### 6. HTML 日志展示优化
+
 - 修复换行、断行、乱码问题
 - 基于 `logger.tc_step` 记录，支持 step 折叠展开
 - pytest 执行添加 `-s -v --tb=short`
 - **实现位置**: `pytest-testkit/pytest_testkit/lib/common/log/manager.py`
 
 ### 7. 日志模块重构
+
 - 将原有的 `log_factory.py` 单一大文件拆分为 3 个模块：
   - `filters.py`：敏感数据脱敏过滤器 `SensitiveDataFilter`
   - `infra_logger.py`：核心日志类 `InfraLogger`、日志级别定义、处理器
@@ -49,6 +56,7 @@
 - **实现位置**: `pytest-testkit/pytest_testkit/lib/common/log/`
 
 ## 验收标准
+
 - [ ] 环境状态判断正确，rejected 状态不重试
 - [ ] 软件部署状态检查完整，各状态处理正确
 - [ ] 共享存储挂载检查自动补全 use_nfs 参数
@@ -58,6 +66,7 @@
 - [ ] 日志模块拆分完成，向后兼容
 
 ## 影响范围
+
 - `pytest-testkit/pytest_testkit/lib/common/environment/allocator.py`
 - `pytest-testkit/pytest_testkit/lib/common/log/filters.py`（新增）
 - `pytest-testkit/pytest_testkit/lib/common/log/infra_logger.py`（新增）

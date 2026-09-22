@@ -10,11 +10,21 @@
 **WHEN** 调用 `GET /api/skills/my-skill`
 
 **THEN** 响应中 `fileTreeWithUrls` 字段包含：
+
 ```json
 [
-  {"path": "SKILL.md", "url": "https://github.com/owner/repo/blob/main/skills/my-skill/SKILL.md"},
-  {"path": "README.md", "url": "https://github.com/owner/repo/blob/main/skills/my-skill/README.md"},
-  {"path": "scripts/run.sh", "url": "https://github.com/owner/repo/blob/main/skills/my-skill/scripts/run.sh"}
+  {
+    "path": "SKILL.md",
+    "url": "https://github.com/owner/repo/blob/main/skills/my-skill/SKILL.md"
+  },
+  {
+    "path": "README.md",
+    "url": "https://github.com/owner/repo/blob/main/skills/my-skill/README.md"
+  },
+  {
+    "path": "scripts/run.sh",
+    "url": "https://github.com/owner/repo/blob/main/skills/my-skill/scripts/run.sh"
+  }
 ]
 ```
 
@@ -25,9 +35,13 @@
 **WHEN** 调用 `GET /api/skills/my-skill`
 
 **THEN** 响应中 `fileTreeWithUrls` 的 URL 使用 GitCode 域名：
+
 ```json
 [
-  {"path": "SKILL.md", "url": "https://gitcode.com/owner/repo/blob/main/skills/my-skill/SKILL.md"}
+  {
+    "path": "SKILL.md",
+    "url": "https://gitcode.com/owner/repo/blob/main/skills/my-skill/SKILL.md"
+  }
 ]
 ```
 

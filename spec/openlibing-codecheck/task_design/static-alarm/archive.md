@@ -2,12 +2,12 @@
 
 ## 归档信息
 
-| 项目 | 内容 |
-|------|------|
+| 项目        | 内容                                                                        |
+| ----------- | --------------------------------------------------------------------------- |
 | FE 需求名称 | 版本级别（nightly）流水线支持开源代码检测工具结果可视，并能采集数据支撑运营 |
-| 业务 PR | openlibing-codecheck #189, openlibing-cicd #351 |
-| 开发分支 | nightly-yym |
-| 归档日期 | 2026-06-11 |
+| 业务 PR     | openlibing-codecheck #189, openlibing-cicd #351                             |
+| 开发分支    | nightly-yym                                                                 |
+| 归档日期    | 2026-06-11                                                                  |
 
 ## 实现总结
 
@@ -45,15 +45,15 @@ codecheck (StaticAlarmController)
 
 ### 关键技术决策
 
-| 决策 | 原因 |
-|------|------|
-| 异步解析（RabbitMQ） | SARIF 文件可能较大，避免阻塞接口响应 |
-| SHA-256 指纹去重 | tool\|ruleId\|filePath\|locationHashRaw 组合唯一标识问题 |
-| 消失问题自动 RESOLVED | 每次扫描时，未出现的问题自动标记为已解决 |
-| 解析器工厂模式 | SarifParserFactory 便于扩展其他 SARIF 工具 |
-| cicd 侧容错 | 触发失败不影响主流程，只记录日志 |
-| repoUrl 反查 | 通过 URL 解析 repoType/owner/repo，不依赖外部项目 ID |
-| 死信队列 + 2h TTL | 防止消息积压，超时转入死信 |
+| 决策                  | 原因                                                     |
+| --------------------- | -------------------------------------------------------- |
+| 异步解析（RabbitMQ）  | SARIF 文件可能较大，避免阻塞接口响应                     |
+| SHA-256 指纹去重      | tool\|ruleId\|filePath\|locationHashRaw 组合唯一标识问题 |
+| 消失问题自动 RESOLVED | 每次扫描时，未出现的问题自动标记为已解决                 |
+| 解析器工厂模式        | SarifParserFactory 便于扩展其他 SARIF 工具               |
+| cicd 侧容错           | 触发失败不影响主流程，只记录日志                         |
+| repoUrl 反查          | 通过 URL 解析 repoType/owner/repo，不依赖外部项目 ID     |
+| 死信队列 + 2h TTL     | 防止消息积压，超时转入死信                               |
 
 ### 数据模型
 
@@ -64,29 +64,29 @@ codecheck (StaticAlarmController)
 
 #### openlibing-codecheck（新增约 30 个文件）
 
-| 类别 | 文件 |
-|------|------|
-| Controller | StaticAlarmController, StaticAlarmInternalController, StaticAlarmReceiveController |
-| Entity | StaticAlarmIssueEntity, StaticAlarmScanRunEntity |
-| DTO | StaticAlarmReceiveDTO, StaticAlarmQueryDTO, StaticAlarmFilterOptionsQueryDTO, StaticAlarmShieldDTO |
-| Model | ParsedIssue, ParsedSarifMeta |
-| Operation | StaticAlarmOperation, StaticAlarmScanRunOperation |
-| Service | StaticAlarmReceiveService/Impl, StaticAlarmService/Impl, SarifParseService/Impl |
-| Parser | ISarifParser, SarifParserFactory, CodeQlSarifParser |
-| MQ | StaticAlarmRabbitConfig, StaticAlarmEventProducer, StaticAlarmEventConsumer |
-| VO | StaticAlarmIssueListVO, StaticAlarmIssueDetailVO, StaticAlarmIssueCountVO, StaticAlarmFilterOptionsVO, StaticAlarmRepoSearchVO, StaticAlarmShieldResultVO, PageInfoInVO, PageInfoOutVO |
-| Enum | StaticAlarmSeverityEnum, StaticAlarmStatusEnum |
-| Util | RepoUrlParser, MongoCriteriaBuilder |
-| Config | application.yaml, application-gama.yaml, application-prod.yaml |
-| DB | static_alarm_index.xml (MongoDB changelog) |
+| 类别       | 文件                                                                                                                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Controller | StaticAlarmController, StaticAlarmInternalController, StaticAlarmReceiveController                                                                                                     |
+| Entity     | StaticAlarmIssueEntity, StaticAlarmScanRunEntity                                                                                                                                       |
+| DTO        | StaticAlarmReceiveDTO, StaticAlarmQueryDTO, StaticAlarmFilterOptionsQueryDTO, StaticAlarmShieldDTO                                                                                     |
+| Model      | ParsedIssue, ParsedSarifMeta                                                                                                                                                           |
+| Operation  | StaticAlarmOperation, StaticAlarmScanRunOperation                                                                                                                                      |
+| Service    | StaticAlarmReceiveService/Impl, StaticAlarmService/Impl, SarifParseService/Impl                                                                                                        |
+| Parser     | ISarifParser, SarifParserFactory, CodeQlSarifParser                                                                                                                                    |
+| MQ         | StaticAlarmRabbitConfig, StaticAlarmEventProducer, StaticAlarmEventConsumer                                                                                                            |
+| VO         | StaticAlarmIssueListVO, StaticAlarmIssueDetailVO, StaticAlarmIssueCountVO, StaticAlarmFilterOptionsVO, StaticAlarmRepoSearchVO, StaticAlarmShieldResultVO, PageInfoInVO, PageInfoOutVO |
+| Enum       | StaticAlarmSeverityEnum, StaticAlarmStatusEnum                                                                                                                                         |
+| Util       | RepoUrlParser, MongoCriteriaBuilder                                                                                                                                                    |
+| Config     | application.yaml, application-gama.yaml, application-prod.yaml                                                                                                                         |
+| DB         | static_alarm_index.xml (MongoDB changelog)                                                                                                                                             |
 
 #### openlibing-cicd（修改 3 个文件）
 
-| 文件 | 变更 |
-|------|------|
-| StaticAlarmReceiveDTO | 新增 DTO 类 |
-| PipelineEventConsumer | 新增 SARIF 检测与触发逻辑 |
-| CodeCheckClient | 新增 receiveStaticAlarmResult Feign 接口 |
+| 文件                  | 变更                                     |
+| --------------------- | ---------------------------------------- |
+| StaticAlarmReceiveDTO | 新增 DTO 类                              |
+| PipelineEventConsumer | 新增 SARIF 检测与触发逻辑                |
+| CodeCheckClient       | 新增 receiveStaticAlarmResult Feign 接口 |
 
 ## 经验沉淀
 

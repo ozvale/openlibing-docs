@@ -14,11 +14,11 @@
 
 经测试验证（0d3f261b），APIG 环境下各 IP Header 可信度：
 
-| Header | APIG 处理方式 | 可信度 |
-|--------|--------------|--------|
-| `X-Forwarded-For` | 原样透传（客户端可伪造） | 不可信 |
-| `X-Real-IP` | APIG 覆盖为真实来源 IP | 可信 |
-| `RemoteAddr` | TCP 连接来源（与 X-Real-IP 一致） | 可信 |
+| Header            | APIG 处理方式                     | 可信度 |
+| ----------------- | --------------------------------- | ------ |
+| `X-Forwarded-For` | 原样透传（客户端可伪造）          | 不可信 |
+| `X-Real-IP`       | APIG 覆盖为真实来源 IP            | 可信   |
+| `RemoteAddr`      | TCP 连接来源（与 X-Real-IP 一致） | 可信   |
 
 ### 2.2 IP 提取优先级
 
@@ -48,23 +48,24 @@ MaasAuthInterceptor.resolveClientIp(request)
 ```
 
 所有 `TracingLogEntity.builder()` 调用处通过 `MaasAuthContext.getClientIp().orElse(null)` 获取 IP 值，包括：
+
 - `ModelProxyServiceImpl`：阻塞请求成功/失败
 - `StreamingRequestHandler`：流式请求成功/失败
 - `ProxyErrorResponseWriter`：限流拒绝、降级耗尽等错误路径
 
 ## 四、涉及文件清单
 
-| 文件 | 改动类型 | 说明 |
-|------|---------|------|
-| MaasAuthInterceptor.java | 修改 | 新增 `resolveClientIp()`，IP 提取优先级：X-Real-IP → RemoteAddr → 0.0.0.0 |
-| MaasAuthContext.java | 修改 | 新增 `clientIp` 字段 |
-| TracingLogEntity.java | 修改 | 新增 `clientIp` 字段 |
-| MaasTracingLog.java | 修改 | 新增 `clientIp` 字段 |
-| maas-tables.xml | 修改 | 新增 `client_ip` 列定义 |
-| MaasTracingLogMapper.xml | 修改 | INSERT 语句包含 `client_ip` |
-| ModelProxyServiceImpl.java | 修改 | `TracingLogEntity.builder()` 添加 `.clientIp()` |
-| StreamingRequestHandler.java | 修改 | `TracingLogEntity.builder()` 添加 `.clientIp()` |
-| ProxyErrorResponseWriter.java | 修改 | `TracingLogEntity.builder()` 添加 `.clientIp()` |
+| 文件                          | 改动类型 | 说明                                                                      |
+| ----------------------------- | -------- | ------------------------------------------------------------------------- |
+| MaasAuthInterceptor.java      | 修改     | 新增 `resolveClientIp()`，IP 提取优先级：X-Real-IP → RemoteAddr → 0.0.0.0 |
+| MaasAuthContext.java          | 修改     | 新增 `clientIp` 字段                                                      |
+| TracingLogEntity.java         | 修改     | 新增 `clientIp` 字段                                                      |
+| MaasTracingLog.java           | 修改     | 新增 `clientIp` 字段                                                      |
+| maas-tables.xml               | 修改     | 新增 `client_ip` 列定义                                                   |
+| MaasTracingLogMapper.xml      | 修改     | INSERT 语句包含 `client_ip`                                               |
+| ModelProxyServiceImpl.java    | 修改     | `TracingLogEntity.builder()` 添加 `.clientIp()`                           |
+| StreamingRequestHandler.java  | 修改     | `TracingLogEntity.builder()` 添加 `.clientIp()`                           |
+| ProxyErrorResponseWriter.java | 修改     | `TracingLogEntity.builder()` 添加 `.clientIp()`                           |
 
 ## 五、风险评估
 

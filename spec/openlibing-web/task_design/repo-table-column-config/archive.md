@@ -6,10 +6,10 @@
 
 ## 变更摘要
 
-| 类别 | 内容 |
-|------|------|
-| **新功能** | 表格列配置（localStorage 持久化）、同步时间列、返回刷新 |
-| **Bug 修复** | 弹窗溢出、空值保护、校验阻断移除、文案修正 |
+| 类别         | 内容                                                                    |
+| ------------ | ----------------------------------------------------------------------- |
+| **新功能**   | 表格列配置（localStorage 持久化）、同步时间列、返回刷新                 |
+| **Bug 修复** | 弹窗溢出、空值保护、校验阻断移除、文案修正                              |
 | **影响文件** | `index.vue`(+191)、`branches.vue`、`roleMappingDialog.vue`、`common.ts` |
 
 ## 关联
@@ -21,6 +21,7 @@
 ## 技术要点
 
 ### 列配置实现
+
 - 参考 `branches.vue` 的列配置模式
 - 使用 `el-popover` + `el-checkbox-group` 实现列选择面板
 - 配置通过 `localStorage` 按 `repo_column_setting_{userId}` 键存储
@@ -29,11 +30,11 @@
 
 ### commit 历史
 
-| commit | 说明 |
-|--------|------|
-| `2a2de7bc` | feat(repos): add column config and refresh on back |
-| `4bd169d0` | fix(repos): hide tag tab and fix role mapping dialog overflow |
-| `98e7bef4` | fix(utils): update gitee account label text |
-| `d6cf685b` | feat(repos): add lastSyncTime column and widen column config popover |
-| `0ff2e10b` | fix(repos): remove repoLanguage required validation rule |
+| commit     | 说明                                                                   |
+| ---------- | ---------------------------------------------------------------------- |
+| `2a2de7bc` | feat(repos): add column config and refresh on back                     |
+| `4bd169d0` | fix(repos): hide tag tab and fix role mapping dialog overflow          |
+| `98e7bef4` | fix(utils): update gitee account label text                            |
+| `d6cf685b` | feat(repos): add lastSyncTime column and widen column config popover   |
+| `0ff2e10b` | fix(repos): remove repoLanguage required validation rule               |
 | `916e4fd5` | fix(repos): guard repoLanguage split and remove blocking ruleset check |

@@ -65,13 +65,13 @@ public @interface LogApi {
 
 **关键属性说明**：
 
-| 属性 | 必填 | 说明 |
-|------|------|------|
-| `tableName` | 是 | 日志表名，对应 `GetLogsMapper.xml` 白名单中的表 |
-| `operationModule` | 是 | 操作模块名，同时是 Handler 注册到 `LoggerAspect.logHandlerMap` 的 key |
-| `operation` | 是 | 操作类型，Handler 内按此字段分发不同逻辑 |
-| `remarkPath` | 否 | 方法参数中备注字段的类全限定名，`"2"` 表示不提取 |
-| `isBackData` | 否 | `true` 时跳过 `externalDataLogInfo`（备注提取），由 Handler 自行封装 |
+| 属性              | 必填 | 说明                                                                  |
+| ----------------- | ---- | --------------------------------------------------------------------- |
+| `tableName`       | 是   | 日志表名，对应 `GetLogsMapper.xml` 白名单中的表                       |
+| `operationModule` | 是   | 操作模块名，同时是 Handler 注册到 `LoggerAspect.logHandlerMap` 的 key |
+| `operation`       | 是   | 操作类型，Handler 内按此字段分发不同逻辑                              |
+| `remarkPath`      | 否   | 方法参数中备注字段的类全限定名，`"2"` 表示不提取                      |
+| `isBackData`      | 否   | `true` 时跳过 `externalDataLogInfo`（备注提取），由 Handler 自行封装  |
 
 ### 2.2 LoggerAspect 切面
 
@@ -211,13 +211,13 @@ protected String paramValue(String paramPath, String paramName, List<Object> arg
 
 **位置**：`com.openlibing.common.pojo.dto.RecordLogsDTO`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `args` | `List<Object>` | 方法参数列表 |
-| `resultMap` | `Map` | 方法返回值（fastjson2 序列化为 Map） |
-| `oldDataJsonString` | `String` | 旧数据 JSON |
-| `paramsMap` | `Map<String, Object>` | 方法参数名→值映射 |
-| `startTime` | `long` | 请求开始时间 |
+| 字段                | 类型                  | 说明                                 |
+| ------------------- | --------------------- | ------------------------------------ |
+| `args`              | `List<Object>`        | 方法参数列表                         |
+| `resultMap`         | `Map`                 | 方法返回值（fastjson2 序列化为 Map） |
+| `oldDataJsonString` | `String`              | 旧数据 JSON                          |
+| `paramsMap`         | `Map<String, Object>` | 方法参数名→值映射                    |
+| `startTime`         | `long`                | 请求开始时间                         |
 
 ### 2.5 LogsDetailVO
 
@@ -225,31 +225,31 @@ protected String paramValue(String paramPath, String paramName, List<Object> arg
 
 **核心字段**（对应日志表列）：
 
-| 字段 | 数据库列 | 说明 |
-|------|---------|------|
-| `id` | `id` | UUID |
-| `operationDate` | `operation_date` | 操作时间 |
-| `logCode` | `log_code` | 接口返回码 |
-| `logResult` | `log_result` | "成功"/"失败" |
-| `operationModule` | `operation_module` | 操作模块 |
-| `userName` | `user_name` | 操作人用户名 |
-| `userId` | `user_id` | 操作人用户ID |
-| `operation` | `operation` | 操作类型 |
-| `oldData` | `old_data` | 操作前数据 JSON |
-| `newData` | `new_data` | 操作后数据 JSON |
-| `remark` | `remark` | 备注 |
-| `logMessage` | `log_message` | 接口返回消息 |
-| `isDetail` | `is_detail` | 是否有详情 |
-| `params` | `params` | 请求入参（失败时保留） |
-| `accountId` | `account_id` | 三方账号ID |
-| `accountPlatform` | `account_platform` | 三方账号平台 |
-| `accountName` | `account_name` | 三方账号名 |
-| `operatorIp` | — | 操作IP（不入库，仅入湖） |
-| `requestMethod` | — | HTTP 方法（仅入湖） |
-| `requestUri` | — | 请求 URI（仅入湖） |
-| `requestTime` | — | 请求耗时 ms（仅入湖） |
-| `host` | — | 域名（仅入湖） |
-| `logLakeData` | — | 入湖标识（仅入湖） |
+| 字段              | 数据库列           | 说明                     |
+| ----------------- | ------------------ | ------------------------ |
+| `id`              | `id`               | UUID                     |
+| `operationDate`   | `operation_date`   | 操作时间                 |
+| `logCode`         | `log_code`         | 接口返回码               |
+| `logResult`       | `log_result`       | "成功"/"失败"            |
+| `operationModule` | `operation_module` | 操作模块                 |
+| `userName`        | `user_name`        | 操作人用户名             |
+| `userId`          | `user_id`          | 操作人用户ID             |
+| `operation`       | `operation`        | 操作类型                 |
+| `oldData`         | `old_data`         | 操作前数据 JSON          |
+| `newData`         | `new_data`         | 操作后数据 JSON          |
+| `remark`          | `remark`           | 备注                     |
+| `logMessage`      | `log_message`      | 接口返回消息             |
+| `isDetail`        | `is_detail`        | 是否有详情               |
+| `params`          | `params`           | 请求入参（失败时保留）   |
+| `accountId`       | `account_id`       | 三方账号ID               |
+| `accountPlatform` | `account_platform` | 三方账号平台             |
+| `accountName`     | `account_name`     | 三方账号名               |
+| `operatorIp`      | —                  | 操作IP（不入库，仅入湖） |
+| `requestMethod`   | —                  | HTTP 方法（仅入湖）      |
+| `requestUri`      | —                  | 请求 URI（仅入湖）       |
+| `requestTime`     | —                  | 请求耗时 ms（仅入湖）    |
+| `host`            | —                  | 域名（仅入湖）           |
+| `logLakeData`     | —                  | 入湖标识（仅入湖）       |
 
 ---
 
@@ -298,15 +298,15 @@ public class XxxLogHandler extends AbstractLogHandler {
 
 **典型 Handler 列表**：
 
-| Handler | operationModule | 日志表 |
-|---------|----------------|--------|
-| `ProjectLogHandler` | "项目" | `log_project` |
-| `SpaceUserLogHandler` | "项目与仓库成员管理" | `log_space_permission` |
-| `PermissionRoleLogHandler` | "角色管理" | `log_permission_config` |
-| `CmcLogHandler` | "技术委员会管理" | `log_cmc_info` |
-| `WikiLogHandler` | "帮助文档" | `log_wiki` |
-| `IamLogHandler` | "账号纳管" | `log_iam_info` |
-| `ToolInfoLogHandler` | "工具管理" | `log_tool` |
+| Handler                    | operationModule      | 日志表                  |
+| -------------------------- | -------------------- | ----------------------- |
+| `ProjectLogHandler`        | "项目"               | `log_project`           |
+| `SpaceUserLogHandler`      | "项目与仓库成员管理" | `log_space_permission`  |
+| `PermissionRoleLogHandler` | "角色管理"           | `log_permission_config` |
+| `CmcLogHandler`            | "技术委员会管理"     | `log_cmc_info`          |
+| `WikiLogHandler`           | "帮助文档"           | `log_wiki`              |
+| `IamLogHandler`            | "账号纳管"           | `log_iam_info`          |
+| `ToolInfoLogHandler`       | "工具管理"           | `log_tool`              |
 
 ### 3.2 getOldData 常见模式
 
@@ -517,9 +517,9 @@ public DataResult<Xxx> addXxx(XxxRequest request) { ... }
 
 ```yaml
 success:
-  code: "200"           # 与 DataResult.success() 的 code 值一致
+  code: "200" # 与 DataResult.success() 的 code 值一致
 openlibing:
-  domain: "https://xxx"  # 系统域名，入湖数据需要
+  domain: "https://xxx" # 系统域名，入湖数据需要
 ```
 
 ---

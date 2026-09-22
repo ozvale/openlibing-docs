@@ -12,41 +12,41 @@ Agent 为端侧无状态进程，无 DB/MQ/Redis；所有持久化均为本地�
 
 ## 2. 业务边界
 
-| 边界类型 | 说明 |
-| --- | --- |
+| 边界类型 | 说明                                                           |
+| -------- | -------------------------------------------------------------- |
 | 上游依赖 | transport 服务（token 获取）、区域指标上报服务、区域文件服务器 |
-| 下游依赖 | 无（Agent 为最末端被控端） |
-| 外部接口 | 暴露 7 个 HTTPS REST 接口供后端调用 |
-| 内部接口 | 无 |
+| 下游依赖 | 无（Agent 为最末端被控端）                                     |
+| 外部接口 | 暴露 7 个 HTTPS REST 接口供后端调用                            |
+| 内部接口 | 无                                                             |
 
 ## 3. 分层结构
 
 Go 非 OOP 式 Controller/Service/Entity 划分，但存在等价分层：
 
-| 分层 | 文件 | 关键单元 |
-| --- | --- | --- |
-| 入口/路由 | `main.go` | `main()`、`setConfig`、`handleSoftwareInstall/Uninstall/Check`、`handleAgentDelete`、`handleNetConfigDelete`、`writeJSON` |
-| 业务 | `service/config.go` | `AgentConfig`/`MetricsConfig`/`AgentConfigExport`、`GlobalConfig`、`Load`/`Save`/`Export` |
-| 业务 | `service/collect.go` | `MetricsRequest`/`UsageReport`、`CollectAndReportMetrics`、各采集函数、上报线程池 `InitMetricsReporterPool`/`metricsReporterWorker`/`uploadMetrics` |
-| 业务 | `service/token.go` | `TokenCache`、`InitTokenLoader`/`tokenLoaderLoop`/`loadTokenFromFile`/`fetchAndStoreToken`/`fetchTokenFromAPI` |
-| 业务 | `service/software.go` | `Software`/`SoftwareInstallRequest` 等、`InstallSoftware`/`UninstallSoftware`/`CheckSoftware`/`ValidatePlatform` |
-| 业务 | `service/delete.go` | `DeleteAgent`/`DeleteNetworkConfigs`、`removeAgentFiles`/`cleanupBashrc`/`cleanupRedHatNetwork`/`cleanupDebianNetwork` |
-| 工具 | `tools/encryptor.go` | `Encryptor`（三段式 AES-GCM） |
-| 工具 | `tools/signature.go` | `GenerateSignature`/`ValidateSignature`（HMAC-SHA256） |
-| 工具 | `tools/cert.go` | `GenerateSelfSignedCert` |
-| 工具 | `tools/systemutils.go` | `GetOSFamily`/`SafeCommand`/`SafeRemoveDir`/`FileExists` 等 |
-| 常量 | `constant/const.go` | `VERSION`(26.6.0)、`LISTEN_PORT`(:51234)、`IP_TO_REGION`、`REGION_TO_METRICS_URL`/`REGION_TO_TRANSPORT_ENDPOINT`/`REGION_TO_FILESERVER_ENDPOINT` |
+| 分层      | 文件                   | 关键单元                                                                                                                                            |
+| --------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 入口/路由 | `main.go`              | `main()`、`setConfig`、`handleSoftwareInstall/Uninstall/Check`、`handleAgentDelete`、`handleNetConfigDelete`、`writeJSON`                           |
+| 业务      | `service/config.go`    | `AgentConfig`/`MetricsConfig`/`AgentConfigExport`、`GlobalConfig`、`Load`/`Save`/`Export`                                                           |
+| 业务      | `service/collect.go`   | `MetricsRequest`/`UsageReport`、`CollectAndReportMetrics`、各采集函数、上报线程池 `InitMetricsReporterPool`/`metricsReporterWorker`/`uploadMetrics` |
+| 业务      | `service/token.go`     | `TokenCache`、`InitTokenLoader`/`tokenLoaderLoop`/`loadTokenFromFile`/`fetchAndStoreToken`/`fetchTokenFromAPI`                                      |
+| 业务      | `service/software.go`  | `Software`/`SoftwareInstallRequest` 等、`InstallSoftware`/`UninstallSoftware`/`CheckSoftware`/`ValidatePlatform`                                    |
+| 业务      | `service/delete.go`    | `DeleteAgent`/`DeleteNetworkConfigs`、`removeAgentFiles`/`cleanupBashrc`/`cleanupRedHatNetwork`/`cleanupDebianNetwork`                              |
+| 工具      | `tools/encryptor.go`   | `Encryptor`（三段式 AES-GCM）                                                                                                                       |
+| 工具      | `tools/signature.go`   | `GenerateSignature`/`ValidateSignature`（HMAC-SHA256）                                                                                              |
+| 工具      | `tools/cert.go`        | `GenerateSelfSignedCert`                                                                                                                            |
+| 工具      | `tools/systemutils.go` | `GetOSFamily`/`SafeCommand`/`SafeRemoveDir`/`FileExists` 等                                                                                         |
+| 常量      | `constant/const.go`    | `VERSION`(26.6.0)、`LISTEN_PORT`(:51234)、`IP_TO_REGION`、`REGION_TO_METRICS_URL`/`REGION_TO_TRANSPORT_ENDPOINT`/`REGION_TO_FILESERVER_ENDPOINT`    |
 
 ## 4. 区域路由
 
 Agent 基于本机非回环 IPv4，按 `IP_TO_REGION` 的 CIDR 匹配机房 region（Dongguan-G6/Hangzhou-Z2/Z9/Haiwei/Suzhou-B3/Helingeer-C1 等华为机房），再据 `REGION_TO_*` 映射表选择对应上游地址，并区分 prod/test 环境。
 
-| 映射表 | 用途 |
-| --- | --- |
-| `IP_TO_REGION` | 本机 IP CIDR → region |
-| `REGION_TO_TRANSPORT_ENDPOINT` | region → token/transport 服务地址 |
-| `REGION_TO_METRICS_URL` | region → 指标上报 URL |
-| `REGION_TO_FILESERVER_ENDPOINT` | region → 软件脚本文件服务器 IP |
+| 映射表                          | 用途                              |
+| ------------------------------- | --------------------------------- |
+| `IP_TO_REGION`                  | 本机 IP CIDR → region             |
+| `REGION_TO_TRANSPORT_ENDPOINT`  | region → token/transport 服务地址 |
+| `REGION_TO_METRICS_URL`         | region → 指标上报 URL             |
+| `REGION_TO_FILESERVER_ENDPOINT` | region → 软件脚本文件服务器 IP    |
 
 ## 5. 核心流程
 
@@ -108,15 +108,15 @@ sequenceDiagram
 
 Agent 侧 HTTPS 服务，监听 `:51234`。所有请求需携带 `X-HiD-Signature` 头（请求体 HMAC-SHA256，密钥为 Token），响应头带 `X-Agent-Version`。
 
-| API 路径 | HTTP方法 | 功能描述 |
-| --- | --- | --- |
-| `/config` | GET | 获取当前 agent 配置（metrics.enable/interval/custom_metrics、agent_id、env、log_level、region） |
-| `/config` | PATCH | 增量更新采集配置，热重启采集器并持久化 |
-| `/software/install` | POST | 触发软件预制安装 |
-| `/software/uninstall` | POST | 触发软件预制卸载 |
-| `/software/check` | POST | 读取某 task_id 的安装日志内容 |
-| `/agent/delete` | POST | 卸载并删除 agent 自身（成功后进程退出） |
-| `/net_config/delete` | POST | 清理主机网络配置（保留 loopback） |
+| API 路径              | HTTP方法 | 功能描述                                                                                        |
+| --------------------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `/config`             | GET      | 获取当前 agent 配置（metrics.enable/interval/custom_metrics、agent_id、env、log_level、region） |
+| `/config`             | PATCH    | 增量更新采集配置，热重启采集器并持久化                                                          |
+| `/software/install`   | POST     | 触发软件预制安装                                                                                |
+| `/software/uninstall` | POST     | 触发软件预制卸载                                                                                |
+| `/software/check`     | POST     | 读取某 task_id 的安装日志内容                                                                   |
+| `/agent/delete`       | POST     | 卸载并删除 agent 自身（成功后进程退出）                                                         |
+| `/net_config/delete`  | POST     | 清理主机网络配置（保留 loopback）                                                               |
 
 > 注：`docs/API.md` 较旧，写端口 8443、`/software/check` 为 GET；以代码 `main.go` 为准（端口 51234、check 为 POST）。
 
@@ -124,12 +124,12 @@ Agent 侧 HTTPS 服务，监听 `:51234`。所有请求需携带 `X-HiD-Signatur
 
 **无数据库、无 ORM、无 SQL。** 所有持久化为本地文件：
 
-| 文件 | 内容 |
-| --- | --- |
-| `config/config.json` | Agent 配置（agent_id、env、region、log_level、metrics） |
-| `config/tk.txt` | 加密后的 Token |
-| `config/build1.rk`/`build2.rk`/`build3.rk` | 三段式加密密钥文件 |
-| `/home/<task_id>.log` | 软件预制执行日志 |
+| 文件                                       | 内容                                                    |
+| ------------------------------------------ | ------------------------------------------------------- |
+| `config/config.json`                       | Agent 配置（agent_id、env、region、log_level、metrics） |
+| `config/tk.txt`                            | 加密后的 Token                                          |
+| `config/build1.rk`/`build2.rk`/`build3.rk` | 三段式加密密钥文件                                      |
+| `/home/<task_id>.log`                      | 软件预制执行日志                                        |
 
 ## 8. 与其他服务的依赖关系
 
@@ -143,15 +143,15 @@ Agent 侧 HTTPS 服务，监听 `:51234`。所有请求需携带 `X-HiD-Signatur
 
 **配置文件** `config/config.json`（`AgentConfig`）：
 
-| 字段 | 说明 |
-| --- | --- |
-| `metrics.enable` | 采集开关 |
-| `metrics.interval` | 采集周期（毫秒，1000~86400000，默认 900000） |
+| 字段                     | 说明                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------- |
+| `metrics.enable`         | 采集开关                                                                                          |
+| `metrics.interval`       | 采集周期（毫秒，1000~86400000，默认 900000）                                                      |
 | `metrics.custom_metrics` | 可选采集项：`cpu`/`mem`/`disk_r`/`disk_w`/`ssh_session`/`usage`/`machine_type`/`disk`，空则采全量 |
-| `agent_id` | 后端分配，上报 URL 的 `aid` 参数 |
-| `env` | `prod`/`test`，由本机 IP CIDR 自动判定 |
-| `region` | 华为机房区域名，决定上游 URL |
-| `log_level` | debug/info/warn/error/fatal，默认 `warn` |
+| `agent_id`               | 后端分配，上报 URL 的 `aid` 参数                                                                  |
+| `env`                    | `prod`/`test`，由本机 IP CIDR 自动判定                                                            |
+| `region`                 | 华为机房区域名，决定上游 URL                                                                      |
+| `log_level`              | debug/info/warn/error/fatal，默认 `warn`                                                          |
 
 **中间件**：
 
@@ -172,10 +172,10 @@ Agent 侧 HTTPS 服务，监听 `:51234`。所有请求需携带 `X-HiD-Signatur
 
 ## 11. 异常处理
 
-| 异常场景 | 处理策略 |
-| --- | --- |
-| token 获取失败 | 枚举本机 IP 逐个尝试，全部失败则采集上报无签名密钥 |
-| 指标上报失败 | 最多 3 次重试，60s 超时 |
-| 软件平台非法 | `ValidatePlatform` 拦截，返回错误 |
-| 控制面签名校验失败 | `ValidateSignature` 拦截，返回错误 |
-| 配置 interval 越界 | 限制在 1000~86400000 毫秒 |
+| 异常场景           | 处理策略                                           |
+| ------------------ | -------------------------------------------------- |
+| token 获取失败     | 枚举本机 IP 逐个尝试，全部失败则采集上报无签名密钥 |
+| 指标上报失败       | 最多 3 次重试，60s 超时                            |
+| 软件平台非法       | `ValidatePlatform` 拦截，返回错误                  |
+| 控制面签名校验失败 | `ValidateSignature` 拦截，返回错误                 |
+| 配置 interval 越界 | 限制在 1000~86400000 毫秒                          |

@@ -18,11 +18,11 @@ GET /license/repos
 
 `openlibing-web/.../communityList.vue` projectCompliance Tab：
 
-| 参数 | 格式 | 示例 |
-|------|------|------|
-| `repoResult` | 逗号分隔多值 | `success,fail` |
-| `sortColumn` | 列 prop | `scanTime`, `fileNum`, `compatibilityNumber`, ... |
-| `sortOrder` | Element Plus 值 | `ascending`, `descending` |
+| 参数         | 格式            | 示例                                              |
+| ------------ | --------------- | ------------------------------------------------- |
+| `repoResult` | 逗号分隔多值    | `success,fail`                                    |
+| `sortColumn` | 列 prop         | `scanTime`, `fileNum`, `compatibilityNumber`, ... |
+| `sortOrder`  | Element Plus 值 | `ascending`, `descending`                         |
 
 状态值域：`success` 成功、`fail` 失败（`ResultType` 枚举，**非** open/scan/repos 的 `1/-1/0`）。
 
@@ -91,13 +91,13 @@ List<LicenseInfoVO> page = sortAndPaginateLicenseData(list, dto);
 
 新建枚举（参考 `ScanColumnList`）：
 
-| sortColumn (key) | 排序字段 |
-|------------------|----------|
-| `scanTime` | `licenseCreateTime`（Date，nullsLast） |
-| `fileNum` | `fileNum`（Integer，null → 0） |
-| `compatibilityNumber` | `compatibilityNumber` |
-| `incompatibleNumber` | `incompatibleNumber` |
-| `unrecognizedNumber` | `unrecognizedNumber` |
+| sortColumn (key)      | 排序字段                               |
+| --------------------- | -------------------------------------- |
+| `scanTime`            | `licenseCreateTime`（Date，nullsLast） |
+| `fileNum`             | `fileNum`（Integer，null → 0）         |
+| `compatibilityNumber` | `compatibilityNumber`                  |
+| `incompatibleNumber`  | `incompatibleNumber`                   |
+| `unrecognizedNumber`  | `unrecognizedNumber`                   |
 
 `sortOrder`：`descending` → `comparator.reversed()`（与 open scan 一致）。
 
@@ -119,13 +119,13 @@ openSource 与 projectCompliance 列集合不同，独立 `LicenseColumnList` �
 
 ## Risks / Trade-offs
 
-| 风险 | 缓解 |
-|------|------|
-| 全量 MongoDB 聚合性能 | 与去重后 scanId 数量线性相关；大社区需联调观察；后续可 SQL/缓存优化 |
-| 默认排序变更（repository → scanTime desc） | 无 sort 参数时列表顺序变化；PR 说明；与前端 UX 一致 |
-| 历史脏数据（非 success/fail 的 repo_result） | 筛选不匹配则自然排除；可加 debug 日志 |
-| `LicenseServiceImplTest` mock 使用 `repoResult("1")` | 测试一并修正为 `success`/`fail` |
-| 导出顺序变化 | `fetchLicenseList` 复用同一方法，行为随新排序逻辑 |
+| 风险                                                 | 缓解                                                                |
+| ---------------------------------------------------- | ------------------------------------------------------------------- |
+| 全量 MongoDB 聚合性能                                | 与去重后 scanId 数量线性相关；大社区需联调观察；后续可 SQL/缓存优化 |
+| 默认排序变更（repository → scanTime desc）           | 无 sort 参数时列表顺序变化；PR 说明；与前端 UX 一致                 |
+| 历史脏数据（非 success/fail 的 repo_result）         | 筛选不匹配则自然排除；可加 debug 日志                               |
+| `LicenseServiceImplTest` mock 使用 `repoResult("1")` | 测试一并修正为 `success`/`fail`                                     |
+| 导出顺序变化                                         | `fetchLicenseList` 复用同一方法，行为随新排序逻辑                   |
 
 ## Migration Plan
 

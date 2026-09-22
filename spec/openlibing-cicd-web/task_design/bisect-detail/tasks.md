@@ -33,25 +33,25 @@
 
 ## Commit 记录
 
-| Commit | 说明 |
-|--------|------|
-| `b8e7f21` | feat: 新增PR问题二分定位弹窗组件 BisectDetail |
-| `ba0fd60` | feat: 新增流水线编辑-二分定位配置组件 pipelineBisectDebug |
+| Commit    | 说明                                                                          |
+| --------- | ----------------------------------------------------------------------------- |
+| `b8e7f21` | feat: 新增PR问题二分定位弹窗组件 BisectDetail                                 |
+| `ba0fd60` | feat: 新增流水线编辑-二分定位配置组件 pipelineBisectDebug                     |
 | `e6bf14c` | feat: BisectDetail 完善二分定位弹窗-进度摘要/表格操作/状态图标/重置重试等交互 |
-| `7852c3f` | feat: 集成二分定位功能-API/Detail入口/编辑配置联动 |
-| `a4efa98` | fix: 将状态图标从分析流水线列移至分析结果列 |
-| `4f8f82d` | fix: BisectDetail 优化-移除分页/字段调整/空值处理 |
-| `91ffd5e` | fix: BisectDetail 调整提示文案 |
-| `5432908` | fix: BisectDetail 移除分析状态图标 |
-| `74a2068` | feat: BisectDetail 引入BuildProductLabel组件 |
-| `6d56d6e` | fix: BisectDetail 调整Empty组件空数据提示文案 |
-| `58d0a7a` | fix: BisectDetail 调整摘要文案-总体运行时间改为分析时长 |
-| `5f3930e` | fix: BisectDetail 重置按钮支持RUN_FAILED状态 |
-| `945904f` | fix: BisectDetail 调整重置请求参数并移除失败提示 |
-| `b1efdf1` | chore: BisectDetail 修复行尾空白 |
-| `69df63b` | refactor: BisectDetail 简化task展开表达式 |
-| `13d70d5` | refactor: BisectDetail 代码评审问题修复 |
-| `db927fa` | fix: pipelineEditDialog bisectDebug菜单文案改回辅助功能 |
-| `e7740b1` | fix: BisectDetail projectId动态化并在批量编辑时隐藏bisectDebug |
-| `6c3984d` | refactor: BisectDetail 二分定位配置与展示优化 |
-| `2b6428a` | refactor(BisectDetail): remove text truncation from failure message |
+| `7852c3f` | feat: 集成二分定位功能-API/Detail入口/编辑配置联动                            |
+| `a4efa98` | fix: 将状态图标从分析流水线列移至分析结果列                                   |
+| `4f8f82d` | fix: BisectDetail 优化-移除分页/字段调整/空值处理                             |
+| `91ffd5e` | fix: BisectDetail 调整提示文案                                                |
+| `5432908` | fix: BisectDetail 移除分析状态图标                                            |
+| `74a2068` | feat: BisectDetail 引入BuildProductLabel组件                                  |
+| `6d56d6e` | fix: BisectDetail 调整Empty组件空数据提示文案                                 |
+| `58d0a7a` | fix: BisectDetail 调整摘要文案-总体运行时间改为分析时长                       |
+| `5f3930e` | fix: BisectDetail 重置按钮支持RUN_FAILED状态                                  |
+| `945904f` | fix: BisectDetail 调整重置请求参数并移除失败提示                              |
+| `b1efdf1` | chore: BisectDetail 修复行尾空白                                              |
+| `69df63b` | refactor: BisectDetail 简化task展开表达式                                     |
+| `13d70d5` | refactor: BisectDetail 代码评审问题修复                                       |
+| `db927fa` | fix: pipelineEditDialog bisectDebug菜单文案改回辅助功能                       |
+| `e7740b1` | fix: BisectDetail projectId动态化并在批量编辑时隐藏bisectDebug                |
+| `6c3984d` | refactor: BisectDetail 二分定位配置与展示优化                                 |
+| `2b6428a` | refactor(BisectDetail): remove text truncation from failure message           |

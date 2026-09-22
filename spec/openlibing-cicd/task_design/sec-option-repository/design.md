@@ -86,15 +86,15 @@ WHERE project_id = #{projectId} AND assume_pr = '1'
 
 ### 修改文件
 
-| 文件 | 变更类型 |
-|------|---------|
-| `SecOptionScanReportDTO.java` | 新增字段 |
-| `SecOptionScanRecordEntity.java` | 新增字段 |
-| `RepoInfoMapper.java` | 新增方法 |
-| `RepoInfoMapper.xml` | 新增 SQL |
-| `SecOptionScanServiceImpl.java` | 重构 fetchGitUrlsByProjectId + buildPipelineLink |
-| `CodeRepoClient.java` | 删除 |
-| `db.changelog.xml` | 新增 changeset |
+| 文件                             | 变更类型                                         |
+| -------------------------------- | ------------------------------------------------ |
+| `SecOptionScanReportDTO.java`    | 新增字段                                         |
+| `SecOptionScanRecordEntity.java` | 新增字段                                         |
+| `RepoInfoMapper.java`            | 新增方法                                         |
+| `RepoInfoMapper.xml`             | 新增 SQL                                         |
+| `SecOptionScanServiceImpl.java`  | 重构 fetchGitUrlsByProjectId + buildPipelineLink |
+| `CodeRepoClient.java`            | 删除                                             |
+| `db.changelog.xml`               | 新增 changeset                                   |
 
 ### 数据库变更
 

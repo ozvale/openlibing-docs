@@ -35,9 +35,9 @@
 
 ## 影响范围
 
-| 模块 | 影响程度 |
-|------|---------|
-| `cte/utils.py` | 核心修改（新增脱敏函数） |
-| `unified.py` | 安全修复（Ansible 文件写入） |
-| `test_set.py` | 日志脱敏调用 |
-| `tests/test_sanitize_sensitive_data.py` | 新增测试文件 |
+| 模块                                    | 影响程度                     |
+| --------------------------------------- | ---------------------------- |
+| `cte/utils.py`                          | 核心修改（新增脱敏函数）     |
+| `unified.py`                            | 安全修复（Ansible 文件写入） |
+| `test_set.py`                           | 日志脱敏调用                 |
+| `tests/test_sanitize_sensitive_data.py` | 新增测试文件                 |

@@ -8,27 +8,27 @@ MCP Server 插件市场后端 API 提供了 MCP Server 插件的浏览、搜索�
 
 ### 2.1 公共接口
 
-| 接口名称 | HTTP 方法 | 路径 | 功能描述 |
-|---------|----------|------|---------|
-| 获取 MCP Server 列表 | GET | /api/mcp-servers | 获取 MCP Server 列表，支持搜索、筛选和排序 |
-| 获取 MCP Server 详情 | GET | /api/mcp-servers/{name} | 获取指定 MCP Server 的详细信息 |
-| 点赞 MCP Server | POST | /api/mcp-servers/{name}/like | 为指定 MCP Server 点赞 |
-| 取消点赞 MCP Server | POST | /api/mcp-servers/{name}/unlike | 取消对指定 MCP Server 的点赞 |
-| 获取分类列表 | GET | /api/mcp-servers/categories | 获取所有分类 |
-| 获取标签列表 | GET | /api/mcp-servers/tags | 获取热门标签 |
-| 获取统计信息 | GET | /api/mcp-servers/stats | 获取 MCP Server 统计信息 |
-| 获取用户配置 | GET | /api/mcp-servers/{name}/user-config | 获取用户的 MCP Server 配置 |
-| 生成用户配置 | POST | /api/mcp-servers/{name}/user-config | 生成用户的 MCP Server 配置 |
+| 接口名称             | HTTP 方法 | 路径                                | 功能描述                                   |
+| -------------------- | --------- | ----------------------------------- | ------------------------------------------ |
+| 获取 MCP Server 列表 | GET       | /api/mcp-servers                    | 获取 MCP Server 列表，支持搜索、筛选和排序 |
+| 获取 MCP Server 详情 | GET       | /api/mcp-servers/{name}             | 获取指定 MCP Server 的详细信息             |
+| 点赞 MCP Server      | POST      | /api/mcp-servers/{name}/like        | 为指定 MCP Server 点赞                     |
+| 取消点赞 MCP Server  | POST      | /api/mcp-servers/{name}/unlike      | 取消对指定 MCP Server 的点赞               |
+| 获取分类列表         | GET       | /api/mcp-servers/categories         | 获取所有分类                               |
+| 获取标签列表         | GET       | /api/mcp-servers/tags               | 获取热门标签                               |
+| 获取统计信息         | GET       | /api/mcp-servers/stats              | 获取 MCP Server 统计信息                   |
+| 获取用户配置         | GET       | /api/mcp-servers/{name}/user-config | 获取用户的 MCP Server 配置                 |
+| 生成用户配置         | POST      | /api/mcp-servers/{name}/user-config | 生成用户的 MCP Server 配置                 |
 
 ### 2.2 管理接口
 
-| 接口名称 | HTTP 方法 | 路径 | 功能描述 |
-|---------|----------|------|---------|
-| 管理端获取 MCP Server 列表 | GET | /api/admin/mcp-servers | 管理端获取 MCP Server 列表，支持搜索、筛选和排序 |
-| 管理端创建 MCP Server | POST | /api/admin/mcp-servers | 管理端创建 MCP Server |
-| 管理端更新 MCP Server | POST | /api/admin/mcp-servers/{name} | 管理端更新 MCP Server |
-| 管理端删除 MCP Server | POST | /api/admin/mcp-servers/{name}/delete | 管理端删除 MCP Server |
-| 管理端预览 MCP Server README | POST | /api/admin/mcp-servers/readme | 管理端从仓库预览 MCP Server README |
+| 接口名称                     | HTTP 方法 | 路径                                 | 功能描述                                         |
+| ---------------------------- | --------- | ------------------------------------ | ------------------------------------------------ |
+| 管理端获取 MCP Server 列表   | GET       | /api/admin/mcp-servers               | 管理端获取 MCP Server 列表，支持搜索、筛选和排序 |
+| 管理端创建 MCP Server        | POST      | /api/admin/mcp-servers               | 管理端创建 MCP Server                            |
+| 管理端更新 MCP Server        | POST      | /api/admin/mcp-servers/{name}        | 管理端更新 MCP Server                            |
+| 管理端删除 MCP Server        | POST      | /api/admin/mcp-servers/{name}/delete | 管理端删除 MCP Server                            |
+| 管理端预览 MCP Server README | POST      | /api/admin/mcp-servers/readme        | 管理端从仓库预览 MCP Server README               |
 
 ## 3. 接口详情
 
@@ -40,23 +40,23 @@ MCP Server 插件市场后端 API 提供了 MCP Server 插件的浏览、搜索�
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 描述 | 示例值 |
-|-------|------|------|------|-------|
-| q | string | 否 | 搜索关键词 | "test server" |
-| category | string | 否 | 分类筛选，默认"all" | "ai-assistant" |
-| tag | string | 否 | 标签筛选 | "llm" |
-| sort | string | 否 | 排序方式，可选值：updatedAt, likeCount，默认 updatedAt | "likeCount" |
-| page | integer | 否 | 页码，默认 1 | 2 |
-| limit | integer | 否 | 每页数量，范围 1-50，默认 12 | 20 |
+| 参数名   | 类型    | 必填 | 描述                                                   | 示例值         |
+| -------- | ------- | ---- | ------------------------------------------------------ | -------------- |
+| q        | string  | 否   | 搜索关键词                                             | "test server"  |
+| category | string  | 否   | 分类筛选，默认"all"                                    | "ai-assistant" |
+| tag      | string  | 否   | 标签筛选                                               | "llm"          |
+| sort     | string  | 否   | 排序方式，可选值：updatedAt, likeCount，默认 updatedAt | "likeCount"    |
+| page     | integer | 否   | 页码，默认 1                                           | 2              |
+| limit    | integer | 否   | 每页数量，范围 1-50，默认 12                           | 20             |
 
 #### 响应参数
 
-| 参数名 | 类型 | 描述 |
-|-------|------|------|
-| data | array | MCP Server 列表 |
-| total | integer | 总数量 |
-| page | integer | 当前页码 |
-| limit | integer | 每页数量 |
+| 参数名 | 类型    | 描述            |
+| ------ | ------- | --------------- |
+| data   | array   | MCP Server 列表 |
+| total  | integer | 总数量          |
+| page   | integer | 当前页码        |
+| limit  | integer | 每页数量        |
 
 #### 示例请求
 
@@ -96,30 +96,30 @@ GET /api/mcp-servers?q=test&category=ai-assistant&sort=likeCount&page=1&limit=12
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 描述 | 示例值 |
-|-------|------|------|------|-------|
-| name | string | 是 | MCP Server 名称 | "test-server" |
+| 参数名 | 类型   | 必填 | 描述            | 示例值        |
+| ------ | ------ | ---- | --------------- | ------------- |
+| name   | string | 是   | MCP Server 名称 | "test-server" |
 
 #### 响应参数
 
-| 参数名 | 类型 | 描述 |
-|-------|------|------|
-| name | string | MCP Server 名称 |
-| displayName | string | 显示名称 |
-| icon | string | 图标 URL |
-| description | string | 描述 |
-| category | string | 分类 |
-| team | string | 团队 |
-| tags | array | 标签列表 |
-| likeCount | integer | 点赞数 |
-| sourceUrl | string | 源码地址 |
-| updatedAt | string | 更新时间 |
-| createdAt | string | 创建时间 |
-| readmeMd | string | README 文档 |
-| remoteServerConfig | object | 远程服务器配置 |
-| localServerConfig | object | 本地服务器配置 |
-| envSchema | object | 环境变量模式 |
-| parameterSchema | object | 参数模式 |
+| 参数名             | 类型    | 描述            |
+| ------------------ | ------- | --------------- |
+| name               | string  | MCP Server 名称 |
+| displayName        | string  | 显示名称        |
+| icon               | string  | 图标 URL        |
+| description        | string  | 描述            |
+| category           | string  | 分类            |
+| team               | string  | 团队            |
+| tags               | array   | 标签列表        |
+| likeCount          | integer | 点赞数          |
+| sourceUrl          | string  | 源码地址        |
+| updatedAt          | string  | 更新时间        |
+| createdAt          | string  | 创建时间        |
+| readmeMd           | string  | README 文档     |
+| remoteServerConfig | object  | 远程服务器配置  |
+| localServerConfig  | object  | 本地服务器配置  |
+| envSchema          | object  | 环境变量模式    |
+| parameterSchema    | object  | 参数模式        |
 
 #### 示例请求
 
@@ -196,15 +196,15 @@ GET /api/mcp-servers/test-server
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 描述 | 示例值 |
-|-------|------|------|------|-------|
-| name | string | 是 | MCP Server 名称 | "test-server" |
+| 参数名 | 类型   | 必填 | 描述            | 示例值        |
+| ------ | ------ | ---- | --------------- | ------------- |
+| name   | string | 是   | MCP Server 名称 | "test-server" |
 
 #### 响应参数
 
-| 参数名 | 类型 | 描述 |
-|-------|------|------|
-| ok | boolean | 操作结果 |
+| 参数名 | 类型    | 描述     |
+| ------ | ------- | -------- |
+| ok     | boolean | 操作结果 |
 
 #### 示例请求
 
@@ -228,15 +228,15 @@ POST /api/mcp-servers/test-server/like
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 描述 | 示例值 |
-|-------|------|------|------|-------|
-| name | string | 是 | MCP Server 名称 | "test-server" |
+| 参数名 | 类型   | 必填 | 描述            | 示例值        |
+| ------ | ------ | ---- | --------------- | ------------- |
+| name   | string | 是   | MCP Server 名称 | "test-server" |
 
 #### 响应参数
 
-| 参数名 | 类型 | 描述 |
-|-------|------|------|
-| ok | boolean | 操作结果 |
+| 参数名 | 类型    | 描述     |
+| ------ | ------- | -------- |
+| ok     | boolean | 操作结果 |
 
 #### 示例请求
 
@@ -264,8 +264,8 @@ POST /api/mcp-servers/test-server/unlike
 
 #### 响应参数
 
-| 参数名 | 类型 | 描述 |
-|-------|------|------|
+| 参数名     | 类型  | 描述     |
+| ---------- | ----- | -------- |
 | categories | array | 分类列表 |
 
 #### 示例请求
@@ -278,11 +278,7 @@ GET /api/mcp-servers/categories
 
 ```json
 {
-  "categories": [
-    "ai-assistant",
-    "code-analysis",
-    "dev-tools"
-  ]
+  "categories": ["ai-assistant", "code-analysis", "dev-tools"]
 }
 ```
 
@@ -294,15 +290,15 @@ GET /api/mcp-servers/categories
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 描述 | 示例值 |
-|-------|------|------|------|-------|
-| limit | integer | 否 | 标签数量，范围 1-50，默认 20 | 10 |
+| 参数名 | 类型    | 必填 | 描述                         | 示例值 |
+| ------ | ------- | ---- | ---------------------------- | ------ |
+| limit  | integer | 否   | 标签数量，范围 1-50，默认 20 | 10     |
 
 #### 响应参数
 
-| 参数名 | 类型 | 描述 |
-|-------|------|------|
-| tags | array | 标签列表 |
+| 参数名 | 类型  | 描述     |
+| ------ | ----- | -------- |
+| tags   | array | 标签列表 |
 
 #### 示例请求
 
@@ -314,12 +310,7 @@ GET /api/mcp-servers/tags?limit=10
 
 ```json
 {
-  "tags": [
-    "llm",
-    "ai",
-    "python",
-    "java"
-  ]
+  "tags": ["llm", "ai", "python", "java"]
 }
 ```
 
@@ -335,11 +326,11 @@ GET /api/mcp-servers/tags?limit=10
 
 #### 响应参数
 
-| 参数名 | 类型 | 描述 |
-|-------|------|------|
-| totalMCPServers | integer | 总 MCP Server 数量 |
-| recentMCPServers | array | 最近添加的 MCP Server 列表 |
-| topMCPServers | array | 最受欢迎的 MCP Server 列表 |
+| 参数名           | 类型    | 描述                       |
+| ---------------- | ------- | -------------------------- |
+| totalMCPServers  | integer | 总 MCP Server 数量         |
+| recentMCPServers | array   | 最近添加的 MCP Server 列表 |
+| topMCPServers    | array   | 最受欢迎的 MCP Server 列表 |
 
 #### 示例请求
 
@@ -391,26 +382,26 @@ GET /api/mcp-servers/stats
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 描述 | 示例值 |
-|-------|------|------|------|-------|
-| name | string | 是 | MCP Server 名称 | "test-server" |
-| userId | string | 是 | 用户 ID | "user123" |
+| 参数名 | 类型   | 必填 | 描述            | 示例值        |
+| ------ | ------ | ---- | --------------- | ------------- |
+| name   | string | 是   | MCP Server 名称 | "test-server" |
+| userId | string | 是   | 用户 ID         | "user123"     |
 
 #### 响应参数
 
-| 参数名 | 类型 | 描述 |
-|-------|------|------|
-| id | integer | 配置 ID |
-| userId | string | 用户 ID |
-| mcpServerName | string | MCP Server 名称 |
-| traeRemoteConfig | string | Trae IDE 远程配置 |
-| traeLocalConfig | string | Trae IDE 本地配置 |
-| opencodeRemoteConfig | string | OpenCode 远程配置 |
-| opencodeLocalConfig | string | OpenCode 本地配置 |
-| localConfigUserParams | object | 本地配置用户参数 |
-| remoteConfigUserParams | object | 远程配置用户参数 |
-| createdAt | string | 创建时间 |
-| updatedAt | string | 更新时间 |
+| 参数名                 | 类型    | 描述              |
+| ---------------------- | ------- | ----------------- |
+| id                     | integer | 配置 ID           |
+| userId                 | string  | 用户 ID           |
+| mcpServerName          | string  | MCP Server 名称   |
+| traeRemoteConfig       | string  | Trae IDE 远程配置 |
+| traeLocalConfig        | string  | Trae IDE 本地配置 |
+| opencodeRemoteConfig   | string  | OpenCode 远程配置 |
+| opencodeLocalConfig    | string  | OpenCode 本地配置 |
+| localConfigUserParams  | object  | 本地配置用户参数  |
+| remoteConfigUserParams | object  | 远程配置用户参数  |
+| createdAt              | string  | 创建时间          |
+| updatedAt              | string  | 更新时间          |
 
 #### 示例请求
 
@@ -448,12 +439,12 @@ GET /api/mcp-servers/test-server/user-config?userId=user123
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 描述 | 示例值 |
-|-------|------|------|------|-------|
-| name | string | 是 | MCP Server 名称 | "test-server" |
-| body.userId | string | 是 | 用户 ID | "user123" |
-| body.transportType | string | 否 | 传输类型，可选值：local, remote，默认 local | "remote" |
-| body.userParams | object | 否 | 用户参数 | {"token": "abc123"} |
+| 参数名             | 类型   | 必填 | 描述                                        | 示例值              |
+| ------------------ | ------ | ---- | ------------------------------------------- | ------------------- |
+| name               | string | 是   | MCP Server 名称                             | "test-server"       |
+| body.userId        | string | 是   | 用户 ID                                     | "user123"           |
+| body.transportType | string | 否   | 传输类型，可选值：local, remote，默认 local | "remote"            |
+| body.userParams    | object | 否   | 用户参数                                    | {"token": "abc123"} |
 
 #### 响应参数
 
@@ -477,7 +468,6 @@ Content-Type: application/json
 #### 示例响应
 
 同获取用户配置接口
-
 
 ## 4. 数据模型
 
@@ -518,7 +508,7 @@ Content-Type: application/json
     "mcpServers": {
       "string": {
         "url": "string",
-        "headers": {"string": "string"}
+        "headers": { "string": "string" }
       }
     }
   },
@@ -527,7 +517,7 @@ Content-Type: application/json
       "string": {
         "command": "string",
         "args": ["string"],
-        "env": {"string": "string"}
+        "env": { "string": "string" }
       }
     }
   },
@@ -566,8 +556,8 @@ Content-Type: application/json
   "traeLocalConfig": "string",
   "opencodeRemoteConfig": "string",
   "opencodeLocalConfig": "string",
-  "localConfigUserParams": {"string": "string"},
-  "remoteConfigUserParams": {"string": "string"},
+  "localConfigUserParams": { "string": "string" },
+  "remoteConfigUserParams": { "string": "string" },
   "createdAt": "string",
   "updatedAt": "string"
 }
@@ -579,7 +569,7 @@ Content-Type: application/json
 {
   "userId": "string",
   "transportType": "string",
-  "userParams": {"string": "string"}
+  "userParams": { "string": "string" }
 }
 ```
 
@@ -615,11 +605,11 @@ curl -X GET "http://localhost:8000/api/mcp-servers/chatgpt-server/user-config?us
 
 ## 6. 错误处理
 
-| 错误代码 | 描述 | 解决方案 |
-|---------|------|---------|
-| 400 | 请求参数错误 | 检查请求参数是否符合要求 |
-| 404 | MCP Server 不存在 | 检查 MCP Server 名称是否正确 |
-| 500 | 服务器内部错误 | 联系系统管理员 |
+| 错误代码 | 描述              | 解决方案                     |
+| -------- | ----------------- | ---------------------------- |
+| 400      | 请求参数错误      | 检查请求参数是否符合要求     |
+| 404      | MCP Server 不存在 | 检查 MCP Server 名称是否正确 |
+| 500      | 服务器内部错误    | 联系系统管理员               |
 
 ## 7. 管理接口详情
 
@@ -632,13 +622,13 @@ curl -X GET "http://localhost:8000/api/mcp-servers/chatgpt-server/user-config?us
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 描述 | 示例值 |
-|-------|------|------|------|-------|
-| q | string | 否 | 搜索关键词 | "test server" |
-| category | string | 否 | 分类筛选，默认"all" | "ai-assistant" |
-| sort | string | 否 | 排序方式，可选值：updatedAt, likeCount，默认 updatedAt | "likeCount" |
-| page | integer | 否 | 页码，默认 1 | 2 |
-| limit | integer | 否 | 每页数量，范围 1-50，默认 12 | 20 |
+| 参数名   | 类型    | 必填 | 描述                                                   | 示例值         |
+| -------- | ------- | ---- | ------------------------------------------------------ | -------------- |
+| q        | string  | 否   | 搜索关键词                                             | "test server"  |
+| category | string  | 否   | 分类筛选，默认"all"                                    | "ai-assistant" |
+| sort     | string  | 否   | 排序方式，可选值：updatedAt, likeCount，默认 updatedAt | "likeCount"    |
+| page     | integer | 否   | 页码，默认 1                                           | 2              |
+| limit    | integer | 否   | 每页数量，范围 1-50，默认 12                           | 20             |
 
 #### 响应参数
 
@@ -663,21 +653,21 @@ GET /api/admin/mcp-servers?q=test&category=ai-assistant&sort=likeCount&page=1&li
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 描述 | 示例值 |
-|-------|------|------|------|-------|
-| name | string | 是 | MCP Server 名称 | "test-server" |
-| displayName | string | 否 | 显示名称 | "Test Server" |
-| icon | string | 否 | 图标 URL | "https://example.com/icon.png" |
-| description | string | 否 | 描述 | "A test MCP server" |
-| category | string | 否 | 分类，默认"其他" | "ai-assistant" |
-| team | string | 否 | 团队，默认"未知团队" | "Test Team" |
-| sourceUrl | string | 否 | 源码地址 | "https://github.com/test/server" |
-| readmeMd | string | 否 | README 文档 | "# Test Server" |
-| remoteServerConfig | string | 否 | 远程服务器配置 JSON 字符串 | '{"mcpServers": {"test": {"url": "https://api.example.com"}}}' |
-| localServerConfig | string | 否 | 本地服务器配置 JSON 字符串 | '{"mcpServers": {"test": {"command": "python", "args": ["server.py"]}}}' |
-| envSchema | string | 否 | 环境变量模式 JSON 字符串 | '{"properties": {}, "required": [], "type": "object"}' |
-| parameterSchema | string | 否 | 参数模式 JSON 字符串 | '{"properties": {}, "required": [], "type": "object"}' |
-| tags | array | 否 | 标签列表 | ["test", "ai"] |
+| 参数名             | 类型   | 必填 | 描述                       | 示例值                                                                   |
+| ------------------ | ------ | ---- | -------------------------- | ------------------------------------------------------------------------ |
+| name               | string | 是   | MCP Server 名称            | "test-server"                                                            |
+| displayName        | string | 否   | 显示名称                   | "Test Server"                                                            |
+| icon               | string | 否   | 图标 URL                   | "https://example.com/icon.png"                                           |
+| description        | string | 否   | 描述                       | "A test MCP server"                                                      |
+| category           | string | 否   | 分类，默认"其他"           | "ai-assistant"                                                           |
+| team               | string | 否   | 团队，默认"未知团队"       | "Test Team"                                                              |
+| sourceUrl          | string | 否   | 源码地址                   | "https://github.com/test/server"                                         |
+| readmeMd           | string | 否   | README 文档                | "# Test Server"                                                          |
+| remoteServerConfig | string | 否   | 远程服务器配置 JSON 字符串 | '{"mcpServers": {"test": {"url": "https://api.example.com"}}}'           |
+| localServerConfig  | string | 否   | 本地服务器配置 JSON 字符串 | '{"mcpServers": {"test": {"command": "python", "args": ["server.py"]}}}' |
+| envSchema          | string | 否   | 环境变量模式 JSON 字符串   | '{"properties": {}, "required": [], "type": "object"}'                   |
+| parameterSchema    | string | 否   | 参数模式 JSON 字符串       | '{"properties": {}, "required": [], "type": "object"}'                   |
+| tags               | array  | 否   | 标签列表                   | ["test", "ai"]                                                           |
 
 #### 响应参数
 
@@ -719,21 +709,21 @@ Content-Type: application/json
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 描述 | 示例值 |
-|-------|------|------|------|-------|
-| name | string | 是 | MCP Server 名称 | "test-server" |
-| displayName | string | 否 | 显示名称 | "Updated Test Server" |
-| icon | string | 否 | 图标 URL | "https://example.com/new-icon.png" |
-| description | string | 否 | 描述 | "An updated test MCP server" |
-| category | string | 否 | 分类 | "updated-category" |
-| team | string | 否 | 团队 | "Updated Team" |
-| sourceUrl | string | 否 | 源码地址 | "https://github.com/updated/server" |
-| readmeMd | string | 否 | README 文档 | "# Updated Test Server" |
-| remoteServerConfig | string | 否 | 远程服务器配置 JSON 字符串 | '{"mcpServers": {"test": {"url": "https://updated-api.example.com"}}}' |
-| localServerConfig | string | 否 | 本地服务器配置 JSON 字符串 | '{"mcpServers": {"test": {"command": "python3", "args": ["server.py"]}}}' |
-| envSchema | string | 否 | 环境变量模式 JSON 字符串 | '{"properties": {"PORT": {"description": "Server port"}}, "required": ["PORT"], "type": "object"}' |
-| parameterSchema | string | 否 | 参数模式 JSON 字符串 | '{"properties": {"token": {"description": "API token"}}, "required": ["token"], "type": "object"}' |
-| tags | array | 否 | 标签列表 | ["updated", "test"] |
+| 参数名             | 类型   | 必填 | 描述                       | 示例值                                                                                             |
+| ------------------ | ------ | ---- | -------------------------- | -------------------------------------------------------------------------------------------------- |
+| name               | string | 是   | MCP Server 名称            | "test-server"                                                                                      |
+| displayName        | string | 否   | 显示名称                   | "Updated Test Server"                                                                              |
+| icon               | string | 否   | 图标 URL                   | "https://example.com/new-icon.png"                                                                 |
+| description        | string | 否   | 描述                       | "An updated test MCP server"                                                                       |
+| category           | string | 否   | 分类                       | "updated-category"                                                                                 |
+| team               | string | 否   | 团队                       | "Updated Team"                                                                                     |
+| sourceUrl          | string | 否   | 源码地址                   | "https://github.com/updated/server"                                                                |
+| readmeMd           | string | 否   | README 文档                | "# Updated Test Server"                                                                            |
+| remoteServerConfig | string | 否   | 远程服务器配置 JSON 字符串 | '{"mcpServers": {"test": {"url": "https://updated-api.example.com"}}}'                             |
+| localServerConfig  | string | 否   | 本地服务器配置 JSON 字符串 | '{"mcpServers": {"test": {"command": "python3", "args": ["server.py"]}}}'                          |
+| envSchema          | string | 否   | 环境变量模式 JSON 字符串   | '{"properties": {"PORT": {"description": "Server port"}}, "required": ["PORT"], "type": "object"}' |
+| parameterSchema    | string | 否   | 参数模式 JSON 字符串       | '{"properties": {"token": {"description": "API token"}}, "required": ["token"], "type": "object"}' |
+| tags               | array  | 否   | 标签列表                   | ["updated", "test"]                                                                                |
 
 #### 响应参数
 
@@ -765,15 +755,15 @@ Content-Type: application/json
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 描述 | 示例值 |
-|-------|------|------|------|-------|
-| name | string | 是 | MCP Server 名称 | "test-server" |
+| 参数名 | 类型   | 必填 | 描述            | 示例值        |
+| ------ | ------ | ---- | --------------- | ------------- |
+| name   | string | 是   | MCP Server 名称 | "test-server" |
 
 #### 响应参数
 
-| 参数名 | 类型 | 描述 |
-|-------|------|------|
-| ok | boolean | 操作结果 |
+| 参数名 | 类型    | 描述     |
+| ------ | ------- | -------- |
+| ok     | boolean | 操作结果 |
 
 #### 示例请求
 
@@ -798,17 +788,17 @@ POST /api/admin/mcp-servers/test-server/delete
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 描述 | 示例值 |
-|-------|------|------|------|-------|
-| repoUrl | string | 是 | 仓库 URL | "https://github.com/test/server" |
-| branch | string | 否 | 分支名称 | "main" |
+| 参数名  | 类型   | 必填 | 描述     | 示例值                           |
+| ------- | ------ | ---- | -------- | -------------------------------- |
+| repoUrl | string | 是   | 仓库 URL | "https://github.com/test/server" |
+| branch  | string | 否   | 分支名称 | "main"                           |
 
 #### 响应参数
 
-| 参数名 | 类型 | 描述 |
-|-------|------|------|
+| 参数名         | 类型   | 描述        |
+| -------------- | ------ | ----------- |
 | readme_content | string | README 内容 |
-| preview_result | object | 预览结果 |
+| preview_result | object | 预览结果    |
 
 #### 示例请求
 

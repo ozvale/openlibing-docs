@@ -11,6 +11,7 @@
 **选择**：遍历列表逐一执行挂载命令
 
 **原因**：
+
 - 简单直观，易于维护
 - 每个挂载操作独立，便于错误处理和日志记录
 - 符合现有挂载命令的执行模式
@@ -20,6 +21,7 @@
 **选择**：配置在 scheduler_config.py 中
 
 **原因**：
+
 - 统一配置管理，便于维护
 - 避免在每个用例的环境信息中重复配置
 - 便于环境间的配置迁移
@@ -29,6 +31,7 @@
 **选择**：只支持数组格式，不兼容字符串格式
 
 **原因**：
+
 - 简化代码逻辑，避免类型判断
 - 强制使用新格式，确保配置一致性
 
@@ -99,15 +102,16 @@ class Config:
 
 ### 3. 挂载逻辑说明
 
-| 配置格式 | 处理方式 |
-|---------|----------|
-| 列表格式 | 遍历列表，逐一执行挂载命令 |
+| 配置格式       | 处理方式                             |
+| -------------- | ------------------------------------ |
+| 列表格式       | 遍历列表，逐一执行挂载命令           |
 | 列表长度不一致 | 以较短列表为准，多余项忽略并记录警告 |
-| 空列表或None | 跳过挂载步骤 |
+| 空列表或None   | 跳过挂载步骤                         |
 
 ### 4. 测试工程代码拷贝
 
 当前已实现：
+
 ```python
 scp.put(str(self.test_dir), recursive=True, remote_path=remote_path)
 ```
@@ -116,10 +120,10 @@ scp.put(str(self.test_dir), recursive=True, remote_path=remote_path)
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `pytest-executor/src/executor/pytest_executor.py` | 修改 | 增强挂载逻辑，支持多数据源 |
-| `pytest-executor/src/scheduler/scheduler_config.py` | 修改 | 新增挂载脚本路径配置 |
+| 文件                                                | 操作 | 说明                       |
+| --------------------------------------------------- | ---- | -------------------------- |
+| `pytest-executor/src/executor/pytest_executor.py`   | 修改 | 增强挂载逻辑，支持多数据源 |
+| `pytest-executor/src/scheduler/scheduler_config.py` | 修改 | 新增挂载脚本路径配置       |
 
 ## 接口变更
 
@@ -133,12 +137,12 @@ def _prepare_test_environment(self, server_info, machine_info, upload_testkit=Tr
     - Clear existing directory
     - Mount shared storage
     - Upload test code to /home directory
-    
+
     Args:
         server_info: Server connection information
         machine_info: Machine information (包含 mount_source_data 和 mount_dest_dir)
         upload_testkit: Whether to upload pytest-testkit (default: True)
-    
+
     Returns:
         bool: Whether preparation succeeded
     """
@@ -150,19 +154,19 @@ def _prepare_test_environment(self, server_info, machine_info, upload_testkit=Tr
 
 ## 错误处理策略
 
-| 错误场景 | 处理策略 |
-|---------|----------|
-| 挂载命令失败 | 记录警告，继续执行后续步骤 |
-| 多数据源列表长度不一致 | 以较短列表为准，记录警告 |
-| 配置格式错误（非列表） | 记录错误，跳过挂载步骤 |
+| 错误场景               | 处理策略                   |
+| ---------------------- | -------------------------- |
+| 挂载命令失败           | 记录警告，继续执行后续步骤 |
+| 多数据源列表长度不一致 | 以较短列表为准，记录警告   |
+| 配置格式错误（非列表） | 记录错误，跳过挂载步骤     |
 
 ## 风险 & 缓解
 
-| 风险 | 影响 | 缓解措施 |
-|------|------|----------|
-| 挂载脚本路径配置错误 | 中 | 提供默认值，配置错误时使用默认脚本 |
-| 多数据源挂载时间过长 | 低 | 添加日志记录，便于性能分析 |
-| 配置格式不统一 | 中 | 文档明确说明只支持列表格式 |
+| 风险                 | 影响 | 缓解措施                           |
+| -------------------- | ---- | ---------------------------------- |
+| 挂载脚本路径配置错误 | 中   | 提供默认值，配置错误时使用默认脚本 |
+| 多数据源挂载时间过长 | 低   | 添加日志记录，便于性能分析         |
+| 配置格式不统一       | 中   | 文档明确说明只支持列表格式         |
 
 ## 测试策略
 

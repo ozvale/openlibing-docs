@@ -60,6 +60,7 @@ CREATE 时 POST 返回的 `id`（GitCode/Gitee/GitHub 评论 id）持久化到 M
 **现状**：UPDATE 事件触发 `resolveExpiredComments`（PUT resolve 过期评论），且 `callSuppressionScan` 传 `commitShas` 做增量扫描。
 
 **新方案**：
+
 - UPDATE 事件不再调用 `resolveExpiredComments`（因为新方案评论是文件级，不会因行号变化过期；旧的行级评论仍保留 resolve 逻辑处理历史遗留评论，过渡期保留）
 - UPDATE 事件调用 `callSuppressionScan` 时，**不再传 commitShas**，全量扫描当前 PR 所有修改文件（与 CREATE 一致）
 - 扫描结果返回后，按 `repo_url + pr_number + file_path` 查询已有的评论记录：
@@ -90,6 +91,7 @@ coderepo 端解析 `firstChangedFile`，作为文件级评论的 `path`。
 **兜底策略**：若 codecheck 未返回 `firstChangedFile`，coderepo 从扫描结果 `result` 列表的第一个元素的 `filePath` 作为兜底（不准确但保证可用）。
 
 **codecheck 仓改动**：
+
 1. `SuppressionScanServiceImpl.scanSuppressionComments` 在 CREATE 分支 `fetchPrFiles` 后，记录 `diffs[0].statistic.new_path` 作为 `firstChangedFile`
 2. 响应结构新增 `firstChangedFile` 字段
 3. UPDATE 事件也改为全量扫描（不再走 `scanCompareDiff` 增量），与 coderepo 新方案对齐
@@ -105,6 +107,7 @@ coderepo 端解析 `firstChangedFile`，作为文件级评论的 `path`。
 **新增端点**：`WebHookEventController` 新增 `POST /webhookEvent/hooks/github`，解析 `X-GitHub-Event` 头作为 eventType，`repoType` 设为 `"github"`。
 
 **签名校验**：`MachineInterfaceAuthUtil.webhookMachineInterfacePermissionAuth` 改为按 platform 取签名头：
+
 - gitcode → `X-GitCode-Signature-256`
 - gitee → `X-Gitee-Token`
 - github → `X-Hub-Signature-256`
@@ -114,6 +117,7 @@ coderepo 端解析 `firstChangedFile`，作为文件级评论的 `path`。
 **事件路由**：GitHub PR 事件头是 `X-GitHub-Event: pull_request`，与现有 `supportedEventType()="Merge Request Hook"` 不一致。
 
 **方案**：不新增 handler，改造 dispatcher 与 handler 支持多事件类型匹配：
+
 - `WebHookEventHandler` 接口 `supportedEventType()` 改为 `Set<String> supportedEventTypes()`（保留旧方法兼容）
 - `MergeRequestEventHandler` 返回 `{"Merge Request Hook", "pull_request"}`
 - dispatcher 遍历 handler 时检查 `eventType ∈ supportedEventTypes()`
@@ -121,12 +125,15 @@ coderepo 端解析 `firstChangedFile`，作为文件级评论的 `path`。
 #### 1.3.2 GitHub token 链路打通
 
 **CommonService 新增 `getGithubToken`**：
+
 ```java
 String getGithubToken(Integer projectId, boolean isDefault);
 ```
+
 实现参照 `getGitcodeToken`（`CommonServiceImpl.java:598-611`），从 `project_common_account_info` 表读 `github_token` 解密，未配置时回退到 `${github.common.access_token}`。
 
 **RepoServiceImpl 修正**：
+
 - `getRepoAccessToken`（line 2296-2301）：github 项目级 token 改调 `commonService.getGithubToken`
 - `getRepoAccessToken`（line 2306-2307）：公共 token 回退改为 `githubCommonToken`
 - `getProjectToken`（line 3835-3846）：增加 github 分支
@@ -136,14 +143,15 @@ String getGithubToken(Integer projectId, boolean isDefault);
 
 **关键差异**：GitHub 用 `subject_type=file` 实现文件级评论
 
-| 能力 |  GitHub |
-|------|--------|
-| 创建文件级评论 | POST `/repos/{o}/{r}/pulls/{n}/comments` + `subject_type=file` |
-| 编辑评论 | PATCH `/repos/{o}/{r}/pulls/comments/{id}` |
-| 列出评论 | GET `/repos/{o}/{r}/pulls/{n}/comments` |
-| 认证头 | `Authorization: Bearer <token>` + `Accept: application/vnd.github+json` |
+| 能力           | GitHub                                                                  |
+| -------------- | ----------------------------------------------------------------------- |
+| 创建文件级评论 | POST `/repos/{o}/{r}/pulls/{n}/comments` + `subject_type=file`          |
+| 编辑评论       | PATCH `/repos/{o}/{r}/pulls/comments/{id}`                              |
+| 列出评论       | GET `/repos/{o}/{r}/pulls/{n}/comments`                                 |
+| 认证头         | `Authorization: Bearer <token>` + `Accept: application/vnd.github+json` |
 
 **MR事件处理器 MergeRequestEventHandler 改造**：
+
 - `buildCommentApiUrl`（line 778-791）：增加 github 分支，URL 用 `githubApiUrl + "/repos/" + owner + "/" + repo + "/pulls/" + prNumber + "/comments"`
 - `buildRequestBody`（line 884-898）：增加 `buildGithubRequestBody`，请求体用 `body`/`path`/`subject_type=file`
 - `sendCommentRequest`（line 936-943）：header 按 platform 切换，github 用 `Authorization: Bearer <token>` + `Accept: application/vnd.github+json`
@@ -158,6 +166,7 @@ String getGithubToken(Integer projectId, boolean isDefault);
 #### 1.3.5 codecheck 仓 github 扫描支持
 
 **codecheck 仓改动**：
+
 1. `SuppressionScanServiceImpl.fetchPrFiles`（line 110-120）：增加 github 分支，调 `GET https://api.github.com/repos/{owner}/{repo}/pulls/{pr}/files`，header 用 `Authorization: Bearer <token>`
 2. GitHub files 响应格式与 gitcode 不同，GitHub 返回 `[{filename, patch, sha, status}]`，`patch` 是 unified diff 文本。需要新增 `parseGithubPatch` 方法将 patch 解析成内部 `diffs[].content.text[]` 格式（可参考 codecheck UPDATE 事件的 `parsePatch` line 795-825）
 3. `CodePlateHelper.getCodePlate`（line 107-121）：增加 github 识别，新增 `GithubHelper`/`GithubPlate` 类
@@ -167,34 +176,34 @@ String getGithubToken(Integer projectId, boolean isDefault);
 
 #### 第一优先级（强阻塞，必须补）
 
-| # | 方法 | 位置 | 当前处理 | 需补内容 |
-|---|------|------|---------|---------|
-| 1 | `CommonService.getGithubToken` | CommonServiceImpl | 不存在 | 新增方法，参照 `getGitcodeToken` |
-| 2 | `getRepoAccessToken` | RepoServiceImpl:2296-2301 | 误用 `getGitcodeToken` | 改调 `commonService.getGithubToken` |
-| 3 | `getRepoAccessToken` | RepoServiceImpl:2306-2307 | 回退 `gitcodeCommonToken` | 改为 `githubCommonToken` |
-| 4 | `getProjectToken` | RepoServiceImpl:3835-3846 | github 返回空串 | 增加 github 分支 |
-| 5 | `getAccessTokenForWebhook` | RepoServiceImpl:3898-3933 | github 返回空串 | 回退分支增加 github |
-| 6 | `WebHookEventController` | :56,:96 | 无 github 端点 | 新增 `/hooks/github` |
-| 7 | `webhookMachineInterfacePermissionAuth` | MachineInterfaceAuthUtil:62-84 | 硬编码 `X-GitCode-Signature-256` | 按 platform 取签名头 |
-| 8 | `MergeRequestEventHandler` 平台分支方法群 | extractAction:210 等 | 无 github 分支 | 全部补 github 适配（payload 结构不同） |
-| 9 | `MergeRequestEventHandler.getProjectToken` | :611-622 | github 返回空串 | 增加 github 分支 |
-| 10 | `MergeRequestEventHandler.buildCommentApiUrl` | :778-791 | 不支持 github | 增加 github 分支 |
-| 11 | `MergeRequestEventHandler.buildRequestBody` | :884-898 | 不支持 github | 新增 `buildGithubRequestBody`（`subject_type=file`） |
-| 12 | `MergeRequestEventHandler.sendCommentRequest` | :936-943 | 硬编码 `PRIVATE-TOKEN` | header 按 platform 切换 |
-| 13 | `ApplyRepoServiceImpl.repoConfig` | :382-383 | github 早 return | 删除早 return，让 webhook 设置走起来 |
-| 14 | RepoServiceImpl webhook 方法群 | getRepoWebhookList 等 | 抛异常/空串 | 增加 github 分支 + 新增 `github.webhook.*.url` 配置 |
+| #   | 方法                                          | 位置                           | 当前处理                         | 需补内容                                             |
+| --- | --------------------------------------------- | ------------------------------ | -------------------------------- | ---------------------------------------------------- |
+| 1   | `CommonService.getGithubToken`                | CommonServiceImpl              | 不存在                           | 新增方法，参照 `getGitcodeToken`                     |
+| 2   | `getRepoAccessToken`                          | RepoServiceImpl:2296-2301      | 误用 `getGitcodeToken`           | 改调 `commonService.getGithubToken`                  |
+| 3   | `getRepoAccessToken`                          | RepoServiceImpl:2306-2307      | 回退 `gitcodeCommonToken`        | 改为 `githubCommonToken`                             |
+| 4   | `getProjectToken`                             | RepoServiceImpl:3835-3846      | github 返回空串                  | 增加 github 分支                                     |
+| 5   | `getAccessTokenForWebhook`                    | RepoServiceImpl:3898-3933      | github 返回空串                  | 回退分支增加 github                                  |
+| 6   | `WebHookEventController`                      | :56,:96                        | 无 github 端点                   | 新增 `/hooks/github`                                 |
+| 7   | `webhookMachineInterfacePermissionAuth`       | MachineInterfaceAuthUtil:62-84 | 硬编码 `X-GitCode-Signature-256` | 按 platform 取签名头                                 |
+| 8   | `MergeRequestEventHandler` 平台分支方法群     | extractAction:210 等           | 无 github 分支                   | 全部补 github 适配（payload 结构不同）               |
+| 9   | `MergeRequestEventHandler.getProjectToken`    | :611-622                       | github 返回空串                  | 增加 github 分支                                     |
+| 10  | `MergeRequestEventHandler.buildCommentApiUrl` | :778-791                       | 不支持 github                    | 增加 github 分支                                     |
+| 11  | `MergeRequestEventHandler.buildRequestBody`   | :884-898                       | 不支持 github                    | 新增 `buildGithubRequestBody`（`subject_type=file`） |
+| 12  | `MergeRequestEventHandler.sendCommentRequest` | :936-943                       | 硬编码 `PRIVATE-TOKEN`           | header 按 platform 切换                              |
+| 13  | `ApplyRepoServiceImpl.repoConfig`             | :382-383                       | github 早 return                 | 删除早 return，让 webhook 设置走起来                 |
+| 14  | RepoServiceImpl webhook 方法群                | getRepoWebhookList 等          | 抛异常/空串                      | 增加 github 分支 + 新增 `github.webhook.*.url` 配置  |
 
 #### 第二优先级（影响其他能力但不阻塞告警抑制评论）
 
-| # | 方法 | 影响 |
-|---|------|------|
-| 15 | `syncAllRepoInfoToProjectRepoInfo`| 全量同步所有仓库信息 |
-| 16 | `validateAccessToken`| 录入/更新代码仓时校验accessToken有效性 |
-| 17 | `checkRepoAccess`| 录入/更新代码仓时校验项目公共账号信息，获取项目可见性和状态 |
-| 18 | `syncRepoBranch`| 同步分支 |
-| 19 | `SyncUserServiceImpl.syncRepoUserByJob` | 同步用户 |
-| 20 | `syncDesignProject` | design 扫描 |
-| 21 | `checkProjectHasCommonAccount`/`isTokenValid`/`processAccessTokenAndUserInfo` | 录入校验与展示 |
+| #   | 方法                                                                          | 影响                                                        |
+| --- | ----------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| 15  | `syncAllRepoInfoToProjectRepoInfo`                                            | 全量同步所有仓库信息                                        |
+| 16  | `validateAccessToken`                                                         | 录入/更新代码仓时校验accessToken有效性                      |
+| 17  | `checkRepoAccess`                                                             | 录入/更新代码仓时校验项目公共账号信息，获取项目可见性和状态 |
+| 18  | `syncRepoBranch`                                                              | 同步分支                                                    |
+| 19  | `SyncUserServiceImpl.syncRepoUserByJob`                                       | 同步用户                                                    |
+| 20  | `syncDesignProject`                                                           | design 扫描                                                 |
+| 21  | `checkProjectHasCommonAccount`/`isTokenValid`/`processAccessTokenAndUserInfo` | 录入校验与展示                                              |
 
 **本需求聚焦第一优先级**，第二优先级需要先实现15-18、21的能力，其他暂不实现。
 
@@ -309,6 +318,7 @@ UPDATE:
 路径：`com.openlibing.coderepo.business.service.PrSuppressionCommentService`
 
 封装评论记录的持久化逻辑：
+
 - `saveComments(List<CommentRecord>)`：批量插入
 - `queryComments(repoUrl, prNumber, filePath)`：按 PR + 文件查询
 - `editComment(record, newBody)`：更新记录并返回 comment_id
@@ -319,6 +329,7 @@ UPDATE:
 路径：`com.openlibing.coderepo.business.service.suppression.SuppressionCommentBuilder`
 
 无状态工具类，负责：
+
 - `buildTableBody(List<SuppressionData>, firstChangedFile, repoWebUrl, commitSha)`：拼表格 body
 - `splitByCharLimit(body, limit=65535)`：按字数拆分多条
 - `buildFileLevelRequest(platform, path, body)`：按平台构造文件级评论请求体
@@ -331,27 +342,27 @@ UPDATE:
 
 ### 3.2 修改类（openlibing-coderepo 仓）
 
-| 类 | 修改要点 |
-|----|---------|
-| `WebHookEventController` | 新增 `/hooks/github` 端点 |
-| `WebHookEventHandler` | `supportedEventType()` 改为 `Set<String> supportedEventTypes()`（保留旧方法 `@Deprecated`） |
-| `WebHookEventServiceImpl` | dispatchEvent 改为检查 `eventType ∈ supportedEventTypes()` |
-| `MergeRequestEventHandler` | (1) `supportedEventTypes` 返回 `{"Merge Request Hook","pull_request"}`；(2) 所有 extract* 方法增加 github 分支或委托 `GithubWebhookPayloadParser`；(3) `buildCommentApiUrl`/`buildRequestBody`/`sendCommentRequest` 增加 github 分支；(4) 新增 `editSuppressionComments` 方法处理 UPDATE；(5) `callSuppressionScan` 解析 `firstChangedFile`；(6) 注入 `PrSuppressionCommentService` |
-| `MachineInterfaceAuthUtil` | `webhookMachineInterfacePermissionAuth` 按 platform 路由签名头 |
-| `CommonService` / `CommonServiceImpl` | 新增 `getGithubToken(Integer projectId, boolean isDefault)` |
-| `RepoServiceImpl` | (1) 新增 `@Value("${github.api.address}")`、`@Value("${github.common.access_token}")`、`@Value("${github.webhook.list.url}")` 等字段；(2) `getRepoAccessToken`/`getProjectToken`/`getAccessTokenForWebhook` 增加 github 分支；(3) webhook 方法群（`getRepoWebhookList`/`createRepoWebhook`/`createCoderepoWebhook`/`deleteRepoWebhook`/`deleteRepoWebhookWithToken`）增加 github 分支 |
-| `ApplyRepoServiceImpl` | `repoConfig` 删除 line 382-383 的 github 早 return |
-| `OpenlibingCodeCheckClient` | `scanSuppression` 返回值类型保持 `Map<String,Object>`，但消费方解析新增 `firstChangedFile` key |
+| 类                                    | 修改要点                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WebHookEventController`              | 新增 `/hooks/github` 端点                                                                                                                                                                                                                                                                                                                                                             |
+| `WebHookEventHandler`                 | `supportedEventType()` 改为 `Set<String> supportedEventTypes()`（保留旧方法 `@Deprecated`）                                                                                                                                                                                                                                                                                           |
+| `WebHookEventServiceImpl`             | dispatchEvent 改为检查 `eventType ∈ supportedEventTypes()`                                                                                                                                                                                                                                                                                                                            |
+| `MergeRequestEventHandler`            | (1) `supportedEventTypes` 返回 `{"Merge Request Hook","pull_request"}`；(2) 所有 extract* 方法增加 github 分支或委托 `GithubWebhookPayloadParser`；(3) `buildCommentApiUrl`/`buildRequestBody`/`sendCommentRequest` 增加 github 分支；(4) 新增 `editSuppressionComments` 方法处理 UPDATE；(5) `callSuppressionScan` 解析 `firstChangedFile`；(6) 注入 `PrSuppressionCommentService`   |
+| `MachineInterfaceAuthUtil`            | `webhookMachineInterfacePermissionAuth` 按 platform 路由签名头                                                                                                                                                                                                                                                                                                                        |
+| `CommonService` / `CommonServiceImpl` | 新增 `getGithubToken(Integer projectId, boolean isDefault)`                                                                                                                                                                                                                                                                                                                           |
+| `RepoServiceImpl`                     | (1) 新增 `@Value("${github.api.address}")`、`@Value("${github.common.access_token}")`、`@Value("${github.webhook.list.url}")` 等字段；(2) `getRepoAccessToken`/`getProjectToken`/`getAccessTokenForWebhook` 增加 github 分支；(3) webhook 方法群（`getRepoWebhookList`/`createRepoWebhook`/`createCoderepoWebhook`/`deleteRepoWebhook`/`deleteRepoWebhookWithToken`）增加 github 分支 |
+| `ApplyRepoServiceImpl`                | `repoConfig` 删除 line 382-383 的 github 早 return                                                                                                                                                                                                                                                                                                                                    |
+| `OpenlibingCodeCheckClient`           | `scanSuppression` 返回值类型保持 `Map<String,Object>`，但消费方解析新增 `firstChangedFile` key                                                                                                                                                                                                                                                                                        |
 
 ### 3.3 新增类（openlibing-codecheck 仓，跨仓改动）
 
-| 类 | 修改要点 |
-|----|---------|
-| `SuppressionScanServiceImpl` | (1) `fetchPrFiles` 增加 github 分支；(2) `scanSuppressionComments` 记录 `firstChangedFile` 并写入响应；(3) UPDATE 事件改为全量扫描 |
-| `SuppressionScanResult` | 不改字段（firstChangedFile 放在外层响应） |
-| `CodePlateHelper` | `getCodePlate` 增加 github 识别 |
-| `GithubHelper` / `GithubPlate`（新增） | GitHub 平台辅助类，参照 `GitCodeHelper`/`GitCodePlate` |
-| `SuppressionScanController` | 响应结构外层新增 `firstChangedFile` 字段 |
+| 类                                     | 修改要点                                                                                                                           |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `SuppressionScanServiceImpl`           | (1) `fetchPrFiles` 增加 github 分支；(2) `scanSuppressionComments` 记录 `firstChangedFile` 并写入响应；(3) UPDATE 事件改为全量扫描 |
+| `SuppressionScanResult`                | 不改字段（firstChangedFile 放在外层响应）                                                                                          |
+| `CodePlateHelper`                      | `getCodePlate` 增加 github 识别                                                                                                    |
+| `GithubHelper` / `GithubPlate`（新增） | GitHub 平台辅助类，参照 `GitCodeHelper`/`GitCodePlate`                                                                             |
+| `SuppressionScanController`            | 响应结构外层新增 `firstChangedFile` 字段                                                                                           |
 
 ---
 
@@ -382,28 +393,28 @@ CREATE TABLE pr_suppression_comment (
 
 #### 用户指定字段（9 项）
 
-| 字段 | 来源 | 说明 |
-|------|------|------|
-| `id` | 用户指定 | 雪花算法主键，分布式唯一 |
-| `repo_url` | 用户指定 | 代码仓链接，与 `repo_info.repo_url` 一致，用于反查 token 和关联 |
-| `pr_number` | 用户指定 | PR/Issue 编号 |
-| `create_time` | 用户指定（"评论创建时间"） | 首次 POST 成功时间 |
-| `update_time` | 用户指定（"修改时间"） | 每次 PATCH 编辑更新 |
-| `file_path` | 用户指定（"文件路径"） | 评论挂载的 PR 第一个修改文件路径 |
-| `suppression_fingerprint` | 用户指定（"注释指纹"） | 本次表格内容的 SHA256，含所有抑制注释的 filePath+lineNumber+toolName+codeSnippet |
-| `tool_name` | 用户指定（"工具名称"） | 本次评论涉及的所有工具集合，逗号分隔 |
-| `comment_id` | 用户指定（"评论id"） | 平台返回的评论 id，用于 PATCH 编辑 |
+| 字段                      | 来源                       | 说明                                                                             |
+| ------------------------- | -------------------------- | -------------------------------------------------------------------------------- |
+| `id`                      | 用户指定                   | 雪花算法主键，分布式唯一                                                         |
+| `repo_url`                | 用户指定                   | 代码仓链接，与 `repo_info.repo_url` 一致，用于反查 token 和关联                  |
+| `pr_number`               | 用户指定                   | PR/Issue 编号                                                                    |
+| `create_time`             | 用户指定（"评论创建时间"） | 首次 POST 成功时间                                                               |
+| `update_time`             | 用户指定（"修改时间"）     | 每次 PATCH 编辑更新                                                              |
+| `file_path`               | 用户指定（"文件路径"）     | 评论挂载的 PR 第一个修改文件路径                                                 |
+| `suppression_fingerprint` | 用户指定（"注释指纹"）     | 本次表格内容的 SHA256，含所有抑制注释的 filePath+lineNumber+toolName+codeSnippet |
+| `tool_name`               | 用户指定（"工具名称"）     | 本次评论涉及的所有工具集合，逗号分隔                                             |
+| `comment_id`              | 用户指定（"评论id"）       | 平台返回的评论 id，用于 PATCH 编辑                                               |
 
 #### 建议补充字段（6 项，待用户确认）
 
-| 字段 | 补充理由 |
-|------|---------|
-| `platform` | repo_url 虽能解析平台但不可靠（私有部署 GitCode 域名多样），显式存 platform 便于按平台查询和路由不同 API |
-| `owner` / `repo` | 冗余字段，避免每次从 repo_url 解析；便于按 owner/repo 维度统计与排查 |
-| `comment_seq` | 同一 PR 同一文件字数超限拆分多条时区分序号，UPDATE 编辑时按序号匹配 |
-| `comment_status` | 追踪评论生命周期（active/edited/deleted/lost），便于异常恢复与清理 |
-| `last_scan_count` | 审计字段，记录本次扫描到的抑制注释总数，便于排查"评论为何拆成 N 条" |
-| `last_commit_sha` | 审计字段，记录触发本次评论的 commit，便于追溯（虽然不按 sha 取增量，但记录 sha 便于问题定位） |
+| 字段              | 补充理由                                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------------------------- |
+| `platform`        | repo_url 虽能解析平台但不可靠（私有部署 GitCode 域名多样），显式存 platform 便于按平台查询和路由不同 API |
+| `owner` / `repo`  | 冗余字段，避免每次从 repo_url 解析；便于按 owner/repo 维度统计与排查                                     |
+| `comment_seq`     | 同一 PR 同一文件字数超限拆分多条时区分序号，UPDATE 编辑时按序号匹配                                      |
+| `comment_status`  | 追踪评论生命周期（active/edited/deleted/lost），便于异常恢复与清理                                       |
+| `last_scan_count` | 审计字段，记录本次扫描到的抑制注释总数，便于排查"评论为何拆成 N 条"                                      |
+| `last_commit_sha` | 审计字段，记录触发本次评论的 commit，便于追溯（虽然不按 sha 取增量，但记录 sha 便于问题定位）            |
 
 ### 4.3 Liquibase changelog
 
@@ -550,32 +561,32 @@ Response: 204
 
 ### 6.4 GitHub 其他接口（第二优先级，本需求不实现但预留）
 
-| 能力 | 接口 |
-|------|------|
-| token 校验 | `GET https://api.github.com/user` |
-| 列出分支 | `GET /repos/{o}/{r}/branches?per_page=100` |
-| 列出 PR 文件 | `GET /repos/{o}/{r}/pulls/{n}/files` |
-| 列出 collaborators | `GET /repos/{o}/{r}/collaborators` |
-| 查询仓库 |  |
+| 能力               | 接口                                       |
+| ------------------ | ------------------------------------------ |
+| token 校验         | `GET https://api.github.com/user`          |
+| 列出分支           | `GET /repos/{o}/{r}/branches?per_page=100` |
+| 列出 PR 文件       | `GET /repos/{o}/{r}/pulls/{n}/files`       |
+| 列出 collaborators | `GET /repos/{o}/{r}/collaborators`         |
+| 查询仓库           |                                            |
 
 ### 6.5 GitHub webhook 与 GitCode webhook 对比表
 
-| 维度 | GitCode | Gitee | GitHub | 一致性 | 适配方式 |
-|------|---------|-------|--------|--------|---------|
-| webhook 路径 | `/hooks/gitcode` | `/hooks/gitee` | `/hooks/github` | 不一致 | 新增端点 |
-| 事件头名 | `X-GitCode-Event` | `X-Gitee-Event` | `X-GitHub-Event` | 不一致 | 按 platform 取头 |
-| 事件 id 头 | `X-GitCode-Delivery` | `X-Gitee-Delivery` | `X-GitHub-Delivery` | 不一致 | 同上 |
-| 签名头 | `X-GitCode-Signature-256` | `X-Gitee-Token` | `X-Hub-Signature-256` | 不一致 | 按 platform 取头 |
-| 签名算法 | HMAC SHA256 | token 明文/MD5 | HMAC SHA256 | GitHub=GitCode | `validateSignature` 通用 |
-| 签名格式 | `sha256=<hex>` | — | `sha256=<hex>` | GitHub=GitCode | `sign.substring(7)` 通用 |
-| PR 事件名 | `Merge Request Hook` | `Merge Request Hook` | `pull_request` | 不一致 | supportedEventTypes 多值 |
-| PR action | `open`/`update` | `open`/`update` | `opened`/`synchronize`/`reopened` | 不一致 | extractAction 适配 |
-| update 标识 | `update_reason=source update` | `action_desc=source_branch_changed` | `action=synchronize` | 不一致 | isValidSourceUpdateReason 适配 |
-| payload 结构 | `object_attributes.iid` | 顶层 `iid` | `pull_request.number` | 不一致 | extractPrInfo 适配 |
-| 仓库信息 | `project.namespace`+`repository.git_http_url` | 同 GitCode | `repository.full_name`+`repository.clone_url` | 不一致 | extractPrInfo 适配 |
-| commit 信息 | `object_attributes.last_commit.id`+`oldrev` | `pull_request.head_sha` | `pull_request.head.sha`+`before` | 不一致 | extractPushCommitShas 适配 |
-| webhook 创建 body | 平铺 `url`/`events` | 平铺 | 嵌套 `config:{url,content_type,secret}`+`events` | 不一致 | createRepoWebhook 适配 |
-| webhook secret | `secret` 字段 | `password` 字段 | `config.secret` 嵌套 | 不一致 | 同上 |
+| 维度              | GitCode                                       | Gitee                               | GitHub                                           | 一致性         | 适配方式                       |
+| ----------------- | --------------------------------------------- | ----------------------------------- | ------------------------------------------------ | -------------- | ------------------------------ |
+| webhook 路径      | `/hooks/gitcode`                              | `/hooks/gitee`                      | `/hooks/github`                                  | 不一致         | 新增端点                       |
+| 事件头名          | `X-GitCode-Event`                             | `X-Gitee-Event`                     | `X-GitHub-Event`                                 | 不一致         | 按 platform 取头               |
+| 事件 id 头        | `X-GitCode-Delivery`                          | `X-Gitee-Delivery`                  | `X-GitHub-Delivery`                              | 不一致         | 同上                           |
+| 签名头            | `X-GitCode-Signature-256`                     | `X-Gitee-Token`                     | `X-Hub-Signature-256`                            | 不一致         | 按 platform 取头               |
+| 签名算法          | HMAC SHA256                                   | token 明文/MD5                      | HMAC SHA256                                      | GitHub=GitCode | `validateSignature` 通用       |
+| 签名格式          | `sha256=<hex>`                                | —                                   | `sha256=<hex>`                                   | GitHub=GitCode | `sign.substring(7)` 通用       |
+| PR 事件名         | `Merge Request Hook`                          | `Merge Request Hook`                | `pull_request`                                   | 不一致         | supportedEventTypes 多值       |
+| PR action         | `open`/`update`                               | `open`/`update`                     | `opened`/`synchronize`/`reopened`                | 不一致         | extractAction 适配             |
+| update 标识       | `update_reason=source update`                 | `action_desc=source_branch_changed` | `action=synchronize`                             | 不一致         | isValidSourceUpdateReason 适配 |
+| payload 结构      | `object_attributes.iid`                       | 顶层 `iid`                          | `pull_request.number`                            | 不一致         | extractPrInfo 适配             |
+| 仓库信息          | `project.namespace`+`repository.git_http_url` | 同 GitCode                          | `repository.full_name`+`repository.clone_url`    | 不一致         | extractPrInfo 适配             |
+| commit 信息       | `object_attributes.last_commit.id`+`oldrev`   | `pull_request.head_sha`             | `pull_request.head.sha`+`before`                 | 不一致         | extractPushCommitShas 适配     |
+| webhook 创建 body | 平铺 `url`/`events`                           | 平铺                                | 嵌套 `config:{url,content_type,secret}`+`events` | 不一致         | createRepoWebhook 适配         |
+| webhook secret    | `secret` 字段                                 | `password` 字段                     | `config.secret` 嵌套                             | 不一致         | 同上                           |
 
 **核心结论**：三者 webhook 机制整体相似（事件头路由 + HMAC 签名），但 payload 结构、事件名、action 语义、webhook 设置 body 格式差异较大，需要逐方法适配。GitHub 与 GitCode 的签名机制完全一致（HmacSHA256 + `sha256=` 前缀），签名校验层可复用。
 

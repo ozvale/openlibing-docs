@@ -1,7 +1,5 @@
 ## 1. Service 层查询路径调整
 
-
-
 - [x] 1.1 抽取平台判断（如 `isFuzzySearchPlatform(accountPlatform)`）：仅 `gitcode` / `gitee` / `openubmc` 返回 true；`uniportal` 返回 false
 
 - [x] 1.2 **uniportal 分支保持原逻辑**：仍调用 `commonService.getUser()`；`errorMsg` 非空时 `failureMessage`；有 `userId` 时走 `queryProjectUserByUserIdLimit`
@@ -10,11 +8,7 @@
 
 - [x] 1.4 无账号筛选时保持原三分流/全量 UNION 行为不变
 
-
-
 ## 2. Mapper SQL 模糊条件（仅三方平台）
-
-
 
 - [x] 2.1 在 `projectUserQueryWithConditions`：当 `info.accountPlatform` 为 gitcode/gitee/openubmc 时，将 `account_login =` 改为 `account_login LIKE CONCAT('%', #{info.accountLogin}, '%')`；uniportal 或无账号条件时保持 `=`
 
@@ -24,11 +18,7 @@
 
 - [x] 2.4 确认排序 tie-breaker 与 `sortColumn`/`sortOrder` 行为不变
 
-
-
 ## 3. 单元测试
-
-
 
 - [x] 3.1 新增用例：gitee 部分 `accountLogin` 走 UNION 模糊路径（mock `queryProjectUserByLimit`）
 
@@ -42,15 +32,10 @@
 
 - [x] 3.6 新增用例：三方模糊筛选 + `sortColumn`/`sortOrder` 正确传入 `QueryProjectUserEntity`
 
-
-
 ## 4. 验证与收尾
-
-
 
 - [x] 4.1 本地执行 `ProjectUserServiceImplTest` 相关用例通过
 
 - [x] 4.2 自检：uniportal 代码路径无 LIKE 模糊；`queryCommitterInfo` 等精确接口未受影响
 
 - [x] 4.3 记录与前端对齐说明：三方平台失焦/回车可模糊筛选；uniportal 仍需完整工号
-

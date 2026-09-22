@@ -16,6 +16,7 @@
 **文件**: `pytest-executor/src/scheduler/env_manager.py`
 
 **实现内容**:
+
 - 在 `_query_k8s_env_status()` 方法中添加 `rejected` 状态检查
 - `status=rejected` 时立即停止重试，返回失败
 
@@ -28,6 +29,7 @@
 **文件**: `pytest-executor/src/scheduler/env_manager.py`
 
 **实现内容**:
+
 - 检查 device 中是否有 `softwares` 参数
 - 若存在 `softwares` 且不为空，检查部署状态
 - 支持状态：
@@ -45,12 +47,14 @@
 **文件**: `pytest-executor/src/scheduler/env_manager.py`
 
 **实现内容**:
+
 - 新增辅助方法 `_check_mount_data_source()`
 - 检查 device 中是否有 `mount_data_source` 参数
 - 若有 `mount_data_source` 但无 `use_nfs=True`，自动补全 `use_nfs=True`
 - 在 `pytest_executor.py` 中检查 `/mnt/weight`、`/mnt/share` 目录存在性
 
-**提交记录**: 
+**提交记录**:
+
 - 相关实现在 `pytest-executor/src/scheduler/env_manager.py` 和 `pytest-executor/src/executor/pytest_executor.py`
 
 ---
@@ -60,12 +64,14 @@
 **文件**: `pytest-executor/src/scheduler/env_manager.py`
 
 **实现内容**:
+
 - 新增辅助方法 `_extract_max_ttl()`
 - 从 device 列表中提取所有 `ttl` 值
 - 取最大值并提升到外层（与 `env_definition` 同级）
 - 将 `ttl` 添加到 API 请求 payload 中
 
-**提交记录**: 
+**提交记录**:
+
 - 相关实现在 `pytest-executor/src/scheduler/env_manager.py`
 
 ---
@@ -75,10 +81,12 @@
 **文件**: `pytest-executor/src/scheduler/env_manager.py`
 
 **实现内容**:
+
 - 使用统一的环境名称格式：`{Config.platform}-{Config.job_unique_id}`
 - 移除了 API 请求中的 `env_name` 参数
 
-**提交记录**: 
+**提交记录**:
+
 - `dd94b44 feat(env_manager): enhance k8s environment allocation`
 - `383e469 fix(env_manager): remove env_name from API payload`
 
@@ -89,6 +97,7 @@
 **文件**: `pytest-testkit/pytest_testkit/lib/common/log/`
 
 **实现内容**:
+
 1. **HTML 日志展示优化**:
    - 修复换行、断行、乱码问题
    - 基于 `logger.tc_step` 记录，支持 step 折叠展开
@@ -107,11 +116,11 @@
 
 ## 实现位置说明
 
-| 任务 | 实际实现位置 | 原设计位置 | 说明 |
-|------|-------------|-----------|------|
-| Task 1 | `pytest-executor/src/scheduler/env_manager.py` | 正确 | - |
-| Task 2 | `pytest-executor/src/scheduler/env_manager.py` | 正确 | - |
-| Task 3 | `pytest-executor/src/scheduler/env_manager.py` | `pytest-testkit/.../allocator.py` | 实现位置调整 |
-| Task 4 | `pytest-executor/src/scheduler/env_manager.py` | `pytest-testkit/.../allocator.py` | 实现位置调整 |
-| Task 5 | `pytest-executor/src/scheduler/env_manager.py` | 正确 | - |
-| Task 6 | `pytest-testkit/pytest_testkit/lib/common/log/` | 正确 | - |
+| 任务   | 实际实现位置                                    | 原设计位置                        | 说明         |
+| ------ | ----------------------------------------------- | --------------------------------- | ------------ |
+| Task 1 | `pytest-executor/src/scheduler/env_manager.py`  | 正确                              | -            |
+| Task 2 | `pytest-executor/src/scheduler/env_manager.py`  | 正确                              | -            |
+| Task 3 | `pytest-executor/src/scheduler/env_manager.py`  | `pytest-testkit/.../allocator.py` | 实现位置调整 |
+| Task 4 | `pytest-executor/src/scheduler/env_manager.py`  | `pytest-testkit/.../allocator.py` | 实现位置调整 |
+| Task 5 | `pytest-executor/src/scheduler/env_manager.py`  | 正确                              | -            |
+| Task 6 | `pytest-testkit/pytest_testkit/lib/common/log/` | 正确                              | -            |

@@ -46,105 +46,105 @@ NodeManageController 是 openlibing-simulation 项目中的核心控制器模块
 
 #### 3.2.1 NodeManageController
 
-| 方法名 | 功能描述 | 参数 | 返回值 |
-|-------|---------|------|-------|
-| saveNodeManageTask | 创建资源调度任务 | NodeManageParamEntity | ResponseEntity |
-| getNodeManageTask | 查询调度任务详情 | simulationTaskId, simulationSceneId | ResponseEntity |
-| getNodeList | 查询任务节点信息 | simulationTaskId, simulationSceneId | ResponseEntity |
-| releaseNodeManageTask | 释放调度任务 | simulationTaskId, executor, simulationSceneId | ResponseEntity |
-| saveNodes | 添加机器 | List\<ServerBasicInfoEntity\> | ResponseEntity |
-| saveScene | 添加场景配置 | SimulationSceneEntity | ResponseEntity |
-| getScene | 获取场景配置 | sceneId | ResponseEntity |
-| deleteScene | 删除场景配置 | sceneId | ResponseEntity |
+| 方法名                | 功能描述         | 参数                                          | 返回值         |
+| --------------------- | ---------------- | --------------------------------------------- | -------------- |
+| saveNodeManageTask    | 创建资源调度任务 | NodeManageParamEntity                         | ResponseEntity |
+| getNodeManageTask     | 查询调度任务详情 | simulationTaskId, simulationSceneId           | ResponseEntity |
+| getNodeList           | 查询任务节点信息 | simulationTaskId, simulationSceneId           | ResponseEntity |
+| releaseNodeManageTask | 释放调度任务     | simulationTaskId, executor, simulationSceneId | ResponseEntity |
+| saveNodes             | 添加机器         | List\<ServerBasicInfoEntity\>                 | ResponseEntity |
+| saveScene             | 添加场景配置     | SimulationSceneEntity                         | ResponseEntity |
+| getScene              | 获取场景配置     | sceneId                                       | ResponseEntity |
+| deleteScene           | 删除场景配置     | sceneId                                       | ResponseEntity |
 
 #### 3.2.2 依赖服务
 
-| 服务名 | 接口 | 用途 |
-|-------|------|------|
+| 服务名            | 接口              | 用途                 |
+| ----------------- | ----------------- | -------------------- |
 | NodeManageService | NodeManageService | 节点管理核心业务逻辑 |
 
 ## 4. 数据模型设计
 
 ### 4.1 NodeManageParamEntity
 
-| 字段名 | 类型 | 含义 | 约束 |
-|-------|------|------|------|
-| simulationTaskId | String | 仿真任务ID | 必填 |
-| productId | String | 产品ID | 可选 |
-| simulationSceneId | String | 仿真场景ID | 可选 |
-| createBy | String | 创建人 | 可选 |
-| pageNo | int | 页码 | 默认1 |
-| pageSize | int | 每页数量 | 默认10 |
+| 字段名            | 类型   | 含义       | 约束   |
+| ----------------- | ------ | ---------- | ------ |
+| simulationTaskId  | String | 仿真任务ID | 必填   |
+| productId         | String | 产品ID     | 可选   |
+| simulationSceneId | String | 仿真场景ID | 可选   |
+| createBy          | String | 创建人     | 可选   |
+| pageNo            | int    | 页码       | 默认1  |
+| pageSize          | int    | 每页数量   | 默认10 |
 
 ### 4.2 ServerBasicInfoEntity
 
-| 字段名 | 类型 | 含义 | 约束 |
-|-------|------|------|------|
-| id | String | 主键ID | 自动生成 |
-| groupId | String | 分组ID | 可选 |
-| ip | String | 服务器IP | 必填 |
-| port | Integer | SSH端口 | 默认22 |
-| user | String | 用户名 | 必填 |
-| password | String | 密码 | 必填 |
-| labId | String | 实验室ID | 可选 |
-| labName | String | 实验室名称 | 可选 |
-| labRegion | String | 实验室区域 | 可选 |
-| bmcIp | String | BMC IP | 可选 |
-| bmcPort | Integer | BMC端口 | 可选 |
-| bmcUser | String | BMC用户名 | 可选 |
-| bmcPassword | String | BMC密码 | 可选 |
-| architecture | String | 架构类型 | 可选 |
-| creator | String | 创建人 | 可选 |
-| tag | String | 标签 | 可选 |
-| cpu | Integer | CPU核数 | 可选 |
-| memory | Integer | 内存大小(GB) | 可选 |
-| createTime | Timestamp | 创建时间 | 自动生成 |
-| lastModifyTime | Timestamp | 最后修改时间 | 自动更新 |
-| usingCount | String | 使用次数 | 可选 |
-| overcommitRatio | double | 超售比例 | 默认1.0 |
-| overcommitCpu | Integer | 超售CPU | 可选 |
-| overcommitMemory | Integer | 超售内存 | 可选 |
-| disk | String | 磁盘大小 | 可选 |
-| usableDisk | String | 可用磁盘 | 可选 |
-| hidevlabTaskId | String | 关联任务ID | 可选 |
-| computingLabServerId | String | 计算实验室服务器ID | 可选 |
-| jumperServer | String | 跳板机 | 可选 |
+| 字段名               | 类型      | 含义               | 约束     |
+| -------------------- | --------- | ------------------ | -------- |
+| id                   | String    | 主键ID             | 自动生成 |
+| groupId              | String    | 分组ID             | 可选     |
+| ip                   | String    | 服务器IP           | 必填     |
+| port                 | Integer   | SSH端口            | 默认22   |
+| user                 | String    | 用户名             | 必填     |
+| password             | String    | 密码               | 必填     |
+| labId                | String    | 实验室ID           | 可选     |
+| labName              | String    | 实验室名称         | 可选     |
+| labRegion            | String    | 实验室区域         | 可选     |
+| bmcIp                | String    | BMC IP             | 可选     |
+| bmcPort              | Integer   | BMC端口            | 可选     |
+| bmcUser              | String    | BMC用户名          | 可选     |
+| bmcPassword          | String    | BMC密码            | 可选     |
+| architecture         | String    | 架构类型           | 可选     |
+| creator              | String    | 创建人             | 可选     |
+| tag                  | String    | 标签               | 可选     |
+| cpu                  | Integer   | CPU核数            | 可选     |
+| memory               | Integer   | 内存大小(GB)       | 可选     |
+| createTime           | Timestamp | 创建时间           | 自动生成 |
+| lastModifyTime       | Timestamp | 最后修改时间       | 自动更新 |
+| usingCount           | String    | 使用次数           | 可选     |
+| overcommitRatio      | double    | 超售比例           | 默认1.0  |
+| overcommitCpu        | Integer   | 超售CPU            | 可选     |
+| overcommitMemory     | Integer   | 超售内存           | 可选     |
+| disk                 | String    | 磁盘大小           | 可选     |
+| usableDisk           | String    | 可用磁盘           | 可选     |
+| hidevlabTaskId       | String    | 关联任务ID         | 可选     |
+| computingLabServerId | String    | 计算实验室服务器ID | 可选     |
+| jumperServer         | String    | 跳板机             | 可选     |
 
 ### 4.3 SimulationSceneEntity
 
-| 字段名 | 类型 | 含义 | 约束 |
-|-------|------|------|------|
-| id | String | 主键ID | 自动生成 |
-| name | String | 场景名称 | 必填 |
-| description | String | 场景描述 | 可选 |
-| serverTags | String | 服务器标签 | 可选 |
-| deployTags | String | 部署标签 | 可选 |
-| creator | String | 创建人 | 可选 |
-| createTime | String | 创建时间 | 自动生成 |
+| 字段名         | 类型   | 含义         | 约束     |
+| -------------- | ------ | ------------ | -------- |
+| id             | String | 主键ID       | 自动生成 |
+| name           | String | 场景名称     | 必填     |
+| description    | String | 场景描述     | 可选     |
+| serverTags     | String | 服务器标签   | 可选     |
+| deployTags     | String | 部署标签     | 可选     |
+| creator        | String | 创建人       | 可选     |
+| createTime     | String | 创建时间     | 自动生成 |
 | lastModifyTime | String | 最后修改时间 | 自动更新 |
 
 ### 4.4 ResponseEntity
 
-| 字段名 | 类型 | 含义 | 约束 |
-|-------|------|------|------|
-| code | Integer | 响应码 | 必填 |
-| message | String | 响应消息 | 必填 |
-| data | Object | 响应数据 | 可选 |
+| 字段名  | 类型    | 含义     | 约束 |
+| ------- | ------- | -------- | ---- |
+| code    | Integer | 响应码   | 必填 |
+| message | String  | 响应消息 | 必填 |
+| data    | Object  | 响应数据 | 可选 |
 
 ## 5. API 接口设计
 
 ### 5.1 接口总览
 
-| API路径 | HTTP方法 | 功能描述 |
-|--------|---------|---------|
-| /simulation/v2/node/manage/task | POST | 创建资源调度任务 |
-| /simulation/v2/node/manage/task | GET | 查询调度任务详情 |
-| /simulation/v2/node/manage/task | DELETE | 释放调度任务 |
-| /simulation/v2/node/manage/task/node | GET | 查询任务节点信息 |
-| /simulation/v2/node/manage/node | POST | 添加机器 |
-| /simulation/v2/node/manage/scene | POST | 添加场景配置 |
-| /simulation/v2/node/manage/scene | GET | 获取场景配置 |
-| /simulation/v2/node/manage/scene | DELETE | 删除场景配置 |
+| API路径                              | HTTP方法 | 功能描述         |
+| ------------------------------------ | -------- | ---------------- |
+| /simulation/v2/node/manage/task      | POST     | 创建资源调度任务 |
+| /simulation/v2/node/manage/task      | GET      | 查询调度任务详情 |
+| /simulation/v2/node/manage/task      | DELETE   | 释放调度任务     |
+| /simulation/v2/node/manage/task/node | GET      | 查询任务节点信息 |
+| /simulation/v2/node/manage/node      | POST     | 添加机器         |
+| /simulation/v2/node/manage/scene     | POST     | 添加场景配置     |
+| /simulation/v2/node/manage/scene     | GET      | 获取场景配置     |
+| /simulation/v2/node/manage/scene     | DELETE   | 删除场景配置     |
 
 ### 5.2 接口详细设计
 
@@ -180,31 +180,31 @@ NodeManageController 是 openlibing-simulation 项目中的核心控制器模块
 - **路径**: `GET /simulation/v2/node/manage/task`
 - **功能**: 查询调度任务详情
 - **请求参数**:
-  | 参数名 | 类型 | 必填 |
-  |-------|------|------|
-  | simulationTaskId | String | 是 |
-  | simulationSceneId | String | 是 |
+  | 参数名            | 类型   | 必填 |
+  | ----------------- | ------ | ---- |
+  | simulationTaskId  | String | 是   |
+  | simulationSceneId | String | 是   |
 
 #### 5.2.3 查询任务节点信息
 
 - **路径**: `GET /simulation/v2/node/manage/task/node`
 - **功能**: 查询任务节点列表
 - **请求参数**:
-  | 参数名 | 类型 | 必填 |
-  |-------|------|------|
-  | simulationTaskId | String | 是 |
-  | simulationSceneId | String | 否 |
+  | 参数名            | 类型   | 必填 |
+  | ----------------- | ------ | ---- |
+  | simulationTaskId  | String | 是   |
+  | simulationSceneId | String | 否   |
 
 #### 5.2.4 释放调度任务
 
 - **路径**: `DELETE /simulation/v2/node/manage/task`
 - **功能**: 释放资源调度任务
 - **请求参数**:
-  | 参数名 | 类型 | 必填 |
-  |-------|------|------|
-  | simulationTaskId | String | 是 |
-  | simulationSceneId | String | 否 |
-  | executor | String | 是 |
+  | 参数名            | 类型   | 必填 |
+  | ----------------- | ------ | ---- |
+  | simulationTaskId  | String | 是   |
+  | simulationSceneId | String | 否   |
+  | executor          | String | 是   |
 
 #### 5.2.5 添加机器
 
@@ -232,18 +232,18 @@ NodeManageController 是 openlibing-simulation 项目中的核心控制器模块
 - **路径**: `GET /simulation/v2/node/manage/scene`
 - **功能**: 获取场景配置详情
 - **请求参数**:
-  | 参数名 | 类型 | 必填 |
-  |-------|------|------|
-  | sceneId | String | 是 |
+  | 参数名  | 类型   | 必填 |
+  | ------- | ------ | ---- |
+  | sceneId | String | 是   |
 
 #### 5.2.8 删除场景配置
 
 - **路径**: `DELETE /simulation/v2/node/manage/scene`
 - **功能**: 删除场景配置
 - **请求参数**:
-  | 参数名 | 类型 | 必填 |
-  |-------|------|------|
-  | sceneId | String | 是 |
+  | 参数名  | 类型   | 必填 |
+  | ------- | ------ | ---- |
+  | sceneId | String | 是   |
 
 ## 6. 业务流程设计
 
@@ -275,60 +275,60 @@ NodeManageController 是 openlibing-simulation 项目中的核心控制器模块
 
 ### 7.1 t_server_basic_info
 
-| 字段名 | 类型 | 约束 | 说明 |
-|-------|------|------|------|
-| id | VARCHAR(64) | PRIMARY KEY | 主键ID |
-| group_id | VARCHAR(64) | NULL | 分组ID |
-| ip | VARCHAR(64) | NOT NULL | 服务器IP |
-| port | INT | DEFAULT 22 | SSH端口 |
-| user | VARCHAR(64) | NOT NULL | 用户名 |
-| password | VARCHAR(255) | NOT NULL | 密码 |
-| lab_id | VARCHAR(64) | NULL | 实验室ID |
-| lab_name | VARCHAR(128) | NULL | 实验室名称 |
-| architecture | VARCHAR(32) | NULL | 架构类型 |
-| creator | VARCHAR(64) | NULL | 创建人 |
-| cpu | INT | NULL | CPU核数 |
-| memory | INT | NULL | 内存大小 |
-| create_time | DATETIME | NOT NULL | 创建时间 |
-| last_modify_time | DATETIME | NOT NULL | 最后修改时间 |
+| 字段名           | 类型         | 约束        | 说明         |
+| ---------------- | ------------ | ----------- | ------------ |
+| id               | VARCHAR(64)  | PRIMARY KEY | 主键ID       |
+| group_id         | VARCHAR(64)  | NULL        | 分组ID       |
+| ip               | VARCHAR(64)  | NOT NULL    | 服务器IP     |
+| port             | INT          | DEFAULT 22  | SSH端口      |
+| user             | VARCHAR(64)  | NOT NULL    | 用户名       |
+| password         | VARCHAR(255) | NOT NULL    | 密码         |
+| lab_id           | VARCHAR(64)  | NULL        | 实验室ID     |
+| lab_name         | VARCHAR(128) | NULL        | 实验室名称   |
+| architecture     | VARCHAR(32)  | NULL        | 架构类型     |
+| creator          | VARCHAR(64)  | NULL        | 创建人       |
+| cpu              | INT          | NULL        | CPU核数      |
+| memory           | INT          | NULL        | 内存大小     |
+| create_time      | DATETIME     | NOT NULL    | 创建时间     |
+| last_modify_time | DATETIME     | NOT NULL    | 最后修改时间 |
 
 ### 7.2 t_server_task
 
-| 字段名 | 类型 | 约束 | 说明 |
-|-------|------|------|------|
-| id | VARCHAR(64) | PRIMARY KEY | 主键ID |
-| simulation_task_id | VARCHAR(64) | NOT NULL | 仿真任务ID |
-| simulation_scene_id | VARCHAR(64) | NULL | 仿真场景ID |
-| server_id | VARCHAR(64) | FOREIGN KEY | 服务器ID |
-| status | VARCHAR(32) | NOT NULL | 任务状态 |
-| task_type | VARCHAR(32) | NULL | 任务类型 |
-| task_param | TEXT | NULL | 任务参数 |
-| executor | VARCHAR(64) | NULL | 执行者 |
-| create_time | DATETIME | NOT NULL | 创建时间 |
-| start_time | DATETIME | NULL | 开始时间 |
-| end_time | DATETIME | NULL | 结束时间 |
+| 字段名              | 类型        | 约束        | 说明       |
+| ------------------- | ----------- | ----------- | ---------- |
+| id                  | VARCHAR(64) | PRIMARY KEY | 主键ID     |
+| simulation_task_id  | VARCHAR(64) | NOT NULL    | 仿真任务ID |
+| simulation_scene_id | VARCHAR(64) | NULL        | 仿真场景ID |
+| server_id           | VARCHAR(64) | FOREIGN KEY | 服务器ID   |
+| status              | VARCHAR(32) | NOT NULL    | 任务状态   |
+| task_type           | VARCHAR(32) | NULL        | 任务类型   |
+| task_param          | TEXT        | NULL        | 任务参数   |
+| executor            | VARCHAR(64) | NULL        | 执行者     |
+| create_time         | DATETIME    | NOT NULL    | 创建时间   |
+| start_time          | DATETIME    | NULL        | 开始时间   |
+| end_time            | DATETIME    | NULL        | 结束时间   |
 
 ### 7.3 t_simulation_scene
 
-| 字段名 | 类型 | 约束 | 说明 |
-|-------|------|------|------|
-| id | VARCHAR(64) | PRIMARY KEY | 主键ID |
-| name | VARCHAR(128) | NOT NULL | 场景名称 |
-| description | VARCHAR(512) | NULL | 场景描述 |
-| server_tags | VARCHAR(255) | NULL | 服务器标签 |
-| deploy_tags | VARCHAR(255) | NULL | 部署标签 |
-| creator | VARCHAR(64) | NULL | 创建人 |
-| create_time | DATETIME | NOT NULL | 创建时间 |
-| last_modify_time | DATETIME | NOT NULL | 最后修改时间 |
+| 字段名           | 类型         | 约束        | 说明         |
+| ---------------- | ------------ | ----------- | ------------ |
+| id               | VARCHAR(64)  | PRIMARY KEY | 主键ID       |
+| name             | VARCHAR(128) | NOT NULL    | 场景名称     |
+| description      | VARCHAR(512) | NULL        | 场景描述     |
+| server_tags      | VARCHAR(255) | NULL        | 服务器标签   |
+| deploy_tags      | VARCHAR(255) | NULL        | 部署标签     |
+| creator          | VARCHAR(64)  | NULL        | 创建人       |
+| create_time      | DATETIME     | NOT NULL    | 创建时间     |
+| last_modify_time | DATETIME     | NOT NULL    | 最后修改时间 |
 
 ## 8. 错误处理设计
 
-| 错误码 | 错误信息 | 触发场景 |
-|-------|---------|---------|
-| 400 | 参数校验失败 | 请求参数缺失或格式错误 |
-| 404 | 任务/场景/节点不存在 | 传入的ID不存在于数据库 |
-| 409 | 资源冲突 | 节点已被占用或任务状态不允许操作 |
-| 500 | 服务器内部错误 | 数据库操作失败或业务逻辑异常 |
+| 错误码 | 错误信息             | 触发场景                         |
+| ------ | -------------------- | -------------------------------- |
+| 400    | 参数校验失败         | 请求参数缺失或格式错误           |
+| 404    | 任务/场景/节点不存在 | 传入的ID不存在于数据库           |
+| 409    | 资源冲突             | 节点已被占用或任务状态不允许操作 |
+| 500    | 服务器内部错误       | 数据库操作失败或业务逻辑异常     |
 
 ## 9. 安全设计
 

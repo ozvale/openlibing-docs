@@ -25,41 +25,41 @@ MindClusterLicenseSchedule (Cron Trigger)
 
 ### MindClusterLicenseSchedule
 
-| 属性 | 说明 |
-|------|------|
-| 类注解 | `@EnableAsync` `@EnableScheduling` `@Component` |
-| cron | `${job.cron.auto.mindcluster.binary.license.task:0 0/1 * * * ?}` |
-| 锁键 | `autoMindClusterLicenseSchedule_<env>` |
-| 锁 TTL | 5 秒 |
+| 属性   | 说明                                                             |
+| ------ | ---------------------------------------------------------------- |
+| 类注解 | `@EnableAsync` `@EnableScheduling` `@Component`                  |
+| cron   | `${job.cron.auto.mindcluster.binary.license.task:0 0/1 * * * ?}` |
+| 锁键   | `autoMindClusterLicenseSchedule_<env>`                           |
+| 锁 TTL | 5 秒                                                             |
 
 **依赖注入**：
 
-| 字段 | 类型 | 注入方式 |
-|------|------|----------|
-| `env` | `String` | `@Value("${spring.profiles.active}")` |
-| `binaryLicenseEnterUtils` | `BinaryLicenseEnterUtils` | `@Autowired` |
-| `lockService` | `DistributedLockService` | `@Resource` |
-| `openlibingSbomClient` | `OpenlibingSbomClient` | `@Autowired` |
+| 字段                      | 类型                      | 注入方式                              |
+| ------------------------- | ------------------------- | ------------------------------------- |
+| `env`                     | `String`                  | `@Value("${spring.profiles.active}")` |
+| `binaryLicenseEnterUtils` | `BinaryLicenseEnterUtils` | `@Autowired`                          |
+| `lockService`             | `DistributedLockService`  | `@Resource`                           |
+| `openlibingSbomClient`    | `OpenlibingSbomClient`    | `@Autowired`                          |
 
 ### MindClusterBinaryLicenseDto
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| version | String | 版本号 |
+| 字段        | 类型   | 说明     |
+| ----------- | ------ | -------- |
+| version     | String | 版本号   |
 | productName | String | 产品名称 |
-| os | String | 操作系统 |
-| arch | String | 架构 |
-| buildFrom | String | 构建来源 |
+| os          | String | 操作系统 |
+| arch        | String | 架构     |
+| buildFrom   | String | 构建来源 |
 
 注解：`@Data` `@NoArgsConstructor` `@AllArgsConstructor`
 
 ### OpenlibingSbomClient 接口
 
-| 方法 | HTTP | 路径 | 参数 | 返回 |
-|------|------|------|------|------|
-| `queryProductConfig(productType)` | GET | `/sbom-api/queryProductConfig` | `productType` (query) | `ResponseEntity` |
-| `queryProduct(productType, attributes)` | POST | `/sbom-api/queryProduct` | `productType` (query), `attributes` (body) | `ResponseEntity` |
-| `exportSbom(binaryName, format, version, type)` | GET | `/sbom-api/exportSbom` | 4 个 query 参数 | `byte[]` |
+| 方法                                            | HTTP | 路径                           | 参数                                       | 返回             |
+| ----------------------------------------------- | ---- | ------------------------------ | ------------------------------------------ | ---------------- |
+| `queryProductConfig(productType)`               | GET  | `/sbom-api/queryProductConfig` | `productType` (query)                      | `ResponseEntity` |
+| `queryProduct(productType, attributes)`         | POST | `/sbom-api/queryProduct`       | `productType` (query), `attributes` (body) | `ResponseEntity` |
+| `exportSbom(binaryName, format, version, type)` | GET  | `/sbom-api/exportSbom`         | 4 个 query 参数                            | `byte[]`         |
 
 ### BinaryLicenseEnterUtils 关键方法
 
@@ -106,10 +106,10 @@ MindClusterLicenseSchedule (Cron Trigger)
 
 ### 涉及数据库表
 
-| 表 | 写入方法 | 说明 |
-|----|----------|------|
-| `tbl_binary_pro_info` | `enter()` | 二进制主包信息 |
-| `tbl_binary_dept_info` | `enter()` | 二进制依赖关系 |
+| 表                       | 写入方法   | 说明             |
+| ------------------------ | ---------- | ---------------- |
+| `tbl_binary_pro_info`    | `enter()`  | 二进制主包信息   |
+| `tbl_binary_dept_info`   | `enter()`  | 二进制依赖关系   |
 | `tbl_license_compliance` | `enter2()` | 许可证合规性记录 |
 
 ### 写入幂等性
@@ -150,21 +150,21 @@ autoMindClusterLicenseSchedule()
 
 ## Configuration
 
-| 配置项 | 默认值 | 说明 |
-|--------|--------|------|
-| `job.cron.auto.mindcluster.binary.license.task` | `0 0/1 * * * ?` | 定时任务 cron 表达式 |
-| `spring.profiles.active` | - | 环境标识，用于锁键隔离 |
-| `sca.to.sbom.url` | - | SBOM 平台地址 |
+| 配置项                                          | 默认值          | 说明                   |
+| ----------------------------------------------- | --------------- | ---------------------- |
+| `job.cron.auto.mindcluster.binary.license.task` | `0 0/1 * * * ?` | 定时任务 cron 表达式   |
+| `spring.profiles.active`                        | -               | 环境标识，用于锁键隔离 |
+| `sca.to.sbom.url`                               | -               | SBOM 平台地址          |
 
 ## Error Handling Matrix
 
-| 异常场景 | 处理方式 | 日志级别 | 是否中断循环 |
-|----------|----------|----------|-------------|
-| 获取锁失败 | return | INFO | 终止整轮 |
-| versionList 为空 | return | 无 | 终止整轮 |
-| queryProduct 返回 null / 非200 / data 为 null | continue | WARN | 跳过当前版本 |
-| data.name 为空 | continue | WARN | 跳过当前版本 |
-| getLicenseFromSbom 返回空 | continue | 无 | 跳过当前版本 |
-| JSON 解析异常 (JsonProcessingException) | catch + continue | ERROR | 跳过当前版本 |
-| RuntimeException | catch + continue | ERROR | 跳过当前版本 |
-| DataAccessException (enter/enter2 内部) | catch 内部处理 | ERROR | 不中断，但当前版本数据可能不完整 |
+| 异常场景                                      | 处理方式         | 日志级别 | 是否中断循环                     |
+| --------------------------------------------- | ---------------- | -------- | -------------------------------- |
+| 获取锁失败                                    | return           | INFO     | 终止整轮                         |
+| versionList 为空                              | return           | 无       | 终止整轮                         |
+| queryProduct 返回 null / 非200 / data 为 null | continue         | WARN     | 跳过当前版本                     |
+| data.name 为空                                | continue         | WARN     | 跳过当前版本                     |
+| getLicenseFromSbom 返回空                     | continue         | 无       | 跳过当前版本                     |
+| JSON 解析异常 (JsonProcessingException)       | catch + continue | ERROR    | 跳过当前版本                     |
+| RuntimeException                              | catch + continue | ERROR    | 跳过当前版本                     |
+| DataAccessException (enter/enter2 内部)       | catch 内部处理   | ERROR    | 不中断，但当前版本数据可能不完整 |

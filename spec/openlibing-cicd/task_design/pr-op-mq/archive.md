@@ -2,13 +2,13 @@
 
 ## 归档信息
 
-| 项目 | 内容 |
-|------|------|
+| 项目     | 内容                                                                                         |
+| -------- | -------------------------------------------------------------------------------------------- |
 | 需求名称 | reflashPrInfo 异步化：通过 RabbitMQ 解耦 PR 流水线三件外部 API 调用 + 限流/超时 30s 延迟重试 |
-| 业务仓 | openlibing-cicd |
-| 开发分支 | master-pr-mq |
-| 流程模式 | Standard |
-| 归档日期 | 2026-07-30 |
+| 业务仓   | openlibing-cicd                                                                              |
+| 开发分支 | master-pr-mq                                                                                 |
+| 流程模式 | Standard                                                                                     |
+| 归档日期 | 2026-07-30                                                                                   |
 
 ## 关联
 
@@ -25,11 +25,11 @@
 
 ## 交付历程
 
-| commit | 说明 |
-|--------|------|
+| commit      | 说明                                                                                                        |
+| ----------- | ----------------------------------------------------------------------------------------------------------- |
 | `a76e3b87a` | feat(pr-op-mq): 新建 PR 操作异步化 MQ 链路（主队列 + 30s 延迟队列 + Consumer + Producer + 脱敏工具 + 单测） |
-| `2441d29b8` | fix(security): 启用 fastjson 1.x Parser safe mode（`-Dfastjson.parser.safeMode=true`） |
-| `43cc75ba6` | fix(rabbitmq): 修复 MQ 队列配置细节 |
+| `2441d29b8` | fix(security): 启用 fastjson 1.x Parser safe mode（`-Dfastjson.parser.safeMode=true`）                      |
+| `43cc75ba6` | fix(rabbitmq): 修复 MQ 队列配置细节                                                                         |
 
 ## 用户自测反馈
 
@@ -40,14 +40,14 @@
 
 ## 最终验证
 
-| 项 | 结果 |
-|----|------|
-| 业务代码修改 | ✅ 3 个 commit 在 `master-pr-mq` 分支 |
-| 单元测试 | ✅ `PrOpEventConsumerTest` 7 个用例 + `MessageMaskUtilsTest` 通过 |
-| Pre-commit 质量门禁 | ✅ 编译 / 单测 / 覆盖率 / 格式化 / 静态分析全部通过 |
-| 业务 PR | ⏳ 用户尚未触发 Phase 4（业务 PR 提交） |
-| 用户 dev 自测 | ✅ 用户确认通过 |
-| docs PR | ⏳ 本次提交（target=master） |
+| 项                  | 结果                                                              |
+| ------------------- | ----------------------------------------------------------------- |
+| 业务代码修改        | ✅ 3 个 commit 在 `master-pr-mq` 分支                             |
+| 单元测试            | ✅ `PrOpEventConsumerTest` 7 个用例 + `MessageMaskUtilsTest` 通过 |
+| Pre-commit 质量门禁 | ✅ 编译 / 单测 / 覆盖率 / 格式化 / 静态分析全部通过               |
+| 业务 PR             | ⏳ 用户尚未触发 Phase 4（业务 PR 提交）                           |
+| 用户 dev 自测       | ✅ 用户确认通过                                                   |
+| docs PR             | ⏳ 本次提交（target=master）                                      |
 
 ## 设计偏差与取舍
 

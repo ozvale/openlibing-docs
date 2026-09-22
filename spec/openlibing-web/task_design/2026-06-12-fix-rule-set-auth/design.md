@@ -10,12 +10,12 @@
 
 ### 具体变更
 
-| 文件 | 变更内容 |
-|------|---------|
-| `RulesHome.vue` | 删除 `checkAdmin` 函数 |
-| `RulesHome.vue` | 删除 `checkAuthCommunity` 导入 |
-| `RulesHome.vue` | 删除 `ElMessage` 导入 |
-| `RulesHome.vue` | `isAdmin` 默认值从 `false` 改为 `true` |
+| 文件            | 变更内容                                   |
+| --------------- | ------------------------------------------ |
+| `RulesHome.vue` | 删除 `checkAdmin` 函数                     |
+| `RulesHome.vue` | 删除 `checkAuthCommunity` 导入             |
+| `RulesHome.vue` | 删除 `ElMessage` 导入                      |
+| `RulesHome.vue` | `isAdmin` 默认值从 `false` 改为 `true`     |
 | `RulesHome.vue` | watch 回调中移除 `await checkAdmin()` 调用 |
 
 ## 3. 影响范围

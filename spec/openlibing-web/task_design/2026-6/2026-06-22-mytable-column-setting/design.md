@@ -100,13 +100,13 @@
 
 ## Risks / Trade-offs
 
-| 风险 | 缓解 |
-|------|------|
+| 风险                                                       | 缓解                                                                       |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `initOptions()` 清空所有 filter dropdown，不仅是 hidden 列 | 可接受：确认列配置后用户预期为「应用新视图」；visible 列 filter 需重新选择 |
-| 多 Tab 页面 storageKey 冲突 | 每 Tab/表格独立 `storageKey`（如 `cve-term-overdue-warning`） |
-| Options API 页面（cveData）与 Composition API 混用 | Composable 可在 setup 中调用，spread 返回值到 setup return |
-| `columns.js` 未标 `defaultVisible` | 默认全显示，与产品决策一致 |
-| localStorage 配额或隐私模式失败 | try/catch 静默降级，仍可用但不持久化 |
+| 多 Tab 页面 storageKey 冲突                                | 每 Tab/表格独立 `storageKey`（如 `cve-term-overdue-warning`）              |
+| Options API 页面（cveData）与 Composition API 混用         | Composable 可在 setup 中调用，spread 返回值到 setup return                 |
+| `columns.js` 未标 `defaultVisible`                         | 默认全显示，与产品决策一致                                                 |
+| localStorage 配额或隐私模式失败                            | try/catch 静默降级，仍可用但不持久化                                       |
 
 ## Migration Plan
 

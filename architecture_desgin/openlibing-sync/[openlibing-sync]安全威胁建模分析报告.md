@@ -10,13 +10,13 @@
 
 ## 文档信息与元数据
 
-| 字段 | 值 |
-| --- | --- |
-| 分析模型 | DeepSeek-V4-Flash（threat-model-analyst skill 驱动）；补充 3 项缺口（sync Python 采集脚本、Dockerfile 构建供应链完整性、镜像 SBOM/cosign/seccomp）证据合并自 MiniMax-M3 独立分析报告，本仓相关项为 FIND-33/FIND-34（Python 脚本）与 FIND-35（跨仓构建供应链） |
-| 分析基线类型 | 远程仓主干分支（git worktree 独立检出，detached HEAD，分析完成后已清理） |
-| 仓库 | `openlibing-sync`，远程主干 `origin/master`，HEAD `ccf875a` |
-| 分析范围 | 本仓源码 + 配置 + 部署脚本 + CI 工作流 + Python 采集脚本；信任边界证据来自 `openlibing-gateway`/`openlibing-common` 相关代码与 docs 记录 |
-| 输出位置（归档） | `openlibing-docs/architecture_desgin/openlibing-sync/[openlibing-sync]安全威胁建模分析报告.md`（PR 合入主仓 master 后生效） |
+| 字段             | 值                                                                                                                                                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 分析模型         | DeepSeek-V4-Flash（threat-model-analyst skill 驱动）；补充 3 项缺口（sync Python 采集脚本、Dockerfile 构建供应链完整性、镜像 SBOM/cosign/seccomp）证据合并自 MiniMax-M3 独立分析报告，本仓相关项为 FIND-33/FIND-34（Python 脚本）与 FIND-35（跨仓构建供应链） |
+| 分析基线类型     | 远程仓主干分支（git worktree 独立检出，detached HEAD，分析完成后已清理）                                                                                                                                                                                      |
+| 仓库             | `openlibing-sync`，远程主干 `origin/master`，HEAD `ccf875a`                                                                                                                                                                                                   |
+| 分析范围         | 本仓源码 + 配置 + 部署脚本 + CI 工作流 + Python 采集脚本；信任边界证据来自 `openlibing-gateway`/`openlibing-common` 相关代码与 docs 记录                                                                                                                      |
+| 输出位置（归档） | `openlibing-docs/architecture_desgin/openlibing-sync/[openlibing-sync]安全威胁建模分析报告.md`（PR 合入主仓 master 后生效）                                                                                                                                   |
 
 ---
 
@@ -34,9 +34,9 @@ OpenLibing 运营域 `openlibing-sync` 仓（远程主干基线）的**工程化
 
 ### 1.2 威胁计数总览（sync）
 
-| 仓库 | Tier 1 | Tier 2 | Tier 3 | 发现合计 | 最突出弱点 |
-| --- | --- | --- | --- | --- | --- |
-| openlibing-sync | 1 | 4 | 5 | 10 | 对外数据写入接口无认证（可直接写 Doris/OBS）+ Python 采集脚本审查 |
+| 仓库            | Tier 1 | Tier 2 | Tier 3 | 发现合计 | 最突出弱点                                                        |
+| --------------- | ------ | ------ | ------ | -------- | ----------------------------------------------------------------- |
+| openlibing-sync | 1      | 4      | 5      | 10       | 对外数据写入接口无认证（可直接写 Doris/OBS）+ Python 采集脚本审查 |
 
 > 注：FIND-01（跨仓系统性发现：服务端零认证 + 限流死代码）统计口径上记入本仓行（Tier 2）；FIND-18 为本仓 **Tier 1** 发现（全体系唯一）；FIND-33/FIND-34 为本仓 Tier 3 补充发现；FIND-35（跨仓构建供应链完整性）单列"跨仓"行，详见第四章。
 
@@ -140,26 +140,26 @@ flowchart LR
 
 **信任边界说明（sync 视角）：**
 
-| 边界 | 含义 | 关键事实 |
-| --- | --- | --- |
-| `External` | 浏览器、第三方应用 | **第三方直连 sync 数据接入（无用户态校验）**；员工经网关 |
-| `Perimeter` | 网关边界 | AuthFilter 是唯一认证执行点（[AuthFilter.java](file:///c:/w30060144/develop/repositories/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java)）；**sync 数据接入端点未见网关用户态校验证据** |
-| `SiblingServices` | ops / metric / ops-web | 同信任域；Doris 为共享数据存储 |
-| `SyncContext` | sync 本仓 | ingest/upload 零认证（Tier 1）；XXL-Job executor :10000 accessToken 强校验 |
-| `DataStorage` | MySQL / Doris | sync 动态 `INSERT` 直写 Doris；连接串由 Apollo 配置中心下发 |
-| `ExternalServices` | GitCode / 云 AI / 华为云 OBS | 出站调用；OBS AK/SK 静态配置（`obs.*` 配置集） |
+| 边界               | 含义                         | 关键事实                                                                                                                                                                                                                                    |
+| ------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `External`         | 浏览器、第三方应用           | **第三方直连 sync 数据接入（无用户态校验）**；员工经网关                                                                                                                                                                                    |
+| `Perimeter`        | 网关边界                     | AuthFilter 是唯一认证执行点（[AuthFilter.java](file:///c:/w30060144/develop/repositories/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java)）；**sync 数据接入端点未见网关用户态校验证据** |
+| `SiblingServices`  | ops / metric / ops-web       | 同信任域；Doris 为共享数据存储                                                                                                                                                                                                              |
+| `SyncContext`      | sync 本仓                    | ingest/upload 零认证（Tier 1）；XXL-Job executor :10000 accessToken 强校验                                                                                                                                                                  |
+| `DataStorage`      | MySQL / Doris                | sync 动态 `INSERT` 直写 Doris；连接串由 Apollo 配置中心下发                                                                                                                                                                                 |
+| `ExternalServices` | GitCode / 云 AI / 华为云 OBS | 出站调用；OBS AK/SK 静态配置（`obs.*` 配置集）                                                                                                                                                                                              |
 
 ### 2.4 跨仓信任边界与攻击路径（sync 相关）
 
 > 本单仓版保留跨仓视角，便于定位 sync 在体系中的受信位置与风险传导。
 
-| 跨仓关系 | 信任方向 | 风险传导路径 | 本仓受影响威胁 |
-| --- | --- | --- | --- |
-| sync → Doris（共享，写） | 写 | **Tier 1 零认证 ingest 匿名直写 Doris → ops/metric 查询/统计读到被污染指标**（脏数据污染运营结论，全体系最直接的跨仓投毒路径） | T23/T24/T27 |
-| sync → OBS | 写 | upload `archivePath` 由调用方控制，越权对象键/前缀 → 污染 OBS 存储或覆盖文件 | T29 |
-| sync ↔ gateway | 部分信任 | sync 数据接入端点绕过网关用户态校验 → 匿名可达 | T23 |
-| sync → GitCode API / 云 AI | 出站 | 采集/汇总 GitCode 数据；凭据生命周期治理（Python 采集脚本 token） | T40/T41 |
-| 兄弟仓（ops/metric） | 同信任域 | 任一仓被攻破可横向移动；**ops/metric 读 Doris 的结论受 sync 写入质量影响** | T24 |
+| 跨仓关系                   | 信任方向 | 风险传导路径                                                                                                                   | 本仓受影响威胁 |
+| -------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+| sync → Doris（共享，写）   | 写       | **Tier 1 零认证 ingest 匿名直写 Doris → ops/metric 查询/统计读到被污染指标**（脏数据污染运营结论，全体系最直接的跨仓投毒路径） | T23/T24/T27    |
+| sync → OBS                 | 写       | upload `archivePath` 由调用方控制，越权对象键/前缀 → 污染 OBS 存储或覆盖文件                                                   | T29            |
+| sync ↔ gateway             | 部分信任 | sync 数据接入端点绕过网关用户态校验 → 匿名可达                                                                                 | T23            |
+| sync → GitCode API / 云 AI | 出站     | 采集/汇总 GitCode 数据；凭据生命周期治理（Python 采集脚本 token）                                                              | T40/T41        |
+| 兄弟仓（ops/metric）       | 同信任域 | 任一仓被攻破可横向移动；**ops/metric 读 Doris 的结论受 sync 写入质量影响**                                                     | T24            |
 
 ---
 
@@ -167,30 +167,30 @@ flowchart LR
 
 ### 3.1 组件与攻击面
 
-| 组件 ID | 锚点（证据文件） | 暴露面 |
-| --- | --- | --- |
-| DataIngestController | `api/controller/DataIngestController.java` | `POST /api/data/ingest`（context path `/sync`，即 `/sync/api/data/ingest`）第三方数据接入，**零认证** |
-| TestCaseDataController | `api/controller/TestCaseDataController.java` | `POST testcase/metadata/upload` multipart 上传（即 `/sync/testcase/metadata/upload`），**零认证** |
-| DataIngestServiceImpl | `app/service/thirdapi/impl/DataIngestServiceImpl.java` | 模型存在性/启用/必填字段校验 → `dynamicDorisService.dynamicInsert` 直写 Doris |
-| DynamicDorisService + Mapper | `domain/service/thirdapi/impl/DynamicDorisServiceImpl.java` + `resources/mapper/DynamicDorisMapper.xml` | 动态 `INSERT INTO openlibing.${tableName}(${col}) VALUES(#{val})`，列名白名单 + 值参数化 |
-| ObsUtilClient | `infrastructure/client/obs/ObsUtilClient.java` | OBS 上传（`putObject` / `uploadFile`），静态 AK/SK 经 `obs.*` 配置集下发 |
-| XxlJobExecutors | `domain/service/pipeline/job/*` | 24 个 XXL-Job handler（含 5 个已弃用）；executor `openlibing-sync-executor` :10000 |
-| HealthController | `api/controller/HealthController.java` | 健康检查端点（`/health-check/...`） |
+| 组件 ID                      | 锚点（证据文件）                                                                                        | 暴露面                                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| DataIngestController         | `api/controller/DataIngestController.java`                                                              | `POST /api/data/ingest`（context path `/sync`，即 `/sync/api/data/ingest`）第三方数据接入，**零认证** |
+| TestCaseDataController       | `api/controller/TestCaseDataController.java`                                                            | `POST testcase/metadata/upload` multipart 上传（即 `/sync/testcase/metadata/upload`），**零认证**     |
+| DataIngestServiceImpl        | `app/service/thirdapi/impl/DataIngestServiceImpl.java`                                                  | 模型存在性/启用/必填字段校验 → `dynamicDorisService.dynamicInsert` 直写 Doris                         |
+| DynamicDorisService + Mapper | `domain/service/thirdapi/impl/DynamicDorisServiceImpl.java` + `resources/mapper/DynamicDorisMapper.xml` | 动态 `INSERT INTO openlibing.${tableName}(${col}) VALUES(#{val})`，列名白名单 + 值参数化              |
+| ObsUtilClient                | `infrastructure/client/obs/ObsUtilClient.java`                                                          | OBS 上传（`putObject` / `uploadFile`），静态 AK/SK 经 `obs.*` 配置集下发                              |
+| XxlJobExecutors              | `domain/service/pipeline/job/*`                                                                         | 24 个 XXL-Job handler（含 5 个已弃用）；executor `openlibing-sync-executor` :10000                    |
+| HealthController             | `api/controller/HealthController.java`                                                                  | 健康检查端点（`/health-check/...`）                                                                   |
 
 ### 3.2 STRIDE-A 威胁表（sync）
 
-| 威胁 ID | STRIDE 类别 | 威胁描述 | 前置条件 | Tier |
-| --- | --- | --- | --- | --- |
-| T23.S | S 欺骗 | 数据接入/上传两接口无任何服务端认证/签名/apiKey，第三方可匿名伪造 appCode 调用并写入 Doris | `None` | T1 |
-| T24.T | T 篡改 | ingest 数据仅列名白名单过滤，缺类型/长度/取值校验，脏数据可污染 Doris 指标结论（列名来自 DB 注册表，SQL 注入面受限，但数据完整性无保障） | `None` | T2 |
-| T25.I | I 信息泄露 | upload 回传已上传文件路径列表、ingest 回传模型不存在/字段错误等内部细节，便于枚举模型表结构 | `None` | T2 |
-| T26.I | I 信息泄露 | OBS AK/SK 经 `obs.*` 配置集下发且为静态配置，无服务侧轮换机制，密钥材料单点 | `Admin Credentials` | T3 |
-| T27.D | D 拒绝服务 | ingest/upload 无服务端限流、数据量无上限（仅批次上限常量），第三方可高频刷 Doris / 堆积 OBS 上传 | `None` | T2 |
-| T28.D | D 拒绝服务 | XXL-Job executor :10000 暴露面，accessToken 启动强校验是唯一屏障，若 token 泄露/弱配置可伪造调度轰炸 | `Internal Network` + 凭据 | T3 |
-| T29.E | E 权限提升 | upload 的 `archiveConfig.archivePath` 由调用方传入，未校验对象键格式/前缀，可越权写 OBS 指定路径 | `None` | T2 |
-| T30.A | A 滥用 | 批处理/定时 Job handler（含 5 个已弃用但仍在注册）若被误触发/滥用可造成重复采集、重复写库、数据污染 | `Internal Network` | T3 |
-| T40.I | I 信息泄露 | Python 采集脚本 `gitCodeDataCollect` 日志/异常路径可能间接打印 `access_token`（`str(e)` 全量打印）；凭据经 `config.yaml` 的 `${ENV}` 占位符注入为已缓解项 | `Host/OS Access` | T3 |
-| T41.T | T 篡改 | Python 采集脚本 `requests.get/post` 未显式声明 `verify=True`/证书锁定，依赖库默认值，代理或传输劫持场景下响应完整性无显式防护 | `Host/OS Access` | T3 |
+| 威胁 ID | STRIDE 类别 | 威胁描述                                                                                                                                                  | 前置条件                  | Tier |
+| ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ---- |
+| T23.S   | S 欺骗      | 数据接入/上传两接口无任何服务端认证/签名/apiKey，第三方可匿名伪造 appCode 调用并写入 Doris                                                                | `None`                    | T1   |
+| T24.T   | T 篡改      | ingest 数据仅列名白名单过滤，缺类型/长度/取值校验，脏数据可污染 Doris 指标结论（列名来自 DB 注册表，SQL 注入面受限，但数据完整性无保障）                  | `None`                    | T2   |
+| T25.I   | I 信息泄露  | upload 回传已上传文件路径列表、ingest 回传模型不存在/字段错误等内部细节，便于枚举模型表结构                                                               | `None`                    | T2   |
+| T26.I   | I 信息泄露  | OBS AK/SK 经 `obs.*` 配置集下发且为静态配置，无服务侧轮换机制，密钥材料单点                                                                               | `Admin Credentials`       | T3   |
+| T27.D   | D 拒绝服务  | ingest/upload 无服务端限流、数据量无上限（仅批次上限常量），第三方可高频刷 Doris / 堆积 OBS 上传                                                          | `None`                    | T2   |
+| T28.D   | D 拒绝服务  | XXL-Job executor :10000 暴露面，accessToken 启动强校验是唯一屏障，若 token 泄露/弱配置可伪造调度轰炸                                                      | `Internal Network` + 凭据 | T3   |
+| T29.E   | E 权限提升  | upload 的 `archiveConfig.archivePath` 由调用方传入，未校验对象键格式/前缀，可越权写 OBS 指定路径                                                          | `None`                    | T2   |
+| T30.A   | A 滥用      | 批处理/定时 Job handler（含 5 个已弃用但仍在注册）若被误触发/滥用可造成重复采集、重复写库、数据污染                                                       | `Internal Network`        | T3   |
+| T40.I   | I 信息泄露  | Python 采集脚本 `gitCodeDataCollect` 日志/异常路径可能间接打印 `access_token`（`str(e)` 全量打印）；凭据经 `config.yaml` 的 `${ENV}` 占位符注入为已缓解项 | `Host/OS Access`          | T3   |
+| T41.T   | T 篡改      | Python 采集脚本 `requests.get/post` 未显式声明 `verify=True`/证书锁定，依赖库默认值，代理或传输劫持场景下响应完整性无显式防护                             | `Host/OS Access`          | T3   |
 
 **STRIDE-A 汇总（sync）**：S=1，T=2，R=0，I=3，D=2，E=1，A=1，共 **10 条**（T23~T30 + T40/T41）。R（否认）为空：数据接入为写后即弃的第三方通道，无用户态身份可否认，记已缓解/不适用。
 
@@ -198,17 +198,17 @@ flowchart LR
 
 **DataIngestController / TestCaseDataController —— 零认证（Tier 1）：**
 
-| 威胁 | 证据 | 影响 |
-| --- | --- | --- |
-| 数据接入零认证 | [DataIngestController.java:36-44](file:///c:/w30060144/tmp-tm-sync/openlibing-sync-service/src/main/java/com/openlibing/sync/api/controller/DataIngestController.java#L36-L44) `POST /api/data/ingest` 无任何认证注解/签名校验；全仓 grep `HandlerInterceptor\|WebMvcConfigurer\|@PreAuthorize\|SecurityContext` **0 命中**（与服务端零认证结论一致） | 第三方匿名可达 → `dynamicInsert` 直写 Doris；无身份、无审计归属 |
-| 上传零认证 | [TestCaseDataController.java:44-87](file:///c:/w30060144/tmp-tm-sync/openlibing-sync-service/src/main/java/com/openlibing/sync/api/controller/TestCaseDataController.java#L44-L87) `testcase/metadata/upload` 无认证，仅做参数必填/批次上限校验 | 匿名上传文件 → OBS；`archivePath` 由调用方控制，存在越权对象键风险 |
+| 威胁           | 证据                                                                                                                                                                                                                                                                                                                                                  | 影响                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 数据接入零认证 | [DataIngestController.java:36-44](file:///c:/w30060144/tmp-tm-sync/openlibing-sync-service/src/main/java/com/openlibing/sync/api/controller/DataIngestController.java#L36-L44) `POST /api/data/ingest` 无任何认证注解/签名校验；全仓 grep `HandlerInterceptor\|WebMvcConfigurer\|@PreAuthorize\|SecurityContext` **0 命中**（与服务端零认证结论一致） | 第三方匿名可达 → `dynamicInsert` 直写 Doris；无身份、无审计归属    |
+| 上传零认证     | [TestCaseDataController.java:44-87](file:///c:/w30060144/tmp-tm-sync/openlibing-sync-service/src/main/java/com/openlibing/sync/api/controller/TestCaseDataController.java#L44-L87) `testcase/metadata/upload` 无认证，仅做参数必填/批次上限校验                                                                                                       | 匿名上传文件 → OBS；`archivePath` 由调用方控制，存在越权对象键风险 |
 
 **DynamicDorisService（动态写 Doris）—— 已缓解 + 残余风险：**
 
-| 威胁 | 证据 | 影响 |
-| --- | --- | --- |
-| SQL 注入（已缓解） | [DynamicDorisMapper.xml:5-14](file:///c:/w30060144/tmp-tm-sync/openlibing-sync-service/src/main/resources/mapper/DynamicDorisMapper.xml#L5-L14) `INSERT INTO openlibing.${tableName}`、列 `${col}`、值 `#{val}`；`tableName` 来自 DB 注册模型（非用户直传）、列名经 [DynamicDorisServiceImpl.filterAndValidateData:58-79](file:///c:/w30060144/tmp-tm-sync/openlibing-sync-service/src/main/java/com/openlibing/sync/domain/service/thirdapi/impl/DynamicDorisServiceImpl.java#L58-L79) 对 DB 列注册表白名单过滤、值参数化 | SQL 注入面受限，此项记为已缓解 |
-| 数据校验薄弱（残余） | [DynamicDorisServiceImpl.java:35-55](file:///c:/w30060144/tmp-tm-sync/openlibing-sync-service/src/main/java/com/openlibing/sync/domain/service/thirdapi/impl/DynamicDorisServiceImpl.java#L35-L55) 值仅校验"必填字段存在"，无类型/长度/范围校验；`filteredData` 无行数上限 | 脏数据污染 Doris 指标；超长文本/超大行击穿分析性能；叠加零认证可被批量投毒 |
+| 威胁                 | 证据                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | 影响                                                                       |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| SQL 注入（已缓解）   | [DynamicDorisMapper.xml:5-14](file:///c:/w30060144/tmp-tm-sync/openlibing-sync-service/src/main/resources/mapper/DynamicDorisMapper.xml#L5-L14) `INSERT INTO openlibing.${tableName}`、列 `${col}`、值 `#{val}`；`tableName` 来自 DB 注册模型（非用户直传）、列名经 [DynamicDorisServiceImpl.filterAndValidateData:58-79](file:///c:/w30060144/tmp-tm-sync/openlibing-sync-service/src/main/java/com/openlibing/sync/domain/service/thirdapi/impl/DynamicDorisServiceImpl.java#L58-L79) 对 DB 列注册表白名单过滤、值参数化 | SQL 注入面受限，此项记为已缓解                                             |
+| 数据校验薄弱（残余） | [DynamicDorisServiceImpl.java:35-55](file:///c:/w30060144/tmp-tm-sync/openlibing-sync-service/src/main/java/com/openlibing/sync/domain/service/thirdapi/impl/DynamicDorisServiceImpl.java#L35-L55) 值仅校验"必填字段存在"，无类型/长度/范围校验；`filteredData` 无行数上限                                                                                                                                                                                                                                                 | 脏数据污染 Doris 指标；超长文本/超大行击穿分析性能；叠加零认证可被批量投毒 |
 
 **ObsUtilClient（OBS 上传）：** [ObsUtilClient.java:64-70,128-141](file:///c:/w30060144/tmp-tm-sync/openlibing-sync-service/src/main/java/com/openlibing/sync/infrastructure/client/obs/ObsUtilClient.java) 以静态 AK/SK（`obs.*` 配置集，Apollo 下发）初始化 `ObsClient`，`uploadFile`/`putObject` 写 OBS；无凭据轮换与最小权限拆分（与 T26/FIND-23 对应）。
 
@@ -220,14 +220,14 @@ flowchart LR
 
 > 本节证据来自 MiniMax-M3 独立分析报告，与 3.3 的 Java 侧证据互补；对应 FIND-33/FIND-34。
 
-| 项 | 评估 | 处置建议 |
-| --- | --- | --- |
-| 凭据管理 | ✅ `config.yaml` 中 Doris 口令 / 仓库 `access_token` 均通过 `${ENV}` 占位符 + `os.getenv` 注入，**无硬编码**（`config.yaml:53,64`；`main.py:280-291`） | 保持；建议加环境变量来源审计 |
-| 日志脱敏 | ⚠️ token 缺失时仅记仓库名（`main.py:289-291`）OK；但错误路径若 `str(e)` 全量打印可能间接泄漏 token | 统一走脱敏工具，禁止 `str(e)` 直出凭据类对象 |
-| SSL 校验 | ✅ `requests.get/post` 未显式 `verify=False`，依赖默认校验 | 显式 `verify=True` + 可选证书锁定，规避代理/LB 注入 |
-| 重试逻辑 | ⚠️ 指数退避 + 429 重试，但 `max_retries=2` 硬编码，可能掩盖凭据失效 | 重试上限可配置，凭据失效单独告警 |
-| 速率限制 | ✅ 内置 `_throttle()` | 保持 |
-| Token 调度 | ✅ `TokenScheduler` 多租户 token 轮转 | 保持；轮换策略审计 |
+| 项         | 评估                                                                                                                                                   | 处置建议                                            |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| 凭据管理   | ✅ `config.yaml` 中 Doris 口令 / 仓库 `access_token` 均通过 `${ENV}` 占位符 + `os.getenv` 注入，**无硬编码**（`config.yaml:53,64`；`main.py:280-291`） | 保持；建议加环境变量来源审计                        |
+| 日志脱敏   | ⚠️ token 缺失时仅记仓库名（`main.py:289-291`）OK；但错误路径若 `str(e)` 全量打印可能间接泄漏 token                                                     | 统一走脱敏工具，禁止 `str(e)` 直出凭据类对象        |
+| SSL 校验   | ✅ `requests.get/post` 未显式 `verify=False`，依赖默认校验                                                                                             | 显式 `verify=True` + 可选证书锁定，规避代理/LB 注入 |
+| 重试逻辑   | ⚠️ 指数退避 + 429 重试，但 `max_retries=2` 硬编码，可能掩盖凭据失效                                                                                    | 重试上限可配置，凭据失效单独告警                    |
+| 速率限制   | ✅ 内置 `_throttle()`                                                                                                                                  | 保持                                                |
+| Token 调度 | ✅ `TokenScheduler` 多租户 token 轮转                                                                                                                  | 保持；轮换策略审计                                  |
 
 ---
 
@@ -253,19 +253,19 @@ flowchart LR
 
 ## 五、发现清单（sync，FIND-01 + FIND-18 ~ FIND-25 + FIND-33/FIND-34）
 
-| 发现 | 仓库 | Tier | STRIDE | 对应威胁 | 摘要与处置方向 |
-| --- | --- | --- | --- | --- | --- |
-| FIND-01 | 跨仓（记入本仓） | T2 | S/D | 跨仓 | 服务端零认证 + 限流死代码系统性单点失效（详见第四章） |
-| FIND-18 | sync | T1 | S | T23 | 数据接入/上传接口零认证，第三方可直接写 Doris/OBS（最高优先） |
-| FIND-19 | sync | T2 | T | T24 | ingest 数据校验薄弱（类型/长度/范围），脏数据污染 Doris 指标 |
-| FIND-20 | sync | T2 | I | T25 | 上传路径列表/接入错误内部细节回显，便于枚举表结构 |
-| FIND-21 | sync | T2 | D | T27 | ingest/upload 无服务端限流、无数据量上限，可刷 Doris/OBS |
-| FIND-22 | sync | T2 | E | T29 | upload `archivePath` 由调用方控制，OBS 对象键路径穿越风险 |
-| FIND-23 | sync | T3 | I | T26 | OBS 静态 AK/SK（`obs.*` 配置集）、无轮换、密钥单点 |
-| FIND-24 | sync | T3 | D | T28 | XXL-Job executor :10000 暴露面与 accessToken 生命周期治理 |
-| FIND-25 | sync | T3 | A | T30 | 批处理/定时 Job handler（含 5 个已弃用）滥用：重复采集/数据污染 |
-| FIND-33 | sync | T3 | I | T40 | Python 采集脚本日志/异常路径可能间接泄漏 `access_token`；凭据 `${ENV}` 注入为已缓解【合并补充】 |
-| FIND-34 | sync | T3 | T | T41 | Python 采集脚本 SSL 校验依赖默认值、无显式证书锁定/代理防护【合并补充】 |
+| 发现    | 仓库             | Tier | STRIDE | 对应威胁 | 摘要与处置方向                                                                                  |
+| ------- | ---------------- | ---- | ------ | -------- | ----------------------------------------------------------------------------------------------- |
+| FIND-01 | 跨仓（记入本仓） | T2   | S/D    | 跨仓     | 服务端零认证 + 限流死代码系统性单点失效（详见第四章）                                           |
+| FIND-18 | sync             | T1   | S      | T23      | 数据接入/上传接口零认证，第三方可直接写 Doris/OBS（最高优先）                                   |
+| FIND-19 | sync             | T2   | T      | T24      | ingest 数据校验薄弱（类型/长度/范围），脏数据污染 Doris 指标                                    |
+| FIND-20 | sync             | T2   | I      | T25      | 上传路径列表/接入错误内部细节回显，便于枚举表结构                                               |
+| FIND-21 | sync             | T2   | D      | T27      | ingest/upload 无服务端限流、无数据量上限，可刷 Doris/OBS                                        |
+| FIND-22 | sync             | T2   | E      | T29      | upload `archivePath` 由调用方控制，OBS 对象键路径穿越风险                                       |
+| FIND-23 | sync             | T3   | I      | T26      | OBS 静态 AK/SK（`obs.*` 配置集）、无轮换、密钥单点                                              |
+| FIND-24 | sync             | T3   | D      | T28      | XXL-Job executor :10000 暴露面与 accessToken 生命周期治理                                       |
+| FIND-25 | sync             | T3   | A      | T30      | 批处理/定时 Job handler（含 5 个已弃用）滥用：重复采集/数据污染                                 |
+| FIND-33 | sync             | T3   | I      | T40      | Python 采集脚本日志/异常路径可能间接泄漏 `access_token`；凭据 `${ENV}` 注入为已缓解【合并补充】 |
+| FIND-34 | sync             | T3   | T      | T41      | Python 采集脚本 SSL 校验依赖默认值、无显式证书锁定/代理防护【合并补充】                         |
 
 > 注：FIND-35（跨仓构建供应链，Tier 3）与本仓 Dockerfile 直接相关，详见第四章。
 
@@ -326,12 +326,12 @@ flowchart LR
 
 ## 九、附录：STRIDE-A 汇总矩阵（sync）
 
-| 仓库 | S 欺骗 | T 篡改 | R 否认 | I 信息泄露 | D 拒绝服务 | E 权限提升 | A 滥用 | 威胁数 | Tier1 | Tier2 | Tier3 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| openlibing-sync | 1 | 2 | 0 | 3 | 2 | 1 | 1 | 10 | 1 | 4 | 5 |
+| 仓库            | S 欺骗 | T 篡改 | R 否认 | I 信息泄露 | D 拒绝服务 | E 权限提升 | A 滥用 | 威胁数 | Tier1 | Tier2 | Tier3 |
+| --------------- | ------ | ------ | ------ | ---------- | ---------- | ---------- | ------ | ------ | ----- | ----- | ----- |
+| openlibing-sync | 1      | 2      | 0      | 3          | 2          | 1          | 1      | 10     | 1     | 4     | 5     |
 
 > 说明：威胁层 Tier 分布（Tier1=1 / Tier2=4 / Tier3=5，合计 10 条）与发现层 Tier 分布（Tier1=1 / Tier2=4 / Tier3=5，合计 10 条）一致。T40/T41 为本合并版补充项（sync Python 采集脚本）。R（否认）=0 系数据接入为写后即弃的第三方通道，记不适用。
 
 ---
 
-*报告生成：threat-model-analyst skill（STRIDE-A + 零信任 + 纵深防御），基线=远程仓主干分支（sync=origin/master），2026-08-21。本报告由《[openlibing-ops、ops-web、metric、sync]安全威胁建模分析报告》拆分而来，用于归档 openlibing-docs/architecture_desgin/openlibing-sync。*
+_报告生成：threat-model-analyst skill（STRIDE-A + 零信任 + 纵深防御），基线=远程仓主干分支（sync=origin/master），2026-08-21。本报告由《[openlibing-ops、ops-web、metric、sync]安全威胁建模分析报告》拆分而来，用于归档 openlibing-docs/architecture_desgin/openlibing-sync。_

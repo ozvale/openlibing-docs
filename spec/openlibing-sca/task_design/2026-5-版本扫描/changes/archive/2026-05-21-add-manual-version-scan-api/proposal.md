@@ -12,20 +12,20 @@
 
 ### 新增文件（5个）
 
-| 文件 | 说明 |
-|------|------|
-| `analysis/entity/TblManualVersionScan.java` | 实体类，对应 `tbl_manual_version_scan` 表 |
-| `analysis/dao/TblManualVersionScanMapper.java` | Mapper 接口，方法与已有 XML 对应 |
-| `analysis/service/ManualVersionScanService.java` | Service 接口 |
-| `analysis/service/impl/ManualVersionScanServiceImpl.java` | Service 实现 |
-| `analysis/controller/ManualVersionScanController.java` | REST Controller，4 个接口 |
+| 文件                                                      | 说明                                      |
+| --------------------------------------------------------- | ----------------------------------------- |
+| `analysis/entity/TblManualVersionScan.java`               | 实体类，对应 `tbl_manual_version_scan` 表 |
+| `analysis/dao/TblManualVersionScanMapper.java`            | Mapper 接口，方法与已有 XML 对应          |
+| `analysis/service/ManualVersionScanService.java`          | Service 接口                              |
+| `analysis/service/impl/ManualVersionScanServiceImpl.java` | Service 实现                              |
+| `analysis/controller/ManualVersionScanController.java`    | REST Controller，4 个接口                 |
 
 ### 修改文件（2个）
 
-| 文件 | 说明 |
-|------|------|
-| `dm/service/impl/IntegrationApiServiceImpl.java` | `saveVersionScanResult` 中新增：通过 scanId 查找并更新 `tbl_manual_version_scan` 的 `scanResult=1` + `modified` |
-| `common/config/rabbitmq/IntegrationApiListener.java` | 异常路径中新增：scanResult=-1 时同步更新 `tbl_manual_version_scan` |
+| 文件                                                 | 说明                                                                                                            |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `dm/service/impl/IntegrationApiServiceImpl.java`     | `saveVersionScanResult` 中新增：通过 scanId 查找并更新 `tbl_manual_version_scan` 的 `scanResult=1` + `modified` |
+| `common/config/rabbitmq/IntegrationApiListener.java` | 异常路径中新增：scanResult=-1 时同步更新 `tbl_manual_version_scan`                                              |
 
 ### 不在范围内
 

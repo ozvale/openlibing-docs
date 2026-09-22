@@ -14,18 +14,18 @@
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `business/dto/pipeline/PipelineParamDTO.java` | 修改 | 新增 5 个 GitCode 上下文字段 |
-| `business/dto/pipeline/PipelineStatusUpdateMessage.java` | 修改 | 同上，确保 MQ 链路可还原 |
-| `business/dto/pipeline/GitCodePipelineStatusDTO.java` | 新增 | 请求体 + 嵌套 `PipelineDetail` |
-| `business/dto/webhooks/PullRequestEvent.java` | 修改 | GitCode 路径填充 3 个新增字段 |
-| `business/dto/webhooks/NoteEvent.java` | 修改 | GitCode 路径填充 3 个新增字段 |
-| `business/vo/PrStartPipelineVo.java` | 修改 | 新增 3 个字段供 `PipelineStartEventHandler` 填充 |
-| `business/listener/PipelineStartEventHandler.java` | 修改 | PR open/update/note 三处 `setSourceBranch` / `setUserName` / `setPipelineName` |
-| `business/listener/PipelineStatusUpdateConsumer.java` | 修改 | `buildPipelineParamFromMessage` 透传 5 个字段 |
-| `business/service/impl/PipelineServiceImpl.java` | 修改 | 新增 2 个私有方法 + 2 处调用点 |
-| 测试 `PipelineParamDtoBuilder` / `PipelineServiceImplTest` | 修改 | 覆盖 5 个新字段 + API 行为 |
+| 文件                                                       | 操作 | 说明                                                                           |
+| ---------------------------------------------------------- | ---- | ------------------------------------------------------------------------------ |
+| `business/dto/pipeline/PipelineParamDTO.java`              | 修改 | 新增 5 个 GitCode 上下文字段                                                   |
+| `business/dto/pipeline/PipelineStatusUpdateMessage.java`   | 修改 | 同上，确保 MQ 链路可还原                                                       |
+| `business/dto/pipeline/GitCodePipelineStatusDTO.java`      | 新增 | 请求体 + 嵌套 `PipelineDetail`                                                 |
+| `business/dto/webhooks/PullRequestEvent.java`              | 修改 | GitCode 路径填充 3 个新增字段                                                  |
+| `business/dto/webhooks/NoteEvent.java`                     | 修改 | GitCode 路径填充 3 个新增字段                                                  |
+| `business/vo/PrStartPipelineVo.java`                       | 修改 | 新增 3 个字段供 `PipelineStartEventHandler` 填充                               |
+| `business/listener/PipelineStartEventHandler.java`         | 修改 | PR open/update/note 三处 `setSourceBranch` / `setUserName` / `setPipelineName` |
+| `business/listener/PipelineStatusUpdateConsumer.java`      | 修改 | `buildPipelineParamFromMessage` 透传 5 个字段                                  |
+| `business/service/impl/PipelineServiceImpl.java`           | 修改 | 新增 2 个私有方法 + 2 处调用点                                                 |
+| 测试 `PipelineParamDtoBuilder` / `PipelineServiceImplTest` | 修改 | 覆盖 5 个新字段 + API 行为                                                     |
 
 ## API 调用细节
 
@@ -40,36 +40,36 @@ Content-Type: application/json
 
 ### 请求体字段映射
 
-| DTO 字段 | JSON 字段 | 取值来源 |
-|---|---|---|
-| `mergeRequestIid` | `merge_request_iid` | `param.getPrId()` |
-| `state` | `state` | `mapToGitCodeCommitStatus(pipelineStatus)` |
-| `name` | `name` | `param.getPipelineName()` |
-| `targetUrl` | `target_url` | `https://devcloud.{region}.huaweicloud.com/cicd/project/{hwProjectId}/pipeline/detail/{pipelineId}/{pipelineRunId}` |
-| `stopUrl` | `stop_url` | `https://cloudpipeline-backend.{region}.myhuaweicloud.com:8443/CloudPipelineServer/v5/{hwProjectId}/pipelines/{pipelineId}/pipeline-runs/{pipelineRunId}s/stop` |
-| `ref` | `ref` | `param.getSourceBranch()` |
-| `buildId` | `build_id` | `param.getPipelineRunId()` |
-| `stage` | `stage` | `param.getPipelineName()` |
-| `triggerUser` | `trigger_user` | `param.getUserName()` |
+| DTO 字段           | JSON 字段            | 取值来源                                                                                                                                                            |
+| ------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mergeRequestIid`  | `merge_request_iid`  | `param.getPrId()`                                                                                                                                                   |
+| `state`            | `state`              | `mapToGitCodeCommitStatus(pipelineStatus)`                                                                                                                          |
+| `name`             | `name`               | `param.getPipelineName()`                                                                                                                                           |
+| `targetUrl`        | `target_url`         | `https://devcloud.{region}.huaweicloud.com/cicd/project/{hwProjectId}/pipeline/detail/{pipelineId}/{pipelineRunId}`                                                 |
+| `stopUrl`          | `stop_url`           | `https://cloudpipeline-backend.{region}.myhuaweicloud.com:8443/CloudPipelineServer/v5/{hwProjectId}/pipelines/{pipelineId}/pipeline-runs/{pipelineRunId}s/stop`     |
+| `ref`              | `ref`                | `param.getSourceBranch()`                                                                                                                                           |
+| `buildId`          | `build_id`           | `param.getPipelineRunId()`                                                                                                                                          |
+| `stage`            | `stage`              | `param.getPipelineName()`                                                                                                                                           |
+| `triggerUser`      | `trigger_user`       | `param.getUserName()`                                                                                                                                               |
 | `rebuildFailedUrl` | `rebuild_failed_url` | `https://cloudpipeline-backend.{region}.myhuaweicloud.com:8443/CloudPipelineServer/v5/pipelines/{pipelineId}/pipeline-runs/{pipelineRunId}s/codehub/retry/{region}` |
-| `pipelineDetail` | `pipeline_detail` | `JSON.toJSONString(PipelineDetail)`，**必须是字符串** |
-| `reportType` | `report_type` | 固定 `"pipeline"` |
-| `pipelineId` | `pipeline_id` | `param.getPipelineId()` |
-| `pipelineRunId` | `pipeline_run_id` | `param.getPipelineRunId()` |
+| `pipelineDetail`   | `pipeline_detail`    | `JSON.toJSONString(PipelineDetail)`，**必须是字符串**                                                                                                               |
+| `reportType`       | `report_type`        | 固定 `"pipeline"`                                                                                                                                                   |
+| `pipelineId`       | `pipeline_id`        | `param.getPipelineId()`                                                                                                                                             |
+| `pipelineRunId`    | `pipeline_run_id`    | `param.getPipelineRunId()`                                                                                                                                          |
 
 ### `pipeline_detail` 子对象字段
 
 `GitCodePipelineStatusDTO.PipelineDetail` 序列化为 JSON 字符串后填入顶层 `pipeline_detail`：
 
-| DTO 字段 | JSON 字段 | 取值 |
-|---|---|---|
-| `hookId` | `hook_id` | `param.getGitcodeHookId()` |
-| `hookType` | `hook_type` | 固定 `"project"` |
-| `jobLogUrl` | `job_log_url` | `null`（按 GitCode 样例留空） |
-| `jobRunTime` | `job_run_time` | `null` |
-| `pipelineTotalTime` | `pipeline_total_time` | `null` |
-| `projectId` | `project_id` | `hwProjectId`（查 `HwProjectInfoEntity` 得来） |
-| `projectHost` | `project_host` | `https://cloudpipeline-ext.{region}.myhuaweicloud.com` |
+| DTO 字段            | JSON 字段             | 取值                                                   |
+| ------------------- | --------------------- | ------------------------------------------------------ |
+| `hookId`            | `hook_id`             | `param.getGitcodeHookId()`                             |
+| `hookType`          | `hook_type`           | 固定 `"project"`                                       |
+| `jobLogUrl`         | `job_log_url`         | `null`（按 GitCode 样例留空）                          |
+| `jobRunTime`        | `job_run_time`        | `null`                                                 |
+| `pipelineTotalTime` | `pipeline_total_time` | `null`                                                 |
+| `projectId`         | `project_id`          | `hwProjectId`（查 `HwProjectInfoEntity` 得来）         |
+| `projectHost`       | `project_host`        | `https://cloudpipeline-ext.{region}.myhuaweicloud.com` |
 
 > 命名说明：第二个值字段是 `project_host`（不是 `endpoint`），以 GitCode 实际接口样例为准。
 
@@ -140,11 +140,11 @@ recordPipelineInfo(param)
 
 ## 风险 & 缓解
 
-| 风险 | 缓解措施 |
-|------|---------|
-| GitCode API 不可用 | try/catch 包到方法边界，失败仅日志 |
-| `accessToken` 缺权限 | warn 日志，便于排障 |
-| `HwProjectInfoEntity` 缺失 / `region` 缺失 | 静默跳过，不影响主流程 |
+| 风险                                                         | 缓解措施                                     |
+| ------------------------------------------------------------ | -------------------------------------------- |
+| GitCode API 不可用                                           | try/catch 包到方法边界，失败仅日志           |
+| `accessToken` 缺权限                                         | warn 日志，便于排障                          |
+| `HwProjectInfoEntity` 缺失 / `region` 缺失                   | 静默跳过，不影响主流程                       |
 | 字段命名与 GitCode 不一致（如 `project_host` vs `endpoint`） | 以本 design.md "API 调用细节" 为唯一事实来源 |
 
 ## 跨仓影响

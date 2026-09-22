@@ -29,13 +29,13 @@
 
 ### 异常路由策略
 
-| 异常 | 处理路径 | 触发行为 |
-|------|---------|---------|
-| `JsonSyntaxException` | 丢弃 | 记录 ERROR 日志后 return |
-| `param.pipelineRunId == null` | 丢弃 | 记录 ERROR 日志后 return |
-| `ThirdPartyApiRateLimitException` (429) | 30s 延迟队列 | 重新发布到 `pr_op_event_delay_queue_30s`，30s 后 DLX 回到主队列重试 |
-| `ThirdPartyApiTimeoutException` | 30s 延迟队列 | 同上 |
-| 其他 Exception | Spring AMQP 默认重试 + 死信 | 原样抛出 |
+| 异常                                    | 处理路径                    | 触发行为                                                            |
+| --------------------------------------- | --------------------------- | ------------------------------------------------------------------- |
+| `JsonSyntaxException`                   | 丢弃                        | 记录 ERROR 日志后 return                                            |
+| `param.pipelineRunId == null`           | 丢弃                        | 记录 ERROR 日志后 return                                            |
+| `ThirdPartyApiRateLimitException` (429) | 30s 延迟队列                | 重新发布到 `pr_op_event_delay_queue_30s`，30s 后 DLX 回到主队列重试 |
+| `ThirdPartyApiTimeoutException`         | 30s 延迟队列                | 同上                                                                |
+| 其他 Exception                          | Spring AMQP 默认重试 + 死信 | 原样抛出                                                            |
 
 ## 不做什么
 
@@ -64,22 +64,22 @@
 
 ### 业务仓 `openlibing-cicd`
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `common/config/rabbitmq/PipelineEventRabbitConfig.java` | 修改 | 新增 6 个 `@Value` 字段 + 6 个 Bean（主队列 3 + 延迟队列 3） |
-| `business/service/PipelineService.java` | 修改 | 接口新增 `void reflashPrInfo(PipelineParamDTO param)` |
-| `business/service/impl/PipelineServiceImpl.java` | 修改 | 注入 `PipelineEventProducer`；`reflashPrInfo` 改为 `public @Override`；`savePipelineInfoWithAsyncPrOps` 改为调 `sendPrOpEvent` |
-| `business/service/impl/PipelineEventProducer.java` | 修改 | 新增 2 个方法（`sendPrOpEvent` / `sendPrOpEventTimeoutRetry`）+ 4 个 `@Value` 字段 |
-| `business/listener/PrOpEventConsumer.java` | 新增 | 监听 `pr_op_event_queue`，反序列化 + 调 service，捕获限流/超时异常重发延迟队列 |
-| `src/main/resources/application.yaml` | 修改 | 新增 6 个 `_beta` 后缀 key |
-| `src/main/resources/application-gama.yaml` | 修改 | 新增 6 个 `_gama` 后缀 key |
-| `src/main/resources/application-prod.yaml` | 修改 | 新增 6 个 `_prod` 后缀 key |
-| `src/test/java/.../listener/PrOpEventConsumerTest.java` | 新增 | 7 个单元测试覆盖关键合约 |
+| 文件                                                    | 操作 | 说明                                                                                                                           |
+| ------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `common/config/rabbitmq/PipelineEventRabbitConfig.java` | 修改 | 新增 6 个 `@Value` 字段 + 6 个 Bean（主队列 3 + 延迟队列 3）                                                                   |
+| `business/service/PipelineService.java`                 | 修改 | 接口新增 `void reflashPrInfo(PipelineParamDTO param)`                                                                          |
+| `business/service/impl/PipelineServiceImpl.java`        | 修改 | 注入 `PipelineEventProducer`；`reflashPrInfo` 改为 `public @Override`；`savePipelineInfoWithAsyncPrOps` 改为调 `sendPrOpEvent` |
+| `business/service/impl/PipelineEventProducer.java`      | 修改 | 新增 2 个方法（`sendPrOpEvent` / `sendPrOpEventTimeoutRetry`）+ 4 个 `@Value` 字段                                             |
+| `business/listener/PrOpEventConsumer.java`              | 新增 | 监听 `pr_op_event_queue`，反序列化 + 调 service，捕获限流/超时异常重发延迟队列                                                 |
+| `src/main/resources/application.yaml`                   | 修改 | 新增 6 个 `_beta` 后缀 key                                                                                                     |
+| `src/main/resources/application-gama.yaml`              | 修改 | 新增 6 个 `_gama` 后缀 key                                                                                                     |
+| `src/main/resources/application-prod.yaml`              | 修改 | 新增 6 个 `_prod` 后缀 key                                                                                                     |
+| `src/test/java/.../listener/PrOpEventConsumerTest.java` | 新增 | 7 个单元测试覆盖关键合约                                                                                                       |
 
 ### docs 仓 `openlibing-docs`
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `spec/openlibing-cicd/task_design/pr-op-mq/proposal.md` | 新增 | 本文件 |
-| `spec/openlibing-cicd/task_design/pr-op-mq/design.md` | 新增 | 详见 `design.md` |
-| `spec/openlibing-cicd/task_design/pr-op-mq/tasks.md` | 新增 | 详见 `tasks.md` |
+| 文件                                                    | 操作 | 说明             |
+| ------------------------------------------------------- | ---- | ---------------- |
+| `spec/openlibing-cicd/task_design/pr-op-mq/proposal.md` | 新增 | 本文件           |
+| `spec/openlibing-cicd/task_design/pr-op-mq/design.md`   | 新增 | 详见 `design.md` |
+| `spec/openlibing-cicd/task_design/pr-op-mq/tasks.md`    | 新增 | 详见 `tasks.md`  |

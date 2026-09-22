@@ -12,13 +12,13 @@
 
 本次一并处理的 bug 和优化：
 
-| 问题 | 描述 |
-|------|------|
-| code_flows 数据体积过大 | 单条约 22KB，精简调用链为 file + line + message 结构，截断时保留首尾关键节点 |
-| count 接口 category 筛选失效 | `countIssues` 未将 category 条件传入查询 |
-| filter 接口 category 筛选失效 | `filterOptions` 聚合管线未加入 category facet |
-| category 不支持多选 | DTO 改为 `List<String> categories`，查询用 `$in` |
-| suppress 处理只覆盖新建分支 | `updateExistingIssue` 中补回 suppress 自修复（SUPPRESSED_RESOLVED）逻辑 |
+| 问题                          | 描述                                                                         |
+| ----------------------------- | ---------------------------------------------------------------------------- |
+| code_flows 数据体积过大       | 单条约 22KB，精简调用链为 file + line + message 结构，截断时保留首尾关键节点 |
+| count 接口 category 筛选失效  | `countIssues` 未将 category 条件传入查询                                     |
+| filter 接口 category 筛选失效 | `filterOptions` 聚合管线未加入 category facet                                |
+| category 不支持多选           | DTO 改为 `List<String> categories`，查询用 `$in`                             |
+| suppress 处理只覆盖新建分支   | `updateExistingIssue` 中补回 suppress 自修复（SUPPRESSED_RESOLVED）逻辑      |
 
 ## 影响范围
 

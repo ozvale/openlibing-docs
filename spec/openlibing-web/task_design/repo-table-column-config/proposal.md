@@ -7,11 +7,13 @@
 ## 需求范围
 
 ### 功能需求
+
 1. **自定义列配置**：仓库管理表格新增"列配置"按钮，支持用户按需显示/隐藏列，配置按用户 ID 持久化到 localStorage
 2. **新增同步时间列**：列表新增 `lastSyncTime`（同步时间）列
 3. **返回刷新**：从分支管理页返回仓库管理页时自动刷新列表
 
 ### Bug 修复
+
 1. 列配置弹窗长标签文本叠加 → 加宽弹窗 + CSS 溢出截断
 2. 角色映射弹窗内容溢出 → 增加滚动容器
 3. 隐藏分支管理中的 Tag 管理 tab
@@ -22,12 +24,12 @@
 
 ## 影响范围
 
-| 文件 | 影响 |
-|------|------|
-| `src/views/Repos/index.vue` | 主要变更，新增列配置、列、刷新逻辑 |
-| `src/views/Repos/branches.vue` | 隐藏 Tag tab |
-| `src/views/Repos/roleMappingDialog.vue` | 弹窗滚动修复 |
-| `src/utils/common.ts` | 文案修正 |
+| 文件                                    | 影响                               |
+| --------------------------------------- | ---------------------------------- |
+| `src/views/Repos/index.vue`             | 主要变更，新增列配置、列、刷新逻辑 |
+| `src/views/Repos/branches.vue`          | 隐藏 Tag tab                       |
+| `src/views/Repos/roleMappingDialog.vue` | 弹窗滚动修复                       |
+| `src/utils/common.ts`                   | 文案修正                           |
 
 ## 验收标准
 

@@ -10,13 +10,14 @@
 
 采用单文件模块设计，包含以下核心组件：
 
-| 组件 | 职责 |
-|------|------|
-| `_process_json_param()` | 处理 JSON 参数，支持标准 JSON 和简化格式 |
-| `upload_data_to_openlibing()` | 核心上传函数，处理文件上传逻辑 |
-| `main()` | CLI 入口，参数解析和调用 |
+| 组件                          | 职责                                     |
+| ----------------------------- | ---------------------------------------- |
+| `_process_json_param()`       | 处理 JSON 参数，支持标准 JSON 和简化格式 |
+| `upload_data_to_openlibing()` | 核心上传函数，处理文件上传逻辑           |
+| `main()`                      | CLI 入口，参数解析和调用                 |
 
 **决策原因**：
+
 - 单文件设计便于部署和维护
 - 功能内聚，职责清晰
 - 符合插件化架构要求
@@ -30,6 +31,7 @@ archive_path > pipeline_params > label
 ```
 
 **决策原因**：
+
 - `archive_path` 提供最高自定义能力
 - `pipeline_params` 是流水线集成场景的标准路径
 - `label` 是简单场景的默认路径
@@ -38,13 +40,14 @@ archive_path > pipeline_params > label
 
 采用分层错误处理：
 
-| 层级 | 处理方式 |
-|------|----------|
-| 文件级别 | 跳过不存在的文件，记录警告日志 |
+| 层级      | 处理方式                                |
+| --------- | --------------------------------------- |
+| 文件级别  | 跳过不存在的文件，记录警告日志          |
 | HTTP 层级 | 抛出 `HTTPError` 异常，包含详细错误信息 |
-| 应用层级 | 记录错误日志并退出（exit code 1） |
+| 应用层级  | 记录错误日志并退出（exit code 1）       |
 
 **决策原因**：
+
 - 文件级别容错，避免单个文件失败影响整体
 - HTTP 层级严格，确保上传成功
 - 应用层级友好，提供清晰的错误提示
@@ -62,18 +65,19 @@ headers = {
 ```
 
 **决策原因**：
+
 - 符合 OpenLibing API 规范
 - 支持多租户认证
 - 便于审计追踪
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `plugins/upload_to_openlibing/upload_to_openlibing.py` | 已存在 | 核心实现文件 |
-| `plugins/upload_to_openlibing/__init__.py` | 已存在 | 包初始化文件 |
+| 文件                                                              | 操作   | 说明         |
+| ----------------------------------------------------------------- | ------ | ------------ |
+| `plugins/upload_to_openlibing/upload_to_openlibing.py`            | 已存在 | 核心实现文件 |
+| `plugins/upload_to_openlibing/__init__.py`                        | 已存在 | 包初始化文件 |
 | `plugins/upload_to_openlibing/tests/test_upload_to_openlibing.py` | 已存在 | 单元测试文件 |
-| `plugins/upload_to_openlibing/requirements.txt` | 已存在 | 依赖声明文件 |
+| `plugins/upload_to_openlibing/requirements.txt`                   | 已存在 | 依赖声明文件 |
 
 ## 数据流
 
@@ -132,12 +136,12 @@ response = upload_data_to_openlibing(
 
 ### 单元测试覆盖
 
-| 测试类 | 覆盖范围 |
-|--------|----------|
-| `TestProcessJsonParam` | JSON 参数解析 |
-| `TestUploadDataToOpenlibing` | 核心上传逻辑 |
-| `TestCliArgValidation` | CLI 参数校验 |
-| `TestIntegration` | 集成测试（需真实 secret） |
+| 测试类                       | 覆盖范围                  |
+| ---------------------------- | ------------------------- |
+| `TestProcessJsonParam`       | JSON 参数解析             |
+| `TestUploadDataToOpenlibing` | 核心上传逻辑              |
+| `TestCliArgValidation`       | CLI 参数校验              |
+| `TestIntegration`            | 集成测试（需真实 secret） |
 
 ### Mock 策略
 
@@ -162,12 +166,12 @@ response = upload_data_to_openlibing(
 
 ## 风险 & 缓解
 
-| 风险 | 影响 | 缓解措施 |
-|------|------|----------|
-| API 端点变更 | 上传失败 | 支持自定义 URL 参数 |
-| 网络超时 | 用户体验差 | 建议调用方添加重试逻辑 |
-| 大文件上传 | 内存占用高 | 建议限制单文件大小 |
-| Secret 泄露 | 安全风险 | 使用环境变量，不在代码中硬编码 |
+| 风险         | 影响       | 缓解措施                       |
+| ------------ | ---------- | ------------------------------ |
+| API 端点变更 | 上传失败   | 支持自定义 URL 参数            |
+| 网络超时     | 用户体验差 | 建议调用方添加重试逻辑         |
+| 大文件上传   | 内存占用高 | 建议限制单文件大小             |
+| Secret 泄露  | 安全风险   | 使用环境变量，不在代码中硬编码 |
 
 ## 性能考虑
 

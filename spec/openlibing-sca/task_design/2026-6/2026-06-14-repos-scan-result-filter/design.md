@@ -79,12 +79,12 @@ jsonObject.put("list", page);
 
 ## Risks / Trade-offs
 
-| 风险 | 缓解 |
-|------|------|
-| 大社区全量 list 内存过滤性能 | 与现有 platform/repository 策略一致；后续可 SQL 优化 |
-| `scanResult` 非法值 | 空 set 视为不过滤；可选 validator.yml 校验 |
-| person 扫描路径无 scanResult 字段 | 本需求仅覆盖 openSourceCompliance version 路径 |
-| 缓存 JSONObject 被原地修改 | `filterByScanResult` 返回新 list，不 mutate 缓存内对象（或 copy 后再 filter） |
+| 风险                              | 缓解                                                                          |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| 大社区全量 list 内存过滤性能      | 与现有 platform/repository 策略一致；后续可 SQL 优化                          |
+| `scanResult` 非法值               | 空 set 视为不过滤；可选 validator.yml 校验                                    |
+| person 扫描路径无 scanResult 字段 | 本需求仅覆盖 openSourceCompliance version 路径                                |
+| 缓存 JSONObject 被原地修改        | `filterByScanResult` 返回新 list，不 mutate 缓存内对象（或 copy 后再 filter） |
 
 **缓存安全**：从 `jsonObject.get("list")` 取 list 后应在新 list 上操作，避免污染 Redis 中缓存的原始全量 list。实现时使用 `stream().filter().collect(toList())` 产生新列表。
 

@@ -3,6 +3,7 @@
 ## Summary
 
 为 openlibing-gateway 新增 GitHub OAuth2.0 授权登录能力，包括：
+
 - 新增 GitHub 配置类和 OAuth 工具类
 - 扩展 `Platform` 枚举支持 `GITHUB`
 - 在 `LoginServiceImpl` 中添加 GitHub 相关方法
@@ -12,6 +13,7 @@
 ## Motivation
 
 当前系统已支持 Gitee、Gitcode、Uniportal、Openubmc 四个第三方平台登录，需要扩展 GitHub 平台支持：
+
 1. 为海外用户提供登录入口
 2. 支持 IDE 插件通过 GitHub 授权获取 token
 3. 完善统一鉴权方案，整合更多第三方平台
@@ -20,16 +22,16 @@
 
 ### 新增文件（2个）
 
-| 文件 | 说明 |
-|------|------|
-| `common/config/auth/GithubAuthConfig.java` | GitHub OAuth 配置类，读取 Apollo 配置 |
-| `common/utils/oauth/GithubOAuthUtil.java` | GitHub OAuth 工具类，实现 token 获取和用户信息查询 |
+| 文件                                       | 说明                                               |
+| ------------------------------------------ | -------------------------------------------------- |
+| `common/config/auth/GithubAuthConfig.java` | GitHub OAuth 配置类，读取 Apollo 配置              |
+| `common/utils/oauth/GithubOAuthUtil.java`  | GitHub OAuth 工具类，实现 token 获取和用户信息查询 |
 
 ### 修改文件（2个）
 
-| 文件 | 说明 |
-|------|------|
-| `common/constants/Platform.java` | 新增 `GITHUB` 枚举值 |
+| 文件                                          | 说明                                  |
+| --------------------------------------------- | ------------------------------------- |
+| `common/constants/Platform.java`              | 新增 `GITHUB` 枚举值                  |
 | `business/service/impl/LoginServiceImpl.java` | 新增 `generateGithubAuthUrl()` 等方法 |
 
 ### 不在范围内

@@ -2,16 +2,16 @@
 
 ## 归档信息
 
-| 项目 | 内容 |
-|------|------|
-| 需求名称 | 黄蓝协同 stop 接口修复 |
-| 业务仓 | openlibing-cicd |
-| 业务 Issue | openlibing/openlibing-cicd#137 |
-| 业务 PR | openlibing/openlibing-cicd!413 (merged) |
-| docs PR | openlibing/openlibing-docs#479 |
-| 开发分支 | master_zby_0625 |
-| 流程模式 | Standard |
-| 归档日期 | 2026-06-30 |
+| 项目       | 内容                                    |
+| ---------- | --------------------------------------- |
+| 需求名称   | 黄蓝协同 stop 接口修复                  |
+| 业务仓     | openlibing-cicd                         |
+| 业务 Issue | openlibing/openlibing-cicd#137          |
+| 业务 PR    | openlibing/openlibing-cicd!413 (merged) |
+| docs PR    | openlibing/openlibing-docs#479          |
+| 开发分支   | master_zby_0625                         |
+| 流程模式   | Standard                                |
+| 归档日期   | 2026-06-30                              |
 
 ## 关联
 

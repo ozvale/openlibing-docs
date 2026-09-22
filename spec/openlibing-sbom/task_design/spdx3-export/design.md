@@ -37,14 +37,14 @@ Client 下载文件 (productName-SPDX-3.0.1-sbom.json)
 
 ### 1.3 架构决策
 
-| 决策 | 结论 | 原因 |
-|------|------|------|
-| 实现方式 | 独立 `Spdx3Writer`，非在 `SbomServiceImpl` 内分支判断 | 保持统一 `getSbomWriter().write()` 路由模式 |
-| 转换策略 | 先 2.2 后转换的两步策略 | tools-java 仅支持文件级转换、externalRefs 需预处理 |
-| externalRefs 映射 | 5 种非标准类型 → OTHER/OTHER，原始信息存 comment | SPDX 3.0.1 规范对 referenceCategory/type 有严格约束 |
-| 时间戳归一化 | 正则 `\.\d+Z$` → `Z` 去毫秒 | tools-java SpdxConverter 高精度时间戳解析失败 |
-| format guard | write() 入口校验非 JSON 抛异常 | 提前拦截而非静默忽略，避免调用方误解 |
-| exportSbomOptions | 独立端点 + 枚举 getter 取值 | 前后端枚举同步，新增枚举值时仅需加一行 |
+| 决策              | 结论                                                  | 原因                                                |
+| ----------------- | ----------------------------------------------------- | --------------------------------------------------- |
+| 实现方式          | 独立 `Spdx3Writer`，非在 `SbomServiceImpl` 内分支判断 | 保持统一 `getSbomWriter().write()` 路由模式         |
+| 转换策略          | 先 2.2 后转换的两步策略                               | tools-java 仅支持文件级转换、externalRefs 需预处理  |
+| externalRefs 映射 | 5 种非标准类型 → OTHER/OTHER，原始信息存 comment      | SPDX 3.0.1 规范对 referenceCategory/type 有严格约束 |
+| 时间戳归一化      | 正则 `\.\d+Z$` → `Z` 去毫秒                           | tools-java SpdxConverter 高精度时间戳解析失败       |
+| format guard      | write() 入口校验非 JSON 抛异常                        | 提前拦截而非静默忽略，避免调用方误解                |
+| exportSbomOptions | 独立端点 + 枚举 getter 取值                           | 前后端枚举同步，新增枚举值时仅需加一行              |
 
 ---
 
@@ -106,14 +106,14 @@ SbomServiceImpl.getExportSbomOptions()
 
 ### 2.4 非标准 externalRefs 映射表
 
-| 原始 category | 转换后 category | 转换后 type | comment 存原始值 |
-|---------------|-----------------|-------------|-------------------|
-| EXTERNAL_MANAGER | OTHER | OTHER | v2_refCategory=EXTERNAL_MANAGER;v2_refType=(原) |
-| PROVIDE_MANAGER | OTHER | OTHER | 同上 |
-| RELATIONSHIP_MANAGER | OTHER | OTHER | 同上 |
-| SOURCE_MANAGER | OTHER | OTHER | 同上 |
-| PERSISTENT_ID | OTHER | OTHER | 同上 |
-| 其他标准类型 | 不修改 | 不修改 | 仅记录 comment |
+| 原始 category        | 转换后 category | 转换后 type | comment 存原始值                                |
+| -------------------- | --------------- | ----------- | ----------------------------------------------- |
+| EXTERNAL_MANAGER     | OTHER           | OTHER       | v2_refCategory=EXTERNAL_MANAGER;v2_refType=(原) |
+| PROVIDE_MANAGER      | OTHER           | OTHER       | 同上                                            |
+| RELATIONSHIP_MANAGER | OTHER           | OTHER       | 同上                                            |
+| SOURCE_MANAGER       | OTHER           | OTHER       | 同上                                            |
+| PERSISTENT_ID        | OTHER           | OTHER       | 同上                                            |
+| 其他标准类型         | 不修改          | 不修改      | 仅记录 comment                                  |
 
 ---
 
@@ -123,60 +123,60 @@ SbomServiceImpl.getExportSbomOptions()
 
 #### Spdx3Writer
 
-| 属性 | 说明 |
-|------|------|
-| 全限定名 | `org.opensourceway.sbom.service.writer.impl.spdx.Spdx3Writer` |
-| 继承/实现 | `implements SbomWriter` |
+| 属性        | 说明                                                                                                 |
+| ----------- | ---------------------------------------------------------------------------------------------------- |
+| 全限定名    | `org.opensourceway.sbom.service.writer.impl.spdx.Spdx3Writer`                                        |
+| 继承/实现   | `implements SbomWriter`                                                                              |
 | Spring 注解 | `@Service(value = SbomConstants.SPDX3_NAME + SbomConstants.WRITER_NAME)` → `@Service("SPDX3writer")` |
-| 职责 | SPDX 3.0.1 格式 SBOM 导出 |
-| 依赖 | `@Autowired SpdxWriter spdxWriter` |
+| 职责        | SPDX 3.0.1 格式 SBOM 导出                                                                            |
+| 依赖        | `@Autowired SpdxWriter spdxWriter`                                                                   |
 
 **方法清单：**
 
-| 方法 | 可见性 | 说明 |
-|------|--------|------|
-| `write(String, SbomFormat) → byte[]` | public | 导出入口，三步流程 + format guard |
-| `writePackage(String, String, String, SbomFormat) → byte[]` | public | 未实现，抛 SbomRuntimeException |
-| `processExternalRefsForSpdx3(byte[]) → byte[]` | private | externalRefs 预处理（时间戳归一化 + 类型映射） |
-| `normalizeCreationTimestamp(JsonNode) → void` | private | 时间戳高精度归一到秒 |
-| `processExternalRef(ObjectNode) → void` | private | 单个 externalRef 映射 |
-| `convertSpdx2ToSpdx3(byte[]) → byte[]` | private | 调用 tools-java SpdxConverter |
+| 方法                                                        | 可见性  | 说明                                           |
+| ----------------------------------------------------------- | ------- | ---------------------------------------------- |
+| `write(String, SbomFormat) → byte[]`                        | public  | 导出入口，三步流程 + format guard              |
+| `writePackage(String, String, String, SbomFormat) → byte[]` | public  | 未实现，抛 SbomRuntimeException                |
+| `processExternalRefsForSpdx3(byte[]) → byte[]`              | private | externalRefs 预处理（时间戳归一化 + 类型映射） |
+| `normalizeCreationTimestamp(JsonNode) → void`               | private | 时间戳高精度归一到秒                           |
+| `processExternalRef(ObjectNode) → void`                     | private | 单个 externalRef 映射                          |
+| `convertSpdx2ToSpdx3(byte[]) → byte[]`                      | private | 调用 tools-java SpdxConverter                  |
 
 **类常量：**
 
-| 常量 | 类型 | 说明 |
-|------|------|------|
-| `NON_STANDARD_CATEGORIES` | `Set<String>` | 需映射的非标准 externalRef 类型集合（5 种） |
-| `JSON_MAPPER` | `ObjectMapper` | Jackson JSON 解析器 |
+| 常量                      | 类型           | 说明                                        |
+| ------------------------- | -------------- | ------------------------------------------- |
+| `NON_STANDARD_CATEGORIES` | `Set<String>`  | 需映射的非标准 externalRef 类型集合（5 种） |
+| `JSON_MAPPER`             | `ObjectMapper` | Jackson JSON 解析器                         |
 
 #### SbomExportOptionVo
 
-| 属性 | 说明 |
-|------|------|
-| 全限定名 | `org.opensourceway.sbom.model.pojo.vo.sbom.SbomExportOptionVo` |
-| 继承/实现 | `implements Serializable` |
-| 职责 | exportSbom 合法参数组合的响应 VO |
+| 属性      | 说明                                                           |
+| --------- | -------------------------------------------------------------- |
+| 全限定名  | `org.opensourceway.sbom.model.pojo.vo.sbom.SbomExportOptionVo` |
+| 继承/实现 | `implements Serializable`                                      |
+| 职责      | exportSbom 合法参数组合的响应 VO                               |
 
 **字段：**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `spec` | `String` | 规范名称 (SPDX / CycloneDX) |
+| 字段          | 类型     | 说明                         |
+| ------------- | -------- | ---------------------------- |
+| `spec`        | `String` | 规范名称 (SPDX / CycloneDX)  |
 | `specVersion` | `String` | 规范版本 (2.2 / 3.0.1 / 1.4) |
-| `format` | `String` | 文件格式 (json / xml / yaml) |
+| `format`      | `String` | 文件格式 (json / xml / yaml) |
 
 ### 3.2 修改的类
 
-| 类 | 修改内容 |
-|----|---------|
-| `SbomSpecification` | 新增 `SPDX_3_0_1(SbomConstants.SPDX_NAME, "3.0.1", SpdxDocument.class)` 枚举值 |
-| `SbomConstants` | 新增 `SPDX3_NAME = "SPDX3"` 常量 |
-| `SbomContentType` | 新增 `SPDX_3_0_1_JSON_SBOM` + findBySpecAndFormat 分支 |
-| `ReferenceType` | 新增 `OTHER("other")` |
-| `SbomService` (接口) | 新增 `List<SbomExportOptionVo> getExportSbomOptions()` 方法声明 |
-| `SbomServiceImpl` | 新增 `WRITER_KEY_MAP` 静态映射；新增 `getExportSbomOptions()` 方法实现 |
-| `SbomController` | 导出文件名增加 specVersion 字段；新增 `GET /sbom-api/exportSbomOptions` 端点 |
-| `SbomRepository` | 补充类级 Javadoc 和 @param/@return |
+| 类                   | 修改内容                                                                       |
+| -------------------- | ------------------------------------------------------------------------------ |
+| `SbomSpecification`  | 新增 `SPDX_3_0_1(SbomConstants.SPDX_NAME, "3.0.1", SpdxDocument.class)` 枚举值 |
+| `SbomConstants`      | 新增 `SPDX3_NAME = "SPDX3"` 常量                                               |
+| `SbomContentType`    | 新增 `SPDX_3_0_1_JSON_SBOM` + findBySpecAndFormat 分支                         |
+| `ReferenceType`      | 新增 `OTHER("other")`                                                          |
+| `SbomService` (接口) | 新增 `List<SbomExportOptionVo> getExportSbomOptions()` 方法声明                |
+| `SbomServiceImpl`    | 新增 `WRITER_KEY_MAP` 静态映射；新增 `getExportSbomOptions()` 方法实现         |
+| `SbomController`     | 导出文件名增加 specVersion 字段；新增 `GET /sbom-api/exportSbomOptions` 端点   |
+| `SbomRepository`     | 补充类级 Javadoc 和 @param/@return                                             |
 
 ---
 
@@ -188,12 +188,12 @@ SbomServiceImpl.getExportSbomOptions()
 
 导出流程读取已有表结构：
 
-| 表 | 用途 | 关键字段 |
-|----|------|---------|
-| `sbom` | SBOM 元数据 | id, product_id (外键), name, data_license, namespace, created |
-| `package` | 软件包信息 | sbom_id (外键), name, version, external_refs |
-| `file` | 文件信息 | sbom_id (外键), name, checksum |
-| `sbom_element_relationship` | 元素关系 | sbom_id (外键), source_element_id, target_element_id, relationship_type |
+| 表                          | 用途        | 关键字段                                                                |
+| --------------------------- | ----------- | ----------------------------------------------------------------------- |
+| `sbom`                      | SBOM 元数据 | id, product_id (外键), name, data_license, namespace, created           |
+| `package`                   | 软件包信息  | sbom_id (外键), name, version, external_refs                            |
+| `file`                      | 文件信息    | sbom_id (外键), name, checksum                                          |
+| `sbom_element_relationship` | 元素关系    | sbom_id (外键), source_element_id, target_element_id, relationship_type |
 
 SpdxWriter 通过 `SbomRepository.findByProductNameWithPackages()` 一次性加载 Sbom 及其 packages 集合，其余子集合通过 Hibernate `@BatchSize` 批量加载。
 
@@ -224,11 +224,11 @@ OTHER("other")
 
 #### SbomExportOptionVo
 
-| 字段 | 类型 | 示例值 |
-|------|------|--------|
-| `spec` | `String` | `"SPDX"` / `"CycloneDX"` |
+| 字段          | 类型     | 示例值                        |
+| ------------- | -------- | ----------------------------- |
+| `spec`        | `String` | `"SPDX"` / `"CycloneDX"`      |
 | `specVersion` | `String` | `"2.2"` / `"3.0.1"` / `"1.4"` |
-| `format` | `String` | `"json"` / `"xml"` / `"yaml"` |
+| `format`      | `String` | `"json"` / `"xml"` / `"yaml"` |
 
 ---
 
@@ -236,11 +236,11 @@ OTHER("other")
 
 ### 5.1 性能目标
 
-| 接口 | 目标 | 说明 |
-|------|------|------|
-| `GET /sbom-api/exportSbom` (SPDX 3.0.1) | ≤ 3s | 新 spec 组合，首个请求含 tools-java 冷启动 |
-| `GET /sbom-api/exportSbom` (SPDX 2.2, 已有) | ≤ 3s | 不受本次改动影响 |
-| `GET /sbom-api/exportSbomOptions` | ≤ 50ms | 纯内存枚举拼接，无 I/O |
+| 接口                                        | 目标   | 说明                                       |
+| ------------------------------------------- | ------ | ------------------------------------------ |
+| `GET /sbom-api/exportSbom` (SPDX 3.0.1)     | ≤ 3s   | 新 spec 组合，首个请求含 tools-java 冷启动 |
+| `GET /sbom-api/exportSbom` (SPDX 2.2, 已有) | ≤ 3s   | 不受本次改动影响                           |
+| `GET /sbom-api/exportSbomOptions`           | ≤ 50ms | 纯内存枚举拼接，无 I/O                     |
 
 ### 5.2 数据库索引
 
@@ -281,12 +281,12 @@ OTHER("other")
 
 ### 5.9 导出接口各阶段耗时分布（实测参考）
 
-| 阶段 | 典型耗时 | 说明 |
-|------|---------|------|
-| SpdxWriter 装配 + 序列化 | 200-500ms | DB 查询 + 实体转换 + JSON 序列化 |
-| externalRefs 预处理 | 50-200ms | JSON 树解析 + externalRefs 遍历 |
-| SpdxConverter 转换 | 500-1500ms | tools-java 文件级 2.2 → 3.0.1 转换（含 I/O） |
-| **Total** | **750-2200ms** | 3s 目标内 |
+| 阶段                     | 典型耗时       | 说明                                         |
+| ------------------------ | -------------- | -------------------------------------------- |
+| SpdxWriter 装配 + 序列化 | 200-500ms      | DB 查询 + 实体转换 + JSON 序列化             |
+| externalRefs 预处理      | 50-200ms       | JSON 树解析 + externalRefs 遍历              |
+| SpdxConverter 转换       | 500-1500ms     | tools-java 文件级 2.2 → 3.0.1 转换（含 I/O） |
+| **Total**                | **750-2200ms** | 3s 目标内                                    |
 
 ---
 
@@ -294,20 +294,20 @@ OTHER("other")
 
 ### 6.1 导出 SBOM（已有接口，本次扩展参数组合）
 
-| 属性 | 值 |
-|------|----|
-| URL | `GET /sbom-api/exportSbom` |
-| 认证 | 继承项目已有鉴权逻辑 |
-| Tags | 关键接口 |
+| 属性 | 值                         |
+| ---- | -------------------------- |
+| URL  | `GET /sbom-api/exportSbom` |
+| 认证 | 继承项目已有鉴权逻辑       |
+| Tags | 关键接口                   |
 
 **请求参数（query string）：**
 
-| 参数 | 类型 | 必填 | 说明 | 新增组合 |
-|------|------|------|------|----------|
-| `productName` | `String` | 是 | 产品名称 | 不变 |
-| `spec` | `String` | 是 | 规范名称 | 原支持 `spdx`/`cyclonedx` |
-| `specVersion` | `String` | 是 | 规范版本 | **新增** `3.0.1` (组合 spec=spdx) |
-| `format` | `String` | 是 | 文件格式 | 仅 `json` (SPDX 3.0.1 限制) |
+| 参数          | 类型     | 必填 | 说明     | 新增组合                          |
+| ------------- | -------- | ---- | -------- | --------------------------------- |
+| `productName` | `String` | 是   | 产品名称 | 不变                              |
+| `spec`        | `String` | 是   | 规范名称 | 原支持 `spdx`/`cyclonedx`         |
+| `specVersion` | `String` | 是   | 规范版本 | **新增** `3.0.1` (组合 spec=spdx) |
+| `format`      | `String` | 是   | 文件格式 | 仅 `json` (SPDX 3.0.1 限制)       |
 
 **新增合法组合：**
 
@@ -324,11 +324,11 @@ spec=spdx, specVersion=3.0.1, format=json
 
 **响应：**
 
-| 场景 | Content-Type | 响应 |
-|------|-------------|------|
-| 成功 | `application/octet-stream` | Content-Disposition 含文件名 `{productName}-SPDX-3.0.1-sbom.json`，body 为 SPDX 3.0.1 JSON-LD |
-| 参数错误 | `text/plain` | 错误消息字符串（如 "export sbom metadata failed"） |
-| format 不是 json | — | 抛出 `SbomRuntimeException("Spdx3Writer only supports JSON format")` |
+| 场景             | Content-Type               | 响应                                                                                          |
+| ---------------- | -------------------------- | --------------------------------------------------------------------------------------------- |
+| 成功             | `application/octet-stream` | Content-Disposition 含文件名 `{productName}-SPDX-3.0.1-sbom.json`，body 为 SPDX 3.0.1 JSON-LD |
+| 参数错误         | `text/plain`               | 错误消息字符串（如 "export sbom metadata failed"）                                            |
+| format 不是 json | —                          | 抛出 `SbomRuntimeException("Spdx3Writer only supports JSON format")`                          |
 
 **文件名规则：**
 
@@ -339,13 +339,13 @@ spec=spdx, specVersion=3.0.1, format=json
 
 ### 6.2 查询合法参数组合（新增接口）
 
-| 属性 | 值 |
-|------|----|
-| URL | `GET /sbom-api/exportSbomOptions` |
-| 方法 | `GET` |
-| 认证 | 继承项目已有鉴权逻辑 |
-| Tags | 关键接口 |
-| Content-Type | `application/json` |
+| 属性         | 值                                |
+| ------------ | --------------------------------- |
+| URL          | `GET /sbom-api/exportSbomOptions` |
+| 方法         | `GET`                             |
+| 认证         | 继承项目已有鉴权逻辑              |
+| Tags         | 关键接口                          |
+| Content-Type | `application/json`                |
 
 **请求参数：** 无
 
@@ -353,29 +353,30 @@ spec=spdx, specVersion=3.0.1, format=json
 
 ```json
 [
-  {"spec": "SPDX", "specVersion": "2.2", "format": "json"},
-  {"spec": "SPDX", "specVersion": "2.2", "format": "xml"},
-  {"spec": "SPDX", "specVersion": "2.2", "format": "yaml"},
-  {"spec": "SPDX", "specVersion": "3.0.1", "format": "json"},
-  {"spec": "CycloneDX", "specVersion": "1.4", "format": "json"},
-  {"spec": "CycloneDX", "specVersion": "1.4", "format": "xml"},
-  {"spec": "CycloneDX", "specVersion": "1.4", "format": "yaml"}
+  { "spec": "SPDX", "specVersion": "2.2", "format": "json" },
+  { "spec": "SPDX", "specVersion": "2.2", "format": "xml" },
+  { "spec": "SPDX", "specVersion": "2.2", "format": "yaml" },
+  { "spec": "SPDX", "specVersion": "3.0.1", "format": "json" },
+  { "spec": "CycloneDX", "specVersion": "1.4", "format": "json" },
+  { "spec": "CycloneDX", "specVersion": "1.4", "format": "xml" },
+  { "spec": "CycloneDX", "specVersion": "1.4", "format": "yaml" }
 ]
 ```
 
 **HTTP Status：**
-| 状态 | 场景 |
-|------|------|
-| 200 | 成功返回列表 |
-| 500 | 服务内部异常 |
-| 403 | 未认证 |
+
+| 状态 | 场景         |
+| ---- | ------------ |
+| 200  | 成功返回列表 |
+| 500  | 服务内部异常 |
+| 403  | 未认证       |
 
 **性能指标：**
 
-| 指标 | 目标值 |
-|------|-------|
-| 平均延迟 | < 10ms |
-| P99 延迟 | < 50ms |
+| 指标     | 目标值               |
+| -------- | -------------------- |
+| 平均延迟 | < 10ms               |
+| P99 延迟 | < 50ms               |
 | QPS 支持 | > 1000（纯内存操作） |
 
 ---
@@ -408,11 +409,11 @@ spec=spdx, specVersion=3.0.1, format=json
 
 ### 7.3 硬编码防范
 
-| 检查项 | 结果 |
-|--------|------|
-| appKey | 无硬编码 |
-| token | 无硬编码，使用 `GC_TOKEN` 环境变量 |
-| cookie | 无硬编码 |
+| 检查项     | 结果                                               |
+| ---------- | -------------------------------------------------- |
+| appKey     | 无硬编码                                           |
+| token      | 无硬编码，使用 `GC_TOKEN` 环境变量                 |
+| cookie     | 无硬编码                                           |
 | 数据库密码 | 通过 `application.properties` 占位符注入，无硬编码 |
 
 ### 7.4 审计日志
@@ -441,23 +442,23 @@ spec=spdx, specVersion=3.0.1, format=json
 
 ## 技术栈
 
-| 组件 | 版本 | 用途 |
-|------|------|------|
-| `org.spdx:tools-java` | 2.0.6 | SPDX 2.2 → 3.0.1 文件级转换 |
-| `org.spdx:java-spdx-library` | 2.0.3 | SPDX 模型注册（SpdxModelFactory.init()） |
-| Jackson ObjectMapper | Spring Boot 内置 | JSON 树解析 + externalRefs 预处理 |
-| Spring Data JPA | Spring Boot 内置 | 实体查询 + EntityGraph |
-| Hibernate | Spring Boot 内置 | 批量加载 + ORM |
+| 组件                         | 版本             | 用途                                     |
+| ---------------------------- | ---------------- | ---------------------------------------- |
+| `org.spdx:tools-java`        | 2.0.6            | SPDX 2.2 → 3.0.1 文件级转换              |
+| `org.spdx:java-spdx-library` | 2.0.3            | SPDX 模型注册（SpdxModelFactory.init()） |
+| Jackson ObjectMapper         | Spring Boot 内置 | JSON 树解析 + externalRefs 预处理        |
+| Spring Data JPA              | Spring Boot 内置 | 实体查询 + EntityGraph                   |
+| Hibernate                    | Spring Boot 内置 | 批量加载 + ORM                           |
 
 ## 风险 & 缓解
 
-| 风险 | 缓解措施 |
-|------|---------|
-| tools-java 未来升级 API 变更 | 锁定版本 2.0.6 in pom.xml |
-| 临时文件残留 | finally 块中 deleteIfExists，异常路径也确保清理 |
-| SpdxConverter 要求输出文件不存在 | createTempFile 后立即 deleteIfExists(toPath) |
-| 超大 SBOM JSON 树解析内存 | 中等规模 (<100 packages) 用树模型；超大场景可改为 Streaming API |
-| 时间戳精度兼容性 | 正则 replaceFirst 去毫秒，仅修改 Z 结尾时间戳 |
+| 风险                             | 缓解措施                                                        |
+| -------------------------------- | --------------------------------------------------------------- |
+| tools-java 未来升级 API 变更     | 锁定版本 2.0.6 in pom.xml                                       |
+| 临时文件残留                     | finally 块中 deleteIfExists，异常路径也确保清理                 |
+| SpdxConverter 要求输出文件不存在 | createTempFile 后立即 deleteIfExists(toPath)                    |
+| 超大 SBOM JSON 树解析内存        | 中等规模 (<100 packages) 用树模型；超大场景可改为 Streaming API |
+| 时间戳精度兼容性                 | 正则 replaceFirst 去毫秒，仅修改 Z 结尾时间戳                   |
 
 ## 跨仓影响
 

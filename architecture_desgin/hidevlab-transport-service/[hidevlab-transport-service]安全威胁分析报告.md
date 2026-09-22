@@ -22,18 +22,18 @@
 
 ### 1.2 技术栈
 
-| 维度 | 组件 |
-|------|------|
-| 语言 | Python 3 |
-| Web 框架 | Flask + flask_apscheduler |
-| WSGI | gunicorn（sync worker，启动时加载 SSL） |
-| 远程管理 | paramiko（SSH/SFTP） |
-| 配置中心 | python-apollo（HTTPS 校验） |
-| 加解密 | pyOpenSSL / pycryptodome（AES-GCM、PBKDF2） |
-| 鉴权 | 动态 Token + APIG 签名（X-HW-ID / X-HW-SIGN / SHA256） |
-| 容器化 | Docker CLI、Harbor、GlusterFS 共享存储 |
-| 部署 | systemd（transport.service / fileserver.service） |
-| 文件服务 | `python3 -m http.server 18443`（静态分发） |
+| 维度     | 组件                                                   |
+| -------- | ------------------------------------------------------ |
+| 语言     | Python 3                                               |
+| Web 框架 | Flask + flask_apscheduler                              |
+| WSGI     | gunicorn（sync worker，启动时加载 SSL）                |
+| 远程管理 | paramiko（SSH/SFTP）                                   |
+| 配置中心 | python-apollo（HTTPS 校验）                            |
+| 加解密   | pyOpenSSL / pycryptodome（AES-GCM、PBKDF2）            |
+| 鉴权     | 动态 Token + APIG 签名（X-HW-ID / X-HW-SIGN / SHA256） |
+| 容器化   | Docker CLI、Harbor、GlusterFS 共享存储                 |
+| 部署     | systemd（transport.service / fileserver.service）      |
+| 文件服务 | `python3 -m http.server 18443`（静态分发）             |
 
 ### 1.3 仓库目录结构（关键部分）
 
@@ -101,16 +101,16 @@ docs/                      # openapi.yaml / docker_images.md
 
 ### 2.2 信任边界
 
-| 边界 | 起点 | 终点 | 通道 | 风险面 |
-|------|------|------|------|--------|
-| TB1 | 黄区业务平台 | 绿区 transport | HTTPS + APIG 签名 + Token | 越权调用、签名重放、Token 泄露 |
-| TB2 | 绿区 transport | 红区宿主机 | SSH（22） | 凭证泄露、命令注入、主机逃逸 |
-| TB3 | 绿区 transport | Harbor | HTTPS（APIG 签名回传） | 镜像篡改、凭证泄露 |
-| TB4 | 绿区 transport | 华为云 OBS | HTTPS（AK/SK） | AK/SK 泄露、桶越权 |
-| TB5 | 绿区 transport | Apollo 配置中心 | HTTPS | 配置篡改、密钥下发泄露 |
-| TB6 | 红区宿主机 ↔ 容器 | 宿主机 Docker daemon | Docker CLI / mount | 容器逃逸、资源耗尽 |
-| TB7 | 绿区 fileserver（:18443） | 宿主机/容器 | HTTP 静态服务 | 未授权下载、目录遍历 |
-| TB8 | transport 内部线程 | 异步任务队列 | `threading.Thread(daemon=True)` | 任务无隔离、无速率限制 |
+| 边界 | 起点                      | 终点                 | 通道                            | 风险面                         |
+| ---- | ------------------------- | -------------------- | ------------------------------- | ------------------------------ |
+| TB1  | 黄区业务平台              | 绿区 transport       | HTTPS + APIG 签名 + Token       | 越权调用、签名重放、Token 泄露 |
+| TB2  | 绿区 transport            | 红区宿主机           | SSH（22）                       | 凭证泄露、命令注入、主机逃逸   |
+| TB3  | 绿区 transport            | Harbor               | HTTPS（APIG 签名回传）          | 镜像篡改、凭证泄露             |
+| TB4  | 绿区 transport            | 华为云 OBS           | HTTPS（AK/SK）                  | AK/SK 泄露、桶越权             |
+| TB5  | 绿区 transport            | Apollo 配置中心      | HTTPS                           | 配置篡改、密钥下发泄露         |
+| TB6  | 红区宿主机 ↔ 容器         | 宿主机 Docker daemon | Docker CLI / mount              | 容器逃逸、资源耗尽             |
+| TB7  | 绿区 fileserver（:18443） | 宿主机/容器          | HTTP 静态服务                   | 未授权下载、目录遍历           |
+| TB8  | transport 内部线程        | 异步任务队列         | `threading.Thread(daemon=True)` | 任务无隔离、无速率限制         |
 
 ### 2.3 关键数据流
 
@@ -127,19 +127,19 @@ docs/                      # openapi.yaml / docker_images.md
 
 ### 3.1 既有安全控制（值得肯定）
 
-| 控制 | 实现位置 | 说明 |
-|------|----------|------|
-| 命令白名单 | `docker_manager.exec_command` / `CommandSecurity.validate_command_ops` | 仅允许白名单命令，禁止 shell 元字符（单引号外） |
-| 路径校验 | `CommandSecurity.validate_path` | 禁 `..`、限制字符集，防路径穿越 |
-| 容器名/镜像名校验 | `CommandSecurity.validate_container_name` / `validate_image_name` | 防止注入恶意 docker 参数 |
-| 凭证 stdin 传递 | `docker_login`、`sudo_exec_command`、`_exec_with_status` | 通过 stdin 传密码，避免命令行/进程列表泄露 |
-| SSL 证书临时化 | `gunicorn_config.when_ready`、`transport.py.__main__` | 启动解密 → 加载 → 删除临时文件 |
-| 双层解密 | `base/decrypt.py` | root key → work key → AES-GCM，减少密钥单点暴露 |
-| IP/MAC 脱敏 | `utils/security.mask_ip_partial`、日志中 `operator` SHA256 | 降低日志中敏感信息泄露 |
-| APIG 签名回传 | `sign_request` | 对回调请求生成 X-HW-SIGN，防回传被仿冒 |
-| 资源配额校验 | `docker_manager` 校验 CPU/RAM/PIDs/存储 | 防止单容器耗尽宿主机资源 |
-| 请求 ID 追踪 | `logging_handler` | 全链路日志关联，便于事后追溯 |
-| `AutoAddPolicy` 限制 | GlusterFS 节点连接使用 `AutoAddPolicy` | 在内网固定节点间使用，风险可控（但见 T-SSH-02） |
+| 控制                 | 实现位置                                                               | 说明                                            |
+| -------------------- | ---------------------------------------------------------------------- | ----------------------------------------------- |
+| 命令白名单           | `docker_manager.exec_command` / `CommandSecurity.validate_command_ops` | 仅允许白名单命令，禁止 shell 元字符（单引号外） |
+| 路径校验             | `CommandSecurity.validate_path`                                        | 禁 `..`、限制字符集，防路径穿越                 |
+| 容器名/镜像名校验    | `CommandSecurity.validate_container_name` / `validate_image_name`      | 防止注入恶意 docker 参数                        |
+| 凭证 stdin 传递      | `docker_login`、`sudo_exec_command`、`_exec_with_status`               | 通过 stdin 传密码，避免命令行/进程列表泄露      |
+| SSL 证书临时化       | `gunicorn_config.when_ready`、`transport.py.__main__`                  | 启动解密 → 加载 → 删除临时文件                  |
+| 双层解密             | `base/decrypt.py`                                                      | root key → work key → AES-GCM，减少密钥单点暴露 |
+| IP/MAC 脱敏          | `utils/security.mask_ip_partial`、日志中 `operator` SHA256             | 降低日志中敏感信息泄露                          |
+| APIG 签名回传        | `sign_request`                                                         | 对回调请求生成 X-HW-SIGN，防回传被仿冒          |
+| 资源配额校验         | `docker_manager` 校验 CPU/RAM/PIDs/存储                                | 防止单容器耗尽宿主机资源                        |
+| 请求 ID 追踪         | `logging_handler`                                                      | 全链路日志关联，便于事后追溯                    |
+| `AutoAddPolicy` 限制 | GlusterFS 节点连接使用 `AutoAddPolicy`                                 | 在内网固定节点间使用，风险可控（但见 T-SSH-02） |
 
 ### 3.2 风险发现（按文件）
 
@@ -203,96 +203,97 @@ docs/                      # openapi.yaml / docker_images.md
 ## 四、STRIDE-A 威胁分析
 
 > 可利用性分层（Exploitability Tier）：
+>
 > - **Tier 1 直接暴露**：外部调用方可直接触发，无需前置条件。
 > - **Tier 2 条件风险**：需满足特定条件（如凭证泄露、配置被改）。
 > - **Tier 3 纵深防御**：属于内部强化项，被直接利用概率低。
 
 ### 4.1 Spoofing（伪装）
 
-| ID | 威胁 | 描述 | 数据流 | Tier | 风险等级 |
-|----|------|------|--------|------|----------|
-| S-01 | APIG 签名重放 + 请求体篡改 | 已核实：`sign_request` 签名不覆盖请求体、无 nonce、时间戳仅分钟级。同一分钟内捕获的合法请求可在篡改请求体后重放，签名依然有效 | TB1 | Tier 1 | 高 |
-| S-02 | 动态 Token 泄露后冒用 | Token 校验依赖远端 URL，Token 一旦泄露可在有效期内冒充调用方 | TB1 | Tier 2 | 中 |
-| S-03 | Apollo 配置篡改致 `ENABLE_AUTH=false` | 攻击者改 Apollo 即可关闭鉴权 | TB5→TB1 | Tier 2 | 高 |
-| S-04 | SSH 中间人（AutoAddPolicy） | 首次连接不校验主机指纹，内网 ARP 欺骗可劫持 SSH | TB2 | Tier 2 | 中 |
-| S-05 | 宿主机运维账号被冒用 | NOPASSWD:ALL 权限，账号被攻陷即等同 root | TB2 | Tier 2 | 高 |
-| S-06 | Harbor 凭证泄露后冒充推送 | `harbor_server_password` 经日志/内存流转，泄露后可推送恶意镜像 | TB3 | Tier 2 | 高 |
+| ID   | 威胁                                  | 描述                                                                                                                          | 数据流  | Tier   | 风险等级 |
+| ---- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------- | ------ | -------- |
+| S-01 | APIG 签名重放 + 请求体篡改            | 已核实：`sign_request` 签名不覆盖请求体、无 nonce、时间戳仅分钟级。同一分钟内捕获的合法请求可在篡改请求体后重放，签名依然有效 | TB1     | Tier 1 | 高       |
+| S-02 | 动态 Token 泄露后冒用                 | Token 校验依赖远端 URL，Token 一旦泄露可在有效期内冒充调用方                                                                  | TB1     | Tier 2 | 中       |
+| S-03 | Apollo 配置篡改致 `ENABLE_AUTH=false` | 攻击者改 Apollo 即可关闭鉴权                                                                                                  | TB5→TB1 | Tier 2 | 高       |
+| S-04 | SSH 中间人（AutoAddPolicy）           | 首次连接不校验主机指纹，内网 ARP 欺骗可劫持 SSH                                                                               | TB2     | Tier 2 | 中       |
+| S-05 | 宿主机运维账号被冒用                  | NOPASSWD:ALL 权限，账号被攻陷即等同 root                                                                                      | TB2     | Tier 2 | 高       |
+| S-06 | Harbor 凭证泄露后冒充推送             | `harbor_server_password` 经日志/内存流转，泄露后可推送恶意镜像                                                                | TB3     | Tier 2 | 高       |
 
 ### 4.2 Tampering（篡改）
 
-| ID | 威胁 | 描述 | 数据流 | Tier | 风险等级 |
-|----|------|------|--------|------|----------|
-| T-01 | 命令注入（docker run 参数） | 白名单前缀匹配，参数位仍可注入 `--privileged` 等危险选项 | TB2 | Tier 1 | 高 |
-| T-02 | 路径穿越写公钥 | `write_public_key` 虽校验公钥格式，但目标路径若未充分校验，可写至宿主机敏感目录 | TB2 | Tier 2 | 中 |
-| T-03 | create_container.sh 模板注入 | `is_custom_image` 等未校验参数进入 shell 模板 | TB2 | Tier 1 | 高 |
-| T-04 | 软件包仓库篡改 | `fileserver` 无鉴权，`software/*/install.sh` 可被中间人替换 | TB7 | Tier 1 | 高 |
-| T-05 | GlusterFS 卷数据篡改 | 共享存储未加密，节点被攻陷可篡改用户数据 | TB6 | Tier 2 | 中 |
-| T-06 | Apollo 配置被篡改 | 配置中心单点，篡改可改变服务行为（如解密密钥、回调 URL） | TB5 | Tier 2 | 高 |
-| T-07 | 日志被篡改 | `/var/log/hidevlab` 若权限过松，攻击者可擦除审计痕迹 | 内部 | Tier 3 | 中 |
+| ID   | 威胁                         | 描述                                                                            | 数据流 | Tier   | 风险等级 |
+| ---- | ---------------------------- | ------------------------------------------------------------------------------- | ------ | ------ | -------- |
+| T-01 | 命令注入（docker run 参数）  | 白名单前缀匹配，参数位仍可注入 `--privileged` 等危险选项                        | TB2    | Tier 1 | 高       |
+| T-02 | 路径穿越写公钥               | `write_public_key` 虽校验公钥格式，但目标路径若未充分校验，可写至宿主机敏感目录 | TB2    | Tier 2 | 中       |
+| T-03 | create_container.sh 模板注入 | `is_custom_image` 等未校验参数进入 shell 模板                                   | TB2    | Tier 1 | 高       |
+| T-04 | 软件包仓库篡改               | `fileserver` 无鉴权，`software/*/install.sh` 可被中间人替换                     | TB7    | Tier 1 | 高       |
+| T-05 | GlusterFS 卷数据篡改         | 共享存储未加密，节点被攻陷可篡改用户数据                                        | TB6    | Tier 2 | 中       |
+| T-06 | Apollo 配置被篡改            | 配置中心单点，篡改可改变服务行为（如解密密钥、回调 URL）                        | TB5    | Tier 2 | 高       |
+| T-07 | 日志被篡改                   | `/var/log/hidevlab` 若权限过松，攻击者可擦除审计痕迹                            | 内部   | Tier 3 | 中       |
 
 ### 4.3 Repudiation（抵赖）
 
-| ID | 威胁 | 描述 | 数据流 | Tier | 风险等级 |
-|----|------|------|--------|------|----------|
-| R-01 | 异步任务无任务 ID 关联审计 | 部分异步函数未在日志中贯穿 task_id，事后无法追溯 | TB8 | Tier 2 | 中 |
-| R-02 | `/os/ops/account/create` 假成功 | 路由返回 success 但未执行，审计日志与实际不一致 | TB2 | Tier 1 | 中 |
-| R-03 | 日志 IP 哈希 salt 硬编码 | salt 泄露后无法可靠关联调用方 IP | 内部 | Tier 3 | 低 |
-| R-04 | fileserver 无访问日志 | `python3 -m http.server` 默认输出 stdout，未记录访问者 | TB7 | Tier 2 | 中 |
+| ID   | 威胁                            | 描述                                                   | 数据流 | Tier   | 风险等级 |
+| ---- | ------------------------------- | ------------------------------------------------------ | ------ | ------ | -------- |
+| R-01 | 异步任务无任务 ID 关联审计      | 部分异步函数未在日志中贯穿 task_id，事后无法追溯       | TB8    | Tier 2 | 中       |
+| R-02 | `/os/ops/account/create` 假成功 | 路由返回 success 但未执行，审计日志与实际不一致        | TB2    | Tier 1 | 中       |
+| R-03 | 日志 IP 哈希 salt 硬编码        | salt 泄露后无法可靠关联调用方 IP                       | 内部   | Tier 3 | 低       |
+| R-04 | fileserver 无访问日志           | `python3 -m http.server` 默认输出 stdout，未记录访问者 | TB7    | Tier 2 | 中       |
 
 ### 4.4 Information Disclosure（信息泄露）
 
-| ID | 威胁 | 描述 | 数据流 | Tier | 风险等级 |
-|----|------|------|--------|------|----------|
-| I-01 | 密码被日志记录 | `LOG.info(f"callback_data={callback_data}")` 可能含密码字段 | TB8 | Tier 1 | 高 |
-| I-02 | 临时 SSL 文件残留 | `when_ready` 未触发时证书私钥残留磁盘 | 内部 | Tier 2 | 中 |
-| I-03 | fileserver 未授权下载 | 静态服务无鉴权，`software/`、`script/` 可被遍历下载 | TB7 | Tier 1 | 高 |
-| I-04 | 进程列表泄露凭证 | 虽 stdin 传密码，但 `docker login` 偶发回显、异常栈可能含密码 | TB2 | Tier 2 | 中 |
-| I-05 | 错误信息回显 | 路由 `except Exception as exc: return {"msg": str(exc)}` 回显内部异常 | TB1 | Tier 1 | 中 |
-| I-06 | IP 脱敏不彻底 | 部分路由（如 `set_vm_obs`）日志中直接出现 `host_ip`，未统一脱敏 | TB2 | Tier 2 | 中 |
-| I-07 | 内存转储泄露明文密钥 | Python 字符串不可控回收，核心 dump 可暴露 SSL 私钥/密码 | 内部 | Tier 3 | 低 |
+| ID   | 威胁                  | 描述                                                                  | 数据流 | Tier   | 风险等级 |
+| ---- | --------------------- | --------------------------------------------------------------------- | ------ | ------ | -------- |
+| I-01 | 密码被日志记录        | `LOG.info(f"callback_data={callback_data}")` 可能含密码字段           | TB8    | Tier 1 | 高       |
+| I-02 | 临时 SSL 文件残留     | `when_ready` 未触发时证书私钥残留磁盘                                 | 内部   | Tier 2 | 中       |
+| I-03 | fileserver 未授权下载 | 静态服务无鉴权，`software/`、`script/` 可被遍历下载                   | TB7    | Tier 1 | 高       |
+| I-04 | 进程列表泄露凭证      | 虽 stdin 传密码，但 `docker login` 偶发回显、异常栈可能含密码         | TB2    | Tier 2 | 中       |
+| I-05 | 错误信息回显          | 路由 `except Exception as exc: return {"msg": str(exc)}` 回显内部异常 | TB1    | Tier 1 | 中       |
+| I-06 | IP 脱敏不彻底         | 部分路由（如 `set_vm_obs`）日志中直接出现 `host_ip`，未统一脱敏       | TB2    | Tier 2 | 中       |
+| I-07 | 内存转储泄露明文密钥  | Python 字符串不可控回收，核心 dump 可暴露 SSL 私钥/密码               | 内部   | Tier 3 | 低       |
 
 ### 4.5 Denial of Service（拒绝服务）
 
-| ID | 威胁 | 描述 | 数据流 | Tier | 风险等级 |
-|----|------|------|--------|------|----------|
-| D-01 | 异步线程爆炸 | 无任务上限的 `threading.Thread`，高频调用耗尽线程/SSH 连接 | TB1→TB8 | Tier 1 | 高 |
-| D-02 | 容器资源耗尽 | 虽校验 CPU/RAM，但 `pids_limit` 上限未与宿主机总量联动 | TB6 | Tier 2 | 中 |
-| D-03 | fileserver 日志打满磁盘 | `os.log` 无轮转 | TB7 | Tier 2 | 中 |
-| D-04 | GlusterFS 清理锁死 | `_cleanup_member_ws_on_gfs_node` 使用 `flock`，异常退出未释放锁 | TB2 | Tier 2 | 中 |
-| D-05 | 慢速 SSH 致请求超时 | paramiko 连接无超时或超时过长，gunicorn sync worker 阻塞 | TB2 | Tier 1 | 中 |
+| ID   | 威胁                    | 描述                                                            | 数据流  | Tier   | 风险等级 |
+| ---- | ----------------------- | --------------------------------------------------------------- | ------- | ------ | -------- |
+| D-01 | 异步线程爆炸            | 无任务上限的 `threading.Thread`，高频调用耗尽线程/SSH 连接      | TB1→TB8 | Tier 1 | 高       |
+| D-02 | 容器资源耗尽            | 虽校验 CPU/RAM，但 `pids_limit` 上限未与宿主机总量联动          | TB6     | Tier 2 | 中       |
+| D-03 | fileserver 日志打满磁盘 | `os.log` 无轮转                                                 | TB7     | Tier 2 | 中       |
+| D-04 | GlusterFS 清理锁死      | `_cleanup_member_ws_on_gfs_node` 使用 `flock`，异常退出未释放锁 | TB2     | Tier 2 | 中       |
+| D-05 | 慢速 SSH 致请求超时     | paramiko 连接无超时或超时过长，gunicorn sync worker 阻塞        | TB2     | Tier 1 | 中       |
 
 ### 4.6 Elevation of Privilege（权限提升）
 
-| ID | 威胁 | 描述 | 数据流 | Tier | 风险等级 |
-|----|------|------|--------|------|----------|
-| E-01 | 容器逃逸（危险 run 选项） | 若 `--privileged`/`--cap-add` 被注入，容器可逃逸至宿主机 | TB6 | Tier 1 | 高 |
-| E-02 | 运维账号 NOPASSWD:ALL | 被攻陷即 root | TB2 | Tier 2 | 高 |
-| E-03 | docker group 提权 | 若运维账号在 docker 组，可 `docker run -v /:/m ...` 挂载宿主根 | TB6 | Tier 2 | 高 |
-| E-04 | Apollo 任意配置写入 | 攻击者改 Apollo 即可改服务行为，等同控制面提权 | TB5 | Tier 2 | 高 |
-| E-05 | 路由级权限不一致 | `/os/ops/account/create` 等路由仅校验 Token，未校验调用者是否具备「建账号」权限 | TB1 | Tier 1 | 中 |
+| ID   | 威胁                      | 描述                                                                            | 数据流 | Tier   | 风险等级 |
+| ---- | ------------------------- | ------------------------------------------------------------------------------- | ------ | ------ | -------- |
+| E-01 | 容器逃逸（危险 run 选项） | 若 `--privileged`/`--cap-add` 被注入，容器可逃逸至宿主机                        | TB6    | Tier 1 | 高       |
+| E-02 | 运维账号 NOPASSWD:ALL     | 被攻陷即 root                                                                   | TB2    | Tier 2 | 高       |
+| E-03 | docker group 提权         | 若运维账号在 docker 组，可 `docker run -v /:/m ...` 挂载宿主根                  | TB6    | Tier 2 | 高       |
+| E-04 | Apollo 任意配置写入       | 攻击者改 Apollo 即可改服务行为，等同控制面提权                                  | TB5    | Tier 2 | 高       |
+| E-05 | 路由级权限不一致          | `/os/ops/account/create` 等路由仅校验 Token，未校验调用者是否具备「建账号」权限 | TB1    | Tier 1 | 中       |
 
 ### 4.7 Abuse Cases（滥用案例）
 
-| ID | 滥用场景 | 涉及威胁 | 严重度 |
-|----|----------|----------|--------|
-| A-01 | 攻击者高频调用 `/docker/image/publish`，传入大量 machines，触发数十个并发 SSH + Harbor push，耗尽宿主机资源 | D-01, D-05 | 高 |
-| A-02 | 攻击者篡改 `software/` 中的 `install.sh`，诱导用户「重装软件」时执行恶意脚本 | T-04, I-03 | 高 |
-| A-03 | 攻击者获取运维账号后，利用 NOPASSWD:ALL 执行 `docker run --privileged -v /:/host`，完全接管宿主机 | E-02, E-03 | 严重 |
-| A-04 | 攻击者重放合法 APIG 签名请求（若无 nonce），重复触发容器删除/清理，造成业务数据丢失 | S-01, T-01 | 高 |
-| A-05 | 攻击者通过 `fileserver` 未授权下载 `script/create_container.sh`，分析模板后构造针对性注入参数 | T-03, I-03 | 高 |
-| A-06 | 内部人员改 Apollo 关闭 `ENABLE_AUTH`，随后直接调用 `/passwd/expire` 重置任意主机密码 | S-03, E-04 | 严重 |
-| A-07 | 攻击者通过日志文件读取 `callback_data`，获取 Harbor 密码，推送恶意镜像至所有环境 | I-01, S-06 | 严重 |
+| ID   | 滥用场景                                                                                                    | 涉及威胁   | 严重度 |
+| ---- | ----------------------------------------------------------------------------------------------------------- | ---------- | ------ |
+| A-01 | 攻击者高频调用 `/docker/image/publish`，传入大量 machines，触发数十个并发 SSH + Harbor push，耗尽宿主机资源 | D-01, D-05 | 高     |
+| A-02 | 攻击者篡改 `software/` 中的 `install.sh`，诱导用户「重装软件」时执行恶意脚本                                | T-04, I-03 | 高     |
+| A-03 | 攻击者获取运维账号后，利用 NOPASSWD:ALL 执行 `docker run --privileged -v /:/host`，完全接管宿主机           | E-02, E-03 | 严重   |
+| A-04 | 攻击者重放合法 APIG 签名请求（若无 nonce），重复触发容器删除/清理，造成业务数据丢失                         | S-01, T-01 | 高     |
+| A-05 | 攻击者通过 `fileserver` 未授权下载 `script/create_container.sh`，分析模板后构造针对性注入参数               | T-03, I-03 | 高     |
+| A-06 | 内部人员改 Apollo 关闭 `ENABLE_AUTH`，随后直接调用 `/passwd/expire` 重置任意主机密码                        | S-03, E-04 | 严重   |
+| A-07 | 攻击者通过日志文件读取 `callback_data`，获取 Harbor 密码，推送恶意镜像至所有环境                            | I-01, S-06 | 严重   |
 
 ---
 
 ## 五、威胁优先级矩阵
 
-| 优先级 | 威胁 ID | 说明 |
-|--------|---------|------|
-| **P0 严重** | A-03, A-06, A-07, E-02, E-04 | 直接导致宿主机/控制面被接管 |
-| **P1 高** | S-01, S-03, T-01, T-03, T-04, I-01, I-03, D-01, E-01, E-05, A-01, A-02, A-04, A-05 | 可被外部直接触发或造成大范围数据/服务影响 |
-| **P2 中** | S-02, S-04, S-06, T-02, T-05, T-06, R-01, R-02, R-04, I-02, I-04, I-05, I-06, D-02, D-03, D-04, D-05, E-03 | 需特定条件触发或影响范围有限 |
-| **P3 低** | R-03, I-07, T-07 | 纵深防御项，直接利用概率低 |
+| 优先级      | 威胁 ID                                                                                                    | 说明                                      |
+| ----------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **P0 严重** | A-03, A-06, A-07, E-02, E-04                                                                               | 直接导致宿主机/控制面被接管               |
+| **P1 高**   | S-01, S-03, T-01, T-03, T-04, I-01, I-03, D-01, E-01, E-05, A-01, A-02, A-04, A-05                         | 可被外部直接触发或造成大范围数据/服务影响 |
+| **P2 中**   | S-02, S-04, S-06, T-02, T-05, T-06, R-01, R-02, R-04, I-02, I-04, I-05, I-06, D-02, D-03, D-04, D-05, E-03 | 需特定条件触发或影响范围有限              |
+| **P3 低**   | R-03, I-07, T-07                                                                                           | 纵深防御项，直接利用概率低                |
 
 ---
 
@@ -332,20 +333,20 @@ docs/                      # openapi.yaml / docker_images.md
 
 ## 七、执行性与追踪
 
-| 建议项 | 对应威胁 | 责任域 | 建议验收方式 |
-|--------|----------|--------|--------------|
-| 结构化命令调用 | T-01, T-03, E-01 | service/ | 单元测试：传入恶意参数应被拒 |
-| fileserver 鉴权 + HTTPS | T-04, I-03 | deploy/ + 新增路由 | 未授权请求返回 401 |
-| 日志脱敏中间件 | I-01, A-07 | base/logging_handler | grep 密码字段为空 |
-| APIG nonce/timestamp | S-01, A-04 | base/auth_filter | 重放请求返回 401 |
-| 异步任务限流 | D-01, A-01 | service/docker_manager | 压测：N+1 任务被拒 |
-| `/os/ops/account/create` 修复 | R-02 | transport.py | 真实创建并返回账号状态 |
-| sudo 权限收窄 | E-02, A-03 | tools/ssh.py | `sudo -l` 仅列白名单命令 |
-| Apollo 配置变更审计 | S-03, E-04, A-06 | base/apollo_manager | 关键项变更触发告警 |
-| SSH 指纹校验 | S-04 | tools/ssh.py | 首次连接需交互确认 |
-| SSL 硬化 | R-SSL-01/02 | gunicorn_config.py | `nmap --ssl-enum` 无弱套件 |
-| 错误信息收敛 | I-05 | transport.py | 异常响应无堆栈 |
-| 密钥管理升级 | R-DEC-01 | base/decrypt.py | root key 不再来自 Apollo |
+| 建议项                        | 对应威胁         | 责任域                 | 建议验收方式                 |
+| ----------------------------- | ---------------- | ---------------------- | ---------------------------- |
+| 结构化命令调用                | T-01, T-03, E-01 | service/               | 单元测试：传入恶意参数应被拒 |
+| fileserver 鉴权 + HTTPS       | T-04, I-03       | deploy/ + 新增路由     | 未授权请求返回 401           |
+| 日志脱敏中间件                | I-01, A-07       | base/logging_handler   | grep 密码字段为空            |
+| APIG nonce/timestamp          | S-01, A-04       | base/auth_filter       | 重放请求返回 401             |
+| 异步任务限流                  | D-01, A-01       | service/docker_manager | 压测：N+1 任务被拒           |
+| `/os/ops/account/create` 修复 | R-02             | transport.py           | 真实创建并返回账号状态       |
+| sudo 权限收窄                 | E-02, A-03       | tools/ssh.py           | `sudo -l` 仅列白名单命令     |
+| Apollo 配置变更审计           | S-03, E-04, A-06 | base/apollo_manager    | 关键项变更触发告警           |
+| SSH 指纹校验                  | S-04             | tools/ssh.py           | 首次连接需交互确认           |
+| SSL 硬化                      | R-SSL-01/02      | gunicorn_config.py     | `nmap --ssl-enum` 无弱套件   |
+| 错误信息收敛                  | I-05             | transport.py           | 异常响应无堆栈               |
+| 密钥管理升级                  | R-DEC-01         | base/decrypt.py        | root key 不再来自 Apollo     |
 
 ---
 
@@ -361,22 +362,22 @@ docs/                      # openapi.yaml / docker_images.md
 
 ## 九、附录：审查覆盖文件清单
 
-| 文件 | 审查深度 | 关键发现 |
-|------|----------|----------|
-| `transport.py` | 路由与入口全览 | R-ROUTE-01~04 |
-| `service/docker_manager.py` | 高风险函数（exec_command、login、create、cleanup、publish） | R-DOCKER-01~06 |
-| `tools/ssh.py` | Ssh 类、sudo_exec_command、create_ops_account | R-SSH-01~03 |
-| `base/auth_filter.py` | auth_filter、sign_request | R-AUTH-01~03 |
-| `base/decrypt.py` | decrypt、decryptbyroot | R-DEC-01~02 |
-| `gunicorn_config.py` | SSL 加载、when_ready | R-SSL-01~02 |
-| `transport.py.__main__` | 临时证书处理 | R-SSL-01 |
-| `utils/command_security.py` | validate_command_ops、validate_path | R-CS-01~02 |
-| `base/logging_handler.py` | JsonFormatter、operator 哈希 | R-LOG-01~02 |
-| `fileserver.service` | 静态文件服务 | R-FS-01~02 |
-| `service/pre_install.py` | 软件状态解析 | 无新增风险 |
-| `base/common.py` | return_post | 无新增风险 |
-| `transport.service` | systemd unit（User=root） | 建议非 root 运行（见 6.2） |
-| `requirements.txt` | 依赖清单 | 建议补充 paramiko/flask/gunicorn 等显式版本约束 |
+| 文件                        | 审查深度                                                    | 关键发现                                        |
+| --------------------------- | ----------------------------------------------------------- | ----------------------------------------------- |
+| `transport.py`              | 路由与入口全览                                              | R-ROUTE-01~04                                   |
+| `service/docker_manager.py` | 高风险函数（exec_command、login、create、cleanup、publish） | R-DOCKER-01~06                                  |
+| `tools/ssh.py`              | Ssh 类、sudo_exec_command、create_ops_account               | R-SSH-01~03                                     |
+| `base/auth_filter.py`       | auth_filter、sign_request                                   | R-AUTH-01~03                                    |
+| `base/decrypt.py`           | decrypt、decryptbyroot                                      | R-DEC-01~02                                     |
+| `gunicorn_config.py`        | SSL 加载、when_ready                                        | R-SSL-01~02                                     |
+| `transport.py.__main__`     | 临时证书处理                                                | R-SSL-01                                        |
+| `utils/command_security.py` | validate_command_ops、validate_path                         | R-CS-01~02                                      |
+| `base/logging_handler.py`   | JsonFormatter、operator 哈希                                | R-LOG-01~02                                     |
+| `fileserver.service`        | 静态文件服务                                                | R-FS-01~02                                      |
+| `service/pre_install.py`    | 软件状态解析                                                | 无新增风险                                      |
+| `base/common.py`            | return_post                                                 | 无新增风险                                      |
+| `transport.service`         | systemd unit（User=root）                                   | 建议非 root 运行（见 6.2）                      |
+| `requirements.txt`          | 依赖清单                                                    | 建议补充 paramiko/flask/gunicorn 等显式版本约束 |
 
 ---
 

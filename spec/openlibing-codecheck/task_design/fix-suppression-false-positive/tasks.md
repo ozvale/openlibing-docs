@@ -11,10 +11,10 @@
 
 ## 修改文件清单
 
-| 文件 | 变更说明 |
-|------|---------|
-| `SuppressionScanServiceImpl.java` | `scanAddedLines` 增加注释标记符位置校验 |
-| `SuppressionScanServiceImplTest.java` | 新增 2 个测试用例覆盖误识别场景 |
+| 文件                                  | 变更说明                                |
+| ------------------------------------- | --------------------------------------- |
+| `SuppressionScanServiceImpl.java`     | `scanAddedLines` 增加注释标记符位置校验 |
+| `SuppressionScanServiceImplTest.java` | 新增 2 个测试用例覆盖误识别场景         |
 
 ## 验证方式
 

@@ -9,6 +9,7 @@ Add an `ignore_err` parameter to SSH command execution methods (`sendcmd` and `s
 Currently, `ssh_cmd()` and `ssh_cmd_interactive()` methods throw exceptions when commands fail. This proposal changes to **never throw exceptions** and use the `success` field to indicate execution status.
 
 Key changes:
+
 - Add `ignore_err` parameter to control `success` behavior on failure
 - Change return type to dictionary with `success`, `stdout`, `stderr`
 - Track `matched_prompt` status in interactive mode
@@ -33,7 +34,7 @@ Key changes:
 ## Impact
 
 - **Backward Compatible**: **NO** - return type changes from `str` to `dict`
-- **Breaking Changes**: 
+- **Breaking Changes**:
   - Return type changes from string to dictionary
   - No exceptions thrown on failure - callers must check `result['success']`
 - **Affected Modules**:
@@ -53,14 +54,14 @@ Key changes:
 
 ## Success Field Logic
 
-| Condition | ignore_err | success |
-|-----------|------------|---------|
-| `exit_code == 0` (command succeeded) | Any | `True` |
-| `exit_code != 0` (command failed) | `False` | `False` |
-| `exit_code != 0` (command failed) | `True` | `True` (error ignored) |
-| Prompt matched (interactive) | Any | `True` |
-| Prompt not matched (interactive) | `False` | `False` |
-| Prompt not matched (interactive) | `True` | `True` (error ignored) |
+| Condition                            | ignore_err | success                |
+| ------------------------------------ | ---------- | ---------------------- |
+| `exit_code == 0` (command succeeded) | Any        | `True`                 |
+| `exit_code != 0` (command failed)    | `False`    | `False`                |
+| `exit_code != 0` (command failed)    | `True`     | `True` (error ignored) |
+| Prompt matched (interactive)         | Any        | `True`                 |
+| Prompt not matched (interactive)     | `False`    | `False`                |
+| Prompt not matched (interactive)     | `True`     | `True` (error ignored) |
 
 **Key insight**: When `ignore_err=True`, `success=True` regardless of command outcome (error was successfully ignored).
 

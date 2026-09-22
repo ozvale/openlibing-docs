@@ -8,11 +8,11 @@
 
 ### 改动文件
 
-| 文件 | 改动 |
-|------|------|
-| apps/web-openlibing/src/api/url.ts | 新增 TRIGGER_VULN_BULLETIN URL 常量 |
-| apps/web-openlibing/src/api/api.ts | 新增 triggerVulnerabilityBulletin 方法定义 |
-| apps/web-openlibing/src/views/Publish/publishReview/detail/reviewDetail.vue | 漏洞信息区域 UI + 业务逻辑 |
+| 文件                                                                        | 改动                                       |
+| --------------------------------------------------------------------------- | ------------------------------------------ |
+| apps/web-openlibing/src/api/url.ts                                          | 新增 TRIGGER_VULN_BULLETIN URL 常量        |
+| apps/web-openlibing/src/api/api.ts                                          | 新增 triggerVulnerabilityBulletin 方法定义 |
+| apps/web-openlibing/src/views/Publish/publishReview/detail/reviewDetail.vue | 漏洞信息区域 UI + 业务逻辑                 |
 
 ### UI 结构
 
@@ -32,13 +32,19 @@
           <el-input v-model="vulnNoticeForm.fixedProduct" />
         </el-form-item>
         <el-form-item label="仓库">
-          <el-input type="textarea" v-model="vulnNoticeForm.repos"
-            placeholder="用英文逗号隔开的仓库名" />
+          <el-input
+            type="textarea"
+            v-model="vulnNoticeForm.repos"
+            placeholder="用英文逗号隔开的仓库名"
+          />
         </el-form-item>
       </el-form>
-      <el-button v-if="!isVulnFormDisabled"
+      <el-button
+        v-if="!isVulnFormDisabled"
         :disabled="!vulnNoticeForm.fixedProduct"
-        @click="handlePublishVulnNotice">发布公告</el-button>
+        @click="handlePublishVulnNotice"
+        >发布公告</el-button
+      >
     </div>
     <!-- 已发布时展示公告地址列表 -->
     <div v-if="showVulnBulletinUrls">
@@ -52,12 +58,12 @@
 
 ### 状态管理
 
-| computed | 逻辑 | 用途 |
-|----------|------|------|
-| currentVulnBulletin | dataList.vulnerabilityBulletinList?.[0] | 当前漏洞公告数据 |
-| vulnBulletinStatus | 无数据→空；3→execute_failed；5→execute_success；其他→executing | statusIcon |
-| isVulnFormDisabled | 有数据 && publishStatus !== 3 | 表单禁用 + 按钮显隐 |
-| showVulnBulletinUrls | publishStatus === 5 | 公告地址列表 |
+| computed             | 逻辑                                                           | 用途                |
+| -------------------- | -------------------------------------------------------------- | ------------------- |
+| currentVulnBulletin  | dataList.vulnerabilityBulletinList?.[0]                        | 当前漏洞公告数据    |
+| vulnBulletinStatus   | 无数据→空；3→execute_failed；5→execute_success；其他→executing | statusIcon          |
+| isVulnFormDisabled   | 有数据 && publishStatus !== 3                                  | 表单禁用 + 按钮显隐 |
+| showVulnBulletinUrls | publishStatus === 5                                            | 公告地址列表        |
 
 ### 回填策略
 
@@ -71,10 +77,14 @@
 ```ts
 triggerVulnerabilityBulletin(
   { userId: app.user.userId, projectId: app.projectInfo.projectId },
-  { reviewId: route.query.reviewId, fixedProduct, repos: repos字符串.split(',').map(trim).filter(Boolean) }
-).then(res => {
+  {
+    reviewId: route.query.reviewId,
+    fixedProduct,
+    repos: repos字符串.split(",").map(trim).filter(Boolean),
+  },
+).then((res) => {
   if (res.code === 200 && res.data) {
-    ElMessage.success('发布成功');
+    ElMessage.success("发布成功");
     getDetailData(); // 刷新
   }
 });

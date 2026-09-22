@@ -18,10 +18,10 @@ code-metrics-scan 插件在 GitCode 流水线中扫描代码仓的 5 项度量�
 
 - **双模式自动切换，存量兼容**：插件按 workflow 配置自动选择认证方式与上报接口（二者一一对应，不混用）：
 
-| 模式 | 触发条件 | 上报接口 | 认证方式 |
-| --- | --- | --- | --- |
-| OIDC 联邦认证（新） | workflow 声明 `permissions: id-token: write` | `/action-api/metrics/code/report` | APIG 上报走 OIDC ID Token → STS 临时凭证 → V11 签名（SDK）；OBS 上传走 STS 临时凭证，零凭证接入 |
-| AK/SK 签名（旧，存量兼容） | 未声明 `permissions: id-token: write` | `/openlibing-coderepo/metrics/code/report`（保持不变） | APIG 上报走 `apig-app-key` / `apig-app-secret` SDK-HMAC-SHA256 签名；OBS 上传走 `obs-ak` / `obs-sk`（行为与升级前完全一致） |
+| 模式                       | 触发条件                                     | 上报接口                                               | 认证方式                                                                                                                    |
+| -------------------------- | -------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| OIDC 联邦认证（新）        | workflow 声明 `permissions: id-token: write` | `/action-api/metrics/code/report`                      | APIG 上报走 OIDC ID Token → STS 临时凭证 → V11 签名（SDK）；OBS 上传走 STS 临时凭证，零凭证接入                             |
+| AK/SK 签名（旧，存量兼容） | 未声明 `permissions: id-token: write`        | `/openlibing-coderepo/metrics/code/report`（保持不变） | APIG 上报走 `apig-app-key` / `apig-app-secret` SDK-HMAC-SHA256 签名；OBS 上传走 `obs-ak` / `obs-sk`（行为与升级前完全一致） |
 
 - OIDC 模式下 OBS 上传使用 STS 临时凭证 + SecurityToken，obsutil 经 `-t` 参数传递临时令牌；
 - 4 个凭证输入参数（`apig-app-key` / `apig-app-secret` / `obs-ak` / `obs-sk`）保留为可选（仅 AK/SK 模式使用），存量脚本零修改继续可用；
@@ -70,15 +70,15 @@ AK/SK 模式（存量兼容）链路保持改造前行为：obsutil 以静态 `o
 
 ### 2.2 改造点清单
 
-| 位置 | 变更 |
-| --- | --- |
+| 位置                                 | 变更                                                                                                                                                                                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dist/uploaders/CoderepoUploader.js` | 保留 `ApigSigner` 类与 `axios`（AK/SK 模式）；新增 `useOidc` 标志与接口前缀常量（`OIDC_API_PREFIX` / `AKSK_API_PREFIX`）；OIDC 分支走 SDK `callApig` + `getCredentials()` 临时凭证，obsutil 参数增加 `-t=<SecurityToken>` |
-| `dist/index.js` | 按 `ACTIONS_ID_TOKEN_REQUEST_URL` 判定 `useOidc`；读取 4 个凭证输入（可选）并透传；输出认证模式日志 |
-| `dist/scanner.js` | 构造 `CoderepoUploader` 时透传双模式配置 |
-| `package.json` | 新增 `@openlibing/huaweicloud-oidc-client@0.0.5`，保留 `axios` |
-| `action.yml`（源码仓 + 发布仓） | 4 个凭证输入声明保留为可选（`required: false`，description 标注仅 AK/SK 模式使用） |
-| `README.md`（源码仓 + 发布仓） | 参数表与使用示例同步，新增「上传认证（双模式自动切换）」章节 |
-| 接入方 workflow | 已适配：新增 permissions 声明（凭证传参可移除）；存量：保持原样零修改 |
+| `dist/index.js`                      | 按 `ACTIONS_ID_TOKEN_REQUEST_URL` 判定 `useOidc`；读取 4 个凭证输入（可选）并透传；输出认证模式日志                                                                                                                       |
+| `dist/scanner.js`                    | 构造 `CoderepoUploader` 时透传双模式配置                                                                                                                                                                                  |
+| `package.json`                       | 新增 `@openlibing/huaweicloud-oidc-client@0.0.5`，保留 `axios`                                                                                                                                                            |
+| `action.yml`（源码仓 + 发布仓）      | 4 个凭证输入声明保留为可选（`required: false`，description 标注仅 AK/SK 模式使用）                                                                                                                                        |
+| `README.md`（源码仓 + 发布仓）       | 参数表与使用示例同步，新增「上传认证（双模式自动切换）」章节                                                                                                                                                              |
+| 接入方 workflow                      | 已适配：新增 permissions 声明（凭证传参可移除）；存量：保持原样零修改                                                                                                                                                     |
 
 ### 2.3 失败处理
 
@@ -88,14 +88,14 @@ AK/SK 模式（存量兼容）链路保持改造前行为：obsutil 以静态 `o
 
 ## 3. 类设计
 
-| 类 | 职责 | 改造点 |
-| --- | --- | --- |
-| `MetricsScanner` | 扫描编排：三个检测器 + 计算器 + 上传器 | 构造上传器时透传双模式配置（`useOidc` / AK/SK 与 OBS 凭证） |
-| `SlocDetector` / `LizardDetector` / `DuplicationDetector` | 代码规模 / 函数指标 / 重复率检测 | 无变化 |
-| `MetricsCalculator` | 指标合并、校验、格式化 | 无变化 |
-| `CoderepoUploader` | OBS 中转上传 + APIG 上报（按模式选择接口与凭证） | 新增 `useOidc` 标志与接口前缀常量（`OIDC_API_PREFIX` / `AKSK_API_PREFIX`）；OIDC 分支走 SDK `callApig` + `getCredentials()`，obsutil 增 `-t` 参数；AK/SK 分支保留 `ApigSigner` + axios + 静态凭证 |
-| `ApigSigner`（保留） | SDK-HMAC-SHA256 签名器（对齐 APIG 官方 SDK），仅 AK/SK 模式使用 | 保留，服务存量 workflow 兼容 |
-| SDK `getCredentials` / `callApig` | 临时凭证获取 / APIG 一行调用 | 新增依赖（OIDC 模式） |
+| 类                                                        | 职责                                                            | 改造点                                                                                                                                                                                            |
+| --------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MetricsScanner`                                          | 扫描编排：三个检测器 + 计算器 + 上传器                          | 构造上传器时透传双模式配置（`useOidc` / AK/SK 与 OBS 凭证）                                                                                                                                       |
+| `SlocDetector` / `LizardDetector` / `DuplicationDetector` | 代码规模 / 函数指标 / 重复率检测                                | 无变化                                                                                                                                                                                            |
+| `MetricsCalculator`                                       | 指标合并、校验、格式化                                          | 无变化                                                                                                                                                                                            |
+| `CoderepoUploader`                                        | OBS 中转上传 + APIG 上报（按模式选择接口与凭证）                | 新增 `useOidc` 标志与接口前缀常量（`OIDC_API_PREFIX` / `AKSK_API_PREFIX`）；OIDC 分支走 SDK `callApig` + `getCredentials()`，obsutil 增 `-t` 参数；AK/SK 分支保留 `ApigSigner` + axios + 静态凭证 |
+| `ApigSigner`（保留）                                      | SDK-HMAC-SHA256 签名器（对齐 APIG 官方 SDK），仅 AK/SK 模式使用 | 保留，服务存量 workflow 兼容                                                                                                                                                                      |
+| SDK `getCredentials` / `callApig`                         | 临时凭证获取 / APIG 一行调用                                    | 新增依赖（OIDC 模式）                                                                                                                                                                             |
 
 ## 4. 数据模型设计
 
@@ -108,14 +108,30 @@ AK/SK 模式（存量兼容）链路保持改造前行为：obsutil 以静态 `o
   "pipelineRunId": "<ATOMGIT_RUN_ID>",
   "commitId": "<ATOMGIT_SHA>",
   "runNumber": "<ATOMGIT_RUN_NUMBER>",
-  "metricsData": { "codeScale": 0, "avgFunctionLoc": 0, "avgCyclomaticComplexity": 0, "totalCodeDuplicationRate": 0, "totalFileDuplicationRate": 0 },
+  "metricsData": {
+    "codeScale": 0,
+    "avgFunctionLoc": 0,
+    "avgCyclomaticComplexity": 0,
+    "totalCodeDuplicationRate": 0,
+    "totalFileDuplicationRate": 0
+  },
   "detectionStartedAt": "yyyy-MM-dd HH:mm:ss",
   "detectionCompletedAt": "yyyy-MM-dd HH:mm:ss",
   "status": 0,
   "errorMessage": "仅失败上报时携带",
-  "fileDetails": [ { "filePath": "...", "...": "文件级指标" } ],
-  "identicalFileDetails": [ { "...": "内容完全一致文件明细" } ],
-  "duplicationOccurrences": [ { "groupId": "...", "contentHash": "...", "occurrenceIndex": 0, "filePath": "...", "startLine": 0, "endLine": 0, "contentB64": "<base64>" } ]
+  "fileDetails": [{ "filePath": "...", "...": "文件级指标" }],
+  "identicalFileDetails": [{ "...": "内容完全一致文件明细" }],
+  "duplicationOccurrences": [
+    {
+      "groupId": "...",
+      "contentHash": "...",
+      "occurrenceIndex": 0,
+      "filePath": "...",
+      "startLine": 0,
+      "endLine": 0,
+      "contentB64": "<base64>"
+    }
+  ]
 }
 ```
 
@@ -125,8 +141,14 @@ AK/SK 模式（存量兼容）链路保持改造前行为：obsutil 以静态 `o
 
 ```json
 {
-  "gitUrl": "...", "branchName": "...", "pipelineRunId": "...", "commitId": "...", "runNumber": "...",
-  "detectionStartedAt": "...", "detectionCompletedAt": "...", "status": 0,
+  "gitUrl": "...",
+  "branchName": "...",
+  "pipelineRunId": "...",
+  "commitId": "...",
+  "runNumber": "...",
+  "detectionStartedAt": "...",
+  "detectionCompletedAt": "...",
+  "status": 0,
   "obsUrl": "https://openlibing-gitcode-action.obs.cn-southwest-2.myhuaweicloud.com/<objectKey>"
 }
 ```
@@ -152,10 +174,10 @@ branchName 不进入路径（远端分支可能含 `/` 造成歧义），仅存�
 
 ### 6.1 report 接口
 
-| 模式 | 接口 | 鉴权 |
-| --- | --- | --- |
-| OIDC 联邦认证（新） | `POST https://apig.openlibing.com/action-api/metrics/code/report` | V11-HMAC-SHA256 签名 + `X-Security-Token`（网关 IAM 认证模式） |
-| AK/SK 签名（旧，存量兼容） | `POST https://apig.openlibing.com/openlibing-coderepo/metrics/code/report` | SDK-HMAC-SHA256 签名（网关 App 认证模式，保持不变） |
+| 模式                       | 接口                                                                       | 鉴权                                                           |
+| -------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| OIDC 联邦认证（新）        | `POST https://apig.openlibing.com/action-api/metrics/code/report`          | V11-HMAC-SHA256 签名 + `X-Security-Token`（网关 IAM 认证模式） |
+| AK/SK 签名（旧，存量兼容） | `POST https://apig.openlibing.com/openlibing-coderepo/metrics/code/report` | SDK-HMAC-SHA256 签名（网关 App 认证模式，保持不变）            |
 
 - 请求体：见 4.2；响应：见 4.4（两套接口契约一致）
 - 报文契约保持不变，后端 openlibing-coderepo 无感

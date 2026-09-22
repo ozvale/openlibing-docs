@@ -13,6 +13,7 @@
 ## Task 1: 更新TagSearchResultVO类
 
 **Files:**
+
 - Modify: `src/main/java/com/openlibing/platformrelease/business/vo/base/TagSearchResultVO.java`
 
 **Step 1: 添加分页信息字段**
@@ -57,16 +58,19 @@ Generated-by: glm-4-5"
 ## Task 2: 改造Service层searchTags方法
 
 **Files:**
+
 - Modify: `src/main/java/com/openlibing/platformrelease/business/service/impl/ReleaseRepoTagHandleServiceImpl.java:197-218`
 
 **Step 1: 修改方法签名**
 
 将方法签名从：
+
 ```java
 public List<TagInfoVO> searchTags(String projectId, String repoUrl, String keyword, Integer pageSize)
 ```
 
 改为：
+
 ```java
 public TagSearchResultVO searchTags(String projectId, String repoUrl, String keyword, Integer pageNum, Integer pageSize)
 ```
@@ -168,6 +172,7 @@ Generated-by: glm-4-5"
 ## Task 3: 改造Controller层searchTags方法
 
 **Files:**
+
 - Modify: `src/main/java/com/openlibing/platformrelease/business/controller/ReleaseTagController.java:49-66`
 
 **Step 1: 添加pageNum参数**
@@ -274,6 +279,7 @@ Generated-by: glm-4-5"
 ## Task 4: 更新设计文档
 
 **Files:**
+
 - Modify: `docs/plans/2026-05-09-tag-release-optimization-design.md:3.1.1`
 
 **Step 1: 更新API参数表格**
@@ -281,13 +287,13 @@ Generated-by: glm-4-5"
 在第3.1.1节的参数表格中添加pageNum参数：
 
 ```markdown
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| projectId | String | 是 | 项目ID |
-| repoUrl | String | 是 | 仓库URL |
-| keyword | String | 否 | 搜索关键字（模糊匹配） |
-| pageNum | Integer | 否 | 页码，从1开始，默认1 |
-| pageSize | Integer | 否 | 返回数量，默认20，最大100 |
+| 参数名    | 类型    | 必填 | 说明                      |
+| --------- | ------- | ---- | ------------------------- |
+| projectId | String  | 是   | 项目ID                    |
+| repoUrl   | String  | 是   | 仓库URL                   |
+| keyword   | String  | 否   | 搜索关键字（模糊匹配）    |
+| pageNum   | Integer | 否   | 页码，从1开始，默认1      |
+| pageSize  | Integer | 否   | 返回数量，默认20，最大100 |
 ```
 
 **Step 2: 更新响应结构示例**
@@ -296,21 +302,21 @@ Generated-by: glm-4-5"
 
 ```json
 {
-    "code": 200,
-    "msg": "success",
-    "data": {
-        "tagList": [
-            {
-                "tagName": "v1.0.0",
-                "commitId": "abc123...",
-                "createTime": "2024-01-01 10:00:00"
-            }
-        ],
-        "total": 100,
-        "pageNum": 1,
-        "pageSize": 20,
-        "totalPages": 5
-    }
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "tagList": [
+      {
+        "tagName": "v1.0.0",
+        "commitId": "abc123...",
+        "createTime": "2024-01-01 10:00:00"
+      }
+    ],
+    "total": 100,
+    "pageNum": 1,
+    "pageSize": 20,
+    "totalPages": 5
+  }
 }
 ```
 
@@ -320,6 +326,7 @@ Generated-by: glm-4-5"
 
 ```markdown
 **业务逻辑**：
+
 1. 获取所有Tag列表
 2. 按关键字过滤（如果keyword不为空）
 3. 按ASCII码升序排序
@@ -347,6 +354,7 @@ Generated-by: glm-4-5"
 ## Task 5: 更新接口文档
 
 **Files:**
+
 - Modify: `docs/api/tag-release-api-document.md`
 
 **Step 1: 更新请求参数表格（第1.3节）**
@@ -354,14 +362,14 @@ Generated-by: glm-4-5"
 在请求参数表格中添加pageNum参数：
 
 ```markdown
-| 参数名 | 类型 | 必填 | 说明 | 示例值 |
-|--------|------|------|------|--------|
-| userId | String | 是 | 用户ID | "user123" |
-| projectId | String | 是 | 项目ID | "project456" |
-| repoUrl | String | 是 | 仓库URL | "https://gitcode.com/openlibing/openlibing-platform-release.git" |
-| keyword | String | 否 | 搜索关键字，用于过滤Tag名称 | "v1.0" |
-| pageNum | Integer | 否 | 页码，从1开始，默认1 | 1 |
-| pageSize | Integer | 否 | 返回数量，默认20，最大100 | 20 |
+| 参数名    | 类型    | 必填 | 说明                        | 示例值                                                           |
+| --------- | ------- | ---- | --------------------------- | ---------------------------------------------------------------- |
+| userId    | String  | 是   | 用户ID                      | "user123"                                                        |
+| projectId | String  | 是   | 项目ID                      | "project456"                                                     |
+| repoUrl   | String  | 是   | 仓库URL                     | "https://gitcode.com/openlibing/openlibing-platform-release.git" |
+| keyword   | String  | 否   | 搜索关键字，用于过滤Tag名称 | "v1.0"                                                           |
+| pageNum   | Integer | 否   | 页码，从1开始，默认1        | 1                                                                |
+| pageSize  | Integer | 否   | 返回数量，默认20，最大100   | 20                                                               |
 ```
 
 **Step 2: 更新成功响应示例（第1.4节）**
@@ -400,32 +408,34 @@ Generated-by: glm-4-5"
 ```markdown
 #### TagSearchResultVO - Tag搜索结果对象
 
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| tagList | List<TagInfoVO> | Tag列表 |
-| total | Integer | 总数量（过滤后） |
-| pageNum | Integer | 当前页码 |
-| pageSize | Integer | 每页大小 |
-| totalPages | Integer | 总页数 |
+| 字段名     | 类型            | 说明             |
+| ---------- | --------------- | ---------------- |
+| tagList    | List<TagInfoVO> | Tag列表          |
+| total      | Integer         | 总数量（过滤后） |
+| pageNum    | Integer         | 当前页码         |
+| pageSize   | Integer         | 每页大小         |
+| totalPages | Integer         | 总页数           |
 ```
 
 **Step 4: 更新请求示例（第1.6节）**
 
 添加带分页参数的请求示例：
 
-```markdown
+````markdown
 #### 示例3：分页查询第2页
 
 ```http
 GET /tag/search?userId=user123&projectId=project456&repoUrl=https://gitcode.com/openlibing/openlibing-platform-release.git&pageNum=2&pageSize=10
 ```
+````
 
 #### 示例4：关键字过滤+分页
 
 ```http
 GET /tag/search?userId=user123&projectId=project456&repoUrl=https://gitcode.com/openlibing/openlibing-platform-release.git&keyword=v1.0&pageNum=1&pageSize=5
 ```
-```
+
+````
 
 **Step 5: 更新业务逻辑说明（第1.7节）**
 
@@ -442,7 +452,7 @@ GET /tag/search?userId=user123&projectId=project456&repoUrl=https://gitcode.com/
 6. 参数校验和调整（pageNum超出范围时调整）
 7. 分页截取，只对当前页的Tag获取commitId信息
 8. 返回Tag列表和完整分页信息
-```
+````
 
 **Step 6: 更新前端集成建议（第1.8节）**
 
@@ -481,6 +491,7 @@ Generated-by: glm-4-5"
 ## Task 6: 验证和测试
 
 **Files:**
+
 - Test: Manual testing via API call
 
 **Step 1: 启动应用**

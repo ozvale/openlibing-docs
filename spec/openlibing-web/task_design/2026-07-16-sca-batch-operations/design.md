@@ -74,6 +74,7 @@ SCA `el-table` 增加选择列，支持多选操作：
 #### 5.3 批量删除
 
 批量删除处理流程：
+
 1. 通过 `ElMessageBox.confirm` 二次确认
 2. 调用 `scaDeleteVersionScan` 接口，入参为 id 数组
 3. 成功后刷新列表，若当前页删空且回退一页
@@ -98,10 +99,10 @@ SCA `el-table` 增加选择列，支持多选操作：
 
 ## API 变化
 
-| 类型 | 名称 | 路径 | 说明 |
-|------|------|------|------|
-| 新增 | `SCA_DELETE_VERSION_SCAN` | `${SCA}/version/scan/deleteByIds` | url.ts 常量 |
-| 新增 | `scaDeleteVersionScan` | — | api.ts 请求函数，入参为 id 数组 |
+| 类型             | 名称                       | 路径                                   | 说明                              |
+| ---------------- | -------------------------- | -------------------------------------- | --------------------------------- |
+| 新增             | `SCA_DELETE_VERSION_SCAN`  | `${SCA}/version/scan/deleteByIds`      | url.ts 常量                       |
+| 新增             | `scaDeleteVersionScan`     | —                                      | api.ts 请求函数，入参为 id 数组   |
 | 复用（参数变更） | `scaQueryVersionScanStart` | `${SCA}/version/scan/startVersionScan` | 请求体由对象改为 `[...]` 数组形式 |
 
 ## 前端组件变化

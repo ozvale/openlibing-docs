@@ -1,11 +1,13 @@
 # 【openlibing-cicd】黄蓝协同流水线状态查询接口
 
 ## 需求背景
+
 黄蓝协同（跨区域部署）场景中，外部服务需要通过组织名称、代码仓名称、PR 编号和平台信息查询流水线的执行状态。当前 `CrossRegionController` 仅支持内部流水线触发与状态更新，缺少面向外部服务的精简状态查询接口。
 
 关联 Issue: https://gitcode.com/openlibing/openlibing-cicd/issues/52
 
 ## 功能描述
+
 1. `CrossRegionController` 新增 `POST /pipelineInfo` 接口，接收 `ExternalPipelineInfoReqDTO`，返回 `YellowPipelineStatusVO`
 2. `ExternalPipelineInfoReqDTO` 包含：owner（组织名称）、repo（仓库名称）、platform（平台 gitee/gitcode）、prNumber（PR 编号）
 3. `YelloRegionPipelineMapper` 新增 `queryLatestPipelineByPlatform` 方法，按 orgName/repoName/number/platform 查询最新流水线
@@ -18,11 +20,13 @@
 10. `PipelineControllerV2.getPipelineRunSummary` 标记为 `@Deprecated`，调用时记录警告日志
 
 ## 不做
+
 - 不修改现有查询流水线的 SQL（仅新增 `queryLatestPipelineByPlatform`）
 - 不新增鉴权（由 API 网关统一认证）
 - 不修改其他 Controller 接口逻辑
 
 ## 验收标准
+
 - [ ] `POST /pipelineInfo` 返回流水线状态 VO（含 status / yellowUrl / duration 等字段）
 - [ ] 按 orgName + repoName + number + platform 查询返回最新一条记录
 - [ ] 不存在时返回 `successData(null)` 而非错误
@@ -34,6 +38,7 @@
 - [ ] 向后兼容：旧接口行为不变
 
 ## 影响范围
+
 - 后端：`openlibing-cicd` 仓
   - `controller/CrossRegionController.java`：新增 `POST /pipelineInfo` 端点
   - `controller/PipelineControllerV2.java`：`getPipelineRunSummary` 标记 `@Deprecated`
