@@ -41,11 +41,11 @@ cron 触发
 **归档 md 日志渲染收敛（省 token/省空间）**：md 中 step 以 `- **<step>** · <STATUS>` 标记，
 完整日志仅在 json 保留（md 只展示 AI 所需）：
 
-| step 状态 | md 渲染 |
-|---|---|
-| 整个 job 成功（COMPLETED） | step 段整体省略，一行 `#### <job>（任务成功，无 step 日志）` |
-| job 内成功 step（COMPLETED） | 只保留 `- **name** · COMPLETED`，不带日志块 |
-| 失败/未执行 step（FAILED/INIT/IGNORED/CANCELED） | 标题 + 日志块（原处理） |
+| step 状态                                        | md 渲染                                                      |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| 整个 job 成功（COMPLETED）                       | step 段整体省略，一行 `#### <job>（任务成功，无 step 日志）` |
+| job 内成功 step（COMPLETED）                     | 只保留 `- **name** · COMPLETED`，不带日志块                  |
+| 失败/未执行 step（FAILED/INIT/IGNORED/CANCELED） | 标题 + 日志块（原处理）                                      |
 
 skill 侧与之配套：job 全成功不读任何 step 日志；job 失败只读失败 step 日志块、成功 step 不读。
 
@@ -78,21 +78,21 @@ Windows 计划任务（每日 07:30）
 
 ## 涉及文件（现状）
 
-| 文件                                     | 操作    | 说明                                              |
-| ---------------------------------------- | ------- | ------------------------------------------------- |
-| `config/collect.yaml`                    | ✅ 已有 | 采集目标配置（8 仓）                              |
-| `collector/fetch_nightly_results.py`     | ✅ 已有 | 采集 + 提取 + 归档主脚本                          |
-| `collector/gitcode_api.py`               | ✅ 已有 | Actions v8 API 封装（urllib 降级 + download_log） |
-| `collector/archive_writer.py`            | ✅ 已有 | 归档生成（json+md，东八区时间戳）                 |
-| `collector/archive_state.py`             | ✅ 已有 | run_id 去重                                       |
-| `.gitcode/workflows/collect-archive.yml` | ✅ 已有 | schedule cron + push 触发 + paths-ignore 防自触发 |
-| `skills/record-summary/SKILL.md`         | ✅ 已有 | AI 日报规则：模板/{OWNER} 占位/硬换行/不臆造 + step 日志按需读取 |
-| `scripts/generate_daily_summary.sh`      | ✅ 已有 | 每日总结入口（fetch+ff 同步、opencode 执行、双远端兜底 push）  |
-| `scripts/register_daily_summary.bat`     | ✅ 已有 | 注册 Windows 计划任务                             |
+| 文件                                     | 操作    | 说明                                                                    |
+| ---------------------------------------- | ------- | ----------------------------------------------------------------------- |
+| `config/collect.yaml`                    | ✅ 已有 | 采集目标配置（8 仓）                                                    |
+| `collector/fetch_nightly_results.py`     | ✅ 已有 | 采集 + 提取 + 归档主脚本                                                |
+| `collector/gitcode_api.py`               | ✅ 已有 | Actions v8 API 封装（urllib 降级 + download_log）                       |
+| `collector/archive_writer.py`            | ✅ 已有 | 归档生成（json+md，东八区时间戳）                                       |
+| `collector/archive_state.py`             | ✅ 已有 | run_id 去重                                                             |
+| `.gitcode/workflows/collect-archive.yml` | ✅ 已有 | schedule cron + push 触发 + paths-ignore 防自触发                       |
+| `skills/record-summary/SKILL.md`         | ✅ 已有 | AI 日报规则：模板/{OWNER} 占位/硬换行/不臆造 + step 日志按需读取        |
+| `scripts/generate_daily_summary.sh`      | ✅ 已有 | 每日总结入口（fetch+ff 同步、opencode 执行、双远端兜底 push）           |
+| `scripts/register_daily_summary.bat`     | ✅ 已有 | 注册 Windows 计划任务                                                   |
 | `AGENTS.md`                              | ✅ 已有 | 本仓项目级约束：AI 总结只读 archive、不改脚本、双远端 push、Commit 规范 |
-| `requirements.txt`                       | ✅ 已有 | requests + PyYAML                                 |
-| `archive/Y*`                             | 生成    | 采集归档                                          |
-| `records/Y*`                             | 生成    | AI 日报                                           |
+| `requirements.txt`                       | ✅ 已有 | requests + PyYAML                                                       |
+| `archive/Y*`                             | 生成    | 采集归档                                                                |
+| `records/Y*`                             | 生成    | AI 日报                                                                 |
 
 ## 凭证与权限
 
@@ -143,17 +143,17 @@ Windows 计划任务（每日 07:30）
 
 ### 关键决策
 
-| 决策点     | 选择                                                                              | 原因                                          |
-| ---------- | --------------------------------------------------------------------------------- | --------------------------------------------- |
-| 读取方式   | GitCode API `GET /api/v5/repos/{owner}/{repo}/contents/records/...`（urllib+PAT） | 只取当日文件，不 clone 全仓，依赖最少         |
-| 负责人映射 | 内网本地 owner 配置文件（不入库）                                                 | 负责人由内网维护，符合既有 `{OWNER}` 占位设计 |
-| GitCode 认证 | 内网本地 `pat.json`（api_base + token）                                             | 独立于 workflow secret；仅用于读远端 records    |
-| WeLink 认证 | 小鲁班专属 token（`tools/welink/config/token.txt`，`send_welink.py --setup` 注入） | 与 GitCode PAT 独立，发送专用                   |
-| 发送       | 复用 `send_welink.py`（WeLinkSender.send_card）                                   | 已实测可用的发送实现，迁出 skill 复用         |
-| 消息形式   | 合并为一条群消息发到 owner 群组（`owners.yaml` 的 `receivers.default`）             | 用户指定                                      |
-| 超长分块   | 发送端按仓块自动分片，每片 ≤8500 字符（上限 10000），多片标题带序号（1/N）        | 26 仓日报约 1.07 万字符超限（422），发送端兜底分块，AI 总结无需压缩 |
-| 触发       | 内网本地定时（默认 09:30）                                                        | 与 AI 总结 07:30 错开，留时间差               |
-| 依赖       | Python 标准库（urllib）+ requests + PyYAML                                        | 尽量少                                        |
+| 决策点       | 选择                                                                               | 原因                                                                |
+| ------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 读取方式     | GitCode API `GET /api/v5/repos/{owner}/{repo}/contents/records/...`（urllib+PAT）  | 只取当日文件，不 clone 全仓，依赖最少                               |
+| 负责人映射   | 内网本地 owner 配置文件（不入库）                                                  | 负责人由内网维护，符合既有 `{OWNER}` 占位设计                       |
+| GitCode 认证 | 内网本地 `pat.json`（api_base + token）                                            | 独立于 workflow secret；仅用于读远端 records                        |
+| WeLink 认证  | 小鲁班专属 token（`tools/welink/config/token.txt`，`send_welink.py --setup` 注入） | 与 GitCode PAT 独立，发送专用                                       |
+| 发送         | 复用 `send_welink.py`（WeLinkSender.send_card）                                    | 已实测可用的发送实现，迁出 skill 复用                               |
+| 消息形式     | 合并为一条群消息发到 owner 群组（`owners.yaml` 的 `receivers.default`）            | 用户指定                                                            |
+| 超长分块     | 发送端按仓块自动分片，每片 ≤8500 字符（上限 10000），多片标题带序号（1/N）         | 26 仓日报约 1.07 万字符超限（422），发送端兜底分块，AI 总结无需压缩 |
+| 触发         | 内网本地定时（默认 09:30）                                                         | 与 AI 总结 07:30 错开，留时间差                                     |
+| 依赖         | Python 标准库（urllib）+ requests + PyYAML                                         | 尽量少                                                              |
 
 ### 涉及新增文件（nightly-notice 仓）
 
@@ -168,9 +168,9 @@ Windows 计划任务（每日 07:30）
 
 ### 风险 & 缓解
 
-| 风险                                      | 缓解                                              |
-| ----------------------------------------- | ------------------------------------------------- |
-| 当日 records 未生成（AI 总结 07:30 失败） | 脚本检查远端文件存在，缺失时明确报错并跳过        |
-| owner 配置缺失某仓                        | 未配置的仓按 `{OWNER}` 原文保留或跳过发送，可配置 |
-| PAT 过期                                  | 读取失败/401 时明确提示重新配置                   |
+| 风险                                      | 缓解                                               |
+| ----------------------------------------- | -------------------------------------------------- |
+| 当日 records 未生成（AI 总结 07:30 失败） | 脚本检查远端文件存在，缺失时明确报错并跳过         |
+| owner 配置缺失某仓                        | 未配置的仓按 `{OWNER}` 原文保留或跳过发送，可配置  |
+| PAT 过期                                  | 读取失败/401 时明确提示重新配置                    |
 | 群消息过长（小鲁班 text 上限 10000）      | 发送端自动分块：每片 ≤8500，逐片发送，多片序号标题 |
