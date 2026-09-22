@@ -24,7 +24,7 @@
 * **对应task(issueID)链接:**: https://gitcode.com/openlibing/hidevlab-infra-manager-service/issues/49
 * **预期结果**: 基础功能正确；新增功能正确，镜像推送逻辑正确，存量数据迁移到正确表，存量harbor 查询逻辑正确
 * **测试结果**：Passed
-* **证明截图**: https://clouddragon.huawei.com/cloudtest/project/g93d08446a01c4a818fe4d9e72ca8ea38/services/9b367f94a4414f438f1ed404346aeaff/manualtaskDetail?stage=Iota,Kappa&taskUri=v8v900011l5cvml5&branchUri=v8r100011jmkc8p8&iterationUri=v8sf00011jmkchck&serviceId=9b367f94a4414f438f1ed404346aeaff&taskType=static%20task&isParent=true
+* **证明截图**: https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?branch_id=vb1v00011jhcp8u2
 
 
 ---
