@@ -38,13 +38,11 @@
 5. **Refactor**: 清理重复代码
 
 ### 验收标准
-
 - `GET /api/skills/{name}` 响应包含 `fileTreeWithUrls` 字段
 - GitHub/GitCode URL 格式正确
 - source_url 为空时不报错，返回 None
 
 ### 涉及文件
-
 - `app/utils/platform.py` — 新增 `build_file_url`
 - `app/schemas/skill.py` — 新增 `FileTreeItem`、`SkillDetail.fileTreeWithUrls`
 - `app/repositories/skill_repo.py` — `get_by_name` 中计算 `fileTreeWithUrls`
@@ -68,12 +66,10 @@
    - 在 `app/main.py` 的 lifespan 中确保 `Base.metadata.create_all` 包含 SyncTask
 
 ### 验收标准
-
 - SyncTask 表可正确创建
 - 字段类型和约束与 design.md 一致
 
 ### 涉及文件
-
 - `app/models/sync_task.py` — 新增
 - `app/main.py` — 确保 import SyncTask 以注册表
 
@@ -112,7 +108,6 @@
 3. **Refactor**: 提取公共逻辑
 
 ### 验收标准
-
 - GitHub/GitCode 两种平台的 Raw API 和 Contents API 均可调用
 - 404 返回 None，不抛异常
 - 超时/429/5xx 触发指数退避重试
@@ -120,7 +115,6 @@
 - 超过重试次数抛出异常
 
 ### 涉及文件
-
 - `app/utils/remote_fetcher.py` — 新增
 - `tests/test_remote_fetcher.py` — 新增
 
@@ -143,12 +137,10 @@
    - 捕获异常，记录日志，不阻塞
 
 ### 验收标准
-
 - 邮件模板包含：统计、更新成功、更新失败、过时 Skill 列表
 - SMTP 失败不阻塞同步流程
 
 ### 涉及文件
-
 - `app/services/email_service.py` — 新增
 - `tests/test_email_service.py` — 新增
 
@@ -181,7 +173,6 @@
 3. **Refactor**: 提取公共逻辑
 
 ### 验收标准
-
 - 分布式锁获取/释放正确
 - 同步流程完整：拉取 → 对比 → 更新/跳过/标记过时/标记失败
 - 单个 Skill 失败不影响其他
@@ -189,7 +180,6 @@
 - 同步完成后发送邮件
 
 ### 涉及文件
-
 - `app/services/sync_service.py` — 新增
 - `tests/test_sync_service.py` — 新增
 
@@ -213,12 +203,10 @@
    - `httpx>=0.28.0`（dev 依赖中已有，移至主依赖）
 
 ### 验收标准
-
 - 所有新配置项可通过环境变量或 Apollo 加载
 - 默认值与 design.md 一致
 
 ### 涉及文件
-
 - `app/config.py` — 修改
 - `pyproject.toml` — 修改
 
@@ -239,13 +227,11 @@
 3. **Refactor**: 确保 import 链正确
 
 ### 验收标准
-
 - 应用启动时 scheduler 自动启动
 - 应用关闭时 scheduler 自动关闭
 - 定时任务配置正确
 
 ### 涉及文件
-
 - `app/main.py` — 修改
 
 ---
@@ -274,14 +260,12 @@
 6. **Green**: 更新 `app/schemas/skill.py`，移除 `AdminLoginRequest` 和 `AdminLoginResponse`
 
 ### 验收标准
-
 - 所有 `/api/admin/*` 接口无需 token 即可访问
 - `/api/admin/login` 返回 404
 - `app/auth.py` 已删除
 - 现有测试通过
 
 ### 涉及文件
-
 - `app/routers/admin.py` — 修改
 - `app/routers/import_.py` — 修改
 - `app/auth.py` — 删除
@@ -306,12 +290,10 @@
 2. 运行全量测试确保无回归
 
 ### 验收标准
-
 - 所有集成测试通过
 - 无回归问题
 
 ### 涉及文件
-
 - `tests/test_integration_sync.py` — 新增
 
 ---

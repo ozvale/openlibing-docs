@@ -20,14 +20,14 @@ OpenLibing SCA 平台的版本扫描功能会对纳管仓库中每个文件进�
 
 ## 3. 验收标准
 
-| #    | 验收项       | 预期结果                                                                                                                                                           |
-| ---- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| # | 验收项 | 预期结果 |
+|---|--------|----------|
 | AC-1 | 人工分析保存 | 调用批量分析接口后，MongoDB 中对应 LicenseIssue 的 manualRiskLevel / manualDescription / compatible 被更新；MySQL `tbl_license_manual_analysis` 新增或更新对应记录 |
-| AC-2 | 扫描继承     | 对已有人工分析结论的文件内容发起新版本扫描，扫描结果中该文件自动携带 manualRiskLevel / manualDescription，且 compatible 被覆盖为人工结论                           |
-| AC-3 | 跨仓库继承   | 仓库 A 中文件 X 已人工标注，仓库 B 中存在内容相同的文件 X'，扫描仓库 B 后 X' 继承 X 的结论                                                                         |
-| AC-4 | 无结论不继承 | 文件内容从未被人工分析过时，扫描结果仅保留自动判定，manualRiskLevel 为空                                                                                           |
-| AC-5 | 继承容错     | MySQL 查询异常时扫描不中断，仅记录 warn 日志，文件保留自动判定结论                                                                                                 |
-| AC-6 | 风险等级联动 | HAS_RISK → compatible="No"；NO_RISK → compatible="Yes"，保存与继承行为一致                                                                                         |
+| AC-2 | 扫描继承 | 对已有人工分析结论的文件内容发起新版本扫描，扫描结果中该文件自动携带 manualRiskLevel / manualDescription，且 compatible 被覆盖为人工结论 |
+| AC-3 | 跨仓库继承 | 仓库 A 中文件 X 已人工标注，仓库 B 中存在内容相同的文件 X'，扫描仓库 B 后 X' 继承 X 的结论 |
+| AC-4 | 无结论不继承 | 文件内容从未被人工分析过时，扫描结果仅保留自动判定，manualRiskLevel 为空 |
+| AC-5 | 继承容错 | MySQL 查询异常时扫描不中断，仅记录 warn 日志，文件保留自动判定结论 |
+| AC-6 | 风险等级联动 | HAS_RISK → compatible="No"；NO_RISK → compatible="Yes"，保存与继承行为一致 |
 
 ## 4. 影响范围
 

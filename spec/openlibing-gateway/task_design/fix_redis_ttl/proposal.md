@@ -30,8 +30,8 @@ Redis `INCR` 命令（`stringRedisTemplate.opsForValue().increment()`）在递�
 
 ### 修改文件（1个）
 
-| 文件                                         | 说明                                        |
-| -------------------------------------------- | ------------------------------------------- |
+| 文件 | 说明 |
+|------|------|
 | `business/service/impl/UserServiceImpl.java` | 修复 `setVerificationCodeFailureCount` 方法 |
 
 ### 不在范围内

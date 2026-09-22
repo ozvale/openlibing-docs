@@ -16,11 +16,11 @@ RedisHelper.increase(key, 1)          ← INCR 清除 TTL → key 永不过期
 
 ### Redis INCR 与 TTL 交互机制
 
-| 操作                             | key 不存在时           | key 存在时             | 对 TTL 的影响                    |
-| -------------------------------- | ---------------------- | ---------------------- | -------------------------------- |
-| `SET key value EX 3600`          | 创建 key，TTL=3600s    | 覆盖值，重设 TTL=3600s | 设置 TTL                         |
-| `INCR key`                       | 创建 key=1，**TTL=-1** | 值+1，**TTL 不变**     | 新 key 无 TTL；已有 key 保留 TTL |
-| `SET key 0 EX 3600` → `INCR key` | —                      | 值=1，**TTL=-1**       | INCR 清除 SET 设置的 TTL         |
+| 操作 | key 不存在时 | key 存在时 | 对 TTL 的影响 |
+|------|-------------|-----------|--------------|
+| `SET key value EX 3600` | 创建 key，TTL=3600s | 覆盖值，重设 TTL=3600s | 设置 TTL |
+| `INCR key` | 创建 key=1，**TTL=-1** | 值+1，**TTL 不变** | 新 key 无 TTL；已有 key 保留 TTL |
+| `SET key 0 EX 3600` → `INCR key` | — | 值=1，**TTL=-1** | INCR 清除 SET 设置的 TTL |
 
 **关键发现**：Redis `INCR` 命令在 key 已存在时保留 TTL，但 `SET` + `INCR` 组合操作中，`INCR` 内部实现会重写 key 值，导致 `SET` 设置的 TTL 被清除。
 
@@ -39,11 +39,11 @@ public Long increase(String key, long delta) {
 
 ### 方案选型
 
-| 方案                   | 描述                                    | 优点           | 缺点                     |
-| ---------------------- | --------------------------------------- | -------------- | ------------------------ |
-| A: set("1") + increase | 首次直接 set("1", ttl)，后续仅 increase | 简单、原子     | 无                       |
-| B: increase + expire   | 先 increase，再 expire                  | 每次都刷新 TTL | 违反"不刷新过期时间"约束 |
-| C: Lua 脚本            | 原子执行 INCR + 条件设置 TTL            | 最严谨         | 过度设计，单方法不需要   |
+| 方案 | 描述 | 优点 | 缺点 |
+|------|------|------|------|
+| A: set("1") + increase | 首次直接 set("1", ttl)，后续仅 increase | 简单、原子 | 无 |
+| B: increase + expire | 先 increase，再 expire | 每次都刷新 TTL | 违反"不刷新过期时间"约束 |
+| C: Lua 脚本 | 原子执行 INCR + 条件设置 TTL | 最严谨 | 过度设计，单方法不需要 |
 
 **选择方案 A**：符合业务约束（60 分钟窗口不刷新），实现最简单。
 
@@ -109,13 +109,13 @@ catch (NumberFormatException | RedisConnectionFailureException e) {
 
 ### 验证场景
 
-| #   | 场景       | 操作                                           | 预期结果                        |
-| --- | ---------- | ---------------------------------------------- | ------------------------------- |
-| 1   | 首次失败   | 触发验证码校验失败                             | key 值=1，TTL=60min             |
-| 2   | 后续失败   | 再次触发失败                                   | key 值=2，TTL 不刷新（<60min）  |
-| 3   | 过期清零   | 等待 60 分钟                                   | key 自动删除，重新计数从 1 开始 |
-| 4   | Redis 异常 | 模拟 Redis 连接失败                            | 返回 false，不抛异常            |
-| 5   | 竞态条件   | `get` 返回值后 key 过期，`increase` 创建新 key | `getExpire == -1` 触发补设 TTL  |
+| # | 场景 | 操作 | 预期结果 |
+|---|------|------|---------|
+| 1 | 首次失败 | 触发验证码校验失败 | key 值=1，TTL=60min |
+| 2 | 后续失败 | 再次触发失败 | key 值=2，TTL 不刷新（<60min） |
+| 3 | 过期清零 | 等待 60 分钟 | key 自动删除，重新计数从 1 开始 |
+| 4 | Redis 异常 | 模拟 Redis 连接失败 | 返回 false，不抛异常 |
+| 5 | 竞态条件 | `get` 返回值后 key 过期，`increase` 创建新 key | `getExpire == -1` 触发补设 TTL |
 
 ## References
 

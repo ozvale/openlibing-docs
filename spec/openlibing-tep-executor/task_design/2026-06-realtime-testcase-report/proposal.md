@@ -5,7 +5,6 @@
 当前 Executor 在执行测试用例时，用例结果仅在任务完成后批量上报。为支持实时监控测试进度，需要实现用例执行过程中的实时上报能力，对接 libing 接口将用例状态实时推送。
 
 本需求涉及两个仓库的协同修改：
-
 1. **openlibing-tep-executor**：实现实时上报的基础设施（libing_api.py 模块）
 2. **UniAutosPython3**：在测试框架中集成实时上报功能
 
@@ -66,7 +65,7 @@
 - [x] 能够正确传递 pipeline_id、pipeline_run_id、job_id 参数
   - 提交：c123aa5961602e747f02eaea128fc691a29c38a2
   - 通过环境变量 PIPELINE_ID、PIPELINE_RUN_ID、JOB_RUN_ID 传递
-  - 在 executor.py 的 **init** 中调用 set_pipeline_info 设置
+  - 在 executor.py 的 __init__ 中调用 set_pipeline_info 设置
 - [x] 不影响现有用例执行流程
   - 提交：5ed7e5b6a1e068f91b868eddf014a96c93afea23
   - 使用 try-except 条件导入，失败不影响执行
@@ -74,29 +73,29 @@
 
 ## 涉及仓库
 
-| 仓库名                  | 修改类型 | 说明                   |
-| ----------------------- | -------- | ---------------------- |
-| openlibing-tep-executor | 主修改仓 | 实现上报基础设施       |
-| UniAutosPython3         | 集成仓   | 集成上报功能到测试框架 |
+| 仓库名 | 修改类型 | 说明 |
+|--------|----------|------|
+| openlibing-tep-executor | 主修改仓 | 实现上报基础设施 |
+| UniAutosPython3 | 集成仓 | 集成上报功能到测试框架 |
 
 ## 修改文件清单
 
 ### openlibing-tep-executor 仓
 
-| 文件路径                            | 操作 | 说明                                                                                                   | 提交    |
-| ----------------------------------- | ---- | ------------------------------------------------------------------------------------------------------ | ------- |
-| `tepexecor_frame/cte/libing_api.py` | 新增 | libing 接口对接工具函数，包含完整实现                                                                  | c123aa5 |
-| `tepexecor_frame/executor.py`       | 修改 | 调用 set_pipeline_info 设置环境变量，prepare_test_cases 中生成 uuid 和 testcase_map，增加 TC_UUID 字段 | c123aa5 |
-| `tepexecor_frame/uniautos.py`       | 修改 | PYTHONPATH 设置包含 tepexecor_frame 父目录                                                             | c123aa5 |
-| `tepexecor_frame/cte/obs_utils.py`  | 修改 | 辅助功能（可能涉及）                                                                                   | c123aa5 |
-| `tepexecor_frame/cte/utils.py`      | 修改 | 辅助功能（可能涉及）                                                                                   | c123aa5 |
+| 文件路径 | 操作 | 说明 | 提交 |
+|----------|------|------|------|
+| `tepexecor_frame/cte/libing_api.py` | 新增 | libing 接口对接工具函数，包含完整实现 | c123aa5 |
+| `tepexecor_frame/executor.py` | 修改 | 调用 set_pipeline_info 设置环境变量，prepare_test_cases 中生成 uuid 和 testcase_map，增加 TC_UUID 字段 | c123aa5 |
+| `tepexecor_frame/uniautos.py` | 修改 | PYTHONPATH 设置包含 tepexecor_frame 父目录 | c123aa5 |
+| `tepexecor_frame/cte/obs_utils.py` | 修改 | 辅助功能（可能涉及） | c123aa5 |
+| `tepexecor_frame/cte/utils.py` | 修改 | 辅助功能（可能涉及） | c123aa5 |
 
 ### UniAutosPython3 仓
 
-| 文件路径                                                 | 操作 | 说明                                                                                                  | 提交    |
-| -------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------- | ------- |
-| `src/Framework/Dev/lib/UniAutos/TestEngine/Engine.py`    | 修改 | 导入 libing_api，添加 `_report_testcase_status` 静态方法，在 `_runTest` 和 `_runConfiguration` 中调用 | 5ed7e5b |
-| `src/Framework/Dev/lib/UniAutos/TestEngine/BBTEngine.py` | 修改 | 导入 libing_api，继承 Engine 的 `_report_testcase_status` 方法，在 `_runTest` 中调用                  | 5ed7e5b |
+| 文件路径 | 操作 | 说明 | 提交 |
+|----------|------|------|------|
+| `src/Framework/Dev/lib/UniAutos/TestEngine/Engine.py` | 修改 | 导入 libing_api，添加 `_report_testcase_status` 静态方法，在 `_runTest` 和 `_runConfiguration` 中调用 | 5ed7e5b |
+| `src/Framework/Dev/lib/UniAutos/TestEngine/BBTEngine.py` | 修改 | 导入 libing_api，继承 Engine 的 `_report_testcase_status` 方法，在 `_runTest` 中调用 | 5ed7e5b |
 
 ## 风险评估
 

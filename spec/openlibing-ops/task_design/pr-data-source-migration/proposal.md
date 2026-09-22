@@ -8,16 +8,15 @@ PR信息获取方式从 xxl-job 定时任务切换为 dolphinscheduler 任务 + 
 
 ### 数据采集链路变更
 
-| 环节     | 旧方案                 | 新方案                    |
-| -------- | ---------------------- | ------------------------- |
-| 调度框架 | xxl-job 定时任务       | dolphinscheduler          |
-| 数据采集 | xxl-job 内直接调用 API | seatunnel 采集            |
-| 数据清洗 | xxl-job 内处理         | dolphinscheduler 任务编排 |
+| 环节 | 旧方案 | 新方案 |
+|------|--------|--------|
+| 调度框架 | xxl-job 定时任务 | dolphinscheduler |
+| 数据采集 | xxl-job 内直接调用 API | seatunnel 采集 |
+| 数据清洗 | xxl-job 内处理 | dolphinscheduler 任务编排 |
 
 ### 涉及数据表
 
 #### 采集层 (raw) — seatunnel 直接写入
-
 - `raw_pull_request_gitcode` — GitCode PR 原始数据
 - `raw_pull_request_gitee` — Gitee PR 原始数据
 - `raw_pull_request_github` — GitHub PR 原始数据
@@ -26,7 +25,6 @@ PR信息获取方式从 xxl-job 定时任务切换为 dolphinscheduler 任务 + 
 - `raw_pull_request_commit_github` — GitHub PR commit 原始数据
 
 #### 标准化层 (sdi) — dolphinscheduler 清洗任务
-
 - `sdi_rd_efc_pr_info_raw_gitcode` — GitCode PR 标准化信息
 - `sdi_rd_efc_pr_info_raw_gitee` — Gitee PR 标准化信息
 - `sdi_rd_efc_pr_files_relation_clean_gitee` — Gitee PR 文件关联清洗
@@ -37,12 +35,10 @@ PR信息获取方式从 xxl-job 定时任务切换为 dolphinscheduler 任务 + 
 - `sdi_rd_efc_pipeline_run_pr_relation_codearts`（**新增**）— CodeArts 流水线与 PR 关联关系
 
 #### 明细层 (dwi)
-
 - `dwi_rd_efc_pr_info_sum` — PR 信息汇总
 - `dwi_rd_efc_pr_workflow_run`（**新增**）— PR workflow 运行记录
 
 #### 汇总层 (dm)
-
 - `dm_rd_efc_pr_dim_pipeline_run_day` — PR 维度流水线运行日表
 - `dm_rd_efc_pr_sum_pipeline_statistics_day` — PR 汇总流水线统计日表
 - `dm_rd_efc_repo_dim_pipeline_run_day` — 仓库维度流水线运行日表

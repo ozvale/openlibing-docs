@@ -2,9 +2,9 @@
 
 ## 1. 基础信息
 
-- **需求链接**: https://gitcode.com/openlibing/openlibing-sca/issues/54
-- **需求名称**: 文件级兼容性分析继承（License Manual Analysis Inheritance）
-- **开发责任人**: qq_39751731
+* **需求链接**: https://gitcode.com/openlibing/openlibing-sca/issues/54
+* **需求名称**: 文件级兼容性分析继承（License Manual Analysis Inheritance）
+* **开发责任人**: qq_39751731
 
 ---
 
@@ -104,17 +104,17 @@
 
 **表名：tbl_license_manual_analysis**（MySQL，License 人工分析结果表）
 
-| 字段名      | 数据类型      | 约束                                | 描述                                   |
-| ----------- | ------------- | ----------------------------------- | -------------------------------------- |
-| id          | VARCHAR(64)   | PRIMARY KEY, NOT NULL               | 主键ID，UUID                           |
-| file_hash   | VARCHAR(128)  | NOT NULL, INDEX (idx_lma_file_hash) | 文件内容 MD5 哈希，继承匹配的核心 key  |
-| risk_level  | VARCHAR(16)   | NOT NULL                            | 风险等级：0(无风险)/1(有风险)          |
-| description | VARCHAR(1024) | -                                   | 人工分析说明                           |
-| analyzed_by | VARCHAR(64)   | -                                   | 分析人用户名                           |
-| scan_id     | VARCHAR(64)   | -                                   | 关联扫描ID                             |
-| file_path   | VARCHAR(512)  | -                                   | 文件路径（首次提交时的路径，用于溯源） |
-| created_at  | DATETIME      | -                                   | 创建时间                               |
-| updated_at  | DATETIME      | -                                   | 更新时间                               |
+| 字段名 | 数据类型 | 约束 | 描述 |
+|--------|---------|------|------|
+| id | VARCHAR(64) | PRIMARY KEY, NOT NULL | 主键ID，UUID |
+| file_hash | VARCHAR(128) | NOT NULL, INDEX (idx_lma_file_hash) | 文件内容 MD5 哈希，继承匹配的核心 key |
+| risk_level | VARCHAR(16) | NOT NULL | 风险等级：0(无风险)/1(有风险) |
+| description | VARCHAR(1024) | - | 人工分析说明 |
+| analyzed_by | VARCHAR(64) | - | 分析人用户名 |
+| scan_id | VARCHAR(64) | - | 关联扫描ID |
+| file_path | VARCHAR(512) | - | 文件路径（首次提交时的路径，用于溯源） |
+| created_at | DATETIME | - | 创建时间 |
+| updated_at | DATETIME | - | 更新时间 |
 
 **索引**：`idx_lma_file_hash` 单列索引覆盖 `file_hash` 查询，支撑 `selectByFileHash` 方法（ORDER BY updated_at DESC LIMIT 1）。
 
@@ -127,11 +127,11 @@
 - **URL**: `/license/manualAnalysis/batch`
 - **方法**: POST
 - **请求体**: `List<LicenseAnalysisVO>`（JSON 数组，无需外层包装）
-  - objectId: String（必填，MongoDB license_issue._id）
-  - fileHash: String（必填，文件内容 MD5）
-  - file: String（文件路径）
-  - manualRiskLevel: String（风险等级 code："0"或"1"）
-  - manualDescription: String（分析说明）
+    - objectId: String（必填，MongoDB license_issue._id）
+    - fileHash: String（必填，文件内容 MD5）
+    - file: String（文件路径）
+    - manualRiskLevel: String（风险等级 code："0"或"1"）
+    - manualDescription: String（分析说明）
 - **请求参数**: userName: String（分析人）
 - **返回**: `ResponseEntity` - 批量分析完成或失败
 
@@ -147,12 +147,12 @@
 - **URL**: `/license/licenseIssue/query`
 - **方法**: POST
 - **请求体**: `QueryLicenseVO`
-  - id: String（scanId，必填）
-  - pageNo: int（页码，必填）
-  - pageSize: int（每页条数，必填）
-  - compatible: List\<String\>（兼容性筛选）
-  - path: String（文件路径前缀匹配）
-  - fileName: String（文件名模糊匹配）
+    - id: String（scanId，必填）
+    - pageNo: int（页码，必填）
+    - pageSize: int（每页条数，必填）
+    - compatible: List\<String\>（兼容性筛选）
+    - path: String（文件路径前缀匹配）
+    - fileName: String（文件名模糊匹配）
 - **返回**: `ResponseEntity<DPage<LicenseIssue>>` - 分页结果，manualRiskLevel 字段已转为中文描述
 
 ##### 4.3.4 一键刷新缓存接口
@@ -178,22 +178,22 @@
 
 ### 4.4 Apollo 配置清单
 
-| 配置项                     | 说明                         | 默认值       |
-| -------------------------- | ---------------------------- | ------------ |
+| 配置项 | 说明 | 默认值 |
+|--------|------|--------|
 | licenseScanCacheTtlMinutes | License 看板缓存 TTL（分钟） | 120（2小时） |
 
 ### 4.5 任务清单
 
-| 任务 ID   | 任务描述 (Task Description)                               | 预期产出 (Deliverables)                                       | 涉及文件                                                                                                                                      |
-| --------- | --------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **task1** | 创建 `tbl_license_manual_analysis` 表及 Mapper            | Liquibase changelog + Entity + Mapper 接口 + XML 映射         | `LicenseManualAnalysis.java`、`LicenseManualAnalysisMapper.java`、`LicenseManualAnalysisMapper.xml`、`create-tbl-license-manual-analysis.xml` |
-| **task2** | 新增 `ManualRiskLevel` 枚举                               | 枚举类 + `getDescriptionByCode` 工具方法                      | `ManualRiskLevel.java`                                                                                                                        |
-| **task3** | 新增 `LicenseAnalysisVO` 请求对象                         | VO（含 `@NotBlank` 校验）                                     | `LicenseAnalysisVO.java`                                                                                                                      |
-| **task4** | 实现批量人工分析接口 `POST /license/manualAnalysis/batch` | Controller 端点 + Service 方法（MongoDB 更新 + MySQL upsert） | `LicenseController.java`、`LicenseServiceImpl.java`                                                                                           |
-| **task5** | 实现 `computeFileMd5Hashes` 预计算方法                    | 批处理前遍历 workspace 计算 MD5 Map                           | `IntegrationApiServiceImpl.java`                                                                                                              |
-| **task6** | 实现 `inheritManualAnalysis` 继承方法                     | 按 fileHash 查 MySQL → 覆盖 LicenseIssue 字段                 | `IntegrationApiServiceImpl.java`                                                                                                              |
-| **task7** | 在 `processFileLicenses` 中集成继承逻辑                   | 自动分析后调用 inheritManualAnalysis                          | `IntegrationApiServiceImpl.java`                                                                                                              |
-| **task8** | 查询接口 manualRiskLevel 中文描述转换                     | `getLicenseIssue` 中使用 `getDescriptionByCode`               | `LicenseServiceImpl.java`                                                                                                                     |
+| 任务 ID | 任务描述 (Task Description) | 预期产出 (Deliverables) | 涉及文件 |
+|---------|---------------------------|------------------------|----------|
+| **task1** | 创建 `tbl_license_manual_analysis` 表及 Mapper | Liquibase changelog + Entity + Mapper 接口 + XML 映射 | `LicenseManualAnalysis.java`、`LicenseManualAnalysisMapper.java`、`LicenseManualAnalysisMapper.xml`、`create-tbl-license-manual-analysis.xml` |
+| **task2** | 新增 `ManualRiskLevel` 枚举 | 枚举类 + `getDescriptionByCode` 工具方法 | `ManualRiskLevel.java` |
+| **task3** | 新增 `LicenseAnalysisVO` 请求对象 | VO（含 `@NotBlank` 校验） | `LicenseAnalysisVO.java` |
+| **task4** | 实现批量人工分析接口 `POST /license/manualAnalysis/batch` | Controller 端点 + Service 方法（MongoDB 更新 + MySQL upsert） | `LicenseController.java`、`LicenseServiceImpl.java` |
+| **task5** | 实现 `computeFileMd5Hashes` 预计算方法 | 批处理前遍历 workspace 计算 MD5 Map | `IntegrationApiServiceImpl.java` |
+| **task6** | 实现 `inheritManualAnalysis` 继承方法 | 按 fileHash 查 MySQL → 覆盖 LicenseIssue 字段 | `IntegrationApiServiceImpl.java` |
+| **task7** | 在 `processFileLicenses` 中集成继承逻辑 | 自动分析后调用 inheritManualAnalysis | `IntegrationApiServiceImpl.java` |
+| **task8** | 查询接口 manualRiskLevel 中文描述转换 | `getLicenseIssue` 中使用 `getDescriptionByCode` | `LicenseServiceImpl.java` |
 
 ---
 
@@ -205,45 +205,45 @@
 
 > *若涉及以下任一项，打标 `need_security`标签，PR 必须关联特性issue的架构设计文档（含安全设计部分）**如勾选需要给出原因**。
 
-- [ ] **边界变更**：新增公网端口、修改防火墙规则、变更网关配置。
-- [ ] **凭证处理**：涉及密钥（Secret/Key）、Token、证书的存储或分发。
-- [ ] **权限调整**：修改权限模型、服务账号（SA）权限或鉴权逻辑。
-- [ ] **供应链**：引入新的第三方二进制文件、SDK 或重大版本依赖升级。
-- [ ] **隐私风险评估**：涉及用户个人数据（Email、手机号、IP、邮箱 等）的处理。
-- [ ] **AI使用**：涉及AIGC能力应用，并提供服务。
+* [ ] **边界变更**：新增公网端口、修改防火墙规则、变更网关配置。
+* [ ] **凭证处理**：涉及密钥（Secret/Key）、Token、证书的存储或分发。
+* [ ] **权限调整**：修改权限模型、服务账号（SA）权限或鉴权逻辑。
+* [ ] **供应链**：引入新的第三方二进制文件、SDK 或重大版本依赖升级。
+* [ ] **隐私风险评估**：涉及用户个人数据（Email、手机号、IP、邮箱 等）的处理。
+* [ ] **AI使用**：涉及AIGC能力应用，并提供服务。
 
 ### B. 架构设计相关性分析
 
 > *若涉及以下任一项，打标 `need_design`标签，PR 必须关联特性issue的架构设计文档。 **如勾选需要给出原因**。
 
-- [ ] A环节判定需要完成安全设计
-- [ ] 改变了现有系统的物理/逻辑拓扑
-- [ ] 新增或大幅修改对外暴露的 API/CLI 接口（新增 `/license/manualAnalysis/batch` 接口）
-- [ ] 引入了新的中间件、数据库或三方核心组件 **[勾选必填]** _原因：新增 MySQL 表 `tbl_license_manual_analysis`，新增 Redis 缓存与定时任务_
+* [ ] A环节判定需要完成安全设计
+* [ ] 改变了现有系统的物理/逻辑拓扑
+* [ ] 新增或大幅修改对外暴露的 API/CLI 接口（新增 `/license/manualAnalysis/batch` 接口）
+* [ ] 引入了新的中间件、数据库或三方核心组件 **[勾选必填]** _原因：新增 MySQL 表 `tbl_license_manual_analysis`，新增 Redis 缓存与定时任务_
 
 ### C. 系统集成测试相关性分析
 
 > *若涉及以下任一项，打标 `need_itest`标签，PR必须关联特性issue的测试策略和测试报告文档。 **如勾选需要给出原因**。
 
-- [ ] 上述环节判定需要执行安全设计或架构设计。
-- [ ] **跨组件影响**：变更会触发下游服务或关联系统的连锁反应（级联效应）。
-- [ ] **核心组件管控**：含项目定级为 Core 的核心逻辑变更。
-- [ ] **环境强依赖**：功能高度依赖内核参数、网络拓扑或特定的物理挂载。
-- [ ] **端到端流程**：涉及从用户输入到持久化存储的全链路逻辑（前端→Controller→MongoDB+MySQL 双写→扫描继承→前端展示）。
+* [ ] 上述环节判定需要执行安全设计或架构设计。
+* [ ] **跨组件影响**：变更会触发下游服务或关联系统的连锁反应（级联效应）。
+* [ ] **核心组件管控**：含项目定级为 Core 的核心逻辑变更。
+* [ ] **环境强依赖**：功能高度依赖内核参数、网络拓扑或特定的物理挂载。
+* [ ] **端到端流程**：涉及从用户输入到持久化存储的全链路逻辑（前端→Controller→MongoDB+MySQL 双写→扫描继承→前端展示）。
 
 ### D. 用户体验相关性分析
 
 > *若涉及以下任一项，打标 `need_ux`标签，PR必须关联特性issue的用户体验设计文档。 **如勾选需要给出原因**。
 
-- [ ] **交互逻辑变更**：涉及 Web 门户、控制台（Dashboard）或命令行工具（CLI）的交互流程调整。
-- [ ] **感知性能变动**：变更可能显著影响页面的加载时间、同步请求的响应时延或异步任务的进度反馈。
-- [ ] **文档与辅助能力**：涉及报错提示语、帮助中心链接、FAQ 或新功能的 Runbook 说明。
-- [ ] **无障碍与多语种**：涉及国际化（i18n）支持、辅助功能或不同终端（移动端/桌面端）的适配。
+* [ ] **交互逻辑变更**：涉及 Web 门户、控制台（Dashboard）或命令行工具（CLI）的交互流程调整。
+* [ ] **感知性能变动**：变更可能显著影响页面的加载时间、同步请求的响应时延或异步任务的进度反馈。
+* [ ] **文档与辅助能力**：涉及报错提示语、帮助中心链接、FAQ 或新功能的 Runbook 说明。
+* [ ] **无障碍与多语种**：涉及国际化（i18n）支持、辅助功能或不同终端（移动端/桌面端）的适配。
 
 ### 5.1 需求相关性分析汇总结果
 
-- [ ] need_security (需架构设计（含安全威胁分析和安全设计）)
-- [ ] need_design (需架构设计)
-- [ ] need_itest (需执行测试策略设计和全链路集成测试)
-- [ ] need_ux (需架构设计（含UX设计）)
-- [ ] need_light (上述均未勾选，走快速合入通道)
+* [ ] need_security (需架构设计（含安全威胁分析和安全设计）)
+* [ ] need_design (需架构设计)
+* [ ] need_itest (需执行测试策略设计和全链路集成测试)
+* [ ] need_ux (需架构设计（含UX设计）)
+* [ ] need_light (上述均未勾选，走快速合入通道)

@@ -68,15 +68,15 @@ private String buildPipelineLink(String repository, String pipelineRunId) {
 
 ### 修改文件
 
-| 文件                              | 变更类型                                                             |
-| --------------------------------- | -------------------------------------------------------------------- |
-| `CodeMetricsController.java`      | 日志增加 repository 字段                                             |
-| `CodeMetricsReportDTO.java`       | 新增 repository 字段 + BigDecimal import 优化                        |
-| `CodeMetricsRecordEntity.java`    | 新增 repository 字段                                                 |
-| `CodeMetricsServiceImpl.java`     | 重构 buildPipelineLink + reportMetrics 存储 repository               |
-| `db.changelog.xml`                | 新增 changeset                                                       |
-| `CodeMetricsRecordMapper.xml`     | resultMap 增加 repository + selectByPipelineRunId 增加 repository 列 |
-| `CodeMetricsServiceImplTest.java` | gitcodeDomain 测试值更新为基础域名                                   |
+| 文件 | 变更类型 |
+|------|---------|
+| `CodeMetricsController.java` | 日志增加 repository 字段 |
+| `CodeMetricsReportDTO.java` | 新增 repository 字段 + BigDecimal import 优化 |
+| `CodeMetricsRecordEntity.java` | 新增 repository 字段 |
+| `CodeMetricsServiceImpl.java` | 重构 buildPipelineLink + reportMetrics 存储 repository |
+| `db.changelog.xml` | 新增 changeset |
+| `CodeMetricsRecordMapper.xml` | resultMap 增加 repository + selectByPipelineRunId 增加 repository 列 |
+| `CodeMetricsServiceImplTest.java` | gitcodeDomain 测试值更新为基础域名 |
 
 ### 数据库变更
 

@@ -39,13 +39,13 @@
 
 ## 验证状态
 
-| 验证项                       | 状态          | 证据                                                       |
-| ---------------------------- | ------------- | ---------------------------------------------------------- |
-| 业务仓代码修改               | ✅ 完成       | commit `c22f3c61a`                                         |
-| 业务仓单测编写               | ✅ 完成       | 7 个测试用例                                               |
-| 业务仓 PR 创建               | ✅ 完成       | https://gitcode.com/yanzhaohong/openlibing-cicd/pulls/1    |
-| 业务仓 PR 标签 `ai-assisted` | ✅ 完成       | `gitcode pr edit 1 --labels ai-assisted`                   |
-| 本地 mvn 编译                | ❌ 环境限制   | openlibing-common-sdk 1.0.19.3 私有 Maven 仓 401           |
-| 本地 mvn test                | ❌ 环境限制   | 同上                                                       |
-| 用户本地自测                 | ⏳ 待用户执行 | 拉取分支后 `mvn test -Dtest=PipelineFailEmailConsumerTest` |
-| CI 流水线                    | ⏳ 待 CI 触发 | GitCode PR 流水线自动执行                                  |
+| 验证项 | 状态 | 证据 |
+|---|---|---|
+| 业务仓代码修改 | ✅ 完成 | commit `c22f3c61a` |
+| 业务仓单测编写 | ✅ 完成 | 7 个测试用例 |
+| 业务仓 PR 创建 | ✅ 完成 | https://gitcode.com/yanzhaohong/openlibing-cicd/pulls/1 |
+| 业务仓 PR 标签 `ai-assisted` | ✅ 完成 | `gitcode pr edit 1 --labels ai-assisted` |
+| 本地 mvn 编译 | ❌ 环境限制 | openlibing-common-sdk 1.0.19.3 私有 Maven 仓 401 |
+| 本地 mvn test | ❌ 环境限制 | 同上 |
+| 用户本地自测 | ⏳ 待用户执行 | 拉取分支后 `mvn test -Dtest=PipelineFailEmailConsumerTest` |
+| CI 流水线 | ⏳ 待 CI 触发 | GitCode PR 流水线自动执行 |

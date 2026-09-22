@@ -11,20 +11,20 @@
 ```javascript
 // 问题代码
 if (ruleInForm.language) {
-  lgEmptyTip.value = "";
-  if (visible) getRuleSet(); // 缺少花括号
+  lgEmptyTip.value = '';
+  if (visible) getRuleSet();  // 缺少花括号
 } else {
-  lgEmptyTip.value = "请选择语言";
+  lgEmptyTip.value = '请选择语言';
 }
 
 // 优化后
 if (ruleInForm.language) {
-  lgEmptyTip.value = "";
+  lgEmptyTip.value = '';
   if (visible) {
     getRuleSet();
   }
 } else {
-  lgEmptyTip.value = "请选择语言";
+  lgEmptyTip.value = '请选择语言';
 }
 ```
 
@@ -54,18 +54,18 @@ getColorIcon(key) {  // 使用箭头函数简写
 
 ### 2.1 CustomRuleConfig.vue 变更
 
-| 变更类型   | 位置                        | 说明                              |
-| ---------- | --------------------------- | --------------------------------- |
-| 格式化优化 | `getRuleSetData()` 函数     | if 语句添加花括号                 |
+| 变更类型 | 位置 | 说明 |
+|---------|------|------|
+| 格式化优化 | `getRuleSetData()` 函数 | if 语句添加花括号 |
 | 格式化优化 | `handleRowSelection()` 函数 | toggleRowSelection 调用添加花括号 |
 
 ### 2.2 gitUrlList.vue 变更
 
-| 变更类型 | 位置                  | 说明                                       |
-| -------- | --------------------- | ------------------------------------------ |
-| 函数简化 | `render()` 方法       | `rowspan: rowspan` → `rowspan`（属性简写） |
+| 变更类型 | 位置 | 说明 |
+|---------|------|------|
+| 函数简化 | `render()` 方法 | `rowspan: rowspan` → `rowspan`（属性简写） |
 | 函数简化 | `getColorIcon()` 方法 | `function (key)` → `(key)`（箭头函数简写） |
-| 函数简化 | `getProImg()` 方法    | `function (key)` → `(key)`（箭头函数简写） |
+| 函数简化 | `getProImg()` 方法 | `function (key)` → `(key)`（箭头函数简写） |
 
 ## 3. 影响范围
 

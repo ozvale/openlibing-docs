@@ -34,8 +34,8 @@
 
 ## 前端契约（已实现，后端须对齐）
 
-| 字段         | 值                             | 说明                |
-| ------------ | ------------------------------ | ------------------- |
-| `sortColumn` | `"matched"`                    | 与列 prop 一致      |
-| `sortOrder`  | `"ascending"` / `"descending"` | Element Plus 约定   |
-| 取消排序     | 不传两字段                     | 回退 `scanFile ASC` |
+| 字段 | 值 | 说明 |
+|------|-----|------|
+| `sortColumn` | `"matched"` | 与列 prop 一致 |
+| `sortOrder` | `"ascending"` / `"descending"` | Element Plus 约定 |
+| 取消排序 | 不传两字段 | 回退 `scanFile ASC` |

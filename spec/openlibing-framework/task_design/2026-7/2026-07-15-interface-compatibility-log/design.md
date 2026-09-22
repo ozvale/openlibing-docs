@@ -3,7 +3,6 @@
 openlibing-framework 日志体系基于 `LogDataCollectionName.MANAGEMENT_LOG` JSON 配置动态获取表名列表，通过 `GetLogsMapper.xml` 的 `<choose>` 块做表名映射验证，使用 Liquibase changelog 管理建表。
 
 现有日志模块（如 `log_tool`、`log_wiki`、`log_feedback` 等）均遵循统一模式：
-
 1. `LogDataCollectionName.java` 定义常量 + JSON 配置项
 2. `GetLogsMapper.xml` 添加 `<when>` 分支
 3. Liquibase changelog XML 创建表

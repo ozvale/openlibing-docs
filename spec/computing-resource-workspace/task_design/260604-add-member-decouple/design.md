@@ -6,11 +6,11 @@
 
 ### 涉及表
 
-| 表                                     | 当前方式      | 改造后                    |
-| -------------------------------------- | ------------- | ------------------------- |
-| user_info_gitcode 等（三方信息表）     | 直接 SQL 查询 | 由 framework 接口聚合返回 |
-| user_basic_info（用户主表）            | 直接 SQL 查询 | 由 framework 接口聚合返回 |
-| workspace_project_member（项目成员表） | 读写          | 不变                      |
+| 表 | 当前方式 | 改造后 |
+|---|---------|-------|
+| user_info_gitcode 等（三方信息表） | 直接 SQL 查询 | 由 framework 接口聚合返回 |
+| user_basic_info（用户主表） | 直接 SQL 查询 | 由 framework 接口聚合返回 |
+| workspace_project_member（项目成员表） | 读写 | 不变 |
 
 ## 二、改造前流程
 
@@ -88,20 +88,20 @@ Step 4: 遍历 rawLogins 组装结果并写入
 
 输入：`rawLogins = ["a", "b", "c", "a"]`
 
-| 序号 | login | 查询结果    | 判断                       | 最终状态                           |
-| ---- | ----- | ----------- | -------------------------- | ---------------------------------- |
-| 1    | a     | userId=001  | 新增                       | ✅ 成功，001 加入 justAddedUserIds |
-| 2    | b     | userId=002  | 新增                       | ✅ 成功，002 加入 justAddedUserIds |
-| 3    | c     | userId=null | 未绑定                     | ❌ 账号未关联平台用户ID            |
-| 4    | a     | userId=001  | 001 在 justAddedUserIds 中 | ❌ 成员已存在                      |
+| 序号 | login | 查询结果 | 判断 | 最终状态 |
+|------|-------|---------|------|---------|
+| 1 | a | userId=001 | 新增 | ✅ 成功，001 加入 justAddedUserIds |
+| 2 | b | userId=002 | 新增 | ✅ 成功，002 加入 justAddedUserIds |
+| 3 | c | userId=null | 未绑定 | ❌ 账号未关联平台用户ID |
+| 4 | a | userId=001 | 001 在 justAddedUserIds 中 | ❌ 成员已存在 |
 
 ### 数据库操作次数
 
-| 操作                        | 次数                     | 说明                   |
-| --------------------------- | ------------------------ | ---------------------- |
-| 查 workspace_project_member | 1 次                     | 一次性加载所有已有成员 |
-| 写 workspace_project_member | ≤ rawLogins.size 次      | 仅成功的才写入         |
-| Feign 调用 framework        | ceil(uniqueLogins/50) 次 | 分批调用               |
+| 操作 | 次数 | 说明 |
+|------|------|------|
+| 查 workspace_project_member | 1 次 | 一次性加载所有已有成员 |
+| 写 workspace_project_member | ≤ rawLogins.size 次 | 仅成功的才写入 |
+| Feign 调用 framework | ceil(uniqueLogins/50) 次 | 分批调用 |
 
 ## 四、详细改造点
 
@@ -130,15 +130,15 @@ Step 4: 遍历 rawLogins 组装结果并写入
 
 **UserInfoResult 字段映射**：
 
-| UserInfoResult 字段 | 接口返回字段      | 说明                                         |
-| ------------------- | ----------------- | -------------------------------------------- |
-| userId              | userId            | 不变                                         |
-| userName            | userName          | 不变                                         |
-| accountId           | accountId         | 不变                                         |
-| accountName         | accountName       | 不变                                         |
-| accountPlatform     | 请求参数 platform | 不变                                         |
-| accountLogin        | accountLogin      | 不变                                         |
-| errorMsg            | —                 | 已删除，由调用方根据 userId 是否为 null 判断 |
+| UserInfoResult 字段 | 接口返回字段 | 说明 |
+|---------------------|-------------|------|
+| userId | userId | 不变 |
+| userName | userName | 不变 |
+| accountId | accountId | 不变 |
+| accountName | accountName | 不变 |
+| accountPlatform | 请求参数 platform | 不变 |
+| accountLogin | accountLogin | 不变 |
+| errorMsg | — | 已删除，由调用方根据 userId 是否为 null 判断 |
 
 **注意**：`errorMsg` 不再由接口返回，改为在 `ProjectSpaceServiceImpl` 中根据接口返回数据判断。
 
@@ -200,7 +200,9 @@ for (int i = 0; i < uniqueLogins.size(); i += BATCH_SIZE) {
 ```json
 {
   "successCount": 2,
-  "failedMembers": [{ "accountLogin": "xxx", "reason": "成员已存在" }]
+  "failedMembers": [
+    { "accountLogin": "xxx", "reason": "成员已存在" }
+  ]
 }
 ```
 
@@ -208,27 +210,27 @@ for (int i = 0; i < uniqueLogins.size(); i += BATCH_SIZE) {
 
 删除以下不再需要的 Mapper 方法和 XML SQL：
 
-| 方法                       | 说明                               |
-| -------------------------- | ---------------------------------- |
-| `queryByLogin`             | 单个查三方表 → 改用 Feign 接口     |
-| `queryByPlatformAndLogins` | 批量查三方表 → 改用 Feign 接口     |
-| `queryUserBasicById`       | 单个查用户主表 → 由 Feign 接口聚合 |
-| `queryUserBasicByIds`      | 批量查用户主表 → 由 Feign 接口聚合 |
+| 方法 | 说明 |
+|------|------|
+| `queryByLogin` | 单个查三方表 → 改用 Feign 接口 |
+| `queryByPlatformAndLogins` | 批量查三方表 → 改用 Feign 接口 |
+| `queryUserBasicById` | 单个查用户主表 → 由 Feign 接口聚合 |
+| `queryUserBasicByIds` | 批量查用户主表 → 由 Feign 接口聚合 |
 
 ## 五、涉及文件清单
 
-| 文件                               | 改动类型 | 说明                                                   |
-| ---------------------------------- | -------- | ------------------------------------------------------ |
-| FrameworkClient.java               | 新增     | FeignClient 接口，name="openlibing-framework"          |
-| QueryUserInfoRequest.java          | 新增     | Feign 请求 DTO，镜像 framework 的 QueryUserInfoDTO     |
-| UserDetailInfo.java                | 新增     | Feign 响应 DTO，镜像 framework 的 UserDetailInfoEntity |
-| FrameworkUserQueryService.java     | 重构     | 改为 Feign 调用，删除 Mapper 依赖，新增分批逻辑        |
-| ProjectSpaceServiceImpl.java       | 修改     | parseLogins 保留原始顺序 + justAddedUserIds + 结果组装 |
-| AddMembersResultVo.java            | 不变     | 保持 successCount + failedMembers 格式                 |
-| WorkspaceApplication.java          | 修改     | 添加 @EnableFeignClients 注解                          |
-| FrameworkThreePartyUserMapper.java | 删除     | 不再需要                                               |
-| FrameworkThreePartyUserMapper.xml  | 删除     | 不再需要                                               |
-| application-local.yaml             | 修改     | 添加 framework.service.url 本地调试配置                |
+| 文件 | 改动类型 | 说明 |
+|------|---------|------|
+| FrameworkClient.java | 新增 | FeignClient 接口，name="openlibing-framework" |
+| QueryUserInfoRequest.java | 新增 | Feign 请求 DTO，镜像 framework 的 QueryUserInfoDTO |
+| UserDetailInfo.java | 新增 | Feign 响应 DTO，镜像 framework 的 UserDetailInfoEntity |
+| FrameworkUserQueryService.java | 重构 | 改为 Feign 调用，删除 Mapper 依赖，新增分批逻辑 |
+| ProjectSpaceServiceImpl.java | 修改 | parseLogins 保留原始顺序 + justAddedUserIds + 结果组装 |
+| AddMembersResultVo.java | 不变 | 保持 successCount + failedMembers 格式 |
+| WorkspaceApplication.java | 修改 | 添加 @EnableFeignClients 注解 |
+| FrameworkThreePartyUserMapper.java | 删除 | 不再需要 |
+| FrameworkThreePartyUserMapper.xml | 删除 | 不再需要 |
+| application-local.yaml | 修改 | 添加 framework.service.url 本地调试配置 |
 
 ## 六、验证方式
 

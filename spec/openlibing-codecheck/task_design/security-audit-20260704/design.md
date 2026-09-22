@@ -35,7 +35,6 @@ public final class WebhookInputValidator {
 ```
 
 **改造点**：
-
 1. `WebhookController.insertData` / `insertEvent` / `readMongoDB` / `readMongoDBFindOne`：进入 Delegate 前调用 `WebhookInputValidator` 校验。
 2. `WebhookDelegateImpl.getCriteria`：除白名单字段名外抛 `IllegalArgumentException`；值为 `Map`/`List`/非 `String/Number/Boolean` 视为非法。
 3. `WebhookDelegateImpl.readMongoDB/readMongoDBFindOne`：`tableName` 不在白名单 → 返回 403。
@@ -118,7 +117,6 @@ public final class CommandArgSanitizer {
 **改造点**：
 
 1. `lintRunnerChecksHandler`：
-
    ```java
    private static final Pattern LINT_CHECK_PATTERN = Pattern.compile("^[a-zA-Z0-9_\\-, ]*$");
    @XxlJob("lintRunnerChecksHandler")
@@ -137,7 +135,6 @@ public final class CommandArgSanitizer {
    ```
 
 2. `getTaskTimeout` 边界：
-
    ```java
    int fullTaskTimeout = Math.max(1, Math.min(params.getInteger("fullTaskTimeout", 20), 1440));
    int incTaskTimeout = Math.max(1, Math.min(params.getInteger("incTaskTimeout", 5), 1440));
@@ -161,12 +158,12 @@ F-004 当前推荐方案（`X-Internal-Token` Header + `INTERNAL_SERVICE_TOKEN` 
 
 #### 后续方案候选
 
-| 方案                                                        | 改动范围                | 协调成本 | 安全性 |
-| ----------------------------------------------------------- | ----------------------- | -------- | ------ |
-| K8s NetworkPolicy / Service Mesh AuthorizationPolicy        | 运维 K8s YAML           | 仅运维   | 高     |
-| `InternalSecurityFilter` 改为"源 IP / CIDR 白名单 OR Token" | codecheck + 配置 CIDR   | 部署侧   | 中     |
-| Feign `RequestInterceptor` 自动注入 Token                   | 每个调用方加 ~5 行 Bean | 小       | 高     |
-| 维持现状（接受风险）                                        | 0                       | 0        | 低     |
+| 方案 | 改动范围 | 协调成本 | 安全性 |
+|------|---------|---------|--------|
+| K8s NetworkPolicy / Service Mesh AuthorizationPolicy | 运维 K8s YAML | 仅运维 | 高 |
+| `InternalSecurityFilter` 改为"源 IP / CIDR 白名单 OR Token" | codecheck + 配置 CIDR | 部署侧 | 中 |
+| Feign `RequestInterceptor` 自动注入 Token | 每个调用方加 ~5 行 Bean | 小 | 高 |
+| 维持现状（接受风险） | 0 | 0 | 低 |
 
 详细对比将在 F-004 跟进工单中给出。
 
@@ -174,31 +171,31 @@ F-004 当前推荐方案（`X-Internal-Token` Header + `INTERNAL_SERVICE_TOKEN` 
 
 ## 关键决策
 
-| 决策               | 选择                                | 理由                                                    |
-| ------------------ | ----------------------------------- | ------------------------------------------------------- |
-| F-001 防护策略     | 白名单 + 类型校验                   | 最小化改动，对调用方透明；MongoDB 操作符无法用 Map 传递 |
-| F-002 防护策略     | ProcessBuilder 列表形式 + sanitizer | 完全避免 shell 解析；sanitizer 防止非法 URL/分支名进入  |
-| F-003 防护策略     | 静默拒绝 + 保留旧值                 | 不影响正在运行的 pre-commit 流程；可观测性靠 ERROR 日志 |
-| ~~F-004 鉴权方式~~ | ~~Header-based Token Filter~~       | **本次 PR 透档**；F-004 由独立工单评估                  |
-| 集合白名单范围     | 12 个核心集合                       | 覆盖现有 webhoook 调用场景；后续新增集合需显式加白名单  |
+| 决策 | 选择 | 理由 |
+|------|------|------|
+| F-001 防护策略 | 白名单 + 类型校验 | 最小化改动，对调用方透明；MongoDB 操作符无法用 Map 传递 |
+| F-002 防护策略 | ProcessBuilder 列表形式 + sanitizer | 完全避免 shell 解析；sanitizer 防止非法 URL/分支名进入 |
+| F-003 防护策略 | 静默拒绝 + 保留旧值 | 不影响正在运行的 pre-commit 流程；可观测性靠 ERROR 日志 |
+| ~~F-004 鉴权方式~~ | ~~Header-based Token Filter~~ | **本次 PR 透档**；F-004 由独立工单评估 |
+| 集合白名单范围 | 12 个核心集合 | 覆盖现有 webhoook 调用场景；后续新增集合需显式加白名单 |
 
 ## 风险 & 缓解
 
-| 风险                                    | 缓解                                                                        |
-| --------------------------------------- | --------------------------------------------------------------------------- |
-| F-001 白名单遗漏导致合法调用被拒        | 集合名常量与 `CodeCheckCollectionName` 对齐；如发生回归可通过错误码定位     |
-| F-002 sanitizer 误杀合法 URL            | 正则允许 `https?://` + 路径字符 + `.git`；不限制端口以外的合法字符          |
-| F-003 lint runner checks 中含特殊字符   | 校验正则已允许 `[a-zA-Z0-9_\\-, ]`，覆盖原用法；如需中文/特殊字符可后续扩展 |
-| ~~F-004 配置 token 泄露~~               | **本次 PR 透档**；由 F-004 独立工单评估                                     |
-| ~~F-004 调用方未带 token 导致集成失败~~ | **本次 PR 透档**；F-004 涉及跨仓改造，统一在独立工单评估                    |
+| 风险 | 缓解 |
+|------|------|
+| F-001 白名单遗漏导致合法调用被拒 | 集合名常量与 `CodeCheckCollectionName` 对齐；如发生回归可通过错误码定位 |
+| F-002 sanitizer 误杀合法 URL | 正则允许 `https?://` + 路径字符 + `.git`；不限制端口以外的合法字符 |
+| F-003 lint runner checks 中含特殊字符 | 校验正则已允许 `[a-zA-Z0-9_\\-, ]`，覆盖原用法；如需中文/特殊字符可后续扩展 |
+| ~~F-004 配置 token 泄露~~ | **本次 PR 透档**；由 F-004 独立工单评估 |
+| ~~F-004 调用方未带 token 导致集成失败~~ | **本次 PR 透档**；F-004 涉及跨仓改造，统一在独立工单评估 |
 
 ## 跨仓影响
 
-| 仓                   | 集成点                                   | 风险                             |
-| -------------------- | ---------------------------------------- | -------------------------------- |
-| openlibing-coderepo  | 调用 `/internal/rule-set/recompute-used` | F-004 透档；当前仍依赖网络层隔离 |
-| openlibing-cicd      | 调用 `/internal/pre-commit`              | 同上                             |
-| openlibing-framework | 调用 `/internal/repo/getRepoAccessToken` | 同上                             |
+| 仓 | 集成点 | 风险 |
+|----|--------|------|
+| openlibing-coderepo | 调用 `/internal/rule-set/recompute-used` | F-004 透档；当前仍依赖网络层隔离 |
+| openlibing-cicd | 调用 `/internal/pre-commit` | 同上 |
+| openlibing-framework | 调用 `/internal/repo/getRepoAccessToken` | 同上 |
 
 **F-001~F-003 跨仓影响**：无。本次修复仅收紧 codecheck 内部对输入的处理，对外接口契约不变。
 
@@ -206,20 +203,20 @@ F-004 当前推荐方案（`X-Internal-Token` Header + `INTERNAL_SERVICE_TOKEN` 
 
 ## 文件清单
 
-| 文件                                              | 操作     | 说明                                     |
-| ------------------------------------------------- | -------- | ---------------------------------------- |
-| `WebhookController.java`                          | 修改     | Controller 层白名单校验                  |
-| `WebhookDelegateImpl.java`                        | 修改     | `getCriteria` 字段名白名单               |
-| `WebhookOperation.java`                           | 修改     | `queryData` / `insertData` 字段白名单    |
-| `InternalController.java`                         | 修改     | 入口轻量校验（防御性）                   |
-| `PipelineDelegateImpl.java`                       | 修改     | ProcessBuilder 列表形式 + sanitizer 调用 |
-| `XxlJobHandler.java`                              | 修改     | lintRunnerChecks 校验 + timeout 边界     |
-| `common/security/WebhookInputValidator.java`      | 新增     | F-001 白名单集中管理                     |
-| `common/security/CommandArgSanitizer.java`        | 新增     | F-002 sanitizer                          |
-| ~~`common/security/InternalSecurityFilter.java`~~ | ~~新增~~ | **F-004 透档，本次 PR 不新增**           |
-| ~~`application.yml`~~                             | ~~修改~~ | **F-004 透档，本次 PR 不修改**           |
-| `WebhookDelegateImplTest.java`                    | 修改     | 新增非法输入 → 拒绝用例                  |
-| `PipelineDelegateImplTest.java`                   | 修改     | 新增非法 repoUrl → 拒绝用例              |
-| `XxlJobHandlerTest.java`                          | 修改     | 新增非法 lintRunnerChecks → 拒绝用例     |
-| ~~`InternalSecurityFilterTest.java`~~             | ~~新增~~ | **F-004 透档，本次 PR 不新增**           |
-| `WebhookInputValidatorTest.java`                  | 新增     | F-001 白名单覆盖                         |
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `WebhookController.java` | 修改 | Controller 层白名单校验 |
+| `WebhookDelegateImpl.java` | 修改 | `getCriteria` 字段名白名单 |
+| `WebhookOperation.java` | 修改 | `queryData` / `insertData` 字段白名单 |
+| `InternalController.java` | 修改 | 入口轻量校验（防御性） |
+| `PipelineDelegateImpl.java` | 修改 | ProcessBuilder 列表形式 + sanitizer 调用 |
+| `XxlJobHandler.java` | 修改 | lintRunnerChecks 校验 + timeout 边界 |
+| `common/security/WebhookInputValidator.java` | 新增 | F-001 白名单集中管理 |
+| `common/security/CommandArgSanitizer.java` | 新增 | F-002 sanitizer |
+| ~~`common/security/InternalSecurityFilter.java`~~ | ~~新增~~ | **F-004 透档，本次 PR 不新增** |
+| ~~`application.yml`~~ | ~~修改~~ | **F-004 透档，本次 PR 不修改** |
+| `WebhookDelegateImplTest.java` | 修改 | 新增非法输入 → 拒绝用例 |
+| `PipelineDelegateImplTest.java` | 修改 | 新增非法 repoUrl → 拒绝用例 |
+| `XxlJobHandlerTest.java` | 修改 | 新增非法 lintRunnerChecks → 拒绝用例 |
+| ~~`InternalSecurityFilterTest.java`~~ | ~~新增~~ | **F-004 透档，本次 PR 不新增** |
+| `WebhookInputValidatorTest.java` | 新增 | F-001 白名单覆盖 |

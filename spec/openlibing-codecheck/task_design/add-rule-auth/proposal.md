@@ -9,7 +9,6 @@
 为以下 14 个规则集相关接口补充 `authUtils.checkPermission(url, projectId, userId)` 编程式横向鉴权：
 
 **RuleController 接口（8个）**：
-
 - `/ci-portal/v2/grant/auth/rules-account`
 - `/ci-portal/v2/grant/auth/rules/group-account`
 - `/ci-portal/v2/grant/auth/rules/setting/account`
@@ -20,12 +19,10 @@
 - `/ci-portal/v2/grant/auth/default/template`
 
 **FileDownLoadController 接口（2个）**：
-
 - `/ci-portal/excel/v1/rule/set`
 - `/ci-portal/excel/v1/rule/set/export`
 
 **RuleSetListController 接口（4个）**：
-
 - `/codecheck/operate/project/ruleSetList`
 - `/codecheck/operate/personal/ruleSetList`
 - `/codecheck/operate/project/single/ruleSetList`
@@ -46,11 +43,11 @@
 
 ## 影响范围
 
-| 文件                        | 修改类型 | 说明                             |
-| --------------------------- | -------- | -------------------------------- |
-| RuleDelegate.java           | 修改     | 8个方法签名添加 userId 参数      |
-| RuleDelegateImpl.java       | 修改     | 9个方法添加 checkPermission 鉴权 |
-| RuleController.java         | 修改     | 8个方法添加 userId 请求参数      |
-| RuleSetListController.java  | 修改     | 3个方法添加 userId + @Deprecated |
-| RuleSetListImpl.java        | 修改     | 4个方法添加鉴权逻辑              |
-| FileDownLoadController.java | 修改     | 2个方法添加鉴权 + 注入 AuthUtils |
+| 文件 | 修改类型 | 说明 |
+|------|---------|------|
+| RuleDelegate.java | 修改 | 8个方法签名添加 userId 参数 |
+| RuleDelegateImpl.java | 修改 | 9个方法添加 checkPermission 鉴权 |
+| RuleController.java | 修改 | 8个方法添加 userId 请求参数 |
+| RuleSetListController.java | 修改 | 3个方法添加 userId + @Deprecated |
+| RuleSetListImpl.java | 修改 | 4个方法添加鉴权逻辑 |
+| FileDownLoadController.java | 修改 | 2个方法添加鉴权 + 注入 AuthUtils |

@@ -91,12 +91,12 @@
 
 ## Risks / Trade-offs
 
-| 风险                                                                          | 缓解                                                                                                                                              |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 同一浏览器多标签页共享 `localStorage`，与原 `sessionStorage` 每标签页独立不同 | 可接受：列配置是用户偏好，跨标签页共享符合预期；与 `branches.vue`、`mytable-column-setting` 行为一致                                              |
-| 隐私模式下 `localStorage` 写入可能失败                                        | 原生 `localStorage.setItem` 在隐私模式下可能抛 `QuotaExceededError`；本次未加 try/catch（与原 `sessionStorage` 实现一致），后续如遇问题可统一补充 |
-| 旧 `sessionStorage.clunmLists` 残留数据                                       | 标签页关闭后自动清除；不影响 `localStorage` 读取（key 相同但存储隔离）                                                                            |
-| value 格式非 JSON，扩展性受限                                                 | 与原实现一致；如未来需存储列顺序或宽度，再统一升级为 JSON                                                                                         |
+| 风险 | 缓解 |
+|------|------|
+| 同一浏览器多标签页共享 `localStorage`，与原 `sessionStorage` 每标签页独立不同 | 可接受：列配置是用户偏好，跨标签页共享符合预期；与 `branches.vue`、`mytable-column-setting` 行为一致 |
+| 隐私模式下 `localStorage` 写入可能失败 | 原生 `localStorage.setItem` 在隐私模式下可能抛 `QuotaExceededError`；本次未加 try/catch（与原 `sessionStorage` 实现一致），后续如遇问题可统一补充 |
+| 旧 `sessionStorage.clunmLists` 残留数据 | 标签页关闭后自动清除；不影响 `localStorage` 读取（key 相同但存储隔离） |
+| value 格式非 JSON，扩展性受限 | 与原实现一致；如未来需存储列顺序或宽度，再统一升级为 JSON |
 
 ## Migration Plan
 

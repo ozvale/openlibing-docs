@@ -52,13 +52,13 @@
 
 ## 影响范围
 
-| 模块                                          | 变更类型 | 说明                                                                 |
-| --------------------------------------------- | -------- | -------------------------------------------------------------------- |
-| 路由 `src/router/routes/modules/dashboard.ts` | 修改     | 新增 `CodeCheckDashboard` 子路由                                     |
-| 页面 `src/views/dashboard/code-check/`        | 新增     | 完整目录（view + components + config + utils + style.less）          |
-| API `src/api/dashboard/code-check.ts`         | 新增     | `getKpiSummary` / `getTrend` / `getCommonDetail` 调用                |
-| 类型 `src/types/code-check.ts`                | 新增     | KPI / 图表 / 表格类型定义                                            |
-| 单测                                          | 新增     | `src/views/dashboard/code-check/__tests__/`（utils / columns / e2e） |
+| 模块 | 变更类型 | 说明 |
+|------|---------|------|
+| 路由 `src/router/routes/modules/dashboard.ts` | 修改 | 新增 `CodeCheckDashboard` 子路由 |
+| 页面 `src/views/dashboard/code-check/` | 新增 | 完整目录（view + components + config + utils + style.less） |
+| API `src/api/dashboard/code-check.ts` | 新增 | `getKpiSummary` / `getTrend` / `getCommonDetail` 调用 |
+| 类型 `src/types/code-check.ts` | 新增 | KPI / 图表 / 表格类型定义 |
+| 单测 | 新增 | `src/views/dashboard/code-check/__tests__/`（utils / columns / e2e） |
 
 **不影响**：
 

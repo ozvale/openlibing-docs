@@ -1,11 +1,11 @@
 # 安全威胁分析报告：openlibing-gateway
 
-| 项       | 内容                                                                                                                                                  |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 仓库路径 | `D:\skill\skill收集\repo\openlibing-gateway`                                                                                                          |
-| 分析日期 | 2026-09-02                                                                                                                                            |
-| 分析方法 | 静态代码审计（STRIDE-A 威胁建模 + 配置/依赖检查）                                                                                                     |
-| 报告语言 | 中文                                                                                                                                                  |
+| 项 | 内容 |
+|---|---|
+| 仓库路径 | `D:\skill\skill收集\repo\openlibing-gateway` |
+| 分析日期 | 2026-09-02 |
+| 分析方法 | 静态代码审计（STRIDE-A 威胁建模 + 配置/依赖检查） |
+| 报告语言 | 中文 |
 | 部署分类 | 容器化微服务（K8s 集群内，端口 8073，响应式 WebFlux；平台**统一接入与安全网关**，依赖 Apollo/Nacos 拉取配置，直连 PostgreSQL/Redis/MongoDB/RabbitMQ） |
 
 ---
@@ -22,22 +22,22 @@ OpenLiBing 平台的**统一接入网关**：多平台（Gitee/GitCode/GitHub/Un
 
 ### 1.2 组件与信任边界
 
-| 组件 ID                    | 锚点                                                                                            | 职责                                                          | 信任边界               |
-| -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------- |
-| WebhookAuthFilter          | `business/filter/WebhookAuthFilter.java:46`                                                     | Webhook 限流 + 验签（order=0），GitCode/GitHub 直接交 handler | 外部 → 网关            |
-| AuthFilter                 | `business/filter/AuthFilter.java:58`                                                            | 核心认证鉴权（JWT、CSRF、会话、黑名单、豁免、RBAC），order=2  | 认证边界               |
-| PrivacyProfileFilter       | `business/filter/PrivacyProfileFilter.java`                                                     | 隐私声明签署校验/重签 token                                   | 认证边界               |
-| PermissionCheckFilter      | `business/filter/PermissionCheckFilter.java`                                                    | `/openlibing-cicd/` 项目级横向权限                            | 授权边界               |
-| ApiGatewayFilter           | `business/filter/ApiGatewayFilter.java:36`                                                      | 华为第三方 API 加签转发（X-HW-*）                             | 网关 → 外部 API        |
-| 限流                       | `business/filter/ratelimit/RedisLeakyBucketRateLimiter.java`                                    | Redis 漏桶限流                                                | 边界控制               |
-| LoginController/Impl       | `business/controller/LoginController.java:58`、`business/service/impl/LoginServiceImpl.java:81` | OAuth 发起/回调、绑定、JWT 颁发、登出                         | 外部 ↔ 三方 OAuth 平台 |
-| JwtHelper                  | `common/utils/JwtHelper.java`                                                                   | HMAC256 签发/验签、Cookie 生成                                | 认证边界               |
-| SecurityHelper             | `common/utils/SecurityHelper.java:21`                                                           | AES 加解密（密钥分片 `security.part1`）                       | 密钥边界               |
-| UserAuthHelper             | `common/utils/UserAuthHelper.java`                                                              | RBAC 菜单 URL 鉴权 + 黑名单                                   | 授权边界               |
-| MachineInterfaceAuthHelper | `common/utils/MachineInterfaceAuthHelper.java`                                                  | 机机接口 HMAC-SHA256 签名验签                                 | 服务 ↔ 服务            |
-| RedisHelper                | `common/utils/redis/RedisHelper.java`                                                           | 会话/state/CSRF/限流/黑名单存储（异常静默）                   | 服务 → 存储            |
-| MiddlewareHealthController | `business/controller/MiddlewareHealthController.java:23`                                        | 用解密后凭据直连各中间件探活                                  | 服务 → 存储            |
-| EndUser / 三方平台         | —                                                                                               | 请求来源 / OAuth 身份提供方                                   | 外部主体               |
+| 组件 ID | 锚点 | 职责 | 信任边界 |
+|---|---|---|---|
+| WebhookAuthFilter | `business/filter/WebhookAuthFilter.java:46` | Webhook 限流 + 验签（order=0），GitCode/GitHub 直接交 handler | 外部 → 网关 |
+| AuthFilter | `business/filter/AuthFilter.java:58` | 核心认证鉴权（JWT、CSRF、会话、黑名单、豁免、RBAC），order=2 | 认证边界 |
+| PrivacyProfileFilter | `business/filter/PrivacyProfileFilter.java` | 隐私声明签署校验/重签 token | 认证边界 |
+| PermissionCheckFilter | `business/filter/PermissionCheckFilter.java` | `/openlibing-cicd/` 项目级横向权限 | 授权边界 |
+| ApiGatewayFilter | `business/filter/ApiGatewayFilter.java:36` | 华为第三方 API 加签转发（X-HW-*） | 网关 → 外部 API |
+| 限流 | `business/filter/ratelimit/RedisLeakyBucketRateLimiter.java` | Redis 漏桶限流 | 边界控制 |
+| LoginController/Impl | `business/controller/LoginController.java:58`、`business/service/impl/LoginServiceImpl.java:81` | OAuth 发起/回调、绑定、JWT 颁发、登出 | 外部 ↔ 三方 OAuth 平台 |
+| JwtHelper | `common/utils/JwtHelper.java` | HMAC256 签发/验签、Cookie 生成 | 认证边界 |
+| SecurityHelper | `common/utils/SecurityHelper.java:21` | AES 加解密（密钥分片 `security.part1`） | 密钥边界 |
+| UserAuthHelper | `common/utils/UserAuthHelper.java` | RBAC 菜单 URL 鉴权 + 黑名单 | 授权边界 |
+| MachineInterfaceAuthHelper | `common/utils/MachineInterfaceAuthHelper.java` | 机机接口 HMAC-SHA256 签名验签 | 服务 ↔ 服务 |
+| RedisHelper | `common/utils/redis/RedisHelper.java` | 会话/state/CSRF/限流/黑名单存储（异常静默） | 服务 → 存储 |
+| MiddlewareHealthController | `business/controller/MiddlewareHealthController.java:23` | 用解密后凭据直连各中间件探活 | 服务 → 存储 |
+| EndUser / 三方平台 | — | 请求来源 / OAuth 身份提供方 | 外部主体 |
 
 **关键信任边界**：① 终端用户/插件 → 网关过滤链（认证鉴权核心）；② 网关 → 5 个 OAuth 平台（授权码换 token、拉用户信息）；③ 网关 → 后端业务服务（身份以 query 参数注入转发，依赖网络隔离）；④ 网关 → 各中间件（健康检查直连）。
 
@@ -45,15 +45,15 @@ OpenLiBing 平台的**统一接入网关**：多平台（Gitee/GitCode/GitHub/Un
 
 ## 二、STRIDE-A 威胁分析汇总
 
-| STRIDE 类别 | 威胁数 | 代表性威胁                                                                                                 |
-| ----------- | ------ | ---------------------------------------------------------------------------------------------------------- |
-| S 仿冒      | 2      | 机机/Webhook 签名依赖可伪造 IP 白名单；`use-insecure-trust-manager` 下后端可被中间人仿冒                   |
-| T 篡改      | 3      | 网关转发信任所有 TLS 证书（MITM 篡改）；MongoDB 禁用主机名校验；白名单 `contains` 子串匹配可被路径构造绕过 |
-| R 抵赖      | 1      | 鉴权/限流基于可伪造的 XFF 与可降级的 Redis，审计归属可被误导                                               |
-| I 信息泄露  | 3      | GitHub 回调 500 回显 `e.getMessage()`；access_token 放 URL query；中间件健康检查/Swagger 暴露面            |
-| D 拒绝服务  | 2      | Redis 故障时限流/会话 fail-open 或异常；无统一请求体大小约束（网关层）                                     |
-| E 权限提升  | 3      | 豁免/转发/CSRF 白名单 `contains` 绕过认证；开放重定向挟持绑定回调；身份以 query 参数转发后端               |
-| A 业务滥用  | 2      | 开放重定向钓鱼；白名单绕过后无鉴权调用敏感接口                                                             |
+| STRIDE 类别 | 威胁数 | 代表性威胁 |
+|---|---|---|
+| S 仿冒 | 2 | 机机/Webhook 签名依赖可伪造 IP 白名单；`use-insecure-trust-manager` 下后端可被中间人仿冒 |
+| T 篡改 | 3 | 网关转发信任所有 TLS 证书（MITM 篡改）；MongoDB 禁用主机名校验；白名单 `contains` 子串匹配可被路径构造绕过 |
+| R 抵赖 | 1 | 鉴权/限流基于可伪造的 XFF 与可降级的 Redis，审计归属可被误导 |
+| I 信息泄露 | 3 | GitHub 回调 500 回显 `e.getMessage()`；access_token 放 URL query；中间件健康检查/Swagger 暴露面 |
+| D 拒绝服务 | 2 | Redis 故障时限流/会话 fail-open 或异常；无统一请求体大小约束（网关层） |
+| E 权限提升 | 3 | 豁免/转发/CSRF 白名单 `contains` 绕过认证；开放重定向挟持绑定回调；身份以 query 参数转发后端 |
+| A 业务滥用 | 2 | 开放重定向钓鱼；白名单绕过后无鉴权调用敏感接口 |
 
 ### 关键威胁场景
 
@@ -71,92 +71,92 @@ OpenLiBing 平台的**统一接入网关**：多平台（Gitee/GitCode/GitHub/Un
 
 #### FIND-01：网关转发全局信任所有 TLS 证书（禁用证书校验）
 
-| 属性     | 内容                                                                                                                                                                                        |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| STRIDE   | T（篡改）/ S（仿冒）                                                                                                                                                                        |
-| CWE      | [CWE-295](https://cwe.mitre.org/data/definitions/295.html) 证书校验不当                                                                                                                     |
-| OWASP    | A02:2025 – Cryptographic Failures；A05:2025 – Security Misconfiguration                                                                                                                     |
-| 利用前提 | 处于网关到后端/外部的网络路径上（内网中间人、被攻陷代理/DNS）                                                                                                                               |
-| 证据     | `src/main/resources/application.yaml:27-29` `httpclient.ssl.use-insecure-trust-manager: true`（全局生效于网关转发 HttpClient）                                                              |
-| 风险     | 网关转发的所有请求（含注入的 userId/accountId、会话、业务数据、华为 API 加签请求）在 TLS 层不校验对端证书，可被中间人窃听/篡改而不告警。这是网关作为统一入口最严重的传输层缺陷。            |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | T（篡改）/ S（仿冒） |
+| CWE | [CWE-295](https://cwe.mitre.org/data/definitions/295.html) 证书校验不当 |
+| OWASP | A02:2025 – Cryptographic Failures；A05:2025 – Security Misconfiguration |
+| 利用前提 | 处于网关到后端/外部的网络路径上（内网中间人、被攻陷代理/DNS） |
+| 证据 | `src/main/resources/application.yaml:27-29` `httpclient.ssl.use-insecure-trust-manager: true`（全局生效于网关转发 HttpClient） |
+| 风险 | 网关转发的所有请求（含注入的 userId/accountId、会话、业务数据、华为 API 加签请求）在 TLS 层不校验对端证书，可被中间人窃听/篡改而不告警。这是网关作为统一入口最严重的传输层缺陷。 |
 | 修复建议 | 移除 `use-insecure-trust-manager: true`（默认即严格校验）；若后端为自签证书，通过受信 CA/信任库（仓内已有 `cacerts`）显式导入，而非全局关闭校验；区分"出站到外部三方"与"内网转发"分别配置。 |
-| 修复成本 | 低（配置项）；中（需梳理自签后端证书）                                                                                                                                                      |
+| 修复成本 | 低（配置项）；中（需梳理自签后端证书） |
 
 #### FIND-02：认证/CSRF/转发/豁免白名单普遍使用 `String.contains` 子串匹配，可被路径构造绕过
 
-| 属性     | 内容                                                                                                                                                                                                                                                                                                                                       |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| STRIDE   | E（权限提升）/ T（绕过控制）                                                                                                                                                                                                                                                                                                               |
-| CWE      | [CWE-807](https://cwe.mitre.org/data/definitions/807.html) 安全决策依赖不可靠输入；[CWE-285](https://cwe.mitre.org/data/definitions/285.html) 授权不当；[CWE-184](https://cwe.mitre.org/data/definitions/184.html) 不完整白名单                                                                                                            |
-| OWASP    | A01:2025 – Broken Access Control                                                                                                                                                                                                                                                                                                           |
-| 利用前提 | 能向网关发送请求；白名单中存在较短/可作为子串出现的条目                                                                                                                                                                                                                                                                                    |
-| 证据     | `AuthFilter.java:900`（`shouldExemptAuth` 豁免认证）、`:809`（CSRF 信任列表 `checkCsrfAttack`）、`:950`（失效凭证白名单）、`:861`（`isForwardRequest` 转发白名单，命中后跳过 RBAC `:195-197`）、`:883`（插件 token 头路径）、`:929`（公开接口）均为 `path.contains(trustUrl)`；`WebhookAuthFilter.java:96,108` webhook 路径也用 `contains` |
-| 风险     | 子串匹配不锚定路径边界。攻击者可构造包含可信片段的路径（如 `/x?next=<exempt片段>`、`/<exempt片段>/../<敏感接口>`、把片段放在路径段内）命中豁免/转发/CSRF 白名单，使敏感接口**跳过认证、跳过 CSRF、跳过 RBAC**。`isForwardRequest` 命中后直接 `chain.filter(exchange)` 且不注入/不校验用户，风险最高。                                      |
-| 修复建议 | 白名单匹配改为**前缀匹配 + 路径边界**（`path.equals(x)` 或 `path.startsWith(x + "/")`），或使用 Spring `AntPathMatcher`/`PathPattern` 精确匹配；匹配前对路径做规范化（`normalize()` 去除 `../`）；白名单条目避免过短片段；对 `forward.trust.list` 命中的转发额外强制认证。                                                                 |
-| 修复成本 | 低                                                                                                                                                                                                                                                                                                                                         |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | E（权限提升）/ T（绕过控制） |
+| CWE | [CWE-807](https://cwe.mitre.org/data/definitions/807.html) 安全决策依赖不可靠输入；[CWE-285](https://cwe.mitre.org/data/definitions/285.html) 授权不当；[CWE-184](https://cwe.mitre.org/data/definitions/184.html) 不完整白名单 |
+| OWASP | A01:2025 – Broken Access Control |
+| 利用前提 | 能向网关发送请求；白名单中存在较短/可作为子串出现的条目 |
+| 证据 | `AuthFilter.java:900`（`shouldExemptAuth` 豁免认证）、`:809`（CSRF 信任列表 `checkCsrfAttack`）、`:950`（失效凭证白名单）、`:861`（`isForwardRequest` 转发白名单，命中后跳过 RBAC `:195-197`）、`:883`（插件 token 头路径）、`:929`（公开接口）均为 `path.contains(trustUrl)`；`WebhookAuthFilter.java:96,108` webhook 路径也用 `contains` |
+| 风险 | 子串匹配不锚定路径边界。攻击者可构造包含可信片段的路径（如 `/x?next=<exempt片段>`、`/<exempt片段>/../<敏感接口>`、把片段放在路径段内）命中豁免/转发/CSRF 白名单，使敏感接口**跳过认证、跳过 CSRF、跳过 RBAC**。`isForwardRequest` 命中后直接 `chain.filter(exchange)` 且不注入/不校验用户，风险最高。 |
+| 修复建议 | 白名单匹配改为**前缀匹配 + 路径边界**（`path.equals(x)` 或 `path.startsWith(x + "/")`），或使用 Spring `AntPathMatcher`/`PathPattern` 精确匹配；匹配前对路径做规范化（`normalize()` 去除 `../`）；白名单条目避免过短片段；对 `forward.trust.list` 命中的转发额外强制认证。 |
+| 修复成本 | 低 |
 
 ### 中危
 
 #### FIND-03：账号绑定回调存在开放重定向（`redirect` 参数无同源校验）
 
-| 属性     | 内容                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| STRIDE   | E / A（钓鱼、授权流程挟持）                                                                                                                                                                                                                                                                                                                                                                                                     |
-| CWE      | [CWE-601](https://cwe.mitre.org/data/definitions/601.html) 开放重定向                                                                                                                                                                                                                                                                                                                                                           |
-| OWASP    | A01:2025                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| 利用前提 | 诱导已登录受害者点击构造的绑定授权链接（含 `redirect=https://evil.com`）                                                                                                                                                                                                                                                                                                                                                        |
-| 证据     | 发起：`LoginController.java:361-370`（uniportal）、`:471-478`（openubmc）、`:521-528`（gitee）、`:571-578`（gitcode）、`:620-626`（github）`redirect = request.getQueryParams().getFirst("redirect")` → `replace(SPLIT_STR,"&")` → `redisHelper.set(userId+":"+platform+":redirect", redirect, 30, MINUTES)`；回调：`LoginServiceImpl.java:624` 与 `:709` `response.getHeaders().add("location", prManageRedirectUrl)` 原样 302 |
-| 风险     | `redirect` 用户完全可控、无协议/主机白名单/同源校验。受害者完成三方账号绑定授权后被 302 到攻击者站点，可用于钓鱼、窃取授权码/令牌（若三方回调带 code）、或借平台可信域名信誉实施跳转钓鱼。                                                                                                                                                                                                                                      |
-| 修复建议 | 对 `redirect` 做白名单校验（仅允许 `domain.name` 同源或预置相对路径/可信主机列表）；拒绝绝对 URL 中的外域；仅允许 `https`；回调取用时再次校验。                                                                                                                                                                                                                                                                                 |
-| 修复成本 | 低                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | E / A（钓鱼、授权流程挟持） |
+| CWE | [CWE-601](https://cwe.mitre.org/data/definitions/601.html) 开放重定向 |
+| OWASP | A01:2025 |
+| 利用前提 | 诱导已登录受害者点击构造的绑定授权链接（含 `redirect=https://evil.com`） |
+| 证据 | 发起：`LoginController.java:361-370`（uniportal）、`:471-478`（openubmc）、`:521-528`（gitee）、`:571-578`（gitcode）、`:620-626`（github）`redirect = request.getQueryParams().getFirst("redirect")` → `replace(SPLIT_STR,"&")` → `redisHelper.set(userId+":"+platform+":redirect", redirect, 30, MINUTES)`；回调：`LoginServiceImpl.java:624` 与 `:709` `response.getHeaders().add("location", prManageRedirectUrl)` 原样 302 |
+| 风险 | `redirect` 用户完全可控、无协议/主机白名单/同源校验。受害者完成三方账号绑定授权后被 302 到攻击者站点，可用于钓鱼、窃取授权码/令牌（若三方回调带 code）、或借平台可信域名信誉实施跳转钓鱼。 |
+| 修复建议 | 对 `redirect` 做白名单校验（仅允许 `domain.name` 同源或预置相对路径/可信主机列表）；拒绝绝对 URL 中的外域；仅允许 `https`；回调取用时再次校验。 |
+| 修复成本 | 低 |
 
 #### FIND-04：Redis 异常静默吞掉，鉴权/限流/黑名单存在 fail-open 降级面
 
-| 属性     | 内容                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| STRIDE   | D / E / T                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| CWE      | [CWE-755](https://cwe.mitre.org/data/definitions/755.html) 异常处理不当；[CWE-636](https://cwe.mitre.org/data/definitions/636.html) 安全决策依赖未失败即安全                                                                                                                                                                                                                                                                                      |
-| OWASP    | A05:2025 – Security Misconfiguration                                                                                                                                                                                                                                                                                                                                                                                                              |
-| 证据     | `RedisHelper.hasKey` 在异常/返回 null 时 `return false`（`RedisHelper.java:65-73`，注意 `stringRedisTemplate.hasKey` 抛 `RedisConnectionFailureException` 时会向上传播，但大量 `set/hset/lSet` 等 catch 后 `return false`：`:119-121,143-145,168-170,...`）；会话校验 `AuthFilter.java:743` `if (!redisHelper.hasKey(userTokenKey))` 判失效；限流 `RedisLeakyBucketRateLimiter`、黑名单 `UserAuthHelper`、CSRF `AuthFilter.java:832` 均依赖 Redis |
-| 风险     | Redis 故障/超时时，写类操作静默失败、读类判断可能返回"不存在"。不同分支语义不一致：会话 `hasKey=false` 会拒绝（fail-closed，偏安全但造成可用性问题），而限流计数/黑名单/权限缓存若异常被吞可能**降级放行或不限流**。整体安全姿态在依赖故障时行为不确定。                                                                                                                                                                                          |
-| 修复建议 | 统一安全关键路径的故障策略：认证/黑名单默认 **fail-closed**，限流可按业务明确选择并记录；不要吞掉 `RedisConnectionFailureException`，应向上传播或返回显式错误并打点告警；区分"key 不存在"与"Redis 不可用"。                                                                                                                                                                                                                                       |
-| 修复成本 | 中                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | D / E / T |
+| CWE | [CWE-755](https://cwe.mitre.org/data/definitions/755.html) 异常处理不当；[CWE-636](https://cwe.mitre.org/data/definitions/636.html) 安全决策依赖未失败即安全 |
+| OWASP | A05:2025 – Security Misconfiguration |
+| 证据 | `RedisHelper.hasKey` 在异常/返回 null 时 `return false`（`RedisHelper.java:65-73`，注意 `stringRedisTemplate.hasKey` 抛 `RedisConnectionFailureException` 时会向上传播，但大量 `set/hset/lSet` 等 catch 后 `return false`：`:119-121,143-145,168-170,...`）；会话校验 `AuthFilter.java:743` `if (!redisHelper.hasKey(userTokenKey))` 判失效；限流 `RedisLeakyBucketRateLimiter`、黑名单 `UserAuthHelper`、CSRF `AuthFilter.java:832` 均依赖 Redis |
+| 风险 | Redis 故障/超时时，写类操作静默失败、读类判断可能返回"不存在"。不同分支语义不一致：会话 `hasKey=false` 会拒绝（fail-closed，偏安全但造成可用性问题），而限流计数/黑名单/权限缓存若异常被吞可能**降级放行或不限流**。整体安全姿态在依赖故障时行为不确定。 |
+| 修复建议 | 统一安全关键路径的故障策略：认证/黑名单默认 **fail-closed**，限流可按业务明确选择并记录；不要吞掉 `RedisConnectionFailureException`，应向上传播或返回显式错误并打点告警；区分"key 不存在"与"Redis 不可用"。 |
+| 修复成本 | 中 |
 
 #### FIND-05：MongoDB 健康检查禁用 SSL 主机名校验
 
-| 属性     | 内容                                                                                                                                                                                                   |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| STRIDE   | T / S                                                                                                                                                                                                  |
-| CWE      | [CWE-297](https://cwe.mitre.org/data/definitions/297.html) 主机名证书校验不当；[CWE-295](https://cwe.mitre.org/data/definitions/295.html)                                                              |
-| OWASP    | A02:2025                                                                                                                                                                                               |
-| 证据     | `business/service/impl/MiddlewareHealthServiceImpl.java:192-196` `applyToSslSettings(builder -> { builder.enabled(true); builder.invalidHostNameAllowed(true); })`（代码注释自述"不推荐用于生产环境"） |
-| 风险     | 健康检查直连 MongoDB 时不校验证书主机名，连接串含解密后的生产凭据，中间人可仿冒 MongoDB 端点截获凭据/数据。虽为探活路径，但携带真实凭据。                                                              |
-| 修复建议 | 移除 `invalidHostNameAllowed(true)`；确保证书 CN/SAN 与连接主机匹配；探活使用低权限只读账号。                                                                                                          |
-| 修复成本 | 低                                                                                                                                                                                                     |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | T / S |
+| CWE | [CWE-297](https://cwe.mitre.org/data/definitions/297.html) 主机名证书校验不当；[CWE-295](https://cwe.mitre.org/data/definitions/295.html) |
+| OWASP | A02:2025 |
+| 证据 | `business/service/impl/MiddlewareHealthServiceImpl.java:192-196` `applyToSslSettings(builder -> { builder.enabled(true); builder.invalidHostNameAllowed(true); })`（代码注释自述"不推荐用于生产环境"） |
+| 风险 | 健康检查直连 MongoDB 时不校验证书主机名，连接串含解密后的生产凭据，中间人可仿冒 MongoDB 端点截获凭据/数据。虽为探活路径，但携带真实凭据。 |
+| 修复建议 | 移除 `invalidHostNameAllowed(true)`；确保证书 CN/SAN 与连接主机匹配；探活使用低权限只读账号。 |
+| 修复成本 | 低 |
 
 #### FIND-06：Cookie 未设置 `SameSite`，CSRF 防护完全依赖自定义 token 机制
 
-| 属性     | 内容                                                                                                                                                                                                                                            |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| STRIDE   | E / T                                                                                                                                                                                                                                           |
-| CWE      | [CWE-1275](https://cwe.mitre.org/data/definitions/1275.html) 敏感 Cookie 无 SameSite；[CWE-352](https://cwe.mitre.org/data/definitions/352.html) CSRF                                                                                           |
-| OWASP    | A01:2025；A07:2025                                                                                                                                                                                                                              |
-| 证据     | `JwtHelper.generateCookie`（`common/utils/JwtHelper.java:151-168`）仅设置 `httpOnly(true)`、`secure(true)`、`path("/")`、`domain(...)`，**未设置 `SameSite`**；CSRF 靠 `Csrf-Token-Open-Li-Bing` 头/Redis 双重校验（`AuthFilter.java:805-850`） |
-| 风险     | 缺少浏览器层 SameSite 防线，一旦自定义 CSRF 校验逻辑出现疏漏（如 FIND-02 的 `csrf.trust.list` contains 绕过、Referer 校验 `referer.contains(domainName)` 子串匹配 `AuthFilter.java:816` 可被 `domainName.evil.com` 绕过），即形成 CSRF。        |
-| 修复建议 | 为会话 Cookie 增加 `SameSite=Lax`（或 `Strict`）；Referer/Origin 校验改为**主机名精确匹配**（解析 URL 后比 host，而非 `contains`）；保留现有 token 校验作为纵深防御。                                                                           |
-| 修复成本 | 低                                                                                                                                                                                                                                              |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | E / T |
+| CWE | [CWE-1275](https://cwe.mitre.org/data/definitions/1275.html) 敏感 Cookie 无 SameSite；[CWE-352](https://cwe.mitre.org/data/definitions/352.html) CSRF |
+| OWASP | A01:2025；A07:2025 |
+| 证据 | `JwtHelper.generateCookie`（`common/utils/JwtHelper.java:151-168`）仅设置 `httpOnly(true)`、`secure(true)`、`path("/")`、`domain(...)`，**未设置 `SameSite`**；CSRF 靠 `Csrf-Token-Open-Li-Bing` 头/Redis 双重校验（`AuthFilter.java:805-850`） |
+| 风险 | 缺少浏览器层 SameSite 防线，一旦自定义 CSRF 校验逻辑出现疏漏（如 FIND-02 的 `csrf.trust.list` contains 绕过、Referer 校验 `referer.contains(domainName)` 子串匹配 `AuthFilter.java:816` 可被 `domainName.evil.com` 绕过），即形成 CSRF。 |
+| 修复建议 | 为会话 Cookie 增加 `SameSite=Lax`（或 `Strict`）；Referer/Origin 校验改为**主机名精确匹配**（解析 URL 后比 host，而非 `contains`）；保留现有 token 校验作为纵深防御。 |
+| 修复成本 | 低 |
 
 #### FIND-07：GitHub 回调 500 响应回显异常消息 `e.getMessage()`
 
-| 属性     | 内容                                                                                                                                                                                                                           |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| STRIDE   | I（信息泄露）                                                                                                                                                                                                                  |
-| CWE      | [CWE-209](https://cwe.mitre.org/data/definitions/209.html) 错误信息含敏感内容；[CWE-200](https://cwe.mitre.org/data/definitions/200.html)                                                                                      |
-| OWASP    | A05:2025 – Security Misconfiguration                                                                                                                                                                                           |
-| 证据     | `LoginController.java:929-937` catch `RedisConnectionFailureException` 后 `response.writeWith(... ("Internal Server Error" + e.getMessage()) ...)`；对比其他平台回调仅回固定 `"Internal Server Error"`（`:776,862,1017,1096`） |
-| 风险     | Redis 连接异常消息可能包含内网主机、端口、连接串片段等基础设施细节，回显给外部访问者有助于探测内网拓扑。                                                                                                                       |
-| 修复建议 | 响应体统一返回固定 `"Internal Server Error"`，异常细节仅写服务端日志；与其他 4 个回调保持一致。                                                                                                                                |
-| 修复成本 | 低                                                                                                                                                                                                                             |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | I（信息泄露） |
+| CWE | [CWE-209](https://cwe.mitre.org/data/definitions/209.html) 错误信息含敏感内容；[CWE-200](https://cwe.mitre.org/data/definitions/200.html) |
+| OWASP | A05:2025 – Security Misconfiguration |
+| 证据 | `LoginController.java:929-937` catch `RedisConnectionFailureException` 后 `response.writeWith(... ("Internal Server Error" + e.getMessage()) ...)`；对比其他平台回调仅回固定 `"Internal Server Error"`（`:776,862,1017,1096`） |
+| 风险 | Redis 连接异常消息可能包含内网主机、端口、连接串片段等基础设施细节，回显给外部访问者有助于探测内网拓扑。 |
+| 修复建议 | 响应体统一返回固定 `"Internal Server Error"`，异常细节仅写服务端日志；与其他 4 个回调保持一致。 |
+| 修复成本 | 低 |
 
 ### 低危 / 信息
 
@@ -224,26 +224,26 @@ OpenLiBing 平台的**统一接入网关**：多平台（Gitee/GitCode/GitHub/Un
 
 ### Quick Wins（低成本快速修复）
 
-| 编号    | 事项                                                          | 成本  |
-| ------- | ------------------------------------------------------------- | ----- |
+| 编号 | 事项 | 成本 |
+|---|---|---|
 | FIND-01 | 移除 `use-insecure-trust-manager: true`，自签证书走受信信任库 | 低/中 |
-| FIND-02 | 白名单 `contains` 改前缀/`PathPattern` 精确匹配 + 路径规范化  | 低    |
-| FIND-03 | 绑定 `redirect` 参数加同源/白名单校验                         | 低    |
-| FIND-05 | 移除 MongoDB `invalidHostNameAllowed(true)`                   | 低    |
-| FIND-06 | Cookie 增加 `SameSite=Lax`；Referer 改主机名精确匹配          | 低    |
-| FIND-07 | GitHub 回调去掉 `e.getMessage()` 回显                         | 低    |
-| FIND-10 | 删除 `hashCode()==401` 冗余判断                               | 低    |
-| FIND-12 | 生产关闭 Swagger、收敛健康检查/actuator 暴露面                | 低    |
+| FIND-02 | 白名单 `contains` 改前缀/`PathPattern` 精确匹配 + 路径规范化 | 低 |
+| FIND-03 | 绑定 `redirect` 参数加同源/白名单校验 | 低 |
+| FIND-05 | 移除 MongoDB `invalidHostNameAllowed(true)` | 低 |
+| FIND-06 | Cookie 增加 `SameSite=Lax`；Referer 改主机名精确匹配 | 低 |
+| FIND-07 | GitHub 回调去掉 `e.getMessage()` 回显 | 低 |
+| FIND-10 | 删除 `hashCode()==401` 冗余判断 | 低 |
+| FIND-12 | 生产关闭 Swagger、收敛健康检查/actuator 暴露面 | 低 |
 
 ### 需专项处理
 
-| 编号    | 事项                                                       | 成本  |
-| ------- | ---------------------------------------------------------- | ----- |
-| FIND-04 | Redis 故障安全策略统一（认证 fail-closed、异常不吞、告警） | 中    |
-| FIND-08 | 后端仅接受网关来源（NetworkPolicy），身份改签名内部头      | 中    |
-| FIND-11 | 评估废弃 gitee 账密直通，全链路不记录口令                  | 中    |
-| FIND-13 | 去除反射改 sslInfo；XFF 按受信跳数解析                     | 低/中 |
-| FIND-09 | 三方 access_token 改请求头，出站主机白名单                 | 低    |
+| 编号 | 事项 | 成本 |
+|---|---|---|
+| FIND-04 | Redis 故障安全策略统一（认证 fail-closed、异常不吞、告警） | 中 |
+| FIND-08 | 后端仅接受网关来源（NetworkPolicy），身份改签名内部头 | 中 |
+| FIND-11 | 评估废弃 gitee 账密直通，全链路不记录口令 | 中 |
+| FIND-13 | 去除反射改 sslInfo；XFF 按受信跳数解析 | 低/中 |
+| FIND-09 | 三方 access_token 改请求头，出站主机白名单 | 低 |
 
 ---
 

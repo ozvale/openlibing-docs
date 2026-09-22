@@ -2,10 +2,10 @@
 
 `communityList.vue` 在同一组件内维护两个 Tab 表格：
 
-| Tab                    | 表格数据              | API               | 任务状态字段                                               |
-| ---------------------- | --------------------- | ----------------- | ---------------------------------------------------------- |
-| `openSourceCompliance` | `table.column`        | `open/scan/repos` | `scanResult`（`1`/`-1`/`0`）— 已接入筛选                   |
-| `projectCompliance`    | `table.projectColumn` | `license/repos`   | `repoResult` → 前端映射为 `scanResult`（`success`/`fail`） |
+| Tab | 表格数据 | API | 任务状态字段 |
+|-----|---------|-----|-------------|
+| `openSourceCompliance` | `table.column` | `open/scan/repos` | `scanResult`（`1`/`-1`/`0`）— 已接入筛选 |
+| `projectCompliance` | `table.projectColumn` | `license/repos` | `repoResult` → 前端映射为 `scanResult`（`success`/`fail`） |
 
 `projectCompliance` 表格（约 242–354 行）当前问题：
 
@@ -64,7 +64,7 @@ name: 'repoResult',  // tableFilters key 与 API 参数名
 ```javascript
 const repoResultFilter = this.tableFilters.repoResult;
 if (repoResultFilter?.length) {
-  params.repoResult = repoResultFilter.join(",");
+  params.repoResult = repoResultFilter.join(',');
 }
 ```
 
@@ -89,13 +89,13 @@ if (this.sortParams.sortColumn) {
 
 **排序字段白名单（前端约定，供后端实现参考）**：
 
-| sortColumn            | 含义                                       |
-| --------------------- | ------------------------------------------ |
-| `scanTime`            | 最新扫描时间（映射自 `licenseCreateTime`） |
-| `fileNum`             | 文件总数                                   |
-| `compatibilityNumber` | 合规数                                     |
-| `incompatibleNumber`  | 未确认数                                   |
-| `unrecognizedNumber`  | 未识别数                                   |
+| sortColumn | 含义 |
+|------------|------|
+| `scanTime` | 最新扫描时间（映射自 `licenseCreateTime`） |
+| `fileNum` | 文件总数 |
+| `compatibilityNumber` | 合规数 |
+| `incompatibleNumber` | 未确认数 |
+| `unrecognizedNumber` | 未识别数 |
 
 ### 4. 筛选与排序状态按 Tab 隔离
 
@@ -124,13 +124,13 @@ statusMap: {
 
 ## Risks / Trade-offs
 
-| 风险                                                                  | 缓解                                                                               |
-| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| 后端 `license/repos` 尚未支持 `repoResult`/`sortColumn`，筛选排序无效 | 前端先完成 UI 与参数透传；tasks 中标注联调前置；spec 固定参数契约                  |
-| `repoResult` 与 `scanResult` 参数名并存，维护者混淆                   | design/spec 明确两 Tab 参数差异；`name: 'repoResult'` 仅用于 projectCompliance     |
-| 嵌套列 `sort-change` 的 `prop` 与后端字段映射                         | 透传 Element Plus 的 `prop` 值；后端按白名单实现                                   |
-| 筛选后 `total` 是否应为过滤后总数                                     | 与 openSource 一致，默认由后端筛选后更新 `total`；前端不做客户端过滤               |
-| 共用 `handleCustomSort` 对两 Tab 均生效                               | 切换 Tab 时 `resetQueryContext` 清空 `sortParams`；各 Tab 独立触发 `initQueryData` |
+| 风险 | 缓解 |
+|------|------|
+| 后端 `license/repos` 尚未支持 `repoResult`/`sortColumn`，筛选排序无效 | 前端先完成 UI 与参数透传；tasks 中标注联调前置；spec 固定参数契约 |
+| `repoResult` 与 `scanResult` 参数名并存，维护者混淆 | design/spec 明确两 Tab 参数差异；`name: 'repoResult'` 仅用于 projectCompliance |
+| 嵌套列 `sort-change` 的 `prop` 与后端字段映射 | 透传 Element Plus 的 `prop` 值；后端按白名单实现 |
+| 筛选后 `total` 是否应为过滤后总数 | 与 openSource 一致，默认由后端筛选后更新 `total`；前端不做客户端过滤 |
+| 共用 `handleCustomSort` 对两 Tab 均生效 | 切换 Tab 时 `resetQueryContext` 清空 `sortParams`；各 Tab 独立触发 `initQueryData` |
 
 ## Migration Plan
 

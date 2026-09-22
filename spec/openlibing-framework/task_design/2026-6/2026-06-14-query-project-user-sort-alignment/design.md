@@ -63,16 +63,16 @@ handleCustomSort({ prop, order }) {
 
 ### D2: 白名单映射与默认行为
 
-| 前端 `sortColumn`    | DB 列         | 说明       |
-| -------------------- | ------------- | ---------- |
-| `createTime`         | `create_time` | 唯一合法值 |
+| 前端 `sortColumn` | DB 列 | 说明 |
+|-------------------|-------|------|
+| `createTime` | `create_time` | 唯一合法值 |
 | `null` / `""` / 其他 | `create_time` | 回退默认列 |
 
-| 前端 `sortOrder` | SQL    |
-| ---------------- | ------ |
-| `ascending`      | `ASC`  |
-| `descending`     | `DESC` |
-| `null` / `""`    | `DESC` | 对齐 UI `:default-sort` 与历史硬编码 |
+| 前端 `sortOrder` | SQL |
+|------------------|-----|
+| `ascending` | `ASC` |
+| `descending` | `DESC` |
+| `null` / `""` | `DESC` | 对齐 UI `:default-sort` 与历史硬编码 |
 
 实现参考：
 
@@ -136,24 +136,24 @@ ORDER BY ${info.sortDbColumn} ${info.sortDirection}, id DESC, user_identifier DE
 
 ## 前后端契约对齐表（联调替代）
 
-| 场景                       | 前端请求 sortColumn | 前端请求 sortOrder | 后端 ORDER BY                         |
-| -------------------------- | ------------------- | ------------------ | ------------------------------------- |
-| 首屏加载                   | `""`                | `""`               | `create_time DESC`                    |
-| 点击创建时间升序           | `createTime`        | `ascending`        | `create_time ASC, ...`                |
-| 点击创建时间降序           | `createTime`        | `descending`       | `create_time DESC, ...`               |
-| 取消排序（列头第三次点击） | `createTime`        | `null`             | `create_time DESC, ...`               |
-| 恶意/未知列                | `userName`          | `ascending`        | `create_time DESC, ...`（忽略非法列） |
+| 场景 | 前端请求 sortColumn | 前端请求 sortOrder | 后端 ORDER BY |
+|------|---------------------|--------------------|---------------|
+| 首屏加载 | `""` | `""` | `create_time DESC` |
+| 点击创建时间升序 | `createTime` | `ascending` | `create_time ASC, ...` |
+| 点击创建时间降序 | `createTime` | `descending` | `create_time DESC, ...` |
+| 取消排序（列头第三次点击） | `createTime` | `null` | `create_time DESC, ...` |
+| 恶意/未知列 | `userName` | `ascending` | `create_time DESC, ...`（忽略非法列） |
 
 响应 `createTime` 格式不变：`"yyyy-MM-dd HH:mm:ss"` 字符串，前端展示逻辑无需改动。
 
 ## Risks / Trade-offs
 
-| 风险                                            | 缓解                                                                    |
-| ----------------------------------------------- | ----------------------------------------------------------------------- |
-| `${}` 动态 SQL 被误用引入注入                   | 仅 Service 白名单赋值；Code Review 禁止 XML 直接使用 DTO 原始 sort 字段 |
-| UNION 两表 `create_time` 类型不一致导致排序异常 | 现有列均为可比字符串/datetime；实现后 UT 用 mock 数据验证 ASC/DESC      |
-| 首屏前端未传 sort 与 UI 箭头不一致              | 后端默认 DESC 与历史行为一致；属已知前端小瑕疵，不在本变更范围          |
-| 无法 E2E 联调                                   | 契约表 + 单元测试双重保障；PR 描述附对齐表供 QA 按场景验收              |
+| 风险 | 缓解 |
+|------|------|
+| `${}` 动态 SQL 被误用引入注入 | 仅 Service 白名单赋值；Code Review 禁止 XML 直接使用 DTO 原始 sort 字段 |
+| UNION 两表 `create_time` 类型不一致导致排序异常 | 现有列均为可比字符串/datetime；实现后 UT 用 mock 数据验证 ASC/DESC |
+| 首屏前端未传 sort 与 UI 箭头不一致 | 后端默认 DESC 与历史行为一致；属已知前端小瑕疵，不在本变更范围 |
+| 无法 E2E 联调 | 契约表 + 单元测试双重保障；PR 描述附对齐表供 QA 按场景验收 |
 
 ## Migration Plan
 

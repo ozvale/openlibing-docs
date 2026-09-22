@@ -21,27 +21,23 @@
 采用分阶段策略逐步提升覆盖率：
 
 ### Phase 1: 快速见效 (纯静态类) - +10-15%
-
 - 新增 CsvValidatorTest
 - 增强 AESCipherTest 边界测试
 - 增强 HmacUtilTest 异常路径
 
 ### Phase 2: Mock重构 (工具类) - +15-20%
-
 - 新增 PublishMessageUtilsTest (Mock SmnClient)
 - 重构 ObsUtilTest (Mock ObsClient)
 - 重构 SecurityUtilTest (静态Mock ReadFileUtils)
 - 重构 AESCipherTest (静态Mock ReadFileUtils)
 
 ### Phase 3: Spring Mock (配置类和AOP) - +10-15%
-
 - 新增 ConfigContextInitializerTest
 - 新增 JasyptConfigTest
 - 新增 LoggerAspectTest
 - 新增 AbstractLogHandlerTest
 
 ### Phase 4: 边界补充 - +5-10%
-
 - 补充异常路径测试
 - 补充边界值测试
 - 补充并发安全测试
@@ -49,13 +45,11 @@
 ## Scope
 
 ### In Scope
-
 - 所有非 pojo/exception/constants/enums 包下的类
 - 添加 mockito-inline 依赖支持静态方法 Mock
 - 保持现有 JaCoCo 排除策略
 
 ### Out of Scope
-
 - pojo/VO/Entity 类 (已排除)
 - exception 类 (已排除)
 - constants 类 (已排除)
@@ -75,12 +69,12 @@
 
 ## Risks
 
-| Risk                       | Impact | Mitigation                                               |
-| -------------------------- | ------ | -------------------------------------------------------- |
-| 静态Mock可能导致测试不稳定 | 中     | 使用 try-with-resources 确保 Mock 作用域正确             |
-| 华为云SDK API变化          | 低     | Mock 不依赖具体实现细节                                  |
-| 测试执行时间增加           | 低     | 全部使用 Mock，不启动真实服务                            |
-| 部分类无法完整测试         | 低     | PublishMessageUtils/ObsUtil.createObsClient跳过，影响<3% |
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| 静态Mock可能导致测试不稳定 | 中 | 使用 try-with-resources 确保 Mock 作用域正确 |
+| 华为云SDK API变化 | 低 | Mock 不依赖具体实现细节 |
+| 测试执行时间增加 | 低 | 全部使用 Mock，不启动真实服务 |
+| 部分类无法完整测试 | 低 | PublishMessageUtils/ObsUtil.createObsClient跳过，影响<3% |
 
 ## Dependencies
 
@@ -90,7 +84,7 @@
 ## Timeline
 
 - Phase 1: 1-2 小时
-- Phase 2: 3-4 小时
+- Phase 2: 3-4 小时  
 - Phase 3: 4-6 小时
 - Phase 4: 2-3 小时
 - Total: 10-15 小时

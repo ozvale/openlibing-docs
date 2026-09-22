@@ -3,7 +3,6 @@
 ## 需求背景
 
 当前 computing-resource-workspace 没有访问控制机制，所有通过鉴权的用户都能访问所有接口。存在以下问题：
-
 - 无法限制特定用户或 IP 的访问
 - MaaS 接口缺乏账号-IP 绑定校验，API Key 被盗用后无法从 IP 层面拦截
 - 现有的 `lingshu.test.whitelist` 配置式白名单不够灵活，无法动态管理

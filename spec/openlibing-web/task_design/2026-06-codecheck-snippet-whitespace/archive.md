@@ -2,15 +2,15 @@
 
 ## 归档信息
 
-| 项目         | 内容                                                             |
-| ------------ | ---------------------------------------------------------------- |
-| **需求名称** | 代码检查页面告警代码片段与实际代码不一致                         |
-| **Issue**    | [#194](https://gitcode.com/openlibing/openlibing-web/issues/194) |
-| **PR 链接**  | [#511](https://gitcode.com/openlibing/openlibing-web/pulls/511)  |
-| **源分支**   | `weixin_45521051:dev-chenning-202606-codeCheck-bug`              |
-| **目标分支** | `openlibing:release_20260615`                                    |
-| **状态**     | ✅ 已完成                                                        |
-| **归档日期** | 2026-06-15                                                       |
+| 项目 | 内容 |
+|------|------|
+| **需求名称** | 代码检查页面告警代码片段与实际代码不一致 |
+| **Issue** | [#194](https://gitcode.com/openlibing/openlibing-web/issues/194) |
+| **PR 链接** | [#511](https://gitcode.com/openlibing/openlibing-web/pulls/511) |
+| **源分支** | `weixin_45521051:dev-chenning-202606-codeCheck-bug` |
+| **目标分支** | `openlibing:release_20260615` |
+| **状态** | ✅ 已完成 |
+| **归档日期** | 2026-06-15 |
 
 ## 变更摘要
 

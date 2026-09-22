@@ -10,11 +10,11 @@
 
 ## 影响范围
 
-| 文件                                                                                       | 操作 | 说明                                    |
-| ------------------------------------------------------------------------------------------ | ---- | --------------------------------------- |
-| `src/main/java/com/openlibing/framework/common/log/LogDataCollectionName.java`             | 修改 | `MANAGEMENT_LOG` JSON 配置块中 key 更名 |
-| `src/test/java/com/openlibing/framework/business/service/impl/InternalServerImplTest.java` | 修改 | 测试入参字符串同步更新                  |
-| `src/test/java/com/openlibing/framework/business/service/impl/LoggingServiceImplTest.java` | 修改 | 测试断言字符串同步更新                  |
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `src/main/java/com/openlibing/framework/common/log/LogDataCollectionName.java` | 修改 | `MANAGEMENT_LOG` JSON 配置块中 key 更名 |
+| `src/test/java/com/openlibing/framework/business/service/impl/InternalServerImplTest.java` | 修改 | 测试入参字符串同步更新 |
+| `src/test/java/com/openlibing/framework/business/service/impl/LoggingServiceImplTest.java` | 修改 | 测试断言字符串同步更新 |
 
 ## 验收标准
 

@@ -2,13 +2,13 @@
 
 ## 修改范围
 
-| 文件                       | 修改类型            | 说明                                                                                                                                     |
-| -------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `SSLCipherSuiteUtil.java`  | 新增方法            | `createHttpClientWithTimeout(protocol, connectTimeoutMs, socketTimeoutMs)`                                                               |
-| `HwCloudClient.java`       | 新增方法 + 优化     | 新增 `buildPipelineSslHttpsClientWithTimeout`、`getDataResultFromHWCloudHttpApiWithTimeout`；`OBJECT_MAPPER` 复用优化                    |
+| 文件 | 修改类型 | 说明 |
+|------|---------|------|
+| `SSLCipherSuiteUtil.java` | 新增方法 | `createHttpClientWithTimeout(protocol, connectTimeoutMs, socketTimeoutMs)` |
+| `HwCloudClient.java` | 新增方法 + 优化 | 新增 `buildPipelineSslHttpsClientWithTimeout`、`getDataResultFromHWCloudHttpApiWithTimeout`；`OBJECT_MAPPER` 复用优化 |
 | `PipelineServiceImpl.java` | 修改方法 + 新增方法 | `fetchPipelineDetailFromRemote` 改用带超时版本；新增 `getCodeArtsPipelineClientByProjectIdWithTimeout`、`fetchPipelineDetailWithTimeout` |
-| `ScheduleTaskImpl.java`    | 注释注解            | `@Scheduled` 注释掉，标注已迁移                                                                                                          |
-| `XxlJobHandler.java`       | 新增方法            | `@XxlJob("syncPipelineConfigInfoHandler")`                                                                                               |
+| `ScheduleTaskImpl.java` | 注释注解 | `@Scheduled` 注释掉，标注已迁移 |
+| `XxlJobHandler.java` | 新增方法 | `@XxlJob("syncPipelineConfigInfoHandler")` |
 
 ## 技术方案
 
@@ -21,7 +21,6 @@
 - `setConnectionRequestTimeout(connectTimeoutMs)` — 从连接池获取连接的超时
 
 与 `createHttpClient` 的区别：
-
 - 不覆盖 static `httpClient` 字段，避免资源泄漏
 - 每次调用创建新客户端实例（超时客户端用完即关）
 
@@ -40,7 +39,6 @@ HttpConfig httpConfig = HttpConfig.getDefaultHttpConfig()
 ### 3. fetchPipelineDetailFromRemote 改造
 
 原调用链：
-
 ```
 fetchPipelineDetailFromRemote
   → getCodeArtsPipelineClientByProjectId        // 无超时
@@ -49,7 +47,6 @@ fetchPipelineDetailFromRemote
 ```
 
 改造后：
-
 ```
 fetchPipelineDetailFromRemote
   → getCodeArtsPipelineClientByProjectIdWithTimeout  // 带超时 SDK
@@ -61,13 +58,13 @@ fetchPipelineDetailFromRemote
 
 ### 4. @Scheduled → xxl-job 迁移
 
-| 对比项   | @Scheduled                    | xxl-job                |
-| -------- | ----------------------------- | ---------------------- |
-| 调度线程 | Spring 单线程（scheduling-1） | xxl-job 独立线程池     |
-| 阻塞影响 | 一个卡死全部停摆              | 仅影响当前任务         |
-| 手动触发 | 不支持                        | 支持控制台手动执行     |
-| 监控告警 | 无                            | 内置执行日志和失败告警 |
-| 超时控制 | 无                            | 支持配置任务超时时间   |
+| 对比项 | @Scheduled | xxl-job |
+|--------|-----------|---------|
+| 调度线程 | Spring 单线程（scheduling-1） | xxl-job 独立线程池 |
+| 阻塞影响 | 一个卡死全部停摆 | 仅影响当前任务 |
+| 手动触发 | 不支持 | 支持控制台手动执行 |
+| 监控告警 | 无 | 内置执行日志和失败告警 |
+| 超时控制 | 无 | 支持配置任务超时时间 |
 
 handler 名称：`syncPipelineConfigInfoHandler`
 调度建议：`0 0 0,12 * * ?`（每天 0 点、12 点）
@@ -76,10 +73,10 @@ handler 名称：`syncPipelineConfigInfoHandler`
 
 统一使用 `ThirdPartyApiConstants`：
 
-| 参数                      | 值  | 说明            |
-| ------------------------- | --- | --------------- |
-| `CONNECT_TIMEOUT_SECONDS` | 10s | TCP 建连超时    |
-| `READ_TIMEOUT_SECONDS`    | 20s | socket 读取超时 |
+| 参数 | 值 | 说明 |
+|------|---|------|
+| `CONNECT_TIMEOUT_SECONDS` | 10s | TCP 建连超时 |
+| `READ_TIMEOUT_SECONDS` | 20s | socket 读取超时 |
 
 ### 6. 附带优化
 

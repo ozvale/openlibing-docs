@@ -29,13 +29,13 @@ index.vue (URL 参数跳转)
 
 ### 1.3 metricType 与列配置映射
 
-| metricType | 标题             | 列配置                                         | 可排序列                 |
-| ---------- | ---------------- | ---------------------------------------------- | ------------------------ |
-| 0          | 代码规模详情     | 文件名称 + 行数                                | 行数                     |
-| 1          | 平均代码行数详情 | 文件名称 + 函数名 + 函数行数 + 开始行 + 结束行 | 函数行数、开始行、结束行 |
-| 2          | 平均圈复杂度详情 | 文件名称 + 平均圈复杂度                        | 平均圈复杂度             |
-| 3          | 总代码重复率详情 | 文件名称 + 重复率 + 重复行数                   | 重复率、重复行数         |
-| 4          | 总文件重复率详情 | 文件名称 + 重复文件                            | 无                       |
+| metricType | 标题 | 列配置 | 可排序列 |
+|---|---|---|---|
+| 0 | 代码规模详情 | 文件名称 + 行数 | 行数 |
+| 1 | 平均代码行数详情 | 文件名称 + 函数名 + 函数行数 + 开始行 + 结束行 | 函数行数、开始行、结束行 |
+| 2 | 平均圈复杂度详情 | 文件名称 + 平均圈复杂度 | 平均圈复杂度 |
+| 3 | 总代码重复率详情 | 文件名称 + 重复率 + 重复行数 | 重复率、重复行数 |
+| 4 | 总文件重复率详情 | 文件名称 + 重复文件 | 无 |
 
 ### 1.4 合并单元格方案（metricType=4）
 
@@ -65,40 +65,40 @@ POST /metrics/code/file-detail
 
 ### 2.1 branches.vue 变更
 
-| 变更类型 | 位置                                      | 说明                                                                  |
-| -------- | ----------------------------------------- | --------------------------------------------------------------------- |
-| 新增     | `allColumns`                              | 5 个 metrics 列添加 `metricType` 属性（0-4）                          |
-| 新增     | 模板 metrics 列                           | 有值时渲染为 `.metrics-link` 可点击链接，点击调用 `openMetricsDetail` |
-| 新增     | `showMetricsDialog`、`metricsDialogProps` | 弹窗状态和传参                                                        |
-| 新增     | `metricsTitleMap`、`metricsDialogTitle`   | 弹窗标题动态映射                                                      |
-| 新增     | el-dialog + MetricsDetailDialog           | 弹窗外壳 + 内容组件                                                   |
-| 新增     | `.metrics-link` 样式                      | 蓝色可点击链接样式                                                    |
+| 变更类型 | 位置 | 说明 |
+|---------|------|------|
+| 新增 | `allColumns` | 5 个 metrics 列添加 `metricType` 属性（0-4） |
+| 新增 | 模板 metrics 列 | 有值时渲染为 `.metrics-link` 可点击链接，点击调用 `openMetricsDetail` |
+| 新增 | `showMetricsDialog`、`metricsDialogProps` | 弹窗状态和传参 |
+| 新增 | `metricsTitleMap`、`metricsDialogTitle` | 弹窗标题动态映射 |
+| 新增 | el-dialog + MetricsDetailDialog | 弹窗外壳 + 内容组件 |
+| 新增 | `.metrics-link` 样式 | 蓝色可点击链接样式 |
 
 ### 2.2 MetricsDetailDialog.vue 变更
 
-| 变更类型 | 位置                     | 说明                                     |
-| -------- | ------------------------ | ---------------------------------------- |
-| 新增     | 整个文件                 | 指标详情内容组件                         |
-| 新增     | `metricsColumnMap`       | 按 metricType 映射列配置                 |
-| 新增     | `flattenedTableData`     | metricType=4 时展平 duplicatedFiles 数组 |
-| 新增     | `mergeMethod`            | 合并单元格逻辑                           |
-| 新增     | `indexMethod`            | 序号列在合并场景下按原始行号显示         |
-| 新增     | `handleSortChange`       | 自定义排序，传递 sortByField + sort 参数 |
-| 新增     | 文件名称列筛选           | el-popover + el-input 模糊搜索           |
-| 新增     | `goToNotice`             | 流水线链接安全跳转                       |
-| 新增     | `defineExpose({ init })` | 暴露初始化方法供父组件调用               |
+| 变更类型 | 位置 | 说明 |
+|---------|------|------|
+| 新增 | 整个文件 | 指标详情内容组件 |
+| 新增 | `metricsColumnMap` | 按 metricType 映射列配置 |
+| 新增 | `flattenedTableData` | metricType=4 时展平 duplicatedFiles 数组 |
+| 新增 | `mergeMethod` | 合并单元格逻辑 |
+| 新增 | `indexMethod` | 序号列在合并场景下按原始行号显示 |
+| 新增 | `handleSortChange` | 自定义排序，传递 sortByField + sort 参数 |
+| 新增 | 文件名称列筛选 | el-popover + el-input 模糊搜索 |
+| 新增 | `goToNotice` | 流水线链接安全跳转 |
+| 新增 | `defineExpose({ init })` | 暴露初始化方法供父组件调用 |
 
 ### 2.3 index.vue 变更
 
-| 变更类型 | 位置                                      | 说明                                           |
-| -------- | ----------------------------------------- | ---------------------------------------------- |
-| 新增     | `showMetricsDetail`、`metricsDetailProps` | 指标详情视图状态                               |
-| 新增     | `goMetricsDetail`、`backToBranch`         | 视图切换函数                                   |
-| 新增     | `autoGoBranch`                            | URL 参数自动跳转                               |
-| 新增     | 面包屑三级导航                            | 仓库管理 / 分支管理 / 指标详情                 |
-| 新增     | 条件渲染                                  | showMetricsDetail 时显示 MetricsDetailDialog   |
-| 修改     | `branchBack`                              | 返回时同时关闭指标详情                         |
-| 修改     | 返回箭头                                  | 指标详情时返回分支管理，分支管理时返回仓库列表 |
+| 变更类型 | 位置 | 说明 |
+|---------|------|------|
+| 新增 | `showMetricsDetail`、`metricsDetailProps` | 指标详情视图状态 |
+| 新增 | `goMetricsDetail`、`backToBranch` | 视图切换函数 |
+| 新增 | `autoGoBranch` | URL 参数自动跳转 |
+| 新增 | 面包屑三级导航 | 仓库管理 / 分支管理 / 指标详情 |
+| 新增 | 条件渲染 | showMetricsDetail 时显示 MetricsDetailDialog |
+| 修改 | `branchBack` | 返回时同时关闭指标详情 |
+| 修改 | 返回箭头 | 指标详情时返回分支管理，分支管理时返回仓库列表 |
 
 ## 3. 影响范围
 

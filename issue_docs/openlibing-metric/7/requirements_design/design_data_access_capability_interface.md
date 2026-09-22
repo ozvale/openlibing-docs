@@ -2,7 +2,7 @@
 
 ## 1. 文档目的
 
-本文档用于指导开发实现“通用运营数据接入接口”。
+本文档用于指导开发实现“通用运营数据接入接口”。  
 文档面向开发人员和 AI 编码工具，要求内容具备明确的边界、数据模型、接口契约、校验规则和实现约束，避免开发过程中出现理解偏差。
 
 ## 2.核心概念
@@ -31,7 +31,7 @@
 
 ### 2.4 schemaVersion
 
-模型结构版本号，用于后续兼容字段新增、停用和模型升级。
+模型结构版本号，用于后续兼容字段新增、停用和模型升级。  
 本期可默认从 `1` 开始，先保留字段，不强制在请求中传递。
 
 ---
@@ -40,20 +40,21 @@
 
 建议按以下层次实现，且结构必须参照当前项目进行开发
 
-1. Controller 层
+1. Controller 层  
    负责接收请求、基础参数校验、返回统一响应
 
-2. Application/Service 层
+2. Application/Service 层  
    负责鉴权、元数据加载、字段校验、落库编排、日志记录
 
-3. Domain/Metadata 层
+3. Domain/Metadata 层  
    负责数据模型、字段规则、权限信息管理
 
-4. Repository / Mapper 层
+4. Repository / Mapper 层  
    负责元数据查询、动态插入、日志持久化 可适当使用mybatisPlus
 
-5. DB 层
+5. DB 层  
    包含元数据表、调用日志表、业务数据表 可适当使用mybatisPlus
+
 
 ---
 
@@ -65,18 +66,18 @@
 
 建议字段：
 
-| 字段           | 类型         | 说明                 |
-| -------------- | ------------ | -------------------- |
-| id             | bigint       | 主键                 |
-| app_code       | varchar(64)  | 所属应用             |
-| model_code     | varchar(64)  | 模型编码             |
-| model_name     | varchar(128) | 模型名称             |
-| table_name     | varchar(128) | 真实表名             |
-| schema_version | int          | 结构版本             |
-| status         | tinyint      | 状态：0-停用，1-启用 |
-| description    | varchar(512) | 描述                 |
-| created_time   | datetime     | 创建时间             |
-| updated_time   | datetime     | 更新时间             |
+| 字段  | 类型  | 说明  |
+| --- | --- | --- |
+| id  | bigint | 主键  |
+| app_code | varchar(64) | 所属应用 |
+| model_code | varchar(64) | 模型编码 |
+| model_name | varchar(128) | 模型名称 |
+| table_name | varchar(128) | 真实表名 |
+| schema_version | int | 结构版本 |
+| status | tinyint | 状态：0-停用，1-启用 |
+| description | varchar(512) | 描述  |
+| created_time | datetime | 创建时间 |
+| updated_time | datetime | 更新时间 |
 
 约束建议：
 
@@ -116,12 +117,12 @@
 
 ### 5.3 请求字段说明
 
-| 字段      | 类型   | 是否必填 | 说明                                       |
-| --------- | ------ | -------- | ------------------------------------------ |
-| appCode   | string | 是       | 应用编码                                   |
-| modelCode | string | 是       | 模型编码                                   |
-| requestId | string | 否       | 请求唯一标识，建议传入，用于排查和幂等扩展 |
-| data      | object | 是       | 实际业务数据                               |
+| 字段  | 类型  | 是否必填 | 说明  |
+| --- | --- | --- | --- |
+| appCode | string | 是   | 应用编码 |
+| modelCode | string | 是   | 模型编码 |
+| requestId | string | 否   | 请求唯一标识，建议传入，用于排查和幂等扩展 |
+| data | object | 是   | 实际业务数据 |
 
 说明：
 
@@ -141,12 +142,12 @@
 
 ### 5.5 响应字段说明
 
-| 字段      | 类型    | 说明                 |
-| --------- | ------- | -------------------- |
-| code      | string  | 返回码，`0` 表示成功 |
-| message   | string  | 响应描述             |
-| requestId | string  | 请求流水号           |
-| success   | boolean | 是否成功             |
+| 字段  | 类型  | 说明  |
+| --- | --- | --- |
+| code | string | 返回码，`0` 表示成功 |
+| message | string | 响应描述 |
+| requestId | string | 请求流水号 |
+| success | boolean | 是否成功 |
 
 ---
 
@@ -177,7 +178,7 @@
 
 ## 7. 安全设计
 
-动态 SQL
+动态 SQL  
 核心原则是：动态的是“已验证过的白名单元数据”，不是“客户端原始输入”。
 
 ### 7.1 动态表名和字段名必须走白名单
@@ -214,7 +215,7 @@
 
 ### 8.3 风险说明
 
-虽然 MyBatis 中 `${tableName}`、`${col}` 常见于动态表插入，但它们本质仍是字符串拼接。
+虽然 MyBatis 中 `${tableName}`、`${col}` 常见于动态表插入，但它们本质仍是字符串拼接。  
 因此只有在“表名和字段名均已通过服务端白名单验证”的前提下才允许使用。
 
 开发时禁止出现以下情况：

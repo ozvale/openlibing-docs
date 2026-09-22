@@ -13,7 +13,6 @@
 ## Task 1: Add Tag Validation Fields to ReleaseReviewVirusScanEntity
 
 **Files:**
-
 - Modify: `src/main/java/com/openlibing/platformrelease/business/entity/base/ReleaseReviewVirusScanEntity.java`
 - Create: `src/main/resources/db/changelog/2026-05-09-add-tag-validation-fields.yaml`
 
@@ -69,7 +68,6 @@ git commit -m "feat: add tag validation fields to ReleaseReviewVirusScanEntity"
 ## Task 2: Add Get Tag CommitId Method
 
 **Files:**
-
 - Modify: `src/main/java/com/openlibing/platformrelease/business/service/impl/ReleaseRepoTagHandleServiceImpl.java`
 
 **Step 1: Add method to Service**
@@ -133,7 +131,6 @@ git commit -m "feat: add getTagCommitId method"
 ## Task 3: Add Tag Search API
 
 **Files:**
-
 - Create: `src/main/java/com/openlibing/platformrelease/business/controller/ReleaseTagController.java`
 - Create: `src/main/java/com/openlibing/platformrelease/business/vo/base/TagSearchResultVO.java`
 - Modify: `src/main/java/com/openlibing/platformrelease/business/service/impl/ReleaseRepoTagHandleServiceImpl.java`
@@ -239,7 +236,6 @@ git commit -m "feat: add tag search API"
 ## Task 4: Add Tag CommitId Validation Method
 
 **Files:**
-
 - Modify: `src/main/java/com/openlibing/platformrelease/business/service/impl/SafeScanServiceImpl.java`
 
 **Step 1: Add validation method**
@@ -298,7 +294,6 @@ git commit -m "feat: add validateTagCommitId method"
 ## Task 5: Integrate Tag Validation into executeVirusScan
 
 **Files:**
-
 - Modify: `src/main/java/com/openlibing/platformrelease/business/service/impl/SafeScanServiceImpl.java`
 
 **Step 1: Add service injection**
@@ -384,7 +379,6 @@ git commit -m "feat: integrate tag commitId validation into executeVirusScan"
 ## Task 6: Update VO for Frontend Display
 
 **Files:**
-
 - Modify: `src/main/java/com/openlibing/platformrelease/business/vo/base/ReleaseReviewVirusScanVo.java`
 
 **Step 1: Add fields to VO**
@@ -439,12 +433,12 @@ git commit -m "feat: complete tag release optimization implementation"
 
 ## Summary
 
-| Task | Description               | Files                                |
-| ---- | ------------------------- | ------------------------------------ |
-| 1    | Add database fields       | Entity + Liquibase                   |
-| 2    | Add getTagCommitId method | Service                              |
-| 3    | Add tag search API        | Controller + Service + VO            |
-| 4    | Add validation method     | SafeScanServiceImpl                  |
-| 5    | Integrate validation      | SafeScanServiceImpl.executeVirusScan |
-| 6    | Update VO                 | ReleaseReviewVirusScanVo             |
-| 7    | Final verification        | All tests                            |
+| Task | Description | Files |
+|------|-------------|-------|
+| 1 | Add database fields | Entity + Liquibase |
+| 2 | Add getTagCommitId method | Service |
+| 3 | Add tag search API | Controller + Service + VO |
+| 4 | Add validation method | SafeScanServiceImpl |
+| 5 | Integrate validation | SafeScanServiceImpl.executeVirusScan |
+| 6 | Update VO | ReleaseReviewVirusScanVo |
+| 7 | Final verification | All tests |

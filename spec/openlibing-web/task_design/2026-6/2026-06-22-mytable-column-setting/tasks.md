@@ -6,6 +6,7 @@
 
 - [x] 1.3 新增 `components/TableColumnSetting.vue`：Popover + checkbox 网格 + 全选/恢复默认/取消/确认（对齐 branches.vue 交互）
 
+
 ## 2. cveData 试点接入
 
 - [x] 2.1 在 `cveData.vue` 的 `setting-btns` 中并列添加 `TableColumnSetting`（`storageKey: 'cve-data'`）
@@ -34,6 +35,7 @@
 
 - [x] 4.4 接入 `cveTerm.vue` 超期告警 Tab（`storageKey: 'cve-term-overdue-alarm'`）
 
+
 ## 5. 漏洞 0Day 模块推广
 
 - [x] 5.1 在 `vulnerabilityView/created.vue` 接入列配置（`storageKey: 'vuln-created'`，表格组件 `vulnTable`）
@@ -41,3 +43,5 @@
 - [x] 5.2 实现 filter 联动：`query` 对象清除 + `vulnTableRef.initOptions()` + 重查
 
 - [x] 5.3 漏洞名称列通过 `columnSettingDisabled: true` 设为不可取消
+
+

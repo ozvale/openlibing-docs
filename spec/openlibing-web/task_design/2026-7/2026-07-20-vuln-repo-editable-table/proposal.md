@@ -19,11 +19,9 @@
 ## Capabilities
 
 ### New Capabilities
-
 - `vuln-repo-table`: 漏洞公告仓库可编辑表格组件，包含行级编辑/新增/删除、行级状态展示、轮询合并逻辑
 
 ### Modified Capabilities
-
 <!-- 无现有 spec 需要修改 -->
 
 ## Impact

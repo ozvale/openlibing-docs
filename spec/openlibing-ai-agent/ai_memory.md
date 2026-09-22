@@ -23,7 +23,7 @@
 
 ## 常见 AI 错误与规避
 
-| 错误模式                                  | 规避规则                                                                               | 来源需求                    |
-| ----------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------- |
-| 修改鉴权逻辑后遗漏 import 清理            | 全局搜索 `from app.auth`、`require_admin`、`admin_headers` 确保无残留引用              | 2026-5-admin-whitelist-auth |
+| 错误模式 | 规避规则 | 来源需求 |
+| --- | --- | --- |
+| 修改鉴权逻辑后遗漏 import 清理 | 全局搜索 `from app.auth`、`require_admin`、`admin_headers` 确保无残留引用 | 2026-5-admin-whitelist-auth |
 | 测试环境 Python 3.14 与 SQLAlchemy 不兼容 | 集成测试依赖 `app_client` fixture 会触发 SQLAlchemy 初始化，本地环境需确保依赖版本兼容 | 2026-5-admin-whitelist-auth |

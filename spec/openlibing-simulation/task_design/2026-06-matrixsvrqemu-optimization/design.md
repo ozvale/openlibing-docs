@@ -4,16 +4,15 @@
 
 ### 1.1 需求概述
 
-| 需求点                    | 核心目标                         | 技术挑战             |
-| :------------------------ | :------------------------------- | :------------------- |
-| matrixSvrQemu调度优化     | 从配置动态获取baseCpu/baseMemory | 配置解析、默认值回退 |
-| 并发安全问题              | 防止机器重复分配                 | 分布式锁、任务排队   |
-| /manage/task/node接口完善 | 返回List<NodeInfoEntity>         | 数据聚合、DTO转换    |
+| 需求点 | 核心目标 | 技术挑战 |
+| :--- | :--- | :--- |
+| matrixSvrQemu调度优化 | 从配置动态获取baseCpu/baseMemory | 配置解析、默认值回退 |
+| 并发安全问题 | 防止机器重复分配 | 分布式锁、任务排队 |
+| /manage/task/node接口完善 | 返回List<NodeInfoEntity> | 数据聚合、DTO转换 |
 
 ### 1.2 数据结构分析
 
 **SimulationDeployConfigEntity**（配置结构）：
-
 ```java
 @Data
 public class SimulationDeployConfigEntity {
@@ -26,7 +25,6 @@ public class SimulationDeployConfigEntity {
 ```
 
 **NodeInfoEntity**（返回结构）：
-
 ```java
 @Data
 public class NodeInfoEntity {
@@ -80,7 +78,6 @@ public class NodeInfoEntity {
 **修改位置**：`NodeManageServiceImpl.java`第456行附近
 
 **配置解析流程**：
-
 1. 通过`nodeManageMapper.getDeployTagsById("qemu")`获取configJson
 2. 解析为`List<SimulationDeployConfigEntity>`
 3. 过滤`deploymentValue.equals("matrixSvrQemu")`的配置项
@@ -118,12 +115,12 @@ public class NodeInfoEntity {
 
 **解决方案**：分布式锁 + 任务排队
 
-| 配置项           | 值                     | 说明           |
-| :--------------- | :--------------------- | :------------- |
-| `lock_key`       | `node_allocation_lock` | 全局锁的key    |
-| `lock_timeout`   | 10000ms                | 锁自动过期时间 |
-| `max_wait_time`  | 180000ms               | 最大等待时间   |
-| `retry_interval` | 100ms                  | 重试间隔时间   |
+| 配置项 | 值 | 说明 |
+| :--- | :--- | :--- |
+| `lock_key` | `node_allocation_lock` | 全局锁的key |
+| `lock_timeout` | 10000ms | 锁自动过期时间 |
+| `max_wait_time` | 180000ms | 最大等待时间 |
+| `retry_interval` | 100ms | 重试间隔时间 |
 
 **核心流程**：
 
@@ -206,14 +203,14 @@ public class NodeInfoEntity {
 private EnvironmentTaskEntity createOffcloudPolicyEnv(
         List<SimulationDeployResultEntity> simulationDeployResultList,
         SimulationVerificationTaskBaseEntity simulationTask) {
-
+    
     // ===== 原有逻辑保持不变：创建任务实体并入库 =====
     String taskId = CommmonUtils.getUuid();
     EnvironmentTaskEntity taskEntity = new EnvironmentTaskEntity(
         taskId, simulationTask.getName(), "0", "OFFCLOUD",
         simulationTask.getCreateBy(), "0");
     nodeManageMapper.insterOrUpdateServerTask(taskEntity);
-
+    
     // ===== 异步执行：获取分布式锁 + 机器分配 =====
     CompletableFuture.runAsync(() -> {
         String lockValue = "task_" + taskId;
@@ -221,7 +218,7 @@ private EnvironmentTaskEntity createOffcloudPolicyEnv(
         long maxWaitTime = 180000;  // 3分钟
         long retryInterval = 100;   // 100ms重试间隔
         long lockTimeout = 10000;   // 10秒锁超时
-
+        
         try {
             // 1. 尝试获取分布式锁，最多等待3分钟
             boolean lockAcquired = false;
@@ -239,14 +236,14 @@ private EnvironmentTaskEntity createOffcloudPolicyEnv(
                     return;
                 }
             }
-
+            
             if (!lockAcquired) {
                 log.warn("Timeout waiting for node allocation lock, task: {}", taskId);
                 nodeManageMapper.updateEnvTaskStatus(taskId, "3");
                 nodeManageMapper.updateEnvTaskErrorMessage(taskId, "等待机器分配锁超时");
                 return;
             }
-
+            
             // 2. 获取锁成功，执行原有机器分配逻辑
             String simulationSceneId = simulationTask.getSimulationSceneId();
             Boolean isEnoughEnv = true;
@@ -255,7 +252,7 @@ private EnvironmentTaskEntity createOffcloudPolicyEnv(
             } else {
                 isEnoughEnv = checkEnvEnough(simulationDeployResultList, simulationTask, taskId, false);
             }
-
+            
             if (!isEnoughEnv) {
                 // 环境创建失败，回退之前预支的环境信息
                 nodeManageMapper.deleteUsingEnvByTaskId(taskId);
@@ -271,7 +268,7 @@ private EnvironmentTaskEntity createOffcloudPolicyEnv(
             } else {
                 nodeManageMapper.updateEnvTaskStatus(taskId, "4");
             }
-
+            
         } catch (Exception e) {
             log.error("Error allocating node for task: {}", taskId, e);
             nodeManageMapper.updateEnvTaskStatus(taskId, "3");
@@ -282,7 +279,7 @@ private EnvironmentTaskEntity createOffcloudPolicyEnv(
             log.info("Released node allocation lock for task: {}", taskId);
         }
     }, taskExecutor);
-
+    
     // ===== 立即返回taskEntity（状态为"0"，异步更新） =====
     return taskEntity;
 }
@@ -314,7 +311,7 @@ List<NodeInfoEntity> nodeList = null;
 if (environmentId != null) {
     // 直接使用JOIN查询，返回List<NodeInfoEntity>
     nodeList = serverUsingMapper.selectNodeListByTaskId(environmentId);
-
+    
     // 密码脱敏
     if (nodeList != null) {
         for (NodeInfoEntity node : nodeList) {
@@ -331,7 +328,7 @@ if (environmentId != null) {
 ```xml
 <!-- ServerUsingMapper（使用已有t_server_using表，JOIN查询） -->
 <select id="selectNodeListByTaskId" resultType="NodeInfoEntity">
-    SELECT
+    SELECT 
         sbi.id,
         sbi.ip,
         sbi.user_name AS userName,
@@ -348,7 +345,7 @@ if (environmentId != null) {
         sbi.resource_pool_id AS resourcePoolId
     FROM t_server_using su
     JOIN server_basic_info sbi ON su.server_id = sbi.id
-    WHERE su.task_id = #{taskId}
+    WHERE su.task_id = #{taskId} 
       AND su.status = 'ALLOCATED'
 </select>
 ```
@@ -377,22 +374,22 @@ if (environmentId != null) {
 
 ## 4. 监控指标
 
-| 指标               | 计算方式                | 告警阈值   |
-| :----------------- | :---------------------- | :--------- |
-| **锁获取成功率**   | 成功次数 / 总请求次数   | <99%       |
-| **平均等待时间**   | 总等待时间 / 总请求次数 | >5秒       |
-| **锁过期次数**     | 释放锁时锁不存在的次数  | >10次/小时 |
-| **最大等待时间**   | 单次请求的最大等待时间  | >180秒     |
-| **任务分配成功率** | 成功次数 / 总任务数     | <99%       |
+| 指标 | 计算方式 | 告警阈值 |
+| :--- | :--- | :--- |
+| **锁获取成功率** | 成功次数 / 总请求次数 | <99% |
+| **平均等待时间** | 总等待时间 / 总请求次数 | >5秒 |
+| **锁过期次数** | 释放锁时锁不存在的次数 | >10次/小时 |
+| **最大等待时间** | 单次请求的最大等待时间 | >180秒 |
+| **任务分配成功率** | 成功次数 / 总任务数 | <99% |
 
 ---
 
 ## 5. 异常处理
 
-| 异常场景                | 处理方式             | 恢复策略             |
-| :---------------------- | :------------------- | :------------------- |
-| **获取锁超时（3分钟）** | 抛出RuntimeException | 客户端重试           |
-| **任务执行异常**        | 捕获异常，记录日志   | 更新任务状态为FAILED |
-| **锁过期（10秒）**      | 自动释放（Redis PX） | 下一个任务可以获取锁 |
-| **机器状态检查失败**    | 返回false，记录日志  | 任务状态为FAILED     |
-| **无可用机器**          | 返回false，记录日志  | 任务状态为FAILED     |
+| 异常场景 | 处理方式 | 恢复策略 |
+| :--- | :--- | :--- |
+| **获取锁超时（3分钟）** | 抛出RuntimeException | 客户端重试 |
+| **任务执行异常** | 捕获异常，记录日志 | 更新任务状态为FAILED |
+| **锁过期（10秒）** | 自动释放（Redis PX） | 下一个任务可以获取锁 |
+| **机器状态检查失败** | 返回false，记录日志 | 任务状态为FAILED |
+| **无可用机器** | 返回false，记录日志 | 任务状态为FAILED |

@@ -12,23 +12,23 @@
 
 ### 功能一：Push 事件处理器
 
-| 决策                       | 选择                                                                           | 原因                                                                                                                                                                                                                                                                                                                                                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 事件类型字符串             | `Push Hook`（gitcode/gitee）+ `push`（github）                                 | gitcode/gitee webhook 请求头 `X-GitCode-Event` / `X-Gitee-Event` 在 push 事件下取值为 `Push Hook`；github 请求头 `X-GitHub-Event` 取值为小写 `push`。两者风格不同，需同时支持                                                                                                                                                                                                                              |
-| 分发匹配方式               | 覆写 `supportedEventTypes()` 返回 `{Push Hook, push}` 集合                     | `WebHookEventHandler` 接口已提供 `supportedEventTypes()` 默认方法（返回单值集合），`WebHookEventServiceImpl#dispatchEvent` 已用 `contains` 匹配。覆写为多值集合即可让一个 handler 处理多平台事件类型，无需改 dispatcher                                                                                                                                                                                    |
-| 同步入口                   | 新增 `RepoServiceImpl#syncSingleBranch`，**增量**同步单条分支                  | 全量同步 `syncRepoBranch` 每次都要调用平台 API 拉取全部分支，对高频 push 场景压力过大且容易触发平台限流；webhook 已明确知道新增/删除的是哪条分支（`ref` 字段），直接增删该条记录即可。`syncSingleBranch` 只操作本地 `repo_branch` 表，不调用平台 API，性能与稳定性更优                                                                                                                                     |
-| 系统账号标识               | `"system"`                                                                     | 与 `XxlJobHandler#syncRepoBranchData` 一致                                                                                                                                                                                                                                                                                                                                                                 |
-| branchName 解析            | `ref.substring("refs/heads/".length())`                                        | webhook payload 的 `ref` 形如 `refs/heads/feat-x`，去掉前缀即为分支名                                                                                                                                                                                                                                                                                                                                      |
-| is_default 处理            | 新增分支时置 `0`                                                               | push payload 不含默认分支信息；该字段准确性由 `XxlJobHandler` 定时全量同步兜底修正，不依赖 webhook                                                                                                                                                                                                                                                                                                         |
-| 分支新增 SQL               | 复用 `insertRepoBranch`（已 `INSERT IGNORE`）                                  | 既有 XML 已用 `INSERT IGNORE INTO repo_branch ...`，唯一索引冲突时静默跳过，符合 webhook 重复投递幂等性要求                                                                                                                                                                                                                                                                                                |
-| 分支删除 SQL               | 新增 `deleteByRepoIdAndBranchName`                                             | 既有 `deleteByIds` 需先 `queryByRepoIdAndBranchName` 拿 `branchId`，两次 SQL 浪费；按 `repoId + branchName` 直接删一次即可                                                                                                                                                                                                                                                                                 |
-| token 获取                 | 不再需要                                                                       | 增量同步不调用平台 API，无需 `accessToken`，`PushEventHandler` 不再注入 `CommonService`                                                                                                                                                                                                                                                                                                                    |
-| **去重策略（修订）**       | **依赖 `syncSingleBranch` 幂等性，不引入 Redis 限流**                          | 原方案参照 `NotifyConfigEventHandler#acquireYamlCheckLock` 用 Redis `trySet` 3 分钟限流。实施后发现：限流 key 仅用 `repoUrl`，导致**同一仓库不同分支的新增/删除事件、或同一仓库不同操作事件（新增+删除）在 3 分钟窗口内被静默丢弃**。改为依赖 `syncSingleBranch` 自身的幂等性（新增 `INSERT IGNORE` 静默跳过重复记录、删除按 `repoId + branchName` 幂等），既保证重复投递安全，又不丢失不同分支/操作的事件 |
-| 分支判定                   | `ref` 以 `refs/heads/` 开头 + `created`/`deleted` 布尔字段或 before/after 全 0 | gitcode 标准 push payload 用 before/after 全 0；gitee / github 优先用 `created`/`deleted` 布尔字段，更准确，缺失时回退 before/after 全 0                                                                                                                                                                                                                                                                   |
-| tag 排除                   | `ref` 不以 `refs/tags/` 开头即跳过                                             | tag 推送不触发分支同步                                                                                                                                                                                                                                                                                                                                                                                     |
-| 仓库 URL 反查              | 依次尝试 `git_http_url` → `clone_url` → `html_url`                             | gitcode/gitee payload 用 `git_http_url`；github payload 无该字段，用 `clone_url`（带 `.git`）和 `html_url`（无后缀）。本地 `repo_url` 由用户录入，格式不确定，多候选依次反查提高命中率                                                                                                                                                                                                                     |
-| github webhook 事件订阅    | `events` 由 `["pull_request"]` 改为 `["pull_request", "push"]`                 | github webhook 配置用 `events` 数组（不同于 gitcode/gitee 的 `is_push_events` 布尔位），需显式加入 `push`                                                                                                                                                                                                                                                                                                  |
-| 既有 webhook push 订阅补齐 | `XxlJobHandler#refreshWebhookHandler` 自动检测并 PATCH 原地更新                | 已注册的 webhook 可能缺 push 事件订阅，刷新时用 PATCH 原地更新而非删除重建，避免影响既有订阅；本地/beta 环境跳过订阅检查                                                                                                                                                                                                                                                                                   |
+| 决策 | 选择 | 原因 |
+|------|------|------|
+| 事件类型字符串 | `Push Hook`（gitcode/gitee）+ `push`（github） | gitcode/gitee webhook 请求头 `X-GitCode-Event` / `X-Gitee-Event` 在 push 事件下取值为 `Push Hook`；github 请求头 `X-GitHub-Event` 取值为小写 `push`。两者风格不同，需同时支持 |
+| 分发匹配方式 | 覆写 `supportedEventTypes()` 返回 `{Push Hook, push}` 集合 | `WebHookEventHandler` 接口已提供 `supportedEventTypes()` 默认方法（返回单值集合），`WebHookEventServiceImpl#dispatchEvent` 已用 `contains` 匹配。覆写为多值集合即可让一个 handler 处理多平台事件类型，无需改 dispatcher |
+| 同步入口 | 新增 `RepoServiceImpl#syncSingleBranch`，**增量**同步单条分支 | 全量同步 `syncRepoBranch` 每次都要调用平台 API 拉取全部分支，对高频 push 场景压力过大且容易触发平台限流；webhook 已明确知道新增/删除的是哪条分支（`ref` 字段），直接增删该条记录即可。`syncSingleBranch` 只操作本地 `repo_branch` 表，不调用平台 API，性能与稳定性更优 |
+| 系统账号标识 | `"system"` | 与 `XxlJobHandler#syncRepoBranchData` 一致 |
+| branchName 解析 | `ref.substring("refs/heads/".length())` | webhook payload 的 `ref` 形如 `refs/heads/feat-x`，去掉前缀即为分支名 |
+| is_default 处理 | 新增分支时置 `0` | push payload 不含默认分支信息；该字段准确性由 `XxlJobHandler` 定时全量同步兜底修正，不依赖 webhook |
+| 分支新增 SQL | 复用 `insertRepoBranch`（已 `INSERT IGNORE`） | 既有 XML 已用 `INSERT IGNORE INTO repo_branch ...`，唯一索引冲突时静默跳过，符合 webhook 重复投递幂等性要求 |
+| 分支删除 SQL | 新增 `deleteByRepoIdAndBranchName` | 既有 `deleteByIds` 需先 `queryByRepoIdAndBranchName` 拿 `branchId`，两次 SQL 浪费；按 `repoId + branchName` 直接删一次即可 |
+| token 获取 | 不再需要 | 增量同步不调用平台 API，无需 `accessToken`，`PushEventHandler` 不再注入 `CommonService` |
+| **去重策略（修订）** | **依赖 `syncSingleBranch` 幂等性，不引入 Redis 限流** | 原方案参照 `NotifyConfigEventHandler#acquireYamlCheckLock` 用 Redis `trySet` 3 分钟限流。实施后发现：限流 key 仅用 `repoUrl`，导致**同一仓库不同分支的新增/删除事件、或同一仓库不同操作事件（新增+删除）在 3 分钟窗口内被静默丢弃**。改为依赖 `syncSingleBranch` 自身的幂等性（新增 `INSERT IGNORE` 静默跳过重复记录、删除按 `repoId + branchName` 幂等），既保证重复投递安全，又不丢失不同分支/操作的事件 |
+| 分支判定 | `ref` 以 `refs/heads/` 开头 + `created`/`deleted` 布尔字段或 before/after 全 0 | gitcode 标准 push payload 用 before/after 全 0；gitee / github 优先用 `created`/`deleted` 布尔字段，更准确，缺失时回退 before/after 全 0 |
+| tag 排除 | `ref` 不以 `refs/tags/` 开头即跳过 | tag 推送不触发分支同步 |
+| 仓库 URL 反查 | 依次尝试 `git_http_url` → `clone_url` → `html_url` | gitcode/gitee payload 用 `git_http_url`；github payload 无该字段，用 `clone_url`（带 `.git`）和 `html_url`（无后缀）。本地 `repo_url` 由用户录入，格式不确定，多候选依次反查提高命中率 |
+| github webhook 事件订阅 | `events` 由 `["pull_request"]` 改为 `["pull_request", "push"]` | github webhook 配置用 `events` 数组（不同于 gitcode/gitee 的 `is_push_events` 布尔位），需显式加入 `push` |
+| 既有 webhook push 订阅补齐 | `XxlJobHandler#refreshWebhookHandler` 自动检测并 PATCH 原地更新 | 已注册的 webhook 可能缺 push 事件订阅，刷新时用 PATCH 原地更新而非删除重建，避免影响既有订阅；本地/beta 环境跳过订阅检查 |
 
 ### 功能二：Webhook 入口 MQ 异步化
 
@@ -63,26 +63,26 @@
 
 ## 涉及文件
 
-| 文件                                                     | 操作 | 归属功能 | 说明                                                                                                                                                                                                                            |
-| -------------------------------------------------------- | ---- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `business/handler/PushEventHandler.java`                 | 新增 | 功能一   | Push 事件处理器，覆写 `supportedEventTypes()` 返回 `{Push Hook, push}`，URL 反查兼容 gitcode/gitee/github，从 `ref` 解析 branchName 后调 `syncSingleBranch`；无 Redis 限流                                                      |
-| `business/service/impl/RepoServiceImpl.java`             | 修改 | 功能一   | 新增 `syncSingleBranch(repo, userName, branchName, isCreated, isDeleted)` 增量同步方法；新增私有 `buildRepoBranchInfoEntity(repo, userName, branchName)` 重载；gitcode/gitee `setIsPushEvents(true)`；github `events` 加 `push` |
-| `business/mapper/RepoBranchInfoMapper.java`              | 修改 | 功能一   | 新增 `deleteByRepoIdAndBranchName(repoId, branchName)`                                                                                                                                                                          |
-| `resources/mapper/RepoBranchInfoMapper.xml`              | 修改 | 功能一   | 新增 `deleteByRepoIdAndBranchName` SQL                                                                                                                                                                                          |
-| `common/job/XxlJobHandler.java`                          | 修改 | 功能一   | `refreshWebhookHandler` 自动补齐 push 事件订阅（PATCH 原地更新，本地/beta 跳过）                                                                                                                                                |
-| `business/entity/webhooks/RepoWebhook.java`              | 修改 | 功能一   | `pushEvents` 相关字段调整                                                                                                                                                                                                       |
-| `test/.../handler/PushEventHandlerTest.java`             | 新增 | 功能一   | 单元测试 17 用例（gitcode/gitee/github × 新增/删除/普通推送/tag 推送/未注册仓库/重复投递/不同分支+操作/空 body/字段缺失回退/URL 兜底反查）                                                                                      |
-| `.gitignore`                                             | 修改 | 功能一   | 忽略 `.gitcode/workflows/*.yaml`                                                                                                                                                                                                |
-| `business/controller/WebHookEventController.java`        | 修改 | 功能二   | 三个方法：鉴权后构造 DTO，调 `rabbitTemplate.convertAndSend` 发 MQ，返回「事件接收成功」                                                                                                                                        |
-| `business/service/impl/WebHookEventServiceImpl.java`     | 修改 | 功能二   | `handleWebhookEvent` 去掉 `CompletableFuture.runAsync`，改为直接同步调 `dispatchEvent`；返回值简化为成功/失败                                                                                                                   |
-| `common/config/rabbitmq/WebhookRabbitConfig.java`        | 新增 | 功能二   | 持久化队列 Bean，队列名从 `${spring.rabbitmq.coderepo.webhook_event_queue}` 读取                                                                                                                                                |
-| `business/service/WebhookEventConsumer.java`             | 新增 | 功能二   | `@RabbitListener` 消费消息，反序列化后调 `webhookEventService.handleWebhookEvent`，失败重试                                                                                                                                     |
-| `src/main/resources/application.yaml`                    | 修改 | 功能二   | 增加 `spring.rabbitmq.coderepo.webhook_event_queue: webhook_event_queue_beta`                                                                                                                                                   |
-| `src/main/resources/application-gama.yaml`               | 修改 | 功能二   | 增加 `webhook_event_queue_gama`                                                                                                                                                                                                 |
-| `src/main/resources/application-prod.yaml`               | 修改 | 功能二   | 增加 `webhook_event_queue_prod`                                                                                                                                                                                                 |
-| `test/.../service/WebhookEventConsumerTest.java`         | 新增 | 功能二   | Consumer 单元测试 6 用例：正常消费 / 重试成功 / 超限丢弃 / 非法 JSON / 空 body / 失败结果触发重试                                                                                                                               |
-| `test/.../controller/WebHookEventControllerTest.java`    | 修改 | 功能二   | 适配 MQ 改造                                                                                                                                                                                                                    |
-| `test/.../service/impl/WebHookEventServiceImplTest.java` | 修改 | 功能二   | 适配同步 dispatch 改造                                                                                                                                                                                                          |
+| 文件 | 操作 | 归属功能 | 说明 |
+|------|------|----------|------|
+| `business/handler/PushEventHandler.java` | 新增 | 功能一 | Push 事件处理器，覆写 `supportedEventTypes()` 返回 `{Push Hook, push}`，URL 反查兼容 gitcode/gitee/github，从 `ref` 解析 branchName 后调 `syncSingleBranch`；无 Redis 限流 |
+| `business/service/impl/RepoServiceImpl.java` | 修改 | 功能一 | 新增 `syncSingleBranch(repo, userName, branchName, isCreated, isDeleted)` 增量同步方法；新增私有 `buildRepoBranchInfoEntity(repo, userName, branchName)` 重载；gitcode/gitee `setIsPushEvents(true)`；github `events` 加 `push` |
+| `business/mapper/RepoBranchInfoMapper.java` | 修改 | 功能一 | 新增 `deleteByRepoIdAndBranchName(repoId, branchName)` |
+| `resources/mapper/RepoBranchInfoMapper.xml` | 修改 | 功能一 | 新增 `deleteByRepoIdAndBranchName` SQL |
+| `common/job/XxlJobHandler.java` | 修改 | 功能一 | `refreshWebhookHandler` 自动补齐 push 事件订阅（PATCH 原地更新，本地/beta 跳过） |
+| `business/entity/webhooks/RepoWebhook.java` | 修改 | 功能一 | `pushEvents` 相关字段调整 |
+| `test/.../handler/PushEventHandlerTest.java` | 新增 | 功能一 | 单元测试 17 用例（gitcode/gitee/github × 新增/删除/普通推送/tag 推送/未注册仓库/重复投递/不同分支+操作/空 body/字段缺失回退/URL 兜底反查） |
+| `.gitignore` | 修改 | 功能一 | 忽略 `.gitcode/workflows/*.yaml` |
+| `business/controller/WebHookEventController.java` | 修改 | 功能二 | 三个方法：鉴权后构造 DTO，调 `rabbitTemplate.convertAndSend` 发 MQ，返回「事件接收成功」 |
+| `business/service/impl/WebHookEventServiceImpl.java` | 修改 | 功能二 | `handleWebhookEvent` 去掉 `CompletableFuture.runAsync`，改为直接同步调 `dispatchEvent`；返回值简化为成功/失败 |
+| `common/config/rabbitmq/WebhookRabbitConfig.java` | 新增 | 功能二 | 持久化队列 Bean，队列名从 `${spring.rabbitmq.coderepo.webhook_event_queue}` 读取 |
+| `business/service/WebhookEventConsumer.java` | 新增 | 功能二 | `@RabbitListener` 消费消息，反序列化后调 `webhookEventService.handleWebhookEvent`，失败重试 |
+| `src/main/resources/application.yaml` | 修改 | 功能二 | 增加 `spring.rabbitmq.coderepo.webhook_event_queue: webhook_event_queue_beta` |
+| `src/main/resources/application-gama.yaml` | 修改 | 功能二 | 增加 `webhook_event_queue_gama` |
+| `src/main/resources/application-prod.yaml` | 修改 | 功能二 | 增加 `webhook_event_queue_prod` |
+| `test/.../service/WebhookEventConsumerTest.java` | 新增 | 功能二 | Consumer 单元测试 6 用例：正常消费 / 重试成功 / 超限丢弃 / 非法 JSON / 空 body / 失败结果触发重试 |
+| `test/.../controller/WebHookEventControllerTest.java` | 修改 | 功能二 | 适配 MQ 改造 |
+| `test/.../service/impl/WebHookEventServiceImplTest.java` | 修改 | 功能二 | 适配同步 dispatch 改造 |
 
 ## 关键代码结构
 
@@ -203,29 +203,29 @@ WebhookEventConsumer.onMessage
 
 ### 功能一：Push 事件处理器
 
-| 风险                                             | 缓解                                                                                                                                                                |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| webhook 短时间大量重复推送                       | `syncSingleBranch` 幂等性兜底：新增 `INSERT IGNORE` 静默跳过重复记录，删除按 `repoId + branchName` 幂等。不再使用 Redis 限流，避免限流粒度过粗丢失不同分支/操作事件 |
-| 仓库未注册到本系统                               | `selectByUrl` 返回 null 时 info 并返回，不抛异常                                                                                                                    |
-| gitcode/gitee/github payload 字段差异            | 分支判定优先用 `created`/`deleted` 布尔字段（gitee/github），缺失时回退 before/after 全 0（gitcode 标准）                                                           |
-| github 仓库 URL 字段与 gitcode/gitee 不同        | 依次尝试 `git_http_url` → `clone_url` → `html_url`，覆盖三平台 payload                                                                                              |
-| 本地 `repo_url` 录入格式不确定（带/不带 `.git`） | github 用 `clone_url`（带 `.git`）和 `html_url`（无后缀）双候选反查，提高命中率                                                                                     |
-| 普通 commit 推送误触发                           | 严格判定 before/after 全 0 或 created/deleted 为 true，普通推送两者均非 0 且布尔字段缺失，自然跳过                                                                  |
-| 重复 webhook 投递导致重复插入                    | `insertRepoBranch` 已用 `INSERT IGNORE`，唯一索引冲突静默跳过                                                                                                       |
-| 增量同步导致 `is_default` 不准                   | push payload 无默认分支信息，新增分支时 `is_default` 置 `0`；该字段准确性由 `XxlJobHandler` 定时全量同步兜底修正                                                    |
-| 仓库在事件投递后被删除                           | `syncSingleBranch` 入口和写库前都校验 `repoInfoMapper.queryById`，不存在则跳过                                                                                      |
-| 平台 API 与本地数据漂移                          | 增量同步只覆盖 push 事件覆盖的分支；全量同步由 `XxlJobHandler` 定时任务兜底，两套机制互补                                                                           |
-| 既有 webhook 缺 push 订阅                        | `XxlJobHandler#refreshWebhookHandler` 自动检测并用 PATCH 原地更新，不删除重建影响既有订阅                                                                           |
+| 风险 | 缓解 |
+|------|------|
+| webhook 短时间大量重复推送 | `syncSingleBranch` 幂等性兜底：新增 `INSERT IGNORE` 静默跳过重复记录，删除按 `repoId + branchName` 幂等。不再使用 Redis 限流，避免限流粒度过粗丢失不同分支/操作事件 |
+| 仓库未注册到本系统 | `selectByUrl` 返回 null 时 info 并返回，不抛异常 |
+| gitcode/gitee/github payload 字段差异 | 分支判定优先用 `created`/`deleted` 布尔字段（gitee/github），缺失时回退 before/after 全 0（gitcode 标准） |
+| github 仓库 URL 字段与 gitcode/gitee 不同 | 依次尝试 `git_http_url` → `clone_url` → `html_url`，覆盖三平台 payload |
+| 本地 `repo_url` 录入格式不确定（带/不带 `.git`） | github 用 `clone_url`（带 `.git`）和 `html_url`（无后缀）双候选反查，提高命中率 |
+| 普通 commit 推送误触发 | 严格判定 before/after 全 0 或 created/deleted 为 true，普通推送两者均非 0 且布尔字段缺失，自然跳过 |
+| 重复 webhook 投递导致重复插入 | `insertRepoBranch` 已用 `INSERT IGNORE`，唯一索引冲突静默跳过 |
+| 增量同步导致 `is_default` 不准 | push payload 无默认分支信息，新增分支时 `is_default` 置 `0`；该字段准确性由 `XxlJobHandler` 定时全量同步兜底修正 |
+| 仓库在事件投递后被删除 | `syncSingleBranch` 入口和写库前都校验 `repoInfoMapper.queryById`，不存在则跳过 |
+| 平台 API 与本地数据漂移 | 增量同步只覆盖 push 事件覆盖的分支；全量同步由 `XxlJobHandler` 定时任务兜底，两套机制互补 |
+| 既有 webhook 缺 push 订阅 | `XxlJobHandler#refreshWebhookHandler` 自动检测并用 PATCH 原地更新，不删除重建影响既有订阅 |
 
 ### 功能二：Webhook 入口 MQ 异步化
 
-| 风险                                 | 缓解                                                                                                                                               |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 风险 | 缓解 |
+|------|------|
 | RabbitMQ 不可用导致 webhook 事件丢失 | `RabbitTemplate` 已配置发布确认 + 退回回调（`PubConfirmHandler`），投递失败会记录错误日志。Controller 层捕获异常返回失败，平台会按自身重试策略重发 |
-| Consumer 处理慢导致消息堆积          | 复用 `RabbitConnectionFactoryConfig` 的并发消费参数（concurrent=5, max=20, prefetch=5），可动态扩展                                                |
-| 消息反序列化失败                     | Consumer 捕获 `JSONException`，记录错误日志后 ACK 丢弃，避免毒消息阻塞队列                                                                         |
-| 事件重复消费                         | 各 handler 内部有去重逻辑（PushEventHandler 依赖 `syncSingleBranch` 幂等、MergeRequestEventHandler 的事件去重），无需 Consumer 层幂等              |
-| 服务重启时未消费消息                 | 队列持久化 + 消息持久化（`MessageDeliveryMode.PERSISTENT`），重启后继续消费                                                                        |
+| Consumer 处理慢导致消息堆积 | 复用 `RabbitConnectionFactoryConfig` 的并发消费参数（concurrent=5, max=20, prefetch=5），可动态扩展 |
+| 消息反序列化失败 | Consumer 捕获 `JSONException`，记录错误日志后 ACK 丢弃，避免毒消息阻塞队列 |
+| 事件重复消费 | 各 handler 内部有去重逻辑（PushEventHandler 依赖 `syncSingleBranch` 幂等、MergeRequestEventHandler 的事件去重），无需 Consumer 层幂等 |
+| 服务重启时未消费消息 | 队列持久化 + 消息持久化（`MessageDeliveryMode.PERSISTENT`），重启后继续消费 |
 
 ## 跨仓影响
 

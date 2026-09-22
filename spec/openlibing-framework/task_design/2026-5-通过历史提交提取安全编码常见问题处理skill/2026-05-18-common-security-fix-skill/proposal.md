@@ -15,12 +15,10 @@ FindBugs/SpotBugs 扫描产生的安全编码问题（如 EI_EXPOSE_REP、DM_DEF
 ## Capabilities
 
 ### New Capabilities
-
 - `security-fix-patterns`: 安全编码问题的修复模式库，包含 14 种问题类型的 BEFORE/AFTER 模板
 - `skill-automation`: skill 的自动化执行流程，包括日志解析、分批处理、约束强化循环
 
 ### Modified Capabilities
-
 <!-- No existing specs to modify -->
 
 ## Impact

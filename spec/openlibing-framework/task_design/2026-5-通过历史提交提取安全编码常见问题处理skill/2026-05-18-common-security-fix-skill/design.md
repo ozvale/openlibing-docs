@@ -5,7 +5,6 @@ openlibing-framework 项目使用 Java 21，依赖 Lombok、MyBatis、Spring Boo
 通过分析 50+ 次安全编码整改提交，已提取一套经过验证的修复模式。需要将这些模式固化为 opencode skill，使开发者可以一键调用。
 
 **约束条件：**
-
 - 项目使用 Java 21，支持 `List.copyOf()`、`Set.copyOf()`、`Map.copyOf()` 等 Java 9+ API
 - MyBatis 作为 ORM 框架，`Optional` 返回值适配不佳，统一使用 `@Nullable`
 - Lombok 的 `@Data` 会自动生成 getter/setter，需要通过 `@Getter(AccessLevel.NONE)` 覆盖
@@ -14,14 +13,12 @@ openlibing-framework 项目使用 Java 21，依赖 Lombok、MyBatis、Spring Boo
 ## Goals / Non-Goals
 
 **Goals:**
-
 - 覆盖 14 种常见 FindBugs/SpotBugs 问题类型，每种提供 BEFORE/AFTER 模板
 - 建立强制约束确保修复质量（追溯调用点、@Nullable 规范等）
 - 支持批量日志文件处理，分批执行并反馈进度
 - 未覆盖问题类型需用户确认后修改
 
 **Non-Goals:**
-
 - 不自动执行代码编译或测试（由用户手动执行）
 - 不修改项目构建配置或 CI/CD 流程
 - 不处理非 FindBugs/SpotBugs 类型的代码质量问题
@@ -66,10 +63,10 @@ Entity 类（如 RepoInfoEntity）的 Date getter 返回 `@Nullable Date` 而非
 
 ## Risks / Trade-offs
 
-| Risk                                                    | Mitigation                                                           |
-| ------------------------------------------------------- | -------------------------------------------------------------------- |
-| `@Nullable` 注解需要 `jakarta.annotation.Nullable` 依赖 | 项目已引入该依赖，无额外依赖风险                                     |
-| 批量处理日志文件时可能超出上下文窗口                    | 按 20~40 个 BugInstance 分批执行，每批反馈进度                       |
-| 未覆盖的问题类型可能被错误处理                          | 强制约束 #5：必须先向用户说明并获得确认                              |
-| `List.copyOf()` 不接受 null 元素                        | setter 使用 `new ArrayList<>()` 复制入参，允许 null 元素由调用方保证 |
-| `BeanUtils.copyProperties()` 是浅拷贝                   | 对于嵌套可变对象需要深拷贝，skill 模板中注明此限制                   |
+| Risk | Mitigation |
+|------|-----------|
+| `@Nullable` 注解需要 `jakarta.annotation.Nullable` 依赖 | 项目已引入该依赖，无额外依赖风险 |
+| 批量处理日志文件时可能超出上下文窗口 | 按 20~40 个 BugInstance 分批执行，每批反馈进度 |
+| 未覆盖的问题类型可能被错误处理 | 强制约束 #5：必须先向用户说明并获得确认 |
+| `List.copyOf()` 不接受 null 元素 | setter 使用 `new ArrayList<>()` 复制入参，允许 null 元素由调用方保证 |
+| `BeanUtils.copyProperties()` 是浅拷贝 | 对于嵌套可变对象需要深拷贝，skill 模板中注明此限制 |

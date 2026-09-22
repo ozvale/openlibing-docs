@@ -18,14 +18,13 @@
 
 **参数与目录映射规则**：
 
-| 参数组合                 | OBS 目录结构                                                        | 说明                   |
-| ------------------------ | ------------------------------------------------------------------- | ---------------------- |
+| 参数组合 | OBS 目录结构 | 说明 |
+|---------|-------------|------|
 | 无 label、无 archivePath | `testcase-metadata/{pipelineId}/{pipelineRunId}/{jobId}/{filename}` | 现有冒烟测试，保持不变 |
-| 仅 label                 | `/{label}/{filename}`                                               | 按标签直接归档         |
-| label + archivePath      | `/{label}/{archivePath}/{filename}`                                 | 自定义归档路径         |
+| 仅 label | `/{label}/{filename}` | 按标签直接归档 |
+| label + archivePath | `/{label}/{archivePath}/{filename}` | 自定义归档路径 |
 
 **关键行为**：
-
 - `label` 可单独使用，归档为 `/{label}/{filename}`
 - `archivePath` 必须与 `label` 同时传入，归档为 `/{label}/{archivePath}/{filename}`
 - 当 `label` + `archivePath` 与流水线参数同时传入时，以 `archivePath` 为最终归档路径
@@ -33,7 +32,6 @@
 - 不对 `label` 的具体值做特殊判断和处理，所有 label 值统一走相同的路由逻辑
 
 **校验规则**：
-
 - `files` 不能为空
 - `archivePath` 不能脱离 `label` 单独传入
 - 至少需要 `label` 或流水线参数（pipelineId/pipelineRunId/jobId）之一
@@ -44,7 +42,6 @@
 **目标**：改造 `upload_to_openlibing.py` 脚本，支持 `--label` 和 `--archive-path` 参数，`--openlibing-secret` 改为非必传（支持环境变量）。
 
 **使用示例**：
-
 ```bash
 # 冒烟测试（流水线参数）
 python upload_to_openlibing.py \
@@ -89,9 +86,9 @@ python upload_to_openlibing.py \
 
 ## 影响范围
 
-| 仓库                       | 模块                           | 变更类型                                                               |
-| -------------------------- | ------------------------------ | ---------------------------------------------------------------------- |
-| openlibing-sync            | `TestCaseDataController.java`  | 修改：新增 label、archivePath 参数，调整校验逻辑                       |
-| openlibing-sync            | `TestCaseDataService.java`     | 修改：接口方法签名新增 label、archivePath 参数                         |
-| openlibing-sync            | `TestCaseDataServiceImpl.java` | 修改：实现 label + archivePath 路由逻辑，去除两侧斜杠                  |
-| openlibing-pytest-executor | `upload_to_openlibing.py`      | 修改：auth_secret→openlibing_secret，新增 --archive-path，支持环境变量 |
+| 仓库 | 模块 | 变更类型 |
+|------|------|----------|
+| openlibing-sync | `TestCaseDataController.java` | 修改：新增 label、archivePath 参数，调整校验逻辑 |
+| openlibing-sync | `TestCaseDataService.java` | 修改：接口方法签名新增 label、archivePath 参数 |
+| openlibing-sync | `TestCaseDataServiceImpl.java` | 修改：实现 label + archivePath 路由逻辑，去除两侧斜杠 |
+| openlibing-pytest-executor | `upload_to_openlibing.py` | 修改：auth_secret→openlibing_secret，新增 --archive-path，支持环境变量 |

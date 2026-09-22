@@ -24,3 +24,4 @@
 - 修改文件：`publishReview/config.ts`（操作列配置，宽度 100→140）、`publishReview/index.vue`（复制入口逻辑）、`publishReview/addReview.vue`（支持 reviewCopy 模式，创建空白评审后跳转详情页）、`publishReview/detail/reviewDetail.vue`（loadCopyData 预填逻辑）
 - API 调用：复用现有 `addPublishReview`、`getPublishReviewDetailById`，无需新增后端接口
 - 路由参数：详情页新增 `copySourceReviewId` 查询参数，预填完成后通过 `router.replace` 自动移除
+

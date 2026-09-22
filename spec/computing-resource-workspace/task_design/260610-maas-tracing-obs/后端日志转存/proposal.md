@@ -15,25 +15,25 @@
 
 ### 2.1 新增组件
 
-| 组件                  | 说明                                                                             |
-| --------------------- | -------------------------------------------------------------------------------- |
-| `ObsConfig`           | OBS 客户端配置类，初始化 `ObsClient` Bean（`@ConditionalOnProperty` 按开关控制） |
-| `TracingLogObsBuffer` | OBS 通道核心类：内存缓冲 + 定时 flush + 优雅关闭 + DB UPDATE 回调 + 恢复文件     |
+| 组件 | 说明 |
+|------|------|
+| `ObsConfig` | OBS 客户端配置类，初始化 `ObsClient` Bean（`@ConditionalOnProperty` 按开关控制） |
+| `TracingLogObsBuffer` | OBS 通道核心类：内存缓冲 + 定时 flush + 优雅关闭 + DB UPDATE 回调 + 恢复文件 |
 
 ### 2.2 修改组件
 
-| 组件                        | 改动                                                                                             |
-| --------------------------- | ------------------------------------------------------------------------------------------------ |
-| `TracingLogHelper`          | 去掉 `TRACING_LOG_LOGGER` 文件通道 + 增加 `saveToObsAsync` 调用                                  |
-| `MaasTracingLogService`     | 新增 `updateBodyStorageLocationBatch` 接口方法                                                   |
-| `MaasTracingLogServiceImpl` | 实现 `updateBodyStorageLocationBatch`                                                            |
-| `MaasTracingLogMapper`      | 新增 `updateBodyStorageLocationBatch` 方法                                                       |
-| `MaasTracingLogMapper.xml`  | 新增 `updateBodyStorageLocationBatch` SQL + ON DUPLICATE KEY UPDATE 补充 `body_storage_location` |
-| `ModelProxyServiceImpl`     | 补全 requestBody/responseBody（3 处调用点）                                                      |
-| `StreamingRequestHandler`   | 补全 requestBody/responseBody（2 处调用点）                                                      |
-| `ProxyErrorResponseWriter`  | 补全 requestBody/responseBody（2 处调用点）                                                      |
-| `pom.xml`                   | 添加 `esdk-obs-java-bundle` 依赖                                                                 |
-| Apollo 配置                 | OBS 连接信息（enabled、AK/SK、endpoint、bucket-name），不写入 application.yaml                   |
+| 组件 | 改动 |
+|------|------|
+| `TracingLogHelper` | 去掉 `TRACING_LOG_LOGGER` 文件通道 + 增加 `saveToObsAsync` 调用 |
+| `MaasTracingLogService` | 新增 `updateBodyStorageLocationBatch` 接口方法 |
+| `MaasTracingLogServiceImpl` | 实现 `updateBodyStorageLocationBatch` |
+| `MaasTracingLogMapper` | 新增 `updateBodyStorageLocationBatch` 方法 |
+| `MaasTracingLogMapper.xml` | 新增 `updateBodyStorageLocationBatch` SQL + ON DUPLICATE KEY UPDATE 补充 `body_storage_location` |
+| `ModelProxyServiceImpl` | 补全 requestBody/responseBody（3 处调用点） |
+| `StreamingRequestHandler` | 补全 requestBody/responseBody（2 处调用点） |
+| `ProxyErrorResponseWriter` | 补全 requestBody/responseBody（2 处调用点） |
+| `pom.xml` | 添加 `esdk-obs-java-bundle` 依赖 |
+| Apollo 配置 | OBS 连接信息（enabled、AK/SK、endpoint、bucket-name），不写入 application.yaml |
 
 ### 2.3 不改动的部分
 

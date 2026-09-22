@@ -36,7 +36,7 @@
 **1. 通过接口给指定代码仓配置webhook**:
 
 - **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-framework/issues/18
-- **前置条件**: 创建测试仓库，将openLiBingCi设置为维护者角色
+- **前置条件**:  创建测试仓库，将openLiBingCi设置为维护者角色
 - **步骤一**: 调用新增接口/openlibing-framework/manage/ticketIssue/addRepoWebhookCi，给指定仓库配置webhook
 - **预期结果**: webhook创建成功。
 
@@ -49,6 +49,7 @@
 - **步骤二**: 使用未绑定w3的gitcode账号在测试仓创建issue，添加infra-tooling标签，查看UniTicket平台，查看工单情况
 - **预期结果**: 工单创建成功，标题、内容等与issue一致，创建人工号为webhook默认配置工号
 
+
 **3. 已有issue新增infra-tooling标签，UniTicket平台同步创建服务单**:
 
 - **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-framework/issues/18
@@ -57,6 +58,8 @@
 - **预期结果**: 工单创建成功，标题、内容等与issue一致，创建人工号为操作人工号
 - **步骤二**:使用未绑定w3的gitcode账号在测试仓已有issue，添加infra-tooling标签，查看是否有工单同步创建，创建人是webhook配置的默认账号。
 - **预期结果**: 工单创建成功，标题、内容等与issue一致，创建人工号为webhook默认配置工号
+
+
 
 **4. 已有infra-tooling标签的issue移除并重新添加标签，查看UniTicket平台同步情况**:
 

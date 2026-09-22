@@ -1,11 +1,11 @@
 # 安全威胁分析报告：openlibing-anti-poison
 
-| 项       | 内容                                                                                                          |
-| -------- | ------------------------------------------------------------------------------------------------------------- |
-| 仓库路径 | `D:\skill\skill收集\repo\openlibing-anti-poison`                                                              |
-| 分析日期 | 2026-09-02                                                                                                    |
-| 分析方法 | 静态代码审计（STRIDE-A 威胁建模 + 配置/依赖/供应链检查）                                                      |
-| 报告语言 | 中文                                                                                                          |
+| 项 | 内容 |
+|---|---|
+| 仓库路径 | `D:\skill\skill收集\repo\openlibing-anti-poison` |
+| 分析日期 | 2026-09-02 |
+| 分析方法 | 静态代码审计（STRIDE-A 威胁建模 + 配置/依赖/供应链检查） |
+| 报告语言 | 中文 |
 | 部署分类 | 容器化微服务（K8s 集群内，端口 8086，经网关/API 网关暴露部分接口），容器内附带 Python3 + yara-python 扫描引擎 |
 
 ---
@@ -22,20 +22,20 @@
 
 ### 1.2 组件与信任边界
 
-| 组件 ID                                              | 锚点                                                                                                             | 职责                                                           | 信任边界                       |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------ |
-| PoisonPRController                                   | `business/controller/PoisonPRController.java:47`                                                                 | PR 门禁接口 `/poison-pr/**`                                    | 外部/网关 → 服务               |
-| PoisonVersionOpenController                          | `business/controller/PoisonVersionOpenController.java:38`                                                        | 版本扫描对外接口                                               | 外部 → 服务                    |
-| ActionPRController                                   | `business/controller/action/ActionPRController.java:40`                                                          | Action 触发 `/action-pr/**`                                    | CI Action → 服务（HMAC 网关）  |
-| CheckRuleController                                  | `business/controller/CheckRuleController.java`                                                                   | YARA 规则/规则集增删改查                                       | 网关 → 服务                    |
-| AntiServiceImpl                                      | `business/service/impl/AntiServiceImpl.java`                                                                     | clone 仓库、curl 下载 diff、调 python 扫描（**命令执行核心**） | 服务 → 容器 OS / 外部 Git 平台 |
-| ActionPRServiceImpl                                  | `business/service/action/ActionPRServiceImpl.java`                                                               | PR 任务处理、差异文件复制、拼 shell                            | 服务 → 容器 OS                 |
-| JGitUtil                                             | `common/util/JGitUtil.java:31`                                                                                   | git clone/checkout（shell 拼接）                               | 服务 → 容器 OS                 |
-| ExecCmdUtil / CmdInjection / LinuxCommandInjectCheck | `common/utils/ExecCmdUtil.java`、`common/util/CmdInjection.java`、`common/utils/LinuxCommandInjectCheck.java:12` | 命令执行封装与黑名单校验                                       | 服务内                         |
-| HttpUtil / GiteeOrGitcodeApiUtil                     | `common/util/HttpUtil.java:32`、`common/util/GiteeOrGitcodeApiUtil.java:19`                                      | 外部 HTTP 调用、HMAC 转发签名                                  | 服务 → 外部平台                |
-| YaraScan                                             | `tools/SoftwareSupplyChainSecurity-v1/yara_scan.py`、`openeuler_scan.py`                                         | YARA 扫描脚本                                                  | 容器内被调用                   |
-| MySQL / MongoDB / Redis                              | 配置于 Apollo                                                                                                    | 业务数据、规则、缓存                                           | 数据存储边界                   |
-| ExternalActor                                        | PR 提交者、Git 平台 API 响应                                                                                     | 不可信输入（分支名、文件名、raw_url、diff 内容）               | 外部攻击者                     |
+| 组件 ID | 锚点 | 职责 | 信任边界 |
+|---|---|---|---|
+| PoisonPRController | `business/controller/PoisonPRController.java:47` | PR 门禁接口 `/poison-pr/**` | 外部/网关 → 服务 |
+| PoisonVersionOpenController | `business/controller/PoisonVersionOpenController.java:38` | 版本扫描对外接口 | 外部 → 服务 |
+| ActionPRController | `business/controller/action/ActionPRController.java:40` | Action 触发 `/action-pr/**` | CI Action → 服务（HMAC 网关） |
+| CheckRuleController | `business/controller/CheckRuleController.java` | YARA 规则/规则集增删改查 | 网关 → 服务 |
+| AntiServiceImpl | `business/service/impl/AntiServiceImpl.java` | clone 仓库、curl 下载 diff、调 python 扫描（**命令执行核心**） | 服务 → 容器 OS / 外部 Git 平台 |
+| ActionPRServiceImpl | `business/service/action/ActionPRServiceImpl.java` | PR 任务处理、差异文件复制、拼 shell | 服务 → 容器 OS |
+| JGitUtil | `common/util/JGitUtil.java:31` | git clone/checkout（shell 拼接） | 服务 → 容器 OS |
+| ExecCmdUtil / CmdInjection / LinuxCommandInjectCheck | `common/utils/ExecCmdUtil.java`、`common/util/CmdInjection.java`、`common/utils/LinuxCommandInjectCheck.java:12` | 命令执行封装与黑名单校验 | 服务内 |
+| HttpUtil / GiteeOrGitcodeApiUtil | `common/util/HttpUtil.java:32`、`common/util/GiteeOrGitcodeApiUtil.java:19` | 外部 HTTP 调用、HMAC 转发签名 | 服务 → 外部平台 |
+| YaraScan | `tools/SoftwareSupplyChainSecurity-v1/yara_scan.py`、`openeuler_scan.py` | YARA 扫描脚本 | 容器内被调用 |
+| MySQL / MongoDB / Redis | 配置于 Apollo | 业务数据、规则、缓存 | 数据存储边界 |
+| ExternalActor | PR 提交者、Git 平台 API 响应 | 不可信输入（分支名、文件名、raw_url、diff 内容） | 外部攻击者 |
 
 **关键信任边界**：① 外部 PR 元数据/平台 API 响应（`raw_url`、`new_path`、分支名、仓库名）→ 服务内拼接到 shell 命令 → 容器 OS 执行；② Action/外部调用 → 无服务内鉴权的业务接口；③ 密钥材料（`.ks`/`.pfx`）→ 容器镜像层。
 
@@ -43,15 +43,15 @@
 
 ## 二、STRIDE-A 威胁分析汇总
 
-| STRIDE 类别 | 威胁数 | 代表性威胁                                                                                     |
-| ----------- | ------ | ---------------------------------------------------------------------------------------------- |
-| S 仿冒      | 2      | 业务接口无服务内鉴权；外链 HMAC 签名恒用 null 密钥失效                                         |
-| T 篡改      | 4      | shell 命令拼接注入；ExecCmdUtil 数组 join 回字符串；差异文件路径穿越写；构建期下载无校验       |
-| R 抵赖      | 1      | 操作日志中 userId 取自请求参数，可伪造抵赖                                                     |
-| I 信息泄露  | 5      | git token 入命令行/异常日志；密钥烘焙镜像；Swagger 暴露；beta SQL 日志；路径 startsWith 越界读 |
-| D 拒绝服务  | 2      | Actuator shutdown 暴露；扫描任务无线索限流可被刷爆（线程池 50~300）                            |
-| E 权限提升  | 3      | 命令注入 RCE；越权篡改/删除规则；SSRF 打内网/元数据                                            |
-| A 业务滥用  | 2      | 无鉴权发起扫描任务消耗资源；扫描他人仓库                                                       |
+| STRIDE 类别 | 威胁数 | 代表性威胁 |
+|---|---|---|
+| S 仿冒 | 2 | 业务接口无服务内鉴权；外链 HMAC 签名恒用 null 密钥失效 |
+| T 篡改 | 4 | shell 命令拼接注入；ExecCmdUtil 数组 join 回字符串；差异文件路径穿越写；构建期下载无校验 |
+| R 抵赖 | 1 | 操作日志中 userId 取自请求参数，可伪造抵赖 |
+| I 信息泄露 | 5 | git token 入命令行/异常日志；密钥烘焙镜像；Swagger 暴露；beta SQL 日志；路径 startsWith 越界读 |
+| D 拒绝服务 | 2 | Actuator shutdown 暴露；扫描任务无线索限流可被刷爆（线程池 50~300） |
+| E 权限提升 | 3 | 命令注入 RCE；越权篡改/删除规则；SSRF 打内网/元数据 |
+| A 业务滥用 | 2 | 无鉴权发起扫描任务消耗资源；扫描他人仓库 |
 
 ### 关键威胁场景
 
@@ -69,79 +69,79 @@
 
 #### FIND-01：PR 差异文件下载/扫描链路 Shell 命令注入（RCE）
 
-| 属性     | 内容                                                                                                                                                                                                                                                                                                                                                                                   |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| STRIDE   | E（权限提升/RCE）                                                                                                                                                                                                                                                                                                                                                                      |
-| CWE      | [CWE-78](https://cwe.mitre.org/data/definitions/78.html) OS 命令注入；[CWE-88](https://cwe.mitre.org/data/definitions/88.html) 参数注入                                                                                                                                                                                                                                                |
-| OWASP    | A03:2025 – Injection                                                                                                                                                                                                                                                                                                                                                                   |
-| 利用前提 | 能向被扫描仓库提交 PR（或污染内源 Git 平台 API 响应）                                                                                                                                                                                                                                                                                                                                  |
-| 证据     | `AntiServiceImpl.java:591/647/722/773` `Runtime.getRuntime().exec(new String[]{"/bin/sh","-c",cmd},null,null)`；`:825-835` curl 命令拼接 `info.getUser()/getPassword()/getWorkspace()/url`，其中 `url=json.getString("raw_url")`（:577/633/717）；`:578-579` 黑名单仅校验 workspace、target 两个字段；`LinuxCommandInjectCheck.java:13-14` 黑名单未拦截引号、空格、`$()`、反引号闭合等 |
-| 风险     | 外部 PR 数据经 `/bin/sh -c` 执行，黑名单可绕过（引号闭合、`$(...)`、git 参数注入），导致容器内 RCE，进而窃取密钥、横向访问内网。                                                                                                                                                                                                                                                       |
-| 修复建议 | ① 禁止 `/bin/sh -c` 拼接，改用 `ProcessBuilder(String[])` 参数数组（curl 的 URL、`-o`、`-u` 各自独立参数，凭据用 `--netrc-file`）；② 所有进入命令的字段做白名单校验（URL 限定官方域名 + 字符白名单）；③ 迁移到 common 仓已有的 `SecureCmdExecutor`（白名单模板 + 参数化 + 超时）。                                                                                                     |
-| 修复成本 | 高                                                                                                                                                                                                                                                                                                                                                                                     |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | E（权限提升/RCE） |
+| CWE | [CWE-78](https://cwe.mitre.org/data/definitions/78.html) OS 命令注入；[CWE-88](https://cwe.mitre.org/data/definitions/88.html) 参数注入 |
+| OWASP | A03:2025 – Injection |
+| 利用前提 | 能向被扫描仓库提交 PR（或污染内源 Git 平台 API 响应） |
+| 证据 | `AntiServiceImpl.java:591/647/722/773` `Runtime.getRuntime().exec(new String[]{"/bin/sh","-c",cmd},null,null)`；`:825-835` curl 命令拼接 `info.getUser()/getPassword()/getWorkspace()/url`，其中 `url=json.getString("raw_url")`（:577/633/717）；`:578-579` 黑名单仅校验 workspace、target 两个字段；`LinuxCommandInjectCheck.java:13-14` 黑名单未拦截引号、空格、`$()`、反引号闭合等 |
+| 风险 | 外部 PR 数据经 `/bin/sh -c` 执行，黑名单可绕过（引号闭合、`$(...)`、git 参数注入），导致容器内 RCE，进而窃取密钥、横向访问内网。 |
+| 修复建议 | ① 禁止 `/bin/sh -c` 拼接，改用 `ProcessBuilder(String[])` 参数数组（curl 的 URL、`-o`、`-u` 各自独立参数，凭据用 `--netrc-file`）；② 所有进入命令的字段做白名单校验（URL 限定官方域名 + 字符白名单）；③ 迁移到 common 仓已有的 `SecureCmdExecutor`（白名单模板 + 参数化 + 超时）。 |
+| 修复成本 | 高 |
 
 #### FIND-02：PR 差异文件复制存在路径穿越（任意文件写）
 
-| 属性     | 内容                                                                                                                                                                                                                                                                                                     |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| STRIDE   | T / E                                                                                                                                                                                                                                                                                                    |
-| CWE      | [CWE-22](https://cwe.mitre.org/data/definitions/22.html) 路径穿越                                                                                                                                                                                                                                        |
-| OWASP    | A01:2025 – Broken Access Control                                                                                                                                                                                                                                                                         |
-| 利用前提 | 能提交 PR（filename 可控）                                                                                                                                                                                                                                                                               |
-| 证据     | `ActionPRServiceImpl.java:665` `fileName = fileObj.getString("filename")`；`:684` `new File(repoDir, fileName)`；`:688` `new File(targetDir, fileName)`；`:694` `Files.copy(sourceFile, targetFile, REPLACE_EXISTING)`；全程无 normalize/边界校验；`:336` `normalizeBranch` 仅替换 `/`、`\`，未处理 `..` |
-| 风险     | `../../` 形式文件名可跳出工作目录，将攻击者控制的仓库文件写到服务端任意可写路径（覆盖 yaml 配置、结果 json、定时脚本），结合 FIND-01 实现 RCE 持久化。                                                                                                                                                   |
-| 修复建议 | 对 fileName 做 `Path.normalize()` 并校验 `targetPath.startsWith(targetDir)`（严格到段边界）；拒绝含 `..`、绝对路径、控制字符的文件名；落盘文件名服务端重生成（UUID）。                                                                                                                                   |
-| 修复成本 | 中                                                                                                                                                                                                                                                                                                       |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | T / E |
+| CWE | [CWE-22](https://cwe.mitre.org/data/definitions/22.html) 路径穿越 |
+| OWASP | A01:2025 – Broken Access Control |
+| 利用前提 | 能提交 PR（filename 可控） |
+| 证据 | `ActionPRServiceImpl.java:665` `fileName = fileObj.getString("filename")`；`:684` `new File(repoDir, fileName)`；`:688` `new File(targetDir, fileName)`；`:694` `Files.copy(sourceFile, targetFile, REPLACE_EXISTING)`；全程无 normalize/边界校验；`:336` `normalizeBranch` 仅替换 `/`、`\`，未处理 `..` |
+| 风险 | `../../` 形式文件名可跳出工作目录，将攻击者控制的仓库文件写到服务端任意可写路径（覆盖 yaml 配置、结果 json、定时脚本），结合 FIND-01 实现 RCE 持久化。 |
+| 修复建议 | 对 fileName 做 `Path.normalize()` 并校验 `targetPath.startsWith(targetDir)`（严格到段边界）；拒绝含 `..`、绝对路径、控制字符的文件名；落盘文件名服务端重生成（UUID）。 |
+| 修复成本 | 中 |
 
 ### 高危
 
 #### FIND-03：`ExecCmdUtil` 字符串形式执行命令，数组参数被 join 回字符串
 
-| 属性     | 内容                                                                                                                                                                                                                          |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| STRIDE   | E / I                                                                                                                                                                                                                         |
-| CWE      | [CWE-78](https://cwe.mitre.org/data/definitions/78.html)；[CWE-532](https://cwe.mitre.org/data/definitions/532.html)                                                                                                          |
-| OWASP    | A03:2025；A09:2025                                                                                                                                                                                                            |
-| 证据     | `common/utils/ExecCmdUtil.java:39-41` `Runtime.getRuntime().exec(cmd)`（字符串重载）；`:28-29` `executeCmdArray(String[]){ return executeCmd(String.join(" ", cmdArray)); }`；`:40` `log.info("cmd: {}", cmd)` 记录含凭据命令 |
-| 风险     | 参数数组本可隔离注入，join 成整串后经 StringTokenizer 重新解析，防护失效；完整命令（含 `curl -u user:password`、git token）写入 info 日志。                                                                                   |
-| 修复建议 | 删除字符串重载，统一 `ProcessBuilder(String[])`；日志对凭据脱敏（user:password、token URL 模式打码）。                                                                                                                        |
-| 修复成本 | 中                                                                                                                                                                                                                            |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | E / I |
+| CWE | [CWE-78](https://cwe.mitre.org/data/definitions/78.html)；[CWE-532](https://cwe.mitre.org/data/definitions/532.html) |
+| OWASP | A03:2025；A09:2025 |
+| 证据 | `common/utils/ExecCmdUtil.java:39-41` `Runtime.getRuntime().exec(cmd)`（字符串重载）；`:28-29` `executeCmdArray(String[]){ return executeCmd(String.join(" ", cmdArray)); }`；`:40` `log.info("cmd: {}", cmd)` 记录含凭据命令 |
+| 风险 | 参数数组本可隔离注入，join 成整串后经 StringTokenizer 重新解析，防护失效；完整命令（含 `curl -u user:password`、git token）写入 info 日志。 |
+| 修复建议 | 删除字符串重载，统一 `ProcessBuilder(String[])`；日志对凭据脱敏（user:password、token URL 模式打码）。 |
+| 修复成本 | 中 |
 
 #### FIND-04：git clone 命令拼接，凭据置于命令行/URL
 
-| 属性     | 内容                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| STRIDE   | I / E                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| CWE      | [CWE-78](https://cwe.mitre.org/data/definitions/78.html)；[CWE-522](https://cwe.mitre.org/data/definitions/522.html)；[CWE-214](https://cwe.mitre.org/data/definitions/214.html)                                                                                                                                                                                                                                                           |
-| OWASP    | A03:2025；A07:2025                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| 证据     | `common/util/JGitUtil.java:143-153` `" git clone https://" + user + ":" + token + "@" + ... + " -b " + branch + " " + workspace` 经 `CmdInjection.runCmd`（`CmdInjection.java:81` `Runtime.exec(cmd, envArray)`）执行；`ActionPRServiceImpl.java:590-594` 同类拼接；`:730` 异常 `"command failed: " + command`（含 token URL）；`:265-266,644-645` token 放 URL query `?access_token=`；`AntiServiceImpl.java:825` `curl -u user:password` |
-| 风险     | ① token 出现在进程命令行（`/proc/<pid>/cmdline`、ps 可见）；② 命令失败时含 token 的完整命令进入应用日志；③ URL query token 被代理/网关日志记录；④ branch/workspace 可注入。                                                                                                                                                                                                                                                                |
-| 修复建议 | 统一使用 JGit API + `UsernamePasswordCredentialsProvider`（仓内已有安全实现 `pullGiteeVersion`）；凭据走 git credential helper 或 `http.extraHeader`；异常日志脱敏；API 调用用 Authorization 头替代 query token。                                                                                                                                                                                                                          |
-| 修复成本 | 中                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | I / E |
+| CWE | [CWE-78](https://cwe.mitre.org/data/definitions/78.html)；[CWE-522](https://cwe.mitre.org/data/definitions/522.html)；[CWE-214](https://cwe.mitre.org/data/definitions/214.html) |
+| OWASP | A03:2025；A07:2025 |
+| 证据 | `common/util/JGitUtil.java:143-153` `" git clone https://" + user + ":" + token + "@" + ... + " -b " + branch + " " + workspace` 经 `CmdInjection.runCmd`（`CmdInjection.java:81` `Runtime.exec(cmd, envArray)`）执行；`ActionPRServiceImpl.java:590-594` 同类拼接；`:730` 异常 `"command failed: " + command`（含 token URL）；`:265-266,644-645` token 放 URL query `?access_token=`；`AntiServiceImpl.java:825` `curl -u user:password` |
+| 风险 | ① token 出现在进程命令行（`/proc/<pid>/cmdline`、ps 可见）；② 命令失败时含 token 的完整命令进入应用日志；③ URL query token 被代理/网关日志记录；④ branch/workspace 可注入。 |
+| 修复建议 | 统一使用 JGit API + `UsernamePasswordCredentialsProvider`（仓内已有安全实现 `pullGiteeVersion`）；凭据走 git credential helper 或 `http.extraHeader`；异常日志脱敏；API 调用用 Authorization 头替代 query token。 |
+| 修复成本 | 中 |
 
 #### FIND-05：业务接口无服务内鉴权，userId 取自请求参数（越权）
 
-| 属性     | 内容                                                                                                                                                                                                                                                                                                                  |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| STRIDE   | E / S                                                                                                                                                                                                                                                                                                                 |
-| CWE      | [CWE-306](https://cwe.mitre.org/data/definitions/306.html) 缺失认证；[CWE-639](https://cwe.mitre.org/data/definitions/639.html) 用户可控键越权                                                                                                                                                                        |
-| OWASP    | A01:2025 – Broken Access Control                                                                                                                                                                                                                                                                                      |
-| 证据     | 全仓无 `SecurityFilterChain`/`HandlerInterceptor`/`@PreAuthorize`；`PoisonPRController.java:90`、`PoisonVersionOpenController.java:58`、`ActionPRController.java:71`、`CheckRuleController.java:97,155` 等敏感接口无鉴权注解；`CheckRuleController.java:99` 等用 `@RequestParam("userId") String userId` 直接取自请求 |
-| 风险     | 鉴权完全依赖外层网关；服务被直连（容器网络/SSRF 反弹/网关路由误配）时，任何人可发起扫描、篡改/删除 YARA 规则集、伪造 userId 越权操作。                                                                                                                                                                                |
-| 修复建议 | 服务内引入统一鉴权（JWT 过滤器/内部令牌），userId 从认证上下文获取而非请求参数；内部任务接口用签名 + 共享密钥并 fail-close；默认拒绝。                                                                                                                                                                                |
-| 修复成本 | 高                                                                                                                                                                                                                                                                                                                    |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | E / S |
+| CWE | [CWE-306](https://cwe.mitre.org/data/definitions/306.html) 缺失认证；[CWE-639](https://cwe.mitre.org/data/definitions/639.html) 用户可控键越权 |
+| OWASP | A01:2025 – Broken Access Control |
+| 证据 | 全仓无 `SecurityFilterChain`/`HandlerInterceptor`/`@PreAuthorize`；`PoisonPRController.java:90`、`PoisonVersionOpenController.java:58`、`ActionPRController.java:71`、`CheckRuleController.java:97,155` 等敏感接口无鉴权注解；`CheckRuleController.java:99` 等用 `@RequestParam("userId") String userId` 直接取自请求 |
+| 风险 | 鉴权完全依赖外层网关；服务被直连（容器网络/SSRF 反弹/网关路由误配）时，任何人可发起扫描、篡改/删除 YARA 规则集、伪造 userId 越权操作。 |
+| 修复建议 | 服务内引入统一鉴权（JWT 过滤器/内部令牌），userId 从认证上下文获取而非请求参数；内部任务接口用签名 + 共享密钥并 fail-close；默认拒绝。 |
+| 修复成本 | 高 |
 
 #### FIND-06：Actuator `shutdown` 端点暴露并启用
 
-| 属性     | 内容                                                                                                                                               |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| STRIDE   | D                                                                                                                                                  |
-| CWE      | [CWE-732](https://cwe.mitre.org/data/definitions/732.html) 不安全权限分配；[CWE-400](https://cwe.mitre.org/data/definitions/400.html)              |
-| OWASP    | A05:2025 – Security Misconfiguration                                                                                                               |
-| 证据     | `src/main/resources/application.yaml:28-35` `management.endpoints.web.exposure.include: shutdown,health,info` 且 `endpoint.shutdown.enabled: true` |
-| 风险     | `POST /actuator/shutdown` 可远程关闭服务（无服务内鉴权时即匿名 DoS）。                                                                             |
-| 修复建议 | 移除 shutdown 暴露或 `enabled: false`；actuator 独立管理端口、绑定内网、加鉴权；`include` 最小化为 health,info。                                   |
-| 修复成本 | 低                                                                                                                                                 |
+| 属性 | 内容 |
+|---|---|
+| STRIDE | D |
+| CWE | [CWE-732](https://cwe.mitre.org/data/definitions/732.html) 不安全权限分配；[CWE-400](https://cwe.mitre.org/data/definitions/400.html) |
+| OWASP | A05:2025 – Security Misconfiguration |
+| 证据 | `src/main/resources/application.yaml:28-35` `management.endpoints.web.exposure.include: shutdown,health,info` 且 `endpoint.shutdown.enabled: true` |
+| 风险 | `POST /actuator/shutdown` 可远程关闭服务（无服务内鉴权时即匿名 DoS）。 |
+| 修复建议 | 移除 shutdown 暴露或 `enabled: false`；actuator 独立管理端口、绑定内网、加鉴权；`include` 最小化为 health,info。 |
+| 修复成本 | 低 |
 
 ### 中危
 
@@ -237,26 +237,26 @@
 
 ### Quick Wins（低成本快速修复）
 
-| 编号    | 事项                                     | 成本 |
-| ------- | ---------------------------------------- | ---- |
-| FIND-06 | 移除/关闭 actuator shutdown 暴露         | 低   |
-| FIND-07 | 修复 HttpUtil 签名 secretKey 丢弃 bug    | 低   |
-| FIND-09 | 路径校验改 canonical + 段边界 startsWith | 低   |
-| FIND-11 | beta 关闭 SQL stdout 日志                | 低   |
-| FIND-12 | fastjson safeMode 参数改为 fastjson2     | 低   |
-| FIND-15 | 生产关闭 Swagger                         | 低   |
+| 编号 | 事项 | 成本 |
+|---|---|---|
+| FIND-06 | 移除/关闭 actuator shutdown 暴露 | 低 |
+| FIND-07 | 修复 HttpUtil 签名 secretKey 丢弃 bug | 低 |
+| FIND-09 | 路径校验改 canonical + 段边界 startsWith | 低 |
+| FIND-11 | beta 关闭 SQL stdout 日志 | 低 |
+| FIND-12 | fastjson safeMode 参数改为 fastjson2 | 低 |
+| FIND-15 | 生产关闭 Swagger | 低 |
 
 ### 需专项处理
 
-| 编号       | 事项                                                                     | 成本 |
-| ---------- | ------------------------------------------------------------------------ | ---- |
-| FIND-01    | 命令执行全面迁移 ProcessBuilder 参数数组 / SecureCmdExecutor，字段白名单 | 高   |
-| FIND-02    | 差异文件复制路径穿越修复（normalize + 边界校验 + UUID 落盘）             | 中   |
-| FIND-03/04 | ExecCmdUtil/JGitUtil 命令执行与凭据处理重构                              | 中   |
-| FIND-05    | 服务内统一鉴权、userId 服务端化                                          | 高   |
-| FIND-08    | SSRF 域名白名单 + 内网 IP 校验                                           | 中   |
-| FIND-13    | 密钥从镜像剥离改 KMS/Secret 挂载并轮换                                   | 中   |
-| FIND-14    | 构建制品完整性校验                                                       | 低   |
+| 编号 | 事项 | 成本 |
+|---|---|---|
+| FIND-01 | 命令执行全面迁移 ProcessBuilder 参数数组 / SecureCmdExecutor，字段白名单 | 高 |
+| FIND-02 | 差异文件复制路径穿越修复（normalize + 边界校验 + UUID 落盘） | 中 |
+| FIND-03/04 | ExecCmdUtil/JGitUtil 命令执行与凭据处理重构 | 中 |
+| FIND-05 | 服务内统一鉴权、userId 服务端化 | 高 |
+| FIND-08 | SSRF 域名白名单 + 内网 IP 校验 | 中 |
+| FIND-13 | 密钥从镜像剥离改 KMS/Secret 挂载并轮换 | 中 |
+| FIND-14 | 构建制品完整性校验 | 低 |
 
 ---
 

@@ -6,12 +6,12 @@
 
 **列字段映射**（`tableHeader.id`）：
 
-| 列       | id           | 筛选来源                           |
-| -------- | ------------ | ---------------------------------- |
-| 平台     | `platform`   | 静态 `gitcode`、`gitee`            |
-| 供应商   | `vendor`     | `tableDatas` 去重                  |
-| 组件名称 | `shieldRole` | `tableDatas` 去重                  |
-| 创建时间 | `created`    | 仅排序，格式 `yyyy-MM-dd HH:mm:ss` |
+| 列 | id | 筛选来源 |
+|----|-----|----------|
+| 平台 | `platform` | 静态 `gitcode`、`gitee` |
+| 供应商 | `vendor` | `tableDatas` 去重 |
+| 组件名称 | `shieldRole` | `tableDatas` 去重 |
+| 创建时间 | `created` | 仅排序，格式 `yyyy-MM-dd HH:mm:ss` |
 
 ## Goals / Non-Goals
 
@@ -100,14 +100,12 @@ tableDatas (API 全量)
 **理由**：筛选/排序时父组件将 `pageNum` 设为 1 后，分页器 UI 必须同步；子组件本地页码会导致表格数据与分页器显示不一致。
 
 **实现要点**：
-
 - `pageChange(pages)` 仅在收到 `pages` 参数时更新 `pageNum`/`pageSize`；无参数时保留当前页码（供筛选设 1 后刷新数据）
 - `fetchFrontData()` 在切片前校验：若 `pageNum` 大于筛选后最大页，回退到最后一页
 
 ### 10. 筛选图标高亮（不修改 filterDropdown）
 
 **选择**：
-
 - 父组件传入 `tableFilters`；`tableList` 用 `is-filter-active` 类 + `:deep()` CSS 高亮图标
 - 移除 `el-table` 上 `:key="tableShowDatas?.length"`，避免筛选后 remount 清空 `filterDropdown` 内部选中态
 
@@ -123,13 +121,13 @@ tableDatas (API 全量)
 
 ## Risks / Trade-offs
 
-| 风险                                | 缓解                                                   |
-| ----------------------------------- | ------------------------------------------------------ |
+| 风险 | 缓解 |
+|------|------|
 | 全量数据量大时前端 filter/sort 性能 | 与现状一致（本就全量返回）；数据量极大时再考虑后端分页 |
-| 移除顶部搜索后用户找不到供应商筛选  | 列头「供应商」筛选提供等价多选能力；静态平台选项更直观 |
-| 动态 options 在筛选后变少           | options 始终从全量 `tableDatas` 生成，非当前页         |
-| `tree-props` 遗留配置               | 不改动，避免无关 diff                                  |
-| 筛选后当前页超出范围                | `fetchFrontData` 自动将 `pageNum` 校正为最大有效页     |
+| 移除顶部搜索后用户找不到供应商筛选 | 列头「供应商」筛选提供等价多选能力；静态平台选项更直观 |
+| 动态 options 在筛选后变少 | options 始终从全量 `tableDatas` 生成，非当前页 |
+| `tree-props` 遗留配置 | 不改动，避免无关 diff |
+| 筛选后当前页超出范围 | `fetchFrontData` 自动将 `pageNum` 校正为最大有效页 |
 
 ## Migration Plan
 

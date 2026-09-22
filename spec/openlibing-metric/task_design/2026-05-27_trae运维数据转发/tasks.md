@@ -7,7 +7,6 @@
 **Commit:** `024fcf1bfc10109a658848f73779217dbb348cde`
 
 **文件：**
-
 - 新增：`app/service/metric/req/ApiForwardRequest.java`
 - 新增：`domain/repository/entity/ApiConfig.java`
 - 新增：`domain/repository/repository/ApiConfigMapper.java`
@@ -28,7 +27,6 @@
 **Commit:** `a87fab6a8c7d4c39832a342b47c6d3e089879152`
 
 **文件：**
-
 - 修改：`infrastructure/aop/DataSource.java`
 - 修改：`infrastructure/aop/DataSourceAspect.java`
 
@@ -41,7 +39,6 @@
 **Commit:** `98b96a80a81aaa3cbd87ee65a95f4370209398c0`
 
 **文件：**
-
 - 修改：`api/controller/AiDashboardController.java`
 - 修改：`app/service/metric/AiDashboardService.java`
 - 修改：`app/service/metric/req/ApiForwardRequest.java`
@@ -57,7 +54,6 @@
 **Commit:** `c46f46c013418cbf29bb26f643ed7d2fd9559296`
 
 **文件：**
-
 - 修改：`infrastructure/entity/DynamicDataSource.java`
 - 修改：`infrastructure/entity/DynamicDataSourceContextHolder.java`
 - 修改：`infrastructure/enums/DataSourceEnum.java`
@@ -69,10 +65,9 @@
 ### Task 5: 分支同步
 
 **Commits:**
-
 - `844f73a1f1a937439c746deff5dbe76bc9d49b48` — Merge branch 'dev_ai_bashboard' into develop
 - `ac661da1775b81951e751938a10f250dbbfa4c2e` — Merge branch 'refs/heads/develop' into dev_ai_bashboard
 - `cdc7cb9cee2b7e35dd36f10a0d4b6909a7cd6685` — Merge branch 'release_20260528_iter2' into dev_ai_bashboard
 
 - [x] **Step 1: 分支同步合并**
-      多次分支同步，无新增功能变更
+  多次分支同步，无新增功能变更

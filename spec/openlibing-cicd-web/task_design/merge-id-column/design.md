@@ -4,9 +4,9 @@
 
 ### 变更文件
 
-| 文件                                            | 变更类型 | 说明                                       |
-| ----------------------------------------------- | -------- | ------------------------------------------ |
-| `src/views/pipeline/PipelineDetail/History.vue` | 修改     | 新增 Merge ID 列定义、筛选、跳转逻辑和样式 |
+| 文件 | 变更类型 | 说明 |
+|------|---------|------|
+| `src/views/pipeline/PipelineDetail/History.vue` | 修改 | 新增 Merge ID 列定义、筛选、跳转逻辑和样式 |
 
 仅涉及单文件前端变更，无新增文件、无接口变更、无数据模型变更。
 
@@ -56,7 +56,7 @@ const goToMergeRequest = (row) => {
   const gitUrl = row?.build_params?.git_url;
   const mergeId = row?.build_params?.merge_id;
   if (!gitUrl || !mergeId) return;
-  const baseUrl = gitUrl.replace(/\.git$/, "");
+  const baseUrl = gitUrl.replace(/\.git$/, '');
   goToNotice(`${baseUrl}/pull/${mergeId}`);
 };
 ```

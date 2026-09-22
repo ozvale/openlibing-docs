@@ -5,7 +5,6 @@
 当单个测试用例或步骤的输出内容过长时,系统会强制进行拆分处理,生成多个HTML文件(如 `TC_xxx_1.html`, `TC_xxx_2.html` 等)。当前在构建测试结果日志URL时,`get_case_log_urls` 函数只取第一个HTML文件,忽略了其他拆分文件,导致部分测试日志内容无法正常显示。
 
 **问题根源**:
-
 - [utils.py:1371](file:///home/tzing/openlibing/openlibing-tep-executor/tepexecor_frame/cte/utils.py#L1371) 在处理HTML文件时,只取第一个文件:
   ```python
   elif file_name.lower().endswith(('.html', '.htm')):
@@ -21,13 +20,11 @@
 修复 `get_case_log_urls` 函数,确保拆分的多个HTML文件能够正确记录并显示。
 
 **做什么**:
-
 - 修改 `utils.py` 的 `get_case_log_urls` 函数,支持处理多个HTML文件
 - 将多个HTML文件的URL正确记录到测试结果中
 - 确保用户能够访问所有拆分的HTML日志文件
 
 **不做什么**:
-
 - 不修改测试执行框架的HTML拆分逻辑
 - 不改变HTML文件的命名和存储策略
 - 不影响其他模块的结果处理流程
@@ -43,12 +40,10 @@
 ## 影响范围
 
 **受影响的模块**:
-
 - `tepexecor_frame/cte/utils.py` - 日志URL生成逻辑
 - `tepexecor_frame/executor.py` - 测试结果数据结构(可能需要调整)
 
 **受影响的文件**:
-
 - utils.py 的 `get_case_log_urls` 函数(约 30 行修改)
 - 可能需要调整 `resultDownloadUrl` 字段的数据结构(从单URL变为URL列表或合并URL)
 

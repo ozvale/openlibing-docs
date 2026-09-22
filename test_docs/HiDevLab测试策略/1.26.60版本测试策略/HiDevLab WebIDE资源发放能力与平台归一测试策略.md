@@ -1,8 +1,10 @@
-# [HiDevLab WebIDE资源发放能力与平台归一] 测试策略
+#  [HiDevLab WebIDE资源发放能力与平台归一] 测试策略
 
 ## 1. 基本信息
 
-- **需求链接**: 1.https://gitcode.com/openlibing/hidevlab-transport-service/issues/49 2.https://gitcode.com/openlibing/hidevlab-transport-service/issues/45
+- **需求链接**: 
+1.https://gitcode.com/openlibing/hidevlab-transport-service/issues/49
+2.https://gitcode.com/openlibing/hidevlab-transport-service/issues/45
 - **需求名称**: HiDevLab WebIDE资源发放能力与平台归一
 - **核心目标**:
   验证功能正确性，以及架构设计中定义的安全与隐私、可靠性与韧性、可服务性与可观测性和性能与伸缩性等非功能专项任务的闭环验收。
@@ -35,5 +37,7 @@
 
 **1. HiDevLab WebIDE资源发放能力与平台归一**:HiDevLab在线开发蓝区调度切换到资源管理平台进行调度
 
-- **对应task(issueID)链接:** : 1.https://gitcode.com/openlibing/hidevlab-transport-service/issues/49 2.https://gitcode.com/openlibing/hidevlab-transport-service/issues/45
+- **对应task(issueID)链接:** :
+1.https://gitcode.com/openlibing/hidevlab-transport-service/issues/49
+2.https://gitcode.com/openlibing/hidevlab-transport-service/issues/45
 - **预期结果**: HiDevLab在线开发原有的蓝区功能点保持，且支持多级多卡的调度，容器重启，容器网络打通

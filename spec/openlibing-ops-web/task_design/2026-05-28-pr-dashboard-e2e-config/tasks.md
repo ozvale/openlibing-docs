@@ -4,12 +4,12 @@
 
 ### 涉及文件
 
-| 文件                                                             | 操作 | 说明                                                                |
-| ---------------------------------------------------------------- | ---- | ------------------------------------------------------------------- |
-| `src/api/dashboard/open-source-project.ts`                       | 修改 | 扩展 `batchConfigBranch` 支持 `targetMinutes`；更新 `RepoItem` 接口 |
-| `src/views/dashboard/open-source-project/scan-branch-config.vue` | 修改 | 弹窗内容改为 2 个页签，新增 E2E 达标时长配置页签                    |
-| `src/views/dashboard/open-source-project/sub-table.vue`          | 修改 | 按钮名称改为"配置"                                                  |
-| `src/views/dashboard/open-source-project/columns/pr-columns.ts`  | 修改 | `prPipelineColumnData` + `prInfoDetailColumn` 新增字段              |
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `src/api/dashboard/open-source-project.ts` | 修改 | 扩展 `batchConfigBranch` 支持 `targetMinutes`；更新 `RepoItem` 接口 |
+| `src/views/dashboard/open-source-project/scan-branch-config.vue` | 修改 | 弹窗内容改为 2 个页签，新增 E2E 达标时长配置页签 |
+| `src/views/dashboard/open-source-project/sub-table.vue` | 修改 | 按钮名称改为"配置" |
+| `src/views/dashboard/open-source-project/columns/pr-columns.ts` | 修改 | `prPipelineColumnData` + `prInfoDetailColumn` 新增字段 |
 
 ### 任务清单
 
@@ -20,7 +20,6 @@
 - [ ] Task 5: **修改 `prInfoDetailColumn`** — 新增 prE2eTime、pipelineStartupTime、mergeLeadTime
 
 ### 验证方式
-
 - 构建通过（`npm run build` 或 IDE 类型检查）
 - 按钮名称改为"配置"
 - 弹窗含 2 个页签

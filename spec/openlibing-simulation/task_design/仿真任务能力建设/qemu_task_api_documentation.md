@@ -21,8 +21,8 @@ QemuTaskController 提供 Qemu 任务管理相关的 API 接口，包括自动�
 
 ### 3.1 创建自动化任务
 
-**HTTP 方法**: POST
-**路径**: `/simulation/qemu/auto/task`
+**HTTP 方法**: POST  
+**路径**: `/simulation/qemu/auto/task`  
 **功能描述**: 创建 Qemu 自动化任务
 
 #### 请求参数
@@ -80,8 +80,8 @@ Content-Type: application/json
 
 ### 3.2 查询自动化任务
 
-**HTTP 方法**: GET
-**路径**: `/simulation/qemu/auto/task`
+**HTTP 方法**: GET  
+**路径**: `/simulation/qemu/auto/task`  
 **功能描述**: 根据任务ID查询任务详情
 
 #### 请求参数
@@ -138,8 +138,8 @@ GET /simulation/qemu/auto/task?id=task-001
 
 ### 3.3 关闭自动化任务
 
-**HTTP 方法**: PUT
-**路径**: `/simulation/qemu/auto/task`
+**HTTP 方法**: PUT  
+**路径**: `/simulation/qemu/auto/task`  
 **功能描述**: 关闭指定自动化任务
 
 #### 请求参数
@@ -184,8 +184,8 @@ Content-Type: application/json
 
 ### 3.4 查询仿真环境
 
-**HTTP 方法**: GET
-**路径**: `/simulation/qemu/auto/task/env`
+**HTTP 方法**: GET  
+**路径**: `/simulation/qemu/auto/task/env`  
 **功能描述**: 查询仿真环境状态
 
 #### 请求参数
@@ -240,8 +240,8 @@ GET /simulation/qemu/auto/task/env?taskId=task-001
 
 ### 3.5 保存运行脚本
 
-**HTTP 方法**: POST
-**路径**: `/simulation/qemu/runScript`
+**HTTP 方法**: POST  
+**路径**: `/simulation/qemu/runScript`  
 **功能描述**: 保存运行脚本信息
 
 #### 请求参数
@@ -295,8 +295,8 @@ Content-Type: application/json
 
 ### 3.6 删除运行脚本
 
-**HTTP 方法**: DELETE
-**路径**: `/simulation/qemu/runScript`
+**HTTP 方法**: DELETE  
+**路径**: `/simulation/qemu/runScript`  
 **功能描述**: 删除指定运行脚本
 
 #### 请求参数
@@ -334,8 +334,8 @@ DELETE /simulation/qemu/runScript?id=script-001
 
 ### 3.7 修改锁时间
 
-**HTTP 方法**: PUT
-**路径**: `/simulation/qemu/uploadLock`
+**HTTP 方法**: PUT  
+**路径**: `/simulation/qemu/uploadLock`  
 **功能描述**: 更新分布式锁过期时间
 
 #### 请求参数
@@ -382,8 +382,8 @@ Content-Type: application/json
 
 ### 3.8 测试接口
 
-**HTTP 方法**: GET
-**路径**: `/simulation/qemu/test`
+**HTTP 方法**: GET  
+**路径**: `/simulation/qemu/test`  
 **功能描述**: 服务健康检查测试
 
 #### 请求参数

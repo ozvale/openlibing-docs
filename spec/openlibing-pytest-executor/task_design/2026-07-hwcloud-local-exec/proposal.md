@@ -12,37 +12,37 @@
 
 ### 3.1 场景标识
 
-| 配置项             | 值           | 描述                                           |
-| ------------------ | ------------ | ---------------------------------------------- |
-| `env_deploy_model` | `Co-located` | 通过流水线参数传入，标识本地执行模式           |
+| 配置项 | 值 | 描述 |
+|--------|-----|------|
+| `env_deploy_model` | `Co-located` | 通过流水线参数传入，标识本地执行模式 |
 | `env_deploy_model` | `Dislocated` | 通过流水线参数传入，标识分布式执行模式（默认） |
-| `env_provider`     | `k8s`        | 硬编码，不再从外部传入                         |
+| `env_provider` | `k8s` | 硬编码，不再从外部传入 |
 
 ### 3.2 调度层行为
 
-| 行为         | 描述                                                                        |
-| ------------ | --------------------------------------------------------------------------- |
-| 跳过环境申请 | `env_deploy_model=Co-located` 时，不再调用 k8s API 申请被测设备             |
-| 设置执行标志 | 将 `exec_in_runner` 标志设置为 `True`                                       |
-| 使用本机 IP  | 设备信息中的 IP 地址替换为本机 IP                                           |
+| 行为 | 描述 |
+|------|------|
+| 跳过环境申请 | `env_deploy_model=Co-located` 时，不再调用 k8s API 申请被测设备 |
+| 设置执行标志 | 将 `exec_in_runner` 标志设置为 `True` |
+| 使用本机 IP | 设备信息中的 IP 地址替换为本机 IP |
 | 单机用例限制 | Co-located 模式仅支持单机用例（单 device），多 device 用例将抛出 ValueError |
 
 ### 3.3 执行层行为
 
-| 行为                      | 描述                                                                    |
-| ------------------------- | ----------------------------------------------------------------------- |
-| 识别 `exec_in_runner`     | `execute()` 方法优先检查 `exec_in_runner` 标志                          |
-| 新增 `_execute_in_runner` | 当 `exec_in_runner=True` 时，使用新方法执行                             |
-| 拷贝用例代码              | 使用 `shutil.copytree` 将用例代码拷贝到 `/home/` 下                     |
-| 本地执行 pytest           | 在 `/home/<test_dir>` 目录下本地执行 pytest                             |
-| 传递 `local_exec`         | 将 `local_exec=True` 标志传递给 testkit 插件的 environment(device 对象) |
+| 行为 | 描述 |
+|------|------|
+| 识别 `exec_in_runner` | `execute()` 方法优先检查 `exec_in_runner` 标志 |
+| 新增 `_execute_in_runner` | 当 `exec_in_runner=True` 时，使用新方法执行 |
+| 拷贝用例代码 | 使用 `shutil.copytree` 将用例代码拷贝到 `/home/` 下 |
+| 本地执行 pytest | 在 `/home/<test_dir>` 目录下本地执行 pytest |
+| 传递 `local_exec` | 将 `local_exec=True` 标志传递给 testkit 插件的 environment(device 对象) |
 
 ### 3.4 testkit 插件行为
 
-| 行为          | 描述                                                 |
-| ------------- | ---------------------------------------------------- |
+| 行为 | 描述 |
+|------|------|
 | 跳过 SSH 登录 | `local_exec=True` 时，device 对象跳过 SSH 注册和登录 |
-| 本地执行命令  | 直接使用 subprocess 本地执行命令                     |
+| 本地执行命令 | 直接使用 subprocess 本地执行命令 |
 
 ## 4. 验收标准
 
@@ -76,19 +76,19 @@ result = device.sendcmd("ls -l")  # 使用 subprocess 本地执行
 
 ### 4.3 向后兼容性验收
 
-| 场景                          | 行为                            |
-| ----------------------------- | ------------------------------- |
+| 场景 | 行为 |
+|------|------|
 | `env_deploy_model=Dislocated` | 原有行为，通过 k8s API 申请环境 |
-| 不传 `env_deploy_model`       | 默认 `Dislocated`，保持原有行为 |
-| `local_exec=False`            | 原有行为，通过 SSH 执行命令     |
+| 不传 `env_deploy_model` | 默认 `Dislocated`，保持原有行为 |
+| `local_exec=False` | 原有行为，通过 SSH 执行命令 |
 
 ## 5. 非功能需求
 
-| 需求类型 | 描述                   |
-| -------- | ---------------------- |
-| 性能     | 不显著增加测试执行耗时 |
-| 兼容性   | 不影响现有测试用例运行 |
-| 可维护性 | 代码符合现有项目规范   |
+| 需求类型 | 描述 |
+|----------|------|
+| 性能 | 不显著增加测试执行耗时 |
+| 兼容性 | 不影响现有测试用例运行 |
+| 可维护性 | 代码符合现有项目规范 |
 
 ## 6. 关联 Issue
 

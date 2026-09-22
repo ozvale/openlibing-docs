@@ -90,14 +90,12 @@ openlibing-tep-executor                       UniAutosPython3
 **决策**：采用 dict 结构，key 为 testcase 的 number 字段，value 为完整的 testcase dict 对象。
 
 **实际实现**：
-
 - 在 `prepare_test_cases` 方法中初始化并构建
 - 通过 `set_testcase_map()` 函数将 testcase_map 序列化为 JSON 字符串存入环境变量
 - 子进程通过 `get_testcase_map()` 函数从环境变量反序列化获取
 - 用例上报时从 testcase_map 中获取基础数据，然后用 test_case 对象刷新相关字段
 
 理由：
-
 - number 是用例唯一标识，便于快速查询和更新
 - dict 结构查询效率 O(1)，适合实时更新场景
 - 通过环境变量传递，支持跨进程访问
@@ -110,13 +108,11 @@ openlibing-tep-executor                       UniAutosPython3
 **决策**：在 `prepare_test_cases` 方法中为每个元素生成 uuid。
 
 **实际实现**：
-
 - 字段名为 `TC_UUID`（而非 `id`）
 - 使用 `str(uuid.uuid4())` 生成唯一标识
 - 在 prepare_test_cases 的循环中与 testcase_map 构建同时完成
 
 理由：
-
 - 职责单一 - 该方法专门用于初始化用例执行所需字段
 - 与现有逻辑一致 - 已初始化 TC_RESULT、TC_BEGIN_TIME 等字段
 - 更好的代码组织 - uuid 生成与其他字段初始化放在一起
@@ -129,14 +125,12 @@ openlibing-tep-executor                       UniAutosPython3
 **设计决策**：采用 **环境变量** 方案，在 uniautos.py 的 `run_together` 方法中传递。
 
 **实际实现**（优化后）：
-
 - **在 executor.py 的 `__init__` 方法中调用 `set_pipeline_info()` 设置环境变量**
 - 主进程设置，子进程自动继承（无需在 uniautos.py 中额外传递）
 - 支持更多参数：hw_project_id、libing_appcode
 - 通过 `get_pipeline_info()` 函数统一获取
 
 理由：
-
 1. **修改范围更小** - 仅需在 executor.py 中添加调用，无需修改 uniautos.py 的环境变量传递逻辑
 2. **更符合进程模型** - 主进程设置环境变量，子进程自动继承，更符合 os.environ 的工作原理
 3. **参数更完整** - 支持 hw_project_id、libing_appcode 等认证参数
@@ -148,24 +142,23 @@ openlibing-tep-executor                       UniAutosPython3
 
 **分析**：UniAutosPython3 有多个 Engine 类：
 
-| Engine 类     | 继承关系   | `_runTest` 方法来源 | 是否需要修改      |
-| ------------- | ---------- | ------------------- | ----------------- |
-| Engine        | 基类       | 自己定义            | ✅ 是             |
-| RatsEngine    | Engine     | 继承父类            | ❌ 否（使用父类） |
-| BBTEngine     | Engine     | 自己定义            | ✅ 是             |
-| BBTRatsEngine | RatsEngine | 继承父链            | ❌ 否（使用父链） |
+| Engine 类 | 继承关系 | `_runTest` 方法来源 | 是否需要修改 |
+|-----------|----------|---------------------|--------------|
+| Engine | 基类 | 自己定义 | ✅ 是 |
+| RatsEngine | Engine | 继承父类 | ❌ 否（使用父类） |
+| BBTEngine | Engine | 自己定义 | ✅ 是 |
+| BBTRatsEngine | RatsEngine | 继承父链 | ❌ 否（使用父链） |
 
 Engine.py 中的执行方法：
 
-| 方法                 | 执行类型           | 是否需要上报                     |
-| -------------------- | ------------------ | -------------------------------- |
-| `_runTest`           | 串行执行 Case      | ✅ 是                            |
-| `_runTestParallel`   | 并发执行 Case      | ❌ 否（内部调用 `_runTest`）     |
-| `_runConfiguration`  | 执行 Configuration | ✅ 是                            |
-| `runTestsInParallel` | 并发执行入口       | ❌ 否（调用 `_runTestParallel`） |
+| 方法 | 执行类型 | 是否需要上报 |
+|------|----------|--------------|
+| `_runTest` | 串行执行 Case | ✅ 是 |
+| `_runTestParallel` | 并发执行 Case | ❌ 否（内部调用 `_runTest`） |
+| `_runConfiguration` | 执行 Configuration | ✅ 是 |
+| `runTestsInParallel` | 并发执行入口 | ❌ 否（调用 `_runTestParallel`） |
 
 **决策**：
-
 1. **Engine.py - Case 执行**：在 `_runTest` 方法中上报（覆盖串行和并发执行）
    - 执行前：上报 `running` 状态
    - 执行后：上报全量状态
@@ -176,7 +169,6 @@ Engine.py 中的执行方法：
    - BBTEngine 有独立的 `_runTest` 方法，需单独添加上报逻辑
 
 **实际实现**：
-
 - Engine.py：添加静态方法 `_report_testcase_status`，直接调用 `report_testcase_status`
 - BBTEngine.py：继承 Engine 的 `_report_testcase_status` 方法，无需重新定义
 - 实现更简洁，复用父类方法
@@ -188,13 +180,11 @@ Engine.py 中的执行方法：
 **决策**：上报失败 **不阻塞** 用例执行，捕获异常后仅记录日志。
 
 **实际实现**：
-
 - libing_api.py 的 `report_testcase_status` 函数内部捕获所有异常
 - UniAutosPython3 使用 `LIBING_API_AVAILABLE` 标志，导入失败时跳过上报
 - 上报失败记录日志：`tep_executor_logger.info(f"Failed to report testcase status: {e}")`
 
 理由：
-
 1. 上报功能为辅助功能，不应影响主流程
 2. 网络问题可能导致上报失败，不应中断测试执行
 
@@ -203,7 +193,6 @@ Engine.py 中的执行方法：
 **决策**：参考 `uniautos.py` 中 `run_parallel` 和 `run_together` 函数的实现，使用 os 环境变量设置。
 
 **实际实现**：
-
 ```python
 # uniautos.py 中，run_parallel 和 run_together 方法
 extra_dirs = [os.path.dirname(self._plugin_base_dir)]  # tepexecor_frame 父目录
@@ -221,7 +210,6 @@ env_path = tag.join(
 **问题**：如何将用例日志上传到 OBS 并集成到上报 JSON？
 
 **决策**：
-
 - 在 executor.py 中调用 `set_obs_log_config()` 设置 OBS 配置
 - 在 `build_report_json()` 函数中，对于非 running 状态：
   - 移动日志文件到 cases_log 目录
@@ -230,7 +218,6 @@ env_path = tag.join(
   - 将日志 URL 加入上报 JSON
 
 **实际实现**：
-
 - 使用 ObsLogConfig 数据类统一管理 OBS 配置参数
 - 通过环境变量传递配置，子进程可直接获取
 - `_upload_case_log_file()` 函数封装上传逻辑
@@ -378,7 +365,6 @@ def _build_obs_url(base_url: str, task_project_id: str) -> str:
 ```
 
 **关键特性**：
-
 - **真实接口调用**：使用 `requests.post()` 调用 libing API
 - **认证支持**：通过 `X-Apig-Appcode` header 进行认证
 - **日志上传**：支持将用例日志上传到 OBS
@@ -419,7 +405,7 @@ except ImportError:
 @staticmethod
 def _report_testcase_status(testCase, status):
     """上报用例状态到 libing
-
+    
     Args:
         testCase: 测试用例对象
         status: 用例状态
@@ -434,18 +420,18 @@ def _report_testcase_status(testCase, status):
 ```python
 def _runTest(self, testCase, tcLogFile):
     # ... 现有代码 ...
-
+    
     testCase.setStartTime(_start.strftime('%Y-%m-%d %H:%M:%S'))
     testCase.setCaseStatus(TEST_STATUS.RUNNING)
-
+    
     # 上报 running 状态到 libing
     if LIBING_API_AVAILABLE:
         self._report_testcase_status(testCase, "running")
-
+    
     # ... 执行用例 ...
-
+    
     testCase.setEndTime(_end.strftime('%Y-%m-%d %H:%M:%S'))
-
+    
     # 上报全量状态到 libing
     if LIBING_API_AVAILABLE:
         self._report_testcase_status(testCase, testCase.caseStatus)
@@ -458,15 +444,15 @@ def _runTest(self, testCase, tcLogFile):
 ```python
 def _runConfiguration(self, configuration, tcLogFile):
     # ... 现有代码 ...
-
+    
     # 上报 running 状态到 libing
     if LIBING_API_AVAILABLE:
         self._report_testcase_status(configuration, "running")
-
+    
     # ... 执行逻辑 ...
-
+    
     configuration.setEndTime(_end.strftime('%Y-%m-%d %H:%M:%S'))
-
+    
     # 上报全量状态到 libing
     if LIBING_API_AVAILABLE:
         self._report_testcase_status(configuration, configuration.caseStatus)
@@ -491,17 +477,16 @@ class BBTEngine(Engine):
 
 libing_api.py 内部的状态映射：
 
-| UniAutos 状态 | libing 状态  |
-| ------------- | ------------ |
-| running       | running      |
-| pass          | passed       |
-| fail          | failed       |
-| investigat    | investigated |
-| error         | error        |
-| block         | blocked      |
+| UniAutos 状态 | libing 状态 |
+|---------------|-------------|
+| running | running |
+| pass | passed |
+| fail | failed |
+| investigat | investigated |
+| error | error |
+| block | blocked |
 
 映射逻辑：
-
 ```python
 status_map = {
     "pass": "passed",
@@ -517,20 +502,20 @@ mapped_status = status_map.get(status.lower(), status)
 
 ### openlibing-tep-executor 仓
 
-| 文件                                | 操作 | 说明                                                                                                                            | 提交    |
-| ----------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `tepexecor_frame/executor.py`       | 修改 | 调用 set_pipeline_info、set_obs_log_config、set_testcase_map，prepare_test_cases 中生成 uuid 和 testcase_map，增加 TC_UUID 字段 | c123aa5 |
-| `tepexecor_frame/uniautos.py`       | 修改 | PYTHONPATH 设置包含 tepexecor_frame 父目录                                                                                      | c123aa5 |
-| `tepexecor_frame/cte/libing_api.py` | 新增 | libing 接口对接工具函数，完整实现（真实接口、日志上传）                                                                         | c123aa5 |
-| `tepexecor_frame/cte/obs_utils.py`  | 修改 | 辅助功能（可能涉及）                                                                                                            | c123aa5 |
-| `tepexecor_frame/cte/utils.py`      | 修改 | 辅助功能（可能涉及）                                                                                                            | c123aa5 |
+| 文件 | 操作 | 说明 | 提交 |
+|------|------|------|------|
+| `tepexecor_frame/executor.py` | 修改 | 调用 set_pipeline_info、set_obs_log_config、set_testcase_map，prepare_test_cases 中生成 uuid 和 testcase_map，增加 TC_UUID 字段 | c123aa5 |
+| `tepexecor_frame/uniautos.py` | 修改 | PYTHONPATH 设置包含 tepexecor_frame 父目录 | c123aa5 |
+| `tepexecor_frame/cte/libing_api.py` | 新增 | libing 接口对接工具函数，完整实现（真实接口、日志上传） | c123aa5 |
+| `tepexecor_frame/cte/obs_utils.py` | 修改 | 辅助功能（可能涉及） | c123aa5 |
+| `tepexecor_frame/cte/utils.py` | 修改 | 辅助功能（可能涉及） | c123aa5 |
 
 ### UniAutosPython3 仓
 
-| 文件           | 操作 | 说明                                                                                                  | 提交    |
-| -------------- | ---- | ----------------------------------------------------------------------------------------------------- | ------- |
-| `Engine.py`    | 修改 | 导入 libing_api，添加 `_report_testcase_status` 静态方法，在 `_runTest` 和 `_runConfiguration` 中调用 | 5ed7e5b |
-| `BBTEngine.py` | 修改 | 导入 libing_api，继承 Engine 的 `_report_testcase_status` 方法，在 `_runTest` 中调用                  | 5ed7e5b |
+| 文件 | 操作 | 说明 | 提交 |
+|------|------|------|------|
+| `Engine.py` | 修改 | 导入 libing_api，添加 `_report_testcase_status` 静态方法，在 `_runTest` 和 `_runConfiguration` 中调用 | 5ed7e5b |
+| `BBTEngine.py` | 修改 | 导入 libing_api，继承 Engine 的 `_report_testcase_status` 方法，在 `_runTest` 中调用 | 5ed7e5b |
 
 ### 不影响
 
@@ -540,14 +525,14 @@ mapped_status = status_map.get(status.lower(), status)
 
 ## 风险 & 缓解
 
-| 风险                                 | 缓解措施                                           | 状态                      |
-| ------------------------------------ | -------------------------------------------------- | ------------------------- |
-| testcase_map 与 testcase_list 不同步 | 在每次修改 testcase_list 时同步更新 testcase_map   | ✅ 已缓解（同一循环构建） |
-| uuid 生成性能开销                    | uuid.uuid4() 性能足够，单次任务用例数量通常 < 1000 | ✅ 已评估（无问题）       |
-| PYTHONPATH 设置影响其他模块          | 仅在必要时设置，不全局修改                         | ✅ 已缓解                 |
-| 网络上报失败                         | 捕获异常，不阻塞用例执行                           | ✅ 已缓解（完整异常处理） |
-| libing_api 模块导入失败              | 使用条件导入，设置可用性标志                       | ✅ 已缓解                 |
-| 环境变量传递失败                     | 主进程设置，子进程自动继承                         | ✅ 已缓解                 |
+| 风险 | 缓解措施 | 状态 |
+|------|---------|------|
+| testcase_map 与 testcase_list 不同步 | 在每次修改 testcase_list 时同步更新 testcase_map | ✅ 已缓解（同一循环构建） |
+| uuid 生成性能开销 | uuid.uuid4() 性能足够，单次任务用例数量通常 < 1000 | ✅ 已评估（无问题） |
+| PYTHONPATH 设置影响其他模块 | 仅在必要时设置，不全局修改 | ✅ 已缓解 |
+| 网络上报失败 | 捕获异常，不阻塞用例执行 | ✅ 已缓解（完整异常处理） |
+| libing_api 模块导入失败 | 使用条件导入，设置可用性标志 | ✅ 已缓解 |
+| 环境变量传递失败 | 主进程设置，子进程自动继承 | ✅ 已缓解 |
 
 ## 测试策略
 

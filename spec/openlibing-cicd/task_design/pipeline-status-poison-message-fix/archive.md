@@ -2,25 +2,25 @@
 
 ## 关联
 
-| 类型            | 链接                                                                        |
-| --------------- | --------------------------------------------------------------------------- |
-| 业务 Issue      | https://gitcode.com/openlibing/openlibing-cicd/issues/169                   |
-| 业务 Issue 标题 | pipeline_status_queue 积压 60 条毒消息不消费                                |
-| 业务 PR         | https://gitcode.com/openlibing/openlibing-cicd/merge_requests/449           |
-| 业务 PR 标题    | fix(cicd): 修复 pipeline_status_queue 毒消息卡死 60 条 + 消息体敏感字段脱敏 |
-| 业务 PR 分支    | fix-pipeline-status-poison-message → release_20260706                       |
-| docs PR         | (本 PR)                                                                     |
-| docs PR 分支    | spec-openlibing-cicd-pipeline-status-poison-message-fix → master            |
+| 类型 | 链接 |
+|---|---|
+| 业务 Issue | https://gitcode.com/openlibing/openlibing-cicd/issues/169 |
+| 业务 Issue 标题 | pipeline_status_queue 积压 60 条毒消息不消费 |
+| 业务 PR | https://gitcode.com/openlibing/openlibing-cicd/merge_requests/449 |
+| 业务 PR 标题 | fix(cicd): 修复 pipeline_status_queue 毒消息卡死 60 条 + 消息体敏感字段脱敏 |
+| 业务 PR 分支 | fix-pipeline-status-poison-message → release_20260706 |
+| docs PR | (本 PR) |
+| docs PR 分支 | spec-openlibing-cicd-pipeline-status-poison-message-fix → master |
 
 ## 交付历程
 
-| commit     | 说明                                                                                                                                |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| commit | 说明 |
+|---|---|
 | `180fc080` | fix(pipeline-status): unblock pipeline_status_queue from ClassCastException poison message（业务代码兜底 + 框架 retry interceptor） |
-| `d9e41aea` | fix(pipeline-status): log fallback path when parsing PR labels response（用户反馈加 WARN 日志）                                     |
-| `54bb6f47` | fix(security): mask sensitive fields (accessToken/token/etc) in pipeline status update logs（用户反馈加日志脱敏）                   |
-| `0ba7a612` | 修改代码规范问题（用户自查修复 RabbitConnectionFactoryConfig.java）                                                                 |
-| `98d2735c` | fix(security): reorder class declaration to comply with G.FMT.04（用户反馈 G.FMT.04 违规，方法移位）                                |
+| `d9e41aea` | fix(pipeline-status): log fallback path when parsing PR labels response（用户反馈加 WARN 日志） |
+| `54bb6f47` | fix(security): mask sensitive fields (accessToken/token/etc) in pipeline status update logs（用户反馈加日志脱敏） |
+| `0ba7a612` | 修改代码规范问题（用户自查修复 RabbitConnectionFactoryConfig.java） |
+| `98d2735c` | fix(security): reorder class declaration to comply with G.FMT.04（用户反馈 G.FMT.04 违规，方法移位） |
 
 ## 用户自测反馈
 
@@ -30,26 +30,26 @@
 
 ## 最终验证
 
-| 项            | 结果                                     |
-| ------------- | ---------------------------------------- |
-| 业务代码修改  | ✅ 3 个 commit 已 push 到 fork           |
-| 单元测试      | ✅ 206/206 通过                          |
-| 业务 PR       | ✅ PR #449 已创建并打 `ai-assisted` 标签 |
-| 业务 PR CI    | ✅ `ci_state_passed: true`               |
-| 业务 PR 合入  | ⏳ 待用户/评审合入                       |
-| 用户 dev 自测 | ✅ 通过                                  |
-| docs PR       | ⏳ 本次提交（target=master）             |
+| 项 | 结果 |
+|---|---|
+| 业务代码修改 | ✅ 3 个 commit 已 push 到 fork |
+| 单元测试 | ✅ 206/206 通过 |
+| 业务 PR | ✅ PR #449 已创建并打 `ai-assisted` 标签 |
+| 业务 PR CI | ✅ `ci_state_passed: true` |
+| 业务 PR 合入 | ⏳ 待用户/评审合入 |
+| 用户 dev 自测 | ✅ 通过 |
+| docs PR | ⏳ 本次提交（target=master） |
 
 ## 设计偏差与取舍
 
-| 取舍                                                                        | 原因                                                      |
-| --------------------------------------------------------------------------- | --------------------------------------------------------- |
-| 业务代码兜底 vs 修 GitCode API 客户端 schema                                | GitCode API 行为是上游约束，业务侧兜底最稳                |
-| `setDefaultRequeueRejected(false)` 必须配套 `RejectAndDontRequeueRecoverer` | 否则瞬时异常直接入 DLQ，丢失重试机会                      |
-| retry 次数定 3 + 退避 1s/2s/5s                                              | 业务可容忍 ~8s 延迟；超过 8s 视为毒消息                   |
-| 脱敏用正则而非 JSON 解析                                                    | 热路径避免 Gson parse 开销；正则覆盖 7 个常见敏感字段     |
-| 仅修 `pipelineStatusListenerContainerFactory`                               | 其他 7 个 listener catch 后不重抛，行为不同，不在本次范围 |
-| `bisectQueue` DLX 死循环 bug 不在本次范围                                   | 涉及独立故障路径，单独工单跟进                            |
+| 取舍 | 原因 |
+|---|---|
+| 业务代码兜底 vs 修 GitCode API 客户端 schema | GitCode API 行为是上游约束，业务侧兜底最稳 |
+| `setDefaultRequeueRejected(false)` 必须配套 `RejectAndDontRequeueRecoverer` | 否则瞬时异常直接入 DLQ，丢失重试机会 |
+| retry 次数定 3 + 退避 1s/2s/5s | 业务可容忍 ~8s 延迟；超过 8s 视为毒消息 |
+| 脱敏用正则而非 JSON 解析 | 热路径避免 Gson parse 开销；正则覆盖 7 个常见敏感字段 |
+| 仅修 `pipelineStatusListenerContainerFactory` | 其他 7 个 listener catch 后不重抛，行为不同，不在本次范围 |
+| `bisectQueue` DLX 死循环 bug 不在本次范围 | 涉及独立故障路径，单独工单跟进 |
 
 ## 可复用经验
 

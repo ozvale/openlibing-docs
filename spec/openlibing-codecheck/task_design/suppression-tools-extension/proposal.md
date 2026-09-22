@@ -52,22 +52,22 @@ openlibing-codecheck 的 `SuppressionStrategy` 已支持 14 个开源代码检�
 
 ### 业务仓 `openlibing-codecheck`
 
-| 文件                                                    | 操作 | 说明                                                                                                                                                                                                                                                             |
-| ------------------------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `common/enums/SuppressionStrategy.java`                 | 修改 | 新增 10 个工具枚举；`SuppressionPattern` 新增 `skipValidation` 字段；`MatchResult` record 新增 `skipValidation`；`identifyToolAndType` 改为 `identifyAllToolsAndTypes` 返回 `List<MatchResult>`；阶段三：checkstyle/PMD/SpotBugs/rustfmt/clippy 5 个工具正则增强 |
-| `common/lexer/LexRules.java`                            | 新增 | 阶段一：按文件扩展名分派词法规则；阶段三：`.md`/`.markdown` 改用 `markup` 规则                                                                                                                                                                                   |
-| `common/lexer/SuppressionLexer.java`                    | 新增 | 阶段一：状态机词法分析器，跨行状态维护，防误报                                                                                                                                                                                                                   |
-| `business/service/impl/SuppressionScanServiceImpl.java` | 修改 | `scanAddedLines` 支持 `skipValidation` 和多工具结果；移除全部块级处理逻辑；引入 lexer 防误报                                                                                                                                                                     |
-| `src/test/java/.../SuppressionStrategyTest.java`        | 修改 | 适配枚举数 14→24；阶段三新增 5 个工具正则测试                                                                                                                                                                                                                    |
-| `src/test/java/.../SuppressionLexerTest.java`           | 新增 | 阶段一/三：词法分析器测试（17 个）                                                                                                                                                                                                                               |
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `common/enums/SuppressionStrategy.java` | 修改 | 新增 10 个工具枚举；`SuppressionPattern` 新增 `skipValidation` 字段；`MatchResult` record 新增 `skipValidation`；`identifyToolAndType` 改为 `identifyAllToolsAndTypes` 返回 `List<MatchResult>`；阶段三：checkstyle/PMD/SpotBugs/rustfmt/clippy 5 个工具正则增强 |
+| `common/lexer/LexRules.java` | 新增 | 阶段一：按文件扩展名分派词法规则；阶段三：`.md`/`.markdown` 改用 `markup` 规则 |
+| `common/lexer/SuppressionLexer.java` | 新增 | 阶段一：状态机词法分析器，跨行状态维护，防误报 |
+| `business/service/impl/SuppressionScanServiceImpl.java` | 修改 | `scanAddedLines` 支持 `skipValidation` 和多工具结果；移除全部块级处理逻辑；引入 lexer 防误报 |
+| `src/test/java/.../SuppressionStrategyTest.java` | 修改 | 适配枚举数 14→24；阶段三新增 5 个工具正则测试 |
+| `src/test/java/.../SuppressionLexerTest.java` | 新增 | 阶段一/三：词法分析器测试（17 个） |
 
 ### docs 仓 `openlibing-docs`
 
-| 文件                                                                            | 操作 | 说明         |
-| ------------------------------------------------------------------------------- | ---- | ------------ |
-| `spec/openlibing-codecheck/task_design/suppression-tools-extension/proposal.md` | 新增 | 本文件       |
-| `spec/openlibing-codecheck/task_design/suppression-tools-extension/design.md`   | 新增 | 技术设计     |
-| `spec/openlibing-codecheck/task_design/suppression-tools-extension/tasks.md`    | 新增 | 实现任务清单 |
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `spec/openlibing-codecheck/task_design/suppression-tools-extension/proposal.md` | 新增 | 本文件 |
+| `spec/openlibing-codecheck/task_design/suppression-tools-extension/design.md` | 新增 | 技术设计 |
+| `spec/openlibing-codecheck/task_design/suppression-tools-extension/tasks.md` | 新增 | 实现任务清单 |
 
 ## 关联 Issue
 

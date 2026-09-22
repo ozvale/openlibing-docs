@@ -21,10 +21,10 @@ sec-option-scan 插件在 GitCode 流水线中扫描构建产物（ELF 文件）
 
 - **双模式认证，平滑迁移**：为保证存量用户（workflow 尚未改造）不受影响，插件按 workflow 配置自动选择认证方式与上报接口（二者一一对应，不混用）：
 
-| 模式                       | 触发条件                                     | 上报接口                                                        | 认证方式                                                                        |
-| -------------------------- | -------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| OIDC 联邦认证（新）        | workflow 声明 `permissions: id-token: write` | `/action-api/build-artifact/sec-option/report`                  | OIDC ID Token → STS 临时凭证 → V11 签名（SDK），零凭证                          |
-| AK/SK 签名（旧，存量兼容） | 未声明 `permissions: id-token: write`        | `/openlibing-cicd/build-artifact/sec-option/report`（保持不变） | `apig-app-key` / `apig-app-secret` SDK-HMAC-SHA256 签名（行为与升级前完全一致） |
+| 模式 | 触发条件 | 上报接口 | 认证方式 |
+| --- | --- | --- | --- |
+| OIDC 联邦认证（新） | workflow 声明 `permissions: id-token: write` | `/action-api/build-artifact/sec-option/report` | OIDC ID Token → STS 临时凭证 → V11 签名（SDK），零凭证 |
+| AK/SK 签名（旧，存量兼容） | 未声明 `permissions: id-token: write` | `/openlibing-cicd/build-artifact/sec-option/report`（保持不变） | `apig-app-key` / `apig-app-secret` SDK-HMAC-SHA256 签名（行为与升级前完全一致） |
 
 - 已适配的 workflow 仅需声明 `permissions: id-token: write`，由 runner 注入 OIDC 环境变量，插件免密接入；
 - 新接口（`/action-api/...`）在网关侧安全认证方式为 IAM 认证，IAM 侧配置 OIDC 身份提供商与信任委托；旧接口（`/openlibing-cicd/...`）保持 App 认证不变；
@@ -53,12 +53,12 @@ APIG（IAM 认证模式）校验签名与安全令牌 → 转发后端 openlibin
 
 改造过程分四个环节落地，环环相扣，任一环节缺失均会失败：
 
-| 环节              | 责任侧                       | 关键动作                                                                                                        | 缺失时的典型报错                                                                                                     |
-| ----------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 1. 客户端认证切换 | 插件仓                       | 引入 SDK，`CicdUploader` 按 `useOidc` 分流：OIDC 走 `callApig` + 新接口，AK/SK 走 `ApigSigner` + axios + 旧接口 | —                                                                                                                    |
-| 2. workflow 声明  | 业务流水线仓                 | OIDC 模式：workflow 级声明 `permissions: id-token: write`，凭证可不传；存量脚本保持原样（继续传 AK/SK）         | `缺少 ACTIONS_ID_TOKEN_REQUEST_URL/ACTIONS_ID_TOKEN_REQUEST_TOKEN`                                                   |
-| 3. 网关认证切换   | 平台侧（华为云 APIG 控制台） | 新接口安全认证为 IAM 认证；旧接口保持 App 认证不变                                                              | `HTTP 401 Incorrect app authentication information: app not found`（网关把 V11 签名中的 STS 临时 AK 当 appkey 查找） |
-| 4. IAM 信任委托   | 平台侧（华为云 IAM 控制台）  | 委托 `gitcode-actions` 信任策略放行 `sts:agencies:assumeWithOIDC`，Condition 限定 iss/aud/sub                   | `STS5.1001 no identity-based policy allows sts:agencies:assumeWithOIDC`                                              |
+| 环节 | 责任侧 | 关键动作 | 缺失时的典型报错 |
+| --- | --- | --- | --- |
+| 1. 客户端认证切换 | 插件仓 | 引入 SDK，`CicdUploader` 按 `useOidc` 分流：OIDC 走 `callApig` + 新接口，AK/SK 走 `ApigSigner` + axios + 旧接口 | — |
+| 2. workflow 声明 | 业务流水线仓 | OIDC 模式：workflow 级声明 `permissions: id-token: write`，凭证可不传；存量脚本保持原样（继续传 AK/SK） | `缺少 ACTIONS_ID_TOKEN_REQUEST_URL/ACTIONS_ID_TOKEN_REQUEST_TOKEN` |
+| 3. 网关认证切换 | 平台侧（华为云 APIG 控制台） | 新接口安全认证为 IAM 认证；旧接口保持 App 认证不变 | `HTTP 401 Incorrect app authentication information: app not found`（网关把 V11 签名中的 STS 临时 AK 当 appkey 查找） |
+| 4. IAM 信任委托 | 平台侧（华为云 IAM 控制台） | 委托 `gitcode-actions` 信任策略放行 `sts:agencies:assumeWithOIDC`，Condition 限定 iss/aud/sub | `STS5.1001 no identity-based policy allows sts:agencies:assumeWithOIDC` |
 
 ### 1.4 SDK 引入方式
 
@@ -80,12 +80,12 @@ APIG（IAM 认证模式）校验签名与安全令牌 → 转发后端 openlibin
 
 ### 2.2 失败处理与排查指引（改造过程中验证过的线上问题）
 
-| 现象                                                                                | 根因                                                                                                                                                                    | 处理                                            |
-| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `缺少 ACTIONS_ID_TOKEN_REQUEST_URL/ACTIONS_ID_TOKEN_REQUEST_TOKEN`                  | workflow 未声明 `permissions: id-token: write`，runner 不注入 OIDC 环境变量                                                                                             | 补 workflow 级 permissions 声明                 |
-| `HTTP 401 Incorrect app authentication information: app not found, appkey HSTAP...` | 网关接口仍为 App 认证，把 V11 签名 Credential 中的 STS 临时 AK（HSTAP 前缀）当 appkey 查找                                                                              | 网关侧将该接口安全认证切换为 IAM 认证           |
-| `STS5.1001 ... no identity-based policy allows sts:agencies:assumeWithOIDC`         | 委托信任策略未命中 Allow：`oidc:iss` 不等于实际签发地址 `https://actions-results.atomgit.com`、`oidc:sub` 通配符未覆盖目标仓、或缺 `sts:agencies:assumeWithOIDC` Action | 按日志输出的 iss/aud/sub 逐项比对并修正信任策略 |
-| 失败日志自动输出 Token 声明（iss/aud/azp/sub/provider_urn）                         | SDK 内置排查辅助                                                                                                                                                        | 与信任策略逐项比对即可定位                      |
+| 现象 | 根因 | 处理 |
+| --- | --- | --- |
+| `缺少 ACTIONS_ID_TOKEN_REQUEST_URL/ACTIONS_ID_TOKEN_REQUEST_TOKEN` | workflow 未声明 `permissions: id-token: write`，runner 不注入 OIDC 环境变量 | 补 workflow 级 permissions 声明 |
+| `HTTP 401 Incorrect app authentication information: app not found, appkey HSTAP...` | 网关接口仍为 App 认证，把 V11 签名 Credential 中的 STS 临时 AK（HSTAP 前缀）当 appkey 查找 | 网关侧将该接口安全认证切换为 IAM 认证 |
+| `STS5.1001 ... no identity-based policy allows sts:agencies:assumeWithOIDC` | 委托信任策略未命中 Allow：`oidc:iss` 不等于实际签发地址 `https://actions-results.atomgit.com`、`oidc:sub` 通配符未覆盖目标仓、或缺 `sts:agencies:assumeWithOIDC` Action | 按日志输出的 iss/aud/sub 逐项比对并修正信任策略 |
+| 失败日志自动输出 Token 声明（iss/aud/azp/sub/provider_urn） | SDK 内置排查辅助 | 与信任策略逐项比对即可定位 |
 
 ### 2.3 workflow 侧变更
 
@@ -103,23 +103,23 @@ permissions:
 
 ### 3.1 插件侧（Node.js，源码位于 code-metrics-scan 仓）
 
-| 类                   | 职责                                                                    | 改造点                                                                                                                                            |
-| -------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SecOptionScanner`   | 扫描编排：调用检测器、组装结果、落盘、触发上传                          | 无变化，构造 `CicdUploader` 时透传双模式配置（`useOidc` / AK/SK 凭证）                                                                            |
-| `SecOptionDetector`  | 封装 Python 扫描脚本 `sec_option_scan.py`，支持 scan-options 圈定检测项 | 无变化                                                                                                                                            |
-| `CicdUploader`       | 上报器：组装 payload、按模式选择接口与认证方式、调用上报接口、解析响应  | 新增 `useOidc` 标志与新旧接口路径常量（`OIDC_REPORT_PATH` / `AKSK_REPORT_PATH`）；OIDC 分支走 SDK `callApig`，AK/SK 分支保留 `ApigSigner` + axios |
-| `ApigSigner`（保留） | SDK-HMAC-SHA256 签名器（对齐 APIG 官方 SDK），仅 AK/SK 模式使用         | 保留，服务存量 workflow 兼容                                                                                                                      |
+| 类 | 职责 | 改造点 |
+| --- | --- | --- |
+| `SecOptionScanner` | 扫描编排：调用检测器、组装结果、落盘、触发上传 | 无变化，构造 `CicdUploader` 时透传双模式配置（`useOidc` / AK/SK 凭证） |
+| `SecOptionDetector` | 封装 Python 扫描脚本 `sec_option_scan.py`，支持 scan-options 圈定检测项 | 无变化 |
+| `CicdUploader` | 上报器：组装 payload、按模式选择接口与认证方式、调用上报接口、解析响应 | 新增 `useOidc` 标志与新旧接口路径常量（`OIDC_REPORT_PATH` / `AKSK_REPORT_PATH`）；OIDC 分支走 SDK `callApig`，AK/SK 分支保留 `ApigSigner` + axios |
+| `ApigSigner`（保留） | SDK-HMAC-SHA256 签名器（对齐 APIG 官方 SDK），仅 AK/SK 模式使用 | 保留，服务存量 workflow 兼容 |
 
 ### 3.2 SDK 侧（`@openlibing/huaweicloud-oidc-client`）
 
-| 模块                    | 职责                                                                                                                                |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `oidc.js`               | 从 Actions 兼容流水线注入的环境变量申请 OIDC ID Token                                                                               |
-| `credentials.js`        | `getCredentials()`：STS 换证（缓存 / force / 并发去重），返回 `{accessKeyId, secretAccessKey, securityToken, expiresAt, expiresIn}` |
-| `signer-v11.js`         | `V11Signer`：V11-HMAC-SHA256 签名（服务名固定 apic）                                                                                |
-| `apig.js`               | `callApig()`：一行调用 APIG（自动换证 + 签名 + X-Security-Token）                                                                   |
-| `config.js`             | 内置 openlibing 账号默认配置 + `configure()` 覆盖                                                                                   |
-| `logger.js` / `http.js` | 分级日志（关键步骤 info、失败详情 error、debug 可选且敏感字段脱敏）/ HTTPS 工具                                                     |
+| 模块 | 职责 |
+| --- | --- |
+| `oidc.js` | 从 Actions 兼容流水线注入的环境变量申请 OIDC ID Token |
+| `credentials.js` | `getCredentials()`：STS 换证（缓存 / force / 并发去重），返回 `{accessKeyId, secretAccessKey, securityToken, expiresAt, expiresIn}` |
+| `signer-v11.js` | `V11Signer`：V11-HMAC-SHA256 签名（服务名固定 apic） |
+| `apig.js` | `callApig()`：一行调用 APIG（自动换证 + 签名 + X-Security-Token） |
+| `config.js` | 内置 openlibing 账号默认配置 + `configure()` 覆盖 |
+| `logger.js` / `http.js` | 分级日志（关键步骤 info、失败详情 error、debug 可选且敏感字段脱敏）/ HTTPS 工具 |
 
 ## 4. 数据模型设计
 
@@ -131,12 +131,8 @@ permissions:
   "pipelineRunId": "<ATOMGIT_RUN_ID>",
   "runNumber": "<ATOMGIT_RUN_NUMBER>",
   "packageName": "<构建产物压缩包名>",
-  "overviewData": {
-    "<option>": { "totalFiles": 0, "yesCount": 0, "rate": "0%" }
-  },
-  "fileDetails": [
-    { "filePath": "...", "options": { "<option>": "YES|NO|N/A" } }
-  ],
+  "overviewData": { "<option>": { "totalFiles": 0, "yesCount": 0, "rate": "0%" } },
+  "fileDetails": [ { "filePath": "...", "options": { "<option>": "YES|NO|N/A" } } ],
   "detectionStartedAt": "yyyy-MM-dd'T'HH:mm:ss",
   "detectionCompletedAt": "yyyy-MM-dd'T'HH:mm:ss",
   "status": 0,
@@ -166,20 +162,20 @@ permissions:
 
 ### 6.1 上报接口
 
-| 模式                       | 接口                                                                                | 鉴权                                                                            |
-| -------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| OIDC 联邦认证（新）        | `POST https://apig.openlibing.com/action-api/build-artifact/sec-option/report`      | V11-HMAC-SHA256 签名 Authorization 头 + `X-Security-Token`（网关 IAM 认证模式） |
-| AK/SK 签名（旧，存量兼容） | `POST https://apig.openlibing.com/openlibing-cicd/build-artifact/sec-option/report` | SDK-HMAC-SHA256 签名 Authorization 头（网关 App 认证模式，保持不变）            |
+| 模式 | 接口 | 鉴权 |
+| --- | --- | --- |
+| OIDC 联邦认证（新） | `POST https://apig.openlibing.com/action-api/build-artifact/sec-option/report` | V11-HMAC-SHA256 签名 Authorization 头 + `X-Security-Token`（网关 IAM 认证模式） |
+| AK/SK 签名（旧，存量兼容） | `POST https://apig.openlibing.com/openlibing-cicd/build-artifact/sec-option/report` | SDK-HMAC-SHA256 签名 Authorization 头（网关 App 认证模式，保持不变） |
 
 - 请求体：见 4.1；响应：见 4.2（两套接口契约一致）
 - 报文契约保持不变，后端 openlibing-cicd 无感
 
 ### 6.2 依赖的华为云接口
 
-| 接口                                             | 用途                            |
-| ------------------------------------------------ | ------------------------------- |
-| 流水线 OIDC 接口（ACTIONS_ID_TOKEN_REQUEST_URL） | 申请 OIDC ID Token              |
-| `sts:agencies:assumeWithOIDC`（cn-southwest-2）  | OIDC ID Token 换取 STS 临时凭证 |
+| 接口 | 用途 |
+| --- | --- |
+| 流水线 OIDC 接口（ACTIONS_ID_TOKEN_REQUEST_URL） | 申请 OIDC ID Token |
+| `sts:agencies:assumeWithOIDC`（cn-southwest-2） | OIDC ID Token 换取 STS 临时凭证 |
 
 ## 7. 安全设计
 

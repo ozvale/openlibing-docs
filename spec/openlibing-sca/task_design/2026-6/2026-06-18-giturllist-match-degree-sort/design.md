@@ -2,25 +2,25 @@
 
 ### 前端现状
 
-| 项       | 现状                                                                       |
-| -------- | -------------------------------------------------------------------------- |
-| 页面     | `gitUrlList.vue`，Tab `openSourceCompliance`                               |
-| 表格数据 | `table.list`，列配置来自 `analysisTable.config.js` 的 `column`             |
+| 项 | 现状 |
+|---|---|
+| 页面 | `gitUrlList.vue`，Tab `openSourceCompliance` |
+| 表格数据 | `table.list`，列配置来自 `analysisTable.config.js` 的 `column` |
 | 匹配度列 | `{ label: '匹配度', id: 'matched', width: 85, show: true }`，无 `sortable` |
-| 查询方法 | `queryRiskData()` → `softWareCompent.getScanIssue({ data: params })`       |
-| 分页     | `pagesConfig.pageNo` / `pageSize`，组件 `sca-pagination`                   |
-| 排序     | **未实现**，表格无 `@sort-change`                                          |
+| 查询方法 | `queryRiskData()` → `softWareCompent.getScanIssue({ data: params })` |
+| 分页 | `pagesConfig.pageNo` / `pageSize`，组件 `sca-pagination` |
+| 排序 | **未实现**，表格无 `@sort-change` |
 
 ### 后端现状（调研结论，供后端 PR 参考）
 
-| 项         | 现状                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------ |
-| 接口       | `POST /open/scan/scanIssue/query`                                                          |
-| 请求 DTO   | `ScanIssueQueryVO`：含 `pageNo`、`pageSize` 及筛选字段，**无排序字段**                     |
-| 数据层     | MongoDB 集合 `scan_issue`，`MongoTemplate` 查询                                            |
-| 当前排序   | 硬编码 `Sort.by(Sort.Order.asc("scanFile"))`（`OpenScanServiceImpl` 约 1116 行）           |
-| 匹配度字段 | Mongo/VO 均为 `matched`，值如 `"90%"`、`"100%"`                                            |
-| 参考实现   | `/open/scan/repos` 使用 `sortColumn` + `sortOrder`（`ascending`/`descending`）+ 白名单枚举 |
+| 项 | 现状 |
+|---|---|
+| 接口 | `POST /open/scan/scanIssue/query` |
+| 请求 DTO | `ScanIssueQueryVO`：含 `pageNo`、`pageSize` 及筛选字段，**无排序字段** |
+| 数据层 | MongoDB 集合 `scan_issue`，`MongoTemplate` 查询 |
+| 当前排序 | 硬编码 `Sort.by(Sort.Order.asc("scanFile"))`（`OpenScanServiceImpl` 约 1116 行） |
+| 匹配度字段 | Mongo/VO 均为 `matched`，值如 `"90%"`、`"100%"` |
+| 参考实现 | `/open/scan/repos` 使用 `sortColumn` + `sortOrder`（`ascending`/`descending`）+ 白名单枚举 |
 
 ### 项目内前端排序惯例
 
@@ -79,13 +79,13 @@ if (this.sortParams.sortColumn && this.sortParams.sortOrder) {
 
 ### 4. 排序状态生命周期
 
-| 操作                              | 行为                                                                  |
-| --------------------------------- | --------------------------------------------------------------------- |
-| 点击列头排序                      | 更新 `sortParams`，`pageNo = 1`，`queryRiskData()`                    |
-| 翻页 / 改 pageSize                | 保留 `sortParams`，仅 `queryRiskData()`                               |
+| 操作 | 行为 |
+|---|---|
+| 点击列头排序 | 更新 `sortParams`，`pageNo = 1`，`queryRiskData()` |
+| 翻页 / 改 pageSize | 保留 `sortParams`，仅 `queryRiskData()` |
 | 筛选条件变更（`updateCondition`） | 保留 `sortParams`（与 communityList 筛选+排序共存一致），`pageNo = 1` |
-| 切换代码仓 / scanId               | **重置** `sortParams`（新数据集）                                     |
-| 切换 Tab                          | 不污染另一 Tab 的查询参数                                             |
+| 切换代码仓 / scanId | **重置** `sortParams`（新数据集） |
+| 切换 Tab | 不污染另一 Tab 的查询参数 |
 
 ### 5. 改动文件与代码结构
 
@@ -129,10 +129,10 @@ handleCustomSort({ prop, order }) {
 
 前端将传递：
 
-| 字段         | 示例                           | 说明                      |
-| ------------ | ------------------------------ | ------------------------- |
-| `sortColumn` | `"matched"`                    | 与列 `prop` / VO 字段一致 |
-| `sortOrder`  | `"ascending"` / `"descending"` | Element Plus 约定         |
+| 字段 | 示例 | 说明 |
+|---|---|---|
+| `sortColumn` | `"matched"` | 与列 `prop` / VO 字段一致 |
+| `sortOrder` | `"ascending"` / `"descending"` | Element Plus 约定 |
 
 后端需：
 
@@ -144,12 +144,12 @@ handleCustomSort({ prop, order }) {
 
 ## Risks / Trade-offs
 
-| 风险                                        | 缓解                                                                             |
-| ------------------------------------------- | -------------------------------------------------------------------------------- |
-| 后端未就绪时点击排序无效或报错              | 前端先合入；联调前可 mock 或 feature flag；接口失败时 `$message.error` 已有      |
-| 仅 matched 可排序，用户可能误点其他列       | 其他列不设 `sortable`；`handleCustomSort` 对非 matched 直接 return               |
-| 取消排序回退到 scanFile ASC，用户可能无感知 | 符合后端默认行为；可在帮助文案中说明（非必须）                                   |
-| 合并单元格 `arraySpanMethod` 与排序共存     | 当前 openSourceCompliance 表使用 span-method；需联调确认排序后合并逻辑是否仍正确 |
+| 风险 | 缓解 |
+|---|---|
+| 后端未就绪时点击排序无效或报错 | 前端先合入；联调前可 mock 或 feature flag；接口失败时 `$message.error` 已有 |
+| 仅 matched 可排序，用户可能误点其他列 | 其他列不设 `sortable`；`handleCustomSort` 对非 matched 直接 return |
+| 取消排序回退到 scanFile ASC，用户可能无感知 | 符合后端默认行为；可在帮助文案中说明（非必须） |
+| 合并单元格 `arraySpanMethod` 与排序共存 | 当前 openSourceCompliance 表使用 span-method；需联调确认排序后合并逻辑是否仍正确 |
 
 ## Migration Plan
 

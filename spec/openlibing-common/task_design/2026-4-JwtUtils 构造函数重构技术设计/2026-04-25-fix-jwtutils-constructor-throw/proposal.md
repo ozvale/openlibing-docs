@@ -40,7 +40,6 @@ SpotBugs 报告 `JwtUtils` 构造函数在初始化时抛出 `IllegalStateExcept
 ```
 
 核心改动：
-
 1. 构造函数改为空实现
 2. 新增 `@PostConstruct` 的 `init()` 方法处理初始化
 3. 变量重命名：配置注入变量与实际使用变量分离
@@ -49,13 +48,11 @@ SpotBugs 报告 `JwtUtils` 构造函数在初始化时抛出 `IllegalStateExcept
 ## Scope
 
 ### In Scope
-
 - `JwtUtils.java` 构造函数重构
 - `JwtUtilsTest.java` 反射测试字段名适配
 - 变量命名优化
 
 ### Out of Scope
-
 - `initializeForTest()` 方法逻辑保持不变
 - `assertInitialized()` 方法保持不变
 - 其他静态方法签名保持不变
@@ -68,10 +65,10 @@ SpotBugs 报告 `JwtUtils` 构造函数在初始化时抛出 `IllegalStateExcept
 
 ## Risks
 
-| Risk                          | Impact | Mitigation                                |
-| ----------------------------- | ------ | ----------------------------------------- |
-| 测试环境不触发 @PostConstruct | 无     | `initializeForTest()` 逻辑不变            |
-| Spring 初始化顺序变化         | 低     | @PostConstruct 在依赖注入后执行，符合预期 |
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| 测试环境不触发 @PostConstruct | 无 | `initializeForTest()` 逻辑不变 |
+| Spring 初始化顺序变化 | 低 | @PostConstruct 在依赖注入后执行，符合预期 |
 
 ## Dependencies
 

@@ -10,24 +10,24 @@
 
 核心选型：
 
-| 维度     | 选型                            | 说明                                                                       |
-| -------- | ------------------------------- | -------------------------------------------------------------------------- |
-| 异步     | RabbitMQ                        | 导出接口直接生产消息，Consumer 异步消费生成 Excel                          |
-| 大数据量 | 分批流式查写 + 超限切 Sheet     | 单 Sheet 上限 SHARD_SIZE 行，超限自动切换新 Sheet 继续写入，不截断丢弃数据 |
-| 存储     | MySQL 记录任务状态 + OBS 存文件 | MySQL 做状态机与审计，OBS 做文件持久化                                     |
-| 并发控制 | CAS 抢占 + 同用户拦截           | 防同一任务重复消费；防同一用户短时间内重复提交                             |
-| 兜底     | xxl-job 定时任务扫描异常记录    | 仅处理 ACK 失败、MQ 丢消息等异常场景，不参与主流程                         |
-| 清理     | xxl-job 定时任务                | 每天清理过期导出记录及对应 OBS 对象                                        |
+| 维度 | 选型 | 说明 |
+| ---- | ---- | ---- |
+| 异步 | RabbitMQ | 导出接口直接生产消息，Consumer 异步消费生成 Excel |
+| 大数据量 | 分批流式查写 + 超限切 Sheet | 单 Sheet 上限 SHARD_SIZE 行，超限自动切换新 Sheet 继续写入，不截断丢弃数据 |
+| 存储 | MySQL 记录任务状态 + OBS 存文件 | MySQL 做状态机与审计，OBS 做文件持久化 |
+| 并发控制 | CAS 抢占 + 同用户拦截 | 防同一任务重复消费；防同一用户短时间内重复提交 |
+| 兜底 | xxl-job 定时任务扫描异常记录 | 仅处理 ACK 失败、MQ 丢消息等异常场景，不参与主流程 |
+| 清理 | xxl-job 定时任务 | 每天清理过期导出记录及对应 OBS 对象 |
 
 导出条件与列表查询入参一致，**强制走 `projectId` 路径**（前端调用时固定传入 `projectId`），多仓由项目维度天然聚合，`repoType/owner/repo` 作为项目内额外过滤条件。
 
 **关键参数**：
 
-| 参数           | 值    | 说明                                                                               |
-| -------------- | ----- | ---------------------------------------------------------------------------------- |
-| SHARD_SIZE     | 50000 | 单 Sheet 最大行数（Excel 单 Sheet 行数上限 1048576，5 万为兼顾性能与可读性的折中） |
-| BATCH_SIZE     | 10000 | 分批查询 MongoDB 的每批行数（控制单次查询内存占用与响应时间）                      |
-| MQ concurrency | 5     | Consumer 并发线程数                                                                |
+| 参数 | 值 | 说明 |
+| ---- | ---- | ---- |
+| SHARD_SIZE | 50000 | 单 Sheet 最大行数（Excel 单 Sheet 行数上限 1048576，5 万为兼顾性能与可读性的折中） |
+| BATCH_SIZE | 10000 | 分批查询 MongoDB 的每批行数（控制单次查询内存占用与响应时间） |
+| MQ concurrency | 5 | Consumer 并发线程数 |
 
 ---
 
@@ -43,7 +43,6 @@
 终态: 导出成功 / 导出失败：xxx（不再流转）
 重入: 仅 导出任务已创建 → 导出文件生成中（CAS 条件更新）
 ```
-
 注：应使用enum管理状态类型
 
 ### 2.2 主流程
@@ -104,7 +103,6 @@
 ```
 
 **`_id` 游标的优势**（相比 `skip + limit`）：
-
 - 避免大偏移量 skip 性能问题（skip 10 万需跳过 10 万条文档，`_id` 游标用范围查询 `{_id: {$gt: lastId}}` 直接定位，毫秒级）
 - 每批查询耗时稳定，不受已处理行数影响
 - 对告警数据（离线扫描入库，导出期间基本不变）能保证不重复不遗漏
@@ -147,48 +145,48 @@
 
 ### 3.1 新增类
 
-| 类名                        | 包路径             | 说明                                                                            |
-| --------------------------- | ------------------ | ------------------------------------------------------------------------------- |
-| `StaticAlarmExportEntity`   | `entity.alarm`     | MySQL 实体（表 `static_alarm_export`）                                          |
-| `StaticAlarmExportMapper`   | `mapper`           | MyBatis 映射接口 + XML                                                          |
-| `StaticAlarmExportProducer` | `service.producer` | RabbitMQ 生产者（PERSISTENT 消息）                                              |
+| 类名 | 包路径 | 说明                                                                    |
+| ---- | ---- |-----------------------------------------------------------------------|
+| `StaticAlarmExportEntity` | `entity.alarm` | MySQL 实体（表 `static_alarm_export`）                                     |
+| `StaticAlarmExportMapper` | `mapper` | MyBatis 映射接口 + XML                                                    |
+| `StaticAlarmExportProducer` | `service.producer` | RabbitMQ 生产者（PERSISTENT 消息）                                           |
 | `StaticAlarmExportConsumer` | `service.consumer` | RabbitMQ 消费者（concurrency = 5，死信兜底 24h TTL）                            |
-| `StaticAlarmExportRecordVO` | `vo.alarm`         | 导出结果查询返回 VO（id/taskName/url/message/totalCount/createTime/updateTime） |
-| `StaticAlarmIssueExportVO`  | `vo.alarm`         | Excel 导出专用 VO（`@ExcelProperty` 中文表头 + `@ColumnWidth` 列宽 + 字段过滤） |
-| `ObsBucketService`          | `service`          | OBS 桶操作接口（uploadFile / getSignedUrl）                                     |
-| `ObsBucketServiceImpl`      | `service.impl`     | OBS 实现类                                                                      |
+| `StaticAlarmExportRecordVO` | `vo.alarm` | 导出结果查询返回 VO（id/taskName/url/message/totalCount/createTime/updateTime） |
+| `StaticAlarmIssueExportVO` | `vo.alarm` | Excel 导出专用 VO（`@ExcelProperty` 中文表头 + `@ColumnWidth` 列宽 + 字段过滤）       |
+| `ObsBucketService` | `service` | OBS 桶操作接口（uploadFile / getSignedUrl）                                  |
+| `ObsBucketServiceImpl` | `service.impl` | OBS 实现类                                                               |
 
 ### 3.2 修改类
 
-| 类名                         | 变更内容                                                                                                                                           |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `StaticAlarmController`      | 新增 `POST /list/export`、`GET /list/export/result` 两个接口                                                                                       |
-| `StaticAlarmService`         | 接口新增 `exportStaticAlarmList`、`getExportResult`、`processExport`                                                                               |
-| `StaticAlarmServiceImpl`     | 实现导出主逻辑：同用户拦截 + CAS 抢占 + 分批流式查询 + 多 Sheet 写入 + OBS 上传 + 临时文件清理 + 具体异常捕获                                      |
-| `StaticAlarmOperation`       | 新增 `findIssuesByRepoCoordinatesAfterId(coordinates, dto, lastId, limit)` 支持 `_id` 游标分批查询；已有 `countIssuesByRepoCoordinates` 支持 count |
-| `CodeCheckEventRabbitConfig` | 新增 `static_alarm_export_*` exchange / queue / binding（死信交换机 24h TTL）                                                                      |
-| `XxlJobHandler`（codecheck） | 新增兜底恢复任务 + 过期清理任务                                                                                                                    |
+| 类名 | 变更内容 |
+| ---- | ---- |
+| `StaticAlarmController` | 新增 `POST /list/export`、`GET /list/export/result` 两个接口 |
+| `StaticAlarmService` | 接口新增 `exportStaticAlarmList`、`getExportResult`、`processExport` |
+| `StaticAlarmServiceImpl` | 实现导出主逻辑：同用户拦截 + CAS 抢占 + 分批流式查询 + 多 Sheet 写入 + OBS 上传 + 临时文件清理 + 具体异常捕获 |
+| `StaticAlarmOperation` | 新增 `findIssuesByRepoCoordinatesAfterId(coordinates, dto, lastId, limit)` 支持 `_id` 游标分批查询；已有 `countIssuesByRepoCoordinates` 支持 count |
+| `CodeCheckEventRabbitConfig` | 新增 `static_alarm_export_*` exchange / queue / binding（死信交换机 24h TTL） |
+| `XxlJobHandler`（codecheck） | 新增兜底恢复任务 + 过期清理任务 |
 
 ### 3.3 StaticAlarmIssueExportVO 字段定义
 
-| 字段             | ExcelProperty | ColumnWidth | 说明                                                                |
-| ---------------- | ------------- | ----------- | ------------------------------------------------------------------- |
-| `repoType`       | 代码托管平台  | 15          |                                                                     |
-| `owner`          | 仓库所属空间  | 25          |                                                                     |
-| `repo`           | 仓库名        | 30          |                                                                     |
-| `branch`         | 分支          | 20          |                                                                     |
-| `pipelineName`   | 流水线名称    | 20          |                                                                     |
-| `tool`           | 扫描工具      | 15          |                                                                     |
-| `language`       | 编程语言      | 12          |                                                                     |
-| `ruleId`         | 规则标识      | 30          |                                                                     |
-| `ruleName`       | 规则名称      | 40          |                                                                     |
-| `severity`       | 问题级别      | 12          |                                                                     |
-| `filePath`       | 文件路径      | 60          |                                                                     |
-| `contextSnippet` | 代码片段      | 100         | 将其中的startLine到endLine进行格式处理，用于表示有问题的snippet部分 |
-| `startLine`      | 起始行号      | 10          |                                                                     |
-| `message`        | 问题描述      | 60          |                                                                     |
-| `status`         | 问题状态      | 12          |                                                                     |
-| `lastSeenAt`     | 最近出现时间  | 22          | `@DateTimeFormat("yyyy-MM-dd HH:mm:ss")`                            |
+| 字段 | ExcelProperty | ColumnWidth | 说明 |
+| ---- | ---- | ---- | ---- |
+| `repoType` | 代码托管平台 | 15 | |
+| `owner` | 仓库所属空间 | 25 | |
+| `repo` | 仓库名 | 30 | |
+| `branch` | 分支 | 20 | |
+| `pipelineName` | 流水线名称 | 20 | |
+| `tool` | 扫描工具 | 15 | |
+| `language` | 编程语言 | 12 | |
+| `ruleId` | 规则标识 | 30 | |
+| `ruleName` | 规则名称 | 40 | |
+| `severity` | 问题级别 | 12 | |
+| `filePath` | 文件路径 | 60 | |
+| `contextSnippet` | 代码片段 | 100 | 将其中的startLine到endLine进行格式处理，用于表示有问题的snippet部分 |
+| `startLine` | 起始行号 | 10 | |
+| `message` | 问题描述 | 60 | |
+| `status` | 问题状态 | 12 | |
+| `lastSeenAt` | 最近出现时间 | 22 | `@DateTimeFormat("yyyy-MM-dd HH:mm:ss")` |
 
 ---
 
@@ -196,26 +194,26 @@
 
 ### 4.1 导出记录表 `static_alarm_export`
 
-| 字段             | 类型         | 约束               | 说明                                                                 |
-| ---------------- | ------------ | ------------------ | -------------------------------------------------------------------- |
-| `id`             | INT(32)      | PK, AUTO_INCREMENT | 主键                                                                 |
-| `type`           | VARCHAR(50)  | NOT NULL           | 导出类型，固定 `STATIC_ALARM_EXPORT`                                 |
-| `task_name`      | VARCHAR(255) | NULL               | 任务名称（文件名）                                                   |
-| `object_key`     | VARCHAR(500) | NULL               | OBS 对象 key                                                         |
-| `creator`        | VARCHAR(100) | NOT NULL           | 创建人                                                               |
-| `message`        | VARCHAR(500) | NOT NULL           | 状态信息：导出任务已创建 / 导出文件生成中 / 导出成功 / 导出失败：xxx |
-| `create_time`    | DATETIME     | NOT NULL           | 创建时间                                                             |
-| `update_time`    | DATETIME     | NULL               | 更新时间                                                             |
-| `total_count`    | INT(11)      | NULL               | 命中问题总数（实际写入行数，非 count 值）                            |
-| `query_dto`      | TEXT         | NULL               | 导出条件 JSON（审计与重放）                                          |
-| `query_dto_hash` | VARCHAR(32)  | NULL               | 导出条件 MD5 摘要（用于重复导出检查）                                |
+| 字段 | 类型 | 约束 | 说明 |
+| ---- | ---- | ---- | ---- |
+| `id` | INT(32) | PK, AUTO_INCREMENT | 主键 |
+| `type` | VARCHAR(50) | NOT NULL | 导出类型，固定 `STATIC_ALARM_EXPORT` |
+| `task_name` | VARCHAR(255) | NULL | 任务名称（文件名） |
+| `object_key` | VARCHAR(500) | NULL | OBS 对象 key |
+| `creator` | VARCHAR(100) | NOT NULL | 创建人 |
+| `message` | VARCHAR(500) | NOT NULL | 状态信息：导出任务已创建 / 导出文件生成中 / 导出成功 / 导出失败：xxx |
+| `create_time` | DATETIME | NOT NULL | 创建时间 |
+| `update_time` | DATETIME | NULL | 更新时间 |
+| `total_count` | INT(11) | NULL | 命中问题总数（实际写入行数，非 count 值） |
+| `query_dto` | TEXT | NULL | 导出条件 JSON（审计与重放） |
+| `query_dto_hash` | VARCHAR(32) | NULL | 导出条件 MD5 摘要（用于重复导出检查） |
 
 ### 4.2 索引
 
-| 索引名             | 字段                        | 用途                            |
-| ------------------ | --------------------------- | ------------------------------- |
+| 索引名 | 字段 | 用途 |
+| ---- | ---- | ---- |
 | `idx_creator_hash` | `creator`, `query_dto_hash` | 重复导出检查（同用户 + 同条件） |
-| `idx_create_time`  | `create_time`               | 清理任务范围删除                |
+| `idx_create_time` | `create_time` | 清理任务范围删除 |
 
 ### 4.3 Liquibase DDL
 
@@ -261,16 +259,16 @@
 
 ## 5. 性能设计
 
-| 场景             | 措施                                                                                           |
-| ---------------- | ---------------------------------------------------------------------------------------------- |
+| 场景 | 措施                                                                    |
+| ---- |-----------------------------------------------------------------------|
 | MongoDB 分批查询 | 用 `_id` 游标（`{_id: {$gt: lastId}}`）代替 `skip + limit`，避免大偏移量性能问题，每批耗时稳定 |
-| Excel 流式写入   | EasyExcel 逐批 `write()`，不要求内存中全量展开；单 Sheet 满 SHARD_SIZE 行自动切换新 Sheet      |
-| 多 Sheet 支持    | 超过 SHARD_SIZE 行的数据写入新 Sheet（Sheet 名 "告警(1)"、"告警(2)"...），不截断丢弃           |
-| 临时文件         | 上传 OBS 后 `finally` 块立即删除                                                               |
-| MQ 消费并发      | `concurrency = 5`，避免过多消费者同时查询 MongoDB                                              |
-| 重复提交         | 同用户 + 同查询条件（queryDtoHash）近 5 分钟内有未完成记录才拒绝，不同查询条件不受限制         |
-| 签名 URL         | 本地计算不请求远端，7 天有效；DB 记录 + OBS 对象 3 天清理                                      |
-| 典型耗时         | 5 万行（1 Sheet）：15-30 秒；20 万行（4 Sheet）：1-2 分钟；50 万行（10 Sheet）：3-5 分钟       |
+| Excel 流式写入 | EasyExcel 逐批 `write()`，不要求内存中全量展开；单 Sheet 满 SHARD_SIZE 行自动切换新 Sheet   |
+| 多 Sheet 支持 | 超过 SHARD_SIZE 行的数据写入新 Sheet（Sheet 名 "告警(1)"、"告警(2)"...），不截断丢弃         |
+| 临时文件 | 上传 OBS 后 `finally` 块立即删除                                              |
+| MQ 消费并发 | `concurrency = 5`，避免过多消费者同时查询 MongoDB                                 |
+| 重复提交 | 同用户 + 同查询条件（queryDtoHash）近 5 分钟内有未完成记录才拒绝，不同查询条件不受限制                  |
+| 签名 URL | 本地计算不请求远端，7 天有效；DB 记录 + OBS 对象 3 天清理                                  |
+| 典型耗时 | 5 万行（1 Sheet）：15-30 秒；20 万行（4 Sheet）：1-2 分钟；50 万行（10 Sheet）：3-5 分钟    |
 
 ---
 
@@ -286,13 +284,11 @@ Body: StaticAlarmQueryDTO（与列表查询入参一致，projectId 必传）
 ```
 
 **返回示例（提交成功）**：
-
 ```json
 { "code": 0, "data": "42" }
 ```
 
 **返回示例（重复提交）**：
-
 ```json
 { "code": 1, "msg": "已有导出任务正在进行中，请等待完成后再试。" }
 ```
@@ -304,7 +300,6 @@ GET /static-alarm/v1/list/export/result?id={id}&userId={userId}
 ```
 
 **处理中**：
-
 ```json
 {
   "code": 0,
@@ -318,7 +313,6 @@ GET /static-alarm/v1/list/export/result?id={id}&userId={userId}
 ```
 
 **导出成功**：
-
 ```json
 {
   "code": 0,
@@ -335,7 +329,6 @@ GET /static-alarm/v1/list/export/result?id={id}&userId={userId}
 ```
 
 **导出失败**：
-
 ```json
 {
   "code": 0,
@@ -356,14 +349,14 @@ GET /static-alarm/v1/list/export/result?id={id}&userId={userId}
 
 ## 7. 安全设计
 
-| 维度         | 措施                                                                                                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 越权访问     | `getExportResult` 校验 `entity.creator == userId`                                                                                                                        |
-| 查询注入     | MyBatis `#{}` 参数化查询                                                                                                                                                 |
-| 重复消费     | CAS `UPDATE WHERE message = '导出任务已创建'` 条件更新，只有一个 Consumer 能抢占成功                                                                                     |
-| 消息持久化   | RabbitMQ `PERSISTENT` 消息 + 死信队列（24h TTL），消息丢失由兜底恢复任务收尾                                                                                             |
-| 凭证安全     | OBS AK/SK 经 `SecurityUtil.decrypt` 解密后使用，不明文落盘                                                                                                               |
-| 文件泄露     | OBS 签名 URL 7 天自动过期；不返回 `objectKey` 给前端；DB 记录 + OBS 对象 3 天清理                                                                                        |
-| 内部字段泄露 | 导出 Excel 使用专用 VO（`StaticAlarmIssueExportVO`），仅包含用户关心的列，内部字段（projectId/commitId/snippet 等）不导出                                                |
-| DDL 安全     | Liquibase `preConditions` 判表存在则跳过，幂等执行                                                                                                                       |
-| 异常处理     | 按具体异常类型捕获（`DataAccessException`、`IOException`、`JsonProcessingException` 等），失败回写 `导出失败：xxx`；禁止捕获 `Exception/RuntimeException/Throwable` 基类 |
+| 维度 | 措施 |
+| ---- | ---- |
+| 越权访问 | `getExportResult` 校验 `entity.creator == userId` |
+| 查询注入 | MyBatis `#{}` 参数化查询 |
+| 重复消费 | CAS `UPDATE WHERE message = '导出任务已创建'` 条件更新，只有一个 Consumer 能抢占成功 |
+| 消息持久化 | RabbitMQ `PERSISTENT` 消息 + 死信队列（24h TTL），消息丢失由兜底恢复任务收尾 |
+| 凭证安全 | OBS AK/SK 经 `SecurityUtil.decrypt` 解密后使用，不明文落盘 |
+| 文件泄露 | OBS 签名 URL 7 天自动过期；不返回 `objectKey` 给前端；DB 记录 + OBS 对象 3 天清理 |
+| 内部字段泄露 | 导出 Excel 使用专用 VO（`StaticAlarmIssueExportVO`），仅包含用户关心的列，内部字段（projectId/commitId/snippet 等）不导出 |
+| DDL 安全 | Liquibase `preConditions` 判表存在则跳过，幂等执行 |
+| 异常处理 | 按具体异常类型捕获（`DataAccessException`、`IOException`、`JsonProcessingException` 等），失败回写 `导出失败：xxx`；禁止捕获 `Exception/RuntimeException/Throwable` 基类 |

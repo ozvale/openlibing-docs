@@ -7,22 +7,18 @@
 ## 功能描述
 
 ### 1. Trae 运维数据转发
-
 - **API 转发接口**：在 AiDashboardController 中新增运维数据接收和转发接口
 - **转发服务实现**：AiDashboardService 实现数据转发业务逻辑
 - **请求参数封装**：定义 ApiForwardRequest 请求体，规范转发数据格式
 
 ### 2. API 配置管理
-
 - **API 配置实体**：新增 ApiConfig 实体和 ApiConfigMapper，管理转发目标的 API 配置信息
 - **多数据源支持**：通过 DataSource 注解和 DataSourceAspect 切面，支持转发到不同数据源
 
 ### 3. 数据源切换优化
-
 - 优化 DataSource 注解和 DataSourceAspect 切面，增强多数据源切换的灵活性
 
 ### 4. 代码优化
-
 - AiDashboardController 和 AiDashboardService 的代码优化调整
 
 ## 验收标准

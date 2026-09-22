@@ -49,19 +49,19 @@ Workspace 后端 (Spring Boot)
 
 项目空间是 MaaS 模型调用的隔离单元，每个项目拥有独立的 API Key 和成员权限体系。
 
-| 功能         | 接口路径                     | 说明                                     |
-| ------------ | ---------------------------- | ---------------------------------------- |
-| 项目 CRUD    | `/api/project/*`             | 创建/查询/更新/删除项目，owner 全权      |
-| 成员管理     | `/api/project/{id}/members*` | owner/admin/member 三级角色              |
+| 功能 | 接口路径 | 说明 |
+|------|---------|------|
+| 项目 CRUD | `/api/project/*` | 创建/查询/更新/删除项目，owner 全权 |
+| 成员管理 | `/api/project/{id}/members*` | owner/admin/member 三级角色 |
 | API Key 管理 | `/api/project/{id}/apikeys*` | `sk-` 前缀，SHA-256 存储，Redis 缓存验证 |
 
 **角色权限**：
 
-| 角色   | 权限                                            |
-| ------ | ----------------------------------------------- |
-| owner  | 全部权限：更新/删除项目、管理成员、管理 API Key |
-| admin  | 管理成员、管理 API Key                          |
-| member | 查看项目信息、使用 API Key 调用模型             |
+| 角色 | 权限 |
+|------|------|
+| owner | 全部权限：更新/删除项目、管理成员、管理 API Key |
+| admin | 管理成员、管理 API Key |
+| member | 查看项目信息、使用 API Key 调用模型 |
 
 **用户信息同步**：`UserInfoSyncService` 在每次接口请求时异步同步用户信息到 `workspace_user_info`，检测 userName 变更则更新业务表冗余字段。添加成员时通过 `FrameworkUserQueryService` 查询三方账号表完成 accountLogin → userId 转换。
 
@@ -77,11 +77,11 @@ API Key 鉴权 → 限流检查 → 查找可用实例 → 格式转换 → 负�
 
 **接口**：
 
-| 接口           | 路径                                 | 说明               |
-| -------------- | ------------------------------------ | ------------------ |
-| OpenAI Chat    | POST `/api/maas/v1/chat/completions` | OpenAI 格式对话    |
-| Anthropic Chat | POST `/api/maas/v1/messages`         | Anthropic 格式对话 |
-| 实例管理       | `/api/maas/{projectId}/instances/*`  | CRUD 模型实例      |
+| 接口 | 路径 | 说明 |
+|------|------|------|
+| OpenAI Chat | POST `/api/maas/v1/chat/completions` | OpenAI 格式对话 |
+| Anthropic Chat | POST `/api/maas/v1/messages` | Anthropic 格式对话 |
+| 实例管理 | `/api/maas/{projectId}/instances/*` | CRUD 模型实例 |
 
 **格式转换 (FormatConversionService)**：
 
@@ -118,46 +118,46 @@ Redis + Lua 固定窗口计数器，支持用户级 RPM、实例级 RPM/TPM 三�
 
 ### 用户监控
 
-| 接口       | 路径                                                | 说明           |
-| ---------- | --------------------------------------------------- | -------------- |
-| Dashboard  | `/api/monitor/project/{id}/user/dashboard`          | 用户级概览     |
-| 调用趋势   | `/api/monitor/project/{id}/user/call-trend`         | 调用量趋势     |
-| Token 趋势 | `/api/monitor/project/{id}/user/token-trend`        | Token 用量趋势 |
-| 模型分布   | `/api/monitor/project/{id}/user/model-distribution` | 模型使用分布   |
+| 接口 | 路径 | 说明 |
+|------|------|------|
+| Dashboard | `/api/monitor/project/{id}/user/dashboard` | 用户级概览 |
+| 调用趋势 | `/api/monitor/project/{id}/user/call-trend` | 调用量趋势 |
+| Token 趋势 | `/api/monitor/project/{id}/user/token-trend` | Token 用量趋势 |
+| 模型分布 | `/api/monitor/project/{id}/user/model-distribution` | 模型使用分布 |
 
 第一阶段已实现，第二阶段（更丰富的统计维度）待开发。
 
 ## 关键数据模型
 
-| 表                                        | 说明                                        |
-| ----------------------------------------- | ------------------------------------------- |
-| `workspace_project_space`                 | 项目空间                                    |
-| `workspace_project_member`                | 项目成员（含角色）                          |
-| `workspace_project_api_key`               | API Key（SHA-256 存储）                     |
-| `workspace_user_info`                     | 用户信息映射（openLiBing ↔ 三方平台）       |
-| `workspace_model_instance`                | 模型实例（含限流配置、健康状态、Tier 层级） |
-| `workspace_model_instance_health_history` | 健康检查历史                                |
+| 表 | 说明 |
+|------|------|
+| `workspace_project_space` | 项目空间 |
+| `workspace_project_member` | 项目成员（含角色） |
+| `workspace_project_api_key` | API Key（SHA-256 存储） |
+| `workspace_user_info` | 用户信息映射（openLiBing ↔ 三方平台） |
+| `workspace_model_instance` | 模型实例（含限流配置、健康状态、Tier 层级） |
+| `workspace_model_instance_health_history` | 健康检查历史 |
 
 ## 关键设计决策
 
-| 决策                   | 说明                                                             |
-| ---------------------- | ---------------------------------------------------------------- |
+| 决策 | 说明 |
+|------|------|
 | Universal Model 中间层 | 格式转换通过 Universal Model 解耦，新增格式只需实现 ModelAdapter |
-| 源=目标时短路          | 避免不必要的序列化/反序列化，多数国产模型使用 OpenAI 格式        |
-| 加权随机负载均衡       | 基于 Metrics 实时权重计算，优先选择负载低的实例                  |
-| 内存熔断器             | ConcurrentHashMap 实现，轻量高效                                 |
-| Redis + Lua 限流       | 原子操作保证计数准确性                                           |
-| 异步日志双写           | 文件通道入湖 + DB 通道查询，互不阻塞                             |
-| Tier 层级降级          | 同层优先、逐层降级，保证服务可用性                               |
-| SHA-256 存储 API Key   | 不存明文，验证时对比哈希                                         |
-| 冗余存储 userName      | 业务表冗余用户名，避免 JOIN 查询                                 |
+| 源=目标时短路 | 避免不必要的序列化/反序列化，多数国产模型使用 OpenAI 格式 |
+| 加权随机负载均衡 | 基于 Metrics 实时权重计算，优先选择负载低的实例 |
+| 内存熔断器 | ConcurrentHashMap 实现，轻量高效 |
+| Redis + Lua 限流 | 原子操作保证计数准确性 |
+| 异步日志双写 | 文件通道入湖 + DB 通道查询，互不阻塞 |
+| Tier 层级降级 | 同层优先、逐层降级，保证服务可用性 |
+| SHA-256 存储 API Key | 不存明文，验证时对比哈希 |
+| 冗余存储 userName | 业务表冗余用户名，避免 JOIN 查询 |
 
 ## 鉴权方式
 
-| 拦截器                    | 路径                                                       | 鉴权方式               |
-| ------------------------- | ---------------------------------------------------------- | ---------------------- |
-| OpenlibingAuthInterceptor | `/api/project/**`, `/api/maas/**`(管理), `/api/monitor/**` | JWT Token              |
-| MaasAuthInterceptor       | `/api/maas/v1/**`                                          | API Key (Bearer Token) |
+| 拦截器 | 路径 | 鉴权方式 |
+|--------|------|---------|
+| OpenlibingAuthInterceptor | `/api/project/**`, `/api/maas/**`(管理), `/api/monitor/**` | JWT Token |
+| MaasAuthInterceptor | `/api/maas/v1/**` | API Key (Bearer Token) |
 
 `UserContext.resolveUserId()` 统一获取用户 ID，优先级：JWT 已解析 → Header 传入 → Openlibing 上下文 → 一站式作业上下文。
 

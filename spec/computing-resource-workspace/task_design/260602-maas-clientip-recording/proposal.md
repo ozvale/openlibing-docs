@@ -12,11 +12,11 @@ MaaS 代理接口（chat/completions）的鉴权体系独立于项目空间的�
 
 当前部署架构为 `用户 → 华为云 APIG → MaaS 服务`，需确认 APIG 环境下哪个 IP Header 可信。经测试验证（0d3f261b）：
 
-| Header            | APIG 处理方式                     | 可信度 |
-| ----------------- | --------------------------------- | ------ |
-| `X-Forwarded-For` | 原样透传（客户端可伪造）          | 不可信 |
-| `X-Real-IP`       | APIG 覆盖为真实来源 IP            | 可信   |
-| `RemoteAddr`      | TCP 连接来源（与 X-Real-IP 一致） | 可信   |
+| Header | APIG 处理方式 | 可信度 |
+|--------|--------------|--------|
+| `X-Forwarded-For` | 原样透传（客户端可伪造） | 不可信 |
+| `X-Real-IP` | APIG 覆盖为真实来源 IP | 可信 |
+| `RemoteAddr` | TCP 连接来源（与 X-Real-IP 一致） | 可信 |
 
 确定 IP 提取优先级：`X-Real-IP → RemoteAddr → 0.0.0.0`。安全场景必须使用可信 IP，`X-Forwarded-For` 仅用于审计排查。
 
@@ -46,7 +46,6 @@ MaaS 代理接口（chat/completions）的鉴权体系独立于项目空间的�
 ## 六、后续展望
 
 本次改动为 IP 黑名单功能的前置基础。后续可实现：
-
 - 基于 `client_ip` 的黑名单封禁（MaaS 专属，不走项目空间黑白名单）
 - IP 维度的调用频率监控和异常检测
 - 可疑 IP 自动告警

@@ -9,7 +9,6 @@
 ### 1. 工具与标签绑定
 
 **设计思路**：
-
 - 在工具管理配置文件（config.ts）中扩展标签配置
 - 在工具表格组件（toolTable.vue）中增加标签列和标签管理弹窗
 - 新增 API 接口：
@@ -17,7 +16,6 @@
   - `GET /api/tool/tag/list` - 获取工具标签列表
 
 **数据结构**：
-
 ```typescript
 interface ToolTag {
   id: string;
@@ -34,7 +32,6 @@ interface ToolTagBinding {
 ### 2. 工具与项目空间绑定
 
 **设计思路**：
-
 - 在工具详情页（details.vue）增加项目空间绑定功能入口
 - 新增绑定操作弹窗，支持选择项目空间
 - 新增 API 接口：
@@ -43,7 +40,6 @@ interface ToolTagBinding {
   - `GET /api/tool/project-space/list` - 获取绑定关系列表
 
 **数据结构**：
-
 ```typescript
 interface ProjectSpaceBinding {
   toolId: string;
@@ -56,7 +52,6 @@ interface ProjectSpaceBinding {
 ### 3. 一键举报机制
 
 **设计思路**：
-
 - 在工具详情页（details.vue）增加举报按钮
 - 在待办中心新增三个举报相关页面：
   - `ToolReportApplication.vue` - 举报申请
@@ -64,7 +59,6 @@ interface ProjectSpaceBinding {
   - `ToolReportReviewHistory.vue` - 举报历史
 
 **举报流程**：
-
 1. 用户点击工具详情页举报按钮
 2. 填写举报原因，提交举报申请
 3. 举报进入待办中心审核队列
@@ -72,7 +66,6 @@ interface ProjectSpaceBinding {
 5. 审核结果记录到举报历史
 
 **数据结构**：
-
 ```typescript
 interface ToolReport {
   id: string;
@@ -81,7 +74,7 @@ interface ToolReport {
   reporterId: string;
   reporterName: string;
   reason: string;
-  status: "pending" | "approved" | "rejected";
+  status: 'pending' | 'approved' | 'rejected';
   reviewerId?: string;
   reviewerName?: string;
   reviewComment?: string;
@@ -93,7 +86,6 @@ interface ToolReport {
 ### 4. 安全提示内容
 
 **设计思路**：
-
 - 工具上传（toolItem.vue）：在文件选择前弹出安全提示确认框
   - 使用 ElMessageBox.confirm 显示 HTML 格式安全提示
   - 确认后继续文件选择流程
@@ -107,7 +99,6 @@ interface ToolReport {
   - 显示上传者信息和安全注意事项
 
 **提示内容结构**：
-
 - 工具上传：禁止内容列表 + 违规后果说明
 - 工具审核：审核职责列表 + 谨慎审核提示
 - 工具下载：上传者信息 + 安全注意事项 + 免责声明
@@ -115,20 +106,18 @@ interface ToolReport {
 ### 5. 审核日志查看
 
 **设计思路**：
-
 - 新增组件 `reviewHistory.vue` 展示审核日志
 - 在工具管理页面增加审核日志入口
 - 调用现有审核日志 API 获取数据
 
 **数据结构**：
-
 ```typescript
 interface ReviewLog {
   id: string;
   toolId: string;
   reviewerId: string;
   reviewerName: string;
-  action: "approve" | "reject" | "comment";
+  action: 'approve' | 'reject' | 'comment';
   comment?: string;
   time: Date;
 }
@@ -140,32 +129,22 @@ interface ReviewLog {
 
 ```typescript
 // 标签绑定
-export const bindToolTag = (toolId: string, tags: string[]) =>
-  request.post(url.bindToolTag, { toolId, tags });
-export const getToolTags = (toolId: string) =>
-  request.get(url.getToolTags, { params: { toolId } });
+export const bindToolTag = (toolId: string, tags: string[]) => request.post(url.bindToolTag, { toolId, tags });
+export const getToolTags = (toolId: string) => request.get(url.getToolTags, { params: { toolId } });
 
 // 项目空间绑定
-export const bindProjectSpace = (toolId: string, projectSpaceId: string) =>
-  request.post(url.bindProjectSpace, { toolId, projectSpaceId });
-export const unbindProjectSpace = (toolId: string) =>
-  request.delete(url.unbindProjectSpace, { params: { toolId } });
-export const getProjectSpaceBindings = (toolId: string) =>
-  request.get(url.getProjectSpaceBindings, { params: { toolId } });
+export const bindProjectSpace = (toolId: string, projectSpaceId: string) => request.post(url.bindProjectSpace, { toolId, projectSpaceId });
+export const unbindProjectSpace = (toolId: string) => request.delete(url.unbindProjectSpace, { params: { toolId } });
+export const getProjectSpaceBindings = (toolId: string) => request.get(url.getProjectSpaceBindings, { params: { toolId } });
 
 // 举报
-export const createReport = (data: ReportData) =>
-  request.post(url.createReport, data);
-export const getReports = (status: string) =>
-  request.get(url.getReports, { params: { status } });
-export const reviewReport = (reportId: string, data: ReviewData) =>
-  request.post(url.reviewReport(reportId), data);
-export const getReportHistory = (toolId?: string) =>
-  request.get(url.getReportHistory, { params: { toolId } });
+export const createReport = (data: ReportData) => request.post(url.createReport, data);
+export const getReports = (status: string) => request.get(url.getReports, { params: { status } });
+export const reviewReport = (reportId: string, data: ReviewData) => request.post(url.reviewReport(reportId), data);
+export const getReportHistory = (toolId?: string) => request.get(url.getReportHistory, { params: { toolId } });
 
 // 审核日志
-export const getReviewLogs = (toolId: string) =>
-  request.get(url.getReviewLogs, { params: { toolId } });
+export const getReviewLogs = (toolId: string) => request.get(url.getReviewLogs, { params: { toolId } });
 ```
 
 ## 前端组件变化

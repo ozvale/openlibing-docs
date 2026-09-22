@@ -10,13 +10,13 @@
 
 ## 文档信息与元数据
 
-| 字段             | 值                                                                                                                                                                                                                        |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 分析模型         | DeepSeek-V4-Flash（threat-model-analyst skill 驱动）；补充 3 项缺口（sync Python 采集脚本、Dockerfile 构建供应链完整性、镜像 SBOM/cosign/seccomp）证据合并自 MiniMax-M3 独立分析报告，本仓相关项为 FIND-35 跨仓构建供应链 |
-| 分析基线类型     | 远程仓主干分支（git worktree 独立检出，detached HEAD，分析完成后已清理）                                                                                                                                                  |
-| 仓库             | `openlibing-metric`，远程主干 `origin/main`，HEAD `414def6`                                                                                                                                                               |
-| 分析范围         | 本仓源码 + 配置 + 部署脚本 + CI 工作流；信任边界证据来自 `openlibing-gateway`/`openlibing-common` 相关代码与 docs 记录                                                                                                    |
-| 输出位置（归档） | `openlibing-docs/architecture_desgin/openlibing-metric/[openlibing-metric]安全威胁建模分析报告.md`（PR 合入主仓 master 后生效）                                                                                           |
+| 字段 | 值 |
+| --- | --- |
+| 分析模型 | DeepSeek-V4-Flash（threat-model-analyst skill 驱动）；补充 3 项缺口（sync Python 采集脚本、Dockerfile 构建供应链完整性、镜像 SBOM/cosign/seccomp）证据合并自 MiniMax-M3 独立分析报告，本仓相关项为 FIND-35 跨仓构建供应链 |
+| 分析基线类型 | 远程仓主干分支（git worktree 独立检出，detached HEAD，分析完成后已清理） |
+| 仓库 | `openlibing-metric`，远程主干 `origin/main`，HEAD `414def6` |
+| 分析范围 | 本仓源码 + 配置 + 部署脚本 + CI 工作流；信任边界证据来自 `openlibing-gateway`/`openlibing-common` 相关代码与 docs 记录 |
+| 输出位置（归档） | `openlibing-docs/architecture_desgin/openlibing-metric/[openlibing-metric]安全威胁建模分析报告.md`（PR 合入主仓 master 后生效） |
 
 ---
 
@@ -34,9 +34,9 @@ OpenLibing 运营域 `openlibing-metric` 仓（远程主干基线）的**工程�
 
 ### 1.2 威胁计数总览（metric）
 
-| 仓库              | Tier 1 | Tier 2 | Tier 3 | 发现合计 | 最突出弱点                                     |
-| ----------------- | ------ | ------ | ------ | -------- | ---------------------------------------------- |
-| openlibing-metric | 0      | 6      | 2      | 8        | `/forward-api` 出站转发滥用 + 敏感凭据明文落库 |
+| 仓库 | Tier 1 | Tier 2 | Tier 3 | 发现合计 | 最突出弱点 |
+| --- | --- | --- | --- | --- | --- |
+| openlibing-metric | 0 | 6 | 2 | 8 | `/forward-api` 出站转发滥用 + 敏感凭据明文落库 |
 
 > 注：FIND-01（跨仓系统性发现：服务端零认证 + 限流死代码）统计口径上记入本仓行（Tier 2）；FIND-14/FIND-17 为本仓 Tier 3 发现；FIND-35（跨仓构建供应链完整性）单列"跨仓"行，详见第四章。
 
@@ -143,27 +143,27 @@ flowchart LR
 
 **信任边界说明（metric 视角）：**
 
-| 边界               | 含义                         | 关键事实                                                                                                                                                                                       |
-| ------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `External`         | 浏览器                       | 员工经网关鉴权                                                                                                                                                                                 |
-| `Perimeter`        | 网关边界                     | AuthFilter 是唯一认证执行点（[AuthFilter.java](file:///c:/w30060144/develop/repositories/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java)） |
-| `Frontend`         | ops-web nginx                | 同源 /gateway 代理；无安全响应头                                                                                                                                                               |
-| `SiblingServices`  | ops / sync                   | 同信任域兄弟服务；均无服务端鉴权，Doris 为共享数据存储                                                                                                                                         |
-| `MetricContext`    | metric 本仓                  | 服务端零认证；端口集群内网可达；forward-api 出站转发面                                                                                                                                         |
-| `DataStorage`      | MySQL / Doris                | 双数据源；连接串由 Apollo 配置中心下发                                                                                                                                                         |
-| `ExternalServices` | GitCode / framework / 华为云 | 出站调用；forward-api 白名单含 gitcode 等域名                                                                                                                                                  |
+| 边界 | 含义 | 关键事实 |
+| --- | --- | --- |
+| `External` | 浏览器 | 员工经网关鉴权 |
+| `Perimeter` | 网关边界 | AuthFilter 是唯一认证执行点（[AuthFilter.java](file:///c:/w30060144/develop/repositories/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java)） |
+| `Frontend` | ops-web nginx | 同源 /gateway 代理；无安全响应头 |
+| `SiblingServices` | ops / sync | 同信任域兄弟服务；均无服务端鉴权，Doris 为共享数据存储 |
+| `MetricContext` | metric 本仓 | 服务端零认证；端口集群内网可达；forward-api 出站转发面 |
+| `DataStorage` | MySQL / Doris | 双数据源；连接串由 Apollo 配置中心下发 |
+| `ExternalServices` | GitCode / framework / 华为云 | 出站调用；forward-api 白名单含 gitcode 等域名 |
 
 ### 2.4 跨仓信任边界与攻击路径（metric 相关）
 
 > 本单仓版保留跨仓视角，便于定位 metric 在体系中的受信位置与上游/下游风险传导。
 
-| 跨仓关系                            | 信任方向     | 风险传导路径                                                                                           | 本仓受影响威胁 |
-| ----------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------ | -------------- |
-| metric → Doris（共享）              | 写/读        | sync `/api/data/ingest` 零认证匿名直写 Doris → metric 指标统计读到被污染的指标数据                     | T18 等读路径   |
-| metric ↔ gateway                    | 完全信任网关 | 网关绕过（`/manage` 剥离、豁免遗漏、SSRF）→ metric 全部接口匿名可达，含 `delete/{metricCode}` 删除接口 | T13/T19        |
-| metric → GitCode API（forward-api） | 出站         | 客户端自携 `token/apiKey` 借 metric 服务身份出站，白名单域名本身即可作为外带/凭据滥用目标              | T14/T22        |
-| metric → framework                  | 出站         | framework 操作日志若被注入/篡改，审计链被污染（跨仓否认面）                                            | T20            |
-| 兄弟仓（ops/sync）                  | 同信任域     | 任一仓被攻破（如 sync Tier 1 零认证写接口）可横向移动直连 metric 内网端口，取用明文 ak/sk 库           | T13            |
+| 跨仓关系 | 信任方向 | 风险传导路径 | 本仓受影响威胁 |
+| --- | --- | --- | --- |
+| metric → Doris（共享） | 写/读 | sync `/api/data/ingest` 零认证匿名直写 Doris → metric 指标统计读到被污染的指标数据 | T18 等读路径 |
+| metric ↔ gateway | 完全信任网关 | 网关绕过（`/manage` 剥离、豁免遗漏、SSRF）→ metric 全部接口匿名可达，含 `delete/{metricCode}` 删除接口 | T13/T19 |
+| metric → GitCode API（forward-api） | 出站 | 客户端自携 `token/apiKey` 借 metric 服务身份出站，白名单域名本身即可作为外带/凭据滥用目标 | T14/T22 |
+| metric → framework | 出站 | framework 操作日志若被注入/篡改，审计链被污染（跨仓否认面） | T20 |
+| 兄弟仓（ops/sync） | 同信任域 | 任一仓被攻破（如 sync Tier 1 零认证写接口）可横向移动直连 metric 内网端口，取用明文 ak/sk 库 | T13 |
 
 ---
 
@@ -171,34 +171,34 @@ flowchart LR
 
 ### 3.1 组件与攻击面
 
-| 组件 ID                             | 锚点（证据文件）                                                               | 暴露面                                                         |
-| ----------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| AiDashboardController               | `api/controller/AiDashboardController.java`                                    | `metric/ai-dashboard` user-data / user-usage / **forward-api** |
-| DigitalMetricInfoController         | `api/controller/DigitalMetricInfoController.java`                              | `/manage/digital/metric` page/save/{metricCode}/delete         |
-| DataAssetColumnInfoController       | `api/controller/DataAssetColumnInfoController.java`                            | `/manage/dataasset/column` query/update                        |
-| DigitalOperationDimensionController | `api/controller/DigitalOperationDimensionController.java`                      | `/manage/digital/dimension` page/save/delete                   |
-| DataAssetTableRegistryController    | `api/controller/DataAssetTableRegistryController.java`                         | `/manage/dataasset/table` query/update                         |
-| DigitalOperationDomainController    | `api/controller/DigitalOperationDomainController.java`                         | `/manage/digital/domain` page/save/delete                      |
-| AiDashboardForwarder                | `app/service/metric/AiDashboardService.java`                                   | forward-api 出站转发（SSRF 白名单）                            |
-| SecretStore                         | `domain/project/entity/HwProjectInfo.java`、`ProjectCommonAccountInfo.java`    | ak/sk、giteeToken/gitcodeToken 明文落库                        |
-| DataAccess                          | `DataSourceConfig.java` + `mapper/*.xml`                                       | MySQL + Doris；BlockAttack 防全表更新                          |
-| LogPipeline                         | `LogSanitizer.java` + `DashboardLoggerAspect.java` + `AbstractLogHandler.java` | 审计日志（完整请求体序列化）                                   |
-| DockerContainer                     | `Dockerfile` + `start.sh` + `monitor.sh`                                       | 运行时加固                                                     |
+| 组件 ID | 锚点（证据文件） | 暴露面 |
+| --- | --- | --- |
+| AiDashboardController | `api/controller/AiDashboardController.java` | `metric/ai-dashboard` user-data / user-usage / **forward-api** |
+| DigitalMetricInfoController | `api/controller/DigitalMetricInfoController.java` | `/manage/digital/metric` page/save/{metricCode}/delete |
+| DataAssetColumnInfoController | `api/controller/DataAssetColumnInfoController.java` | `/manage/dataasset/column` query/update |
+| DigitalOperationDimensionController | `api/controller/DigitalOperationDimensionController.java` | `/manage/digital/dimension` page/save/delete |
+| DataAssetTableRegistryController | `api/controller/DataAssetTableRegistryController.java` | `/manage/dataasset/table` query/update |
+| DigitalOperationDomainController | `api/controller/DigitalOperationDomainController.java` | `/manage/digital/domain` page/save/delete |
+| AiDashboardForwarder | `app/service/metric/AiDashboardService.java` | forward-api 出站转发（SSRF 白名单） |
+| SecretStore | `domain/project/entity/HwProjectInfo.java`、`ProjectCommonAccountInfo.java` | ak/sk、giteeToken/gitcodeToken 明文落库 |
+| DataAccess | `DataSourceConfig.java` + `mapper/*.xml` | MySQL + Doris；BlockAttack 防全表更新 |
+| LogPipeline | `LogSanitizer.java` + `DashboardLoggerAspect.java` + `AbstractLogHandler.java` | 审计日志（完整请求体序列化） |
+| DockerContainer | `Dockerfile` + `start.sh` + `monitor.sh` | 运行时加固 |
 
 ### 3.2 STRIDE-A 威胁表（metric）
 
-| 威胁 ID | STRIDE 类别 | 威胁描述                                                                                                                                                                                                                            | 前置条件             | Tier |
-| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- |
-| T13.S   | S 欺骗      | 8 个 Controller 无服务端鉴权，全依赖网关；直连/绕过后身份可伪造                                                                                                                                                                     | `Internal Network`   | T2   |
-| T14.S   | S 欺骗      | `/forward-api` 允许客户端自携 `token/apiKey` 作为 Authorization 出站，可借服务身份调用 gitcode 等白名单 API                                                                                                                         | `Authenticated User` | T2   |
-| T15.I   | I 信息泄露  | `forward-api` catch 通用 Exception 后把 `e.getMessage()` 回传客户端（[AiDashboardController.java:92-95](file:///c:/w30060144/tmp-tm-metric/src/main/java/com/openlibing/metric/api/controller/AiDashboardController.java#L92-L95)） | `Authenticated User` | T2   |
-| T16.I   | I 信息泄露  | 生产/预发 Swagger api-docs 全量开放（application-prod.yaml swagger-ui enabled: true）                                                                                                                                               | `Authenticated User` | T2   |
-| T17.I   | I 信息泄露  | 华为云 ak/sk 与平台 giteeToken/gitcodeToken 明文落库（[HwProjectInfo.java:25-28](file:///c:/w30060144/tmp-tm-metric/src/main/java/com/openlibing/metric/domain/project/entity/HwProjectInfo.java#L25-L28)）                         | `Admin Credentials`  | T3   |
-| T18.D   | D 拒绝服务  | `RateLimitConfig` 死代码无消费方；`AiDashboardRequest.pageSize` 无上限校验，可超大分页击穿 Doris                                                                                                                                    | `Authenticated User` | T2   |
-| T19.E   | E 权限提升  | `delete/{metricCode}` 用 GET 语义，配合网关纵向权限漏配可触发任意删除                                                                                                                                                               | `Authenticated User` | T2   |
-| T20.R   | R 否认      | 审计日志把方法参数 `JSON.toJSONString(paramsMap)` 全量序列化（仅移除 `request` 键），未系统性脱敏 token/密码，且无身份强绑定                                                                                                        | `Authenticated User` | T2   |
-| T21.I   | I 信息泄露  | 解密密钥材料（`*.ks`、`openlibing.pfx`、`cacerts`）随 Docker 镜像分发（[Dockerfile:41-49](file:///c:/w30060144/tmp-tm-metric/Dockerfile)），与密文同源 `security.part1` 单点                                                        | `Admin Credentials`  | T3   |
-| T22.A   | A 滥用      | forward-api 对 GET 拼 query / POST 全量透传 body，无参数白名单与长度约束，可被当作外部请求代理/外带通道                                                                                                                             | `Authenticated User` | T2   |
+| 威胁 ID | STRIDE 类别 | 威胁描述 | 前置条件 | Tier |
+| --- | --- | --- | --- | --- |
+| T13.S | S 欺骗 | 8 个 Controller 无服务端鉴权，全依赖网关；直连/绕过后身份可伪造 | `Internal Network` | T2 |
+| T14.S | S 欺骗 | `/forward-api` 允许客户端自携 `token/apiKey` 作为 Authorization 出站，可借服务身份调用 gitcode 等白名单 API | `Authenticated User` | T2 |
+| T15.I | I 信息泄露 | `forward-api` catch 通用 Exception 后把 `e.getMessage()` 回传客户端（[AiDashboardController.java:92-95](file:///c:/w30060144/tmp-tm-metric/src/main/java/com/openlibing/metric/api/controller/AiDashboardController.java#L92-L95)） | `Authenticated User` | T2 |
+| T16.I | I 信息泄露 | 生产/预发 Swagger api-docs 全量开放（application-prod.yaml swagger-ui enabled: true） | `Authenticated User` | T2 |
+| T17.I | I 信息泄露 | 华为云 ak/sk 与平台 giteeToken/gitcodeToken 明文落库（[HwProjectInfo.java:25-28](file:///c:/w30060144/tmp-tm-metric/src/main/java/com/openlibing/metric/domain/project/entity/HwProjectInfo.java#L25-L28)） | `Admin Credentials` | T3 |
+| T18.D | D 拒绝服务 | `RateLimitConfig` 死代码无消费方；`AiDashboardRequest.pageSize` 无上限校验，可超大分页击穿 Doris | `Authenticated User` | T2 |
+| T19.E | E 权限提升 | `delete/{metricCode}` 用 GET 语义，配合网关纵向权限漏配可触发任意删除 | `Authenticated User` | T2 |
+| T20.R | R 否认 | 审计日志把方法参数 `JSON.toJSONString(paramsMap)` 全量序列化（仅移除 `request` 键），未系统性脱敏 token/密码，且无身份强绑定 | `Authenticated User` | T2 |
+| T21.I | I 信息泄露 | 解密密钥材料（`*.ks`、`openlibing.pfx`、`cacerts`）随 Docker 镜像分发（[Dockerfile:41-49](file:///c:/w30060144/tmp-tm-metric/Dockerfile)），与密文同源 `security.part1` 单点 | `Admin Credentials` | T3 |
+| T22.A | A 滥用 | forward-api 对 GET 拼 query / POST 全量透传 body，无参数白名单与长度约束，可被当作外部请求代理/外带通道 | `Authenticated User` | T2 |
 
 **STRIDE-A 汇总（metric）**：S=2，T=0，R=1，I=4，D=1，E=1，A=1，共 **10 条**。Tampering 为空是因为该仓 SQL 全部参数化（`${}` 0 命中）+ BlockAttack 拦截器；此项记为已缓解。
 
@@ -206,11 +206,11 @@ flowchart LR
 
 **AiDashboardForwarder（forward-api）—— 出站转发滥用：**
 
-| 威胁               | 证据                                                                                                                                                                                                                                  | 影响                                                                                   |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| 凭据自携出站       | [AiDashboardService.java:184-194](file:///c:/w30060144/tmp-tm-metric/src/main/java/com/openlibing/metric/app/service/metric/AiDashboardService.java)；`ApiForwardRequest.java:27,30` 允许客户端传 `token/apiKey`                      | 攻击者用任意凭据借服务出口 IP 调 gitcode API；可探测内网可达的 SSRF 目标（虽有白名单） |
-| 白名单覆盖 gitcode | [AiDashboardService.java:45-51](file:///c:/w30060144/tmp-tm-metric/src/main/java/com/openlibing/metric/app/service/metric/AiDashboardService.java#L45-L51) 白名单含 `gitcode.com`、`api.gitcode.com`、`console.enterprise.trae.cn` 等 | 白名单域名本身即可作为外带/凭据滥用的合法目标                                          |
-| 错误详情回传       | [AiDashboardController.java:92-95](file:///c:/w30060144/tmp-tm-metric/src/main/java/com/openlibing/metric/api/controller/AiDashboardController.java#L92-L95) `Result.error(HTTP_REQUEST_ERROR, e.getMessage())`                       | 内部异常/目标响应错误信息暴露给调用方                                                  |
+| 威胁 | 证据 | 影响 |
+| --- | --- | --- |
+| 凭据自携出站 | [AiDashboardService.java:184-194](file:///c:/w30060144/tmp-tm-metric/src/main/java/com/openlibing/metric/app/service/metric/AiDashboardService.java)；`ApiForwardRequest.java:27,30` 允许客户端传 `token/apiKey` | 攻击者用任意凭据借服务出口 IP 调 gitcode API；可探测内网可达的 SSRF 目标（虽有白名单） |
+| 白名单覆盖 gitcode | [AiDashboardService.java:45-51](file:///c:/w30060144/tmp-tm-metric/src/main/java/com/openlibing/metric/app/service/metric/AiDashboardService.java#L45-L51) 白名单含 `gitcode.com`、`api.gitcode.com`、`console.enterprise.trae.cn` 等 | 白名单域名本身即可作为外带/凭据滥用的合法目标 |
+| 错误详情回传 | [AiDashboardController.java:92-95](file:///c:/w30060144/tmp-tm-metric/src/main/java/com/openlibing/metric/api/controller/AiDashboardController.java#L92-L95) `Result.error(HTTP_REQUEST_ERROR, e.getMessage())` | 内部异常/目标响应错误信息暴露给调用方 |
 
 **SecretStore —— 静态凭据明文：** `HwProjectInfo.ak/sk`（华为云访问密钥对）与 `ProjectCommonAccountInfo.giteeToken/gitcodeToken` 均以**明文字段**读写 MySQL（`openlibing` 库），无加密、无脱敏、无审计读取。虽本仓未暴露对应写接口，但任何具备库读权限的路径（备份、DBA、横向移动）可直接取用云 AK/SK 与平台令牌。
 
@@ -240,17 +240,17 @@ flowchart LR
 
 ## 五、发现清单（metric，FIND-01 + FIND-10 ~ FIND-17）
 
-| 发现    | 仓库             | Tier | STRIDE | 对应威胁 | 摘要与处置方向                                                                 |
-| ------- | ---------------- | ---- | ------ | -------- | ------------------------------------------------------------------------------ |
-| FIND-01 | 跨仓（记入本仓） | T2   | S/D    | 跨仓     | 服务端零认证 + 限流死代码系统性单点失效（详见第四章）                          |
-| FIND-10 | metric           | T2   | S/E    | T13,T19  | 服务端零认证 + GET 语义删除接口（`delete/{metricCode}`）依赖网关纵向权限       |
-| FIND-11 | metric           | T2   | S/A    | T14,T22  | `/forward-api` 出站转发滥用：客户端自携 `token/apiKey` 出站 + 代理/外带通道    |
-| FIND-12 | metric           | T2   | I      | T15      | forward-api 异常 `e.getMessage()` 回传客户端                                   |
-| FIND-13 | metric           | T2   | I      | T16      | 生产/预发 Swagger api-docs 全量开放（远程主干 `application-prod.yaml` 已核实） |
-| FIND-14 | metric           | T3   | I      | T17      | 华为云 ak/sk、平台 giteeToken/gitcodeToken 明文落库                            |
-| FIND-15 | metric           | T2   | D      | T18      | 限流死代码 + `pageSize` 无上限可超大分页击穿 Doris                             |
-| FIND-16 | metric           | T2   | R      | T20      | 审计日志全量序列化参数未系统性脱敏 token/密码                                  |
-| FIND-17 | metric           | T3   | I      | T21      | 解密密钥材料（`*.ks`/pfx/cacerts）随镜像分发、与密文同源单点                   |
+| 发现 | 仓库 | Tier | STRIDE | 对应威胁 | 摘要与处置方向 |
+| --- | --- | --- | --- | --- | --- |
+| FIND-01 | 跨仓（记入本仓） | T2 | S/D | 跨仓 | 服务端零认证 + 限流死代码系统性单点失效（详见第四章） |
+| FIND-10 | metric | T2 | S/E | T13,T19 | 服务端零认证 + GET 语义删除接口（`delete/{metricCode}`）依赖网关纵向权限 |
+| FIND-11 | metric | T2 | S/A | T14,T22 | `/forward-api` 出站转发滥用：客户端自携 `token/apiKey` 出站 + 代理/外带通道 |
+| FIND-12 | metric | T2 | I | T15 | forward-api 异常 `e.getMessage()` 回传客户端 |
+| FIND-13 | metric | T2 | I | T16 | 生产/预发 Swagger api-docs 全量开放（远程主干 `application-prod.yaml` 已核实） |
+| FIND-14 | metric | T3 | I | T17 | 华为云 ak/sk、平台 giteeToken/gitcodeToken 明文落库 |
+| FIND-15 | metric | T2 | D | T18 | 限流死代码 + `pageSize` 无上限可超大分页击穿 Doris |
+| FIND-16 | metric | T2 | R | T20 | 审计日志全量序列化参数未系统性脱敏 token/密码 |
+| FIND-17 | metric | T3 | I | T21 | 解密密钥材料（`*.ks`/pfx/cacerts）随镜像分发、与密文同源单点 |
 
 > 注：FIND-35（跨仓构建供应链，Tier 3）与本仓 Dockerfile 直接相关，详见第四章。
 
@@ -309,12 +309,12 @@ flowchart LR
 
 ## 九、附录：STRIDE-A 汇总矩阵（metric）
 
-| 仓库              | S 欺骗 | T 篡改 | R 否认 | I 信息泄露 | D 拒绝服务 | E 权限提升 | A 滥用 | 威胁数 | Tier1 | Tier2 | Tier3 |
-| ----------------- | ------ | ------ | ------ | ---------- | ---------- | ---------- | ------ | ------ | ----- | ----- | ----- |
-| openlibing-metric | 2      | 0      | 1      | 4          | 1          | 1          | 1      | 10     | 0     | 8     | 2     |
+| 仓库 | S 欺骗 | T 篡改 | R 否认 | I 信息泄露 | D 拒绝服务 | E 权限提升 | A 滥用 | 威胁数 | Tier1 | Tier2 | Tier3 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| openlibing-metric | 2 | 0 | 1 | 4 | 1 | 1 | 1 | 10 | 0 | 8 | 2 |
 
 > 说明：威胁层 Tier 分布（Tier2=8 / Tier3=2，合计 10 条）与发现层 Tier 分布（Tier2=6 / Tier3=2，合计 8 条）不同，系跨仓/同主题威胁合并归类所致（FIND-11 合并 T14/T22、FIND-01 为跨仓归类），属预期差异。Tampering=0 系全仓 SQL 参数化 + BlockAttack，记已缓解。
 
 ---
 
-_报告生成：threat-model-analyst skill（STRIDE-A + 零信任 + 纵深防御），基线=远程仓主干分支（metric=origin/main），2026-08-21。本报告由《[openlibing-ops、ops-web、metric、sync]安全威胁建模分析报告》拆分而来，用于归档 openlibing-docs/architecture_desgin/openlibing-metric。_
+*报告生成：threat-model-analyst skill（STRIDE-A + 零信任 + 纵深防御），基线=远程仓主干分支（metric=origin/main），2026-08-21。本报告由《[openlibing-ops、ops-web、metric、sync]安全威胁建模分析报告》拆分而来，用于归档 openlibing-docs/architecture_desgin/openlibing-metric。*

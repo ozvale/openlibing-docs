@@ -15,7 +15,7 @@ openlibing-cicd 仓库负责在流水线构建产物分析完成后，检测 SAR
 
 ## 关联 PR
 
-| 仓库                 | PR   | 说明                           |
-| -------------------- | ---- | ------------------------------ |
-| openlibing-cicd      | #351 | 构建产物 SARIF 检测与触发      |
+| 仓库 | PR | 说明 |
+|------|-----|------|
+| openlibing-cicd | #351 | 构建产物 SARIF 检测与触发 |
 | openlibing-codecheck | #189 | SARIF 解析、问题管理、查询 API |

@@ -33,21 +33,17 @@
 ## Task 4: Bug 修复
 
 **文件**: `src/views/Repos/branches.vue`
-
 - [x] 注释 Tag 管理 tab
 
 **文件**: `src/views/Repos/roleMappingDialog.vue`
-
 - [x] Dialog 添加 `body-class="form-box"`
 - [x] 添加 `.form-box` 滚动样式
 
 **文件**: `src/views/Repos/index.vue`
-
 - [x] `repoLanguage` 空值保护：`formData.repoLanguage ? formData.repoLanguage.split(',') : []`
 - [x] `submit()` 中移除 `checkRepoRuleset()` 阻断逻辑
 - [x] `checkRepoRuleset()` 中移除 `ElMessage.warning` 阻断
 - [x] `rules` 中移除 `repoLanguage` 必填校验
 
 **文件**: `src/utils/common.ts`
-
 - [x] 文案修正：`码云账号标识` → `gitee账号标识`

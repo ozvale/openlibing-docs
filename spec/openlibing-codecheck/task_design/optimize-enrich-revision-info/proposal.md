@@ -9,7 +9,6 @@ enrichRevisionInfo 方法在查询 INC_SHIELD_DETAIL 表时，使用了 `defectI
 ## 功能描述
 
 **做**：
-
 - 优化 IncDetailsOperation.enrichRevisionInfo：先从 defectVos 中筛选满足 defectStatus 条件的记录，提取 defectId，再仅用 defectId 查询 INC_SHIELD_DETAIL
 - 优化 FullDetailsOperation.enrichRevisionInfo MR 模式：同上逻辑
 - 为 inc_shield_detail 集合新增 defectId 索引（Liquibase）
@@ -17,7 +16,6 @@ enrichRevisionInfo 方法在查询 INC_SHIELD_DETAIL 表时，使用了 `defectI
 - 删除 task_inc_result_details 集合的 4 个冗余索引
 
 **不做**：
-
 - 不修改 FULL_SHIELD_DETAIL 相关查询逻辑
 - 不修改外部接口
 

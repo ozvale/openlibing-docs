@@ -54,7 +54,6 @@
 **Decision**: 配置注入变量与实际使用变量分开命名
 
 **Rationale**:
-
 - `jwtSecret` / `part1` - 从 Apollo 配置注入的原始加密值
 - `decryptSecret` - 解密后实际用于 JWT 签名的密钥
 - 命名更清晰，职责更明确
@@ -64,7 +63,6 @@
 **Decision**: `@PostConstruct init()` 方法调用现有的 `isInitialized()` 而不是重复 CAS 逻辑
 
 **Rationale**:
-
 - 避免代码重复
 - `isInitialized()` 已实现 `compareAndSet(false, true)` + 抛异常逻辑
 - 保持一致性
@@ -74,7 +72,6 @@
 **Decision**: `init()` 方法使用 `private` 修饰符
 
 **Rationale**:
-
 - `@PostConstruct` 方法不应对外暴露
 - Spring 框架会通过反射调用
 - 符合最小暴露原则
@@ -84,7 +81,6 @@
 **Decision**: 使用 `@NoArgsConstructor(access = AccessLevel.PRIVATE)` 替代手写空构造函数
 
 **Rationale**:
-
 - 私有构造函数明确表达"不要手动实例化"
 - 符合原静态类的设计意图
 - Spring 5+ 可反射调用私有构造函数，正常工作
@@ -132,10 +128,10 @@
 
 ## File Changes
 
-| File                | Change Type | Description               |
-| ------------------- | ----------- | ------------------------- |
-| `JwtUtils.java`     | Modify      | 构造函数重构 + 变量重命名 |
-| `JwtUtilsTest.java` | Modify      | 反射测试字段名适配        |
+| File | Change Type | Description |
+|------|-------------|-------------|
+| `JwtUtils.java` | Modify | 构造函数重构 + 变量重命名 |
+| `JwtUtilsTest.java` | Modify | 反射测试字段名适配 |
 
 ### JwtUtils.java Detailed Changes
 

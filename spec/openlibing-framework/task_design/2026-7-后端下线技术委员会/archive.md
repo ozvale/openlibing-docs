@@ -13,85 +13,85 @@
 
 ## 变更统计
 
-| 类别       | 数量                    |
-| ---------- | ----------------------- |
-| 删除文件   | ~105                    |
-| 编辑文件   | 12                      |
-| 提交数量   | 42                      |
-| 删除代码行 | -28,689                 |
-| 新增代码行 | +24                     |
-| 测试用例   | 2012 passed, 0 failures |
+| 类别 | 数量 |
+|------|------|
+| 删除文件 | ~105 |
+| 编辑文件 | 12 |
+| 提交数量 | 42 |
+| 删除代码行 | -28,689 |
+| 新增代码行 | +24 |
+| 测试用例 | 2012 passed, 0 failures |
 
 ## 关键提交历史
 
 ### 核心模块删除
 
-| Commit     | 说明                                                         | 文件数 |
-| ---------- | ------------------------------------------------------------ | ------ |
-| `76e27909` | remove CMC core entities, DTOs, constants and log handler    | 8      |
-| `d49d05ac` | remove CmcInfoMapper interface and XML                       | 2      |
-| `8324c6cb` | remove MaintainerInfoMapper and CommitterInfoMapper          | 4      |
-| `558f70b0` | remove BranchKeeperInfoMapper and ReviewerInfoMapper         | 4      |
-| `64fc882f` | remove FieldInfoMapper interface                             | 1      |
-| `aa9d09ce` | remove FieldInfMapper.xml first half SQL statements          | 1      |
-| `41ee0d79` | remove FieldInfMapper.xml remaining content                  | 1      |
-| `787024b6` | remove YamlMapper interface                                  | 1      |
-| `f0d47b5c` | remove YamlMapper.xml                                        | 1      |
-| `d0ce7400` | remove CMC controllers                                       | 5      |
-| `39f50b4d` | remove CMC service interfaces and SelectController endpoints | 7      |
+| Commit | 说明 | 文件数 |
+|--------|------|--------|
+| `76e27909` | remove CMC core entities, DTOs, constants and log handler | 8 |
+| `d49d05ac` | remove CmcInfoMapper interface and XML | 2 |
+| `8324c6cb` | remove MaintainerInfoMapper and CommitterInfoMapper | 4 |
+| `558f70b0` | remove BranchKeeperInfoMapper and ReviewerInfoMapper | 4 |
+| `64fc882f` | remove FieldInfoMapper interface | 1 |
+| `aa9d09ce` | remove FieldInfMapper.xml first half SQL statements | 1 |
+| `41ee0d79` | remove FieldInfMapper.xml remaining content | 1 |
+| `787024b6` | remove YamlMapper interface | 1 |
+| `f0d47b5c` | remove YamlMapper.xml | 1 |
+| `d0ce7400` | remove CMC controllers | 5 |
+| `39f50b4d` | remove CMC service interfaces and SelectController endpoints | 7 |
 
 ### Service 实现删除
 
-| Commit                  | 说明                                         | 文件数 |
-| ----------------------- | -------------------------------------------- | ------ |
-| `3bfde327`              | remove BranchKeeperInfoServiceImpl           | 1      |
-| `695ea775`              | remove ReviewerInfoServiceImpl               | 1      |
-| `2072c74f` ~ `514b3e2e` | remove CmcInfoServiceImpl (2 commits)        | 1      |
-| `43ab130d` ~ `b8876752` | remove SigInfoManagerServiceImpl (2 commits) | 1      |
-| `5a152fee` ~ `91fa1bd0` | remove FieldManagerServiceImpl (4 commits)   | 1      |
+| Commit | 说明 | 文件数 |
+|--------|------|--------|
+| `3bfde327` | remove BranchKeeperInfoServiceImpl | 1 |
+| `695ea775` | remove ReviewerInfoServiceImpl | 1 |
+| `2072c74f` ~ `514b3e2e` | remove CmcInfoServiceImpl (2 commits) | 1 |
+| `43ab130d` ~ `b8876752` | remove SigInfoManagerServiceImpl (2 commits) | 1 |
+| `5a152fee` ~ `91fa1bd0` | remove FieldManagerServiceImpl (4 commits) | 1 |
 
 ### 测试删除
 
-| Commit                  | 说明                                               | 文件数 |
-| ----------------------- | -------------------------------------------------- | ------ |
-| `ad7b636b`              | remove CmcLogHandlerTest                           | 1      |
-| `4d0b882a` ~ `c977ecac` | remove CmcInfoServiceImplTest (2 commits)          | 1      |
-| `a613f82a` ~ `478cda3f` | remove FieldManagerServiceImplTest (2 commits)     | 1      |
-| `92c2b9f4` ~ `d9fd90df` | remove BranchKeeperInfoServiceImplTest (2 commits) | 1      |
-| `67b6dc2e` ~ `d18c7977` | remove ReviewerInfoServiceImplTest (2 commits)     | 1      |
-| `2bd42b23` ~ `7ba9b67d` | remove SigInfoManagerServiceImplTest (2 commits)   | 1      |
+| Commit | 说明 | 文件数 |
+|--------|------|--------|
+| `ad7b636b` | remove CmcLogHandlerTest | 1 |
+| `4d0b882a` ~ `c977ecac` | remove CmcInfoServiceImplTest (2 commits) | 1 |
+| `a613f82a` ~ `478cda3f` | remove FieldManagerServiceImplTest (2 commits) | 1 |
+| `92c2b9f4` ~ `d9fd90df` | remove BranchKeeperInfoServiceImplTest (2 commits) | 1 |
+| `67b6dc2e` ~ `d18c7977` | remove ReviewerInfoServiceImplTest (2 commits) | 1 |
+| `2bd42b23` ~ `7ba9b67d` | remove SigInfoManagerServiceImplTest (2 commits) | 1 |
 
 ### Entity/DTO 删除
 
-| Commit                  | 说明                                  | 文件数 |
-| ----------------------- | ------------------------------------- | ------ |
-| `0a91cace`              | remove CMC-related entity classes     | 17     |
-| `7f9b0403`              | remove committer and maintainer DTOs  | 7      |
-| `27fbf9cf`              | remove branchkeeper and reviewer DTOs | 10     |
-| `8c626283` ~ `f25fc647` | remove git/code DTOs (2 commits)      | 10     |
-| `f95d4f1f` ~ `831360ac` | remove field DTOs (2 commits)         | 18     |
+| Commit | 说明 | 文件数 |
+|--------|------|--------|
+| `0a91cace` | remove CMC-related entity classes | 17 |
+| `7f9b0403` | remove committer and maintainer DTOs | 7 |
+| `27fbf9cf` | remove branchkeeper and reviewer DTOs | 10 |
+| `8c626283` ~ `f25fc647` | remove git/code DTOs (2 commits) | 10 |
+| `f95d4f1f` ~ `831360ac` | remove field DTOs (2 commits) | 18 |
 
 ### 引用清理与优化
 
-| Commit     | 说明                                                     | 文件数 |
-| ---------- | -------------------------------------------------------- | ------ |
-| `c484a4e1` | remove CMC references from service and mapper classes    | 8      |
-| `83143152` | remove CMC-related test cases and update remaining tests | 3      |
-| `54d7d0f1` | remove unused getSigUser method and related imports      | 1      |
-| `07273a3e` | optimize pre-commit config by merging Maven hooks        | 1      |
-| `2bd4c2b7` | revert RedisConfig.java to target branch version         | 1      |
+| Commit | 说明 | 文件数 |
+|--------|------|--------|
+| `c484a4e1` | remove CMC references from service and mapper classes | 8 |
+| `83143152` | remove CMC-related test cases and update remaining tests | 3 |
+| `54d7d0f1` | remove unused getSigUser method and related imports | 1 |
+| `07273a3e` | optimize pre-commit config by merging Maven hooks | 1 |
+| `2bd4c2b7` | revert RedisConfig.java to target branch version | 1 |
 
 ## 下线的 HTTP 接口（38 个）
 
 ### Controller 整体删除（36 个端点）
 
-| Controller                    | 端点数 | 端点列表                                                                                                                                                                                  |
-| ----------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CommitterManagerController    | 11     | add-cmc, update-cmc, query-permission, query-committer-user-info, add-committer, query-committer, update-committer, delete-committer, add-maintainer, query-maintainer, delete-maintainer |
-| BranchKeeperManagerController | 4      | add-branch-keeper, query-branch-keeper, update-branch-keeper, delete-branch-keeper                                                                                                        |
-| ReviewerManagerController     | 4      | add-reviewer, query-reviewer, update-reviewer, delete-reviewer                                                                                                                            |
-| FieldManagerController        | 9      | add-field, query-field, update-field, delete-field, associate-committer, associate-reviewer, associate-branch-keeper, schedule-gitee-owner, query-schedule-gitee                          |
-| SigInfoManagerController      | 8      | check-all-sig-sha, query-role-info, query-sig-all-info, check-sig-sha, initialize-sig, save-sig, schedule-gitcode-sig, get-gitcode-yaml                                                   |
+| Controller | 端点数 | 端点列表 |
+|------------|--------|----------|
+| CommitterManagerController | 11 | add-cmc, update-cmc, query-permission, query-committer-user-info, add-committer, query-committer, update-committer, delete-committer, add-maintainer, query-maintainer, delete-maintainer |
+| BranchKeeperManagerController | 4 | add-branch-keeper, query-branch-keeper, update-branch-keeper, delete-branch-keeper |
+| ReviewerManagerController | 4 | add-reviewer, query-reviewer, update-reviewer, delete-reviewer |
+| FieldManagerController | 9 | add-field, query-field, update-field, delete-field, associate-committer, associate-reviewer, associate-branch-keeper, schedule-gitee-owner, query-schedule-gitee |
+| SigInfoManagerController | 8 | check-all-sig-sha, query-role-info, query-sig-all-info, check-sig-sha, initialize-sig, save-sig, schedule-gitcode-sig, get-gitcode-yaml |
 
 ### SelectController 端点删除（8 个）
 
@@ -112,15 +112,15 @@
 
 ## 下线的角色（7 个）
 
-| 角色              | 常量             | 说明               | 后端状态             | 前端残留                                               |
-| ----------------- | ---------------- | ------------------ | -------------------- | ------------------------------------------------------ |
-| product_cmc       | 产业CMC主任      | CMC 产业级最高权限 | ✅ 已移除守卫        | user.vue、commentInstruction.vue 中硬编码              |
-| project_cmc       | 项目CMC主任      | CMC 项目级最高权限 | ✅ 已移除守卫        | commentInstruction.vue、projectUserManage.vue 中硬编码 |
-| committer_product | 产业级 committer | 产业级代码提交者   | ⚠️ 仍有守卫代码      | user.vue 中硬编码                                      |
-| committer_project | 项目级 committer | 项目级代码提交者   | ⚠️ 仍有守卫代码      | projectUserManage.vue 中硬编码                         |
-| maintainer        | CMC 维护者       | CMC 维护者角色     | ✅ Controller 已删除 | 无残留                                                 |
-| reviewer          | CMC 审查者       | CMC 代码审查者     | ✅ Controller 已删除 | 无残留                                                 |
-| branch_keeper     | CMC 分支管理者   | CMC 分支管理者     | ✅ Controller 已删除 | 无残留                                                 |
+| 角色 | 常量 | 说明 | 后端状态 | 前端残留 |
+|------|------|------|---------|---------|
+| product_cmc | 产业CMC主任 | CMC 产业级最高权限 | ✅ 已移除守卫 | user.vue、commentInstruction.vue 中硬编码 |
+| project_cmc | 项目CMC主任 | CMC 项目级最高权限 | ✅ 已移除守卫 | commentInstruction.vue、projectUserManage.vue 中硬编码 |
+| committer_product | 产业级 committer | 产业级代码提交者 | ⚠️ 仍有守卫代码 | user.vue 中硬编码 |
+| committer_project | 项目级 committer | 项目级代码提交者 | ⚠️ 仍有守卫代码 | projectUserManage.vue 中硬编码 |
+| maintainer | CMC 维护者 | CMC 维护者角色 | ✅ Controller 已删除 | 无残留 |
+| reviewer | CMC 审查者 | CMC 代码审查者 | ✅ Controller 已删除 | 无残留 |
+| branch_keeper | CMC 分支管理者 | CMC 分支管理者 | ✅ Controller 已删除 | 无残留 |
 
 ## 用户自测反馈
 
@@ -201,7 +201,6 @@
 **效果**: 减少 JVM 启动次数，编译时间缩短约 30%
 
 **配置**:
-
 ```yaml
 - repo: local
   hooks:
@@ -221,7 +220,6 @@
 **方案**: 恢复到目标分支版本，避免格式化冲突
 
 **步骤**:
-
 ```bash
 git checkout upstream/release_20260730_prod -- src/main/java/com/openlibing/framework/common/config/RedisConfig.java
 git commit --no-verify -m "revert: restore RedisConfig.java to target branch version"
@@ -237,7 +235,6 @@ git push origin LYP_2607_iter2
 **方案**: 按依赖顺序分阶段提交，每阶段编译验证
 
 **阶段**:
-
 1. Controller 删除（5 个文件）
 2. Service 接口和实现删除（10 个文件）
 3. Mapper 接口和 XML 删除（14 个文件）
@@ -258,7 +255,6 @@ git push origin LYP_2607_iter2
 **方案**: grep 扫描确认无调用方再删除
 
 **步骤**:
-
 ```bash
 # 扫描方法调用
 grep -r "getSigUser" src/main/java/ --include="*.java"
@@ -277,7 +273,6 @@ grep -r "getSigUser" src/main/java/com/openlibing/framework/business/controller/
 **场景**: 下线模块相关角色，评估对现有系统的影响
 
 **评估维度**:
-
 - 后端代码引用（守卫代码、权限检查）
 - 前端硬编码（角色过滤、权限判断）
 - 数据库记录（user_role_info 表）
@@ -292,7 +287,6 @@ grep -r "getSigUser" src/main/java/com/openlibing/framework/business/controller/
 **范围**: 3 个 Vue 文件中的硬编码引用
 
 **文件**:
-
 - `user.vue`: product_cmc、committer_product
 - `commentInstruction.vue`: product_cmc、project_cmc
 - `projectUserManage.vue`: project_cmc、committer_project

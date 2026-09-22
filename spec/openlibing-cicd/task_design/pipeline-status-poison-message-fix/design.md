@@ -29,7 +29,6 @@ factory.setDefaultRequeueRejected(true);  // 异常 → nack(requeue=true) → �
 ```
 
 注释声称"配合死信队列使用，最多重试 3 次后进入死信队列"，但**没有**：
-
 - `RetryOperationsInterceptor`（重试次数限制）
 - `MessageRecoverer`（重试耗尽后的恢复器）
 - `setAdviceChain`（advice 链）
@@ -63,11 +62,11 @@ GitCode webhook 推送 FAILED 状态 → producer 投递到 pipeline_status_queu
 
 ### 方案对比
 
-| 方案                                                       | 改动量         | 风险                           | 推荐度      |
-| ---------------------------------------------------------- | -------------- | ------------------------------ | ----------- |
-| `getPRAllLabels` 字符串数组兜底 + retry interceptor + 脱敏 | 3 文件 +50/-12 | 低                             | ⭐⭐⭐ 推荐 |
-| 仅业务代码兜底，不动框架                                   | 1 文件 +20/-0  | 中：毒消息仍会让 consumer 卡死 | ⭐ 不推荐   |
-| 升级 GitCode API 调用方用对象 schema                       | 跨仓改动       | 高                             | ⭐ 不推荐   |
+| 方案 | 改动量 | 风险 | 推荐度 |
+|---|---|---|---|
+| `getPRAllLabels` 字符串数组兜底 + retry interceptor + 脱敏 | 3 文件 +50/-12 | 低 | ⭐⭐⭐ 推荐 |
+| 仅业务代码兜底，不动框架 | 1 文件 +20/-0 | 中：毒消息仍会让 consumer 卡死 | ⭐ 不推荐 |
+| 升级 GitCode API 调用方用对象 schema | 跨仓改动 | 高 | ⭐ 不推荐 |
 
 采用 **方案 1**：业务代码 + 框架配置 + 日志安全 三层联动修复。
 
@@ -148,9 +147,9 @@ private static String maskSensitiveFields(String messageJson) {
 
 ### 已通过的本地测试
 
-| 验证项                                    | 结果                                        |
-| ----------------------------------------- | ------------------------------------------- |
-| `mvn compile`                             | ✅                                          |
+| 验证项 | 结果 |
+|---|---|
+| `mvn compile` | ✅ |
 | `mvn test -Dtest=PipelineServiceImplTest` | ✅ `Tests run: 206, Failures: 0, Errors: 0` |
 
 ### 用户 dev 环境自测项
@@ -161,12 +160,12 @@ private static String maskSensitiveFields(String messageJson) {
 
 ## 风险与缓解
 
-| 风险                                                                  | 缓解                                                                        |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| 字符串数组兜底可能在某种 GitCode 响应格式下误判（如对象字段名也匹配） | 正则只匹配双引号包裹的 token-style 字段，不会误伤普通字段                   |
-| `setDefaultRequeueRejected` 改动影响其他 listener 行为                | 工厂只针对 `pipelineStatusListenerContainerFactory`，其他 listener 不受影响 |
-| 正则无法覆盖带转义引号的 token 值（如 `"my\"token"`）                 | 已知边界，token 实际不包含引号；如未来需要可改用 JSON parse + 字段过滤      |
-| 3 次重试 + 5s 退避后入 DLQ，可能延迟业务处理                          | 业务功能可容忍 8s 延迟；DLQ 告警有 `handleDeadLetterEvent` 兜底             |
+| 风险 | 缓解 |
+|---|---|
+| 字符串数组兜底可能在某种 GitCode 响应格式下误判（如对象字段名也匹配） | 正则只匹配双引号包裹的 token-style 字段，不会误伤普通字段 |
+| `setDefaultRequeueRejected` 改动影响其他 listener 行为 | 工厂只针对 `pipelineStatusListenerContainerFactory`，其他 listener 不受影响 |
+| 正则无法覆盖带转义引号的 token 值（如 `"my\"token"`） | 已知边界，token 实际不包含引号；如未来需要可改用 JSON parse + 字段过滤 |
+| 3 次重试 + 5s 退避后入 DLQ，可能延迟业务处理 | 业务功能可容忍 8s 延迟；DLQ 告警有 `handleDeadLetterEvent` 兜底 |
 
 ## 跨仓影响
 

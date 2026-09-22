@@ -20,14 +20,12 @@
 #### 2.1.1 时间筛选功能
 
 接口需要支持以下四个时间参数的筛选：
-
 - `createStartDate`：流水线开始时间起始（筛选pipeline_run_starttime）
 - `createEndDate`：流水线开始时间结束（筛选pipeline_run_starttime）
 - `finishStartDate`：流水线结束时间起始（筛选pipeline_run_endtime）
 - `finishEndDate`：流水线结束时间结束（筛选pipeline_run_endtime）
 
 筛选逻辑：
-
 - createStartDate/createEndDate和finishStartDate/finishEndDate为AND关系
 - 所有参数都是可选的
 - 如果只提供部分参数，只对提供的参数进行筛选
@@ -35,7 +33,6 @@
 #### 2.1.2 时间格式化
 
 返回的时间字段需要格式化为以下格式：
-
 - `pipelineRunStarttime`：yyyy-MM-dd HH:mm:ss
 - `pipelineRunEndtime`：yyyy-MM-dd HH:mm:ss
 
@@ -52,7 +49,6 @@
 采用**Mapper XML添加筛选条件 + JSON注解时间格式化**方案：
 
 **理由：**
-
 1. 保持类型安全：字段类型保持LocalDateTime
 2. 性能好：无需内存遍历转换
 3. 代码简洁：只需添加注解和SQL条件
@@ -73,7 +69,6 @@ Mapper层 (DwrRdEfcBuildFactNightlyTestCasePipelineRunMapper)
 ### 3.3 数据库设计
 
 无需修改数据库表结构，利用现有字段：
-
 - `pipeline_run_starttime`：流水线开始时间
 - `pipeline_run_endtime`：流水线结束时间
 
@@ -100,7 +95,7 @@ public class NightlyPipelineDetailReq extends DetailReq {
 public class NightlyPipelineDetailResp extends DetailResp {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime pipelineRunStarttime;
-
+    
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime pipelineRunEndtime;
     // ... 其他字段

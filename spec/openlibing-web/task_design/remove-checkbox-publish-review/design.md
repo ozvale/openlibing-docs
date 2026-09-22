@@ -16,10 +16,16 @@
 
 ```vue
 <!-- 修改前 -->
-<publishTable :multiple="true" ... />
+<publishTable
+  :multiple="true"
+  ...
+/>
 
 <!-- 修改后 -->
-<publishTable :multiple="false" ... />
+<publishTable
+  :multiple="false"
+  ...
+/>
 ```
 
 ### 3. 影响范围

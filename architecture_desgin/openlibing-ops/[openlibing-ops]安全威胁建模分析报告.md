@@ -10,13 +10,13 @@
 
 ## 文档信息与元数据
 
-| 字段             | 值                                                                                                                                                                                                                        |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 分析模型         | DeepSeek-V4-Flash（threat-model-analyst skill 驱动）；补充 3 项缺口（sync Python 采集脚本、Dockerfile 构建供应链完整性、镜像 SBOM/cosign/seccomp）证据合并自 MiniMax-M3 独立分析报告，本仓相关项为 FIND-35 跨仓构建供应链 |
-| 分析基线类型     | 远程仓主干分支（git worktree 独立检出，detached HEAD，分析完成后已清理）                                                                                                                                                  |
-| 仓库             | `openlibing-ops`，远程主干 `origin/main`，HEAD `a1bcb28b`                                                                                                                                                                 |
-| 分析范围         | 本仓源码 + 配置 + 部署脚本 + CI 工作流；信任边界证据来自 `openlibing-gateway`/`openlibing-common` 相关代码与 docs 记录                                                                                                    |
-| 输出位置（归档） | `openlibing-docs/architecture_desgin/openlibing-ops/[openlibing-ops]安全威胁建模分析报告.md`（PR 合入主仓 master 后生效）                                                                                                 |
+| 字段 | 值 |
+| --- | --- |
+| 分析模型 | DeepSeek-V4-Flash（threat-model-analyst skill 驱动）；补充 3 项缺口（sync Python 采集脚本、Dockerfile 构建供应链完整性、镜像 SBOM/cosign/seccomp）证据合并自 MiniMax-M3 独立分析报告，本仓相关项为 FIND-35 跨仓构建供应链 |
+| 分析基线类型 | 远程仓主干分支（git worktree 独立检出，detached HEAD，分析完成后已清理） |
+| 仓库 | `openlibing-ops`，远程主干 `origin/main`，HEAD `a1bcb28b` |
+| 分析范围 | 本仓源码 + 配置 + 部署脚本 + CI 工作流；信任边界证据来自 `openlibing-gateway`/`openlibing-common` 相关代码与 docs 记录 |
+| 输出位置（归档） | `openlibing-docs/architecture_desgin/openlibing-ops/[openlibing-ops]安全威胁建模分析报告.md`（PR 合入主仓 master 后生效） |
 
 ---
 
@@ -34,9 +34,9 @@ OpenLibing 运营域 `openlibing-ops` 仓（远程主干基线）的**工程化�
 
 ### 1.2 威胁计数总览（ops）
 
-| 仓库           | Tier 1 | Tier 2 | Tier 3 | 发现合计 | 最突出弱点                                                 |
-| -------------- | ------ | ------ | ------ | -------- | ---------------------------------------------------------- |
-| openlibing-ops | 0      | 7      | 2      | 9        | sortRule SQL 注入未根治 + 生产 Swagger 开放 + 服务端零认证 |
+| 仓库 | Tier 1 | Tier 2 | Tier 3 | 发现合计 | 最突出弱点 |
+| --- | --- | --- | --- | --- | --- |
+| openlibing-ops | 0 | 7 | 2 | 9 | sortRule SQL 注入未根治 + 生产 Swagger 开放 + 服务端零认证 |
 
 > 注：FIND-01（跨仓系统性发现：服务端零认证 + 限流死代码）统计口径上记入本仓行（Tier 2）；FIND-09 为本仓 Tier 3 发现；FIND-35（跨仓构建供应链完整性）单列"跨仓"行，详见第四章。
 
@@ -145,27 +145,27 @@ flowchart LR
 
 **信任边界说明（ops 视角）：**
 
-| 边界               | 含义                                 | 关键事实                                                                                                                                                                                       |
-| ------------------ | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `External`         | 浏览器                               | 员工经网关鉴权                                                                                                                                                                                 |
-| `Perimeter`        | 网关边界                             | AuthFilter 是唯一认证执行点（[AuthFilter.java](file:///c:/w30060144/develop/repositories/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java)） |
-| `Frontend`         | ops-web nginx                        | 同源 /gateway 代理；无安全响应头                                                                                                                                                               |
-| `SiblingServices`  | metric / sync                        | 同信任域兄弟服务；均无服务端鉴权，Doris 为共享数据存储                                                                                                                                         |
-| `OpsContext`       | ops 本仓                             | 服务端零认证；端口集群内网可达                                                                                                                                                                 |
-| `DataStorage`      | MySQL / Doris                        | 双数据源，默认 Doris；连接串由 Apollo 配置中心下发                                                                                                                                             |
-| `ExternalServices` | GitCode / framework / 云 AI / 华为云 | 出站调用；凭据经 `SecurityUtil.decrypt` 解密                                                                                                                                                   |
+| 边界 | 含义 | 关键事实 |
+| --- | --- | --- |
+| `External` | 浏览器 | 员工经网关鉴权 |
+| `Perimeter` | 网关边界 | AuthFilter 是唯一认证执行点（[AuthFilter.java](file:///c:/w30060144/develop/repositories/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java)） |
+| `Frontend` | ops-web nginx | 同源 /gateway 代理；无安全响应头 |
+| `SiblingServices` | metric / sync | 同信任域兄弟服务；均无服务端鉴权，Doris 为共享数据存储 |
+| `OpsContext` | ops 本仓 | 服务端零认证；端口集群内网可达 |
+| `DataStorage` | MySQL / Doris | 双数据源，默认 Doris；连接串由 Apollo 配置中心下发 |
+| `ExternalServices` | GitCode / framework / 云 AI / 华为云 | 出站调用；凭据经 `SecurityUtil.decrypt` 解密 |
 
 ### 2.4 跨仓信任边界与攻击路径（ops 相关）
 
 > 本单仓版保留跨仓视角，便于定位 ops 在体系中的受信位置与上游/下游风险传导。
 
-| 跨仓关系              | 信任方向     | 风险传导路径                                                                                           | 本仓受影响威胁   |
-| --------------------- | ------------ | ------------------------------------------------------------------------------------------------------ | ---------------- |
-| ops → Doris（共享）   | 写/读        | sync `/api/data/ingest` 零认证匿名直写 Doris → ops 查询/统计读到被污染的指标数据（脏数据污染运营结论） | T03/T10 等读路径 |
-| ops ↔ gateway         | 完全信任网关 | 网关绕过（`/manage` 剥离、豁免遗漏、SSRF）→ ops 全部接口匿名可达                                       | T01/T04/T09      |
-| ops → framework       | 出站         | framework 操作日志若被注入/篡改，审计链被污染（跨仓否认面）                                            | T05/T07          |
-| ops → GitCode API     | 出站         | 客户端透传 Authorization 借 ops 服务身份代查他人邮箱映射                                               | T02              |
-| 兄弟仓（metric/sync） | 同信任域     | 任一仓被攻破（如 sync Tier 1 零认证写接口）可横向移动直连 ops 内网端口                                 | T01              |
+| 跨仓关系 | 信任方向 | 风险传导路径 | 本仓受影响威胁 |
+| --- | --- | --- | --- |
+| ops → Doris（共享） | 写/读 | sync `/api/data/ingest` 零认证匿名直写 Doris → ops 查询/统计读到被污染的指标数据（脏数据污染运营结论） | T03/T10 等读路径 |
+| ops ↔ gateway | 完全信任网关 | 网关绕过（`/manage` 剥离、豁免遗漏、SSRF）→ ops 全部接口匿名可达 | T01/T04/T09 |
+| ops → framework | 出站 | framework 操作日志若被注入/篡改，审计链被污染（跨仓否认面） | T05/T07 |
+| ops → GitCode API | 出站 | 客户端透传 Authorization 借 ops 服务身份代查他人邮箱映射 | T02 |
+| 兄弟仓（metric/sync） | 同信任域 | 任一仓被攻破（如 sync Tier 1 零认证写接口）可横向移动直连 ops 内网端口 | T01 |
 
 ---
 
@@ -173,42 +173,42 @@ flowchart LR
 
 ### 3.1 组件与攻击面
 
-| 组件 ID                      | 锚点（证据文件）                                                       | 暴露面                                                                      |
-| ---------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| OpsOverviewController        | `api/controller/OpsOverviewController.java`                            | `/ops-overview` main/resource-summary/nightly-summary/link-config(GET/POST) |
-| RepoController               | `api/controller/RepoController.java`                                   | `/repo` base/dashboard、branch/config/batch(POST) 等                        |
-| PipelineController           | `api/controller/PipelineController.java`                               | `/pipeline` info/query/version-chart                                        |
-| ResourceController           | `api/controller/ResourceController.java`                               | `/resource` summary/trend                                                   |
-| ProjectController            | `api/controller/ProjectController.java`                                | `/project` issue/summary                                                    |
-| OpsGithubController          | `api/controller/OpsGithubController.java`                              | `/ops/github` chart/export/*                                                |
-| CodeCheckDashboardController | `api/controller/CodeCheckDashboardController.java`                     | `/code-check-dashboard` kpi/trend/branch-config/add                         |
-| CommonController             | `api/controller/CommonController.java`                                 | `common` remark/export/{category}/detail                                    |
-| ExternalApiControllers       | `api/controller/external/GitcodeApi.java` 等 4 个                      | `api/gitcode`、`ops/api/repo`、`ops/api/nightly`、`api/repo/issue`          |
-| OpsQueryServices             | `domain/service/pipeline/impl/DwiPipelineRunInfoServiceImpl.java` 等   | SQL 组装层（sortField/sortRule）                                            |
-| DataAccess                   | `domain/mapper/*.xml` + `infrastructure/config/DataSourceConfig.java`  | MySQL + Doris 双数据源                                                      |
-| GitcodeFeignClient           | `infrastructure/client/gitcode/GitcodeFeignClient.java`                | 出站 GitCode API                                                            |
-| FrameworkFeignClient         | `infrastructure/client/framework/FrameworkFeignClient.java`            | 出站 framework 操作日志                                                     |
-| RateLimitConfig              | `infrastructure/config/RateLimitConfig.java`                           | 限流配置（死代码）                                                          |
-| ExportService                | `app/service/CommonService.java`                                       | EasyExcel 导出                                                              |
-| LogPipeline                  | `infrastructure/aop/DashboardLoggerAspect.java` + `logback-spring.xml` | 日志/审计                                                                   |
-| DockerContainer              | `Dockerfile` + `start.sh` + `monitor.sh`                               | 运行时加固                                                                  |
+| 组件 ID | 锚点（证据文件） | 暴露面 |
+| --- | --- | --- |
+| OpsOverviewController | `api/controller/OpsOverviewController.java` | `/ops-overview` main/resource-summary/nightly-summary/link-config(GET/POST) |
+| RepoController | `api/controller/RepoController.java` | `/repo` base/dashboard、branch/config/batch(POST) 等 |
+| PipelineController | `api/controller/PipelineController.java` | `/pipeline` info/query/version-chart |
+| ResourceController | `api/controller/ResourceController.java` | `/resource` summary/trend |
+| ProjectController | `api/controller/ProjectController.java` | `/project` issue/summary |
+| OpsGithubController | `api/controller/OpsGithubController.java` | `/ops/github` chart/export/* |
+| CodeCheckDashboardController | `api/controller/CodeCheckDashboardController.java` | `/code-check-dashboard` kpi/trend/branch-config/add |
+| CommonController | `api/controller/CommonController.java` | `common` remark/export/{category}/detail |
+| ExternalApiControllers | `api/controller/external/GitcodeApi.java` 等 4 个 | `api/gitcode`、`ops/api/repo`、`ops/api/nightly`、`api/repo/issue` |
+| OpsQueryServices | `domain/service/pipeline/impl/DwiPipelineRunInfoServiceImpl.java` 等 | SQL 组装层（sortField/sortRule） |
+| DataAccess | `domain/mapper/*.xml` + `infrastructure/config/DataSourceConfig.java` | MySQL + Doris 双数据源 |
+| GitcodeFeignClient | `infrastructure/client/gitcode/GitcodeFeignClient.java` | 出站 GitCode API |
+| FrameworkFeignClient | `infrastructure/client/framework/FrameworkFeignClient.java` | 出站 framework 操作日志 |
+| RateLimitConfig | `infrastructure/config/RateLimitConfig.java` | 限流配置（死代码） |
+| ExportService | `app/service/CommonService.java` | EasyExcel 导出 |
+| LogPipeline | `infrastructure/aop/DashboardLoggerAspect.java` + `logback-spring.xml` | 日志/审计 |
+| DockerContainer | `Dockerfile` + `start.sh` + `monitor.sh` | 运行时加固 |
 
 ### 3.2 STRIDE-A 威胁表（ops）
 
-| 威胁 ID | STRIDE 类别 | 威胁描述                                                                                                      | 前置条件             | Tier |
-| ------- | ----------- | ------------------------------------------------------------------------------------------------------------- | -------------------- | ---- |
-| T01.S   | S 欺骗      | 13 个 Controller 无服务端身份校验，网关绕过/直连后身份可任意伪造                                              | `Internal Network`   | T2   |
-| T02.S   | S 欺骗      | GitcodeApi.queryUserByEmail 信任客户端透传 Authorization，可借服务代查他人邮箱映射                            | `Internal Network`   | T2   |
-| T03.T   | T 篡改      | sortRule 未净化直接拼 ORDER BY，SQL 注入/子查询盲注（6 条服务路径）                                           | `Authenticated User` | T2   |
-| T04.T   | T 篡改      | `/manage` 前缀由 PathFilter 无条件剥离，路由混淆/网关鉴权绕过面                                               | `Internal Network`   | T2   |
-| T05.R   | R 否认      | 无服务端身份绑定，操作审计无法追溯真实用户（依赖网关注入身份头）                                              | `Internal Network`   | T2   |
-| T06.I   | I 信息泄露  | 生产/预发 Swagger 全量开放（api-docs + swagger-ui enabled: true，`application-prod.yaml` 生效）               | `Authenticated User` | T2   |
-| T07.I   | I 信息泄露  | PathFilter 对每个请求 INFO 级记录 URI，operate 日志 appender 裸 `%msg%n` 无 CRLF 清洗（日志注入/审计污染）    | `Authenticated User` | T2   |
-| T08.D   | D 拒绝服务  | RateLimitConfig 为死代码（getApiConfig 无调用方），导出/查询/邮箱枚举接口无限流可被刷                         | `Authenticated User` | T2   |
-| T09.E   | E 权限提升  | 经网关纵向权限若漏配（网关 forwardTrustList/豁免路径），写接口（branch-config/add、link-config POST）匿名可写 | `Internal Network`   | T2   |
-| T10.A   | A 滥用      | 导出接口可被用于批量拖取全量运营数据（导出无频次/行数限制）                                                   | `Authenticated User` | T2   |
-| T11.I   | I 信息泄露  | 数据库口令与 GitCode token 经单一静态密钥 `security.part1` 对称解密，密钥与密文同存 Apollo 配置中心单点       | `Admin Credentials`  | T3   |
-| T12.T   | T 篡改      | 镜像内嵌 pfx/cacerts 证书材料随镜像分发，来源管控与轮换缺失                                                   | `Admin Credentials`  | T3   |
+| 威胁 ID | STRIDE 类别 | 威胁描述 | 前置条件 | Tier |
+| --- | --- | --- | --- | --- |
+| T01.S | S 欺骗 | 13 个 Controller 无服务端身份校验，网关绕过/直连后身份可任意伪造 | `Internal Network` | T2 |
+| T02.S | S 欺骗 | GitcodeApi.queryUserByEmail 信任客户端透传 Authorization，可借服务代查他人邮箱映射 | `Internal Network` | T2 |
+| T03.T | T 篡改 | sortRule 未净化直接拼 ORDER BY，SQL 注入/子查询盲注（6 条服务路径） | `Authenticated User` | T2 |
+| T04.T | T 篡改 | `/manage` 前缀由 PathFilter 无条件剥离，路由混淆/网关鉴权绕过面 | `Internal Network` | T2 |
+| T05.R | R 否认 | 无服务端身份绑定，操作审计无法追溯真实用户（依赖网关注入身份头） | `Internal Network` | T2 |
+| T06.I | I 信息泄露 | 生产/预发 Swagger 全量开放（api-docs + swagger-ui enabled: true，`application-prod.yaml` 生效） | `Authenticated User` | T2 |
+| T07.I | I 信息泄露 | PathFilter 对每个请求 INFO 级记录 URI，operate 日志 appender 裸 `%msg%n` 无 CRLF 清洗（日志注入/审计污染） | `Authenticated User` | T2 |
+| T08.D | D 拒绝服务 | RateLimitConfig 为死代码（getApiConfig 无调用方），导出/查询/邮箱枚举接口无限流可被刷 | `Authenticated User` | T2 |
+| T09.E | E 权限提升 | 经网关纵向权限若漏配（网关 forwardTrustList/豁免路径），写接口（branch-config/add、link-config POST）匿名可写 | `Internal Network` | T2 |
+| T10.A | A 滥用 | 导出接口可被用于批量拖取全量运营数据（导出无频次/行数限制） | `Authenticated User` | T2 |
+| T11.I | I 信息泄露 | 数据库口令与 GitCode token 经单一静态密钥 `security.part1` 对称解密，密钥与密文同存 Apollo 配置中心单点 | `Admin Credentials` | T3 |
+| T12.T | T 篡改 | 镜像内嵌 pfx/cacerts 证书材料随镜像分发，来源管控与轮换缺失 | `Admin Credentials` | T3 |
 
 **STRIDE-A 汇总（ops）**：S=2，T=3（T03/T04/T12），R=1，I=3，D=1，E=1，A=1，共 **12 条**（T01~T12）。
 
@@ -216,16 +216,16 @@ flowchart LR
 
 **OpsQueryServices（SQL 组装层）—— Tampering / Injection：**
 
-| 威胁            | 证据                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | 影响                                                        |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `sortRule` 注入 | [DwiPipelineRunInfoServiceImpl.java:146](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/domain/service/pipeline/impl/DwiPipelineRunInfoServiceImpl.java#L146) `queryWrapper.last("order by " + req.getSortField() + " " + req.getSortRule())`；`sortField` 经 [FieldUtil.getSortField](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/infrastructure/util/FieldUtil.java) 白名单映射，**`sortRule` 原样拼接**                                                                                                                                                                                                                                                                                                                                                                                                                                                 | ORDER BY 上下文可构造子查询/时间盲注；叠加无认证/无限流放大 |
-| 同类未净化路径  | [ResourceProjectTestcaseDetailService.java:108](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/domain/service/resource/detail/ResourceProjectTestcaseDetailService.java)、[DwiVersionPipelineInfoServiceImpl.java:63](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/domain/service/pipeline/impl/DwiVersionPipelineInfoServiceImpl.java)、[DwiProjectStatisticsServiceImpl.java:55](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/domain/service/project/impl/DwiProjectStatisticsServiceImpl.java)、[RepoHandle.java:96,113](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/app/service/repo/RepoHandle.java)、[DmRdEfcRepoSumPipelineStatisticsDayServiceImpl.java:66](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/domain/service/repo/impl/DmRdEfcRepoSumPipelineStatisticsDayServiceImpl.java) | 同上                                                        |
-| 已净化对照基线  | `SortFieldValidator.normalizeRule` + `validate`（asc/desc 白名单）；`FieldUtil.getSortFieldByCamel` 反射校验                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | 说明修复模板已存在，`sortRule` 统一走该工具即可             |
+| 威胁 | 证据 | 影响 |
+| --- | --- | --- |
+| `sortRule` 注入 | [DwiPipelineRunInfoServiceImpl.java:146](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/domain/service/pipeline/impl/DwiPipelineRunInfoServiceImpl.java#L146) `queryWrapper.last("order by " + req.getSortField() + " " + req.getSortRule())`；`sortField` 经 [FieldUtil.getSortField](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/infrastructure/util/FieldUtil.java) 白名单映射，**`sortRule` 原样拼接** | ORDER BY 上下文可构造子查询/时间盲注；叠加无认证/无限流放大 |
+| 同类未净化路径 | [ResourceProjectTestcaseDetailService.java:108](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/domain/service/resource/detail/ResourceProjectTestcaseDetailService.java)、[DwiVersionPipelineInfoServiceImpl.java:63](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/domain/service/pipeline/impl/DwiVersionPipelineInfoServiceImpl.java)、[DwiProjectStatisticsServiceImpl.java:55](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/domain/service/project/impl/DwiProjectStatisticsServiceImpl.java)、[RepoHandle.java:96,113](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/app/service/repo/RepoHandle.java)、[DmRdEfcRepoSumPipelineStatisticsDayServiceImpl.java:66](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/domain/service/repo/impl/DmRdEfcRepoSumPipelineStatisticsDayServiceImpl.java) | 同上 |
+| 已净化对照基线 | `SortFieldValidator.normalizeRule` + `validate`（asc/desc 白名单）；`FieldUtil.getSortFieldByCamel` 反射校验 | 说明修复模板已存在，`sortRule` 统一走该工具即可 |
 
 **RateLimitConfig —— Denial of Service：**
 
-| 威胁       | 证据                                                                                                                                                                                                                                                                                | 影响                                                                         |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 威胁 | 证据 | 影响 |
+| --- | --- | --- |
 | 限流死代码 | [RateLimitConfig.java:46](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/infrastructure/config/RateLimitConfig.java#L46) `getApiConfig` 全仓仅被自身与测试类引用，无任何 Filter/Interceptor 挂载（远程主干为 Apollo `@ApolloConfig("framework")` 版，仍无消费方） | 对外接口无限流，可被无节制刷取（撞库、全量导出、配合 SQL 盲注逐位探测、DoS） |
 
 **DataAccess —— 口令存储（已缓解项）：** 数据库口令经 `SecurityUtil.decrypt(password, part1)` 运行时解密（[DataSourceConfig.java:87,106](file:///c:/w30060144/tmp-tm-ops/src/main/java/com/openlibing/ops/infrastructure/config/DataSourceConfig.java)），`@EnableEncryptableProperties` 启用 Jasypt；本地资源文件 0 硬编码凭据，`.gitignore` 排除 keys/pfx/cacerts。**剩余风险**：`security.part1` 与密文同存 Apollo 配置中心（单点）。
@@ -256,17 +256,17 @@ flowchart LR
 
 ## 五、发现清单（ops，FIND-01 ~ FIND-09）
 
-| 发现    | 仓库             | Tier | STRIDE | 对应威胁        | 摘要与处置方向                                                                                    |
-| ------- | ---------------- | ---- | ------ | --------------- | ------------------------------------------------------------------------------------------------- |
-| FIND-01 | 跨仓（记入本仓） | T2   | S/D    | 跨仓            | 服务端零认证 + 限流死代码系统性单点失效（详见第四章）                                             |
-| FIND-02 | ops              | T2   | S/E    | T01,T09         | 服务端零认证 + 网关纵向权限/写接口依赖（branch-config/add、link-config POST 等）                  |
-| FIND-03 | ops              | T2   | T      | T03             | `sortRule` 未净化拼 ORDER BY，SQL 注入/子查询盲注；统一走 `SortFieldValidator`/`FieldUtil` 白名单 |
-| FIND-04 | ops              | T2   | S      | T02             | GitcodeApi 信任客户端透传 Authorization，可借服务代查他人邮箱映射                                 |
-| FIND-05 | ops              | T2   | I      | T06             | 生产/预发 Swagger api-docs 全量开放（远程主干 `application-prod.yaml` 已核实）                    |
-| FIND-06 | ops              | T2   | R/D    | T04,T05,T07,T08 | 平台治理面：`/manage` 前缀剥离、审计否认、PathFilter 日志注入、限流死代码                         |
-| FIND-07 | ops              | T2   | A      | T10             | 导出接口无频次/行数限制，可批量拖取运营数据                                                       |
-| FIND-08 | ops              | T3   | I      | T11             | DB 口令与 GitCode token 单一静态密钥 `security.part1` 解密、密钥密文同存 Apollo 配置中心单点      |
-| FIND-09 | ops              | T3   | T      | T12             | 镜像内嵌 pfx/cacerts 证书材料，来源管控与轮换缺失                                                 |
+| 发现 | 仓库 | Tier | STRIDE | 对应威胁 | 摘要与处置方向 |
+| --- | --- | --- | --- | --- | --- |
+| FIND-01 | 跨仓（记入本仓） | T2 | S/D | 跨仓 | 服务端零认证 + 限流死代码系统性单点失效（详见第四章） |
+| FIND-02 | ops | T2 | S/E | T01,T09 | 服务端零认证 + 网关纵向权限/写接口依赖（branch-config/add、link-config POST 等） |
+| FIND-03 | ops | T2 | T | T03 | `sortRule` 未净化拼 ORDER BY，SQL 注入/子查询盲注；统一走 `SortFieldValidator`/`FieldUtil` 白名单 |
+| FIND-04 | ops | T2 | S | T02 | GitcodeApi 信任客户端透传 Authorization，可借服务代查他人邮箱映射 |
+| FIND-05 | ops | T2 | I | T06 | 生产/预发 Swagger api-docs 全量开放（远程主干 `application-prod.yaml` 已核实） |
+| FIND-06 | ops | T2 | R/D | T04,T05,T07,T08 | 平台治理面：`/manage` 前缀剥离、审计否认、PathFilter 日志注入、限流死代码 |
+| FIND-07 | ops | T2 | A | T10 | 导出接口无频次/行数限制，可批量拖取运营数据 |
+| FIND-08 | ops | T3 | I | T11 | DB 口令与 GitCode token 单一静态密钥 `security.part1` 解密、密钥密文同存 Apollo 配置中心单点 |
+| FIND-09 | ops | T3 | T | T12 | 镜像内嵌 pfx/cacerts 证书材料，来源管控与轮换缺失 |
 
 > 注：FIND-35（跨仓构建供应链，Tier 3）与本仓 Dockerfile 直接相关，详见第四章。
 
@@ -326,12 +326,12 @@ flowchart LR
 
 ## 九、附录：STRIDE-A 汇总矩阵（ops）
 
-| 仓库           | S 欺骗 | T 篡改 | R 否认 | I 信息泄露 | D 拒绝服务 | E 权限提升 | A 滥用 | 威胁数 | Tier1 | Tier2 | Tier3 |
-| -------------- | ------ | ------ | ------ | ---------- | ---------- | ---------- | ------ | ------ | ----- | ----- | ----- |
-| openlibing-ops | 2      | 3      | 1      | 3          | 1          | 1          | 1      | 12     | 0     | 10    | 2     |
+| 仓库 | S 欺骗 | T 篡改 | R 否认 | I 信息泄露 | D 拒绝服务 | E 权限提升 | A 滥用 | 威胁数 | Tier1 | Tier2 | Tier3 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| openlibing-ops | 2 | 3 | 1 | 3 | 1 | 1 | 1 | 12 | 0 | 10 | 2 |
 
 > 说明：威胁层 Tier 分布（Tier2=10 / Tier3=2，合计 12 条）与发现层 Tier 分布（Tier2=7 / Tier3=2，合计 9 条）不同，系跨仓/同主题威胁合并归类所致（FIND-06 合并 T04/T05/T07/T08 四条、FIND-01 为跨仓归类），属预期差异。
 
 ---
 
-_报告生成：threat-model-analyst skill（STRIDE-A + 零信任 + 纵深防御），基线=远程仓主干分支（ops=origin/main），2026-08-21。本报告由《[openlibing-ops、ops-web、metric、sync]安全威胁建模分析报告》拆分而来，用于归档 openlibing-docs/architecture_desgin/openlibing-ops。_
+*报告生成：threat-model-analyst skill（STRIDE-A + 零信任 + 纵深防御），基线=远程仓主干分支（ops=origin/main），2026-08-21。本报告由《[openlibing-ops、ops-web、metric、sync]安全威胁建模分析报告》拆分而来，用于归档 openlibing-docs/architecture_desgin/openlibing-ops。*

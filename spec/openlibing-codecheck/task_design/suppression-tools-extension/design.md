@@ -5,7 +5,6 @@
 扩展现有 `SuppressionStrategy` 枚举 + 少量适配 `SuppressionScanServiceImpl`，新增 10 个工具的告警抑制注释识别能力，同时简化块级注释处理逻辑。
 
 现有架构已通过枚举 + 正则模式良好抽象，9 个工具的抑制注释为代码内注释/注解/属性，可直接复用现有行扫描逻辑。2 个工具需要特殊处理：
-
 - **gitleaks**：`gitleaks:allow` 可出现在行内任意位置（甚至非注释中），需跳过"嵌套在字符串/注释中则无效"校验。
 - **PMD**：`@SuppressWarnings` 无法可靠归属到 PMD（Java 原生也用此语法），仅识别含 `"PMD"` 前缀的注解。
 
@@ -20,10 +19,10 @@
 
 ## 涉及文件
 
-| 文件                                                    | 操作 | 说明                                                                                                                                        |
-| ------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `common/enums/SuppressionStrategy.java`                 | 修改 | 新增 10 个工具枚举；`SuppressionPattern` 新增 `skipValidation`；`MatchResult` record 新增 `skipValidation`；新增 `identifyAllToolsAndTypes` |
-| `business/service/impl/SuppressionScanServiceImpl.java` | 修改 | `scanAddedLines` 支持 `skipValidation` 和多工具结果；移除块级处理逻辑                                                                       |
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `common/enums/SuppressionStrategy.java` | 修改 | 新增 10 个工具枚举；`SuppressionPattern` 新增 `skipValidation`；`MatchResult` record 新增 `skipValidation`；新增 `identifyAllToolsAndTypes` |
+| `business/service/impl/SuppressionScanServiceImpl.java` | 修改 | `scanAddedLines` 支持 `skipValidation` 和多工具结果；移除块级处理逻辑 |
 
 ## 各工具识别规则设计
 
@@ -50,7 +49,6 @@ new SuppressionPattern("gitleaks:allow", SuppressionType.LINE, true)
 ### pylint（行级 / 文件级）
 
 语法：
-
 - 行级：`# pylint: disable=rule1, rule2`、`# pylint: disable-next=<msg>`
 - 文件级：`# pylint: skip-file`（文件顶部）
 
@@ -73,14 +71,12 @@ new SuppressionPattern("#\\s*nosec(?:\\s+\\S+(?:\\s*,\\s*\\S+)*)?", SuppressionT
 ### checkstyle（行级 + 块级起始，纯文本匹配）
 
 语法：
-
 - 行级：`// SUPPRESS CHECKSTYLE rule`、`// SUPPRESS CHECKSTYLE ALL`
 - 块级起始：`// CHECKSTYLE:OFF LineLength`（按设计只识别起始标记 OFF，不识别结束标记 ON，与 CLANG_FORMAT/SPOTLESS 等工具一致；支持规则名）
 
 checkstyle 的 `SuppressWithPlainTextCommentFilter` 为**纯文本匹配**，支持非 Java 文件（`.sh`/`.properties`/`.xml`/`.md` 等）。在这些文件中，抑制标记需写在对应注释里，例如 `.sh`/`.properties` 中写作 `# // CHECKSTYLE:OFF`。
 
 **关键区分**：`// CHECKSTYLE:OFF` 中的 `//` 在不同文件类型中语义不同：
-
 - **cLike 文件**（`.java`/`.c`/`.js` 等）：`//` 是行注释前缀，`// CHECKSTYLE:OFF` 整体是行注释。块注释 `/* // CHECKSTYLE:OFF */` 或行注释 `// 说明 // CHECKSTYLE:OFF` 内的 `// CHECKSTYLE:OFF` 是嵌套示例文字，不应识别。
 - **非 cLike 文件**（`.sh`/`.properties`/`.md` 等）：`//` 不是注释前缀，是字面量。写在 `#` 注释里的 `// CHECKSTYLE:OFF`（如 `# // CHECKSTYLE:OFF`）是合法抑制标记，应识别。
 
@@ -96,17 +92,16 @@ new SuppressionPattern("//\\s*CHECKSTYLE:OFF(?:\\s+\\w+)?", false, true)
 
 各文件类型的识别表现（`allowInComment=true` + cLike 区分）：
 
-| 文件类型                  | lexer 规则                        | `//` 是否行注释前缀 | 行首 `// CHECKSTYLE:OFF` | 注释内 `// CHECKSTYLE:OFF`                     | 字符串内 `// CHECKSTYLE:OFF` |
-| ------------------------- | --------------------------------- | ------------------- | ------------------------ | ---------------------------------------------- | ---------------------------- |
-| `.java`/`.c`/`.js` 等     | cLike                             | 是                  | 识别 ✓                   | 不识别（嵌套示例）                             | 不识别（误报）               |
-| `.sh`/`.bash`/`.yml`      | hash                              | 否                  | 识别 ✓                   | 识别 ✓（`# // CHECKSTYLE:OFF`，`//` 是字面量） | 不识别（误报）               |
-| `.properties`/`.txt`/未知 | defaultRules（treatAllAsComment） | 否                  | 识别 ✓                   | 识别 ✓（`//` 是字面量）                        | 不识别（误报）               |
-| `.md`/`.xml`/`.html`      | markup                            | 否                  | 识别 ✓                   | 识别 ✓（`<!-- // CHECKSTYLE:OFF -->`）         | 不识别（误报）               |
+| 文件类型 | lexer 规则 | `//` 是否行注释前缀 | 行首 `// CHECKSTYLE:OFF` | 注释内 `// CHECKSTYLE:OFF` | 字符串内 `// CHECKSTYLE:OFF` |
+|---------|-----------|------------------|----------------------|------------------------|---------------------------|
+| `.java`/`.c`/`.js` 等 | cLike | 是 | 识别 ✓ | 不识别（嵌套示例） | 不识别（误报） |
+| `.sh`/`.bash`/`.yml` | hash | 否 | 识别 ✓ | 识别 ✓（`# // CHECKSTYLE:OFF`，`//` 是字面量） | 不识别（误报） |
+| `.properties`/`.txt`/未知 | defaultRules（treatAllAsComment） | 否 | 识别 ✓ | 识别 ✓（`//` 是字面量） | 不识别（误报） |
+| `.md`/`.xml`/`.html` | markup | 否 | 识别 ✓ | 识别 ✓（`<!-- // CHECKSTYLE:OFF -->`） | 不识别（误报） |
 
 ### PMD（行级，注释 + 注解）
 
 语法：
-
 - 注释：`// NOPMD - explanation`
 - 注解：`@SuppressWarnings("PMD")`、`@SuppressWarnings("PMD.RuleName")`
 - 多规则（阶段三增强）：`@SuppressWarnings("PMD.rule1", "PMD.rule2")`、`@SuppressWarnings({"PMD.rule1", "PMD.rule2"})`
@@ -123,7 +118,6 @@ new SuppressionPattern(
 ### SpotBugs（行级，注解，支持跨行合并）
 
 语法：
-
 - 单参数：`@SuppressFBWarnings("rule")`
 - 带参数（阶段三增强）：`@SuppressFBWarnings(value = "rule", justification = "explanation")`、`@SuppressFBWarnings(value = "rule", justification = "explanation", matchType = SuppressMatchType.EXACT)`
 - 参数可跨行（阶段三增强）：参数换行书写时通过跨行合并匹配识别
@@ -153,7 +147,6 @@ new SuppressionPattern("//\\s*spotless:off", SuppressionType.LINE)
 ### rustfmt（行级 / 块级 / 文件级，Rust 属性）
 
 语法：
-
 - 行级：`#[rustfmt::skip]`、`#[cfg_attr(any(), rustfmt::skip)]`（阶段三增强：支持 cfg_attr 内嵌套括号）
 - 块级：`#[rustfmt::skip]`（放在函数/结构体前）、`#[rustfmt::skip::macros(name)]`
 - 文件级：`#![rustfmt::skip]`、`#![rustfmt::skip::macros(name)]`
@@ -172,7 +165,6 @@ new SuppressionPattern("#\\[cfg_attr\\([^\\]\\n]*rustfmt::skip[^\\]\\n]*\\)\\]")
 ### clippy（行级 / 块级 / 文件级，Rust 属性）
 
 语法：
-
 - 行级：`#[allow(clippy::<rule>)]`、`#[expect(clippy::<rule>)]`
 - 多规则（阶段三增强）：`#[allow(clippy::rule1, clippy::rule2)]`、`#[expect(clippy::rule1, clippy::rule2)]`
 - 文件级：`#![allow(clippy::<rule>)]`、`#![expect(clippy::<rule>)]`
@@ -295,7 +287,6 @@ for (SuppressionStrategy.MatchResult matchResult : matchResults) {
 ### 问题背景
 
 原实现仅用 `isInvalidSuppressionComment` 检查匹配位置是否在块注释内，无法处理：
-
 - 字符串字面量内的抑制标记（如 `String s = "// NOPMD";`）会被误识别为有效
 - diff 上下文行截断的字符串/行注释跨行错误传递状态，导致下一行的有效抑制标记被误判为嵌套
 - Markdown 等文档类文件中的说明性文字（如 `## 标题 # noqa`）被误识别为有效告警抑制
@@ -305,26 +296,24 @@ for (SuppressionStrategy.MatchResult matchResult : matchResults) {
 8 种状态：NORMAL、LINE_COMMENT、BLOCK_COMMENT、STRING_DOUBLE、STRING_SINGLE、STRING_BACKTICK、TRIPLE_DOUBLE、TRIPLE_SINGLE。
 
 跨行规则：
-
 - 行注释（LINE_COMMENT）、单双引号字符串（STRING_DOUBLE/STRING_SINGLE）**不跨行**，行尾自动重置为 NORMAL —— 这是阶段一修复的关键，避免 diff 截断的字符串/行注释错误影响下一行
 - 块注释（BLOCK_COMMENT）、三引号字符串（TRIPLE_DOUBLE/TRIPLE_SINGLE）、模板字符串（STRING_BACKTICK）**可跨行**，通过 `entryState`/`exitState` 在行间传递
 
 ### LexRules 扩展名分派
 
-| 扩展名                              | 规则         | 说明                                     |
-| ----------------------------------- | ------------ | ---------------------------------------- |
-| `.py`                               | python       | # 行注释，"""/''' 三引号，"/' 字符串     |
-| `.java/.c/.cpp/.js/.ts/.go/.rs/...` | cLike        | // 行注释，/* */ 块注释，"/'/` 字符串    |
-| `.sh/.bash/.yml/.toml/...`          | hash         | # 行注释，"/' 字符串                     |
-| `.sql`                              | sql          | -- 行注释，/* */ 块注释，'/\" 字符串     |
-| `.lua`                              | lua          | -- 行注释，--[[ ]] 块注释                |
-| `.html/.xml/.vue/...`               | markup       | <!-- --> 块注释，"/' 字符串              |
-| `.txt/.rst/.adoc` 及未知            | defaultRules | treatAllAsComment=true，所有内容视为注释 |
+| 扩展名 | 规则 | 说明 |
+|--------|------|------|
+| `.py` | python | # 行注释，"""/''' 三引号，"/' 字符串 |
+| `.java/.c/.cpp/.js/.ts/.go/.rs/...` | cLike | // 行注释，/* */ 块注释，"/'/` 字符串 |
+| `.sh/.bash/.yml/.toml/...` | hash | # 行注释，"/' 字符串 |
+| `.sql` | sql | -- 行注释，/* */ 块注释，'/\" 字符串 |
+| `.lua` | lua | -- 行注释，--[[ ]] 块注释 |
+| `.html/.xml/.vue/...` | markup | <!-- --> 块注释，"/' 字符串 |
+| `.txt/.rst/.adoc` 及未知 | defaultRules | treatAllAsComment=true，所有内容视为注释 |
 
 ### 防误报判定逻辑
 
 `isNestedInCommentOrString(start)`：
-
 - `start == 0`：检查上一行跨行状态 `entryState`，若非 NORMAL 则整行嵌套
 - `start > 0`：检查 `charStates[start - 1]`，若非 NORMAL 则匹配嵌套在注释/字符串内
 
@@ -357,13 +346,13 @@ checkstyle 用 `allowInComment=true` 而非 `shouldSkipValidation=true` 的原�
 
 ### 5 个工具正则增强
 
-| 工具       | 原正则缺陷                                                                   | 阶段三修复                                                                                                                                                                                                                                |
-| ---------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| checkstyle | 仅 `CHECKSTYLE:OFF`，不支持规则名                                            | `// CHECKSTYLE:OFF(?:\s+\w+)?` 支持规则名；按设计只识别起始标记 OFF，不识别结束标记 ON；`allowInComment=true` 支持 `.sh`/`.properties` 等非 Java 文件中 `# // CHECKSTYLE:OFF` 识别，同时 cLike 文件注释内嵌套示例和字符串字面量误报被过滤 |
-| PMD        | `@SuppressWarnings("PMD...")` 仅单规则                                       | `(?:\s*,\s*"PMD[\w.]*")*` 支持多 PMD 规则和数组形式                                                                                                                                                                                       |
-| SpotBugs   | `@SuppressFBWarnings\([^)]*\)` 过于宽泛且无法精确匹配参数                    | 精确匹配 `value`/`justification`/`matchType` 等参数：`(?:\s*,\s*\w+\s*=\s*[^)]+)*`                                                                                                                                                        |
-| rustfmt    | `#[cfg_attr([^)]*rustfmt::skip[^)]*)]` 的 `[^)]` 遇 `any()` 嵌套括号提前结束 | 改用 `[^\]\n]` 排除 `]` 和换行符，确保整个 `#[...]` 属性完整匹配                                                                                                                                                                          |
-| clippy     | `clippy::\w+` 仅单规则                                                       | `(?:,\s*clippy::\w+\s*)*` 支持多规则，含文件级 `#![...]` 和 `expect` 形式                                                                                                                                                                 |
+| 工具 | 原正则缺陷 | 阶段三修复 |
+|------|-----------|-----------|
+| checkstyle | 仅 `CHECKSTYLE:OFF`，不支持规则名 | `// CHECKSTYLE:OFF(?:\s+\w+)?` 支持规则名；按设计只识别起始标记 OFF，不识别结束标记 ON；`allowInComment=true` 支持 `.sh`/`.properties` 等非 Java 文件中 `# // CHECKSTYLE:OFF` 识别，同时 cLike 文件注释内嵌套示例和字符串字面量误报被过滤 |
+| PMD | `@SuppressWarnings("PMD...")` 仅单规则 | `(?:\s*,\s*"PMD[\w.]*")*` 支持多 PMD 规则和数组形式 |
+| SpotBugs | `@SuppressFBWarnings\([^)]*\)` 过于宽泛且无法精确匹配参数 | 精确匹配 `value`/`justification`/`matchType` 等参数：`(?:\s*,\s*\w+\s*=\s*[^)]+)*` |
+| rustfmt | `#[cfg_attr([^)]*rustfmt::skip[^)]*)]` 的 `[^)]` 遇 `any()` 嵌套括号提前结束 | 改用 `[^\]\n]` 排除 `]` 和换行符，确保整个 `#[...]` 属性完整匹配 |
+| clippy | `clippy::\w+` 仅单规则 | `(?:,\s*clippy::\w+\s*)*` 支持多规则，含文件级 `#![...]` 和 `expect` 形式 |
 
 ### rustfmt cfg_attr 嵌套括号正则设计
 

@@ -4,14 +4,14 @@
 
 ### 技术栈
 
-| 技术         | 版本  | 用途       |
-| ------------ | ----- | ---------- |
-| Vue 3        | 3.5+  | 前端框架   |
-| TypeScript   | 5.9+  | 类型安全   |
-| Element Plus | 2.13+ | UI组件库   |
-| ECharts      | 6+    | 图表可视化 |
-| Tailwind CSS | 4+    | 样式框架   |
-| Pinia        | 3+    | 状态管理   |
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| Vue 3 | 3.5+ | 前端框架 |
+| TypeScript | 5.9+ | 类型安全 |
+| Element Plus | 2.13+ | UI组件库 |
+| ECharts | 6+ | 图表可视化 |
+| Tailwind CSS | 4+ | 样式框架 |
+| Pinia | 3+ | 状态管理 |
 
 ### 目录结构
 
@@ -185,7 +185,7 @@ interface KPICardProps {
   value: number;
   unit: string;
   icon: string;
-  color: "blue" | "purple" | "amber" | "green";
+  color: 'blue' | 'purple' | 'amber' | 'green';
   progress?: {
     current: number;
     target: number;
@@ -282,8 +282,8 @@ interface Project {
 interface Pipeline {
   id: string;
   name: string;
-  type: "PR" | "Nightly";
-  status: "success" | "failed" | "running" | "pending";
+  type: 'PR' | 'Nightly';
+  status: 'success' | 'failed' | 'running' | 'pending';
   time: string;
   duration: string;
   vcpu: number;
@@ -296,7 +296,7 @@ interface Pipeline {
 interface Task {
   id: string;
   name: string;
-  status: "success" | "failed" | "running" | "pending";
+  status: 'success' | 'failed' | 'running' | 'pending';
   time: string;
   duration: string;
   vcpu: number;
@@ -312,8 +312,8 @@ interface TestCase {
   repo: string;
   branch: string;
   path: string;
-  level: "P0" | "P1" | "P2" | "P3";
-  result: "passed" | "failed" | "skipped";
+  level: 'P0' | 'P1' | 'P2' | 'P3';
+  result: 'passed' | 'failed' | 'skipped';
   vcpu: number;
   npu: number;
   time?: string;
@@ -326,21 +326,21 @@ interface TestCase {
 // stores/test-dashboard-store.ts
 interface TestDashboardState {
   // 当前导航状态
-  currentLevel: "overview" | "org" | "project" | "pipeline" | "task";
+  currentLevel: 'overview' | 'org' | 'project' | 'pipeline' | 'task';
   selectedOrgId: string | null;
   selectedProjectId: string | null;
   selectedPipelineId: string | null;
   selectedTaskId: string | null;
-  pipelineTab: "PR" | "Nightly";
-
+  pipelineTab: 'PR' | 'Nightly';
+  
   // 视图设置
-  viewMode: "table" | "card";
-  drillMode: "navigate" | "drawer" | "dialog" | "expand";
-
+  viewMode: 'table' | 'card';
+  drillMode: 'navigate' | 'drawer' | 'dialog' | 'expand';
+  
   // 时间筛选
   dateRange: [string, string];
-  timeRange: "today" | "7d" | "30d" | "90d" | "custom";
-
+  timeRange: 'today' | '7d' | '30d' | '90d' | 'custom';
+  
   // 分页状态
   pagination: {
     overview: PaginationState;
@@ -357,36 +357,36 @@ interface TestDashboardState {
 
 ```css
 :root {
-  --primary: #2563eb; /* vCPU 相关 */
-  --primary-light: #dbeafe;
-  --purple: #8b5cf6; /* NPU 相关 */
-  --purple-light: #ede9fe;
-  --warning: #f59e0b; /* 用例CPU */
-  --warning-light: #fef3c7;
-  --success: #10b981; /* 用例NPU */
-  --success-light: #d1fae5;
-  --error: #ef4444; /* 失败状态 */
-  --error-light: #fee2e2;
+  --primary: #2563EB;      /* vCPU 相关 */
+  --primary-light: #DBEAFE;
+  --purple: #8B5CF6;       /* NPU 相关 */
+  --purple-light: #EDE9FE;
+  --warning: #F59E0B;      /* 用例CPU */
+  --warning-light: #FEF3C7;
+  --success: #10B981;      /* 用例NPU */
+  --success-light: #D1FAE5;
+  --error: #EF4444;        /* 失败状态 */
+  --error-light: #FEE2E2;
 }
 ```
 
 ### 状态徽章样式
 
-| 状态      | 颜色 | 样式类        |
-| --------- | ---- | ------------- |
+| 状态 | 颜色 | 样式类 |
+|------|------|--------|
 | 成功/通过 | 绿色 | badge-success |
-| 失败      | 红色 | badge-error   |
-| 运行中    | 蓝色 | badge-info    |
-| 待执行    | 灰色 | badge-muted   |
+| 失败 | 红色 | badge-error |
+| 运行中 | 蓝色 | badge-info |
+| 待执行 | 灰色 | badge-muted |
 
 ### 级别徽章样式
 
-| 级别 | 颜色 | 说明       |
-| ---- | ---- | ---------- |
-| P0   | 红色 | 最高优先级 |
-| P1   | 橙色 | 高优先级   |
-| P2   | 蓝色 | 中优先级   |
-| P3   | 灰色 | 低优先级   |
+| 级别 | 颜色 | 说明 |
+|------|------|------|
+| P0 | 红色 | 最高优先级 |
+| P1 | 橙色 | 高优先级 |
+| P2 | 蓝色 | 中优先级 |
+| P3 | 灰色 | 低优先级 |
 
 ## 交互设计
 
@@ -400,11 +400,11 @@ interface TestDashboardState {
 
 ### 响应式设计
 
-| 断点           | KPI 卡片 | 表格列       |
-| -------------- | -------- | ------------ |
-| > 1100px       | 4 列     | 全部显示     |
-| 768px - 1100px | 2 列     | 隐藏次要列   |
-| < 768px        | 1 列     | 仅显示核心列 |
+| 断点 | KPI 卡片 | 表格列 |
+|------|----------|--------|
+| > 1100px | 4 列 | 全部显示 |
+| 768px - 1100px | 2 列 | 隐藏次要列 |
+| < 768px | 1 列 | 仅显示核心列 |
 
 ## 性能优化
 

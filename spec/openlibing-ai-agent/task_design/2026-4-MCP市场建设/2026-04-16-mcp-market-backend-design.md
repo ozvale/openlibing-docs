@@ -133,7 +133,7 @@ GET /api/mcp-servers
 ```
 GET /api/mcp-servers/{name}
 ```
-
+  
 #### 3.1.3 MCP Server 统计
 
 ```

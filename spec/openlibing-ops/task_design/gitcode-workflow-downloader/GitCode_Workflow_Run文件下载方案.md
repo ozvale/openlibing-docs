@@ -1,14 +1,14 @@
 ﻿# GitCode Workflow Run 文件下载方案
 
-| 项目       | 内容                                                                                                                 |
-| ---------- | -------------------------------------------------------------------------------------------------------------------- |
-| 方案目标   | 从 `sdi_rd_efc_workflow_run_raw_gitcode` 读取 workflow 文件信息，调用 GitCode Raw API 下载文件内容，并保存到固定路径 |
-| 调度方式   | DolphinScheduler Shell 任务                                                                                          |
-| 数据来源表 | `sdi_rd_efc_workflow_run_raw_gitcode`                                                                                |
-| 下载记录表 | `sdi_rd_efc_workflow_run_file_gitcode`                                                                               |
-| Raw API    | `GET https://raw.gitcode.com/{owner}/{repo}/raw/{head_sha}/{name}`                                                   |
-| 落盘路径   | `openlibing/workflow/gitcode/$workflow_id/$workflow_run_id/$filename`                                                |
-| 回绑字段   | `repo_url`、`workflow_id`、`workflow_run_id`                                                                         |
+| 项目 | 内容 |
+|---|---|
+| 方案目标 | 从 `sdi_rd_efc_workflow_run_raw_gitcode` 读取 workflow 文件信息，调用 GitCode Raw API 下载文件内容，并保存到固定路径 |
+| 调度方式 | DolphinScheduler Shell 任务 |
+| 数据来源表 | `sdi_rd_efc_workflow_run_raw_gitcode` |
+| 下载记录表 | `sdi_rd_efc_workflow_run_file_gitcode` |
+| Raw API | `GET https://raw.gitcode.com/{owner}/{repo}/raw/{head_sha}/{name}` |
+| 落盘路径 | `openlibing/workflow/gitcode/$workflow_id/$workflow_run_id/$filename` |
+| 回绑字段 | `repo_url`、`workflow_id`、`workflow_run_id` |
 
 ---
 
@@ -64,13 +64,13 @@ DISTRIBUTED BY HASH(`repo_url`) BUCKETS 10;
 
 本方案直接使用基础表中的以下字段：
 
-| 字段              | 用途                                                            |
-| ----------------- | --------------------------------------------------------------- |
-| `repo_url`        | 解析 GitCode 仓库 `owner` 和 `repo`；同时作为下载记录表回绑字段 |
-| `workflow_id`     | 参与生成本地路径；同时作为下载记录表回绑字段                    |
-| `workflow_run_id` | 参与生成本地路径；同时作为下载记录表回绑字段                    |
-| `file_path`       | 作为 Raw API 的文件路径参数 `name`                              |
-| `head_sha`        | 作为 Raw API 的 `head_sha` 参数                                 |
+| 字段 | 用途 |
+|---|---|
+| `repo_url` | 解析 GitCode 仓库 `owner` 和 `repo`；同时作为下载记录表回绑字段 |
+| `workflow_id` | 参与生成本地路径；同时作为下载记录表回绑字段 |
+| `workflow_run_id` | 参与生成本地路径；同时作为下载记录表回绑字段 |
+| `file_path` | 作为 Raw API 的文件路径参数 `name` |
+| `head_sha` | 作为 Raw API 的 `head_sha` 参数 |
 
 其他字段，例如 `workflow_name`、`status`、`event`、`run_number`、`head_branch`、`stage_id`、`job_id`、`step_id`，不进入下载记录表。如果后续查询需要这些信息，通过 `repo_url + workflow_id + workflow_run_id` 回连基础表获取。
 
@@ -122,13 +122,13 @@ PROPERTIES (
 
 ### 3.2 字段说明
 
-| 字段              | 说明                                     |
-| ----------------- | ---------------------------------------- |
-| `repo_url`        | 与基础表回绑                             |
-| `workflow_id`     | 与基础表回绑；本地路径一级目录           |
-| `workflow_run_id` | 与基础表回绑；本地路径二级目录           |
+| 字段 | 说明 |
+|---|---|
+| `repo_url` | 与基础表回绑 |
+| `workflow_id` | 与基础表回绑；本地路径一级目录 |
+| `workflow_run_id` | 与基础表回绑；本地路径二级目录 |
 | `download_status` | 下载状态，建议值为 `SUCCESS` 或 `FAILED` |
-| `local_file_path` | 文件最终保存路径                         |
+| `local_file_path` | 文件最终保存路径 |
 
 ### 3.3 为什么不保留更多字段
 
@@ -179,11 +179,11 @@ filename = os.path.basename(file_path.lstrip('/'))
 
 示例：
 
-| `file_path`                      | `filename`     |
-| -------------------------------- | -------------- |
-| `/.gitcode/workflows/build.yml`  | `build.yml`    |
-| `.gitcode/workflows/deploy.yaml` | `deploy.yaml`  |
-| `/workflow.yml`                  | `workflow.yml` |
+| `file_path` | `filename` |
+|---|---|
+| `/.gitcode/workflows/build.yml` | `build.yml` |
+| `.gitcode/workflows/deploy.yaml` | `deploy.yaml` |
+| `/workflow.yml` | `workflow.yml` |
 
 如果 `file_path` 为空或最后一段取不到文件名，兜底使用：
 
@@ -203,12 +203,12 @@ GET https://raw.gitcode.com/{owner}/{repo}/raw/{head_sha}/{name}
 
 字段映射如下：
 
-| API 参数   | 来源字段    | 处理方式                          |
-| ---------- | ----------- | --------------------------------- |
-| `owner`    | `repo_url`  | 从仓库 URL 解析                   |
-| `repo`     | `repo_url`  | 从仓库 URL 解析，去掉 `.git` 后缀 |
-| `head_sha` | `head_sha`  | 直接使用                          |
-| `name`     | `file_path` | 去掉前导 `/` 后使用               |
+| API 参数 | 来源字段 | 处理方式 |
+|---|---|---|
+| `owner` | `repo_url` | 从仓库 URL 解析 |
+| `repo` | `repo_url` | 从仓库 URL 解析，去掉 `.git` 后缀 |
+| `head_sha` | `head_sha` | 直接使用 |
+| `name` | `file_path` | 去掉前导 `/` 后使用 |
 
 示例：
 
@@ -435,15 +435,15 @@ python download_gitcode_workflow_files.py \
 
 DolphinScheduler 参数建议：
 
-| 参数         | 建议值                                                   |
-| ------------ | -------------------------------------------------------- |
-| 任务类型     | Shell                                                    |
-| 调度周期     | 每 10~30 分钟一次                                        |
-| 任务超时     | 30~60 分钟                                               |
-| 失败重试次数 | 2                                                        |
-| 失败重试间隔 | 3~5 分钟                                                 |
-| Worker 分组  | 指定可以写 `/data/openlibing/workflow/gitcode` 的 Worker |
-| 告警         | 任务失败时通知负责人                                     |
+| 参数 | 建议值 |
+|---|---|
+| 任务类型 | Shell |
+| 调度周期 | 每 10~30 分钟一次 |
+| 任务超时 | 30~60 分钟 |
+| 失败重试次数 | 2 |
+| 失败重试间隔 | 3~5 分钟 |
+| Worker 分组 | 指定可以写 `/data/openlibing/workflow/gitcode` 的 Worker |
+| 告警 | 任务失败时通知负责人 |
 
 ---
 
@@ -532,14 +532,14 @@ chmod -R 755 /data/openlibing/workflow/gitcode
 
 ## 13. 错误处理
 
-| 问题           | 原因                                   | 处理                             |
-| -------------- | -------------------------------------- | -------------------------------- |
-| 404            | `head_sha` 不存在或 `file_path` 不存在 | 写入 `download_status='FAILED'`  |
-| 403            | 私有仓库或限流                         | 增加 token 或降低并发            |
-| 429            | 请求过多                               | 降低 `concurrency`，增加重试间隔 |
-| Timeout        | 网络不稳定                             | 脚本重试，DS 任务也重试          |
-| 写文件失败     | 目录权限不足或磁盘满                   | 检查 Worker 目录权限和磁盘空间   |
-| Doris 写入失败 | 连接异常或表结构不匹配                 | 记录日志，任务失败后由 DS 重试   |
+| 问题 | 原因 | 处理 |
+|---|---|---|
+| 404 | `head_sha` 不存在或 `file_path` 不存在 | 写入 `download_status='FAILED'` |
+| 403 | 私有仓库或限流 | 增加 token 或降低并发 |
+| 429 | 请求过多 | 降低 `concurrency`，增加重试间隔 |
+| Timeout | 网络不稳定 | 脚本重试，DS 任务也重试 |
+| 写文件失败 | 目录权限不足或磁盘满 | 检查 Worker 目录权限和磁盘空间 |
+| Doris 写入失败 | 连接异常或表结构不匹配 | 记录日志，任务失败后由 DS 重试 |
 
 由于结果表不保留错误详情，如果需要追踪错误原因，建议通过 DolphinScheduler 日志查看。若后续需要长期保存错误详情，可以再扩展 `err_msg` 字段。
 

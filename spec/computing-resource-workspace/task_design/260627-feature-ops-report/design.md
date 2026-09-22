@@ -12,18 +12,17 @@
 
 framework 已提供 [FeatureOpsDashboardController](file:///d:/Code/Java/openlibing/openlibing-framework/src/main/java/com/openlibing/framework/business/controller/FeatureOpsDashboardController.java) 的 `/report` 接口，关键行为：
 
-| 维度      | 现状                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 鉴权      | controller 上无 `@RequireAdmin` 等注解，与 `/internal-server/*` 一致，微服务可直接调                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| 幂等      | 按 `(community, feature, 当天 [dayStart, dayEnd))` upsert，同日多次上报只保留最后一条                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| 指标校验  | body 中每个 metricKey 必须先在 `feature_ops_dashboard_metric_config` 表录入，否则 3007 错误                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| 值校验    | 指标值必须是 Number 或可解析为数字的字符串                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 维度 | 现状 |
+|------|------|
+| 鉴权 | controller 上无 `@RequireAdmin` 等注解，与 `/internal-server/*` 一致，微服务可直接调 |
+| 幂等 | 按 `(community, feature, 当天 [dayStart, dayEnd))` upsert，同日多次上报只保留最后一条 |
+| 指标校验 | body 中每个 metricKey 必须先在 `feature_ops_dashboard_metric_config` 表录入，否则 3007 错误 |
+| 值校验 | 指标值必须是 Number 或可解析为数字的字符串 |
 | rate 指标 | **6/29 调研结论**：framework 当前 `develop_202606_iter2` 要求所有指标值必须是 Number 或可解析为数字的字符串（[isNumeric L529](file:///d:/Code/Java/openlibing/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/FeatureOpsDashboardServiceImpl.java#L529)），rate 类型存库时自动加 `%` 后缀（[serializeMetrics L518](file:///d:/Code/Java/openlibing/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/FeatureOpsDashboardServiceImpl.java#L518)）。历史 commit `0c08247d`（6/26）曾要求 rate 上报 `{numerator, denominator}` 对象，但 commit `13495409`（6/26 最新）回滚为裸数字。周/月/年聚合用算术平均（[calculateMetricAverages L638](file:///d:/Code/Java/openlibing/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/FeatureOpsDashboardServiceImpl.java#L638)），月均会失真。前端 `beta_gamma` 分支已支持解析 `{numerator, denominator}` 对象（[utils.ts](file:///d:/Code/Java/openlibing/openlibing-web/apps/web-openlibing/src/views/manageCenter/FeatureDashboard/utils.ts#L46-L60)），但 framework 端对象上报通路目前关闭 |
-| 周期聚合  | framework 端在查询时按 day/week/month/year 聚合，上报方不用关心                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| 副作用    | 上报会顺带 upsert `feature_ops_dashboard_community_feature` 关联状态为 `active`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 周期聚合 | framework 端在查询时按 day/week/month/year 聚合，上报方不用关心 |
+| 副作用 | 上报会顺带 upsert `feature_ops_dashboard_community_feature` 关联状态为 `active` |
 
 > **6/30 调整说明**：framework 端代码的客观行为如上表所述。本服务 6/30 起不上报 `community` 字段，导致：
->
 > 1. 幂等去重条件 `isNotBlank(community) && isNotBlank(feature)` 不满足 → 走 insert 分支，每次上报新增一条记录（无当日 upsert）。
 > 2. `upsertCommunityFeature` 不执行（同样被 `isNotBlank(community)` 拦截）。
 >
@@ -60,9 +59,9 @@ private LocalDateTime parseTimestamp(String timestamp) {
 
 ### 2.4 现有调用 framework 的两种风格
 
-| 风格           | 客户端                      | 端点                  | 适用场景                     |
-| -------------- | --------------------------- | --------------------- | ---------------------------- |
-| Feign 内部调用 | `FrameworkClient`           | `/internal-server/*`  | 微服务互调，干净无 session   |
+| 风格 | 客户端 | 端点 | 适用场景 |
+|------|-------|------|---------|
+| Feign 内部调用 | `FrameworkClient` | `/internal-server/*` | 微服务互调，干净无 session |
 | WebClient 直调 | `OpenlibingAuthInterceptor` | `/user/get-user-info` | 借浏览器 session 透传 cookie |
 
 **本需求选 Feign 风格**：定时任务无用户 session，不能透传 cookie；且 `/manage/feature-dashboard/report` 与 `/internal-server/*` 同属 framework controller 体系，无额外鉴权拦截。
@@ -81,24 +80,23 @@ queuing → allocating → deploying → installing → success
 
 #### 关键时间字段设置点
 
-| 字段           | 设置点                                                                                                                                                                                                      | 设置条件                                                                        |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `apply_time`   | 创建环境时                                                                                                                                                                                                  | 申请即设                                                                        |
-| `grant_time`   | [EnvStatusTransitionServiceImpl L151-153](file:///d:/Code/Java/openlibing/computing-resource-workspace/src/main/java/com/workspace/business/service/env/impl/EnvStatusTransitionServiceImpl.java#L151-L153) | 解析到 nodeIp 时设（部署成功，拿到节点）                                        |
-| `release_time` | [EnvReleaseServiceImpl.completeRelease L138-141](file:///d:/Code/Java/openlibing/computing-resource-workspace/src/main/java/com/workspace/business/service/env/impl/EnvReleaseServiceImpl.java#L138-L141)   | 仅释放完成（status=released）时设，且 `updated_at = release_time`（同变量赋值） |
+| 字段 | 设置点 | 设置条件 |
+|------|--------|---------|
+| `apply_time` | 创建环境时 | 申请即设 |
+| `grant_time` | [EnvStatusTransitionServiceImpl L151-153](file:///d:/Code/Java/openlibing/computing-resource-workspace/src/main/java/com/workspace/business/service/env/impl/EnvStatusTransitionServiceImpl.java#L151-L153) | 解析到 nodeIp 时设（部署成功，拿到节点） |
+| `release_time` | [EnvReleaseServiceImpl.completeRelease L138-141](file:///d:/Code/Java/openlibing/computing-resource-workspace/src/main/java/com/workspace/business/service/env/impl/EnvReleaseServiceImpl.java#L138-L141) | 仅释放完成（status=released）时设，且 `updated_at = release_time`（同变量赋值） |
 
 #### 各终态记录的字段填充情况
 
-| 终态 status                     | 触发场景                                                                                                                                                                                                                                       | grant_time          | release_time    | fail_type               |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | --------------- | ----------------------- |
-| `success`                       | 安装完成，独占式环境未释放                                                                                                                                                                                                                     | ✅ 有               | ❌ 无（未释放） | null                    |
-| `released`（从 success）        | 任务式任务执行完自动释放，或独占式用户手动释放                                                                                                                                                                                                 | ✅ 有               | ✅ 有           | null                    |
-| `released`（从 install_failed） | 安装失败自动释放（[handleInstallFailed](file:///d:/Code/Java/openlibing/computing-resource-workspace/src/main/java/com/workspace/business/service/env/impl/EnvStatusTransitionServiceImpl.java#L234-L242) 先设 install_failed 再调 doRelease） | ✅ 有               | ✅ 有           | HiDevLab 返回的失败原因 |
-| `deploy_failed`                 | HiDevLab 返回 FAILED/FAILED_RELEASING，或 waiting_release 处理失败                                                                                                                                                                             | ❌ 无（没拿到节点） | ❌ 无（不释放） | HiDevLab 返回的失败原因 |
-| `release_failed`                | 释放流程失败                                                                                                                                                                                                                                   | ✅ 有               | ❌ 无           | HiDevLab 返回的失败原因 |
+| 终态 status | 触发场景 | grant_time | release_time | fail_type |
+|-------------|---------|-----------|--------------|-----------|
+| `success` | 安装完成，独占式环境未释放 | ✅ 有 | ❌ 无（未释放） | null |
+| `released`（从 success） | 任务式任务执行完自动释放，或独占式用户手动释放 | ✅ 有 | ✅ 有 | null |
+| `released`（从 install_failed） | 安装失败自动释放（[handleInstallFailed](file:///d:/Code/Java/openlibing/computing-resource-workspace/src/main/java/com/workspace/business/service/env/impl/EnvStatusTransitionServiceImpl.java#L234-L242) 先设 install_failed 再调 doRelease） | ✅ 有 | ✅ 有 | HiDevLab 返回的失败原因 |
+| `deploy_failed` | HiDevLab 返回 FAILED/FAILED_RELEASING，或 waiting_release 处理失败 | ❌ 无（没拿到节点） | ❌ 无（不释放） | HiDevLab 返回的失败原因 |
+| `release_failed` | 释放流程失败 | ✅ 有 | ❌ 无 | HiDevLab 返回的失败原因 |
 
 **关键结论**：
-
 1. **`install_failed` 在表里查不到**——`handleInstallFailed` 先短暂设 `install_failed`，紧接着调 `doRelease` → `releasing` → 最终 `completeRelease` 把 status 覆盖成 `released`。表里只能靠 `fail_type` 字段回溯安装失败的记录。
 2. **`deploy_failed` 状态保持不变**，不释放，`grant_time=null`、`release_time=null`。
 3. **`release_time` 与 `updated_at` 在 released 记录上完全一致**（同一 `LocalDateTime.now()` 赋值），但对 `deploy_failed` 不一致（`release_time=null`，`updated_at`=失败时间）。
@@ -107,12 +105,12 @@ queuing → allocating → deploying → installing → success
 
 基于上表，4 个业务指标的口径：
 
-| 指标                   | 分子（参与计算的记录）                                                                     | 分母/窗口                      | 归属时间字段                              | 边界处理                                                                       |
-| ---------------------- | ------------------------------------------------------------------------------------------ | ------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------ |
-| `apply_wait_mins`      | `grant_time` 非空的记录（含 success/released/install_failed→released，不含 deploy_failed） | AVG(grant_time - apply_time)   | `grant_time`                              | deploy_failed 无 grant_time，不参与                                            |
-| `apply_success_rate`   | 分子=`grant_time` 非空数（资源拿到=申请成功），分母=全部申请数（含 deploy_failed）         | 分子 COUNT / 分母 COUNT        | **分子分母同按 `apply_time`**（保证同批） | deploy_failed 入分母不入分子                                                   |
-| `exclusive_usage_mins` | `task_type='01'` + `release_time` 非空                                                     | AVG(release_time - grant_time) | `release_time`                            | success 未释放的独占式不入（release_time 为空）                                |
-| `task_usage_mins`      | `task_type='02'` + `release_time` 非空                                                     | AVG(release_time - grant_time) | `release_time`                            | 含 install_failed→released（grant→release 含自动释放等待，可能偏大，本期接受） |
+| 指标 | 分子（参与计算的记录） | 分母/窗口 | 归属时间字段 | 边界处理 |
+|------|---------------------|----------|-------------|---------|
+| `apply_wait_mins` | `grant_time` 非空的记录（含 success/released/install_failed→released，不含 deploy_failed） | AVG(grant_time - apply_time) | `grant_time` | deploy_failed 无 grant_time，不参与 |
+| `apply_success_rate` | 分子=`grant_time` 非空数（资源拿到=申请成功），分母=全部申请数（含 deploy_failed） | 分子 COUNT / 分母 COUNT | **分子分母同按 `apply_time`**（保证同批） | deploy_failed 入分母不入分子 |
+| `exclusive_usage_mins` | `task_type='01'` + `release_time` 非空 | AVG(release_time - grant_time) | `release_time` | success 未释放的独占式不入（release_time 为空） |
+| `task_usage_mins` | `task_type='02'` + `release_time` 非空 | AVG(release_time - grant_time) | `release_time` | 含 install_failed→released（grant→release 含自动释放等待，可能偏大，本期接受） |
 
 **为何 `apply_success_rate` 用 `grant_time` 非空而非 `status=success`**：任务式环境执行完会自动释放，最终 status=released；独占式可能长期 success 未释放。按 status 取值会漏算。用 `grant_time` 非空 = 资源拿到 = 申请成功，更准确反映"申请是否成功拿到资源"。
 
@@ -146,10 +144,10 @@ framework: POST /manage/feature-dashboard/report
 
 #### 用户指标（第一期已落地，unique_visitor 6/30 调整）
 
-| metricKey        | 计算逻辑                                                                    | 数据源                            | 归属字段     |
-| ---------------- | --------------------------------------------------------------------------- | --------------------------------- | ------------ |
-| `page_view`      | `COUNT(*)` 当日窗口内记录条数                                               | `workspace_env_record.created_at` | `created_at` |
-| `unique_visitor` | `COUNT(DISTINCT user_id)` **全表累计去重用户数**（6/30 调整，不再按时间窗） | `workspace_env_record.user_id`    | 无（全表）   |
+| metricKey | 计算逻辑 | 数据源 | 归属字段 |
+|-----------|---------|--------|---------|
+| `page_view` | `COUNT(*)` 当日窗口内记录条数 | `workspace_env_record.created_at` | `created_at` |
+| `unique_visitor` | `COUNT(DISTINCT user_id)` **全表累计去重用户数**（6/30 调整，不再按时间窗） | `workspace_env_record.user_id` | 无（全表） |
 
 **统计口径**：不分成功失败，所有记录都算。`page_view` 按当日窗口，`unique_visitor` 6/30 起改为全表累计 UV（语义从 DAU 变为累计 UV，指标 key 不变）。
 
@@ -172,12 +170,12 @@ long countDistinctUserIdAll();
 
 #### 业务指标（本期新增，6/29）
 
-| metricKey              | 计算逻辑                                                      | 归属字段                       | task_type |
-| ---------------------- | ------------------------------------------------------------- | ------------------------------ | --------- |
-| `apply_wait_mins`      | `AVG(TIMESTAMPDIFF(MINUTE, apply_time, grant_time))`          | `grant_time`                   | 不分      |
-| `apply_success_rate`   | 分子=`COUNT(*) WHERE grant_time IS NOT NULL`，分母=`COUNT(*)` | `apply_time`（分子分母同窗口） | 不分      |
-| `exclusive_usage_mins` | `AVG(TIMESTAMPDIFF(MINUTE, grant_time, release_time))`        | `release_time`                 | `01`      |
-| `task_usage_mins`      | `AVG(TIMESTAMPDIFF(MINUTE, grant_time, release_time))`        | `release_time`                 | `02`      |
+| metricKey | 计算逻辑 | 归属字段 | task_type |
+|-----------|---------|---------|-----------|
+| `apply_wait_mins` | `AVG(TIMESTAMPDIFF(MINUTE, apply_time, grant_time))` | `grant_time` | 不分 |
+| `apply_success_rate` | 分子=`COUNT(*) WHERE grant_time IS NOT NULL`，分母=`COUNT(*)` | `apply_time`（分子分母同窗口） | 不分 |
+| `exclusive_usage_mins` | `AVG(TIMESTAMPDIFF(MINUTE, grant_time, release_time))` | `release_time` | `01` |
+| `task_usage_mins` | `AVG(TIMESTAMPDIFF(MINUTE, grant_time, release_time))` | `release_time` | `02` |
 
 **SQL 模板**（在 `EnvRecordMapper` 新增）：
 
@@ -212,7 +210,6 @@ Double avgUsageMinutesByTaskType(@Param("taskType") String taskType,
 ```
 
 **设计决策**：
-
 - `AVG` 返回 `Double`（可能为 null，当窗口内无符合条件的记录时），service 层判 null 后决定是否上报该 key。
 - `TIMESTAMPDIFF(MINUTE, ...)` 返回整数分钟，`AVG` 后变 `Double`（如 `2.5`）。framework `isNumeric` 用 `Double.parseDouble` 可解析小数，不限制。
 - `apply_success_rate` 分两个 COUNT 查询而非一次 SQL 算比率：service 层组装 `{numerator, denominator}` 上报，前端自行计算百分比，符合 framework rate 指标的对象格式。
@@ -222,11 +219,11 @@ Double avgUsageMinutesByTaskType(@Param("taskType") String taskType,
 
 framework 端 `timestamp` 字段不做时区转换（见 §2.2），本服务需保证：
 
-| 项                       | 取值                                            | 说明                                                                       |
-| ------------------------ | ----------------------------------------------- | -------------------------------------------------------------------------- |
-| 上报 `timestamp` 字段    | `统计日T23:59:59`，格式 `yyyy-MM-dd'T'HH:mm:ss` | 确保归到统计日，凌晨任务（0:00-2:00 跑前一天数据）不会跨日                 |
-| DB 查询窗口              | `[统计日 00:00, 统计日+1 00:00)`                | DB 中 `created_at` 存的是本地时间（北京时间），与 timestamp 归属日完全对齐 |
-| `stat-day-offset` 配置项 | 默认 `-1`                                       | 定时任务在北京凌晨跑，统计前一天数据                                       |
+| 项 | 取值 | 说明 |
+|----|------|------|
+| 上报 `timestamp` 字段 | `统计日T23:59:59`，格式 `yyyy-MM-dd'T'HH:mm:ss` | 确保归到统计日，凌晨任务（0:00-2:00 跑前一天数据）不会跨日 |
+| DB 查询窗口 | `[统计日 00:00, 统计日+1 00:00)` | DB 中 `created_at` 存的是本地时间（北京时间），与 timestamp 归属日完全对齐 |
+| `stat-day-offset` 配置项 | 默认 `-1` | 定时任务在北京凌晨跑，统计前一天数据 |
 
 **为什么不传 UTC 0 点**：framework 用 `LocalDateTime` 解析，不识别时区标记，传 `2026-06-25T00:00:00Z` 去掉 Z 后也是 `2026-06-25 00:00:00`，效果一样。但传 23:59:59 语义更直观——"这是 6/25 末尾的数据"，且对边界比较（`<=` vs `<`）更安全。
 
@@ -247,18 +244,17 @@ String timestamp = statDate.atTime(23, 59, 59)
 
 请求字段与 framework 端 [DashboardReportRequestDTO](file:///d:/Code/Java/openlibing/openlibing-framework/src/main/java/com/openlibing/framework/business/dto/dashboard/DashboardReportRequestDTO.java) 严格对齐：
 
-| 字段              | 类型                | 必填 | 说明                                                                                                                       |
-| ----------------- | ------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------- |
-| `community`       | String              | 否   | **6/30 起不上报**（IDE 不区分社区）。framework 端 `inferCommunity(null, null)` 返回空字符串，落库 `community` 列存空字符串 |
-| `repo`            | String              | 否   | 代码仓，本服务不上报                                                                                                       |
-| `feature`         | String              | 是   | 特性名，默认 `IDE插件`                                                                                                     |
-| `userMetrics`     | Map<String, Object> | 是   | 用户指标，不能为 null                                                                                                      |
-| `businessMetrics` | Map<String, Object> | 是   | 业务指标，不能为 null                                                                                                      |
-| `timestamp`       | String              | 否   | ISO 8601，本服务传"统计日 23:59:59"                                                                                        |
-| `notInvolved`     | Boolean             | 否   | 默认 false                                                                                                                 |
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `community` | String | 否 | **6/30 起不上报**（IDE 不区分社区）。framework 端 `inferCommunity(null, null)` 返回空字符串，落库 `community` 列存空字符串 |
+| `repo` | String | 否 | 代码仓，本服务不上报 |
+| `feature` | String | 是 | 特性名，默认 `IDE插件` |
+| `userMetrics` | Map<String, Object> | 是 | 用户指标，不能为 null |
+| `businessMetrics` | Map<String, Object> | 是 | 业务指标，不能为 null |
+| `timestamp` | String | 否 | ISO 8601，本服务传"统计日 23:59:59" |
+| `notInvolved` | Boolean | 否 | 默认 false |
 
 **设计决策**：
-
 - 用 `Map<String, Object>` 而非独立 DTO：team 反馈 DTO 过多，且本请求字段简单、一次性使用，独立 DTO 性价比低。
 - 不复用 framework 端的 DTO 类：跨模块依赖会引入 `openlibing-framework` 业务包，违反微服务边界。
 - 响应只取 `reportId` 记日志，用 `DataResult<Map<String, Object>>` 接收够用。
@@ -272,7 +268,6 @@ DataResult<Map<String, Object>> reportFeatureOps(@RequestBody Map<String, Object
 ```
 
 **设计决策**：
-
 - 路径写完整 `/manage/feature-dashboard/report`，与现有 `getUserByPlatform` 调 `/internal-server/get-user` 风格一致。
 - 复用 `DataResult<T>` 作为响应包装，与现有 `getUserByPlatform` / `addMicroservicesLog` 一致。
 - Feign 异常由 service 层捕获处理。
@@ -400,7 +395,6 @@ public class FeatureOpsReportService {
 ```
 
 **设计决策**：
-
 - **异常降级**：定时任务不能因上报失败拖垮服务，所有异常（含 Feign 异常 + framework 返回非 200 + DB 查询异常）都降级为 warn 日志。
 - **不抛业务异常**：上游 scheduler 不需要做 try-catch，service 内部完全吞掉异常。
 - **DB 查询包在同一个 try-catch**：用户指标和业务指标一起查，任一失败则整体不上报（保证同一天数据一致性，避免部分上报）。
@@ -435,7 +429,6 @@ public class FeatureOpsReportScheduler {
 ```
 
 **设计决策**：
-
 - **默认关闭**：`enabled` 默认 `false`。前端看板录入指标 key 之前，开启会被 3007 拒绝。
 - **cron 默认每天凌晨 2 点**：`0 0 2 * * ?`。配合 `stat-day-offset=-1`，统计前一天数据。Apollo 可动态调整。
 - **不用分布式锁**：~~framework 端已做 `(community, feature, 当天)` 幂等 upsert，多实例并发上报只保留最后一条，不需要在 workspace 侧加锁。~~ **6/30 调整**：本服务不上报 `community`，framework 端走 insert 分支无幂等。当前定时任务每日一次且单实例，可接受；如未来多实例部署，需在 service 端自管幂等（如用 `report_id = UUID(community+feature+statDate)` 或在 workspace 侧加 Redis 锁）。
@@ -463,7 +456,6 @@ feature-ops:
 ```
 
 **设计决策**：
-
 - 配置项命名 `feature-ops.report.*`，与现有 `maas.gateway.*` 风格一致（小写连字符 + 层级）。
 - 全部带默认值，本地起服务不配 Apollo 也能跑。
 - `community` / `feature` 默认值取 Apollo `dashboard.matrix.features` 默认列表中的项（`openLiBing` / `数字化运营看板`），避免默认值与 framework 端配置不一致导致 3007。
@@ -514,13 +506,13 @@ service 捕获 Feign/DB 异常 → warn 日志
 
 ## 5. 异常与降级
 
-| 异常场景                                              | 处理                                       | 用户感知       |
-| ----------------------------------------------------- | ------------------------------------------ | -------------- |
-| `enabled=false`                                       | scheduler 直接 return                      | 无             |
-| DB 查询失败（连接/超时）                              | warn 日志记 statDate + err，不调 framework | 看板当日无数据 |
-| framework 返回 code != 200（如 3007 指标 key 未配置） | warn 日志记 statDate + code + msg          | 看板当日无数据 |
-| Feign 网络异常 / 超时                                 | warn 日志记 statDate + err                 | 看板当日无数据 |
-| framework 反序列化失败                                | warn 日志记 statDate + err                 | 看板当日无数据 |
+| 异常场景 | 处理 | 用户感知 |
+|---------|------|---------|
+| `enabled=false` | scheduler 直接 return | 无 |
+| DB 查询失败（连接/超时） | warn 日志记 statDate + err，不调 framework | 看板当日无数据 |
+| framework 返回 code != 200（如 3007 指标 key 未配置） | warn 日志记 statDate + code + msg | 看板当日无数据 |
+| Feign 网络异常 / 超时 | warn 日志记 statDate + err | 看板当日无数据 |
+| framework 反序列化失败 | warn 日志记 statDate + err | 看板当日无数据 |
 
 **关键原则**：所有异常都不向上抛，scheduler 永远成功。运营看板是辅助功能，不能影响主业务。
 
@@ -528,19 +520,19 @@ service 捕获 Feign/DB 异常 → warn 日志
 
 ### 6.1 新增文件（第一期已完成）
 
-| 文件                                                      | 说明                                             |
-| --------------------------------------------------------- | ------------------------------------------------ |
+| 文件 | 说明 |
+|------|------|
 | `business/service/dashboard/FeatureOpsReportService.java` | 上报 service（第一期已建，本期扩展业务指标组装） |
-| `common/scheduler/FeatureOpsReportScheduler.java`         | 定时任务                                         |
+| `common/scheduler/FeatureOpsReportScheduler.java` | 定时任务 |
 
 ### 6.2 修改文件
 
-| 文件                                                      | 改动说明                                                                                                                                      |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `business/client/FrameworkClient.java`                    | 第一期已新增 `reportFeatureOps` 方法，本期不动                                                                                                |
-| `business/mapper/EnvRecordMapper.java`                    | 本期新增 4 个业务指标聚合方法：`avgApplyWaitMinutes` / `countGrantedByApplyTimeRange` / `countByApplyTimeRange` / `avgUsageMinutesByTaskType` |
-| `business/service/dashboard/FeatureOpsReportService.java` | 本期扩展：移除 TODO，新增 `buildBusinessMetrics` 方法组装 4 个业务指标                                                                        |
-| `application.yaml` 或 Apollo                              | 第一期已新增 `feature-ops.report.*`，本期不动                                                                                                 |
+| 文件 | 改动说明 |
+|------|---------|
+| `business/client/FrameworkClient.java` | 第一期已新增 `reportFeatureOps` 方法，本期不动 |
+| `business/mapper/EnvRecordMapper.java` | 本期新增 4 个业务指标聚合方法：`avgApplyWaitMinutes` / `countGrantedByApplyTimeRange` / `countByApplyTimeRange` / `avgUsageMinutesByTaskType` |
+| `business/service/dashboard/FeatureOpsReportService.java` | 本期扩展：移除 TODO，新增 `buildBusinessMetrics` 方法组装 4 个业务指标 |
+| `application.yaml` 或 Apollo | 第一期已新增 `feature-ops.report.*`，本期不动 |
 
 ### 6.3 不修改
 
@@ -552,34 +544,34 @@ service 捕获 Feign/DB 异常 → warn 日志
 
 ## 7. 关键决策记录
 
-| #   | 决策                                                                  | 原因                                                                                                                                |
-| --- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | 用 Feign 而非 WebClient                                               | 定时任务无 session，Feign 风格与现有 `FrameworkClient` 一致                                                                         |
-| 2   | 不新建 DTO 文件，请求用 `Map<String, Object>`                         | 团队反馈 DTO 过多，本请求字段简单一次性使用，独立 DTO 性价比低                                                                      |
-| 3   | 不复用 framework 端 DTO 类                                            | 跨模块依赖会引入 framework 业务包，违反微服务边界                                                                                   |
-| 4   | service 吞所有异常                                                    | 定时任务不能拖垮主服务                                                                                                              |
-| 5   | scheduler 默认关闭                                                    | 前端看板录入指标 key 前开启会被 3007 拒绝                                                                                           |
-| 6   | 不加分布式锁                                                          | framework 端按天幂等 upsert，多实例并发安全                                                                                         |
-| 7   | community/feature/statDayOffset 用 `@Value` 注入                      | 与 `ModelHealthScheduler` 风格一致，支持 Apollo 动态调整                                                                            |
-| 8   | cron 默认每天 02:00 + stat-day-offset=-1                              | 凌晨任务统计前一天数据，避开 0 点业务高峰                                                                                           |
-| 9   | timestamp 传"统计日 23:59:59"而非 UTC 0 点                            | framework 用 LocalDateTime 解析不做时区转换，23:59:59 语义直观且边界安全                                                            |
-| 10  | 用户指标不分成功失败都统计                                            | 用户行为统计口径，失败申请也是一次访问                                                                                              |
-| 11  | 业务指标 6/29 扩展                                                    | 4 个业务指标口径见 §2.5，本期落地                                                                                                   |
-| 12  | `apply_success_rate` 按 `{numerator, denominator}` 对象上报           | 用户指示"先按别人那样写"。**风险**：framework 当前 `isNumeric` 校验可能拒绝对象（见 §2.1），若报错再决定改 framework 或退化为裸数字 |
-| 13  | `apply_success_rate` 用 `grant_time` 非空而非 `status=success` 作分子 | 任务式执行完自动释放最终 status=released，按 status 会漏算；grant_time 非空=资源拿到=申请成功，更准确                               |
-| 14  | `apply_success_rate` 分子分母同按 `apply_time` 归属                   | 比率要求分子分母同批，避免跨天错配失真                                                                                              |
-| 15  | `install_failed→released` 计入使用时长均值                            | release_time 非空即参与 AVG，install_failed 占比小影响有限，本期接受                                                                |
-| 16  | count 指标 AVG 为 null 时不上报该 key                                 | 避免传 null 被 framework `isNumeric` 拒绝；`apply_success_rate` 例外（始终上报，分母为 0 时传 `{0,0}`）                             |
-| 17  | `apply_success_rate` 不带 `metricId` 字段                             | workspace 侧不知 metricId（前端看板配置表主键），先按 `{numerator, denominator}` 上报，必要时再补                                   |
+| # | 决策 | 原因 |
+|---|------|------|
+| 1 | 用 Feign 而非 WebClient | 定时任务无 session，Feign 风格与现有 `FrameworkClient` 一致 |
+| 2 | 不新建 DTO 文件，请求用 `Map<String, Object>` | 团队反馈 DTO 过多，本请求字段简单一次性使用，独立 DTO 性价比低 |
+| 3 | 不复用 framework 端 DTO 类 | 跨模块依赖会引入 framework 业务包，违反微服务边界 |
+| 4 | service 吞所有异常 | 定时任务不能拖垮主服务 |
+| 5 | scheduler 默认关闭 | 前端看板录入指标 key 前开启会被 3007 拒绝 |
+| 6 | 不加分布式锁 | framework 端按天幂等 upsert，多实例并发安全 |
+| 7 | community/feature/statDayOffset 用 `@Value` 注入 | 与 `ModelHealthScheduler` 风格一致，支持 Apollo 动态调整 |
+| 8 | cron 默认每天 02:00 + stat-day-offset=-1 | 凌晨任务统计前一天数据，避开 0 点业务高峰 |
+| 9 | timestamp 传"统计日 23:59:59"而非 UTC 0 点 | framework 用 LocalDateTime 解析不做时区转换，23:59:59 语义直观且边界安全 |
+| 10 | 用户指标不分成功失败都统计 | 用户行为统计口径，失败申请也是一次访问 |
+| 11 | 业务指标 6/29 扩展 | 4 个业务指标口径见 §2.5，本期落地 |
+| 12 | `apply_success_rate` 按 `{numerator, denominator}` 对象上报 | 用户指示"先按别人那样写"。**风险**：framework 当前 `isNumeric` 校验可能拒绝对象（见 §2.1），若报错再决定改 framework 或退化为裸数字 |
+| 13 | `apply_success_rate` 用 `grant_time` 非空而非 `status=success` 作分子 | 任务式执行完自动释放最终 status=released，按 status 会漏算；grant_time 非空=资源拿到=申请成功，更准确 |
+| 14 | `apply_success_rate` 分子分母同按 `apply_time` 归属 | 比率要求分子分母同批，避免跨天错配失真 |
+| 15 | `install_failed→released` 计入使用时长均值 | release_time 非空即参与 AVG，install_failed 占比小影响有限，本期接受 |
+| 16 | count 指标 AVG 为 null 时不上报该 key | 避免传 null 被 framework `isNumeric` 拒绝；`apply_success_rate` 例外（始终上报，分母为 0 时传 `{0,0}`） |
+| 17 | `apply_success_rate` 不带 `metricId` 字段 | workspace 侧不知 metricId（前端看板配置表主键），先按 `{numerator, denominator}` 上报，必要时再补 |
 
 ## 8. 待用户补充 / 后续改造
 
-| #   | 待补充项                                         | 影响                                                                                                                                                                                                                                                                                                  |
-| --- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | 指标 key 是否已在前端看板录入                    | 若未录入会被 3007 拒绝。需运营先录入 6 个 metricKey（含本期 4 个业务指标）                                                                                                                                                                                                                            |
-| 2   | 是否需要补单元测试                               | 等指标稳定后补                                                                                                                                                                                                                                                                                        |
-| 3   | **framework rate 指标对象上报支持**              | 本期 `apply_success_rate` 按 `{numerator, denominator}` 上报，若 framework `isNumeric` 拒绝需改 framework 校验（恢复 `0c08247d` 逻辑）或退化为裸数字。需跟踪 framework 仓改造                                                                                                                         |
-| 4   | **framework rate 指标月均聚合失真**              | framework 当前对 rate 做算术平均（[calculateMetricAverages L638](file:///d:/Code/Java/openlibing/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/FeatureOpsDashboardServiceImpl.java#L638)），月均会失真。若 framework 后续支持分子分母累加再除，月均才准确。需跟踪 |
-| 5   | `workspace_env_record` 各时间字段的实际时区      | 当前假设存的是北京时间。若实际是 UTC，需调整 SQL 窗口计算                                                                                                                                                                                                                                             |
-| 6   | `task_usage_mins` 是否需过滤 `fail_type IS NULL` | 本期接受 install_failed 计入。若实际数据偏差过大，加 `fail_type IS NULL` 过滤安装失败记录                                                                                                                                                                                                             |
-| 7   | `apply_success_rate` 是否需要 `metricId` 字段    | 当前不带。若 framework 或前端要求，需先查 framework metric_config 表反查 metricId                                                                                                                                                                                                                     |
+| # | 待补充项 | 影响 |
+|---|---------|------|
+| 1 | 指标 key 是否已在前端看板录入 | 若未录入会被 3007 拒绝。需运营先录入 6 个 metricKey（含本期 4 个业务指标） |
+| 2 | 是否需要补单元测试 | 等指标稳定后补 |
+| 3 | **framework rate 指标对象上报支持** | 本期 `apply_success_rate` 按 `{numerator, denominator}` 上报，若 framework `isNumeric` 拒绝需改 framework 校验（恢复 `0c08247d` 逻辑）或退化为裸数字。需跟踪 framework 仓改造 |
+| 4 | **framework rate 指标月均聚合失真** | framework 当前对 rate 做算术平均（[calculateMetricAverages L638](file:///d:/Code/Java/openlibing/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/FeatureOpsDashboardServiceImpl.java#L638)），月均会失真。若 framework 后续支持分子分母累加再除，月均才准确。需跟踪 |
+| 5 | `workspace_env_record` 各时间字段的实际时区 | 当前假设存的是北京时间。若实际是 UTC，需调整 SQL 窗口计算 |
+| 6 | `task_usage_mins` 是否需过滤 `fail_type IS NULL` | 本期接受 install_failed 计入。若实际数据偏差过大，加 `fail_type IS NULL` 过滤安装失败记录 |
+| 7 | `apply_success_rate` 是否需要 `metricId` 字段 | 当前不带。若 framework 或前端要求，需先查 framework metric_config 表反查 metricId |

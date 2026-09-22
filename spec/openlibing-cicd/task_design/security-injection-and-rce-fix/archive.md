@@ -2,21 +2,21 @@
 
 ## 关联
 
-| 类型                 | 链接                                                     |
-| -------------------- | -------------------------------------------------------- |
+| 类型 | 链接 |
+|---|---|
 | 业务 Issue (fork 仓) | https://gitcode.com/yanzhaohong/openlibing-cicd/issues/4 |
-| 业务 Issue 标题      | 【openLiBing】cicd注入修复                               |
-| 业务 PR (fork 仓)    | https://gitcode.com/yanzhaohong/openlibing-cicd/pulls/1  |
-| 业务 PR 标题         | fix: 【openLiBing】cicd注入修复                          |
-| 业务 PR 分支         | fix-snakeyaml-rce-pipeline-fail-email → master           |
-| 业务 commit          | c22f3c61a                                                |
-| 审计报告 (v2)        | audit-report-injection-rce-v2.md                         |
-| docs PR              | (本 PR)                                                  |
+| 业务 Issue 标题 | 【openLiBing】cicd注入修复 |
+| 业务 PR (fork 仓) | https://gitcode.com/yanzhaohong/openlibing-cicd/pulls/1 |
+| 业务 PR 标题 | fix: 【openLiBing】cicd注入修复 |
+| 业务 PR 分支 | fix-snakeyaml-rce-pipeline-fail-email → master |
+| 业务 commit | c22f3c61a |
+| 审计报告 (v2) | audit-report-injection-rce-v2.md |
+| docs PR | (本 PR) |
 
 ## 交付历程
 
-| commit    | 说明                                                                      |
-| --------- | ------------------------------------------------------------------------- |
+| commit | 说明 |
+|---|---|
 | c22f3c61a | fix(listener): use SafeConstructor for parsing .notification.yaml (F-001) |
 
 ## 用户自测反馈
@@ -26,24 +26,24 @@
 
 ## 最终验证
 
-| 项           | 结果                                      |
-| ------------ | ----------------------------------------- |
-| 业务代码修改 | ✅ 已 commit                              |
-| 单元测试编写 | ✅ 7 个测试用例                           |
-| 业务 PR      | ✅ 已创建并打 `ai-assisted` 标签          |
-| 漏洞修复     | ✅ SnakeYAML 默认构造器 → SafeConstructor |
-| 业务 PR 合入 | ⏳ 待用户/评审合入                        |
-| 本地编译验证 | ❌ 环境受限（私有 Maven 仓 401）          |
-| CI 验证      | ⏳ 等待 PR 触发                           |
+| 项 | 结果 |
+|---|---|
+| 业务代码修改 | ✅ 已 commit |
+| 单元测试编写 | ✅ 7 个测试用例 |
+| 业务 PR | ✅ 已创建并打 `ai-assisted` 标签 |
+| 漏洞修复 | ✅ SnakeYAML 默认构造器 → SafeConstructor |
+| 业务 PR 合入 | ⏳ 待用户/评审合入 |
+| 本地编译验证 | ❌ 环境受限（私有 Maven 仓 401） |
+| CI 验证 | ⏳ 等待 PR 触发 |
 
 ## 设计偏差与取舍
 
-| 取舍                                                          | 原因                                                              |
-| ------------------------------------------------------------- | ----------------------------------------------------------------- |
-| 采用 SafeConstructor 而非 LoaderOptions TagInspector 白名单   | 业务仅需解析 Map/List/String，SafeConstructor 已足够，少 2 行代码 |
-| 不升级 SnakeYAML 到 ≥ 2.0                                     | 避免传递依赖版本冲突                                              |
-| 测试通过 `ReflectionTestUtils.invokeMethod` 调用 private 方法 | 避免将 `parseRecipients` 改为 package-private 破坏封装            |
-| 业务 Issue 创建在 fork 仓                                     | 用户无 `openlibing/openlibing-cicd` 主仓写权限（403 CH.00000403） |
+| 取舍 | 原因 |
+|---|---|
+| 采用 SafeConstructor 而非 LoaderOptions TagInspector 白名单 | 业务仅需解析 Map/List/String，SafeConstructor 已足够，少 2 行代码 |
+| 不升级 SnakeYAML 到 ≥ 2.0 | 避免传递依赖版本冲突 |
+| 测试通过 `ReflectionTestUtils.invokeMethod` 调用 private 方法 | 避免将 `parseRecipients` 改为 package-private 破坏封装 |
+| 业务 Issue 创建在 fork 仓 | 用户无 `openlibing/openlibing-cicd` 主仓写权限（403 CH.00000403） |
 
 ## 可复用经验
 

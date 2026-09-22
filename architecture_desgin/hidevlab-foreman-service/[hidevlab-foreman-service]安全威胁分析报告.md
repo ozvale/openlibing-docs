@@ -8,17 +8,17 @@
 
 ## 0. 报告元数据
 
-| 项目        | 值                                                          |
-| ----------- | ----------------------------------------------------------- |
-| 分析模型    | GLM-5.3（Trae 代理）                                        |
-| 仓库        | https://gitcode.com/openlibing/hidevlab-foreman-service.git |
-| 分支 / 提交 | master / df916d6（提交时间 2026-08-25 16:04:17 +0800）      |
-| 分析开始    | 2026-08-27 12:03:08 UTC                                     |
-| 分析完成    | 2026-08-27 12:11:00 UTC                                     |
-| 部署分类    | INTERNAL_SERVICE（内网服务，经 APIG 网关对外暴露）          |
-| 源文件数    | ~15（小型仓库）                                             |
-| 威胁总数    | 25（开放 18 / 已缓解 7 / Tier 1：0、Tier 2：16、Tier 3：9） |
-| 发现总数    | 12（Tier 2：6、Tier 3：6）                                  |
+| 项目 | 值 |
+|------|-----|
+| 分析模型 | GLM-5.3（Trae 代理） |
+| 仓库 | https://gitcode.com/openlibing/hidevlab-foreman-service.git |
+| 分支 / 提交 | master / df916d6（提交时间 2026-08-25 16:04:17 +0800） |
+| 分析开始 | 2026-08-27 12:03:08 UTC |
+| 分析完成 | 2026-08-27 12:11:00 UTC |
+| 部署分类 | INTERNAL_SERVICE（内网服务，经 APIG 网关对外暴露） |
+| 源文件数 | ~15（小型仓库） |
+| 威胁总数 | 25（开放 18 / 已缓解 7 / Tier 1：0、Tier 2：16、Tier 3：9） |
+| 发现总数 | 12（Tier 2：6、Tier 3：6） |
 
 ---
 
@@ -54,25 +54,25 @@
 
 ### 待验证项（Needs Verification）
 
-| 编号  | 待验证内容                                                              | 潜在影响                                        |
-| ----- | ----------------------------------------------------------------------- | ----------------------------------------------- |
-| NV-01 | 18080 端口是否可从公网 / 非信任网段直接访问                             | 若可，FIND-01、FIND-04 升级为 Tier 1            |
-| NV-02 | APIG 是否校验 `X-HW-DATE` 时间窗，拒绝过期签名                          | 若否，存在令牌校验 / 签名请求重放窗口（T08）    |
+| 编号 | 待验证内容 | 潜在影响 |
+|------|-----------|---------|
+| NV-01 | 18080 端口是否可从公网 / 非信任网段直接访问 | 若可，FIND-01、FIND-04 升级为 Tier 1 |
+| NV-02 | APIG 是否校验 `X-HW-DATE` 时间窗，拒绝过期签名 | 若否，存在令牌校验 / 签名请求重放窗口（T08） |
 | NV-03 | Foreman 内网域名是否为 HTTPS（`FOREMAN_INNER_NET_DOMAIN` 值未在仓库内） | 若为 HTTP，FIND-02 直接成立且无需中间人位置假设 |
-| NV-04 | Apollo `app_id` 命名空间实际配置值（`ENABLE_AUTH` 当前是否为 true）     | 直接决定鉴权面是否生效                          |
+| NV-04 | Apollo `app_id` 命名空间实际配置值（`ENABLE_AUTH` 当前是否为 true） | 直接决定鉴权面是否生效 |
 
 ### 已识别的缓解控制（安全基础设施盘点）
 
-| 类别                    | 控制                                                                                                                | 证据                                    |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| 传输加密（入站）        | 服务自带 TLS（证书经 Apollo 加密下发，解密后加载，`when_ready` 删除临时文件）                                       | `foreman.py` / `gunicorn_config.py`     |
-| 传输加密（出站-Apollo） | 证书固定（verify 指向 `/home/apollo/https/apollo.pem`）                                                             | `apollo_manager.py`                     |
-| 认证                    | APIG 令牌校验（`before_request` 全局拦截，`ENABLE_AUTH` 默认 true）                                                 | `foreman.py` `_check_auth`              |
-| 出站认证                | APIG 侧 X-HW-ID / X-HW-APPKEY SHA-256 签名                                                                          | `auth_filter.py` `sign_request`         |
-| 输入校验                | IP 正则校验、hostId 字符白名单（注释明确防 SSRF）、必填字段检查                                                     | `regex_util.py` / `host_manage.py`      |
-| 日志安全                | 日志注入转义（`sanitize_for_log`）、敏感键递归脱敏（`redact_sensitive`）、账号掩码（`mask`）、operator SHA-256 哈希 | `utils/` / `logging_handler.py`         |
-| 加密                    | AES-256-GCM + PBKDF2(100k) 派生根密钥，双密钥异或托管                                                               | `decrypt.py`                            |
-| 供应链（部分）          | CodeQL 静态分析、gitleaks 密钥扫描、ruff 格式化                                                                     | `.gitcode/` / `.pre-commit-config.yaml` |
+| 类别 | 控制 | 证据 |
+|------|------|------|
+| 传输加密（入站） | 服务自带 TLS（证书经 Apollo 加密下发，解密后加载，`when_ready` 删除临时文件） | `foreman.py` / `gunicorn_config.py` |
+| 传输加密（出站-Apollo） | 证书固定（verify 指向 `/home/apollo/https/apollo.pem`） | `apollo_manager.py` |
+| 认证 | APIG 令牌校验（`before_request` 全局拦截，`ENABLE_AUTH` 默认 true） | `foreman.py` `_check_auth` |
+| 出站认证 | APIG 侧 X-HW-ID / X-HW-APPKEY SHA-256 签名 | `auth_filter.py` `sign_request` |
+| 输入校验 | IP 正则校验、hostId 字符白名单（注释明确防 SSRF）、必填字段检查 | `regex_util.py` / `host_manage.py` |
+| 日志安全 | 日志注入转义（`sanitize_for_log`）、敏感键递归脱敏（`redact_sensitive`）、账号掩码（`mask`）、operator SHA-256 哈希 | `utils/` / `logging_handler.py` |
+| 加密 | AES-256-GCM + PBKDF2(100k) 派生根密钥，双密钥异或托管 | `decrypt.py` |
+| 供应链（部分） | CodeQL 静态分析、gitleaks 密钥扫描、ruff 格式化 | `.gitcode/` / `.pre-commit-config.yaml` |
 
 ---
 
@@ -99,36 +99,36 @@ Foreman 服务器 ──HTTPS 回调(免鉴权, EXCLUDE_PATH)──▶ ForemanAp
 
 ### 2.2 组件清单（含代码锚点）
 
-| 组件 ID            | 类型               | 代码锚点                                                      | 职责                                                             |
-| ------------------ | ------------------ | ------------------------------------------------------------- | ---------------------------------------------------------------- |
-| ForemanApplication | 进程（HTTP 监听）  | `foreman.py`                                                  | Flask 入口：3 个业务端点 + 健康检查 + 全局 `before_request` 鉴权 |
-| AuthFilter         | 进程内模块（出站） | `base/auth_filter.py`                                         | 调 APIG 校验令牌；构造 X-HW APIG 签名请求                        |
-| HostManage         | 进程内模块（出站） | `service/host_manage.py`                                      | 调 Foreman API 创建 / 删除主机（BasicAuth，verify=False）        |
-| BmsAgentManage     | 进程内模块（出站） | `service/bms_agent_manage.py`                                 | 装机完成后经 APIG 签名通知 BMS Agent                             |
-| ApolloManager      | 进程内模块（出站） | `base/apollo_manager.py` + `base/config.py`                   | Apollo 配置加载（证书固定），进程启动时读取全部配置              |
-| Decrypt            | 进程内模块         | `base/decrypt.py`                                             | 双密钥异或 → PBKDF2 → 解密工作密钥 → AES-GCM 解密配置密文        |
-| LoggingHandler     | 进程内模块         | `base/logging_handler.py`                                     | JSON 结构化日志、按日轮转、operator 哈希脱敏                     |
-| Foreman            | 外部系统           | 集成点：`FOREMAN_INNER_NET_DOMAIN`（config.py）               | 裸金属主机管理（创建/删除），装机完成后回调本服务                |
-| APIG               | 外部系统           | 集成点：`API_GATEWAY_DOMAIN` / `TOKEN_VALID_URL`（config.py） | 网关：令牌校验、签名验证                                         |
-| BmsAgentService    | 外部系统           | 集成点：`DELIVERY_COMPLETE_URI`（config.py）                  | 装机完成后续处理                                                 |
-| ApolloConfigCenter | 外部系统           | 集成点：`/home/apollo/apollo_config_foreman.yaml`             | 配置中心                                                         |
-| Operator           | 外部角色           | —                                                             | 调用方（Portal 用户 / APIG 客户端）                              |
-| ForemanServer      | 外部角色           | —                                                             | 回调调用方（Foreman 服务器进程）                                 |
+| 组件 ID | 类型 | 代码锚点 | 职责 |
+|---------|------|---------|------|
+| ForemanApplication | 进程（HTTP 监听） | `foreman.py` | Flask 入口：3 个业务端点 + 健康检查 + 全局 `before_request` 鉴权 |
+| AuthFilter | 进程内模块（出站） | `base/auth_filter.py` | 调 APIG 校验令牌；构造 X-HW APIG 签名请求 |
+| HostManage | 进程内模块（出站） | `service/host_manage.py` | 调 Foreman API 创建 / 删除主机（BasicAuth，verify=False） |
+| BmsAgentManage | 进程内模块（出站） | `service/bms_agent_manage.py` | 装机完成后经 APIG 签名通知 BMS Agent |
+| ApolloManager | 进程内模块（出站） | `base/apollo_manager.py` + `base/config.py` | Apollo 配置加载（证书固定），进程启动时读取全部配置 |
+| Decrypt | 进程内模块 | `base/decrypt.py` | 双密钥异或 → PBKDF2 → 解密工作密钥 → AES-GCM 解密配置密文 |
+| LoggingHandler | 进程内模块 | `base/logging_handler.py` | JSON 结构化日志、按日轮转、operator 哈希脱敏 |
+| Foreman | 外部系统 | 集成点：`FOREMAN_INNER_NET_DOMAIN`（config.py） | 裸金属主机管理（创建/删除），装机完成后回调本服务 |
+| APIG | 外部系统 | 集成点：`API_GATEWAY_DOMAIN` / `TOKEN_VALID_URL`（config.py） | 网关：令牌校验、签名验证 |
+| BmsAgentService | 外部系统 | 集成点：`DELIVERY_COMPLETE_URI`（config.py） | 装机完成后续处理 |
+| ApolloConfigCenter | 外部系统 | 集成点：`/home/apollo/apollo_config_foreman.yaml` | 配置中心 |
+| Operator | 外部角色 | — | 调用方（Portal 用户 / APIG 客户端） |
+| ForemanServer | 外部角色 | — | 回调调用方（Foreman 服务器进程） |
 
 ### 2.3 部署分类与组件暴露表
 
 **部署分类：INTERNAL_SERVICE**（依据：`SERVICE_HOST` 默认 `0.0.0.0`、`SERVICE_PORT` 默认 18080，配置与代码中存在 APIG 网关前置证据，未发现公网直暴露证据）。
 
-| 组件                                              | 监听地址             | 鉴权屏障                        | 外部可达性                  | 最低攻击前提     |
-| ------------------------------------------------- | -------------------- | ------------------------------- | --------------------------- | ---------------- |
-| ForemanApplication（业务端点）                    | 0.0.0.0:18080（TLS） | APIG 令牌校验（可配置）         | 经 APIG 对外可达 / 内网直连 | Internal Network |
-| ForemanApplication（回调端点，默认 EXCLUDE_PATH） | 同上                 | **无**（EXCLUDE_PATH 默认排除） | 内网直连                    | Internal Network |
-| ForemanApplication（/health）                     | 同上                 | APIG 令牌校验                   | 同上                        | Internal Network |
-| AuthFilter                                        | 无监听（出站）       | —                               | —                           | Host/OS Access   |
-| HostManage                                        | 无监听（出站）       | —                               | —                           | Host/OS Access   |
-| BmsAgentManage                                    | 无监听（出站）       | —                               | —                           | Host/OS Access   |
-| ApolloManager                                     | 无监听（出站）       | —                               | —                           | Host/OS Access   |
-| Decrypt / LoggingHandler                          | 无监听               | —                               | —                           | Host/OS Access   |
+| 组件 | 监听地址 | 鉴权屏障 | 外部可达性 | 最低攻击前提 |
+|------|---------|---------|-----------|-------------|
+| ForemanApplication（业务端点） | 0.0.0.0:18080（TLS） | APIG 令牌校验（可配置） | 经 APIG 对外可达 / 内网直连 | Internal Network |
+| ForemanApplication（回调端点，默认 EXCLUDE_PATH） | 同上 | **无**（EXCLUDE_PATH 默认排除） | 内网直连 | Internal Network |
+| ForemanApplication（/health） | 同上 | APIG 令牌校验 | 同上 | Internal Network |
+| AuthFilter | 无监听（出站） | — | — | Host/OS Access |
+| HostManage | 无监听（出站） | — | — | Host/OS Access |
+| BmsAgentManage | 无监听（出站） | — | — | Host/OS Access |
+| ApolloManager | 无监听（出站） | — | — | Host/OS Access |
+| Decrypt / LoggingHandler | 无监听 | — | — | Host/OS Access |
 
 > 本表是威胁前提的"唯一事实来源"：任何威胁 / 发现的攻击前提不得低于对应组件在此表中允许的最低前提。
 
@@ -263,30 +263,30 @@ sequenceDiagram
 
 > 分类含义：S 伪装（Spoofing）、T 篡改（Tampering）、R 抵赖（Repudiation）、I 信息泄露（Information Disclosure）、D 拒绝服务（Denial of Service）、E 权限提升（Elevation of Privilege）、A 滥用（Abuse，业务逻辑 / 流程操纵）。
 
-| 组件               | S   | T   | R   | I        | D   | E   | A   | Tier 1 | Tier 2 | Tier 3 | 状态汇总             |
-| ------------------ | --- | --- | --- | -------- | --- | --- | --- | ------ | ------ | ------ | -------------------- |
-| ForemanApplication | T01 | T02 | T03 | T04      | T05 | T06 | T07 | 0      | 7      | 0      | 开放 6 / 缓解 1      |
-| AuthFilter         | T08 | —   | —   | T10      | T09 | —   | —   | 0      | 1      | 2      | 开放 2 / 缓解 1      |
-| HostManage         | —   | T12 | T13 | T11      | T15 | —   | T14 | 0      | 5      | 0      | 开放 4 / 缓解 1      |
-| BmsAgentManage     | T17 | —   | T16 | —        | T18 | —   | —   | 0      | 1      | 2      | 开放 2 / 缓解 1      |
-| ApolloManager      | —   | T19 | —   | —        | —   | —   | —   | 0      | 0      | 2      | 开放 1 / 缓解 1      |
-| Decrypt            | —   | T21 | —   | T22      | —   | —   | —   | 0      | 0      | 2      | 开放 2               |
-| LoggingHandler     | —   | T24 | —   | T23, T25 | —   | —   | —   | 0      | 2      | 1      | 开放 1 / 缓解 2      |
-| **合计**           | 3   | 3   | 3   | 4        | 4   | 1   | 2   | **0**  | **16** | **9**  | **开放 18 / 缓解 7** |
+| 组件 | S | T | R | I | D | E | A | Tier 1 | Tier 2 | Tier 3 | 状态汇总 |
+|------|---|---|---|---|---|---|---|--------|--------|--------|---------|
+| ForemanApplication | T01 | T02 | T03 | T04 | T05 | T06 | T07 | 0 | 7 | 0 | 开放 6 / 缓解 1 |
+| AuthFilter | T08 | — | — | T10 | T09 | — | — | 0 | 1 | 2 | 开放 2 / 缓解 1 |
+| HostManage | — | T12 | T13 | T11 | T15 | — | T14 | 0 | 5 | 0 | 开放 4 / 缓解 1 |
+| BmsAgentManage | T17 | — | T16 | — | T18 | — | — | 0 | 1 | 2 | 开放 2 / 缓解 1 |
+| ApolloManager | — | T19 | — | — | — | — | — | 0 | 0 | 2 | 开放 1 / 缓解 1 |
+| Decrypt | — | T21 | — | T22 | — | — | — | 0 | 0 | 2 | 开放 2 |
+| LoggingHandler | — | T24 | — | T23, T25 | — | — | — | 0 | 2 | 1 | 开放 1 / 缓解 2 |
+| **合计** | 3 | 3 | 3 | 4 | 4 | 1 | 2 | **0** | **16** | **9** | **开放 18 / 缓解 7** |
 
 ### 3.2 ForemanApplication（foreman.py）
 
 #### Tier 2
 
-| ID  | 类别 | 威胁                                                                                                                                                   | 前提               | 状态   | 映射                                 |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | ------ | ------------------------------------ |
-| T01 | S    | 伪装回调调用方：`/callback/install/complete` 在 `EXCLUDE_PATH` 默认排除清单中，端点免鉴权且无法验证请求确实来自 Foreman 服务器，任何内网主体可伪造回调 | Internal Network   | 开放   | [FIND-01](#4-安全发现按可利用性分层) |
-| T07 | A    | 业务流程操纵：伪造任意合法 IP 的"装机完成"事件，驱动 BMS Agent 对非目标主机执行装机后续动作（业务状态被污染）                                          | Internal Network   | 开放   | FIND-01                              |
-| T06 | E    | 鉴权旁路面：`ENABLE_AUTH` 为 Apollo 可配置布尔开关；`EXCLUDE_PATH` 可任意追加排除路径。配置错误或恶意变更可整体关闭认证                                | Privileged User    | 开放   | FIND-03                              |
-| T04 | I    | 请求体大小无限制（Flask 默认 `MAX_CONTENT_LENGTH=None`），大 JSON 可造成内存放大                                                                       | Internal Network   | 开放   | FIND-04                              |
-| T05 | D    | 回调端点每个请求 `threading.Thread` 新建无上限 daemon 线程，可无成本打满线程/内存                                                                      | Internal Network   | 开放   | FIND-04                              |
-| T03 | R    | 鉴权失败（401）与被 `EXCLUDE_PATH` 排除的请求完全不落审计日志，无法事后追溯谁在何时探测/攻击端点                                                       | Internal Network   | 开放   | FIND-10                              |
-| T02 | T    | 请求字段（mac、各 foreman*Id、defaultBmsPassword 等）仅做非空检查，未做类型/格式白名单即转发 Foreman                                                   | Authenticated User | 已缓解 | —                                    |
+| ID | 类别 | 威胁 | 前提 | 状态 | 映射 |
+|----|------|------|------|------|------|
+| T01 | S | 伪装回调调用方：`/callback/install/complete` 在 `EXCLUDE_PATH` 默认排除清单中，端点免鉴权且无法验证请求确实来自 Foreman 服务器，任何内网主体可伪造回调 | Internal Network | 开放 | [FIND-01](#4-安全发现按可利用性分层) |
+| T07 | A | 业务流程操纵：伪造任意合法 IP 的"装机完成"事件，驱动 BMS Agent 对非目标主机执行装机后续动作（业务状态被污染） | Internal Network | 开放 | FIND-01 |
+| T06 | E | 鉴权旁路面：`ENABLE_AUTH` 为 Apollo 可配置布尔开关；`EXCLUDE_PATH` 可任意追加排除路径。配置错误或恶意变更可整体关闭认证 | Privileged User | 开放 | FIND-03 |
+| T04 | I | 请求体大小无限制（Flask 默认 `MAX_CONTENT_LENGTH=None`），大 JSON 可造成内存放大 | Internal Network | 开放 | FIND-04 |
+| T05 | D | 回调端点每个请求 `threading.Thread` 新建无上限 daemon 线程，可无成本打满线程/内存 | Internal Network | 开放 | FIND-04 |
+| T03 | R | 鉴权失败（401）与被 `EXCLUDE_PATH` 排除的请求完全不落审计日志，无法事后追溯谁在何时探测/攻击端点 | Internal Network | 开放 | FIND-10 |
+| T02 | T | 请求字段（mac、各 foreman*Id、defaultBmsPassword 等）仅做非空检查，未做类型/格式白名单即转发 Foreman | Authenticated User | 已缓解 | — |
 
 > T02 缓解说明：所有字段经 JSON 结构化序列化转发（`requests.post(json=...)`），无字符串拼接注入面；数值 ID 由 Foreman 服务端校验；hostId 已有正则白名单（`_HOST_ID_PATTERN`，注释明确防 SSRF）。
 
@@ -294,28 +294,28 @@ sequenceDiagram
 
 #### Tier 2
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                 | 前提             | 状态 | 映射    |
-| --- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ---- | ------- |
-| T09 | D    | 认证依赖无容错：`auth_filter()` 对 `.json()`、`result["data"]["legal"]` 无异常处理，令牌校验服务异常/慢响应时 `before_request` 抛异常 → 全站 500（级联故障）；且每个请求串行调用一次外部服务，无缓存 | Internal Network | 开放 | FIND-05 |
+| ID | 类别 | 威胁 | 前提 | 状态 | 映射 |
+|----|------|------|------|------|------|
+| T09 | D | 认证依赖无容错：`auth_filter()` 对 `.json()`、`result["data"]["legal"]` 无异常处理，令牌校验服务异常/慢响应时 `before_request` 抛异常 → 全站 500（级联故障）；且每个请求串行调用一次外部服务，无缓存 | Internal Network | 开放 | FIND-05 |
 
 #### Tier 3
 
-| ID  | 类别 | 威胁                                                                 | 前提                        | 状态                   | 映射    |
-| --- | ---- | -------------------------------------------------------------------- | --------------------------- | ---------------------- | ------- |
-| T08 | S    | APIG 签名无 nonce，仅含 `X-HW-DATE` 时间戳，捕获报文后时间窗内可重放 | Internal Network + 报文捕获 | 已缓解（待验证 NV-02） | —       |
-| T10 | I    | `X_HW_APPKEY` 在模块导入时解密并常驻进程内存，进程内存转储可提取     | Host/OS Access              | 开放                   | FIND-09 |
+| ID | 类别 | 威胁 | 前提 | 状态 | 映射 |
+|----|------|------|------|------|------|
+| T08 | S | APIG 签名无 nonce，仅含 `X-HW-DATE` 时间戳，捕获报文后时间窗内可重放 | Internal Network + 报文捕获 | 已缓解（待验证 NV-02） | — |
+| T10 | I | `X_HW_APPKEY` 在模块导入时解密并常驻进程内存，进程内存转储可提取 | Host/OS Access | 开放 | FIND-09 |
 
 ### 3.4 HostManage（service/host_manage.py）
 
 #### Tier 2
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                            | 前提                          | 状态   | 映射    |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ------ | ------- |
-| T11 | I    | 出站 MITM 窃取凭据：对 Foreman 全部请求 `verify=False` 关闭证书校验，`HTTPBasicAuth(foremanAccount, foremanPassword)` 与 `root_pass`（defaultBmsPassword）在同一信道传输，内网中间人可直接截获 Foreman 管理凭据与 BMS root 密码 | Internal Network（MITM 位置） | 开放   | FIND-02 |
-| T15 | D    | 重试风暴阻塞 worker：创建/删除最多 3 次尝试 × 120s 超时 = 最长 360s，超过 Gunicorn `timeout=120`，worker 被 kill；sync worker 池（8 个）可被少量慢请求耗尽                                                                      | Authenticated User            | 开放   | FIND-04 |
-| T14 | A    | 重复交付无幂等控制：`create` 每次生成随机 hostName，同一台 BMS 的重复请求会创建多台 Foreman 主机记录，业务状态漂移                                                                                                              | Authenticated User            | 开放   | FIND-06 |
-| T13 | R    | 删除失败仅记录 info 级日志且消息为"success"字样（`delete host success` 在非 404 分支也输出），失败语义混淆，审计不可靠                                                                                                          | Authenticated User            | 开放   | FIND-10 |
-| T12 | T    | hostId 注入 / SSRF：hostId 拼入 Foreman URL 路径                                                                                                                                                                                | Authenticated User            | 已缓解 | —       |
+| ID | 类别 | 威胁 | 前提 | 状态 | 映射 |
+|----|------|------|------|------|------|
+| T11 | I | 出站 MITM 窃取凭据：对 Foreman 全部请求 `verify=False` 关闭证书校验，`HTTPBasicAuth(foremanAccount, foremanPassword)` 与 `root_pass`（defaultBmsPassword）在同一信道传输，内网中间人可直接截获 Foreman 管理凭据与 BMS root 密码 | Internal Network（MITM 位置） | 开放 | FIND-02 |
+| T15 | D | 重试风暴阻塞 worker：创建/删除最多 3 次尝试 × 120s 超时 = 最长 360s，超过 Gunicorn `timeout=120`，worker 被 kill；sync worker 池（8 个）可被少量慢请求耗尽 | Authenticated User | 开放 | FIND-04 |
+| T14 | A | 重复交付无幂等控制：`create` 每次生成随机 hostName，同一台 BMS 的重复请求会创建多台 Foreman 主机记录，业务状态漂移 | Authenticated User | 开放 | FIND-06 |
+| T13 | R | 删除失败仅记录 info 级日志且消息为"success"字样（`delete host success` 在非 404 分支也输出），失败语义混淆，审计不可靠 | Authenticated User | 开放 | FIND-10 |
+| T12 | T | hostId 注入 / SSRF：hostId 拼入 Foreman URL 路径 | Authenticated User | 已缓解 | — |
 
 > T12 缓解说明：`_HOST_ID_PATTERN = ^[a-zA-Z0-9_\-\.]+$` 白名单（host_manage.py），代码注释明确以 SSRF 防护为目的。
 
@@ -323,51 +323,51 @@ sequenceDiagram
 
 #### Tier 2
 
-| ID  | 类别 | 威胁                                                                                              | 前提             | 状态 | 映射    |
-| --- | ---- | ------------------------------------------------------------------------------------------------- | ---------------- | ---- | ------- |
-| T18 | D    | `delivery_complete` 在无上限 daemon 线程中最多 3 次重试 + sleep，回调洪泛时线程与出站连接同步放大 | Internal Network | 开放 | FIND-04 |
+| ID | 类别 | 威胁 | 前提 | 状态 | 映射 |
+|----|------|------|------|------|------|
+| T18 | D | `delivery_complete` 在无上限 daemon 线程中最多 3 次重试 + sleep，回调洪泛时线程与出站连接同步放大 | Internal Network | 开放 | FIND-04 |
 
 #### Tier 3
 
-| ID  | 类别 | 威胁                                                                                                        | 前提                          | 状态                     | 映射    |
-| --- | ---- | ----------------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------ | ------- |
-| T16 | R    | daemon 线程内 `BusinessException` 被线程默认行为吞掉（仅最终 attempt 有 LOG.error），通知失败可能无审计痕迹 | Host/OS Access                | 开放                     | FIND-10 |
-| T17 | S    | 伪造"通知 BMS Agent"的请求来源                                                                              | ForemanApplication Compromise | 已缓解（APIG X-HW 签名） | —       |
+| ID | 类别 | 威胁 | 前提 | 状态 | 映射 |
+|----|------|------|------|------|------|
+| T16 | R | daemon 线程内 `BusinessException` 被线程默认行为吞掉（仅最终 attempt 有 LOG.error），通知失败可能无审计痕迹 | Host/OS Access | 开放 | FIND-10 |
+| T17 | S | 伪造"通知 BMS Agent"的请求来源 | ForemanApplication Compromise | 已缓解（APIG X-HW 签名） | — |
 
 ### 3.6 ApolloManager（base/apollo_manager.py / base/config.py）
 
 #### Tier 3
 
-| ID  | 类别 | 威胁                                                                                                                                                                                     | 前提                               | 状态                                       | 映射    |
-| --- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------ | ------- |
-| T19 | T    | 配置平面篡改：能改 Apollo 配置即控制服务信任边界——`FOREMAN_INNER_NET_DOMAIN` 可指向凭据收集服务器（配合 T11，凭据被直接外发）、`ENABLE_AUTH=false` 关闭鉴权、`EXCLUDE_PATH` 扩大免鉴权面 | Admin Credentials（Apollo 控制台） | 开放                                       | FIND-03 |
-| T20 | S    | 伪造 Apollo 配置中心                                                                                                                                                                     | Host/OS Access                     | 已缓解（证书固定：verify 指向 apollo.pem） | —       |
+| ID | 类别 | 威胁 | 前提 | 状态 | 映射 |
+|----|------|------|------|------|------|
+| T19 | T | 配置平面篡改：能改 Apollo 配置即控制服务信任边界——`FOREMAN_INNER_NET_DOMAIN` 可指向凭据收集服务器（配合 T11，凭据被直接外发）、`ENABLE_AUTH=false` 关闭鉴权、`EXCLUDE_PATH` 扩大免鉴权面 | Admin Credentials（Apollo 控制台） | 开放 | FIND-03 |
+| T20 | S | 伪造 Apollo 配置中心 | Host/OS Access | 已缓解（证书固定：verify 指向 apollo.pem） | — |
 
 ### 3.7 Decrypt（base/decrypt.py）
 
 #### Tier 3
 
-| ID  | 类别 | 威胁                                                                                                                                       | 前提                                  | 状态 | 映射    |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------- | ---- | ------- |
-| T21 | T    | 解密失败静默回退：`decrypt()` 捕获所有异常后**原样返回密文**，密文被当作明文使用（如 SSL 证书内容、X_HW_APPKEY），故障被掩盖且行为不可预期 | Privileged User（触发条件）/ 配置错误 | 开放 | FIND-08 |
-| T22 | I    | 密钥文件常驻磁盘（key1/key2/workkey，无轮换机制），服务以 root 运行，任何 root 级进程可读取并离线推导工作密钥                              | Host/OS Access                        | 开放 | FIND-09 |
+| ID | 类别 | 威胁 | 前提 | 状态 | 映射 |
+|----|------|------|------|------|------|
+| T21 | T | 解密失败静默回退：`decrypt()` 捕获所有异常后**原样返回密文**，密文被当作明文使用（如 SSL 证书内容、X_HW_APPKEY），故障被掩盖且行为不可预期 | Privileged User（触发条件）/ 配置错误 | 开放 | FIND-08 |
+| T22 | I | 密钥文件常驻磁盘（key1/key2/workkey，无轮换机制），服务以 root 运行，任何 root 级进程可读取并离线推导工作密钥 | Host/OS Access | 开放 | FIND-09 |
 
 ### 3.8 LoggingHandler（base/logging_handler.py）
 
 #### Tier 2
 
-| ID  | 类别 | 威胁                                             | 前提               | 状态                                                      | 映射 |
-| --- | ---- | ------------------------------------------------ | ------------------ | --------------------------------------------------------- | ---- |
-| T25 | I    | 敏感字段（root_pass、密码、账号、token）写入日志 | Authenticated User | 已缓解（`redact_sensitive` 递归脱敏 + `mask` 掩码）       | —    |
-| T24 | T    | CRLF 日志注入伪造日志行                          | Authenticated User | 已缓解（`sanitize_for_log` 应用于 ip / referer / hostId） | —    |
+| ID | 类别 | 威胁 | 前提 | 状态 | 映射 |
+|----|------|------|------|------|------|
+| T25 | I | 敏感字段（root_pass、密码、账号、token）写入日志 | Authenticated User | 已缓解（`redact_sensitive` 递归脱敏 + `mask` 掩码） | — |
+| T24 | T | CRLF 日志注入伪造日志行 | Authenticated User | 已缓解（`sanitize_for_log` 应用于 ip / referer / hostId） | — |
 
 > T24 部分残留：异常文本（如 `create host fail: {e}`）未过滤即入日志，`utils/log_sanitizer.py` 文档自述"尚未在所有路径应用"。缓解评级保留，残留面并入 FIND-10。
 
 #### Tier 3
 
-| ID  | 类别 | 威胁                                                                                                                         | 前提                     | 状态 | 映射    |
-| --- | ---- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ---- | ------- |
-| T23 | I    | operator 脱敏使用硬编码盐 `hidevlab_log_salt_2024` + SHA-256(IP)，IPv4 空间小，可离线彩虹表批量还原源 IP，"脱敏"保护弱于预期 | Host/OS Access（读日志） | 开放 | FIND-11 |
+| ID | 类别 | 威胁 | 前提 | 状态 | 映射 |
+|----|------|------|------|------|------|
+| T23 | I | operator 脱敏使用硬编码盐 `hidevlab_log_salt_2024` + SHA-256(IP)，IPv4 空间小，可离线彩虹表批量还原源 IP，"脱敏"保护弱于预期 | Host/OS Access（读日志） | 开放 | FIND-11 |
 
 ---
 
@@ -523,33 +523,33 @@ sequenceDiagram
 
 > 规则：每项"开放"威胁必须映射到一项发现；"已缓解"威胁需注明缓解证据。
 
-| 威胁 | 组件               | 类别 | 状态   | 覆盖                                                                         |
-| ---- | ------------------ | ---- | ------ | ---------------------------------------------------------------------------- |
-| T01  | ForemanApplication | S    | 开放   | ✅ FIND-01                                                                   |
-| T02  | ForemanApplication | T    | 已缓解 | 🔄 JSON 序列化转发 + Foreman 服务端校验                                      |
-| T03  | ForemanApplication | R    | 开放   | ✅ FIND-10                                                                   |
-| T04  | ForemanApplication | I    | 开放   | ✅ FIND-04                                                                   |
-| T05  | ForemanApplication | D    | 开放   | ✅ FIND-04                                                                   |
-| T06  | ForemanApplication | E    | 开放   | ✅ FIND-03                                                                   |
-| T07  | ForemanApplication | A    | 开放   | ✅ FIND-01                                                                   |
-| T08  | AuthFilter         | S    | 已缓解 | 🔄 APIG 校验 X-HW-DATE 时效（待验证 NV-02）                                  |
-| T09  | AuthFilter         | D    | 开放   | ✅ FIND-05                                                                   |
-| T10  | AuthFilter         | I    | 开放   | ✅ FIND-09                                                                   |
-| T11  | HostManage         | I    | 开放   | ✅ FIND-02                                                                   |
-| T12  | HostManage         | T    | 已缓解 | 🔄 hostId 正则白名单（`_HOST_ID_PATTERN`，防 SSRF）                          |
-| T13  | HostManage         | R    | 开放   | ✅ FIND-10                                                                   |
-| T14  | HostManage         | A    | 开放   | ✅ FIND-06                                                                   |
-| T15  | HostManage         | D    | 开放   | ✅ FIND-04                                                                   |
-| T16  | BmsAgentManage     | R    | 开放   | ✅ FIND-10                                                                   |
-| T17  | BmsAgentManage     | S    | 已缓解 | 🔄 APIG X-HW 签名                                                            |
-| T18  | BmsAgentManage     | D    | 开放   | ✅ FIND-04                                                                   |
-| T19  | ApolloManager      | T    | 开放   | ✅ FIND-03                                                                   |
-| T20  | ApolloManager      | S    | 已缓解 | 🔄 Apollo 证书固定（apollo.pem）                                             |
-| T21  | Decrypt            | T    | 开放   | ✅ FIND-08                                                                   |
-| T22  | Decrypt            | I    | 开放   | ✅ FIND-09                                                                   |
-| T23  | LoggingHandler     | I    | 开放   | ✅ FIND-11                                                                   |
-| T24  | LoggingHandler     | T    | 已缓解 | 🔄 `sanitize_for_log` 应用于 ip/referer/hostId（异常文本残留面并入 FIND-10） |
-| T25  | LoggingHandler     | I    | 已缓解 | 🔄 `redact_sensitive` 递归脱敏 + `mask` 掩码                                 |
+| 威胁 | 组件 | 类别 | 状态 | 覆盖 |
+|------|------|------|------|------|
+| T01 | ForemanApplication | S | 开放 | ✅ FIND-01 |
+| T02 | ForemanApplication | T | 已缓解 | 🔄 JSON 序列化转发 + Foreman 服务端校验 |
+| T03 | ForemanApplication | R | 开放 | ✅ FIND-10 |
+| T04 | ForemanApplication | I | 开放 | ✅ FIND-04 |
+| T05 | ForemanApplication | D | 开放 | ✅ FIND-04 |
+| T06 | ForemanApplication | E | 开放 | ✅ FIND-03 |
+| T07 | ForemanApplication | A | 开放 | ✅ FIND-01 |
+| T08 | AuthFilter | S | 已缓解 | 🔄 APIG 校验 X-HW-DATE 时效（待验证 NV-02） |
+| T09 | AuthFilter | D | 开放 | ✅ FIND-05 |
+| T10 | AuthFilter | I | 开放 | ✅ FIND-09 |
+| T11 | HostManage | I | 开放 | ✅ FIND-02 |
+| T12 | HostManage | T | 已缓解 | 🔄 hostId 正则白名单（`_HOST_ID_PATTERN`，防 SSRF） |
+| T13 | HostManage | R | 开放 | ✅ FIND-10 |
+| T14 | HostManage | A | 开放 | ✅ FIND-06 |
+| T15 | HostManage | D | 开放 | ✅ FIND-04 |
+| T16 | BmsAgentManage | R | 开放 | ✅ FIND-10 |
+| T17 | BmsAgentManage | S | 已缓解 | 🔄 APIG X-HW 签名 |
+| T18 | BmsAgentManage | D | 开放 | ✅ FIND-04 |
+| T19 | ApolloManager | T | 开放 | ✅ FIND-03 |
+| T20 | ApolloManager | S | 已缓解 | 🔄 Apollo 证书固定（apollo.pem） |
+| T21 | Decrypt | T | 开放 | ✅ FIND-08 |
+| T22 | Decrypt | I | 开放 | ✅ FIND-09 |
+| T23 | LoggingHandler | I | 开放 | ✅ FIND-11 |
+| T24 | LoggingHandler | T | 已缓解 | 🔄 `sanitize_for_log` 应用于 ip/referer/hostId（异常文本残留面并入 FIND-10） |
+| T25 | LoggingHandler | I | 已缓解 | 🔄 `redact_sensitive` 递归脱敏 + `mask` 掩码 |
 
 **覆盖统计：** 25 项威胁中 18 项开放全部映射到 12 项发现（✅），7 项已缓解有代码级证据（🔄）。无已接受风险、无未覆盖威胁。
 
@@ -559,32 +559,32 @@ sequenceDiagram
 
 ### 优先级排序（按可利用性层级 × 影响排序）
 
-| 优先级 | 发现    | 一句话行动                                                    |
-| ------ | ------- | ------------------------------------------------------------- |
-| 1      | FIND-01 | 给回调端点加来源验证（HMAC/防火墙限源），阻断伪造装机完成事件 |
-| 2      | FIND-02 | Foreman 连接启用证书校验，撤掉 verify=False 与告警压制        |
-| 3      | FIND-04 | 有界线程池 + 速率限制 + 请求体大小上限                        |
-| 4      | FIND-05 | auth_filter 加异常处理与超时，异常按 401 处理并记录           |
-| 5      | FIND-03 | 收敛配置面：ENABLE_AUTH/EXCLUDE_PATH 加启动校验与变更防护     |
-| 6      | FIND-10 | 补齐鉴权失败、线程异常的审计日志                              |
-| 7      | FIND-07 | 服务改非 root 运行                                            |
-| 8      | FIND-12 | 锁定依赖版本并加 pip-audit CI 卡点                            |
-| 9      | FIND-06 | 交付接口按 mac 幂等去重                                       |
-| 10     | FIND-08 | 解密失败 fail-fast，删除静默回退                              |
-| 11     | FIND-09 | 密钥文件权限最小化 + 建立轮换流程                             |
-| 12     | FIND-11 | 日志盐值改为环境注入或换 HMAC                                 |
+| 优先级 | 发现 | 一句话行动 |
+|--------|------|-----------|
+| 1 | FIND-01 | 给回调端点加来源验证（HMAC/防火墙限源），阻断伪造装机完成事件 |
+| 2 | FIND-02 | Foreman 连接启用证书校验，撤掉 verify=False 与告警压制 |
+| 3 | FIND-04 | 有界线程池 + 速率限制 + 请求体大小上限 |
+| 4 | FIND-05 | auth_filter 加异常处理与超时，异常按 401 处理并记录 |
+| 5 | FIND-03 | 收敛配置面：ENABLE_AUTH/EXCLUDE_PATH 加启动校验与变更防护 |
+| 6 | FIND-10 | 补齐鉴权失败、线程异常的审计日志 |
+| 7 | FIND-07 | 服务改非 root 运行 |
+| 8 | FIND-12 | 锁定依赖版本并加 pip-audit CI 卡点 |
+| 9 | FIND-06 | 交付接口按 mac 幂等去重 |
+| 10 | FIND-08 | 解密失败 fail-fast，删除静默回退 |
+| 11 | FIND-09 | 密钥文件权限最小化 + 建立轮换流程 |
+| 12 | FIND-11 | 日志盐值改为环境注入或换 HMAC |
 
 ### Quick Wins（低成本高收益，建议立即实施）
 
-| 发现    | 措施                                                                              | 成本 | 预期收益                                            |
-| ------- | --------------------------------------------------------------------------------- | ---- | --------------------------------------------------- |
-| FIND-02 | `verify=False` → 证书固定（参照 Apollo 的 pem 方案）；移除两处 `disable_warnings` | Low  | 消除内网 MITM 窃取 Foreman 凭据与 root 密码的主通道 |
-| FIND-05 | `auth_filter()` 加 try/except + 显式 timeout                                      | Low  | 消除认证服务异常引发的全站 500                      |
-| FIND-07 | systemd 专用用户 + 目录授权                                                       | Low  | 大幅缩小应用层漏洞的影响半径                        |
-| FIND-10 | 鉴权失败 / 线程异常补日志                                                         | Low  | 建立攻击可观测性与取证能力                          |
-| FIND-08 | 删除 `decrypt` 静默回退分支，fail-fast                                            | Low  | 消除配置故障被掩盖的反模式                          |
-| FIND-11 | 硬编码盐改环境注入                                                                | Low  | 恢复日志脱敏的有效性                                |
-| FIND-12 | 生成 lockfile + pip-audit CI                                                      | Low  | 封闭供应链漂移风险                                  |
+| 发现 | 措施 | 成本 | 预期收益 |
+|------|------|------|---------|
+| FIND-02 | `verify=False` → 证书固定（参照 Apollo 的 pem 方案）；移除两处 `disable_warnings` | Low | 消除内网 MITM 窃取 Foreman 凭据与 root 密码的主通道 |
+| FIND-05 | `auth_filter()` 加 try/except + 显式 timeout | Low | 消除认证服务异常引发的全站 500 |
+| FIND-07 | systemd 专用用户 + 目录授权 | Low | 大幅缩小应用层漏洞的影响半径 |
+| FIND-10 | 鉴权失败 / 线程异常补日志 | Low | 建立攻击可观测性与取证能力 |
+| FIND-08 | 删除 `decrypt` 静默回退分支，fail-fast | Low | 消除配置故障被掩盖的反模式 |
+| FIND-11 | 硬编码盐改环境注入 | Low | 恢复日志脱敏的有效性 |
+| FIND-12 | 生成 lockfile + pip-audit CI | Low | 封闭供应链漂移风险 |
 
 ### 需要业务/运维确认的事项
 
@@ -598,22 +598,22 @@ sequenceDiagram
 
 ### 安全标准
 
-| 标准         | 版本/年份 | 链接                                                                            |
-| ------------ | --------- | ------------------------------------------------------------------------------- |
-| OWASP Top 10 | 2025      | https://owasp.org/Top10/2025/                                                   |
-| CVSS         | 4.0       | https://www.first.org/cvss/v4.0/specification                                   |
-| CWE          | —         | https://cwe.mitre.org/data/definitions/                                         |
-| STRIDE       | —         | https://learn.microsoft.com/azure/security/develop/threat-modeling-tool-threats |
+| 标准 | 版本/年份 | 链接 |
+|------|----------|------|
+| OWASP Top 10 | 2025 | https://owasp.org/Top10/2025/ |
+| CVSS | 4.0 | https://www.first.org/cvss/v4.0/specification |
+| CWE | — | https://cwe.mitre.org/data/definitions/ |
+| STRIDE | — | https://learn.microsoft.com/azure/security/develop/threat-modeling-tool-threats |
 
 ### 组件文档
 
-| 组件         | 版本  | 链接                                 |
-| ------------ | ----- | ------------------------------------ |
-| Flask        | 3.0+  | https://flask.palletsprojects.com/   |
-| Gunicorn     | 21.2+ | https://docs.gunicorn.org/           |
+| 组件 | 版本 | 链接 |
+|------|------|------|
+| Flask | 3.0+ | https://flask.palletsprojects.com/ |
+| Gunicorn | 21.2+ | https://docs.gunicorn.org/ |
 | PyCryptodome | 3.20+ | https://pycryptodome.readthedocs.io/ |
-| requests     | 2.31+ | https://requests.readthedocs.io/     |
-| Foreman API  | —     | https://apidocs.theforeman.org/      |
+| requests | 2.31+ | https://requests.readthedocs.io/ |
+| Foreman API | — | https://apidocs.theforeman.org/ |
 
 ---
 
@@ -621,20 +621,20 @@ sequenceDiagram
 
 ### 可利用性层级（Exploitability Tier）
 
-| 层级   | 含义       | 前提                                               |
-| ------ | ---------- | -------------------------------------------------- |
-| Tier 1 | 直接暴露   | 无（未认证外部攻击者，无任何先决访问）             |
-| Tier 2 | 有条件风险 | 单一前提：内网位置 / 已认证用户 / 特权用户         |
-| Tier 3 | 纵深防御   | 主机或 OS 权限、管理员凭据、其他组件失陷或多重前提 |
+| 层级 | 含义 | 前提 |
+|------|------|------|
+| Tier 1 | 直接暴露 | 无（未认证外部攻击者，无任何先决访问） |
+| Tier 2 | 有条件风险 | 单一前提：内网位置 / 已认证用户 / 特权用户 |
+| Tier 3 | 纵深防御 | 主机或 OS 权限、管理员凭据、其他组件失陷或多重前提 |
 
 ### CVSS 4.0 严重度区间
 
-| 区间     | 严重度 |
-| -------- | ------ |
-| 9.0–10.0 | 严重   |
-| 7.0–8.9  | 高     |
-| 4.0–6.9  | 中     |
-| 0.1–3.9  | 低     |
+| 区间 | 严重度 |
+|------|--------|
+| 9.0–10.0 | 严重 |
+| 7.0–8.9 | 高 |
+| 4.0–6.9 | 中 |
+| 0.1–3.9 | 低 |
 
 ### 修复成本
 
@@ -642,4 +642,4 @@ Low（代码级局部修改）/ Medium（跨模块或需配置、流程配合）
 
 ---
 
-_报告结束。分析基于提交 df916d6 的代码静态证据；待验证项（NV-01 至 NV-04）需结合实际部署环境复核后可能调整相关发现的层级与评分。_
+*报告结束。分析基于提交 df916d6 的代码静态证据；待验证项（NV-01 至 NV-04）需结合实际部署环境复核后可能调整相关发现的层级与评分。*

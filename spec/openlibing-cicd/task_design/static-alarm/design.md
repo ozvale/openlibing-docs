@@ -16,15 +16,15 @@ PipelineEventConsumer.processMessage()
 
 ## 2. StaticAlarmReceiveDTO
 
-| 字段          | 类型   | 说明                      |
-| ------------- | ------ | ------------------------- |
-| obsUrl        | String | SARIF 文件的 OBS 下载地址 |
-| repoUrl       | String | 代码仓链接                |
-| pipelineId    | String | 流水线 ID                 |
-| pipelineName  | String | 流水线名称                |
-| pipelineRunId | String | 流水线运行 ID             |
-| branch        | String | 分支                      |
-| commitId      | String | commit ID                 |
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| obsUrl | String | SARIF 文件的 OBS 下载地址 |
+| repoUrl | String | 代码仓链接 |
+| pipelineId | String | 流水线 ID |
+| pipelineName | String | 流水线名称 |
+| pipelineRunId | String | 流水线运行 ID |
+| branch | String | 分支 |
+| commitId | String | commit ID |
 
 ## 3. CodeCheckClient 新增接口
 
@@ -41,8 +41,8 @@ DataResult<String> receiveStaticAlarmResult(@RequestBody StaticAlarmReceiveDTO d
 
 ## 5. 变更文件
 
-| 文件                  | 变更类型 | 说明                                     |
-| --------------------- | -------- | ---------------------------------------- |
-| StaticAlarmReceiveDTO | 新增     | 传递给 codecheck 的 DTO                  |
-| PipelineEventConsumer | 修改     | 新增 SARIF 检测与触发逻辑                |
-| CodeCheckClient       | 修改     | 新增 receiveStaticAlarmResult Feign 接口 |
+| 文件 | 变更类型 | 说明 |
+|------|----------|------|
+| StaticAlarmReceiveDTO | 新增 | 传递给 codecheck 的 DTO |
+| PipelineEventConsumer | 修改 | 新增 SARIF 检测与触发逻辑 |
+| CodeCheckClient | 修改 | 新增 receiveStaticAlarmResult Feign 接口 |

@@ -4,12 +4,12 @@
 
 `deep-audit-report.md`（2026-07-04）对 `openlibing-codecheck` 进行了注入类（D1）+ 命令执行类（D4）漏洞深度审计，定位到 4 个待修复漏洞：
 
-| 编号  | 漏洞                                  | 严重度       | 文件                                                                          |
-| ----- | ------------------------------------- | ------------ | ----------------------------------------------------------------------------- |
+| 编号 | 漏洞 | 严重度 | 文件 |
+|------|------|--------|------|
 | F-001 | Webhook MongoDB NoSQL 注入（CWE-943） | **Critical** | `WebhookController.java`, `WebhookDelegateImpl.java`, `WebhookOperation.java` |
-| F-002 | Pipeline 预提交命令注入（CWE-78）     | **Critical** | `InternalController.java`, `PipelineDelegateImpl.java`                        |
-| F-003 | XxlJob 任务参数无类型校验（CWE-20）   | **High**     | `XxlJobHandler.java`                                                          |
-| F-004 | InternalController 微服务间接口无鉴权 | **High**     | `InternalController.java`                                                     |
+| F-002 | Pipeline 预提交命令注入（CWE-78） | **Critical** | `InternalController.java`, `PipelineDelegateImpl.java` |
+| F-003 | XxlJob 任务参数无类型校验（CWE-20） | **High** | `XxlJobHandler.java` |
+| F-004 | InternalController 微服务间接口无鉴权 | **High** | `InternalController.java` |
 
 ### 核心风险
 
@@ -27,7 +27,7 @@
    - 将 `PipelineDelegateImpl.preMergeAndFix` 中 `ProcessBuilder("bash", "-c", cmd)` 改造为**列表形式**（不经过 shell 解析）。
    - 新增 `sanitizeRepoUrl` / `sanitizeBranchName` 严格校验 `repoUrl`、`source_branch`、`target_branch` 格式（白名单正则）。
 3. **F-003 修复**：在 `XxlJobHandler.lintRunnerChecksHandler` 增加 `^[a-zA-Z0-9_\\-, ]*$` 校验；其他 `jobParam` 解析（`syncIncCheckTasksHandler` / `syncDailyCheckTasksHandler` / `rollbackTimeoutTasks`）也补强类型与边界校验。
-4. ~~**F-004 修复**：新增 `InternalSecurityFilter`（基于 `OncePerRequestFilter`），对 `/internal/**` 路径校验 `X-Internal-Token` Header（值来自配置 `internal.service.token`），缺失/错误则 401 拒绝。~~ **本次 PR 透档为遗留项**。原因：F-004 当前推荐方案（`X-Internal-Token` + `INTERNAL_SERVICE_TOKEN`）需要 openlibing-coderepo / openlibing-cicd / openlibing-framework 三个上游服务同步改造 + 部署侧协调，协调成本较高。F-004 将由独立工单跟进，可选方案见设计文档 `design.md` 的"后续方案候选"小节。
+4. ~~**F-004 修复**：新增 `InternalSecurityFilter`（基于 `OncePerRequestFilter`），对 `/internal/**` 路径校验 `X-Internal-Token` Header（值来自配置 `internal.service.token`），缺失/错误则 401 拒绝。~~  **本次 PR 透档为遗留项**。原因：F-004 当前推荐方案（`X-Internal-Token` + `INTERNAL_SERVICE_TOKEN`）需要 openlibing-coderepo / openlibing-cicd / openlibing-framework 三个上游服务同步改造 + 部署侧协调，协调成本较高。F-004 将由独立工单跟进，可选方案见设计文档 `design.md` 的"后续方案候选"小节。
 
 ### 不做什么
 

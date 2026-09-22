@@ -108,26 +108,26 @@
 
 ## 影响范围
 
-| 文件                                                     | 操作 | 归属功能 | 说明                                                                                                   |
-| -------------------------------------------------------- | ---- | -------- | ------------------------------------------------------------------------------------------------------ |
-| `business/handler/PushEventHandler.java`                 | 新增 | 功能一   | Push 事件处理器，支持 gitcode/gitee（`Push Hook`）与 github（`push`），增量同步，无 Redis 限流         |
-| `business/service/impl/RepoServiceImpl.java`             | 修改 | 功能一   | 新增 `syncSingleBranch` 增量同步方法；gitcode/gitee `setIsPushEvents(true)`；github `events` 加 `push` |
-| `business/mapper/RepoBranchInfoMapper.java`              | 修改 | 功能一   | 新增 `deleteByRepoIdAndBranchName` 方法                                                                |
-| `resources/mapper/RepoBranchInfoMapper.xml`              | 修改 | 功能一   | 新增 `deleteByRepoIdAndBranchName` SQL                                                                 |
-| `common/job/XxlJobHandler.java`                          | 修改 | 功能一   | `refreshWebhookHandler` 自动补齐 push 事件订阅（PATCH 原地更新）                                       |
-| `business/entity/webhooks/RepoWebhook.java`              | 修改 | 功能一   | `pushEvents` 字段相关调整                                                                              |
-| `test/.../handler/PushEventHandlerTest.java`             | 新增 | 功能一   | 单元测试 17 用例（含 github 场景，验证 `syncSingleBranch` 调用参数）                                   |
-| `.gitignore`                                             | 修改 | 功能一   | 忽略 `.gitcode/workflows/*.yaml`                                                                       |
-| `business/controller/WebHookEventController.java`        | 修改 | 功能二   | 三个方法鉴权后改为发 MQ                                                                                |
-| `business/service/impl/WebHookEventServiceImpl.java`     | 修改 | 功能二   | 去掉 CompletableFuture.runAsync，改为同步 dispatch                                                     |
-| `common/config/rabbitmq/WebhookRabbitConfig.java`        | 新增 | 功能二   | 队列配置                                                                                               |
-| `business/service/WebhookEventConsumer.java`             | 新增 | 功能二   | MQ 消费者                                                                                              |
-| `src/main/resources/application.yaml`                    | 修改 | 功能二   | 增加队列名配置                                                                                         |
-| `src/main/resources/application-gama.yaml`               | 修改 | 功能二   | 增加队列名配置                                                                                         |
-| `src/main/resources/application-prod.yaml`               | 修改 | 功能二   | 增加队列名配置                                                                                         |
-| `test/.../service/WebhookEventConsumerTest.java`         | 新增 | 功能二   | Consumer 测试 6 用例                                                                                   |
-| `test/.../controller/WebHookEventControllerTest.java`    | 修改 | 功能二   | 适配 MQ 改造                                                                                           |
-| `test/.../service/impl/WebHookEventServiceImplTest.java` | 修改 | 功能二   | 适配同步 dispatch 改造                                                                                 |
+| 文件 | 操作 | 归属功能 | 说明 |
+|------|------|----------|------|
+| `business/handler/PushEventHandler.java` | 新增 | 功能一 | Push 事件处理器，支持 gitcode/gitee（`Push Hook`）与 github（`push`），增量同步，无 Redis 限流 |
+| `business/service/impl/RepoServiceImpl.java` | 修改 | 功能一 | 新增 `syncSingleBranch` 增量同步方法；gitcode/gitee `setIsPushEvents(true)`；github `events` 加 `push` |
+| `business/mapper/RepoBranchInfoMapper.java` | 修改 | 功能一 | 新增 `deleteByRepoIdAndBranchName` 方法 |
+| `resources/mapper/RepoBranchInfoMapper.xml` | 修改 | 功能一 | 新增 `deleteByRepoIdAndBranchName` SQL |
+| `common/job/XxlJobHandler.java` | 修改 | 功能一 | `refreshWebhookHandler` 自动补齐 push 事件订阅（PATCH 原地更新） |
+| `business/entity/webhooks/RepoWebhook.java` | 修改 | 功能一 | `pushEvents` 字段相关调整 |
+| `test/.../handler/PushEventHandlerTest.java` | 新增 | 功能一 | 单元测试 17 用例（含 github 场景，验证 `syncSingleBranch` 调用参数） |
+| `.gitignore` | 修改 | 功能一 | 忽略 `.gitcode/workflows/*.yaml` |
+| `business/controller/WebHookEventController.java` | 修改 | 功能二 | 三个方法鉴权后改为发 MQ |
+| `business/service/impl/WebHookEventServiceImpl.java` | 修改 | 功能二 | 去掉 CompletableFuture.runAsync，改为同步 dispatch |
+| `common/config/rabbitmq/WebhookRabbitConfig.java` | 新增 | 功能二 | 队列配置 |
+| `business/service/WebhookEventConsumer.java` | 新增 | 功能二 | MQ 消费者 |
+| `src/main/resources/application.yaml` | 修改 | 功能二 | 增加队列名配置 |
+| `src/main/resources/application-gama.yaml` | 修改 | 功能二 | 增加队列名配置 |
+| `src/main/resources/application-prod.yaml` | 修改 | 功能二 | 增加队列名配置 |
+| `test/.../service/WebhookEventConsumerTest.java` | 新增 | 功能二 | Consumer 测试 6 用例 |
+| `test/.../controller/WebHookEventControllerTest.java` | 修改 | 功能二 | 适配 MQ 改造 |
+| `test/.../service/impl/WebHookEventServiceImplTest.java` | 修改 | 功能二 | 适配同步 dispatch 改造 |
 
 - 业务仓：`openlibing-coderepo`
 - 不涉及数据库 schema 变更

@@ -14,46 +14,46 @@
 
 ## 涉及文件
 
-| 文件                                                             | 操作 | 说明                                                                                                     |
-| ---------------------------------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------- |
-| `api/controller/DataIngestController.java`                       | 新增 | 数据接入 REST 入口，接收请求并打印日志                                                                   |
-| `api/dto/thirdapi/DataIngestRequest.java`                        | 新增 | 请求 DTO：appCode + modelCode + Map data                                                                 |
-| `app/service/thirdapi/DataIngestService.java`                    | 新增 | 数据接入服务接口                                                                                         |
-| `app/service/thirdapi/impl/DataIngestServiceImpl.java`           | 新增 | 核心实现：请求校验 → 查模型 → 查列信息 → 校验必填 → 动态插入                                             |
-| `domain/mapper/thirdapi/DynamicDorisMapper.java`                 | 新增 | Doris 动态 INSERT Mapper 接口                                                                            |
-| `domain/mapper/thirdapi/ThirdApiDataModelMapper.java`            | 新增 | 数据模型 CRUD Mapper 接口                                                                                |
-| `domain/model/thirdapi/ThirdApiDataModel.java`                   | 新增 | 模型实体，映射 `openlibing_ops.tbl_third_api_data_model`                                                 |
-| `domain/service/thirdapi/DynamicDorisService.java`               | 新增 | 动态 Doris 服务接口                                                                                      |
-| `domain/service/thirdapi/ThirdApiDataModelService.java`          | 新增 | 数据模型服务接口                                                                                         |
-| `domain/service/thirdapi/impl/DynamicDorisServiceImpl.java`      | 新增 | 调用 Mapper 执行动态 INSERT                                                                              |
-| `domain/service/thirdapi/impl/ThirdApiDataModelServiceImpl.java` | 新增 | 按 appCode+modelCode 查询模型                                                                            |
-| `infrastructure/response/ResponseCodeEnum.java`                  | 修改 | 新增 MODEL_NOT_FOUND(40001)、TABLE_NOT_FOUND(40002)、TABLE_COLUMN_NOT_FOUND(40003)、INVALID_FIELD(40004) |
-| `resources/mapper/DynamicDorisMapper.xml`                        | 新增 | 动态 Doris INSERT SQL                                                                                    |
-| `resources/mapper/ThirdApiDataModelMapper.xml`                   | 新增 | 模型查询 SQL                                                                                             |
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `api/controller/DataIngestController.java` | 新增 | 数据接入 REST 入口，接收请求并打印日志 |
+| `api/dto/thirdapi/DataIngestRequest.java` | 新增 | 请求 DTO：appCode + modelCode + Map data |
+| `app/service/thirdapi/DataIngestService.java` | 新增 | 数据接入服务接口 |
+| `app/service/thirdapi/impl/DataIngestServiceImpl.java` | 新增 | 核心实现：请求校验 → 查模型 → 查列信息 → 校验必填 → 动态插入 |
+| `domain/mapper/thirdapi/DynamicDorisMapper.java` | 新增 | Doris 动态 INSERT Mapper 接口 |
+| `domain/mapper/thirdapi/ThirdApiDataModelMapper.java` | 新增 | 数据模型 CRUD Mapper 接口 |
+| `domain/model/thirdapi/ThirdApiDataModel.java` | 新增 | 模型实体，映射 `openlibing_ops.tbl_third_api_data_model` |
+| `domain/service/thirdapi/DynamicDorisService.java` | 新增 | 动态 Doris 服务接口 |
+| `domain/service/thirdapi/ThirdApiDataModelService.java` | 新增 | 数据模型服务接口 |
+| `domain/service/thirdapi/impl/DynamicDorisServiceImpl.java` | 新增 | 调用 Mapper 执行动态 INSERT |
+| `domain/service/thirdapi/impl/ThirdApiDataModelServiceImpl.java` | 新增 | 按 appCode+modelCode 查询模型 |
+| `infrastructure/response/ResponseCodeEnum.java` | 修改 | 新增 MODEL_NOT_FOUND(40001)、TABLE_NOT_FOUND(40002)、TABLE_COLUMN_NOT_FOUND(40003)、INVALID_FIELD(40004) |
+| `resources/mapper/DynamicDorisMapper.xml` | 新增 | 动态 Doris INSERT SQL |
+| `resources/mapper/ThirdApiDataModelMapper.xml` | 新增 | 模型查询 SQL |
 
 ## 数据模型
 
 `tbl_third_api_data_model` 表结构关键字段：
 
-| 字段           | 类型              | 说明                  |
-| -------------- | ----------------- | --------------------- |
-| id             | BIGINT (PK, AUTO) | 主键                  |
-| app_code       | VARCHAR           | 应用编码，路由键      |
-| model_code     | VARCHAR           | 模型编码，路由键      |
-| model_name     | VARCHAR           | 模型名称              |
-| table_name     | VARCHAR           | 写入的真实 Doris 表名 |
-| schema_version | INT               | 结构版本              |
-| status         | INT               | 0-停用，1-启用        |
-| description    | VARCHAR           | 描述                  |
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | BIGINT (PK, AUTO) | 主键 |
+| app_code | VARCHAR | 应用编码，路由键 |
+| model_code | VARCHAR | 模型编码，路由键 |
+| model_name | VARCHAR | 模型名称 |
+| table_name | VARCHAR | 写入的真实 Doris 表名 |
+| schema_version | INT | 结构版本 |
+| status | INT | 0-停用，1-启用 |
+| description | VARCHAR | 描述 |
 
 ## 风险 & 缓解
 
-| 风险                    | 缓解                                           |
-| ----------------------- | ---------------------------------------------- |
-| Doris 动态 SQL 注入风险 | 列名白名单校验 + 只允许已注册列写入            |
-| 模型/表不存在未处理     | 4 个专用错误码 + 日志记录 + 明确错误返回       |
-| 必填字段遗漏写入        | 基于 columnComment 的必填校验 + 前置拦截       |
-| 请求参数不完整          | DataIngestServiceImpl.validateRequest 空值校验 |
+| 风险 | 缓解 |
+|------|------|
+| Doris 动态 SQL 注入风险 | 列名白名单校验 + 只允许已注册列写入 |
+| 模型/表不存在未处理 | 4 个专用错误码 + 日志记录 + 明确错误返回 |
+| 必填字段遗漏写入 | 基于 columnComment 的必填校验 + 前置拦截 |
+| 请求参数不完整 | DataIngestServiceImpl.validateRequest 空值校验 |
 
 ## 跨仓影响
 

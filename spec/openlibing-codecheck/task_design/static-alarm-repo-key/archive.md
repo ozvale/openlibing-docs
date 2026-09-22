@@ -10,33 +10,33 @@
 
 ### 2.1 openlibing-codecheck（分支 `codeql-feat-yym`）
 
-| 文件                                                                     | 操作 | 说明                                                                                                                  |
-| ------------------------------------------------------------------------ | ---- | --------------------------------------------------------------------------------------------------------------------- |
-| `common/util/repo/RepoUrlParser.java`                                    | 修改 | 新增 `buildRepoKey()` 静态方法；删除冗余 `toRepoUrl()`                                                                |
-| `business/entity/alarm/StaticAlarmIssueEntity.java`                      | 修改 | 新增 `@Field("repo_key") private String repoKey`                                                                      |
-| `business/entity/dto/alarm/StaticAlarmQueryDTO.java`                     | 修改 | `RepoCoordinate` 的 `repoUrl` → `repoKey`；category 改为 `List<String>`                                               |
-| `business/operation/alarm/StaticAlarmOperation.java`                     | 修改 | 3 处查询条件 `repo_url $in` → `repo_key $in`；count/filter 补回 category 筛选；updateExistingIssue 补回 suppress 处理 |
-| `business/service/impl/alarm/StaticAlarmServiceImpl.java`                | 修改 | 适配 `RepoCoordinate` 变更                                                                                            |
-| `business/service/parser/CodeQlSarifParser.java`                         | 修改 | code_flows 精简为 file+line+message；截断保留首尾节点                                                                 |
-| `common/config/mongo/changelog/RepoKeyBackfillChange.java`               | 新增 | CustomTaskChange，通过标准 CRUD 遍历回填存量 repo_key                                                                 |
-| `resources/db/changelog/mongo/v1.0.0/static_alarm_index.xml`             | 修改 | 新增 `idx_issue_repo_key_sort_*` 3 条复合索引；changeset ID 更新                                                      |
-| `resources/db/changelog/mongo/v1.0.0/static_alarm_repo_key_backfill.xml` | 新增 | 引用 `RepoKeyBackfillChange` 的 changeset                                                                             |
-| `resources/db/changelog/db.mongodb.changelog.xml`                        | 修改 | 新增 include 引入回填 changeset                                                                                       |
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `common/util/repo/RepoUrlParser.java` | 修改 | 新增 `buildRepoKey()` 静态方法；删除冗余 `toRepoUrl()` |
+| `business/entity/alarm/StaticAlarmIssueEntity.java` | 修改 | 新增 `@Field("repo_key") private String repoKey` |
+| `business/entity/dto/alarm/StaticAlarmQueryDTO.java` | 修改 | `RepoCoordinate` 的 `repoUrl` → `repoKey`；category 改为 `List<String>` |
+| `business/operation/alarm/StaticAlarmOperation.java` | 修改 | 3 处查询条件 `repo_url $in` → `repo_key $in`；count/filter 补回 category 筛选；updateExistingIssue 补回 suppress 处理 |
+| `business/service/impl/alarm/StaticAlarmServiceImpl.java` | 修改 | 适配 `RepoCoordinate` 变更 |
+| `business/service/parser/CodeQlSarifParser.java` | 修改 | code_flows 精简为 file+line+message；截断保留首尾节点 |
+| `common/config/mongo/changelog/RepoKeyBackfillChange.java` | 新增 | CustomTaskChange，通过标准 CRUD 遍历回填存量 repo_key |
+| `resources/db/changelog/mongo/v1.0.0/static_alarm_index.xml` | 修改 | 新增 `idx_issue_repo_key_sort_*` 3 条复合索引；changeset ID 更新 |
+| `resources/db/changelog/mongo/v1.0.0/static_alarm_repo_key_backfill.xml` | 新增 | 引用 `RepoKeyBackfillChange` 的 changeset |
+| `resources/db/changelog/db.mongodb.changelog.xml` | 修改 | 新增 include 引入回填 changeset |
 
 ### 2.2 openlibing-docs（分支 `spec/openlibing-codecheck/static-alarm-repo-key`）
 
-| 文件                                                                      | 操作 | 说明                |
-| ------------------------------------------------------------------------- | ---- | ------------------- |
+| 文件 | 操作 | 说明 |
+|------|------|------|
 | `spec/openlibing-codecheck/task_design/static-alarm-repo-key/proposal.md` | 新增 | 需求背景 + 验收标准 |
-| `spec/openlibing-codecheck/task_design/static-alarm-repo-key/tasks.md`    | 新增 | 实现任务清单        |
-| `spec/openlibing-codecheck/task_design/static-alarm-repo-key/archive.md`  | 新增 | 本文件              |
+| `spec/openlibing-codecheck/task_design/static-alarm-repo-key/tasks.md` | 新增 | 实现任务清单 |
+| `spec/openlibing-codecheck/task_design/static-alarm-repo-key/archive.md` | 新增 | 本文件 |
 
 ## 3. 关联 PR
 
-| 仓                     | PR                                                           | 状态   |
-| ---------------------- | ------------------------------------------------------------ | ------ |
+| 仓 | PR | 状态 |
+|------|------|------|
 | `openlibing-codecheck` | https://gitcode.com/openlibing/openlibing-codecheck/pull/282 | 已创建 |
-| `openlibing-docs`      | https://gitcode.com/openlibing/openlibing-docs/pull/644      | 已创建 |
+| `openlibing-docs` | https://gitcode.com/openlibing/openlibing-docs/pull/644 | 已创建 |
 
 ## 4. 关键决策记录
 

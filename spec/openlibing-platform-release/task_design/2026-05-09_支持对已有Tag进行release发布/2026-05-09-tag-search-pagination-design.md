@@ -25,10 +25,10 @@
 
 #### 2.1.1 新增参数
 
-| 参数名   | 类型    | 必填 | 默认值 | 说明              |
-| -------- | ------- | ---- | ------ | ----------------- |
-| pageNum  | Integer | 否   | 1      | 页码，从1开始     |
-| pageSize | Integer | 否   | 20     | 每页大小，最大100 |
+| 参数名 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| pageNum | Integer | 否 | 1 | 页码，从1开始 |
+| pageSize | Integer | 否 | 20 | 每页大小，最大100 |
 
 #### 2.1.2 完整参数列表
 
@@ -100,13 +100,11 @@ public class TagSearchResultVO implements Serializable {
 #### 2.3.1 方法签名变更
 
 **变更前**：
-
 ```java
 public List<TagInfoVO> searchTags(String projectId, String repoUrl, String keyword, Integer pageSize)
 ```
 
 **变更后**：
-
 ```java
 public TagSearchResultVO searchTags(String projectId, String repoUrl, String keyword, Integer pageNum, Integer pageSize)
 ```
@@ -237,21 +235,21 @@ public DataResult<TagSearchResultVO> searchTags(
 
 ### 3.1 后端改动
 
-| 序号 | 改动项             | 改动文件                                      | 说明                                  |
-| ---- | ------------------ | --------------------------------------------- | ------------------------------------- |
-| 1    | VO类新增字段       | TagSearchResultVO.java                        | 新增pageNum、pageSize、totalPages字段 |
-| 2    | Service方法改造    | ReleaseRepoTagHandleServiceImpl.java          | searchTags方法添加排序和分页逻辑      |
-| 3    | Controller方法改造 | ReleaseTagController.java                     | 新增pageNum参数，添加参数校验         |
-| 4    | 设计文档更新       | 2026-05-09-tag-release-optimization-design.md | 更新API参数和响应结构说明             |
-| 5    | 接口文档更新       | tag-release-api-document.md                   | 更新接口参数、返回结构和示例          |
+| 序号 | 改动项 | 改动文件 | 说明 |
+|------|--------|----------|------|
+| 1 | VO类新增字段 | TagSearchResultVO.java | 新增pageNum、pageSize、totalPages字段 |
+| 2 | Service方法改造 | ReleaseRepoTagHandleServiceImpl.java | searchTags方法添加排序和分页逻辑 |
+| 3 | Controller方法改造 | ReleaseTagController.java | 新增pageNum参数，添加参数校验 |
+| 4 | 设计文档更新 | 2026-05-09-tag-release-optimization-design.md | 更新API参数和响应结构说明 |
+| 5 | 接口文档更新 | tag-release-api-document.md | 更新接口参数、返回结构和示例 |
 
 ### 3.2 前端改动
 
-| 序号 | 改动项       | 说明                                          |
-| ---- | ------------ | --------------------------------------------- |
-| 1    | 分页组件集成 | 使用pageNum、pageSize、totalPages构建分页组件 |
-| 2    | 页码跳转     | 支持页码输入和上一页/下一页功能               |
-| 3    | 总页数展示   | 展示总页数和当前页码信息                      |
+| 序号 | 改动项 | 说明 |
+|------|--------|------|
+| 1 | 分页组件集成 | 使用pageNum、pageSize、totalPages构建分页组件 |
+| 2 | 页码跳转 | 支持页码输入和上一页/下一页功能 |
+| 3 | 总页数展示 | 展示总页数和当前页码信息 |
 
 ---
 
@@ -259,46 +257,46 @@ public DataResult<TagSearchResultVO> searchTags(
 
 ### 4.1 功能测试
 
-| 测试场景        | 测试步骤                              | 预期结果                                  |
-| --------------- | ------------------------------------- | ----------------------------------------- |
-| 基础分页        | pageNum=1, pageSize=10                | 返回第1页的10条数据，分页信息正确         |
-| 跨页请求        | pageNum=2, pageSize=10                | 返回第2页的10条数据，pageNum=2            |
+| 测试场景 | 测试步骤 | 预期结果 |
+|----------|----------|----------|
+| 基础分页 | pageNum=1, pageSize=10 | 返回第1页的10条数据，分页信息正确 |
+| 跨页请求 | pageNum=2, pageSize=10 | 返回第2页的10条数据，pageNum=2 |
 | 关键字过滤+分页 | keyword="v1.0", pageNum=1, pageSize=5 | 只返回包含"v1.0"的Tag，排序正确，分页正确 |
-| 边界页码        | pageNum=100（超出总页数）             | 自动调整为最后一页                        |
-| 无效页码        | pageNum=0或pageNum=-1                 | 自动调整为pageNum=1                       |
-| 无效pageSize    | pageSize=0或pageSize=-1               | 自动调整为pageSize=20                     |
-| 超大pageSize    | pageSize=200                          | 自动调整为pageSize=100                    |
-| 空Tag列表       | 仓库无Tag                             | 返回空列表，total=0, totalPages=0         |
-| 关键字无匹配    | keyword="xyz"（无匹配）               | 返回空列表，total=0, totalPages=0         |
+| 边界页码 | pageNum=100（超出总页数） | 自动调整为最后一页 |
+| 无效页码 | pageNum=0或pageNum=-1 | 自动调整为pageNum=1 |
+| 无效pageSize | pageSize=0或pageSize=-1 | 自动调整为pageSize=20 |
+| 超大pageSize | pageSize=200 | 自动调整为pageSize=100 |
+| 空Tag列表 | 仓库无Tag | 返回空列表，total=0, totalPages=0 |
+| 关键字无匹配 | keyword="xyz"（无匹配） | 返回空列表，total=0, totalPages=0 |
 
 ### 4.2 排序测试
 
-| 测试场景   | 测试数据                              | 预期排序结果                             |
-| ---------- | ------------------------------------- | ---------------------------------------- |
-| ASCII升序  | v1.0.0, v1.0.1, v1.1.0, v2.0.0        | v1.0.0 < v1.0.1 < v1.1.0 < v2.0.0        |
-| 数字版本号 | v1, v10, v2, v20                      | v1 < v10 < v2 < v20（ASCII排序）         |
-| 混合命名   | release-1, release-10, beta-1, beta-2 | beta-1 < beta-2 < release-1 < release-10 |
+| 测试场景 | 测试数据 | 预期排序结果 |
+|----------|----------|--------------|
+| ASCII升序 | v1.0.0, v1.0.1, v1.1.0, v2.0.0 | v1.0.0 < v1.0.1 < v1.1.0 < v2.0.0 |
+| 数字版本号 | v1, v10, v2, v20 | v1 < v10 < v2 < v20（ASCII排序） |
+| 混合命名 | release-1, release-10, beta-1, beta-2 | beta-1 < beta-2 < release-1 < release-10 |
 
 ### 4.3 性能测试
 
-| 测试场景   | 测试数据                  | 性能指标         |
-| ---------- | ------------------------- | ---------------- |
-| 少量Tag    | 10个Tag                   | 响应时间 < 500ms |
-| 中等Tag    | 100个Tag                  | 响应时间 < 1s    |
-| 大量Tag    | 500个Tag                  | 响应时间 < 2s    |
-| 关键字过滤 | 500个Tag，keyword匹配50个 | 响应时间 < 2s    |
+| 测试场景 | 测试数据 | 性能指标 |
+|----------|----------|----------|
+| 少量Tag | 10个Tag | 响应时间 < 500ms |
+| 中等Tag | 100个Tag | 响应时间 < 1s |
+| 大量Tag | 500个Tag | 响应时间 < 2s |
+| 关键字过滤 | 500个Tag，keyword匹配50个 | 响应时间 < 2s |
 
 ---
 
 ## 5. 风险评估
 
-| 风险项                  | 风险等级 | 应对措施                                          |
-| ----------------------- | -------- | ------------------------------------------------- |
-| Tag数量过多（>1000）    | 中       | 添加pageSize最大限制100，建议前端限制每页显示数量 |
-| Git API获取commitId超时 | 中       | Service层已有异常处理，返回错误信息               |
-| 排序性能问题            | 低       | Java内置排序性能足够，Tag数量可控                 |
-| 分页参数非法            | 低       | Controller层参数校验，自动调整为合法值            |
-| 关键字过滤后无结果      | 低       | 返回空列表，前端友好提示                          |
+| 风险项 | 风险等级 | 应对措施 |
+|--------|----------|----------|
+| Tag数量过多（>1000） | 中 | 添加pageSize最大限制100，建议前端限制每页显示数量 |
+| Git API获取commitId超时 | 中 | Service层已有异常处理，返回错误信息 |
+| 排序性能问题 | 低 | Java内置排序性能足够，Tag数量可控 |
+| 分页参数非法 | 低 | Controller层参数校验，自动调整为合法值 |
+| 关键字过滤后无结果 | 低 | 返回空列表，前端友好提示 |
 
 ---
 

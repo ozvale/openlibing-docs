@@ -64,46 +64,44 @@ DISTRIBUTED BY HASH(`pipeline_id`) BUCKETS 8
 
 ### 接口变更
 
-| 变更项              | 旧                                                    | 新                                                                         |
-| ------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------- |
-| URL                 | `GET /pipeline/info/{prId}`                           | `GET /pipeline/info`                                                       |
-| 参数                | `@PathVariable Long prId`                             | `@RequestParam String repoUrl` + `@RequestParam Integer number`            |
+| 变更项 | 旧 | 新 |
+|--------|----|----|
+| URL | `GET /pipeline/info/{prId}` | `GET /pipeline/info` |
+| 参数 | `@PathVariable Long prId` | `@RequestParam String repoUrl` + `@RequestParam Integer number` |
 | PipelineHandle 签名 | `queryPipelineInfo(Long prId, String pipelineStatus)` | `queryPipelineInfo(String repoUrl, Integer number, String pipelineStatus)` |
 
 ### 新增类
 
-| 类                                                 | 说明                                                  |
-| -------------------------------------------------- | ----------------------------------------------------- |
-| `DwiRdEfcPrWorkflowRun`                            | `dwi_rd_efc_pr_workflow_run` Entity                   |
-| `DwiRdEfcPrWorkflowRunMapper`                      | Mapper                                                |
-| `DwiRdEfcPrWorkflowRunService`                     | Service 接口                                          |
-| `DwiRdEfcPrWorkflowRunServiceImpl`                 | Service 实现                                          |
-| `SdiRdEfcPipelineRunPrRelationCodearts`            | `sdi_rd_efc_pipeline_run_pr_relation_codearts` Entity |
-| `SdiRdEfcPipelineRunPrRelationCodeartsMapper`      | Mapper                                                |
-| `SdiRdEfcPipelineRunPrRelationCodeartsService`     | Service 接口                                          |
-| `SdiRdEfcPipelineRunPrRelationCodeartsServiceImpl` | Service 实现                                          |
-| `WorkflowNewHandleImpl`                            | 新 workflow Handle，type="workflow"                   |
+| 类 | 说明 |
+|----|------|
+| `DwiRdEfcPrWorkflowRun` | `dwi_rd_efc_pr_workflow_run` Entity |
+| `DwiRdEfcPrWorkflowRunMapper` | Mapper |
+| `DwiRdEfcPrWorkflowRunService` | Service 接口 |
+| `DwiRdEfcPrWorkflowRunServiceImpl` | Service 实现 |
+| `SdiRdEfcPipelineRunPrRelationCodearts` | `sdi_rd_efc_pipeline_run_pr_relation_codearts` Entity |
+| `SdiRdEfcPipelineRunPrRelationCodeartsMapper` | Mapper |
+| `SdiRdEfcPipelineRunPrRelationCodeartsService` | Service 接口 |
+| `SdiRdEfcPipelineRunPrRelationCodeartsServiceImpl` | Service 实现 |
+| `WorkflowNewHandleImpl` | 新 workflow Handle，type="workflow" |
 
 ### 修改类
 
-| 类                   | 变更说明                                                                             |
-| -------------------- | ------------------------------------------------------------------------------------ |
-| `PipelineHandle`     | 接口方法签名变更                                                                     |
-| `PipelineController` | URL 和参数变更                                                                       |
+| 类 | 变更说明 |
+|----|----------|
+| `PipelineHandle` | 接口方法签名变更 |
+| `PipelineController` | URL 和参数变更 |
 | `PipelineHandleImpl` | PR 绑定查询从 `SdiPrPipelineRelation` 切换到 `SdiRdEfcPipelineRunPrRelationCodearts` |
-| `WorkflowHandleImpl` | type 从 `"workflow"` 改为 `"workflow_old"`                                           |
+| `WorkflowHandleImpl` | type 从 `"workflow"` 改为 `"workflow_old"` |
 
 ### 数据查询映射
 
 **PipelineHandleImpl** 新查询逻辑：
-
 ```
 repoUrl + number → sdi_rd_efc_pipeline_run_pr_relation_codearts (git_url + pr_id)
   → pipeline_run_id → dwr_rd_efc_pipeline_run_fact → 组装 PipelineRunInfoResp
 ```
 
 **WorkflowNewHandleImpl** 新查询逻辑：
-
 ```
 repoUrl + number → dwi_rd_efc_pr_workflow_run (repo_url + number)
   → 按 commit_sha 分组 → 组装 WorkflowInfoResp
@@ -111,28 +109,28 @@ repoUrl + number → dwi_rd_efc_pr_workflow_run (repo_url + number)
 
 ## 涉及文件
 
-| 文件                                                                                 | 操作 | 说明                   |
-| ------------------------------------------------------------------------------------ | ---- | ---------------------- |
-| `domain/model/pipeline/DwiRdEfcPrWorkflowRun.java`                                   | 新增 | Entity                 |
-| `domain/mapper/pipeline/DwiRdEfcPrWorkflowRunMapper.java`                            | 新增 | Mapper                 |
-| `domain/service/pipeline/DwiRdEfcPrWorkflowRunService.java`                          | 新增 | Service 接口           |
-| `domain/service/pipeline/impl/DwiRdEfcPrWorkflowRunServiceImpl.java`                 | 新增 | Service 实现           |
-| `domain/model/pipeline/SdiRdEfcPipelineRunPrRelationCodearts.java`                   | 新增 | Entity                 |
-| `domain/mapper/pipeline/SdiRdEfcPipelineRunPrRelationCodeartsMapper.java`            | 新增 | Mapper                 |
-| `domain/service/pipeline/SdiRdEfcPipelineRunPrRelationCodeartsService.java`          | 新增 | Service 接口           |
-| `domain/service/pipeline/impl/SdiRdEfcPipelineRunPrRelationCodeartsServiceImpl.java` | 新增 | Service 实现           |
-| `app/service/pipeline/impl/WorkflowNewHandleImpl.java`                               | 新增 | 新 workflow Handle     |
-| `app/service/pipeline/PipelineHandle.java`                                           | 修改 | 接口签名               |
-| `api/controller/PipelineController.java`                                             | 修改 | URL + 参数             |
-| `app/service/pipeline/impl/PipelineHandleImpl.java`                                  | 修改 | 切换查询表             |
-| `app/service/pipeline/impl/WorkflowHandleImpl.java`                                  | 修改 | type 改为 workflow_old |
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `domain/model/pipeline/DwiRdEfcPrWorkflowRun.java` | 新增 | Entity |
+| `domain/mapper/pipeline/DwiRdEfcPrWorkflowRunMapper.java` | 新增 | Mapper |
+| `domain/service/pipeline/DwiRdEfcPrWorkflowRunService.java` | 新增 | Service 接口 |
+| `domain/service/pipeline/impl/DwiRdEfcPrWorkflowRunServiceImpl.java` | 新增 | Service 实现 |
+| `domain/model/pipeline/SdiRdEfcPipelineRunPrRelationCodearts.java` | 新增 | Entity |
+| `domain/mapper/pipeline/SdiRdEfcPipelineRunPrRelationCodeartsMapper.java` | 新增 | Mapper |
+| `domain/service/pipeline/SdiRdEfcPipelineRunPrRelationCodeartsService.java` | 新增 | Service 接口 |
+| `domain/service/pipeline/impl/SdiRdEfcPipelineRunPrRelationCodeartsServiceImpl.java` | 新增 | Service 实现 |
+| `app/service/pipeline/impl/WorkflowNewHandleImpl.java` | 新增 | 新 workflow Handle |
+| `app/service/pipeline/PipelineHandle.java` | 修改 | 接口签名 |
+| `api/controller/PipelineController.java` | 修改 | URL + 参数 |
+| `app/service/pipeline/impl/PipelineHandleImpl.java` | 修改 | 切换查询表 |
+| `app/service/pipeline/impl/WorkflowHandleImpl.java` | 修改 | type 改为 workflow_old |
 
 ## 风险 & 缓解
 
-| 风险                                                | 缓解措施                                   |
-| --------------------------------------------------- | ------------------------------------------ |
-| 接口参数变更导致调用方不兼容                        | 前端同步更新 repoUrl + number 参数         |
-| 新表数据未就绪时查询为空                            | 旧 workflow_old 保留，可回退               |
+| 风险 | 缓解措施 |
+|------|----------|
+| 接口参数变更导致调用方不兼容 | 前端同步更新 repoUrl + number 参数 |
+| 新表数据未就绪时查询为空 | 旧 workflow_old 保留，可回退 |
 | CodeArts pr_id 为 String 类型，与旧 Long 类型不兼容 | PipelineHandleImpl 中 pr_id 以 String 匹配 |
 
 ## 跨仓影响

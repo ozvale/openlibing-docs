@@ -24,7 +24,6 @@
 4. 任务级 `updateRule` 改走新的重算方法（行为更准）。
 
 不做：
-
 - 不改变 `is_used` 字段类型（保持 `String "0"/"1"`）。
 - 不做"读时实时聚合"改造（保持冗余字段 + 重算同步的方案）。
 - 不动防投毒规则集相关逻辑。
@@ -43,11 +42,11 @@
 
 ## 影响范围
 
-| 仓                     | 改动                                                                                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 仓 | 改动 |
+| --- | --- |
 | `openlibing-codecheck` | 新增 `/rule-set/recompute-used` 端点；`RuleSetOperation` 新增 `recomputeIsUsedByTemplateIds`；`updateRuleSetUsed` 走"重算"语义；`updateRule` 改走新方法 |
-| `openlibing-coderepo`  | `addCodececkRuleSet` / `defaultCodecheckRuleSet` 在写完 `sig_rule_set` 后回调 `codecheck` 重算接口；删仓路径同步                                        |
-| `openlibing-docs`      | 本目录归档 + Phase 5 archive                                                                                                                            |
+| `openlibing-coderepo` | `addCodececkRuleSet` / `defaultCodecheckRuleSet` 在写完 `sig_rule_set` 后回调 `codecheck` 重算接口；删仓路径同步 |
+| `openlibing-docs` | 本目录归档 + Phase 5 archive |
 
 ## 关联
 

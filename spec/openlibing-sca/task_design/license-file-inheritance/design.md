@@ -9,12 +9,12 @@
 
 ## 2. 核心概念
 
-| 概念         | 说明                                                                                                                                     |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `fileHash`   | 文件内容的 MD5 十六进制字符串（32 位小写），作为跨扫描、跨仓库的文件唯一标识                                                             |
-| 人工分析结论 | 运营人员对某文件做出的风险判定：`HAS_RISK(1)` / `NO_RISK(0)` + 文字说明                                                                  |
-| 继承         | 新版本扫描处理文件时，若 `tbl_license_manual_analysis` 中已存在该 fileHash 的记录，则将人工结论写入新 LicenseIssue，并覆盖自动兼容性判定 |
-| 优先级       | 人工结论 > 自动判定。继承逻辑在自动兼容性分析之后执行，可覆盖 `compatible` 字段                                                          |
+| 概念 | 说明 |
+|------|------|
+| `fileHash` | 文件内容的 MD5 十六进制字符串（32 位小写），作为跨扫描、跨仓库的文件唯一标识 |
+| 人工分析结论 | 运营人员对某文件做出的风险判定：`HAS_RISK(1)` / `NO_RISK(0)` + 文字说明 |
+| 继承 | 新版本扫描处理文件时，若 `tbl_license_manual_analysis` 中已存在该 fileHash 的记录，则将人工结论写入新 LicenseIssue，并覆盖自动兼容性判定 |
+| 优先级 | 人工结论 > 自动判定。继承逻辑在自动兼容性分析之后执行，可覆盖 `compatible` 字段 |
 
 ## 3. 数据模型
 
@@ -22,17 +22,17 @@
 
 存储全局人工分析结论，以 `file_hash` 为检索键。
 
-| 列名        | 类型          | 约束            | 说明                                 |
-| ----------- | ------------- | --------------- | ------------------------------------ |
-| id          | VARCHAR(64)   | PK, NOT NULL    | UUID 主键                            |
-| file_hash   | VARCHAR(128)  | NOT NULL, INDEX | 文件内容 MD5                         |
-| risk_level  | VARCHAR(16)   | NOT NULL        | 风险等级编码：`0`=无风险, `1`=有风险 |
-| description | VARCHAR(1024) | NULL            | 分析说明                             |
-| analyzed_by | VARCHAR(64)   | NULL            | 分析人（userName）                   |
-| scan_id     | VARCHAR(64)   | NULL            | 首次分析时关联的扫描 ID              |
-| file_path   | VARCHAR(512)  | NULL            | 首次分析时的文件路径                 |
-| created_at  | DATETIME      | NULL            | 创建时间                             |
-| updated_at  | DATETIME      | NULL            | 最后更新时间                         |
+| 列名 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | VARCHAR(64) | PK, NOT NULL | UUID 主键 |
+| file_hash | VARCHAR(128) | NOT NULL, INDEX | 文件内容 MD5 |
+| risk_level | VARCHAR(16) | NOT NULL | 风险等级编码：`0`=无风险, `1`=有风险 |
+| description | VARCHAR(1024) | NULL | 分析说明 |
+| analyzed_by | VARCHAR(64) | NULL | 分析人（userName） |
+| scan_id | VARCHAR(64) | NULL | 首次分析时关联的扫描 ID |
+| file_path | VARCHAR(512) | NULL | 首次分析时的文件路径 |
+| created_at | DATETIME | NULL | 创建时间 |
+| updated_at | DATETIME | NULL | 最后更新时间 |
 
 索引：`idx_lma_file_hash (file_hash)`
 
@@ -40,11 +40,11 @@ Liquibase changelog：`src/main/resources/db/changelog/mysql/20260724/create-tbl
 
 ### 3.2 MongoDB — `license_issue` 集合（新增字段）
 
-| 字段              | 类型   | 说明                         |
-| ----------------- | ------ | ---------------------------- |
-| fileHash          | String | 文件内容 MD5，扫描时写入     |
-| manualRiskLevel   | String | 继承或人工设置的风险等级编码 |
-| manualDescription | String | 继承或人工设置的分析说明     |
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| fileHash | String | 文件内容 MD5，扫描时写入 |
+| manualRiskLevel | String | 继承或人工设置的风险等级编码 |
+| manualDescription | String | 继承或人工设置的分析说明 |
 
 ### 3.3 枚举 — `ManualRiskLevel`
 
@@ -100,16 +100,15 @@ POST /license/manualAnalysis/batch?userName=xxx
 
 **入参 `LicenseAnalysisVO`**：
 
-| 字段              | 校验      | 说明                        |
-| ----------------- | --------- | --------------------------- |
-| objectId          | @NotBlank | LicenseIssue 的 MongoDB _id |
-| fileHash          | @NotBlank | 文件 MD5                    |
-| file              | —         | 文件路径（冗余记录）        |
-| manualRiskLevel   | —         | 风险等级编码                |
-| manualDescription | —         | 分析说明                    |
+| 字段 | 校验 | 说明 |
+|------|------|------|
+| objectId | @NotBlank | LicenseIssue 的 MongoDB _id |
+| fileHash | @NotBlank | 文件 MD5 |
+| file | — | 文件路径（冗余记录） |
+| manualRiskLevel | — | 风险等级编码 |
+| manualDescription | — | 分析说明 |
 
 **兼容性联动**：保存人工分析时同步更新 `compatible` 字段（与继承逻辑一致）：
-
 - `HAS_RISK(1)` → `compatible = "No"`
 - `NO_RISK(0)` → `compatible = "Yes"`
 
@@ -119,29 +118,29 @@ POST /license/manualAnalysis/batch?userName=xxx
 
 ## 5. 涉及文件清单
 
-| 文件                                     | 职责                                                                           |
-| ---------------------------------------- | ------------------------------------------------------------------------------ |
-| `IntegrationApiServiceImpl.java`         | 扫描主流程：computeFileMd5Hashes / processFileLicenses / inheritManualAnalysis |
-| `LicenseServiceImpl.java`                | 人工分析保存：batchManualAnalysis / upsertManualAnalysis / 缓存刷新            |
-| `LicenseController.java`                 | HTTP 接口：`POST /license/manualAnalysis/batch`、`POST /license/cache/refresh` |
-| `LicenseIssue.java`                      | MongoDB 实体（新增 fileHash / manualRiskLevel / manualDescription）            |
-| `LicenseManualAnalysis.java`             | MySQL 实体 + 手写 Builder（EI_EXPOSE_REP2 修复）                               |
-| `LicenseManualAnalysisMapper.java`       | MyBatis Mapper 接口                                                            |
-| `LicenseManualAnalysisMapper.xml`        | SQL 映射（insert / update / selectByFileHash）                                 |
-| `LicenseAnalysisVO.java`                 | 批量人工分析入参 VO                                                            |
-| `ManualRiskLevel.java`                   | 风险等级枚举                                                                   |
-| `create-tbl-license-manual-analysis.xml` | Liquibase 建表 changelog                                                       |
+| 文件 | 职责 |
+|------|------|
+| `IntegrationApiServiceImpl.java` | 扫描主流程：computeFileMd5Hashes / processFileLicenses / inheritManualAnalysis |
+| `LicenseServiceImpl.java` | 人工分析保存：batchManualAnalysis / upsertManualAnalysis / 缓存刷新 |
+| `LicenseController.java` | HTTP 接口：`POST /license/manualAnalysis/batch`、`POST /license/cache/refresh` |
+| `LicenseIssue.java` | MongoDB 实体（新增 fileHash / manualRiskLevel / manualDescription） |
+| `LicenseManualAnalysis.java` | MySQL 实体 + 手写 Builder（EI_EXPOSE_REP2 修复） |
+| `LicenseManualAnalysisMapper.java` | MyBatis Mapper 接口 |
+| `LicenseManualAnalysisMapper.xml` | SQL 映射（insert / update / selectByFileHash） |
+| `LicenseAnalysisVO.java` | 批量人工分析入参 VO |
+| `ManualRiskLevel.java` | 风险等级枚举 |
+| `create-tbl-license-manual-analysis.xml` | Liquibase 建表 changelog |
 
 ## 6. 设计决策
 
-| 决策                                        | 理由                                                         |
-| ------------------------------------------- | ------------------------------------------------------------ |
-| 以文件内容 MD5 而非文件路径作为继承键       | 同一文件可能出现在不同仓库/分支/路径下，内容相同即应继承     |
-| 人工结论覆盖自动判定                        | 人工分析成本更高、准确性更强，应作为最终结论                 |
-| 继承失败仅 warn 不中断                      | 继承是增强功能，不应因 MySQL 查询异常导致整次扫描失败        |
-| MySQL 存储人工结论（而非仅 MongoDB）        | 需要跨 scanId 全局检索，MongoDB 按 scanId 分区不便于全局去重 |
-| selectByFileHash 取 updated_at DESC LIMIT 1 | 同一 fileHash 理论上唯一，但允许历史脏数据时取最新           |
-| 预计算 MD5（workspace 删除前）              | workspace 在异步分析前会被清理，必须提前计算                 |
+| 决策 | 理由 |
+|------|------|
+| 以文件内容 MD5 而非文件路径作为继承键 | 同一文件可能出现在不同仓库/分支/路径下，内容相同即应继承 |
+| 人工结论覆盖自动判定 | 人工分析成本更高、准确性更强，应作为最终结论 |
+| 继承失败仅 warn 不中断 | 继承是增强功能，不应因 MySQL 查询异常导致整次扫描失败 |
+| MySQL 存储人工结论（而非仅 MongoDB） | 需要跨 scanId 全局检索，MongoDB 按 scanId 分区不便于全局去重 |
+| selectByFileHash 取 updated_at DESC LIMIT 1 | 同一 fileHash 理论上唯一，但允许历史脏数据时取最新 |
+| 预计算 MD5（workspace 删除前） | workspace 在异步分析前会被清理，必须提前计算 |
 
 ## 7. 接口摘要
 

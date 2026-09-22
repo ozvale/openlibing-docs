@@ -19,13 +19,13 @@
 ```typescript
 // 修改前
 function handleSelectChange() {
-  userForm.value.accountLogin = "";
+  userForm.value.accountLogin = '';
 }
 
 // 修改后
 function handleSelectChange() {
   if (!props.keepInputOnSwitch) {
-    userForm.value.accountLogin = "";
+    userForm.value.accountLogin = '';
   }
   getFormInfor(userForm.value.accountLogin);
 }
@@ -47,7 +47,7 @@ function handleSelectChange() {
 ```typescript
 const repoUrlHandleSelect = () => {
   nextTick(() => {
-    formRef.value?.clearValidate("repoUrl");
+    formRef.value?.clearValidate('repoUrl');
     const result = validateSafeUrl(formData.repoUrl);
     if (result.validate) {
       formData.repoName = getRepoName(formData.repoUrl);
@@ -64,11 +64,11 @@ const repoUrlHandleSelect = () => {
 
 ## 3. 影响范围
 
-| 文件                   | 变更                                     | 影响范围                                   |
-| ---------------------- | ---------------------------------------- | ------------------------------------------ |
-| ContactInformation.vue | 新增 prop + 修改 handleSelectChange      | 所有使用该组件的页面，但默认值保证向后兼容 |
-| Repos/index.vue        | 新增 repoUrlHandleSelect + 导入 nextTick | 仅仓库创建/编辑页面                        |
-| repoUserManage.vue     | 传入 keepInputOnSwitch prop              | 仅仓库用户管理页面                         |
+| 文件 | 变更 | 影响范围 |
+|------|------|----------|
+| ContactInformation.vue | 新增 prop + 修改 handleSelectChange | 所有使用该组件的页面，但默认值保证向后兼容 |
+| Repos/index.vue | 新增 repoUrlHandleSelect + 导入 nextTick | 仅仓库创建/编辑页面 |
+| repoUserManage.vue | 传入 keepInputOnSwitch prop | 仅仓库用户管理页面 |
 
 ## 4. 无数据模型变更
 

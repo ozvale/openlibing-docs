@@ -3,13 +3,11 @@
 ## 需求背景
 
 openlibing-framework 已提供运营看板（`/manage/feature-dashboard/*`），支持：
-
 - 前端看板定义指标（`POST /metrics`）
 - 微服务每日上报指标数据（`POST /report`）
 - 看板按 day/week/month/year 自行做周期聚合统计
 
 我们服务（computing-resource-workspace）作为运营看板的数据上报方之一，需要：
-
 1. 每天定时调用 framework 的 `/manage/feature-dashboard/report` 接口上报当日指标。
 2. 上报的指标 key 必须先在前端看板录入到 `feature_ops_dashboard_metric_config` 表，否则 framework 端会抛 3007 错误。
 3. 看板的周/月/年统计由 framework 端在查询时聚合，本服务只负责每日数据上报，不做周期聚合。
@@ -17,7 +15,6 @@ openlibing-framework 已提供运营看板（`/manage/feature-dashboard/*`），
 ## 功能描述
 
 ### 第一期（已完成，6/27）
-
 - Feign 客户端方法 `FrameworkClient.reportFeatureOps(...)`。
 - `FeatureOpsReportService` + `FeatureOpsReportScheduler`，落地 2 个用户指标：
   - `page_view`：当日 `workspace_env_record` 表 `created_at` 落在窗口内的记录条数。
@@ -26,15 +23,14 @@ openlibing-framework 已提供运营看板（`/manage/feature-dashboard/*`），
 - 配置开关默认关闭，通过 `@Value` 从 Apollo 拉取配置项。
 
 ### 本期（6/29 扩展，业务指标）
-
 在已搭好的上报架子基础上，补充 **4 个业务指标**：
 
-| metricKey              | metricType      | aggregationType | 上报值形态                           | 口径                                                                                                    |
-| ---------------------- | --------------- | --------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `apply_wait_mins`      | business_metric | count           | 裸数字（分钟，小数）                 | `AVG(grant_time - apply_time)`，仅 `grant_time` 非空记录，按 `grant_time` 归属当天                      |
-| `apply_success_rate`   | business_metric | rate            | `{metricId, numerator, denominator}` | 分子=`grant_time` 非空数，分母=全部申请数，分子分母同窗口按 `apply_time` 归属当天                       |
-| `exclusive_usage_mins` | business_metric | count           | 裸数字（分钟，小数）                 | `AVG(release_time - grant_time)`，仅 `release_time` 非空 + `task_type='01'`，按 `release_time` 归属当天 |
-| `task_usage_mins`      | business_metric | count           | 裸数字（分钟，小数）                 | `AVG(release_time - grant_time)`，仅 `release_time` 非空 + `task_type='02'`，按 `release_time` 归属当天 |
+| metricKey | metricType | aggregationType | 上报值形态 | 口径 |
+|-----------|-----------|-----------------|-----------|------|
+| `apply_wait_mins` | business_metric | count | 裸数字（分钟，小数） | `AVG(grant_time - apply_time)`，仅 `grant_time` 非空记录，按 `grant_time` 归属当天 |
+| `apply_success_rate` | business_metric | rate | `{metricId, numerator, denominator}` | 分子=`grant_time` 非空数，分母=全部申请数，分子分母同窗口按 `apply_time` 归属当天 |
+| `exclusive_usage_mins` | business_metric | count | 裸数字（分钟，小数） | `AVG(release_time - grant_time)`，仅 `release_time` 非空 + `task_type='01'`，按 `release_time` 归属当天 |
+| `task_usage_mins` | business_metric | count | 裸数字（分钟，小数） | `AVG(release_time - grant_time)`，仅 `release_time` 非空 + `task_type='02'`，按 `release_time` 归属当天 |
 
 **task_type 含义**：`01` 独占式、`02` 任务式。
 
@@ -54,7 +50,6 @@ openlibing-framework 已提供运营看板（`/manage/feature-dashboard/*`），
 - **语义破坏性提醒**：同名字段下，历史报表曲线（DAU 语义）与未来数据（累计 UV 语义）不可比，需和业务方/dashboard 消费方对齐。
 
 ### 本期不做
-
 - 单元测试（Standard 模式不强制，等指标稳定后补）。
 - 跨仓改动（不动 framework 仓）。
 - framework 端任何接口/表的改造。
@@ -63,32 +58,31 @@ openlibing-framework 已提供运营看板（`/manage/feature-dashboard/*`），
 
 详细分析见 design.md §2.3。要点：
 
-| 终态 status                                       | grant_time | release_time | 在各指标中的归属                                                                                       |
-| ------------------------------------------------- | ---------- | ------------ | ------------------------------------------------------------------------------------------------------ |
-| `success` → `released`（任务式自动释放）          | ✅ 有      | ✅ 有        | 入申请时间均值、入成功率分子、入使用时长均值                                                           |
-| `success`（独占式，未释放）                       | ✅ 有      | ❌ 无        | 入申请时间均值、入成功率分子、不入使用时长（release_time 为空）                                        |
-| `deploy_failed`（部署失败，不释放）               | ❌ 无      | ❌ 无        | 不入申请时间、入成功率分母（失败）、不入使用时长                                                       |
-| `install_failed` → `released`（安装失败自动释放） | ✅ 有      | ✅ 有        | 入申请时间均值、入成功率分子（grant 拿到算成功）、入使用时长均值（含自动释放等待，可能偏大，本期接受） |
+| 终态 status | grant_time | release_time | 在各指标中的归属 |
+|-------------|-----------|--------------|------------------|
+| `success` → `released`（任务式自动释放） | ✅ 有 | ✅ 有 | 入申请时间均值、入成功率分子、入使用时长均值 |
+| `success`（独占式，未释放） | ✅ 有 | ❌ 无 | 入申请时间均值、入成功率分子、不入使用时长（release_time 为空） |
+| `deploy_failed`（部署失败，不释放） | ❌ 无 | ❌ 无 | 不入申请时间、入成功率分母（失败）、不入使用时长 |
+| `install_failed` → `released`（安装失败自动释放） | ✅ 有 | ✅ 有 | 入申请时间均值、入成功率分子（grant 拿到算成功）、入使用时长均值（含自动释放等待，可能偏大，本期接受） |
 
 **核心判定**：`grant_time` 非空 = 资源拿到 = 申请成功；`release_time` 非空 = 有使用时长数据。
 
 ## 指标定义（需先在前端看板录入到 `feature_ops_dashboard_metric_config` 表）
 
-| metricKey              | metricType      | aggregationType | metricName             | 计算逻辑                                                                                                                                       |
-| ---------------------- | --------------- | --------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `page_view`            | user_metric     | count           | 访问量                 | `COUNT(*) FROM workspace_env_record WHERE created_at ∈ [dayStart, dayEnd)`                                                                     |
-| `unique_visitor`       | user_metric     | count           | 用户数                 | `COUNT(DISTINCT user_id) FROM workspace_env_record WHERE created_at ∈ [dayStart, dayEnd)`                                                      |
-| `apply_wait_mins`      | business_metric | count           | 平均申请时间(分)       | `AVG(TIMESTAMPDIFF(MINUTE, apply_time, grant_time)) WHERE grant_time IS NOT NULL AND grant_time ∈ [dayStart, dayEnd)`                          |
-| `apply_success_rate`   | business_metric | rate            | 平均申请成功率         | 分子=`COUNT(*) WHERE grant_time IS NOT NULL AND apply_time ∈ [dayStart, dayEnd)`，分母=`COUNT(*) WHERE apply_time ∈ [dayStart, dayEnd)`        |
-| `exclusive_usage_mins` | business_metric | count           | 独占式平均使用时长(分) | `AVG(TIMESTAMPDIFF(MINUTE, grant_time, release_time)) WHERE release_time IS NOT NULL AND task_type='01' AND release_time ∈ [dayStart, dayEnd)` |
-| `task_usage_mins`      | business_metric | count           | 任务式平均使用时长(分) | `AVG(TIMESTAMPDIFF(MINUTE, grant_time, release_time)) WHERE release_time IS NOT NULL AND task_type='02' AND release_time ∈ [dayStart, dayEnd)` |
+| metricKey | metricType | aggregationType | metricName | 计算逻辑 |
+|-----------|-----------|-----------------|-----------|---------|
+| `page_view` | user_metric | count | 访问量 | `COUNT(*) FROM workspace_env_record WHERE created_at ∈ [dayStart, dayEnd)` |
+| `unique_visitor` | user_metric | count | 用户数 | `COUNT(DISTINCT user_id) FROM workspace_env_record WHERE created_at ∈ [dayStart, dayEnd)` |
+| `apply_wait_mins` | business_metric | count | 平均申请时间(分) | `AVG(TIMESTAMPDIFF(MINUTE, apply_time, grant_time)) WHERE grant_time IS NOT NULL AND grant_time ∈ [dayStart, dayEnd)` |
+| `apply_success_rate` | business_metric | rate | 平均申请成功率 | 分子=`COUNT(*) WHERE grant_time IS NOT NULL AND apply_time ∈ [dayStart, dayEnd)`，分母=`COUNT(*) WHERE apply_time ∈ [dayStart, dayEnd)` |
+| `exclusive_usage_mins` | business_metric | count | 独占式平均使用时长(分) | `AVG(TIMESTAMPDIFF(MINUTE, grant_time, release_time)) WHERE release_time IS NOT NULL AND task_type='01' AND release_time ∈ [dayStart, dayEnd)` |
+| `task_usage_mins` | business_metric | count | 任务式平均使用时长(分) | `AVG(TIMESTAMPDIFF(MINUTE, grant_time, release_time)) WHERE release_time IS NOT NULL AND task_type='02' AND release_time ∈ [dayStart, dayEnd)` |
 
 > 前端看板录入时 `feature` 与第一期一致，`community` 字段不需要（指标配置只按 feature 维度）。
 
 ## 验收标准
 
 ### 第一期（已完成）
-
 - [x] workspace 启动后，`feature-ops.report.enabled=false` 时 scheduler 不触发上报。
 - [x] `feature-ops.report.enabled=true` 时，scheduler 按 cron 定时触发 `FeatureOpsReportService.report()`。
 - [x] `report()` 能正确组装请求并通过 Feign 发出请求。
@@ -99,7 +93,6 @@ openlibing-framework 已提供运营看板（`/manage/feature-dashboard/*`），
 - [x] 编译通过（`mvn compile`）。
 
 ### 本期（6/29 业务指标扩展）
-
 - [ ] 4 个业务指标值来自 `workspace_env_record` 表聚合，时间窗口与归属字段符合上表口径。
 - [ ] `apply_success_rate` 上报值为 `{metricId, numerator, denominator}` 结构；其余 3 个为裸数字（小数可解析）。
 - [ ] `install_failed` 自动释放后 status=released 的记录被正确纳入各指标（grant_time 非空入分子、release_time 非空入使用时长均值）。
@@ -110,13 +103,13 @@ openlibing-framework 已提供运营看板（`/manage/feature-dashboard/*`），
 
 ## 影响范围
 
-| 文件                                                      | 操作             | 说明                                   |
-| --------------------------------------------------------- | ---------------- | -------------------------------------- |
-| `business/client/FrameworkClient.java`                    | 已新增（第一期） | `reportFeatureOps` 方法                |
-| `business/mapper/EnvRecordMapper.java`                    | 修改             | 新增 4 个业务指标聚合查询方法          |
-| `business/service/dashboard/FeatureOpsReportService.java` | 修改             | 补充 4 个业务指标的组装逻辑，移除 TODO |
-| `common/scheduler/FeatureOpsReportScheduler.java`         | 已新增（第一期） | 无需改动                               |
-| `application.yaml` 或 Apollo                              | 已新增（第一期） | 无需改动                               |
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `business/client/FrameworkClient.java` | 已新增（第一期） | `reportFeatureOps` 方法 |
+| `business/mapper/EnvRecordMapper.java` | 修改 | 新增 4 个业务指标聚合查询方法 |
+| `business/service/dashboard/FeatureOpsReportService.java` | 修改 | 补充 4 个业务指标的组装逻辑，移除 TODO |
+| `common/scheduler/FeatureOpsReportScheduler.java` | 已新增（第一期） | 无需改动 |
+| `application.yaml` 或 Apollo | 已新增（第一期） | 无需改动 |
 
 ## 关键约束
 

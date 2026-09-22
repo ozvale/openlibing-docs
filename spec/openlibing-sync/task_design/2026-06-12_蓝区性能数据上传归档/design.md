@@ -15,19 +15,18 @@
 
 ## 涉及文件
 
-| 文件                                                        | 操作 | 说明                                                                                 |
-| ----------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------ |
-| `api/controller/TestCaseDataController.java`                | 修改 | 新增 `label`、`archivePath` 可选参数；调整校验逻辑；错误响应携带具体参数描述         |
-| `domain/service/testcase/TestCaseDataService.java`          | 修改 | `uploadTestcaseMetadata` 方法签名新增 `label`、`archivePath` 参数                    |
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `api/controller/TestCaseDataController.java` | 修改 | 新增 `label`、`archivePath` 可选参数；调整校验逻辑；错误响应携带具体参数描述 |
+| `domain/service/testcase/TestCaseDataService.java` | 修改 | `uploadTestcaseMetadata` 方法签名新增 `label`、`archivePath` 参数 |
 | `domain/service/testcase/impl/TestCaseDataServiceImpl.java` | 修改 | 实现 label + archivePath 路由逻辑，去除两侧斜杠，移除 performance/precision 特殊分支 |
-| `upload_to_openlibing.py`                                   | 修改 | `auth_secret` → `openlibing_secret`，支持环境变量，新增 `--archive-path`             |
+| `upload_to_openlibing.py` | 修改 | `auth_secret` → `openlibing_secret`，支持环境变量，新增 `--archive-path` |
 
 ## 接口变更
 
 ### 请求参数变更
 
 **变更前**：
-
 ```
 POST testcase/metadata/upload (multipart/form-data)
 - files: List<MultipartFile> (必填)
@@ -37,7 +36,6 @@ POST testcase/metadata/upload (multipart/form-data)
 ```
 
 **变更后**：
-
 ```
 POST testcase/metadata/upload (multipart/form-data)
 - files: List<MultipartFile> (必填)
@@ -50,12 +48,12 @@ POST testcase/metadata/upload (multipart/form-data)
 
 ### 校验规则
 
-| 条件                          | 校验                           | 错误信息                                                      |
-| ----------------------------- | ------------------------------ | ------------------------------------------------------------- |
-| files 为空                    | 返回 BAD_REQUEST               | `files must not be empty`                                     |
-| archivePath 非空但 label 为空 | 返回 BAD_REQUEST               | `archivePath requires label`                                  |
-| label 和流水线参数均为空      | 返回 BAD_REQUEST               | `must provide either label or pipelineId/pipelineRunId/jobId` |
-| files 数量 > 100              | 返回 FILES_UPLOAD_EXCEED_LIMIT | —                                                             |
+| 条件 | 校验 | 错误信息 |
+|------|------|---------|
+| files 为空 | 返回 BAD_REQUEST | `files must not be empty` |
+| archivePath 非空但 label 为空 | 返回 BAD_REQUEST | `archivePath requires label` |
+| label 和流水线参数均为空 | 返回 BAD_REQUEST | `must provide either label or pipelineId/pipelineRunId/jobId` |
+| files 数量 > 100 | 返回 FILES_UPLOAD_EXCEED_LIMIT | — |
 
 ## OBS 路径路由逻辑
 
@@ -111,12 +109,12 @@ perfstudio 平台消费
 
 ## 风险 & 缓解
 
-| 风险                                     | 缓解                                                    |
-| ---------------------------------------- | ------------------------------------------------------- |
-| 无 label 时流水线参数校验遗漏            | Controller 层显式校验：label 为空时流水线参数必须非空   |
-| label/archivePath 含前后斜杠导致路径异常 | `StringUtils.strip(value, "/")` 去除两侧斜杠            |
-| label 仅为斜杠字符（如 `///`）           | strip 后为空字符串，`isNotBlank` 判定为空，走流水线路由 |
-| 向后兼容性                               | 无 label 时行为完全不变，现有调用方无感知               |
+| 风险 | 缓解 |
+|------|------|
+| 无 label 时流水线参数校验遗漏 | Controller 层显式校验：label 为空时流水线参数必须非空 |
+| label/archivePath 含前后斜杠导致路径异常 | `StringUtils.strip(value, "/")` 去除两侧斜杠 |
+| label 仅为斜杠字符（如 `///`） | strip 后为空字符串，`isNotBlank` 判定为空，走流水线路由 |
+| 向后兼容性 | 无 label 时行为完全不变，现有调用方无感知 |
 
 ## 跨仓影响
 

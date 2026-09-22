@@ -43,12 +43,12 @@
 
 ### 1.2 核心设计要点
 
-| 设计点   | 方案                                     | 说明                                   |
-| -------- | ---------------------------------------- | -------------------------------------- |
-| 线程隔离 | `threading.local()`                      | 每个线程独立存储 header/footer 内容    |
-| 存储机制 | 字典结构 `{thread_id: {header, footer}}` | 支持多线程并行测试                     |
-| 注入时机 | HTML 报告生成阶段                        | 在 `close_handler_for_thread()` 中处理 |
-| 安全校验 | 标签白名单过滤                           | 防止 XSS 攻击                          |
+| 设计点 | 方案 | 说明 |
+|--------|------|------|
+| 线程隔离 | `threading.local()` | 每个线程独立存储 header/footer 内容 |
+| 存储机制 | 字典结构 `{thread_id: {header, footer}}` | 支持多线程并行测试 |
+| 注入时机 | HTML 报告生成阶段 | 在 `close_handler_for_thread()` 中处理 |
+| 安全校验 | 标签白名单过滤 | 防止 XSS 攻击 |
 
 ## 2. 关键类/方法设计
 
@@ -58,10 +58,10 @@
 
 **新增方法**:
 
-| 方法名         | 功能                                                        | 参数                                                                 | 返回值 |
-| -------------- | ----------------------------------------------------------- | -------------------------------------------------------------------- | ------ |
+| 方法名 | 功能 | 参数 | 返回值 |
+|--------|------|------|--------|
 | `set_header()` | 设置 HTML 日志头部注入内容（header 统计信息之后、表格之前） | `html_content: str` - HTML 内容<br>`append: bool = False` - 是否追加 | `None` |
-| `set_footer()` | 设置 HTML 日志尾部注入内容（表格之后）                      | `html_content: str` - HTML 内容<br>`append: bool = False` - 是否追加 | `None` |
+| `set_footer()` | 设置 HTML 日志尾部注入内容（表格之后） | `html_content: str` - HTML 内容<br>`append: bool = False` - 是否追加 | `None` |
 
 **方法实现逻辑 - set_header**:
 
@@ -69,21 +69,21 @@
 def set_header(self, html_content: str, append: bool = False) -> None:
     """
     设置 HTML 日志头部注入内容（header 统计信息之后、表格之前）
-
+    
     Args:
         html_content: 要注入的 HTML 内容
         append: 是否追加到现有内容之后，默认覆盖
     """
     # 1. 获取当前线程 ID
     thread_id = threading.current_thread().ident
-
+    
     # 2. 获取或初始化线程本地存储
     if not hasattr(self._local, 'headers'):
         self._local.headers = {}
-
+    
     # 3. 安全校验
     safe_content = self._sanitize_html(html_content)
-
+    
     # 4. 覆盖或追加
     if append and thread_id in self._local.headers:
         self._local.headers[thread_id] += safe_content
@@ -97,21 +97,21 @@ def set_header(self, html_content: str, append: bool = False) -> None:
 def set_footer(self, html_content: str, append: bool = False) -> None:
     """
     设置 HTML 日志尾部注入内容（表格之后）
-
+    
     Args:
         html_content: 要注入的 HTML 内容
         append: 是否追加到现有内容之后，默认覆盖
     """
     # 1. 获取当前线程 ID
     thread_id = threading.current_thread().ident
-
+    
     # 2. 获取或初始化线程本地存储
     if not hasattr(self._local, 'footers'):
         self._local.footers = {}
-
+    
     # 3. 安全校验
     safe_content = self._sanitize_html(html_content)
-
+    
     # 4. 覆盖或追加
     if append and thread_id in self._local.footers:
         self._local.footers[thread_id] += safe_content
@@ -127,14 +127,14 @@ def set_footer(self, html_content: str, append: bool = False) -> None:
 def _sanitize_html(self, html_content: str) -> str:
     """
     HTML 内容安全校验
-
+    
     仅过滤最危险的内容，保留常用标签和属性：
     1. 过滤最危险标签（script, iframe, embed, object）
     2. 过滤最危险事件属性（onclick, onload, onerror, onunload）
     3. 过滤 javascript: 和 vbscript: 伪协议
     4. 保留常用标签（div, table, tr, td, span, p, h1-h6, form, input 等）
     5. 清理标签内多余的空格（移除属性后自动清理，如 <div   > -> <div>）
-
+    
     Returns:
         安全的 HTML 内容
     """
@@ -151,7 +151,7 @@ def _sanitize_html(self, html_content: str) -> str:
 ```python
 def generate_html_report(thread_id: int) -> str:
     # ... 现有逻辑 ...
-
+    
     # 读取 header 和 footer 内容
     header_content = ""
     footer_content = ""
@@ -159,7 +159,7 @@ def generate_html_report(thread_id: int) -> str:
         header_content = _local.headers.get(thread_id, "")
     if hasattr(_local, 'footers') and thread_id in _local.footers:
         footer_content = _local.footers.get(thread_id, "")
-
+    
     # 构建 HTML
     html = f"""
     <html>
@@ -167,21 +167,21 @@ def generate_html_report(thread_id: int) -> str:
     <body>
         <!-- 统计信息 -->
         <div class="header">...</div>
-
+        
         <!-- Header 注入内容（header 统计信息之后、Total Entries 之前） -->
         {header_content}
-
+        
         <p><strong>Total Entries:</strong> xxx</p>
-
+        
         <!-- 详细信息表格 -->
         <table>...</table>
-
+        
         <!-- Footer 注入内容（表格之后） -->
         {footer_content}
     </body>
     </html>
     """
-
+    
     return html
 ```
 
@@ -203,14 +203,14 @@ _local = threading.local()
 
 ### 3.2 安全标签白名单
 
-| 标签类别 | 允许标签                                          |
-| -------- | ------------------------------------------------- |
-| 容器标签 | `div`, `span`, `p`, `div`, `section`, `article`   |
-| 表格标签 | `table`, `thead`, `tbody`, `tr`, `td`, `th`       |
-| 标题标签 | `h1`, `h2`, `h3`, `h4`, `h5`, `h6`                |
-| 列表标签 | `ul`, `ol`, `li`                                  |
-| 样式标签 | `style`, `class`（仅允许特定值）                  |
-| 其他     | `br`, `hr`, `strong`, `em`, `a`（限制 href 协议） |
+| 标签类别 | 允许标签 |
+|----------|----------|
+| 容器标签 | `div`, `span`, `p`, `div`, `section`, `article` |
+| 表格标签 | `table`, `thead`, `tbody`, `tr`, `td`, `th` |
+| 标题标签 | `h1`, `h2`, `h3`, `h4`, `h5`, `h6` |
+| 列表标签 | `ul`, `ol`, `li` |
+| 样式标签 | `style`, `class`（仅允许特定值） |
+| 其他 | `br`, `hr`, `strong`, `em`, `a`（限制 href 协议） |
 
 ## 4. API 设计
 
@@ -221,15 +221,15 @@ class InfraLogger:
     def set_footer(self, html_content: str, append: bool = False) -> None:
         """
         在 HTML 日志尾部注入内容
-
+        
         Args:
             html_content: 要注入的 HTML 内容片段
             append: 是否追加模式，默认 False（覆盖）
-
+        
         Example:
             # 基础用法 - 覆盖模式
             logger.set_footer("<div>算子测试结果</div>")
-
+            
             # 追加模式
             logger.set_footer("<div>追加内容</div>", append=True)
         """
@@ -237,21 +237,21 @@ class InfraLogger:
 
 ### 4.2 内部接口
 
-| 方法                      | 功能                   | 调用时机              |
-| ------------------------- | ---------------------- | --------------------- |
-| `_sanitize_html()`        | HTML 安全过滤          | `set_footer()` 调用时 |
-| `_get_footer_content()`   | 获取线程的 footer 内容 | HTML 报告生成时       |
-| `_clear_footer_content()` | 清理线程的 footer 内容 | 测试结束时            |
+| 方法 | 功能 | 调用时机 |
+|------|------|----------|
+| `_sanitize_html()` | HTML 安全过滤 | `set_footer()` 调用时 |
+| `_get_footer_content()` | 获取线程的 footer 内容 | HTML 报告生成时 |
+| `_clear_footer_content()` | 清理线程的 footer 内容 | 测试结束时 |
 
 ## 5. 部署与集成方案
 
 ### 5.1 依赖与环境
 
-| 依赖      | 版本要求 | 说明         |
-| --------- | -------- | ------------ |
-| Python    | 3.8+     | 项目基础依赖 |
-| pytest    | 6.0+     | 测试框架     |
-| threading | 内置模块 | 线程隔离     |
+| 依赖 | 版本要求 | 说明 |
+|------|----------|------|
+| Python | 3.8+ | 项目基础依赖 |
+| pytest | 6.0+ | 测试框架 |
+| threading | 内置模块 | 线程隔离 |
 
 ### 5.2 集成方式
 
@@ -266,34 +266,34 @@ class InfraLogger:
 
 ### 6.1 XSS 防护
 
-| 风险点      | 防护措施                                        |
-| ----------- | ----------------------------------------------- |
-| 脚本注入    | 过滤 `<script>`, `javascript:` 等危险标签和属性 |
-| iframe 攻击 | 过滤 `<iframe>` 标签                            |
-| 事件处理器  | 过滤 `onclick`, `onload`, `onerror` 等事件属性  |
-| 样式注入    | 限制 style 属性的取值范围                       |
+| 风险点 | 防护措施 |
+|--------|----------|
+| 脚本注入 | 过滤 `<script>`, `javascript:` 等危险标签和属性 |
+| iframe 攻击 | 过滤 `<iframe>` 标签 |
+| 事件处理器 | 过滤 `onclick`, `onload`, `onerror` 等事件属性 |
+| 样式注入 | 限制 style 属性的取值范围 |
 
 ### 6.2 容错机制
 
-| 异常场景      | 处理方式                                                         |
-| ------------- | ---------------------------------------------------------------- |
+| 异常场景 | 处理方式 |
+|----------|----------|
 | HTML 格式错误 | 记录警告日志，继续生成报告，注入内容可能显示异常但不影响原有内容 |
-| 空内容注入    | 忽略，不写入报告                                                 |
-| 超大内容注入  | 限制最大长度（如 10MB），超出部分截断                            |
+| 空内容注入 | 忽略，不写入报告 |
+| 超大内容注入 | 限制最大长度（如 10MB），超出部分截断 |
 
 ## 7. 影响范围
 
 ### 7.1 修改的文件
 
-| 文件             | 修改类型    | 影响                                   |
-| ---------------- | ----------- | -------------------------------------- |
+| 文件 | 修改类型 | 影响 |
+|------|----------|------|
 | `log_factory.py` | 修改 + 新增 | 添加 `set_footer()` 方法和安全校验逻辑 |
 
 ### 7.2 新增的文件
 
-| 文件 | 用途         |
-| ---- | ------------ |
-| 无   | 无需新增文件 |
+| 文件 | 用途 |
+|------|------|
+| 无 | 无需新增文件 |
 
 ### 7.3 向后兼容性
 
@@ -305,18 +305,18 @@ class InfraLogger:
 
 ### 8.1 单元测试
 
-| 测试场景 | 测试用例                                          |
-| -------- | ------------------------------------------------- |
+| 测试场景 | 测试用例 |
+|----------|----------|
 | 基础功能 | 调用 `set_footer()` 后，HTML 报告尾部包含注入内容 |
-| 覆盖模式 | 多次调用 `set_footer()`，最终只有最后一次内容     |
-| 追加模式 | `append=True` 时，多次调用内容合并                |
-| 线程隔离 | 多线程并行调用，各自内容正确隔离                  |
-| 安全校验 | 注入危险内容（如 `<script>`）被过滤               |
-| 容错机制 | 注入无效 HTML，原有报告不受影响                   |
+| 覆盖模式 | 多次调用 `set_footer()`，最终只有最后一次内容 |
+| 追加模式 | `append=True` 时，多次调用内容合并 |
+| 线程隔离 | 多线程并行调用，各自内容正确隔离 |
+| 安全校验 | 注入危险内容（如 `<script>`）被过滤 |
+| 容错机制 | 注入无效 HTML，原有报告不受影响 |
 
 ### 8.2 集成测试
 
-| 测试场景 | 测试方法                                       |
-| -------- | ---------------------------------------------- |
+| 测试场景 | 测试方法 |
+|----------|----------|
 | 完整流程 | 运行实际测试用例，验证 footer 注入功能正常工作 |
-| 性能测试 | 验证大量测试用例并行执行时的性能               |
+| 性能测试 | 验证大量测试用例并行执行时的性能 |

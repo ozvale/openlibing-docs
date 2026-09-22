@@ -5,12 +5,10 @@
 ## 变更内容
 
 ### 接口实现
-
 - `POST /openlibing-framework/manage/feature-dashboard/report`：数据上报接口，支持自定义 userMetrics/businessMetrics
 - `POST /openlibing-framework/manage/feature-dashboard/metrics`：指标配置接口，批量支持最多 50 条
 
 ### 核心模块
-
 - **Controller**：`FeatureOpsDashboardController`（两个接口）
 - **Service**：`FeatureOpsDashboardService` + Impl（业务逻辑、Community 推断、唯一性检查）
 - **Mapper**：`FeatureOpsDashboardMapper` + XML（6 个方法）
@@ -18,12 +16,10 @@
 - **DTO**：请求/响应 DTO（参数校验注解）
 
 ### 数据库
-
 - Liquibase XML 格式：`feature_ops_dashboard_report.xml`、`feature_ops_dashboard_metric_config.xml`
 - 包含表结构、索引、唯一约束、回滚脚本
 
 ### 测试
-
 - `FeatureOpsDashboardServiceImplTest`：Service 层（9 个测试场景）
 - `FeatureOpsDashboardControllerTest`：Controller 层（4 个测试场景）
 - `FeatureOpsDashboardMapperTest`：Mapper 层（7 个测试场景）
