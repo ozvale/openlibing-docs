@@ -22,27 +22,27 @@
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `gateway .../entity/permission/WhitelistInterfaceInfoEntity.java` | 新增 | Lombok `@Data`，字段同表结构 |
-| `gateway .../mapper/WhitelistInterfaceInfoMapper.java` | 新增 | `queryAllWhitelist()` |
-| `gateway resources/mapper/WhitelistInterfaceInfoMapper.xml` | 新增 | SQL：三 flag 任一为 '1' 全量查询 |
-| `gateway .../common/utils/WhitelistProvider.java` | 新增 | 加载链 + 双快照 + 三个 getter |
-| `gateway .../business/filter/AuthFilter.java` | 修改 | 删 3 个 `@Value`，三处校验改调 provider |
-| `gateway .../filter/AuthFilterTest.java` | 修改 | 反射注入改为 mock `WhitelistProvider` |
-| `gateway .../utils/WhitelistProviderTest.java` | 新增 | 加载链/兜底/TTL/异常场景 |
-| `gateway AGENTS.md / README.md` | 修改 | 白名单来源说明（原 Nacos key 废弃） |
-| `framework ServiceInterfaceInfoServiceImpl.java` | 修改 | add/update/delete 成功后 `DEL` 3 个 Redis key |
+| 文件                                                              | 操作 | 说明                                          |
+| ----------------------------------------------------------------- | ---- | --------------------------------------------- |
+| `gateway .../entity/permission/WhitelistInterfaceInfoEntity.java` | 新增 | Lombok `@Data`，字段同表结构                  |
+| `gateway .../mapper/WhitelistInterfaceInfoMapper.java`            | 新增 | `queryAllWhitelist()`                         |
+| `gateway resources/mapper/WhitelistInterfaceInfoMapper.xml`       | 新增 | SQL：三 flag 任一为 '1' 全量查询              |
+| `gateway .../common/utils/WhitelistProvider.java`                 | 新增 | 加载链 + 双快照 + 三个 getter                 |
+| `gateway .../business/filter/AuthFilter.java`                     | 修改 | 删 3 个 `@Value`，三处校验改调 provider       |
+| `gateway .../filter/AuthFilterTest.java`                          | 修改 | 反射注入改为 mock `WhitelistProvider`         |
+| `gateway .../utils/WhitelistProviderTest.java`                    | 新增 | 加载链/兜底/TTL/异常场景                      |
+| `gateway AGENTS.md / README.md`                                   | 修改 | 白名单来源说明（原 Nacos key 废弃）           |
+| `framework ServiceInterfaceInfoServiceImpl.java`                  | 修改 | add/update/delete 成功后 `DEL` 3 个 Redis key |
 
 ## 风险 & 缓解
 
-| 风险 | 缓解 |
-|------|------|
-| 冷启动且 DB 全程不可用 → 空列表 | 实际不可达（应用本身无法完成启动）；error 日志标记 |
-| Redis 故障 | 自动滑落 DB 层，请求不受影响 |
-| 多实例生效时间差 | ≤5s，最终一致；DB 回源压力 = 每实例每分钟 ≤3 次 |
-| 迁移脚本绕过 `url_flag` 台账联动 | §9.1 补偿 SQL（可选，仅影响台账数据质量） |
-| Nacos 配置项删除后需回滚 | 回滚前先恢复三个配置项（删除时留历史快照） |
+| 风险                             | 缓解                                               |
+| -------------------------------- | -------------------------------------------------- |
+| 冷启动且 DB 全程不可用 → 空列表  | 实际不可达（应用本身无法完成启动）；error 日志标记 |
+| Redis 故障                       | 自动滑落 DB 层，请求不受影响                       |
+| 多实例生效时间差                 | ≤5s，最终一致；DB 回源压力 = 每实例每分钟 ≤3 次    |
+| 迁移脚本绕过 `url_flag` 台账联动 | §9.1 补偿 SQL（可选，仅影响台账数据质量）          |
+| Nacos 配置项删除后需回滚         | 回滚前先恢复三个配置项（删除时留历史快照）         |
 
 ## 跨仓影响
 

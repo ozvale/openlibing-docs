@@ -6,11 +6,11 @@
 
 `openlibing-gateway` 的 `AuthFilter` 中三份白名单目前通过 `@Value` 从配置中心（Nacos）注入：
 
-| 原配置 key | 用途 | 匹配位置（AuthFilter） |
-|---|---|---|
-| `exempt.paths` | 豁免登录认证 | `shouldExemptAuth` |
-| `no.openlibing.user.info.list` | 无 openlibing 用户信息放行 | `isNoOpenLiBingUserInfoRequired` |
-| `no.authentication.accessible.paths` | 无认证可访问详情页面 | `publicInterface` |
+| 原配置 key                           | 用途                       | 匹配位置（AuthFilter）           |
+| ------------------------------------ | -------------------------- | -------------------------------- |
+| `exempt.paths`                       | 豁免登录认证               | `shouldExemptAuth`               |
+| `no.openlibing.user.info.list`       | 无 openlibing 用户信息放行 | `isNoOpenLiBingUserInfoRequired` |
+| `no.authentication.accessible.paths` | 无认证可访问详情页面       | `publicInterface`                |
 
 现状问题：
 
@@ -48,8 +48,8 @@
 
 ## 影响范围
 
-| 仓 | 模块 | 说明 |
-|---|---|---|
-| openlibing-gateway | `AuthFilter`、`WhitelistProvider`、`WhitelistInterfaceInfo*` | 白名单读取链路改造 |
-| openlibing-framework | `ServiceInterfaceInfoServiceImpl` | 写方增/改/删成功后 DEL Redis key |
-| 共享数据 | 平台 PostgreSQL `whitelist_interface_info` 表 | 白名单唯一数据源 |
+| 仓                   | 模块                                                         | 说明                             |
+| -------------------- | ------------------------------------------------------------ | -------------------------------- |
+| openlibing-gateway   | `AuthFilter`、`WhitelistProvider`、`WhitelistInterfaceInfo*` | 白名单读取链路改造               |
+| openlibing-framework | `ServiceInterfaceInfoServiceImpl`                            | 写方增/改/删成功后 DEL Redis key |
+| 共享数据             | 平台 PostgreSQL `whitelist_interface_info` 表                | 白名单唯一数据源                 |
