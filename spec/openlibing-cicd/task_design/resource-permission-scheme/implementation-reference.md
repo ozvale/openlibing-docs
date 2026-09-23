@@ -1,5 +1,16 @@
 # CICD 资源级权限方案实现参考文档
 
+> ⚠️ **本文档已废弃（2026/09/23 标注）**：以下内容为 **v4 时代（perm_scheme 独立建表方案）的实现参考**，该方案已在 v5 评审中被否决并整体转向"权限组（perm_group）同表加列"方案。文中所有类名（`PermSchemeController`、`PermSchemeResourceBindingLocalMapper` 等）、表名（`perm_scheme`、`perm_scheme_member` 等）、SQL（`hasPermissionByScheme` UNION ALL 镜像 SQL、EXISTS 成员兜底）**均未出现在最终实现中，请勿据此开发或对接**。
+>
+> 最终实现请以以下文档为准：
+>
+> - 设计定稿：design.md（同目录）
+> - 任务与实现状态：tasks.md（同目录）
+> - 前端接口明细：api.md / `openlibing/api-docs/openlibing-framework/perm-scheme-api.md`（framework 侧 9 个 `/perm-group/*` 接口 + 存量 `/project/user/*` 增强；cicd 侧 `/detailInfo` 三字段 + `GET /pipeline/group-permissions` 总览）
+> - 关键差异速览：成员数据落在 `user_role_info.perm_group_id` 列（无独立成员表）；组鉴权 SQL 为 `hasPermissionByGroup` 单段 SQL（三全局角色穿透），落在 **framework** 仓、cicd 经 Feign RPC 调用（`InternalPermGroupController` 4 接口）；绑定查询同走 RPC。
+>
+> 本文档仅作为方案演进历史保留。
+
 本文档面向开发实现，配合《CICD资源级权限方案-设计文档.md》使用，不替代正式设计文档。以下类名、方法名、SQL 引用均为基于现状代码调研结论给出的参考实现，Trae 追码时需以实际代码为准做修正。
 
 ## 一、修改文件列表

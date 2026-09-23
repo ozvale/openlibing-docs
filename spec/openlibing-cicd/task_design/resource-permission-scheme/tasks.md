@@ -25,34 +25,34 @@
 
 ### cicd 仓（commit C1~C6，C1/C2 可与 F3~F6 并行）
 
-| #   | 任务                                                                                                                                                                                                                                                                                                       | 验证                                                                             | 依赖   |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------ |
-| C1  | ✅ `UserRoleMapper.hasPermissionByGroup` 新方法 + XML（单段 SQL：`(role='admin' OR perm_group_id=#{permGroupId})` + 角色白名单子查询；join 字段 `rpm.role_id`/`mui.menu_id`/`mui.menu_url`）                                                                                                               | 单测（admin 穿透/组成员/白名单拦截三 case）                                      | F1     |
-| C2  | ✅ `PermGroupResourceBindingLocalMapper` + `PermGroupQueryService`（独立 Guava 缓存 maximumSize=1000，TTL 5 秒，未绑定结果也缓存防穿透）                                                                                                                                                                   | 单测（命中/未命中/过期）                                                         | F1     |
-| C3  | ✅ `AuthInterceptor` 绑定分支：`extractPermissionContext` 后、`isGitUrlPublic` 前插绑定查询；命中 → userId 空抛 `LOGIN_REQUIRED_BY_GROUP`(401)、非成员抛 `PERMISSION_DENIED_BY_GROUP`(403，携 `permGroupName`)；未命中零改动                                                                               | **16 个存量单测回归** + 新增分支单测（绑定命中/未命中、匿名、admin、公开仓绑定） | C1, C2 |
-| C4  | ✅ cicd 存量 SQL 全量审计整改（2026/09/17，commit `d03a9e703`）：`hasPermission`/`hasPublicPermission` 加 `perm_group_id=0`（admin/visitor 穿透段不滤组）；`HwProjectInfoMapper` / `OpenUbmcFeatureMapper` 全部滤组；`ShortcutServiceImpl.checkUserPermission` Wrapper 补滤组（实体补 `permGroupId` 字段） | 单测 + 回归                                                                      | F1     |
-| C5  | ✅ `/detailInfo` 补 `permGroupId`/`permGroupName`/`groupOperations`（`fillPermGroupInfo` 在 `PipelineServiceImpl`，2026/09/17 从 controller 下沉，commit `e111de724`）+ 独立接口 `GET /pipeline/group-permissions` 总览；`/list` 不改                                                                      | 单测 + BETA 冒烟                                                                 | C3     |
-| C6  | 收尾：质量门禁全绿 + 16 存量单测终回归 + `triggerPermissionType` 对方案类 403 豁免核查                                                                                                                                                                                                                     | `run-mvn.py`                                                                     | 全部   |
+| #   | 任务                                                                                                                                                                                                                                                                                                                | 验证                                                                             | 依赖   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------ |
+| C1  | ✅ 组鉴权 SQL `hasPermissionByGroup`（单段 SQL：`(role IN ('admin','super_admin','platform_operater') OR perm_group_id=#{permGroupId})` + 角色白名单子查询；join 字段 `rpm.role_id`/`mui.menu_id`/`mui.menu_url`）。**最终落点在 framework `UserRoleMapper`（2026/09/23 勘误：随 RPC 化迁移，cicd 经 Feign 调用）** | 单测（全局角色穿透/组成员/白名单拦截三 case）                                    | F1     |
+| C2  | ✅ `PermGroupQueryService`（独立 Guava 缓存 maximumSize=1000，TTL 5 秒，未绑定结果也缓存防穿透）。**绑定查询已 RPC 化：经 `PermGroupFeignClient` 调 framework，`PermGroupResourceBindingLocalMapper` 本地方案废弃（2026/09/23 勘误）**                                                                              | 单测（命中/未命中/过期）                                                         | F1     |
+| C3  | ✅ `AuthInterceptor` 绑定分支：`extractPermissionContext` 后、`isGitUrlPublic` 前插绑定查询；命中 → userId 空抛 `LOGIN_REQUIRED_BY_GROUP`(401)、非成员抛 `PERMISSION_DENIED_BY_GROUP`(403，携 `permGroupName`)；未命中零改动                                                                                        | **16 个存量单测回归** + 新增分支单测（绑定命中/未命中、匿名、admin、公开仓绑定） | C1, C2 |
+| C4  | ✅ cicd 存量 SQL 全量审计整改（2026/09/17，commit `d03a9e703`）：`hasPermission`/`hasPublicPermission` 加 `perm_group_id=0`（admin/visitor 穿透段不滤组）；`HwProjectInfoMapper` / `OpenUbmcFeatureMapper` 全部滤组；`ShortcutServiceImpl.checkUserPermission` Wrapper 补滤组（实体补 `permGroupId` 字段）          | 单测 + 回归                                                                      | F1     |
+| C5  | ✅ `/detailInfo` 补 `permGroupId`/`permGroupName`/`groupOperations`（`fillPermGroupInfo` 在 `PipelineServiceImpl`，2026/09/17 从 controller 下沉，commit `e111de724`）+ 独立接口 `GET /pipeline/group-permissions` 总览；`/list` 不改                                                                               | 单测 + BETA 冒烟                                                                 | C3     |
+| C6  | 收尾：质量门禁全绿 + 16 存量单测终回归 + `triggerPermissionType` 对方案类 403 豁免核查                                                                                                                                                                                                                              | `run-mvn.py`                                                                     | 全部   |
 
-### RPC 改造（2026/09/17 定稿，代码未动工——3 个 commit 计划）
+### RPC 改造（2026/09/17 定稿，✅ 已实现落地——2026/09/23 勘误更新状态）
 
-> 设计见 design.md 4.4：新增查询走 RPC，存量热路径维持本地直查。**待办，下一步实施。**
+> 设计见 design.md 4.4：新增查询走 RPC，存量热路径维持本地直查。
 
-- [ ] R1：framework `InternalPermGroupController`（4 个内部接口，前缀 `/internal-server/perm-group/`，粗粒度合并模式——热路径每请求最多 1 次 RPC）
-- [ ] R2：cicd Feign 客户端 + OkHttp 连接池 + 超时（connect 1s / read 2s）+ 组鉴权缓存（键 `(userId, permGroupId, url)`，TTL 5 秒）+ fail-closed（失败全拒绝、拒绝结果不缓存）；`hasPermissionByGroup` / `queryBoundPermGroup` 等新增查询切换到 RPC
-- [ ] R3：回归验证（16 存量单测 + 绑定分支单测 + RPC 故障注入——断 framework 验证 fail-closed）
+- [x] R1：✅ framework `InternalPermGroupController`（commit `29c730b6` 系列，4 个内部接口 `POST /internal-server/perm-group/{check|bound-group|group-operations|project-permissions}`，粗粒度合并模式——热路径每请求最多 1 次 RPC）
+- [x] R2：✅ cicd `PermGroupFeignClient`（Spring Cloud Feign + OkHttp 连接池 `PermGroupOkHttpConfig`）+ 超时（connect 1s / read 2s）+ 组鉴权缓存（键 `(userId, permGroupId, url)`，TTL 5 秒）+ fail-closed（失败全拒绝、拒绝结果不缓存）；`hasPermissionByGroup` / `queryBoundPermGroup` 等新增查询已切换到 RPC；配套诊断日志（commit `ee5e69dfd`）
+- [x] R3：✅ 回归验证（存量单测 + 绑定分支单测 + RPC 故障注入验证 fail-closed；后续审视修复 `5b7d4c8ac`/`a97778277`/`985542209`/`89d08d7c8`）
 
 ## 任务二：全仓直查整改（部署门禁，你主导闭环）
 
-| #   | 任务                                                                                                                                                                         | 产出                                            |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| T1  | **拉取组织内全部仓库**（清单从 GitCode org 获取），四层搜索：表名 / Entity 类名 / MP 泛型签名 / Liquibase changelog                                                          | 直查处全集（当前已知 5 服务 92 处，全集待确认） |
-| T2  | 逐处细读分类：使用场景（业务语言）/ R 或 W / A(默认组)/B(需感知组)/C(写入)/D(纯JOIN)                                                                                         | 对齐表（design.md 3.4 模板）                    |
-| T3  | 为各仓生成现成 patch（`perm_group_id=0` 的 diff）                                                                                                                            | patch 集                                        |
-| T4  | 与各服务负责人对齐会：认领 patch；RPC 化作为独立选项（0 / RPC / 0+RPC 排期），不替对方选                                                                                     | 认领状态表                                      |
-| T5  | 跟进各仓合入（gateway 12 处 / codecheck 8 处 / coderepo 20 处含写入细查）                                                                                                    | 全部"已整改"                                    |
-| T6  | **BETA 混入验证（部署门禁判据）**：造一条 `perm_group_id != 0` 数据 → 跑各服务存量功能（cicd 鉴权、gateway 鉴权、codecheck/coderepo 管理员判断、framework 成员页）确认不混入 | 验证报告 → **放行部署**                         |
-| T7  | BETA 端到端：绑定关键流水线 → 组外成员被拒、组内放行、admin 放行、匿名（pipeline 路径）拒绝；未绑定全量回归；移出项目（删全部组）后组分支拒绝                                | 验收                                            |
+| #   | 任务                                                                                                                                                                                           | 产出                                            |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| T1  | **拉取组织内全部仓库**（清单从 GitCode org 获取），四层搜索：表名 / Entity 类名 / MP 泛型签名 / Liquibase changelog                                                                            | 直查处全集（当前已知 5 服务 86 处，全集待确认） |
+| T2  | 逐处细读分类：使用场景（业务语言）/ R 或 W / A(默认组)/B(需感知组)/C(写入)/D(纯JOIN)                                                                                                           | 对齐表（design.md 3.4 模板）                    |
+| T3  | 为各仓生成现成 patch（`perm_group_id=0` 的 diff）                                                                                                                                              | patch 集                                        |
+| T4  | 与各服务负责人对齐会：认领 patch；RPC 化作为独立选项（0 / RPC / 0+RPC 排期），不替对方选                                                                                                       | 认领状态表                                      |
+| T5  | 跟进各仓合入（gateway 6 处 / codecheck 8 处 / coderepo 20 处含写入细查）                                                                                                                       | 全部"已整改"                                    |
+| T6  | **BETA 混入验证（部署门禁判据）**：造一条 `perm_group_id != 0` 数据 → 跑各服务存量功能（cicd 鉴权、gateway 鉴权、codecheck/coderepo 管理员判断、framework 成员页）确认不混入                   | 验证报告 → **放行部署**                         |
+| T7  | BETA 端到端：绑定关键流水线 → 组外成员被拒、组内放行、全局角色（admin/super_admin/platform_operater）放行、匿名（pipeline 路径）拒绝；未绑定全量回归；成员从组移除（删该行组记录）后组分支拒绝 | 验收                                            |
 
 ## 前端交接清单（其他同事实施，术语=权限组，字段统一 permGroupId/permGroupName）
 
