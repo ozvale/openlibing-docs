@@ -161,11 +161,11 @@ SELECT CASE WHEN EXISTS (
 
 **RPC 分阶段策略**（为分库做准备，分库前两个月先搞定新增查询）：
 
-| 阶段             | 范围                                                                                                        | 状态                                         |
-| ---------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 阶段             | 范围                                                                                                        | 状态                                                                                       |
+| ---------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | 本次（任务一内） | **新增查询走 RPC**：`hasPermissionByGroup`、`queryBoundPermGroup` 等 cicd 侧新增查询改调 framework 内部接口 | **已实现**（framework `InternalPermGroupController` 4 接口 + cicd `PermGroupFeignClient`） |
-| 本次（任务一内） | **存量热路径维持本地直查**：`hasPermission` 等只补 `perm_group_id=0`                                        | 已完成（3.1.1 审计整改）                     |
-| 任务二           | 其余存量直查的 RPC 化作为各仓独立选项（0 / RPC / 0+RPC 排期），不替对方选                                   | 待对齐                                       |
+| 本次（任务一内） | **存量热路径维持本地直查**：`hasPermission` 等只补 `perm_group_id=0`                                        | 已完成（3.1.1 审计整改）                                                                   |
+| 任务二           | 其余存量直查的 RPC 化作为各仓独立选项（0 / RPC / 0+RPC 排期），不替对方选                                   | 待对齐                                                                                     |
 
 **framework 侧内部接口**（4 个，已实现，前缀 `/internal-server/perm-group/`，独立 `InternalPermGroupController`——不进 `InternalServerController` 防持续膨胀）：`POST /check`（组鉴权，即 hasPermissionByGroup）、`POST /bound-group`（按资源查绑定组）、`POST /group-operations`（组操作权限）、`POST /project-permissions`（项目绑定关系总览）；粗粒度合并模式，热路径每请求最多 1 次 RPC（鉴权与绑定信息合并返回，避免按资源逐条 RPC）。
 
@@ -180,26 +180,26 @@ SELECT CASE WHEN EXISTS (
 
 ### framework 层
 
-| 类名                                          | 职责                                                                                                                                                                                                               |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PermGroupController`                         | 仅 9 个接口：组列表（虚拟返回默认组）/ 创建（支持复制，返回复制计数）/ 删除（绑定占用校验）+ 绑定 6 个（单条/批量绑定、解绑、按资源查/按组反查/批量查）。**成员增删改无独立接口，复用存量项目成员链路（见 8 章）** |
-| `PermGroupService`                            | 组核心逻辑：复制（`copyGroupMembers` 三条件排除：排除 `role='committer_project'`（代码提交者）、repo 非空（仓库角色）、`sync_flag` 无效（同步账号）的记录——仅复制人工可添加成员）、删除前绑定占用校验、同项目重名校验                                  |
-| 存量成员 Service（ProjectUserServiceImpl 等） | `BatchAddUserDTO` 加可选 `permGroupId`（入组写入，`insertUserRoles` 取实体 IFNULL 值）；查重按 `(userId, role, projectId, permGroupId)` 四元组；`updateProjectUserData` 编辑查重加组维度                           |
-| `InternalPermGroupController`（已实现）   | 4 个内部 RPC 接口（见 4.4），承接 cicd 新增查询                                                                                                                                                                    |
-| `PermGroupResourceBindingService`             | 绑定关系维护：单条/批量/按资源查询/按组反查                                                                                                                                                                        |
-| 组定义 Mapper + 绑定 Mapper                   | `perm_group` / `perm_group_resource_binding` 持久层（**成员数据无独立 Mapper——直接在 `UserRoleMapper` 加按 perm_group_id 过滤的查询/写入方法**）                                                                   |
-| `SyncUserServiceImpl` 等                      | 存量写入链路加 `perm_group_id=0`（framework 自身整改）                                                                                                                                                             |
+| 类名                                          | 职责                                                                                                                                                                                                                  |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PermGroupController`                         | 仅 9 个接口：组列表（虚拟返回默认组）/ 创建（支持复制，返回复制计数）/ 删除（绑定占用校验）+ 绑定 6 个（单条/批量绑定、解绑、按资源查/按组反查/批量查）。**成员增删改无独立接口，复用存量项目成员链路（见 8 章）**    |
+| `PermGroupService`                            | 组核心逻辑：复制（`copyGroupMembers` 三条件排除：排除 `role='committer_project'`（代码提交者）、repo 非空（仓库角色）、`sync_flag` 无效（同步账号）的记录——仅复制人工可添加成员）、删除前绑定占用校验、同项目重名校验 |
+| 存量成员 Service（ProjectUserServiceImpl 等） | `BatchAddUserDTO` 加可选 `permGroupId`（入组写入，`insertUserRoles` 取实体 IFNULL 值）；查重按 `(userId, role, projectId, permGroupId)` 四元组；`updateProjectUserData` 编辑查重加组维度                              |
+| `InternalPermGroupController`（已实现）       | 4 个内部 RPC 接口（见 4.4），承接 cicd 新增查询                                                                                                                                                                       |
+| `PermGroupResourceBindingService`             | 绑定关系维护：单条/批量/按资源查询/按组反查                                                                                                                                                                           |
+| 组定义 Mapper + 绑定 Mapper                   | `perm_group` / `perm_group_resource_binding` 持久层（**成员数据无独立 Mapper——直接在 `UserRoleMapper` 加按 perm_group_id 过滤的查询/写入方法**）                                                                      |
+| `SyncUserServiceImpl` 等                      | 存量写入链路加 `perm_group_id=0`（framework 自身整改）                                                                                                                                                                |
 
 ### CICD 层
 
-| 类名                                          | 改造内容                                                                                                                                                                                                                                               |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `AuthInterceptor`                             | 插入绑定分支（同 v4 位置结论）；未命中零改动                                                                                                                                                                    |
-| `UserRoleMapper`                              | 存量 `hasPermission` 加 `perm_group_id=0`（组鉴权 SQL `hasPermissionByGroup` 落在 framework 侧，cicd 经 RPC 调用，见 4.2/4.4）                                                                                |
-| `PermGroupQueryService`（新增）               | 组查询统一入口（已 RPC 化）：经 Feign 调 framework 内部接口——绑定组查询（独立 Guava 缓存 TTL 5 秒，未绑定结果也缓存防穿透）+ 单组/项目级组操作权限计算 + 项目绑定关系总览                                         |
-| `PermGroupFeignClient`（新增）                | Feign 客户端（Spring Cloud Feign + OkHttp 连接池，配套 `PermGroupOkHttpConfig`：连接事件监听与失败日志，connect 1s / read 2s）；取代早期设计的本地只读 `PermGroupResourceBindingLocalMapper` 方案                  |
-| `PipelineServiceImpl`                         | `fillPermGroupInfo` 填充逻辑所在（2026/09/17 从 controller 下沉）：3 参重载 `getPipelineDetail(projectId, pipelineId, userId)` 供 controller 用；2 参重载供事件监听器 / AuthInterceptor 等 6 处内部调用方使用（不触发绑定查询）；controller 仅协议透传 |
-| `ShortcutServiceImpl`                         | `checkUserPermission` Wrapper 补 `perm_group_id=0`（2026/09/17 审计）                                                                                                                                                                                  |
+| 类名                            | 改造内容                                                                                                                                                                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `AuthInterceptor`               | 插入绑定分支（同 v4 位置结论）；未命中零改动                                                                                                                                                                                                           |
+| `UserRoleMapper`                | 存量 `hasPermission` 加 `perm_group_id=0`（组鉴权 SQL `hasPermissionByGroup` 落在 framework 侧，cicd 经 RPC 调用，见 4.2/4.4）                                                                                                                         |
+| `PermGroupQueryService`（新增） | 组查询统一入口（已 RPC 化）：经 Feign 调 framework 内部接口——绑定组查询（独立 Guava 缓存 TTL 5 秒，未绑定结果也缓存防穿透）+ 单组/项目级组操作权限计算 + 项目绑定关系总览                                                                              |
+| `PermGroupFeignClient`（新增）  | Feign 客户端（Spring Cloud Feign + OkHttp 连接池，配套 `PermGroupOkHttpConfig`：连接事件监听与失败日志，connect 1s / read 2s）；取代早期设计的本地只读 `PermGroupResourceBindingLocalMapper` 方案                                                      |
+| `PipelineServiceImpl`           | `fillPermGroupInfo` 填充逻辑所在（2026/09/17 从 controller 下沉）：3 参重载 `getPipelineDetail(projectId, pipelineId, userId)` 供 controller 用；2 参重载供事件监听器 / AuthInterceptor 等 6 处内部调用方使用（不触发绑定查询）；controller 仅协议透传 |
+| `ShortcutServiceImpl`           | `checkUserPermission` Wrapper 补 `perm_group_id=0`（2026/09/17 审计）                                                                                                                                                                                  |
 
 ## 6. 数据模型设计
 
@@ -278,7 +278,7 @@ ALTER TABLE user_role_info ADD COLUMN perm_group_id INT NOT NULL DEFAULT 0
 
 | #   | 项                     | 设计                                                                                                                                                                                                                             |
 | --- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | 全局角色穿透        | SQL 内 `(role IN ('admin','super_admin','platform_operater') OR perm_group_id=#{permGroupId})`，与存量 checkProjectPermissions 口径对齐（2026/09/23 由单一 admin 扩为三角色）                                                              |
+| 1   | 全局角色穿透           | SQL 内 `(role IN ('admin','super_admin','platform_operater') OR perm_group_id=#{permGroupId})`，与存量 checkProjectPermissions 口径对齐（2026/09/23 由单一 admin 扩为三角色）                                                    |
 | 2   | project_manager 不穿透 | 已定案，管理员需显式入组                                                                                                                                                                                                         |
 | 3   | 死锁防护               | 绑定/解绑/组管理接口走全局角色矩阵，不随组走（v4 结论保留）                                                                                                                                                                      |
 | 4   | 数据一致性             | 同表后无需跨表兜底；删除成员 = 删该项目下所有 perm_group_id 记录（前端提示列出涉及组）                                                                                                                                           |
