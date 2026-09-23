@@ -114,17 +114,42 @@ git push origin branch-name
 
 **结论**: 模块专属角色在模块下线后失去管理入口和功能意义，可安全删除
 
-### 6. 权限组滤组整改（resource-permission-scheme）
+### 6. 并发重复插入治理
 
-**场景**: `user_role_info` 加 `perm_group_id` 列后，存量读该表的 SQL/Wrapper 若不滤组，自定义组行会污染接口级鉴权、权限快照（Redis 24h 缓存）、成员查重、IAM 可见性
+**场景**: 双实例部署下 Check-then-Insert 模式存在并发竞态
 
-**已验证规则**（2026/09/17 全量审计，commit `e97ecc5f`/`3a1264c6`）:
+**方案**: 优先在数据库层加唯一约束兜底，应用层捕获 `DuplicateKeyException` 返回友好提示。不要仅依赖应用层排他锁或 `SELECT FOR UPDATE`。
 
-- 存量读一律加 `perm_group_id = 0`（SQL WHERE 或 Java 端 `setPermGroupId(0L)`）；`queryInfo` 因编辑查重依赖条件式过滤，只能改调用方不能改 SQL
-- 死 SQL 补条件不删（防未来复活踩坑）；P2 展示类（管理端分页/个人中心角色/AOP 日志快照）按定案不动
-- 排查必须用四层搜索法：表名字符串 → Entity 类名（Wrapper 在 Java 拼 WHERE，XML 搜不到）→ MP 泛型签名 → Liquibase changelog；"想到哪查到哪"会漏（权限快照、IAM 子查询均不在初期清单上）
-- cicd 仓同类整改见该仓 spec；cicd 实体 `UserRoleInfoEntity` 需有 `permGroupId` 字段才能在 Wrapper 中滤组
+**关键点**:
 
-**成员管理定案**（2026/09/16）: 平行成员接口（`POST/PUT /groups/{id}/members` 等）判定过度设计净删除；成员增删改复用存量项目成员链路 + `permGroupId` 入参（`BatchAddUserDTO`），查重按 `(userId, role, projectId, permGroupId)` 四元组；`copyGroupMembers` 仅复制 `role='committer_project'`、repo 非空、`sync_flag` 有效的记录
+- 数据库唯一约束是根本兜底，不依赖网络/锁服务
+- 兼容存量重复数据（新增约束不检查已有数据）
+- 异常信息脱敏：使用 `LOG.warn("msg")` 而非 `LOG.error("msg", e)` 避免泄露数据库结构
 
-**RPC 分阶段定案**（2026/09/17，待实施）: 新增查询（`hasPermissionByGroup`、`queryBoundPermGroup` 等）走 framework 内部 RPC（4 个接口，`InternalPermGroupController`，粗粒度合并——热路径每请求最多 1 次 RPC）；存量热路径维持 cicd 本地直查只补滤组；Feign + OkHttp 连接池、connect 1s/read 2s、键 `(userId, permGroupId, url)` TTL 5s 缓存、fail-closed（失败全拒绝、拒绝结果不缓存）。完整设计见 `openlibing-docs/spec/openlibing-cicd/task_design/resource-permission-scheme/design.md` 4.4
+**来源**: 2026-09-10 duplicate-key-protection
+
+### 7. Maven Liquibase changelog 命名约定
+
+**规则**: 唯一约束的 changelog 文件按 `{table_name}.xml` 命名，放在对应版本的 `vX.Y.Z/` 目录下。主 `db.changelog.xml` 通过 `<include>` 引用。
+
+**来源**: 2026-09-10 duplicate-key-protection
+
+### 8. 防御性拷贝处理集合字段
+
+**场景**: SpotBugs 检测到 DTO/VO 集合字段 `EI_EXPOSE_REP` / `EI_EXPOSE_REP2` 漏洞
+
+**方案**: getter 和 setter 中使用 `new ArrayList<>(field)` 做防御性拷贝，禁止直接返回或赋值内部引用。
+
+```java
+public List<String> getUserRoles() {
+    return userRoles == null ? null : new ArrayList<>(userRoles);
+}
+
+public void setUserRoles(List<String> userRoles) {
+    this.userRoles = userRoles == null ? null : new ArrayList<>(userRoles);
+}
+```
+
+**注意**: `@Data` 生成的 getter/setter 不做防御性拷贝，有集合字段的 DTO 需手动编写 getter/setter。
+
+**来源**: 2026-09-10 PR#436 code review

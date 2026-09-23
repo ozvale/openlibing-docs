@@ -49,6 +49,7 @@ src/
 - 接口、类型定义必须使用 PascalCase 命名；组件 Props 必须定义清晰的 TypeScript 接口。
 - 命名：文件夹/文件 kebab-case、变量/函数 camelCase、常量 UPPER_CASE、枚举及属性 PascalCase/UPPER_CASE、接口/类 PascalCase、自定义 Hooks 以 `use` 开头。
 - 业务函数：事件处理 `onXxx`（如 `onBannerClick`）、内部处理 `handleXxx`（如 `handleSubmit`）。
+- 使用 `v-html` 渲染动态内容时，必须包一层 `getCleanHtml`（来自 `src/utils/get-clean-html.ts`，DOMPurify 消毒），禁止将动态 HTML 未经消毒直接绑定到 `v-html`。
 
 ### 组件规范
 

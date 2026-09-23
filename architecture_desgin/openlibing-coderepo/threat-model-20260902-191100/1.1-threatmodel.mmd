@@ -1,0 +1,67 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'background': '#ffffff', 'primaryColor': '#ffffff', 'lineColor': '#666666' }}}%%
+flowchart LR
+    classDef process fill:#6baed6,stroke:#2171b5,stroke-width:2px,color:#000000
+    classDef external fill:#fdae61,stroke:#d94701,stroke-width:2px,color:#000000
+    classDef datastore fill:#74c476,stroke:#238b45,stroke-width:2px,color:#000000
+
+    Operator["Operator"]:::external
+    EndUser["EndUser"]:::external
+
+    subgraph Application["Application (Spring Boot, port 8076)"]
+        WebHookCtl(("WebHookEventController")):::process
+        RepoCtl(("RepoController")):::process
+        ProjCfgCtl(("ProjectConfigController")):::process
+        SyncUserCtl(("SyncUserController")):::process
+        CodeMetricsCtl(("CodeMetricsController")):::process
+        PrTokenSvc(("PrAccessTokenServiceImpl")):::process
+        WebhookConsumer(("WebhookEventConsumer")):::process
+        XxlJobHdl(("XxlJobHandler")):::process
+    end
+
+    subgraph External["External (外部服务与数据存储)"]
+        MySQL[("MySQL")]:::datastore
+        MongoDB[("MongoDB")]:::datastore
+        Redis[("Redis")]:::datastore
+        RabbitMQ[("RabbitMQ")]:::datastore
+        GitCode["GitCode"]:::external
+        Gitee["Gitee"]:::external
+        Github["Github"]:::external
+        Nacos["Nacos"]:::external
+        XXLJob["XXLJob"]:::external
+        OBS["OBS"]:::external
+    end
+
+    Operator <-->|"DF01: HTTPS 管理 API"| ProjCfgCtl
+    EndUser <-->|"DF02: HTTPS REST API"| RepoCtl
+    EndUser <-->|"DF03: HTTPS REST API"| CodeMetricsCtl
+    EndUser <-->|"DF04: HTTPS REST API"| SyncUserCtl
+    GitCode <-->|"DF05: HTTPS Webhook (HMAC-SHA256)"| WebHookCtl
+    Gitee <-->|"DF06: HTTPS Webhook (HMAC-SHA256)"| WebHookCtl
+    Github <-->|"DF07: HTTPS Webhook (HMAC-SHA256)"| WebHookCtl
+    WebHookCtl <-->|"DF08: AMQP 持久化投递"| RabbitMQ
+    RabbitMQ <-->|"DF09: AMQP 异步消费"| WebhookConsumer
+    RepoCtl <-->|"DF10: JDBC/TLS 仓库元数据"| MySQL
+    ProjCfgCtl <-->|"DF11: JDBC/TLS 项目配置"| MySQL
+    SyncUserCtl <-->|"DF12: JDBC/TLS 用户权限"| MySQL
+    CodeMetricsCtl <-->|"DF13: MongoDB/TLS 度量查询"| MongoDB
+    WebhookConsumer <-->|"DF14: JDBC/TLS 事件读写"| MySQL
+    WebhookConsumer <-->|"DF15: MongoDB/TLS 日志流水线"| MongoDB
+    XxlJobHdl <-->|"DF16: JDBC/TLS 定时任务数据"| MySQL
+    WebhookConsumer <-->|"DF17: HTTPS PR 操作 (PRIVATE-TOKEN)"| GitCode
+    WebhookConsumer <-->|"DF18: HTTPS PR 操作 (PRIVATE-TOKEN)"| Gitee
+    WebhookConsumer <-->|"DF19: HTTPS PR 操作 (PRIVATE-TOKEN)"| Github
+    PrTokenSvc <-->|"DF20: HTTPS token 校验 /api/v5/user"| GitCode
+    PrTokenSvc <-->|"DF21: HTTPS token 校验 /api/v5/user"| Gitee
+    PrTokenSvc <-->|"DF22: TCP/TLS token 缓存"| Redis
+    PrTokenSvc <-->|"DF23: JDBC/TLS repo_info token 查询"| MySQL
+    RepoCtl <-->|"DF24: HTTPS 导出产物上传"| OBS
+    XxlJobHdl <-->|"DF25: HTTP 任务拉取"| XXLJob
+    WebHookCtl <-->|"DF26: HTTPS 配置拉取 webhook.secretKey"| Nacos
+    XxlJobHdl <-->|"DF27: HTTPS 仓库分支同步"| GitCode
+    XxlJobHdl <-->|"DF28: HTTPS 仓库分支同步"| Gitee
+    XxlJobHdl <-->|"DF29: HTTPS 仓库分支同步"| Github
+
+    style Application fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+    style External fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+
+    linkStyle default stroke:#666666,stroke-width:2px

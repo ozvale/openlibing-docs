@@ -90,6 +90,9 @@
   - 标签: `ai-assisted`、`needs-issue`
 - PR !182: `gateway_20260827_iter2` → `release_20260827_iter2`
   - 包含 commit: 45b6a64（prod 配置迁移，作者 LinYP300）
+- PR #189: `codechentao:chentao_release_20260910` → `openlibing:release_20260910`（2026-09-10）
+  - 本迁移在 release_20260910 发布线的重新应用（commit b903db4），叠加 springdoc webflux-ui 修复与 sdk 1.0.20.6 升级
+  - 详见 [nacos-springdoc-20260910](../nacos-springdoc-20260910/)
 
 ## 备注
 

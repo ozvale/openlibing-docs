@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>安全编译选项扫描 - 三级页面交互 Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background: #f5f7fa; color: #303133; font-size: 14px; }
+  .header { background: #fff; border-bottom: 1px solid #e4e7ed; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .breadcrumb { color: #909399; font-size: 13px; margin-top: 4px; }
+  .breadcrumb .cur { color: #303133; }
+  .container { padding: 20px 24px; }
+  .card { background: #fff; border: 1px solid #ebeef5; border-radius: 4px; padding: 18px 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .toolbar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .toolbar .left { display: flex; gap: 10px; flex-wrap: wrap; }
+  .toolbar .right { margin-left: auto; display: flex; gap: 10px; }
+  input[type=text], select { height: 32px; padding: 0 10px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px; outline: none; }
+  input[type=text]:focus, select:focus { border-color: #409eff; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #ebeef5; }
+  th { background: #fafafa; color: #606266; font-weight: 600; white-space: nowrap; }
+  tr:hover td { background: #f5f7fa; }
+  .btn { display: inline-block; padding: 6px 14px; border: 1px solid #dcdfe6; border-radius: 4px; background: #fff; color: #606266; cursor: pointer; font-size: 13px; line-height: 1.4; }
+  .btn:hover { color: #409eff; border-color: #c6e2ff; background: #ecf5ff; }
+  .btn-primary { background: #409eff; border-color: #409eff; color: #fff; }
+  .btn-primary:hover { background: #66b1ff; border-color: #66b1ff; color: #fff; }
+  .btn-danger { color: #f56c6c; border-color: #fbc4c4; }
+  .btn-danger:hover { background: #fef0f0; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-link { border: none; background: none; color: #409eff; cursor: pointer; padding: 0; font-size: 13px; }
+  .btn-link:hover { color: #66b1ff; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 12px; line-height: 20px; }
+  .tag-yes { background: #f0f9eb; color: #67c23a; border: 1px solid #c2e7b0; }
+  .tag-no { background: #fef0f0; color: #f56c6c; border: 1px solid #fbc4c4; }
+  .tag-na { background: #f4f4f5; color: #909399; border: 1px solid #d3d4d6; }
+  .tag-filed { background: #fdf6ec; color: #e6a23c; border: 1px solid #f5dab1; }
+  .tag-status-ok { background: #f0f9eb; color: #67c23a; }
+  .tag-status-fail { background: #fef0f0; color: #f56c6c; }
+  .rate { font-variant-numeric: tabular-nums; }
+  .rate-good { color: #67c23a; font-weight: 600; }
+  .rate-mid { color: #e6a23c; font-weight: 600; }
+  .rate-bad { color: #f56c6c; font-weight: 600; }
+  .pagination { margin-top: 14px; display: flex; align-items: center; gap: 6px; justify-content: flex-end; color: #606266; font-size: 13px; }
+  .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .info-item { background: #fafafa; padding: 12px 14px; border-radius: 4px; }
+  .info-item .label { color: #909399; font-size: 12px; margin-bottom: 4px; }
+  .info-item .value { font-size: 14px; font-weight: 600; word-break: break-all; }
+  .empty { text-align: center; color: #c0c4cc; padding: 30px; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .formula-note { background: #f8f9fa; border-left: 3px solid #909399; padding: 10px 14px; color: #606266; font-size: 12px; line-height: 1.8; border-radius: 0 4px 4px 0; margin-top: 14px; }
+  .batch-bar { display: none; background: #fff7e6; border: 1px solid #f5dab1; border-radius: 4px; padding: 10px 14px; margin-bottom: 14px; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .batch-bar.show { display: flex; }
+  .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: none; align-items: center; justify-content: center; }
+  .modal { background: #fff; border-radius: 6px; width: 440px; padding: 20px; }
+  .modal h3 { font-size: 16px; margin-bottom: 16px; }
+  .form-row { margin-bottom: 14px; }
+  .form-row label { display: block; color: #606266; margin-bottom: 6px; font-size: 13px; }
+  .form-row textarea { width: 100%; height: 70px; padding: 8px 10px; resize: vertical; border: 1px solid #dcdfe6; border-radius: 4px; }
+  .toggle-show-no { display: flex; align-items: center; gap: 6px; color: #606266; font-size: 13px; cursor: pointer; user-select: none; }
+  .filed-row td { background: #fefcf3; }
+  .orig { text-decoration: line-through; color: #c0c4cc; font-size: 12px; }
+  .modal-wide { width: 92%; max-width: 1280px; max-height: 85vh; display: flex; flex-direction: column; }
+  .modal-wide .modal-body { overflow: auto; flex: 1; margin-top: 14px; }
+  .matrix-cell-filed { background: #fefcf3; }
+  .matrix-cell-filed .orig { display: block; margin-top: 2px; font-size: 11px; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .modal-head h3 { font-size: 16px; margin: 0; }
+  .matrix-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .matrix-val { display: flex; align-items: center; gap: 4px; color: #606266; font-size: 13px; cursor: pointer; user-select: none; }
+  .matrix-val input { cursor: pointer; }
+  table.matrix { min-width: 100%; }
+  table.matrix th, table.matrix td { white-space: nowrap; padding: 8px 10px; }
+  table.matrix td.path-cell { min-width: 280px; max-width: 360px; white-space: normal; word-break: break-all; font-size: 12px; }
+  .json-pre { background: #f8f9fa; border: 1px solid #ebeef5; border-radius: 4px; padding: 12px; font-size: 12px; line-height: 1.6; overflow: auto; max-height: 320px; white-space: pre-wrap; word-break: break-all; font-family: Consolas, Menlo, monospace; color: #303133; margin: 0; }
+  .th-filter { display: inline-flex; align-items: center; gap: 5px; }
+  .th-filter-btn { cursor: pointer; color: #8a8e99; display: inline-flex; line-height: 1; }
+  .th-filter-btn svg { width: 13px; height: 13px; }
+  .th-filter-btn.active, .th-filter-btn:hover { color: #409eff; }
+  .th-filter-popover { position: fixed; z-index: 320; background: #fff; border: 1px solid #dfe1e6; border-radius: 8px; box-shadow: 0 6px 18px rgba(37,43,58,0.14); min-width: 168px; display: none; }
+  .th-filter-body { padding: 8px 12px; max-height: 220px; overflow-y: auto; }
+  .th-filter-body input[type=text] { width: 100%; box-sizing: border-box; }
+  .th-filter-val { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; font-size: 13px; color: #606266; white-space: nowrap; }
+  .th-filter-val input { cursor: pointer; }
+  .th-filter-footer { display: flex; justify-content: center; gap: 8px; border-top: 1px solid #ebedf0; margin-top: 6px; padding: 8px 12px 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>构建产物安全编译选项扫描</h1>
+    <div class="breadcrumb" id="breadcrumb"></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;">
+    <button class="btn btn-sm" style="border-color:#409eff;color:#409eff;" onclick="showFilingRecords()">备案记录</button>
+    <span style="color:#909399;font-size:13px;">项目：智驾 SDK 平台</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ============ 一级：概览页 ============ -->
+  <div class="page active" id="page-overview">
+    <div class="card">
+      <div class="toolbar">
+        <div class="left">
+          <input type="text" placeholder="代码仓 / 产物包名" style="width:220px;">
+          <select><option>全部扫描状态</option><option>成功</option><option>失败</option></select>
+          <button class="btn btn-primary btn-sm">查询</button>
+          <button class="btn btn-sm">重置</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>代码仓</th>
+            <th>流水线</th>
+            <th>产物包名</th>
+            <th>扫描时间</th>
+            <th>扫描状态</th>
+            <th>扫描项数</th>
+            <th>总文件数</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="overview-tbody"></tbody>
+      </table>
+      <div class="pagination">
+        <button class="btn btn-sm">上一页</button>
+        <span>第 1 / 1 页，共 5 条</span>
+        <button class="btn btn-sm">下一页</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 二级：产物包详情页 ============ -->
+  <div class="page" id="page-detail">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title" style="margin:0;">产物包扫描详情</div>
+        <div>
+          <button class="btn btn-sm" onclick="showOverview()">← 返回概览</button>
+          <button class="btn btn-primary btn-sm" onclick="openFilingList()">待备案项列表（批量备案）</button>
+        </div>
+      </div>
+      <div class="info-grid" id="detail-info" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">安全编译选项汇总</div>
+      <table>
+        <thead>
+          <tr>
+            <th>安全编译选项</th>
+            <th>描述</th>
+            <th>满足数</th>
+            <th>实际参与数</th>
+            <th>检测结果（覆盖率）</th>
+            <th>已确认文件数</th>
+            <th>确认结果（覆盖率）</th>
+          </tr>
+        </thead>
+        <tbody id="option-tbody"></tbody>
+      </table>
+      <div class="formula-note">
+        <b>公式说明：</b><br>
+        · 检测结果（覆盖率）= 满足数 ÷ 实际参与数 × 100%　　实际参与数 = 满足数 + 不满足数（即参与该项检测、且不判为 N/A 的文件数）<br>
+        · 确认结果（覆盖率）= 备案后满足数 ÷ 实际参与数 × 100%　　备案后满足数 = 满足数 ± 备案对 NO/YES 文件的变更（未备案时 = 满足数，确认结果与检测结果一致）
+      </div>
+    </div>
+
+    </div>
+
+  <!-- ============ 三级：待备案项列表（批量备案） ============ -->
+  <div class="page" id="page-filing-list">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="card-title" style="margin:0;">待备案项列表（默认只展示不满足项 NO，支持批量勾选备案）</div>
+        <div><button class="btn btn-sm" onclick="showDetail()">← 返回详情</button></div>
+      </div>
+      <div class="toolbar">
+        <div class="left">
+          <label class="toggle-show-no">
+            <input type="checkbox" id="show-only-no" checked onchange="renderFilingList()"> 只看不满足项（NO）
+          </label>
+          <select id="filter-option" onchange="renderFilingList()"></select>
+          <input type="text" id="filter-path" placeholder="按文件路径筛选" style="width:200px;" oninput="renderFilingList()">
+        </div>
+        <div class="right">
+          <button class="btn btn-sm" onclick="selectAllFiltered()">全选当前筛选结果</button>
+          <button class="btn btn-sm" onclick="clearSelection()">取消选择</button>
+        </div>
+      </div>
+      <div class="batch-bar" id="batch-bar">
+        <span id="batch-count" style="color:#e6a23c;font-weight:600;"></span>
+        <button class="btn btn-primary btn-sm" onclick="openBatchModal()">批量备案为 YES</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px;"><input type="checkbox" id="check-all" onchange="toggleCheckAll(this)"></th>
+            <th>文件路径</th>
+            <th>扫描项</th>
+            <th>扫描值</th>
+            <th>备案值</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="filing-list-tbody"></tbody>
+      </table>
+      <div class="pagination" id="filing-pagination"></div>
+      <div class="formula-note">
+        <b>操作说明：</b>默认只列出 NO（不满足）项以聚焦需处理对象；可按扫描项/路径筛选后"全选当前筛选结果"批量备案为 YES（统一理由）。已备案行高亮，可逐项取消。YES/N/A 项默认隐藏，取消"只看 NO"可查看全貌（只读，不可勾选）。
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 独立：安全编译选项备案记录页（展示所有产物包的备案记录） ============ -->
+  <div class="page" id="page-filing-records">
+    <div class="card">
+      <div class="toolbar">
+        <div class="left">
+          <input type="text" id="fr-package" placeholder="产物包名" style="width:180px;">
+          <select id="fr-option"></select>
+          <select id="fr-filer"></select>
+          <input type="text" id="fr-start" placeholder="备案时间起" style="width:150px;">
+          <span style="color:#909399;align-self:center;">至</span>
+          <input type="text" id="fr-end" placeholder="备案时间止" style="width:150px;">
+          <button class="btn btn-primary btn-sm" onclick="queryFilingRecords()">查询</button>
+          <button class="btn btn-sm" onclick="resetFilingRecords()">重置</button>
+        </div>
+        <div class="right">
+          <button class="btn btn-sm" onclick="showOverview()">← 返回概览</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>代码仓</th><th>产物包</th><th>文件路径</th><th>扫描项</th><th>备案值</th><th>备案理由</th><th>备案人</th><th>备案时间</th>
+          </tr>
+        </thead>
+        <tbody id="filing-records-tbody"></tbody>
+      </table>
+      <div class="pagination" id="filing-records-pagination"></div>
+      <div class="formula-note">
+        <b>说明：</b>此页展示所有构建产物包的例外备案记录（含备案人、备案时间，直接落例外备案表，无独立操作日志表 log_build_artifact），支持按产物包 / 扫描项 / 备案时间 / 备案人筛选与排序分页。备案写操作（新增 / 取消备案）需专用角色「安全编译选项例外备案审批人」（角色码 security_compilation_options_filing_approver，纵向鉴权由 gateway 完成，服务侧仅做项目级横向鉴权）。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 批量备案理由弹窗 -->
+<div class="modal-mask" id="batch-modal">
+  <div class="modal">
+    <h3>批量备案为 YES</h3>
+    <div class="form-row">
+      <label>备案理由（将应用于全部选中项）</label>
+      <textarea id="batch-reason" placeholder="说明接受这些不满足项的原因"></textarea>
+    </div>
+    <div style="text-align:right;">
+      <button class="btn" onclick="closeBatchModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitBatch()">确认备案</button>
+    </div>
+  </div>
+</div>
+
+<!-- 文件详情弹窗（包内所有文件 × 扫描项矩阵，只读总览 + 表头逐列筛选） -->
+<div class="modal-mask" id="matrix-modal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h3>文件扫描结果总览</h3>
+      <button class="btn btn-sm" onclick="closeMatrixModal()">关闭</button>
+    </div>
+    <div class="matrix-toolbar">
+      <span style="font-size:13px;color:#606266;">点击表头筛选按钮，可按文件名/路径及各扫描项值（YES/NO/N/A）筛选，有备案以备案值为准：</span>
+      <span id="matrix-filter-count" style="color:#909399;font-size:12px;margin-left:auto;"></span>
+    </div>
+    <div class="modal-body">
+      <table class="matrix">
+        <thead id="matrix-thead"></thead>
+        <tbody id="matrix-tbody"></tbody>
+      </table>
+      <div class="pagination" id="matrix-pagination"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 矩阵列筛选面板（点击表头筛选按钮弹出，模拟 openlibing-cicd-web 的 TableHeaderFilter） -->
+<div class="th-filter-popover" id="matrix-filter-popover">
+  <div class="th-filter-body" id="matrix-filter-body"></div>
+  <div class="th-filter-footer">
+    <button class="btn btn-sm" onclick="resetMatrixFilterPop()">重置</button>
+    <button class="btn btn-primary btn-sm" onclick="confirmMatrixFilterPop()">确定</button>
+  </div>
+</div>
+
+<script>
+// ============ 基础数据 ============
+const OPTIONS = [
+  {key:'bindNow', name:'BIND_NOW 立即绑定'},
+  {key:'nx', name:'堆栈不可执行'},
+  {key:'pic', name:'地址无关代码'},
+  {key:'pie', name:'位置无关可执行'},
+  {key:'relro', name:'GOT 表保护'},
+  {key:'rpath', name:'动态库搜索路径'},
+  {key:'sp', name:'栈保护'},
+  {key:'fortify', name:'_FORTIFY_SOURCE'}
+];
+const OPT_NAME = {}; OPTIONS.forEach(o=>OPT_NAME[o.key]=o.name);
+
+let overviewData = [
+  {id:1, repo:'gitcode.com/DrivingSDK/core', pipeline:'DrivingSDK-aarch64-build', pkg:'DrivingSDK_v2.1.0_3.8_aarch64.tar.gz', time:'2026-09-02 14:30', status:'ok', optCount:8, fileCount:6},
+  {id:2, repo:'gitcode.com/DrivingSDK/perception', pipeline:'Perception-Nightly', pkg:'perception_1.4.2_x86_64.tar.gz', time:'2026-09-02 09:12', status:'ok', optCount:8, fileCount:64},
+  {id:3, repo:'gitcode.com/DrivingSDK/planning', pipeline:'Planning-Release', pkg:'planning_3.0.0_aarch64.deb', time:'2026-09-01 22:40', status:'ok', optCount:8, fileCount:96},
+  {id:4, repo:'gitcode.com/infra/gateway', pipeline:'Gateway-Build', pkg:'gateway_2.2.1.tar.gz', time:'2026-09-01 18:05', status:'fail', optCount:6, fileCount:32},
+  {id:5, repo:'gitcode.com/DrivingSDK/tools', pipeline:'Tools-CI', pkg:'dev_tools_1.0.4.zip', time:'2026-09-01 10:20', status:'ok', optCount:8, fileCount:48}
+];
+
+let currentRecord = null;
+let SCANNED_KEYS = OPTIONS.map(o=>o.key);
+
+// 文件级数据：opts 为原始扫描值，filed 存备案（optionKey -> 备案值）
+let detailFiles = [
+  {path:'mx_driving/packages/vendors/customize_arch35/op_impl/ai_core/tbe/kernel/ascend950/adamw_param_update/AdamwParamUpdate_24e76a56.o',
+   opts:{bindNow:'N/A',nx:'YES',pic:'N/A',pie:'N/A',relro:'N/A',rpath:'NO',sp:'N/A',fortify:'NO'}, filed:{fortify:'YES'}},
+  {path:'mx_driving/lib/libdriving_core.so',
+   opts:{bindNow:'YES',nx:'YES',pic:'YES',pie:'N/A',relro:'YES',rpath:'NO',sp:'YES',fortify:'NO'}, filed:{}},
+  {path:'mx_driving/bin/driving_main',
+   opts:{bindNow:'YES',nx:'YES',pic:'N/A',pie:'YES',relro:'YES',rpath:'NO',sp:'YES',fortify:'YES'}, filed:{}},
+  {path:'mx_driving/lib/libperception.so',
+   opts:{bindNow:'NO',nx:'YES',pic:'YES',pie:'N/A',relro:'YES',rpath:'NO',sp:'YES',fortify:'NO'}, filed:{fortify:'YES'}},
+  {path:'third_party/protobuf/libprotobuf.so.3.19',
+   opts:{bindNow:'YES',nx:'YES',pic:'YES',pie:'N/A',relro:'NO',rpath:'NO',sp:'YES',fortify:'NO'}, filed:{}},
+  {path:'mx_driving/lib/libplanning.so',
+   opts:{bindNow:'YES',nx:'YES',pic:'YES',pie:'N/A',relro:'YES',rpath:'NO',sp:'NO',fortify:'NO'}, filed:{}}
+];
+
+function valTag(v) {
+  if (v === 'YES') return '<span class="tag tag-yes">YES</span>';
+  if (v === 'NO') return '<span class="tag tag-no">NO</span>';
+  if (v === 'N/A') return '<span class="tag tag-na">N/A</span>';
+  return '<span class="tag tag-na">'+v+'</span>';
+}
+function statusTag(s) {
+  return s==='ok' ? '<span class="tag tag-status-ok">成功</span>' : '<span class="tag tag-status-fail">失败</span>';
+}
+function ratePct(a,b) { return b ? +(a/b*100).toFixed(1) : -1; }
+function rateClass(r) { if(r>=85) return 'rate-good'; if(r>=60) return 'rate-mid'; return 'rate-bad'; }
+function rateText(r) { return r<0 ? 'N/A' : r+'%'; }
+
+// 统计某选项：满足/实际参与 + 检测覆盖率 + 已确认文件数 + 确认覆盖率
+function computeOption(key) {
+  let yes=0, no=0, filedFiles=0;
+  detailFiles.forEach(f => {
+    let v = f.opts[key];
+    if (v==='YES') yes++;
+    else if (v==='NO') no++;
+    if (f.filed[key] !== undefined) filedFiles++;
+  });
+  let applicable = yes + no;                          // 实际参与数 = 满足 + 不满足（N/A 不参与）
+  // 备案后满足数：原值为 NO 但备案为 YES 的文件改判满足；原值为 YES 但备案为 NO 的文件改判不满足
+  let confirmedYes = detailFiles.reduce((acc, f) => {
+    let v = f.opts[key], fv = f.filed[key];
+    if (fv === undefined) return acc + (v === 'YES' ? 1 : 0); // 未备案按原值
+    return acc + (fv === 'YES' ? 1 : 0);                       // 已备案按备案值
+  }, 0);
+  let detectRate = ratePct(yes, applicable);
+  let confirmRate = ratePct(confirmedYes, applicable);
+  return { yes, applicable, detectRate, filedFiles, confirmRate };
+}
+
+// ============ 一级渲染 ============
+function renderOverview() {
+  document.getElementById('overview-tbody').innerHTML = overviewData.map(r => `
+    <tr>
+      <td>${r.repo}</td>
+      <td>${r.pipeline}</td>
+      <td>${r.pkg}</td>
+      <td>${r.time}</td>
+      <td>${statusTag(r.status)}</td>
+      <td>${r.optCount} 项</td>
+      <td>${r.fileCount}</td>
+      <td><button class="btn-link" onclick="openDetail(${r.id})">查看详情</button></td>
+    </tr>`).join('');
+}
+
+// ============ 二级渲染 ============
+function renderDetail() {
+  let r = currentRecord;
+  document.getElementById('detail-info').innerHTML = `
+    <div class="info-item"><div class="label">代码仓</div><div class="value">${r.repo}</div></div>
+    <div class="info-item"><div class="label">产物包名</div><div class="value">${r.pkg}</div></div>
+    <div class="info-item"><div class="label">扫描项数</div><div class="value">${r.optCount} 项</div></div>
+    <div class="info-item"><div class="label">总文件数</div><div class="value">${r.fileCount}</div></div>
+  `;
+  document.getElementById('option-tbody').innerHTML = SCANNED_KEYS.map(k => {
+    let s = computeOption(k);
+    return `<tr>
+      <td><code>${k}</code></td>
+      <td>${OPT_NAME[k]}</td>
+      <td><b style="color:#67c23a">${s.yes}</b></td>
+      <td>${s.applicable}</td>
+      <td class="rate ${rateClass(s.detectRate)}"><button class="btn-link" onclick="openMatrixModal('${k}')">${rateText(s.detectRate)}</button></td>
+      <td>${s.filedFiles}</td>
+      <td class="rate ${rateClass(s.confirmRate)}">${rateText(s.confirmRate)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// 通用分页条渲染（含每页条数选择器）
+function renderPager(state, total, totalPages, goFn, sizeFn) {
+  return `
+    <span>每页</span>
+    <select onchange="${sizeFn}(this.value)">
+      ${PAGE_SIZES.map(s=>`<option value="${s}" ${state.size===s?'selected':''}>${s}</option>`).join('')}
+    </select>
+    <span>条</span>
+    <button class="btn btn-sm" ${state.page<=1?'disabled':''} onclick="${goFn}(${state.page-1})">上一页</button>
+    <span>第 ${state.page} / ${totalPages} 页，共 ${total} 条</span>
+    <button class="btn btn-sm" ${state.page>=totalPages?'disabled':''} onclick="${goFn}(${state.page+1})">下一页</button>
+  `;
+}
+
+// ============ 三级渲染：待备案项列表 ============
+// 将文件×选项展开为行：{fileIndex, path, key, val, filedVal}
+let filingRows = [];
+let selected = new Set();       // 选中行的唯一键 `${fileIndex}_${key}`
+let pageState = { page:1, size:10 };           // 待备案项列表分页
+const PAGE_SIZES = [10, 20, 50, 100];
+
+function buildFilingRows() {
+  filingRows = [];
+  detailFiles.forEach((f, fi) => {
+    SCANNED_KEYS.forEach(k => {
+      filingRows.push({ fi, path:f.path, key:k, val:f.opts[k], filedVal:f.filed[k] });
+    });
+  });
+}
+
+function getFilteredRows() {
+  let onlyNo = document.getElementById('show-only-no').checked;
+  let optFilter = document.getElementById('filter-option').value;
+  let pathFilter = document.getElementById('filter-path').value.trim().toLowerCase();
+  return filingRows.filter(r => {
+    if (onlyNo && r.val !== 'NO' && r.filedVal === undefined) return false;  // 只看未备案的 NO
+    if (onlyNo && r.val !== 'NO' && r.filedVal !== undefined) return false;   // 已备案的不在 NO 列
+    if (optFilter && r.key !== optFilter) return false;
+    if (pathFilter && !r.path.toLowerCase().includes(pathFilter)) return false;
+    return true;
+  });
+}
+
+function renderFilingList() {
+  buildFilingRows();
+  // 填充扫描项筛选下拉
+  let sel = document.getElementById('filter-option');
+  if (!sel.options.length) {
+    sel.innerHTML = '<option value="">全部扫描项</option>' + SCANNED_KEYS.map(k=>`<option value="${k}">${OPT_NAME[k]}</option>`).join('');
+  }
+  let rows = getFilteredRows();
+  let total = rows.length;
+  let totalPages = Math.max(1, Math.ceil(total / pageState.size));
+  if (pageState.page > totalPages) pageState.page = totalPages;
+  let start = (pageState.page - 1) * pageState.size;
+  let pageRows = rows.slice(start, start + pageState.size);
+
+  document.getElementById('filing-list-tbody').innerHTML = pageRows.length ? pageRows.map(r => {
+    let selKey = r.fi+'_'+r.key;
+    let isFiled = r.filedVal !== undefined;
+    let canCheck = r.val === 'NO' && !isFiled;   // 仅未备案的 NO 项可勾选
+    return `<tr class="${isFiled?'filed-row':''}">
+      <td><input type="checkbox" ${canCheck?'':'disabled'} ${selected.has(selKey)?'checked':''} onchange="toggleSel('${selKey}')"></td>
+      <td style="max-width:340px;word-break:break-all;font-size:12px;">${r.path}</td>
+      <td>${OPT_NAME[r.key]}</td>
+      <td>${valTag(r.val)}</td>
+      <td>${isFiled ? `<span class="orig">${r.val}</span> → ${valTag(r.filedVal)}` : '—'}</td>
+      <td>${isFiled ? `<button class="btn-link" style="color:#f56c6c" onclick="removeFiling(${r.fi},'${r.key}')">取消备案</button>` : '—'}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="6" class="empty">没有符合条件的不满足项</td></tr>';
+
+  // 分页
+  document.getElementById('filing-pagination').innerHTML = renderPager(pageState, total, totalPages, 'goPage', 'changePageSize');
+  updateBatchBar();
+}
+
+function goPage(p) { pageState.page = p; renderFilingList(); }
+function changePageSize(s) { pageState.size = +s; pageState.page = 1; renderFilingList(); }
+
+function toggleSel(key) {
+  if (selected.has(key)) selected.delete(key); else selected.add(key);
+  updateBatchBar();
+}
+function clearSelection() { selected.clear(); renderFilingList(); }
+function selectAllFiltered() {
+  // 全选当前筛选结果中所有可勾选项（未备案的 NO），跨页生效
+  getFilteredRows().filter(r => r.val==='NO' && r.filedVal===undefined).forEach(r => selected.add(r.fi+'_'+r.key));
+  renderFilingList();
+}
+function toggleCheckAll(el) {
+  if (el.checked) selectAllFiltered(); else clearSelection();
+}
+function updateBatchBar() {
+  let bar = document.getElementById('batch-bar');
+  document.getElementById('batch-count').textContent = `已选中 ${selected.size} 个不满足项`;
+  bar.classList.toggle('show', selected.size > 0);
+  // 同步表头勾选状态
+  let pageRows = getFilteredRows().slice((pageState.page-1)*pageState.size, pageState.page*pageState.size);
+  let checkable = pageRows.filter(r => r.val==='NO' && r.filedVal===undefined);
+  let allChecked = checkable.length>0 && checkable.every(r => selected.has(r.fi+'_'+r.key));
+  document.getElementById('check-all').checked = allChecked;
+}
+
+function openBatchModal() {
+  if (selected.size === 0) return;
+  document.getElementById('batch-reason').value = '';
+  document.getElementById('batch-modal').style.display = 'flex';
+}
+function closeBatchModal() { document.getElementById('batch-modal').style.display = 'none'; }
+function submitBatch() {
+  let reason = document.getElementById('batch-reason').value.trim();
+  if (!reason) { alert('请填写备案理由'); return; }
+  selected.forEach(selKey => {
+    let [fi, key] = selKey.split('_');
+    detailFiles[fi].filed[key] = 'YES';
+  });
+  selected.clear();
+  closeBatchModal();
+  renderFilingList();
+  renderDetail();
+}
+
+function removeFiling(fi, key) {
+  let f = detailFiles[fi];
+  if (f && f.filed[key] !== undefined) delete f.filed[key];
+  renderFilingList();
+  renderDetail();
+}
+
+// ============ 文件详情弹窗（文件×扫描项矩阵，只读总览 + 表头逐列筛选 + 分页） ============
+let matrixPageState = { page:1, size:10 };
+// 列筛选状态：path 为文件名/路径关键词；valueFilters 记录各扫描项列的值多选（空/缺省 = 不筛选该列）
+let matrixPathFilter = '';
+let matrixValueFilters = {};   // { optionKey: Set<String> }
+let matrixFilterTarget = null; // 当前打开筛选面板的列（'path' 或某扫描项 key）
+
+// 漏斗图标（对应 openlibing-cicd-web TableHeaderFilter 的 Filter 图标）
+const FILTER_ICON = '<svg viewBox="64 64 896 896" width="13" height="13" fill="currentColor"><path d="M349 838c0 17.7 14.2 32 31.8 32h262.4c17.6 0 31.8-14.3 31.8-32V642H349v196zm531.1-684H143.9c-24.4 0-39.8 26.7-27.5 48l221.3 376h348.8l221.3-376c12.1-21.3-3.2-48-27.7-48z"/></svg>';
+
+function openMatrixModal() {
+  // 每次打开重置全部列筛选，默认全量展示
+  matrixPathFilter = '';
+  matrixValueFilters = {};
+  matrixFilterTarget = null;
+  document.getElementById('matrix-filter-popover').style.display = 'none';
+  matrixPageState.page = 1;
+  renderMatrix();
+  document.getElementById('matrix-modal').style.display = 'flex';
+}
+function closeMatrixModal() { document.getElementById('matrix-modal').style.display = 'none'; }
+
+// 生效值：有备案以备案值为准，无备案取原扫描值
+function effectiveVal(f, k) {
+  return f.filed[k] !== undefined ? f.filed[k] : f.opts[k];
+}
+
+// 某列是否处于激活筛选状态
+function matrixFilterActive(key) {
+  if (key === 'path') return matrixPathFilter.trim() !== '';
+  const s = matrixValueFilters[key];
+  return !!s && s.size > 0;
+}
+
+// 生成带筛选按钮的表头（label + 漏斗图标，点击弹出该列筛选面板）
+function filterTh(label, key) {
+  return '<span class="th-filter">' + label + '<span class="th-filter-btn' + (matrixFilterActive(key) ? ' active' : '') + '" onclick="toggleMatrixFilter(event, \'' + key + '\')">' + FILTER_ICON + '</span></span>';
+}
+
+// 表头筛选按钮：打开/关闭对应列筛选面板
+function toggleMatrixFilter(ev, key) {
+  ev.stopPropagation();
+  const pop = document.getElementById('matrix-filter-popover');
+  if (pop.style.display === 'block' && matrixFilterTarget === key) {
+    closeMatrixFilterPop();
+    return;
+  }
+  matrixFilterTarget = key;
+  renderMatrixFilterPop(key);
+  pop.style.display = 'block';
+  const rect = ev.currentTarget.getBoundingClientRect();
+  const w = pop.offsetWidth || 180;
+  pop.style.left = Math.min(rect.left, window.innerWidth - w - 12) + 'px';
+  pop.style.top = (rect.bottom + 6) + 'px';
+}
+
+// 渲染筛选面板内容：path → 文本输入；扫描项 → YES/NO/N/A 多选
+function renderMatrixFilterPop(key) {
+  const body = document.getElementById('matrix-filter-body');
+  if (key === 'path') {
+    body.innerHTML = '<input type="text" id="matrix-pop-path" placeholder="文件名/路径关键词" value="' + matrixPathFilter.replace(/"/g, '&quot;') + '">';
+    return;
+  }
+  const s = matrixValueFilters[key] || new Set();
+  body.innerHTML = ['YES', 'NO', 'N/A'].map(v =>
+    '<label class="th-filter-val"><input type="checkbox" class="matrix-pop-val" value="' + v + '"' + (s.has(v) ? ' checked' : '') + '> ' + v + '</label>'
+  ).join('');
+}
+
+function closeMatrixFilterPop() {
+  document.getElementById('matrix-filter-popover').style.display = 'none';
+  matrixFilterTarget = null;
+}
+
+function confirmMatrixFilterPop() {
+  const key = matrixFilterTarget;
+  if (key === 'path') {
+    matrixPathFilter = document.getElementById('matrix-pop-path').value.trim();
+  } else {
+    const sel = new Set();
+    document.querySelectorAll('.matrix-pop-val:checked').forEach(cb => sel.add(cb.value));
+    if (sel.size) matrixValueFilters[key] = sel; else delete matrixValueFilters[key];
+  }
+  closeMatrixFilterPop();
+  matrixPageState.page = 1;
+  renderMatrix();
+}
+
+function resetMatrixFilterPop() {
+  const key = matrixFilterTarget;
+  if (key === 'path') { matrixPathFilter = ''; }
+  else { delete matrixValueFilters[key]; }
+  closeMatrixFilterPop();
+  matrixPageState.page = 1;
+  renderMatrix();
+}
+
+function getMatrixRows() {
+  return detailFiles.filter(f => {
+    // 文件名/路径关键词（AND）
+    if (matrixPathFilter && !f.path.toLowerCase().includes(matrixPathFilter.toLowerCase())) return false;
+    // 各扫描项列值筛选（AND）：该列生效值需命中选中值集合
+    for (const k in matrixValueFilters) {
+      const vals = matrixValueFilters[k];
+      if (vals && vals.size && !vals.has(effectiveVal(f, k))) return false;
+    }
+    return true;
+  });
+}
+
+function renderMatrix() {
+  const cols = SCANNED_KEYS;
+  // 表头：文件路径列 + 各扫描项列，每列都带筛选按钮
+  document.getElementById('matrix-thead').innerHTML =
+    '<tr><th class="path-cell">' + filterTh('文件路径', 'path') + '</th>' +
+    cols.map(k => '<th>' + filterTh(OPT_NAME[k], k) + '</th>').join('') + '</tr>';
+
+  const allRows = getMatrixRows();
+  const total = allRows.length;
+  const totalPages = Math.max(1, Math.ceil(total / matrixPageState.size));
+  if (matrixPageState.page > totalPages) matrixPageState.page = totalPages;
+  const start = (matrixPageState.page - 1) * matrixPageState.size;
+  const pageRows = allRows.slice(start, start + matrixPageState.size);
+
+  // 表体：每行一个文件；有备案值的单元格"以备案值为准"，标注原值
+  document.getElementById('matrix-tbody').innerHTML = pageRows.length ? pageRows.map(f => {
+    const cells = cols.map(k => {
+      const orig = f.opts[k];
+      const filed = f.filed[k];
+      if (filed !== undefined && filed !== orig) {
+        return '<td class="matrix-cell-filed">' + valTag(filed) + '<span class="orig">原值 ' + orig + '</span></td>';
+      }
+      return '<td>' + valTag(orig) + '</td>';
+    }).join('');
+    return '<tr><td class="path-cell">' + f.path + '</td>' + cells + '</tr>';
+  }).join('') : '<tr><td class="empty" colspan="' + (cols.length + 1) + '">没有符合条件的文件</td></tr>';
+
+  const hasFilter = matrixPathFilter.trim() !== '' || Object.keys(matrixValueFilters).some(k => matrixFilterActive(k));
+  document.getElementById('matrix-filter-count').textContent = hasFilter ? ('命中 ' + total + ' 个文件') : ('共 ' + total + ' 个文件');
+  document.getElementById('matrix-pagination').innerHTML = renderPager(matrixPageState, total, totalPages, 'goMatrixPage', 'changeMatrixSize');
+}
+function goMatrixPage(p) { matrixPageState.page = p; renderMatrix(); }
+function changeMatrixSize(s) { matrixPageState.size = +s; matrixPageState.page = 1; renderMatrix(); }
+
+// ============ 独立：安全编译选项备案记录页（跨产物包总览，备案人/备案时间直接落备案表） ============
+let filingRecordPageState = { page:1, size:10 };
+// 样例备案记录：每条即一个备案，备案人/备案时间已落在备案记录上，无独立操作日志表
+const filingRecordData = [
+  {repo:'gitcode.com/DrivingSDK/core', pkg:'DrivingSDK_v2.1.0_3.8_aarch64.tar.gz', file:'mx_driving/packages/vendors/.../AdamwParamUpdate_24e76a56.o', key:'fortify', val:'YES', reason:'确认该不满足项可接受', filer:'zhangsan', time:'2026-09-02 15:20'},
+  {repo:'gitcode.com/DrivingSDK/core', pkg:'DrivingSDK_v2.1.0_3.8_aarch64.tar.gz', file:'mx_driving/lib/libperception.so', key:'fortify', val:'YES', reason:'已核对源码，可豁免', filer:'zhangsan', time:'2026-09-02 15:32'},
+  {repo:'gitcode.com/DrivingSDK/core', pkg:'DrivingSDK_v2.1.0_3.8_aarch64.tar.gz', file:'mx_driving/lib/libdriving_core.so', key:'fortify', val:'NO', reason:'撤销备案，恢复原扫描值', filer:'lisi', time:'2026-09-02 16:05'},
+  {repo:'gitcode.com/DrivingSDK/perception', pkg:'perception_1.4.2_x86_64.tar.gz', file:'op_impl/ai_core/lib/libinfer.so', key:'rpath', val:'YES', reason:'三方库，接受默认搜索路径', filer:'zhangsan', time:'2026-09-03 09:11'},
+  {repo:'gitcode.com/DrivingSDK/planning', pkg:'planning_3.0.0_aarch64.deb', file:'lib/libplanning.so', key:'sp', val:'YES', reason:'栈保护已确认覆盖', filer:'wangwu', time:'2026-09-03 10:02'}
+];
+
+function showFilingRecords() {
+  initFilingRecordFilters();
+  resetFilingRecords();
+  switchPage('page-filing-records');
+  setBreadcrumb(4);
+  renderFilingRecordsPage();
+}
+// 初始化筛选下拉（扫描项 / 备案人），仅在首次进入时填充，避免覆盖用户已选值
+function initFilingRecordFilters() {
+  if (!document.getElementById('fr-option').options.length) {
+    document.getElementById('fr-option').innerHTML = '<option value="">全部扫描项</option>' +
+      SCANNED_KEYS.map(k=>`<option value="${k}">${OPT_NAME[k]}</option>`).join('');
+  }
+  if (!document.getElementById('fr-filer').options.length) {
+    let filers = [...new Set(filingRecordData.map(r=>r.filer))];
+    document.getElementById('fr-filer').innerHTML = '<option value="">全部备案人</option>' +
+      filers.map(f=>`<option value="${f}">${f}</option>`).join('');
+  }
+}
+function resetFilingRecords() {
+  ['fr-package','fr-start','fr-end'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fr-option').value = '';
+  document.getElementById('fr-filer').value = '';
+}
+function queryFilingRecords() { filingRecordPageState.page = 1; renderFilingRecordsPage(); }
+
+// 按产物包 / 扫描项 / 备案时间 / 备案人筛选（时间按字符串比较，语义与后端 datetime 范围一致）
+function getFilingRecordRows() {
+  const pkg = document.getElementById('fr-package').value.trim().toLowerCase();
+  const opt = document.getElementById('fr-option').value;
+  const filer = document.getElementById('fr-filer').value;
+  const start = document.getElementById('fr-start').value.trim();
+  const end = document.getElementById('fr-end').value.trim();
+  return filingRecordData.filter(r => {
+    if (pkg && !r.pkg.toLowerCase().includes(pkg)) return false;
+    if (opt && r.key !== opt) return false;
+    if (filer && r.filer !== filer) return false;
+    if (start && r.time < start) return false;
+    if (end && r.time > end) return false;
+    return true;
+  });
+}
+
+function renderFilingRecordsPage() {
+  const rows = getFilingRecordRows();
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / filingRecordPageState.size));
+  if (filingRecordPageState.page > totalPages) filingRecordPageState.page = totalPages;
+  const start = (filingRecordPageState.page - 1) * filingRecordPageState.size;
+  const pageRows = rows.slice(start, start + filingRecordPageState.size);
+
+  document.getElementById('filing-records-tbody').innerHTML = pageRows.length ? pageRows.map(r => `
+    <tr>
+      <td style="max-width:200px;word-break:break-all;font-size:12px;">${r.repo}</td>
+      <td style="max-width:200px;word-break:break-all;font-size:12px;">${r.pkg}</td>
+      <td style="max-width:280px;word-break:break-all;font-size:12px;">${r.file}</td>
+      <td>${OPT_NAME[r.key] || r.key}</td>
+      <td>${valTag(r.val)}</td>
+      <td style="max-width:180px;font-size:12px;">${r.reason}</td>
+      <td>${r.filer}</td>
+      <td>${r.time}</td>
+    </tr>`).join('') : '<tr><td colspan="8" class="empty">暂无备案记录</td></tr>';
+
+  document.getElementById('filing-records-pagination').innerHTML = renderPager(filingRecordPageState, total, totalPages, 'goFilingRecordPage', 'changeFilingRecordSize');
+}
+function goFilingRecordPage(p) { filingRecordPageState.page = p; renderFilingRecordsPage(); }
+function changeFilingRecordSize(s) { filingRecordPageState.size = +s; filingRecordPageState.page = 1; renderFilingRecordsPage(); }
+
+// ============ 页面切换 ============
+function showOverview() { switchPage('page-overview'); setBreadcrumb(1); }
+function openDetail(id) {
+  currentRecord = JSON.parse(JSON.stringify(overviewData.find(r=>r.id===id)));
+  switchPage('page-detail');
+  renderDetail(); setBreadcrumb(2);
+}
+function showDetail() { switchPage('page-detail'); setBreadcrumb(2); }
+function openFilingList() {
+  switchPage('page-filing-list');
+  pageState.page = 1;
+  selected.clear();
+  document.getElementById('filter-option').value = '';
+  document.getElementById('filter-path').value = '';
+  document.getElementById('show-only-no').checked = true;
+  renderFilingList();
+  setBreadcrumb(3);
+  window.scrollTo(0,0);
+}
+function switchPage(id) {
+  ['page-overview','page-detail','page-filing-list','page-filing-records'].forEach(p => document.getElementById(p).classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function setBreadcrumb(level) {
+  let b = document.getElementById('breadcrumb');
+  if (level === 1) b.innerHTML = '<span class="cur">安全编译选项概览</span>';
+  else if (level === 2) b.innerHTML = '安全编译选项概览 / <span class="cur">产物包详情</span>';
+  else if (level === 3) b.innerHTML = '安全编译选项概览 / 产物包详情 / <span class="cur">待备案项列表</span>';
+  else b.innerHTML = '安全编译选项概览 / <span class="cur">安全编译选项备案记录</span>';
+}
+
+renderOverview();
+setBreadcrumb(1);
+</script>
+</body>
+</html>
