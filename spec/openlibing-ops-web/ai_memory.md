@@ -80,7 +80,13 @@ src/
 - 自动导入（`unplugin-auto-import` / `unplugin-vue-components` / `unplugin-icons`，配置见 `vite.config.ts`）：
   - Vue / vue-router / pinia / @vueuse/core 的 API（`ref`、`computed`、`watch`、`defineStore`、`storeToRefs` 等）自动导入。
   - `src/api/**`、`src/hooks/**`、`src/types/**`、`src/utils/**`、`src/stores/**` 导出的函数、常量、类型自动导入。
+  - 模板（`<template>`）中引用的变量、函数必须显式 `import`，自动导入仅保证 `<script setup>` 内生效。
+  - 自动导入扫描范围内（`src/api/**`、`src/hooks/**`、`src/types/**`、`src/utils/**`、`src/stores/**`）的导出名禁止重复；同名导出会被 unplugin 静默去重，导致其中一个解析失效（如 `ProjectRow`、`TrendSeries` 冲突，需按模块前缀改名消除，如 `TestProjectRow`、`CodeCheckTrendSeries`）。
   - `src/components/**` 组件在模板中直接用组件名，不手动 import。
   - Element Plus 组件 `el-*` 标签直接用。
   - 图标：`<i-ep-xxx />`（Element Plus 图标集合）并用 `<el-icon>` 包裹，无需显式 import。
-- 提交前质量门禁：每次 commit 前必须运行 `npm run lint`、`npm run format`、`npm run test:unit`、`npm run type-check`，全部无问题才能提交。
+- 提交前质量门禁：每次 commit 前必须检查，但只针对本次修改的文件，禁止全量运行：
+  - lint / format：由 pre-commit 钩子（lint-staged）自动只处理暂存文件，无需手动全量执行 `npm run lint` / `npm run format`。
+  - 单元测试：`npx vitest run <本次修改文件对应的测试文件>`，只跑受影响的测试；无对应测试文件则跳过。
+  - 类型检查：`npm run type-check`（vue-tsc --build 为增量编译，开销小，保留）。
+  - 全部无问题才能提交。
