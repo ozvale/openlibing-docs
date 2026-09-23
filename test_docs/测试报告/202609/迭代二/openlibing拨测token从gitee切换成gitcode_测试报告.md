@@ -24,7 +24,7 @@
 **1.openlibing拨测token从gitee切换成gitcode**:
 
 * **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-common/issues/39
-* **步骤一**：请求以下接口检查是否获取到数据   https://1.95.74.1:8077/gateway/login/gitcode/token
+* **步骤一**：请求以下接口检查是否获取到数据
 * **预期结果**: 成功获取到用户数据，gitcode能够联通
 * **测试结果**： Passed
 * **证明截图**:  https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?type=0&branch_id=vb1n00011m6houbb&case_id=vb2100011nbht73d&detail=result

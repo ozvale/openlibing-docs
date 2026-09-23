@@ -35,7 +35,7 @@
 **1.openlibing拨测token从gitee切换成gitcode**:
 
 * **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-common/issues/39
-* **步骤一**：请求以下接口检查是否获取到数据   https://1.95.74.1:8077/gateway/login/gitcode/token
+* **步骤一**：请求以下接口检查是否获取到数据
 * **预期结果**: 成功获取到用户数据，gitcode能够联通
 * **测试结果**： Passed
 
