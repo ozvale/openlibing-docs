@@ -40,27 +40,27 @@
 
 ### 特性指标元数据上报接口
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `indicatorCode` | String | 指标编码 |
-| `indicatorName` | String | 指标名称 |
-| `indicatorType` | Enum | `NUMBER` / `RATIO` |
-| `aggregateMethod` | Enum | `SUM` / `AVG` / `NONE` |
-| `showInFeatureDetail` | Boolean | 是否在特性详情展示 |
-| `allColumnMethod` | Enum | `SUM` / `AVG`（全部列聚合方式） |
-| `targetValue` | Decimal? | 可选目标值 |
-| `targetValueDimension` | Enum? | `FEATURE` / `COMMUNITY`（与 targetValue 同时存在） |
-| `targetValueType` | Enum? | `GROWTH` / `REDUCTION`（与 targetValue 同时存在） |
+| 字段                   | 类型     | 说明                                               |
+| ---------------------- | -------- | -------------------------------------------------- |
+| `indicatorCode`        | String   | 指标编码                                           |
+| `indicatorName`        | String   | 指标名称                                           |
+| `indicatorType`        | Enum     | `NUMBER` / `RATIO`                                 |
+| `aggregateMethod`      | Enum     | `SUM` / `AVG` / `NONE`                             |
+| `showInFeatureDetail`  | Boolean  | 是否在特性详情展示                                 |
+| `allColumnMethod`      | Enum     | `SUM` / `AVG`（全部列聚合方式）                    |
+| `targetValue`          | Decimal? | 可选目标值                                         |
+| `targetValueDimension` | Enum?    | `FEATURE` / `COMMUNITY`（与 targetValue 同时存在） |
+| `targetValueType`      | Enum?    | `GROWTH` / `REDUCTION`（与 targetValue 同时存在）  |
 
 > 接口契约以上线代码为准。
 
 ## 风险与缓解
 
-| 风险 | 影响 | 缓解 |
-|------|------|------|
-| 历史元数据缺新字段 | 上报接口报错 | 新字段默认值兜底；存量数据沿用原值，运营按需手动调整 |
-| 前端看板未同步对接 | 展示错位 | 与前端约定字段同步发布；老字段保留兼容期 |
-| 目标值方向影响完成率计算 | 完成率反向 | Service 层按 `targetValueType` 选择计算公式，单测覆盖 |
+| 风险                     | 影响         | 缓解                                                  |
+| ------------------------ | ------------ | ----------------------------------------------------- |
+| 历史元数据缺新字段       | 上报接口报错 | 新字段默认值兜底；存量数据沿用原值，运营按需手动调整  |
+| 前端看板未同步对接       | 展示错位     | 与前端约定字段同步发布；老字段保留兼容期              |
+| 目标值方向影响完成率计算 | 完成率反向   | Service 层按 `targetValueType` 选择计算公式，单测覆盖 |
 
 ## 关联
 
