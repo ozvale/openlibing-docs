@@ -4,6 +4,7 @@
 > 流程模式：Full（跨仓跨团队：framework + cicd + gateway + codecheck + coderepo + 前端）
 > v5 变化（评审后重大转向）：**放弃独立建表方案，改为在 `user_role_info` 表上加 `perm_group_id` 列**；概念更名为"权限组"（Permission Group）；默认组与其他组同等地位（同步仅对默认组，其余组纯手工维护）；存量跨服务直查 SQL 全量整改（部署门禁）；gateway 鉴权层纳入设计视野。
 > 2026/09/17 同步：成员平行接口定案删除、复用存量链路（8 章）；RPC 分阶段策略定稿（4.4）；framework/cicd 全量审计整改完成（3.1.1）；fillPermGroupInfo 下沉 service（5 章）。
+> 2026/09/23 勘误与实现状态同步：穿透口径由单一 admin 扩为三全局角色 `admin`/`super_admin`/`platform_operater`（与存量 checkProjectPermissions 口径对齐，4.2/9 章）；RPC 已落地实现（4.4/5 章，非"计划"状态）；成员管理复用存量 `/project/user/*` 接口（8 章，注意不是 `/manage/product/user/*`）。
 
 ## 30 秒速览
 
@@ -15,7 +16,7 @@
 | 自定义权限组 | 同表内 `perm_group_id = 组id` 的成员-角色记录       | `user_role_info` + `perm_group`（组定义） |
 | 资源绑定     | 某条资源指定用哪个组鉴权                            | `perm_group_resource_binding`（新增）     |
 
-**效果示例**：流水线 P1（未绑定）→ 按默认组鉴权，与今天完全一致；流水线 P2（绑定组"生产发布管控"）→ 仅该组成员与 admin 可操作，项目管理员未入组同样被拒（已定案）。
+**效果示例**：流水线 P1（未绑定）→ 按默认组鉴权，与今天完全一致；流水线 P2（绑定组"生产发布管控"）→ 仅该组成员与全局角色（admin/super_admin/platform_operater）可操作，项目管理员未入组同样被拒（已定案）。
 
 **核心不变式**：权限组只改变"角色数据来源的过滤范围"，不改变"角色能做什么"（后者永远由角色-菜单-URL 矩阵决定）。
 
@@ -72,6 +73,15 @@
 
 审计新发现、此前任何清单未覆盖的漏网点：权限快照构建 `queryInfoByUser`（污染 Redis 24h 权限缓存）、IAM 账号可见性子查询、`queryAllAccountName` 成员候选。P2 展示类（管理端分页 / 个人中心角色展示 / AOP 日志快照）按定案本次不动。
 
+**2026/09/17 全量复审修复（合入前扫描发现，均已修复）**：
+
+- `getOperationPermissions`（UserBasicServiceImpl，前端按钮矩阵数据源）漏加组过滤——自定义组 PROJECT 角色会混入按钮计算导致误亮——已补 `setPermGroupId(0L)`
+- `getUserRole` RPC 此前 `setPermGroupId(0L)` 未被 `queryByLimit`/`count` SQL 消费（假整改）——两条 SQL 已补 permGroupId 动态条件，其他调用方不传不受影响
+- `query-project-user` 的 `countProjectUserByUserId`/`countProjectUserByAccount` 补 permGroupIds 筛选（此前 limit 分支已筛选、count 分支漏筛，组合筛选时分页 total 不一致）
+- `queryInfoByUser`/`queryInfoByRole` SELECT 补 `perm_group_id` 列（同 queryInfo 曾发生的"实体恒 null"同型隐患）
+- cicd 2 参 `getPipelineDetail` 恢复独立实现（此前误委托 3 参重载导致内部 6 处调用方异常面扩大——绑定查询失败会抛进事件监听器）
+- 遗留待定：`SelectServiceImpl.getSpaceSelect` 系统级角色查询未滤组（正常写入路径无自定义组系统角色，防御性遗漏，是否补待定）
+
 ### 3.2 整改原则（一句话版）
 
 > **存量一律 `perm_group_id = 0`（SELECT 加条件 / INSERT 显式写值），无例外；动态 perm_group_id 只存在于新功能四处**（cicd 资源鉴权、组页签查询、添加成员组写入、framework RPC/接口入参）。
@@ -121,13 +131,13 @@
 
 ### 4.2 cicd 鉴权 SQL（同表后大幅简化）
 
-存量 `hasPermission` / `hasPublicPermission` **属整改项**：逻辑结构不动，加 `perm_group_id=0`（与项目匹配段同级，admin/visitor 穿透段保持不滤组）。新增 `hasPermissionByGroup`，同表后**不再需要 UNION ALL 和 EXISTS 兜底**：
+存量 `hasPermission` / `hasPublicPermission` **属整改项**：逻辑结构不动，加 `perm_group_id=0`（与项目匹配段同级，全局角色穿透段保持不滤组）。新增 `hasPermissionByGroup`，同表后**不再需要 UNION ALL 和 EXISTS 兜底**；该 SQL 落在 **framework 仓 `UserRoleMapper`**，cicd 经内部 RPC 调用（见 4.4）：
 
 ```sql
 SELECT CASE WHEN EXISTS (
     SELECT role FROM user_role_info uri
     WHERE uri.user_id = #{userId}
-      AND (uri.role = 'admin' OR uri.perm_group_id = #{permGroupId})
+      AND (uri.role IN ('admin','super_admin','platform_operater') OR uri.perm_group_id = #{permGroupId})
       AND uri.role IN (
           SELECT rti.role FROM role_type_info rti
           JOIN role_permission_manager rpm ON rti.id = rpm.role_id
@@ -137,27 +147,27 @@ SELECT CASE WHEN EXISTS (
 ) THEN TRUE ELSE FALSE END
 ```
 
-> 与现状穿透语义对齐：admin 不限项目（但需在 URL 角色白名单内）；组内成员按 `perm_group_id` 过滤后仍需过角色白名单——**白名单判断逻辑不变，只是数据范围从"项目"换成"组"**。
+> 与现状穿透语义对齐：全局角色（admin/super_admin/platform_operater，与存量 checkProjectPermissions 口径一致）不限项目（但需在 URL 角色白名单内）；组内成员按 `perm_group_id` 过滤后仍需过角色白名单——**白名单判断逻辑不变，只是数据范围从"项目"换成"组"**。
 > join 字段已核实：`rpm.role_id` / `mui.menu_id` / `mui.menu_url`（该表无 `role_type_id` 字段，`menu_url_info` 字段非 `id`/`url`，勿回退错误字段名）。
 > 原设计的 EXISTS 成员兜底、`isValidProjectMember` 僵尸标记、双数据源复制分支——**全部消失**（同表红利）。
 
 ### 4.3 插入位置（不变，v4 结论保留）
 
-绑定查询插在 `extractPermissionContext` 之后、`isGitUrlPublic` **之前**——否则绑定的公开仓资源被短路和匿名放行绕过。命中绑定跳过公开仓短路与匿名分支；未绑定零改动。绑定查询本地直查 + 独立 Guava 缓存（TTL 5~10 秒）。
+绑定查询插在 `extractPermissionContext` 之后、`isGitUrlPublic` **之前**——否则绑定的公开仓资源被短路和匿名放行绕过。命中绑定跳过公开仓短路与匿名分支；未绑定零改动。绑定查询经内部 RPC 调 framework（见 4.4）+ 独立 Guava 缓存（TTL 5 秒，未绑定结果也缓存防穿透）。
 
 ### 4.4 方案管理链路与 RPC 分阶段策略（2026/09/17 定案）
 
-- 组/绑定的写路径统一走 framework 接口；cicd 鉴权读路径现状为本地直查（同库，已实现：`PermGroupQueryServiceImpl` + 绑定独立 Guava 缓存 TTL 5 秒，未绑定结果也缓存防穿透）
+- 组/绑定的写路径统一走 framework 接口；cicd 鉴权读路径**已 RPC 化**（已实现：cicd `PermGroupQueryServiceImpl` 经 `PermGroupFeignClient` 调 framework 内部接口 + 绑定独立 Guava 缓存 TTL 5 秒，未绑定结果也缓存防穿透）
 
 **RPC 分阶段策略**（为分库做准备，分库前两个月先搞定新增查询）：
 
 | 阶段             | 范围                                                                                                        | 状态                                         |
 | ---------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| 本次（任务一内） | **新增查询走 RPC**：`hasPermissionByGroup`、`queryBoundPermGroup` 等 cicd 侧新增查询改调 framework 内部接口 | 设计定稿，**代码未动工**（3 个 commit 计划） |
+| 本次（任务一内） | **新增查询走 RPC**：`hasPermissionByGroup`、`queryBoundPermGroup` 等 cicd 侧新增查询改调 framework 内部接口 | **已实现**（framework `InternalPermGroupController` 4 接口 + cicd `PermGroupFeignClient`） |
 | 本次（任务一内） | **存量热路径维持本地直查**：`hasPermission` 等只补 `perm_group_id=0`                                        | 已完成（3.1.1 审计整改）                     |
 | 任务二           | 其余存量直查的 RPC 化作为各仓独立选项（0 / RPC / 0+RPC 排期），不替对方选                                   | 待对齐                                       |
 
-**framework 侧内部接口**（4 个，前缀 `/internal-server/perm-group/`，独立 `InternalPermGroupController`——不进 `InternalServerController` 防持续膨胀）：粗粒度合并模式，热路径每请求最多 1 次 RPC（鉴权与绑定信息合并返回，避免按资源逐条 RPC）；具体清单以实现时为准。
+**framework 侧内部接口**（4 个，已实现，前缀 `/internal-server/perm-group/`，独立 `InternalPermGroupController`——不进 `InternalServerController` 防持续膨胀）：`POST /check`（组鉴权，即 hasPermissionByGroup）、`POST /bound-group`（按资源查绑定组）、`POST /group-operations`（组操作权限）、`POST /project-permissions`（项目绑定关系总览）；粗粒度合并模式，热路径每请求最多 1 次 RPC（鉴权与绑定信息合并返回，避免按资源逐条 RPC）。
 
 **cicd 侧配套**（Spring Cloud Feign + OkHttp）：
 
@@ -173,9 +183,9 @@ SELECT CASE WHEN EXISTS (
 | 类名                                          | 职责                                                                                                                                                                                                               |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `PermGroupController`                         | 仅 9 个接口：组列表（虚拟返回默认组）/ 创建（支持复制，返回复制计数）/ 删除（绑定占用校验）+ 绑定 6 个（单条/批量绑定、解绑、按资源查/按组反查/批量查）。**成员增删改无独立接口，复用存量项目成员链路（见 8 章）** |
-| `PermGroupService`                            | 组核心逻辑：复制（`copyGroupMembers` 三条件过滤：仅复制 `role='committer_project'`、repo 非空、`sync_flag` 有效的记录——仅复制人工可添加成员）、删除前绑定占用校验、同项目重名校验                                  |
+| `PermGroupService`                            | 组核心逻辑：复制（`copyGroupMembers` 三条件排除：排除 `role='committer_project'`（代码提交者）、repo 非空（仓库角色）、`sync_flag` 无效（同步账号）的记录——仅复制人工可添加成员）、删除前绑定占用校验、同项目重名校验                                  |
 | 存量成员 Service（ProjectUserServiceImpl 等） | `BatchAddUserDTO` 加可选 `permGroupId`（入组写入，`insertUserRoles` 取实体 IFNULL 值）；查重按 `(userId, role, projectId, permGroupId)` 四元组；`updateProjectUserData` 编辑查重加组维度                           |
-| `InternalPermGroupController`（**待实现**）   | 4 个内部 RPC 接口（见 4.4），承接 cicd 新增查询                                                                                                                                                                    |
+| `InternalPermGroupController`（已实现）   | 4 个内部 RPC 接口（见 4.4），承接 cicd 新增查询                                                                                                                                                                    |
 | `PermGroupResourceBindingService`             | 绑定关系维护：单条/批量/按资源查询/按组反查                                                                                                                                                                        |
 | 组定义 Mapper + 绑定 Mapper                   | `perm_group` / `perm_group_resource_binding` 持久层（**成员数据无独立 Mapper——直接在 `UserRoleMapper` 加按 perm_group_id 过滤的查询/写入方法**）                                                                   |
 | `SyncUserServiceImpl` 等                      | 存量写入链路加 `perm_group_id=0`（framework 自身整改）                                                                                                                                                             |
@@ -184,10 +194,10 @@ SELECT CASE WHEN EXISTS (
 
 | 类名                                          | 改造内容                                                                                                                                                                                                                                               |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `AuthInterceptor`                             | 插入绑定分支（同 v4 位置结论）；未命中零改动                                                                                                                                                                                                           |
-| `UserRoleMapper`                              | 新增 `hasPermissionByGroup`（4.2 SQL）；存量 `hasPermission` 加 `perm_group_id=0`                                                                                                                                                                      |
-| `PermGroupQueryService`（新增）               | 绑定组查询（独立 Guava 缓存 TTL 5 秒，未绑定结果也缓存防穿透）+ 单组/项目级组操作权限计算 + 项目绑定关系总览                                                                                                                                           |
-| `PermGroupResourceBindingLocalMapper`（新增） | 本地只读绑定查询（RPC 化后由 Feign 客户端替代，见 4.4）                                                                                                                                                                                                |
+| `AuthInterceptor`                             | 插入绑定分支（同 v4 位置结论）；未命中零改动                                                                                                                                                                    |
+| `UserRoleMapper`                              | 存量 `hasPermission` 加 `perm_group_id=0`（组鉴权 SQL `hasPermissionByGroup` 落在 framework 侧，cicd 经 RPC 调用，见 4.2/4.4）                                                                                |
+| `PermGroupQueryService`（新增）               | 组查询统一入口（已 RPC 化）：经 Feign 调 framework 内部接口——绑定组查询（独立 Guava 缓存 TTL 5 秒，未绑定结果也缓存防穿透）+ 单组/项目级组操作权限计算 + 项目绑定关系总览                                         |
+| `PermGroupFeignClient`（新增）                | Feign 客户端（Spring Cloud Feign + OkHttp 连接池，配套 `PermGroupOkHttpConfig`：连接事件监听与失败日志，connect 1s / read 2s）；取代早期设计的本地只读 `PermGroupResourceBindingLocalMapper` 方案                  |
 | `PipelineServiceImpl`                         | `fillPermGroupInfo` 填充逻辑所在（2026/09/17 从 controller 下沉）：3 参重载 `getPipelineDetail(projectId, pipelineId, userId)` 供 controller 用；2 参重载供事件监听器 / AuthInterceptor 等 6 处内部调用方使用（不触发绑定查询）；controller 仅协议透传 |
 | `ShortcutServiceImpl`                         | `checkUserPermission` Wrapper 补 `perm_group_id=0`（2026/09/17 审计）                                                                                                                                                                                  |
 
@@ -241,7 +251,7 @@ ALTER TABLE user_role_info ADD COLUMN perm_group_id INT NOT NULL DEFAULT 0
 
 ## 8. API 接口设计
 
-### framework 层（前缀 `/perm-group`，网关全路径 `/openlibing-framework/perm-group`）
+### framework 层（前缀 `/perm-group`，网关全路径 `/gateway/openlibing-framework/perm-group`）
 
 | 接口                           | Method          | 说明                                                                                                                           |
 | ------------------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -268,7 +278,7 @@ ALTER TABLE user_role_info ADD COLUMN perm_group_id INT NOT NULL DEFAULT 0
 
 | #   | 项                     | 设计                                                                                                                                                                                                                             |
 | --- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | admin 穿透             | SQL 内 `(role='admin' OR perm_group_id=#{permGroupId})`，语义与现状一致                                                                                                                                                          |
+| 1   | 全局角色穿透        | SQL 内 `(role IN ('admin','super_admin','platform_operater') OR perm_group_id=#{permGroupId})`，与存量 checkProjectPermissions 口径对齐（2026/09/23 由单一 admin 扩为三角色）                                                              |
 | 2   | project_manager 不穿透 | 已定案，管理员需显式入组                                                                                                                                                                                                         |
 | 3   | 死锁防护               | 绑定/解绑/组管理接口走全局角色矩阵，不随组走（v4 结论保留）                                                                                                                                                                      |
 | 4   | 数据一致性             | 同表后无需跨表兜底；删除成员 = 删该项目下所有 perm_group_id 记录（前端提示列出涉及组）                                                                                                                                           |
