@@ -13,7 +13,7 @@
 - [x] T1.5 拷贝 util 8 个 py（authApi、catchUtil、downUtil、extractUtil、formateUtil、popUtil、postOrdered、stack）
 - [x] T1.6 写入裁剪版 `requirements.txt`（初版 19 项，见 design.md §3.3）
 - [x] T1.7 `python -m py_compile` 验证全部迁移文件语法
-- [x] T1.8 确认未带入 token.yaml / __pycache__ / temp 等无关文件
+- [x] T1.8 确认未带入 token.yaml / **pycache** / temp 等无关文件
 - [x] T1.9 commit：`feat(tools): 引入 issue-scanner lcsca 最小闭包源码`（ada506c1）
 
 ## T2 Dockerfile（commit 2: `5cb5d0ff`）

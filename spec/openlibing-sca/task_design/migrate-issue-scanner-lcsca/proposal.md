@@ -36,14 +36,14 @@
 
 ## 4. 验收标准（已随 PR #313 合入验证）
 
-| # | 标准 | 验证方式 | 状态 |
-|---|------|---------|------|
-| 1 | `tools/license-scanner/` 包含 lcsca 最小闭包 15 个源文件 + requirements.txt（16 项） | 文件清单比对 | ✅ |
-| 2 | `python src/command.py -m lcsca <path>` 在依赖安装后可运行并输出 JSON | 容器内端到端扫描 | ⏳ PR 测试计划遗留项 |
-| 3 | Dockerfile 无 git clone / git-credentials / GIT_USERNAME / GIT_PASSWORD 残留 | 文本检查 + docker build | ✅（构建通过） |
-| 4 | `DMContastName.ISSUESCANNER == "tools/license-scanner"`，相关单测更新后全部通过 | `python scripts/run-mvn.py` 执行单测 | ✅（4/4） |
-| 5 | Java 侧 ProcessBuilder 命令、stdout JSON 解析逻辑无改动 | code review | ✅ |
-| 6 | pip 依赖解析无冲突，漏洞依赖升级后 High/Critical 归零 | Docker 构建 + 依赖审计 | ✅ |
+| #   | 标准                                                                                 | 验证方式                             | 状态                 |
+| --- | ------------------------------------------------------------------------------------ | ------------------------------------ | -------------------- |
+| 1   | `tools/license-scanner/` 包含 lcsca 最小闭包 15 个源文件 + requirements.txt（16 项） | 文件清单比对                         | ✅                   |
+| 2   | `python src/command.py -m lcsca <path>` 在依赖安装后可运行并输出 JSON                | 容器内端到端扫描                     | ⏳ PR 测试计划遗留项 |
+| 3   | Dockerfile 无 git clone / git-credentials / GIT_USERNAME / GIT_PASSWORD 残留         | 文本检查 + docker build              | ✅（构建通过）       |
+| 4   | `DMContastName.ISSUESCANNER == "tools/license-scanner"`，相关单测更新后全部通过      | `python scripts/run-mvn.py` 执行单测 | ✅（4/4）            |
+| 5   | Java 侧 ProcessBuilder 命令、stdout JSON 解析逻辑无改动                              | code review                          | ✅                   |
+| 6   | pip 依赖解析无冲突，漏洞依赖升级后 High/Critical 归零                                | Docker 构建 + 依赖审计               | ✅                   |
 
 ## 5. 风险与约束
 

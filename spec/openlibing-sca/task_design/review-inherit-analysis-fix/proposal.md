@@ -35,16 +35,16 @@ PR/版本扫描的评审结论流转链路存在一组相互关联的缺陷，�
 
 ## 4. 验收标准（已随 PR #315 合入验证）
 
-| # | 标准 | 验证方式 | 状态 |
-|---|------|---------|------|
-| 1 | 二次扫描继承待审状态；PR 改文件不碰匹配行时按 fileHash 模糊继承；触碰匹配行不继承 | 单测（ScanCommonServiceImplTest / OpenPersonDMScanDMServiceImplTest，+328 行） | ✅ |
-| 2 | 批复/撤销经 reviewId 传播到全部关联 mongo 文档 | 单测（ConfirmReviewServceImplTest +528 行） | ✅ |
-| 3 | scan_issue 批量确认不再触发 E11000；人工批复后刷新 un_confirmed_file_num；reviewStatus=10 中间态不再落库 | 单测（ConfirmReviewServceImplTest） | ✅ |
-| 4 | 自动同步仅命中 sourceHash/fileHash 匹配且状态 10/20 的审核单 | 单测 | ✅ |
-| 5 | atomgit PR 链接归一后走 gitcode 链路并回写 PrScanPo | 单测（IntegrationApiServiceImplTest 新增 4 例） | ✅ |
-| 6 | pre-commit 门禁通过（spotless / checkstyle / spotbugs / pmd） | pre-commit | ✅ |
-| 7 | 构建与依赖解析正常（spring-boot 解析为 3.5.14） | mvn compile + dependency:tree | ✅ |
-| 8 | CI 流水线通过 | PR 标签 ci-pipeline-passed | ✅ |
+| #   | 标准                                                                                                     | 验证方式                                                                       | 状态 |
+| --- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---- |
+| 1   | 二次扫描继承待审状态；PR 改文件不碰匹配行时按 fileHash 模糊继承；触碰匹配行不继承                        | 单测（ScanCommonServiceImplTest / OpenPersonDMScanDMServiceImplTest，+328 行） | ✅   |
+| 2   | 批复/撤销经 reviewId 传播到全部关联 mongo 文档                                                           | 单测（ConfirmReviewServceImplTest +528 行）                                    | ✅   |
+| 3   | scan_issue 批量确认不再触发 E11000；人工批复后刷新 un_confirmed_file_num；reviewStatus=10 中间态不再落库 | 单测（ConfirmReviewServceImplTest）                                            | ✅   |
+| 4   | 自动同步仅命中 sourceHash/fileHash 匹配且状态 10/20 的审核单                                             | 单测                                                                           | ✅   |
+| 5   | atomgit PR 链接归一后走 gitcode 链路并回写 PrScanPo                                                      | 单测（IntegrationApiServiceImplTest 新增 4 例）                                | ✅   |
+| 6   | pre-commit 门禁通过（spotless / checkstyle / spotbugs / pmd）                                            | pre-commit                                                                     | ✅   |
+| 7   | 构建与依赖解析正常（spring-boot 解析为 3.5.14）                                                          | mvn compile + dependency:tree                                                  | ✅   |
+| 8   | CI 流水线通过                                                                                            | PR 标签 ci-pipeline-passed                                                     | ✅   |
 
 ## 5. 影响范围与风险
 

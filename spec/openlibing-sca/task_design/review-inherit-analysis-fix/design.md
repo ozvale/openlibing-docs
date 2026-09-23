@@ -89,26 +89,26 @@
 
 ## 6. 涉及文件（12 个）
 
-| 文件 | 变更 | 子域 |
-|------|------|------|
-| `analysis/service/impl/ConfirmReviewServceImpl.java` | +217：中间态治理 / 批量确认去重 / 未确认数刷新 / 撤销传播 | B |
-| `analysis/dao/TblConfirmReviewMapper.java` + `resources/mapper/dm/TblConfirmReviewMapper.xml` | +9 / +21：新增 selectUnderReviewByScope | A |
-| `analysis/entity/ScanIssue.java` | +2：reviewId 字段映射 | A |
-| `dm/service/impl/ScanCommonServiceImpl.java` | +226：resultInheritV3 / prResultInherit 待审继承（精确 + 模糊）、saveScanResult/insertScanResult 哈希守卫 | A |
-| `dm/service/impl/OpenPersonDMScanDMServiceImpl.java` | +69：继承链路配套调整 | A |
-| `dm/service/impl/IntegrationApiServiceImpl.java` | +90：startPrScan atomgit 域名归一 + PrScanPo 回写 | C |
-| `pom.xml` | -305：BOM 收敛 + sdk 1.0.21.0 | D |
-| `ConfirmReviewServceImplTest` / `IntegrationApiServiceImplTest` / `OpenPersonDMScanDMServiceImplTest` / `ScanCommonServiceImplTest` | +528 / +120 / +88 / +240：上述行为单测（含 atomgit 4 例） | A/B/C |
+| 文件                                                                                                                                | 变更                                                                                                      | 子域  |
+| ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ----- |
+| `analysis/service/impl/ConfirmReviewServceImpl.java`                                                                                | +217：中间态治理 / 批量确认去重 / 未确认数刷新 / 撤销传播                                                 | B     |
+| `analysis/dao/TblConfirmReviewMapper.java` + `resources/mapper/dm/TblConfirmReviewMapper.xml`                                       | +9 / +21：新增 selectUnderReviewByScope                                                                   | A     |
+| `analysis/entity/ScanIssue.java`                                                                                                    | +2：reviewId 字段映射                                                                                     | A     |
+| `dm/service/impl/ScanCommonServiceImpl.java`                                                                                        | +226：resultInheritV3 / prResultInherit 待审继承（精确 + 模糊）、saveScanResult/insertScanResult 哈希守卫 | A     |
+| `dm/service/impl/OpenPersonDMScanDMServiceImpl.java`                                                                                | +69：继承链路配套调整                                                                                     | A     |
+| `dm/service/impl/IntegrationApiServiceImpl.java`                                                                                    | +90：startPrScan atomgit 域名归一 + PrScanPo 回写                                                         | C     |
+| `pom.xml`                                                                                                                           | -305：BOM 收敛 + sdk 1.0.21.0                                                                             | D     |
+| `ConfirmReviewServceImplTest` / `IntegrationApiServiceImplTest` / `OpenPersonDMScanDMServiceImplTest` / `ScanCommonServiceImplTest` | +528 / +120 / +88 / +240：上述行为单测（含 atomgit 4 例）                                                 | A/B/C |
 
 ## 7. 风险与缓解
 
-| 风险 | 缓解 |
-|------|------|
-| pom 依赖收敛（-305 行）后构建产物依赖完整性 | mvn compile + dependency:tree 验证；版本随 BOM 对齐（spring-boot 3.5.14） |
-| 评审继承涉及 mongo 文档关联，重扫场景关联文档数量增长 | 建议 PR/版本重扫灰度观察批复/撤销传播正确性与性能（PR 风险项） |
-| 模糊继承误继承 | 3a 增量 diff 守卫触碰匹配行即跳过；基线不可解保守跳过 |
-| 中间态不落库后批复失败的问题单停在"未处理" | 属预期 fail-safe：下次扫描自愈重跑；bulk 异常不再吞掉，可按审核单 id 补偿 |
-| reviewStatus=10 语义保留 | 状态机取值不变，仅落库时机后移到批复阶段 |
+| 风险                                                  | 缓解                                                                      |
+| ----------------------------------------------------- | ------------------------------------------------------------------------- |
+| pom 依赖收敛（-305 行）后构建产物依赖完整性           | mvn compile + dependency:tree 验证；版本随 BOM 对齐（spring-boot 3.5.14） |
+| 评审继承涉及 mongo 文档关联，重扫场景关联文档数量增长 | 建议 PR/版本重扫灰度观察批复/撤销传播正确性与性能（PR 风险项）            |
+| 模糊继承误继承                                        | 3a 增量 diff 守卫触碰匹配行即跳过；基线不可解保守跳过                     |
+| 中间态不落库后批复失败的问题单停在"未处理"            | 属预期 fail-safe：下次扫描自愈重跑；bulk 异常不再吞掉，可按审核单 id 补偿 |
+| reviewStatus=10 语义保留                              | 状态机取值不变，仅落库时机后移到批复阶段                                  |
 
 ## 8. 跨仓影响
 

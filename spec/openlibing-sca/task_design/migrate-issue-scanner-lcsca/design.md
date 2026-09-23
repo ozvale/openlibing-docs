@@ -23,16 +23,16 @@ OpenPersonDMScanDMServiceImpl#getCopyrightAndLicense(path, workdir)
 
 模块级 import 全量追踪结果（command.py → 全部可达模块），并叠加交付期死代码清理（§4 决策 3）后的最终状态：
 
-| 目录 | 迁移文件 | 说明 |
-|------|---------|------|
-| `src/` | `command.py` | CLI 入口（`-m pr` 入口已随 DB 层删除） |
-| `src/reposca/` | `__init__.py` | 包标记 |
-| | `commSca.py` | CommSca.scaResult 核心（DB init 已移除） |
-| | `analyzeSca.py` | getScaAnalyze（模块级被引） |
-| | `sourceAnalyze.py` | getSourceData（lcsca 实际执行） |
-| | `licenseCheck.py` | license 白黑名单判定 |
-| | `config/Licenses.yaml` | licenseCheck 的数据文件（相对 `__file__` 定位，必须随迁） |
-| `src/util/` | `authApi.py`、`catchUtil.py`、`downUtil.py`、`extractUtil.py`、`formateUtil.py`、`popUtil.py`、`postOrdered.py`、`stack.py` | util 闭包（无 `__init__.py`，靠 PEP 420 命名空间包工作，保持原样） |
+| 目录           | 迁移文件                                                                                                                    | 说明                                                               |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `src/`         | `command.py`                                                                                                                | CLI 入口（`-m pr` 入口已随 DB 层删除）                             |
+| `src/reposca/` | `__init__.py`                                                                                                               | 包标记                                                             |
+|                | `commSca.py`                                                                                                                | CommSca.scaResult 核心（DB init 已移除）                           |
+|                | `analyzeSca.py`                                                                                                             | getScaAnalyze（模块级被引）                                        |
+|                | `sourceAnalyze.py`                                                                                                          | getSourceData（lcsca 实际执行）                                    |
+|                | `licenseCheck.py`                                                                                                           | license 白黑名单判定                                               |
+|                | `config/Licenses.yaml`                                                                                                      | licenseCheck 的数据文件（相对 `__file__` 定位，必须随迁）          |
+| `src/util/`    | `authApi.py`、`catchUtil.py`、`downUtil.py`、`extractUtil.py`、`formateUtil.py`、`popUtil.py`、`postOrdered.py`、`stack.py` | util 闭包（无 `__init__.py`，靠 PEP 420 命名空间包工作，保持原样） |
 
 **初版迁移含、最终删除的 DB 模块**（commit `3d93edb9`）：`repoDb.py`、`prSca.py`、`itemLicSca.py`、`takeRepoSca.py`——均为 lcsca 路径死代码（见 §4 决策 3），删除后 lcsca 闭包自洽（commSca 对 itemLicSca 的模块级 import 一并清理）。
 
@@ -76,12 +76,12 @@ RUN pip3 install --index-url https://pypi.tuna.tsinghua.edu.cn/simple/ -r $PROJE
 
 ### 3.2 Java 侧变更
 
-| 文件 | 变更 |
-|------|------|
-| `DMContastName.java` | `ISSUESCANNER = "issue-scanner"` → `"tools/license-scanner"` |
-| `PrCommonName.java` | 同步改为 `"tools/license-scanner"`（定义未被 main 引用，但语义应一致，避免后续误用） |
-| `DMContastNameTest` / `PrCommonNameTest` | 断言值同步更新 |
-| `OpenPersonDMScanDMServiceImpl` | **零改动**（workdir 由常量拼接，`src/command.py` 相对路径不变） |
+| 文件                                     | 变更                                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------ |
+| `DMContastName.java`                     | `ISSUESCANNER = "issue-scanner"` → `"tools/license-scanner"`                         |
+| `PrCommonName.java`                      | 同步改为 `"tools/license-scanner"`（定义未被 main 引用，但语义应一致，避免后续误用） |
+| `DMContastNameTest` / `PrCommonNameTest` | 断言值同步更新                                                                       |
+| `OpenPersonDMScanDMServiceImpl`          | **零改动**（workdir 由常量拼接，`src/command.py` 相对路径不变）                      |
 
 ### 3.3 requirements.txt 裁剪与升级（27 → 最终 16 项）
 
@@ -118,15 +118,15 @@ click==8.1.7                # 必须：scancode 31.0.1 与 click 8.2+ 不兼容
 
 ## 4. 关键行为决策
 
-| 决策点 | 结论 | 依据 |
-|--------|------|------|
-| `CommSca.__init__` 的 MySQL 构造 | **删除**（commit `68dacc3a`，2026-09-17） | 初判"保持原样"，但部署环境缺 `MYSQL_PORT` 时 `int(None)` 抛 TypeError 直接断掉 lcsca 路径。核实 `_dbObject_` 仅被 `infoSca` 使用，而 `infoSca` 在 command.py 无任何调用入口（死代码）；lcsca/repo/local 三条实际路径均不触库 |
-| `/home/repo/tempRepo` 临时目录 | **Dockerfile 构建期预建**（commit `1a8e5600`，2026-09-17） | 初判"makedirs 递归创建"不成立：容器以非 root 用户 `openlibing` 运行，`/home` 归 root，`os.makedirs('/home/repo/tempRepo/tempJson')` 抛 PermissionError 且被 `catch_error` 吞掉 → stdout 输出 `null` → Java `processJsonFile` JSON 解析失败。旧镜像的 git clone 目标是 `./issue-scanner`，从未创建过 /home/repo。构建期 `mkdir -p /home/repo/tempRepo` 并 chown 给 `openlibing` |
-| DB 层整体删除（repoDb / prSca / itemLicSca / takeRepoSca + `-m pr` 入口） | **删除**（commit `3d93edb9`，2026-09-23） | 决策 1 的延伸：四个 DB 模块仅服务于已确认死代码的 infoSca/pr 路径，保留只会引入 PyMySQL 连接池等无用依赖面；requirements 同步移除 PyMySQL/DBUtils/SQLAlchemy；src 下零残留引用（py_compile + 引用核查） |
-| 漏洞依赖升级 | **升级 5 项 pin**（commit `7c84168c`，2026-09-23） | 迁移引入的 requirements 承担了旧仓 42 个 High/Critical 漏洞；升级至当前无漏洞版本并核对 API 兼容（urllib3 1.x → 2.x 为主风险点）；顺带修正 Dockerfile 尾部 pdfminer.six 降级覆盖 |
-| 工具目录命名 `issue-scanner` → `license-scanner` | **重命名**（commit `731f5ba2`，2026-09-23） | 迁入本仓后工具职责是 license/copyright 扫描，`license-scanner` 语义更准确；Java 常量、测试断言、Dockerfile 路径同步更新 |
-| `util/` 无 `__init__.py` | 保持原样 | PEP 420 命名空间包，上游原样可跑 |
-| Python 语法/缺陷修复 | 不做 | 行为一致性优先，缺陷在上游仓修 |
+| 决策点                                                                    | 结论                                                       | 依据                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CommSca.__init__` 的 MySQL 构造                                          | **删除**（commit `68dacc3a`，2026-09-17）                  | 初判"保持原样"，但部署环境缺 `MYSQL_PORT` 时 `int(None)` 抛 TypeError 直接断掉 lcsca 路径。核实 `_dbObject_` 仅被 `infoSca` 使用，而 `infoSca` 在 command.py 无任何调用入口（死代码）；lcsca/repo/local 三条实际路径均不触库                                                                                                                                                   |
+| `/home/repo/tempRepo` 临时目录                                            | **Dockerfile 构建期预建**（commit `1a8e5600`，2026-09-17） | 初判"makedirs 递归创建"不成立：容器以非 root 用户 `openlibing` 运行，`/home` 归 root，`os.makedirs('/home/repo/tempRepo/tempJson')` 抛 PermissionError 且被 `catch_error` 吞掉 → stdout 输出 `null` → Java `processJsonFile` JSON 解析失败。旧镜像的 git clone 目标是 `./issue-scanner`，从未创建过 /home/repo。构建期 `mkdir -p /home/repo/tempRepo` 并 chown 给 `openlibing` |
+| DB 层整体删除（repoDb / prSca / itemLicSca / takeRepoSca + `-m pr` 入口） | **删除**（commit `3d93edb9`，2026-09-23）                  | 决策 1 的延伸：四个 DB 模块仅服务于已确认死代码的 infoSca/pr 路径，保留只会引入 PyMySQL 连接池等无用依赖面；requirements 同步移除 PyMySQL/DBUtils/SQLAlchemy；src 下零残留引用（py_compile + 引用核查）                                                                                                                                                                        |
+| 漏洞依赖升级                                                              | **升级 5 项 pin**（commit `7c84168c`，2026-09-23）         | 迁移引入的 requirements 承担了旧仓 42 个 High/Critical 漏洞；升级至当前无漏洞版本并核对 API 兼容（urllib3 1.x → 2.x 为主风险点）；顺带修正 Dockerfile 尾部 pdfminer.six 降级覆盖                                                                                                                                                                                               |
+| 工具目录命名 `issue-scanner` → `license-scanner`                          | **重命名**（commit `731f5ba2`，2026-09-23）                | 迁入本仓后工具职责是 license/copyright 扫描，`license-scanner` 语义更准确；Java 常量、测试断言、Dockerfile 路径同步更新                                                                                                                                                                                                                                                        |
+| `util/` 无 `__init__.py`                                                  | 保持原样                                                   | PEP 420 命名空间包，上游原样可跑                                                                                                                                                                                                                                                                                                                                               |
+| Python 语法/缺陷修复                                                      | 不做                                                       | 行为一致性优先，缺陷在上游仓修                                                                                                                                                                                                                                                                                                                                                 |
 
 ## 5. 测试策略（Full）与验证结果
 
@@ -141,19 +141,19 @@ click==8.1.7                # 必须：scancode 31.0.1 与 click 8.2+ 不兼容
 
 初版按 3 commit 规划（源码迁移 / Dockerfile / Java 常量），最终 PR #313 共 11 个 commit：
 
-| # | commit | 说明 |
-|---|--------|------|
-| 1 | `ada506c1` | feat(tools): 引入 issue-scanner lcsca 最小闭包源码（19 文件，纯拷贝） |
-| 2 | `5cb5d0ff` | build(docker): 移除 issue-scanner git clone，改用 tools 目录 COPY |
-| 3 | `dc862567` | feat(scanner): 容器内 issue-scanner 路径改至 tools/issue-scanner |
-| 4 | `dc38260f` | fix(tools): remove commoncode pin conflicting with scancode-toolkit 31.0.1 |
-| 5 | `68dacc3a` | fix(tools): remove unused DB init from CommSca constructor |
-| 6 | `1a8e5600` | fix(docker): pre-create /home/repo/tempRepo for issue-scanner lcsca |
-| 7 | `7c84168c` | fix(deps): upgrade vulnerable python deps in issue-scanner requirements |
-| 8 | `3d93edb9` | refactor(tools): remove unused db layer from issue-scanner lcsca path |
-| 9 | `7024c898` | chore(deps): bump openlibing-common-sdk to 1.0.21.0（随分支带入的独立依赖升级，与迁移无直接关系） |
-| 10 | `731f5ba2` | refactor(tools): rename tools/issue-scanner to tools/license-scanner |
-| 11 | `3db76de7` | merge upstream/release_20260923 into dev_scanner |
+| #   | commit     | 说明                                                                                              |
+| --- | ---------- | ------------------------------------------------------------------------------------------------- |
+| 1   | `ada506c1` | feat(tools): 引入 issue-scanner lcsca 最小闭包源码（19 文件，纯拷贝）                             |
+| 2   | `5cb5d0ff` | build(docker): 移除 issue-scanner git clone，改用 tools 目录 COPY                                 |
+| 3   | `dc862567` | feat(scanner): 容器内 issue-scanner 路径改至 tools/issue-scanner                                  |
+| 4   | `dc38260f` | fix(tools): remove commoncode pin conflicting with scancode-toolkit 31.0.1                        |
+| 5   | `68dacc3a` | fix(tools): remove unused DB init from CommSca constructor                                        |
+| 6   | `1a8e5600` | fix(docker): pre-create /home/repo/tempRepo for issue-scanner lcsca                               |
+| 7   | `7c84168c` | fix(deps): upgrade vulnerable python deps in issue-scanner requirements                           |
+| 8   | `3d93edb9` | refactor(tools): remove unused db layer from issue-scanner lcsca path                             |
+| 9   | `7024c898` | chore(deps): bump openlibing-common-sdk to 1.0.21.0（随分支带入的独立依赖升级，与迁移无直接关系） |
+| 10  | `731f5ba2` | refactor(tools): rename tools/issue-scanner to tools/license-scanner                              |
+| 11  | `3db76de7` | merge upstream/release_20260923 into dev_scanner                                                  |
 
 ## 7. 影响范围
 

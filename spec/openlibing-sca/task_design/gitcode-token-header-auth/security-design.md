@@ -45,13 +45,13 @@
 
 ## 7. 验证计划
 
-| 约束 | 验证方式 | 时机 |
-|------|---------|------|
-| SEC-1 token 空值不加 header | 单测：token 为 null/blank 时请求头无 Authorization（HttpClientUtilTest / HttpUtilTest） | Phase 3 编码时 |
-| SEC-2 gitcode URL 无 token | 单测：断言 gitcode 分支构建的 URL 不含 `access_token`，gitee 分支仍含 | Phase 3 编码时 |
+| 约束                        | 验证方式                                                                                                              | 时机                              |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| SEC-1 token 空值不加 header | 单测：token 为 null/blank 时请求头无 Authorization（HttpClientUtilTest / HttpUtilTest）                               | Phase 3 编码时                    |
+| SEC-2 gitcode URL 无 token  | 单测：断言 gitcode 分支构建的 URL 不含 `access_token`，gitee 分支仍含                                                 | Phase 3 编码时                    |
 | SEC-2 扩展 clone/fetch 凭据 | 单测：clone/fetch 命令的 URL 参数不含 token；`GIT_CONFIG_VALUE_0` 为 `Authorization: Basic`（DownLoadFilesUtilsTest） | Phase 3 编码时（commit 2a516fe4） |
-| SEC-3 日志不含凭证 | 代码走查（无 header 值日志语句）+ 事后 `gitcode-security-check` 扫描 | Phase 3 后事后审查 |
-| SEC-4 失败不降级放行 | 单测：401 响应走既有异常路径；回归现有失败处理用例 | Phase 3 编码时 |
-| 整体功能不回退 | 用户自测 PR 扫描、版本扫描链路 | 用户自测环 |
+| SEC-3 日志不含凭证          | 代码走查（无 header 值日志语句）+ 事后 `gitcode-security-check` 扫描                                                  | Phase 3 后事后审查                |
+| SEC-4 失败不降级放行        | 单测：401 响应走既有异常路径；回归现有失败处理用例                                                                    | Phase 3 编码时                    |
+| 整体功能不回退              | 用户自测 PR 扫描、版本扫描链路                                                                                        | 用户自测环                        |
 
 事后审查闭环：SEC-1 ~ SEC-4 的实现符合性交由 `gitcode-security-check` 在 Phase 3 交付后验证（用户触发或合并前）。

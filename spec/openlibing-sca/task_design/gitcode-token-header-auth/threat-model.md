@@ -2,12 +2,12 @@
 
 ## 资产清单
 
-| 资产 | 分类 | 责任域 | 备注 |
-|------|------|--------|------|
-| GitCode 平台 token（gitcodeToken / majunAccessToken） | 机密 | SCA 服务 | 来源 `platformUtil.getPlatformToken`，按 projectId 解析，不入仓 |
-| 调用 GitCode API 的完整 URL | 敏感（现状含 token） | SCA 服务 | 改造目标：URL 中不再出现 token |
-| `.git/config` 的 `remote.origin.url` | 机密（现状含 user:token） | SCA 扫描工作目录 | clone 内嵌凭据随工作目录落盘；改造目标：干净 URL |
-| git 子进程命令行参数（argv） | 敏感（现状含 user:token） | SCA 服务 | argv 可经 `ps` / 进程列表 / 错误输出暴露；改造目标：凭据走环境变量 |
+| 资产                                                  | 分类                      | 责任域           | 备注                                                               |
+| ----------------------------------------------------- | ------------------------- | ---------------- | ------------------------------------------------------------------ |
+| GitCode 平台 token（gitcodeToken / majunAccessToken） | 机密                      | SCA 服务         | 来源 `platformUtil.getPlatformToken`，按 projectId 解析，不入仓    |
+| 调用 GitCode API 的完整 URL                           | 敏感（现状含 token）      | SCA 服务         | 改造目标：URL 中不再出现 token                                     |
+| `.git/config` 的 `remote.origin.url`                  | 机密（现状含 user:token） | SCA 扫描工作目录 | clone 内嵌凭据随工作目录落盘；改造目标：干净 URL                   |
+| git 子进程命令行参数（argv）                          | 敏感（现状含 user:token） | SCA 服务         | argv 可经 `ps` / 进程列表 / 错误输出暴露；改造目标：凭据走环境变量 |
 
 ## 信任边界
 
@@ -25,12 +25,12 @@
 
 ## STRIDE 评估
 
-| 资产 | S | T | R | I | D | E | 缓解措施 |
-|------|---|---|---|---|---|---|---------|
-| GitCode 平台 token | 低 | 低 | 中 | **高** | 无变化 | 无变化 | **本次改造**：API 调用 token 从 URL query 移入 Authorization header；clone/fetch 凭据从 URL/argv 移入 `GIT_CONFIG_*` 环境变量；HTTPS 传输；日志不记录 header 值；`LogSanitizer` 保留兜底 |
-| API URL | 低 | 低 | 低 | 中 | 无变化 | 无变化 | 改造后 URL 不含凭证，可直接入日志 |
-| `.git/config` | 低 | 低 | 低 | **高**（现状） | 无变化 | 无变化 | 改造后 `remote.origin.url` 为干净 URL，凭据不再落盘 |
-| git 子进程 argv | 低 | 低 | 低 | **高**（现状） | 无变化 | 无变化 | 改造后 argv 仅含干净 URL，凭据经环境块传递 |
+| 资产               | S   | T   | R   | I              | D      | E      | 缓解措施                                                                                                                                                                                 |
+| ------------------ | --- | --- | --- | -------------- | ------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitCode 平台 token | 低  | 低  | 中  | **高**         | 无变化 | 无变化 | **本次改造**：API 调用 token 从 URL query 移入 Authorization header；clone/fetch 凭据从 URL/argv 移入 `GIT_CONFIG_*` 环境变量；HTTPS 传输；日志不记录 header 值；`LogSanitizer` 保留兜底 |
+| API URL            | 低  | 低  | 低  | 中             | 无变化 | 无变化 | 改造后 URL 不含凭证，可直接入日志                                                                                                                                                        |
+| `.git/config`      | 低  | 低  | 低  | **高**（现状） | 无变化 | 无变化 | 改造后 `remote.origin.url` 为干净 URL，凭据不再落盘                                                                                                                                      |
+| git 子进程 argv    | 低  | 低  | 低  | **高**（现状） | 无变化 | 无变化 | 改造后 argv 仅含干净 URL，凭据经环境块传递                                                                                                                                               |
 
 - **I（信息泄露）为本次核心威胁**：
   - API 链路：token 拼在 URL 中会被网关访问日志、Nginx/代理日志、APM trace、`LOGGER.info` 等多通道固化记录。现状的 `LogSanitizer.sanitizeForLog` 只覆盖显式调用点，属被动补救。
