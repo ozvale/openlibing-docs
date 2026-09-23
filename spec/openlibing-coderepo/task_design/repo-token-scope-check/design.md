@@ -51,30 +51,30 @@ RepoServiceImpl
 
 ### 2. 令牌权限探测（TokenPermissionEvaluator.probe）
 
-| 步骤 | 说明 |
-| ---- | ---- |
-| 元数据获取 | `GET /user`：login（令牌账号名）、scope、tokenStatus；GitHub Classic PAT 从 `X-OAuth-Scopes` 响应头提取，Fine-grained PAT（`github_pat_` 前缀）固定 `"--"` 占位并按过期时间响应头回填状态 |
-| 令牌无效判定 | login 为空或 tokenStatus=invalid → invalidTokenSnapshot（scope/role 均 abnormal，携带细分错误信息） |
-| scope 状态 | 见「scope 判定矩阵」；Fine-grained PAT 跳过 scope 校验，snapshot 中 scopeStatus=null，入库置空串 |
-| 角色解析 | 逐仓调用：GitCode 按 collaborators 列表匹配 username 取 `role_name_cn`；GitHub 用 `GET /repos/{owner}/{repo}` 解析当前认证用户有效权限（role_name 优先，缺失时按 permissions 布尔位收敛为 admin/maintain/write/triage/read），read 角色 token 亦可调用 |
-| 探测异常 | catch 后返回 platformFailureSnapshot（platformProbeFailed=true），上层跳过告警，不降级读库 |
+| 步骤         | 说明                                                                                                                                                                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 元数据获取   | `GET /user`：login（令牌账号名）、scope、tokenStatus；GitHub Classic PAT 从 `X-OAuth-Scopes` 响应头提取，Fine-grained PAT（`github_pat_` 前缀）固定 `"--"` 占位并按过期时间响应头回填状态                                                              |
+| 令牌无效判定 | login 为空或 tokenStatus=invalid → invalidTokenSnapshot（scope/role 均 abnormal，携带细分错误信息）                                                                                                                                                    |
+| scope 状态   | 见「scope 判定矩阵」；Fine-grained PAT 跳过 scope 校验，snapshot 中 scopeStatus=null，入库置空串                                                                                                                                                       |
+| 角色解析     | 逐仓调用：GitCode 按 collaborators 列表匹配 username 取 `role_name_cn`；GitHub 用 `GET /repos/{owner}/{repo}` 解析当前认证用户有效权限（role_name 优先，缺失时按 permissions 布尔位收敛为 admin/maintain/write/triage/read），read 角色 token 亦可调用 |
+| 探测异常     | catch 后返回 platformFailureSnapshot（platformProbeFailed=true），上层跳过告警，不降级读库                                                                                                                                                             |
 
 ### 3. scope 判定矩阵
 
-| 平台 | required 并集 | 别名/覆盖规则 | 精确匹配项 |
-| ---- | ---- | ---- | ---- |
+| 平台    | required 并集                                        | 别名/覆盖规则                                                                    | 精确匹配项                   |
+| ------- | ---------------------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------- |
 | GitCode | read_user、read_projects、all_hook、all_pr、all_note | read_user ← {read_user, all_user}；read_projects ← {read_projects, all_projects} | all_hook / all_pr / all_note |
-| GitHub | read:user、repo、admin:repo_hook、read:project | read:user ← {read:user, user}；read:project ← {read:project, project} | repo / admin:repo_hook |
+| GitHub  | read:user、repo、admin:repo_hook、read:project       | read:user ← {read:user, user}；read:project ← {read:project, project}            | repo / admin:repo_hook       |
 
 - scope 字符串解析兼容逗号或空格分隔（GitCode OAuth 两种格式均出现）
 - blank 或 `"--"` 判为 abnormal
 
 ### 4. 角色判定
 
-| 平台 | 最低要求 | 判定逻辑 |
-| ---- | ---- | ---- |
-| GitCode | 维护者及以上 | 角色名包含 管理员 / 维护者 / owner / Owner / 仓库owner |
-| GitHub | maintain 及以上 | role ∈ {owner, admin, maintain}（大小写不敏感） |
+| 平台    | 最低要求        | 判定逻辑                                               |
+| ------- | --------------- | ------------------------------------------------------ |
+| GitCode | 维护者及以上    | 角色名包含 管理员 / 维护者 / owner / Owner / 仓库owner |
+| GitHub  | maintain 及以上 | role ∈ {owner, admin, maintain}（大小写不敏感）        |
 
 - 角色为空判为 abnormal
 - 演进：GitHub 最低要求由 owner/admin 放宽至 maintain+（25a38570），因为角色解析改用仓库详情接口后 write/read 令牌也能正确读取自身权限
@@ -105,25 +105,25 @@ RepoServiceImpl
 
 ## DDL 变更（db.changelog.xml）
 
-| 列 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| token_account_name | VARCHAR(512) | 令牌账号名（平台 login） |
-| token_member_role | VARCHAR(512) | 令牌角色：目标仓成员角色 |
-| token_scope_status | VARCHAR(16) | 令牌权限状态：normal/abnormal |
-| token_role_status | VARCHAR(16) | 令牌角色状态：normal/abnormal |
+| 列                 | 类型         | 说明                          |
+| ------------------ | ------------ | ----------------------------- |
+| token_account_name | VARCHAR(512) | 令牌账号名（平台 login）      |
+| token_member_role  | VARCHAR(512) | 令牌角色：目标仓成员角色      |
+| token_scope_status | VARCHAR(16)  | 令牌权限状态：normal/abnormal |
+| token_role_status  | VARCHAR(16)  | 令牌角色状态：normal/abnormal |
 
 - changeSet `20260916_add_repo_token_permission_fields`，preConditions 防重（列存在则 MARK_RAN），含 rollback
 - 仅 GitCode/GitHub 写入；Gitee 四字段保持 NULL
 
 ## 错误映射（PlatformTokenErrorResolver）
 
-| HTTP | GitCode | GitHub | 映射文案 |
-| ---- | ---- | ---- | ---- |
-| 401 | Bad credentials | Bad credentials | 令牌已过期或无效，请重新填写 |
-| 401 | token not found | Requires authentication | 令牌不存在或已失效，请重新填写 |
-| 403 | has not permission | Resource not accessible by personal access token | 令牌权限不足，请检查令牌权限配置 |
-| 403 | Unauthorized access | Must have admin access | 令牌角色不足，请检查令牌角色配置 |
-| 其他 | — | — | 不匹配返回 empty，调用方回退默认文案（最终兜底：调用平台接口失败，请检查令牌或账号权限） |
+| HTTP | GitCode             | GitHub                                           | 映射文案                                                                                 |
+| ---- | ------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| 401  | Bad credentials     | Bad credentials                                  | 令牌已过期或无效，请重新填写                                                             |
+| 401  | token not found     | Requires authentication                          | 令牌不存在或已失效，请重新填写                                                           |
+| 403  | has not permission  | Resource not accessible by personal access token | 令牌权限不足，请检查令牌权限配置                                                         |
+| 403  | Unauthorized access | Must have admin access                           | 令牌角色不足，请检查令牌角色配置                                                         |
+| 其他 | —                   | —                                                | 不匹配返回 empty，调用方回退默认文案（最终兜底：调用平台接口失败，请检查令牌或账号权限） |
 
 - 错误文本提取：GitCode 取 `error_message` 字段，GitHub 取 `message` 字段，解析失败用原始 body
 - 映射命中打 warn 日志（错误文本截断至 500 字符）；Gitee 不介入
@@ -137,14 +137,14 @@ RepoServiceImpl
 
 ## 错误处理与降级
 
-| 场景 | 处理 |
-| ---- | ---- |
+| 场景                          | 处理                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------- |
 | 平台 API 探测失败（网络/5xx） | platformProbeFailed=true，跳过告警不误报，不降级读库（25a38570 移除早期 DB 降级口径） |
-| 令牌无效（401/过期/不存在） | invalidTokenSnapshot，四字段兜底入库，弹框展示细分文案 |
-| 批量混选平台（check 接口） | gitcode + github 混选跳过校验（探测口径因平台而异） |
-| 校验接口自身异常 | catch 后返回统一失败文案，不抛出、不影响保存 |
-| 四字段填充异常 | catch + warn，写兜底值，不阻断保存与刷新 |
-| 事务回滚 | 元数据刷新挂 afterCommit，回滚不触发，避免脏数据 |
+| 令牌无效（401/过期/不存在）   | invalidTokenSnapshot，四字段兜底入库，弹框展示细分文案                                |
+| 批量混选平台（check 接口）    | gitcode + github 混选跳过校验（探测口径因平台而异）                                   |
+| 校验接口自身异常              | catch 后返回统一失败文案，不抛出、不影响保存                                          |
+| 四字段填充异常                | catch + warn，写兜底值，不阻断保存与刷新                                              |
+| 事务回滚                      | 元数据刷新挂 afterCommit，回滚不触发，避免脏数据                                      |
 
 ## 关键设计决策
 

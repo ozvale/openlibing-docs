@@ -11,7 +11,7 @@
 ## 校验评估核心（common/utils）
 
 - [x] TokenPermissionEvaluator（@Component）：probe 实时探测（不写库）/ fillTokenPermissionFields 写四字段 / evaluateScopeStatus / evaluateRoleStatus 静态评估；TokenPermissionSnapshot record（tokenValid / platformProbeFailed / tokenInvalidMessage）
-- [x] scope 判定：GitCode required 并集 + all_* 覆盖 read_*；GitHub required 并集 + user/project 上级覆盖 read:*；scope 解析兼容逗号/空格分隔；blank 与 "--" 判 abnormal
+- [x] scope 判定：GitCode required 并集 + all_* 覆盖 read__；GitHub required 并集 + user/project 上级覆盖 read:_；scope 解析兼容逗号/空格分隔；blank 与 "--" 判 abnormal
 - [x] 角色判定：GitCode 维护者及以上（含管理员）；GitHub maintain+（owner/admin/maintain）
 - [x] token 级元数据缓存：metadataCache（key=platform+token），批量同 token 复用 GET /user
 - [x] TokenPermissionAlertBuilder：按平台组装弹框正文（权限要求 + 当前检测 + Fine-grained PAT 说明 + 批量摘要 + 继承提示）
