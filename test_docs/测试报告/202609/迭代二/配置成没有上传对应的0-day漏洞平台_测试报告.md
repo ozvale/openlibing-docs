@@ -2,7 +2,7 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://gitcode.com/openlibing/openlibing-vulnerability-hunting/issues
+* **需求链接**: https://gitcode.com/openlibing/openlibing-vulnerability-hunting/issues/61
 * **需求名称**: 配置成没有上传对应的0-day漏洞平台
 * **开发责任人**: liujiaqi
 * **测试责任人**: caolongheng
@@ -23,7 +23,7 @@
 
 **1.漏洞挖掘页面对漏洞进行0day同步操作_无法同步完成功能下线**:
 
-* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability-hunting/issues
+* **对应task(issueID)链接:** https://gitcode.com/openlibing/openlibing-vulnerability-hunting/issues/61
 * **步骤一**：访问漏洞挖掘页面
 * **预期结果**: 首页正常渲染，可以看到对应项目的漏洞信息
 * **测试结果**： Passed
