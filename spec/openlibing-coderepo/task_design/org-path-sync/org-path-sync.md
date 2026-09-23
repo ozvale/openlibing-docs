@@ -150,7 +150,12 @@ sequenceDiagram
 3. 组织：对每个 `(platform, org)` 调 `enumerateOrgRepos`（分派 `syncGitcodeRepos` / `syncGiteeRepos` / `syncGithubRepos`），令牌用 `commonService` 项目级平台令牌。接口失败或返回不可信计入 `failedLocations`。成功则把 `(owner, repo)` 加入全集，并记 `resolvedLocations++`（**组织成功枚举必须计入**，否则仅配组织路径时现有「resolvedLocations==0 跳过导入」会把组织仓全部丢掉）。
 4. 去重：同一 `(platform, owner, repo)` 只保留一次。同时出现在 SIG 与组织清单：导入时 `repo_source=sig`（SIG 更细）；删除以**合并全集**为准，不按来源各删各的。
 5. `shouldDelete`：`(SIG 路径空且组织路径空) 或 failedLocations==0`。为真时，硬删除 `repo_source ∈ {sig, org}` 且 URL 不在全集的仓。为假则不删。
-6. 导入：全集中 `repo_info` 尚无该 URL 的仓，按来源调用现有 `buildDefaultSigRepoDTO` + `addRepoInfo` / `importSigRepoByJob`。已存在则跳过并对账来源：SIG 清单中的 org→sig；`isMigrateToSig` 开启时还处理 manual→sig（在 SIG 清单）或 manual→org（仅在组织清单）。不把已是 sig 的仓改成 org。
+6. 导入：全集中 `repo_info` 尚无该 URL 的仓，按来源调用现有 `buildDefaultSigRepoDTO` + `addRepoInfo` / `importSigRepoByJob`。已存在则跳过并对账来源：
+   - SIG 清单中的 org→sig（**不受开关控制**，SIG 更细）。
+   - `isMigrateToSig` 开启时：manual→这次发现到的来源。在 SIG 清单则写 sig；仅在组织清单则写 org。
+   - 不把已是 sig 的仓改成 org。
+
+**为何 manual→org 也走 `isMigrateToSig`，不另加 `isMigrateToOrg`：** 键名沿用现网 `config_json.isMigrateToSig`，存量项目配置不用迁。产品语义已从「迁到 SIG」收成「允不允许把手动录入改成这次发现到的来源」——开关只回答「动不动 manual」，「改成 sig 还是 org」由第 4 步的清单归属决定（同时出现则 SIG）。manual→sig 与 manual→org 是同一条对账策略的两个落点，不是两种产品策略。拆第二个开关会出现 4 种组合，本期没有「只迁 SIG、不迁组织」或反过来的需求。若以后真要独立控制组织侧，再加键，不改本键含义。
 
 手动录入（`repo_source=manual`）不在本次硬删除范围内。
 
@@ -205,15 +210,17 @@ sequenceDiagram
     "gitee": [],
     "github": []
   },
+  "isMigrateToSig": false,
   "roleMapping": {}
 }
 ```
 
-| 字段               | 说明                                                                  |
-| ------------------ | --------------------------------------------------------------------- |
-| `sigInfoLocations` | 现有 SIG URL，同步读                                                  |
-| `orgLocations`     | 组织登录名（同步读）。请求可传组织主页 URL，保存时归一后入库；缺省=空 |
-| `roleMapping`      | 现有角色映射，本次不改                                                |
+| 字段               | 说明                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| `sigInfoLocations` | 现有 SIG URL，同步读                                                                        |
+| `orgLocations`     | 组织登录名（同步读）。请求可传组织主页 URL，保存时归一后入库；缺省=空                       |
+| `isMigrateToSig`   | 现网键名不改。语义见 2.4 第 6 步：是否把手动录入改成发现来源（sig 或 org）。缺省/缺失=false |
+| `roleMapping`      | 现有角色映射，本次不改                                                                      |
 
 ## 4.3 Entity / DTO / VO
 
@@ -300,6 +307,7 @@ sequenceDiagram
 - **配置发现同步**：同步步骤 2 / 定时 `syncSigRepos`，读发现规则后导入/删除。
 - **组织路径**：需求配置项类型。输入可以是组织登录名或组织主页 URL；入库与同步使用登录名，调 `/orgs/{name}/repos`。
 - **repo_source=org**：由组织路径导入的仓。
+- **isMigrateToSig**：config_json 存量键。开启后同步才改 manual 的 `repo_source`；目标来源看仓落在 SIG 清单还是仅组织清单，不是「只迁到 SIG」。org→sig 不对这个开关。
 
 ## A.2 关联代码定位
 
@@ -316,3 +324,4 @@ sequenceDiagram
 - 平台客户端新 API：无。
 - 新缓存 / MQ：无。
 - 方法强制重命名 `syncSigRepos`：不做，只扩展行为。
+- 独立 `isMigrateToOrg`、或把键改名为 `isMigrateManualSource`：不做。理由见 2.4 第 6 步；存量键与 API 字段保持 `isMigrateToSig`。
