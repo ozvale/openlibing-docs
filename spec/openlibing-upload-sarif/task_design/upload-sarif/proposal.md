@@ -35,7 +35,7 @@ OpenLibing 工作流平台已支持多类静态扫描工具接入（CodeQL、Cod
 
 ## 验收标准
 
-- [ ] `sarif_file` 支持单文件 / 多文件 / 目录（扫描 `.sarif`）/ 逗号分隔多值；路径不存在或目录为空时报错退出
+- [ ] `sarif_file` 支持单文件 / 多文件 / 目录（扫描 `.sarif`）/ 逗号分隔多值；路径不存在或最终未收集到任何 SARIF 文件时报错退出，单个目录为空时仅告警
 - [ ] 工具名从 `runs[0].tool.driver.name` 正确提取，OBS 前缀按 `{toolName}-results` 动态拼装，缺失时兜底 `code-arts-check-results`
 - [ ] SARIF 缺少 `region.snippet` 时按 `uri`+行号读源码补齐并写回；已有 snippet 的 result 跳过；源码不可读时静默跳过
 - [ ] OBS 上传使用 `esdk-obs-nodejs` SDK + OIDC 临时凭证，对象 `public-read`；server 由 `configure()` 动态 region 拼装
