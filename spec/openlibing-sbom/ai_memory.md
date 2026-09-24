@@ -155,3 +155,19 @@ BFS/DFS 遍历关系表时，循环内查询关系数据必须用 projection DTO
 - 单实例部署：`ConcurrentHashMap` 即可
 - 多实例部署：进程内锁失效，但若底层操作幂等（如 `upsert` / `INSERT IGNORE`），重复触发只会重复计算不会数据损坏，可接受
 - 需要严格去重时再引入 Redis 或 DB 行锁，避免过度设计
+
+## WebClient 远程调用规则
+
+### URI 模板变量禁止手动 URL 编码
+
+WebClient 的 URI 模板（`uri("/path/{var}", value)`）会自动对变量值做 URI 编码，手动预编码会产生双重编码（如 `%2F` 被再次编码为 `%252F`）导致远端 404。`/` 属于 path 合法保留字符，直接透传即可，无需任何转换。
+
+## 并发与状态机规则
+
+### check-then-save 必须升级为原子条件 UPDATE
+
+先查状态再覆盖写库存在时序窗口：判断与写入之间任务可能被调度器改变状态。必须用 `UPDATE ... WHERE 状态满足` 原子条件更新，更新返回 0 行即并发冲突（抛业务异常），比"先查后存 + 内存锁"可靠且无锁开销。项目示例：`RawSbomRepository.updateRawSbomIfStatusAllowed`（publishSbom 覆盖 WAIT 任务）。
+
+### Controller 错误消息分级透出
+
+自定义业务异常（如 `SbomRuntimeException`，参数校验 / 任务冲突等面向调用方的消息）可透出到响应 errorInfo；未预期异常（DB 连接、NPE 等）仅记日志，对外返回固定文案（如 `publish sbom failed!`），避免 SQL / 连接串等内部细节泄露。
