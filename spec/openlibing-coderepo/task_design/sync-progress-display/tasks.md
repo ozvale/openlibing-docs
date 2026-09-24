@@ -9,7 +9,7 @@
 - [ ] A1. 新增 `SyncProgressService` + `SyncProgressServiceImpl`（**仅进度，无锁**）：initProgress / setTotal / setCurrentRepo / incrCompleted（HINCRBY + 续期）/ finishProgress / getProgress（none 语义）
 - [ ] A2. 新增 `SyncProgressVO`
 - [ ] A3. `RepoController` 新增 `GET /project-repo/sync-progress`（参数校验 + verifyPermissionsByProduct 越权校验）；`RepoService` 声明 `querySyncProgress`
-- [ ] A4. `RepoServiceImpl#submitProjectSyncTask`：tryLock 成功后 `initProgress(projectId, 0, byJob ? "job" : "manual")`；finally 重排为 `inFlight-- → finishProgress → isHeldByCurrentThread 才 unlock`
+- [ ] A4. `RepoServiceImpl#submitProjectSyncTask`：tryLock 成功后 `initProgress(projectId, byJob ? "job" : "manual")`（total 由 step1 后的 setTotal 补充）；finally 重排为 `inFlight-- → finishProgress → isHeldByCurrentThread 才 unlock`
 - [ ] A5. `RepoServiceImpl#runProjectSyncSteps`：step1 查到仓库列表后 `setTotal(size)`
 - [ ] A6. `RepoServiceImpl#syncAllRepoInfoFromRemote`：删内部内存锁 `projectLockMap`；每仓 setCurrentRepo + finally incrCompleted（failed 标记）
 - [ ] A7. `XxlJobHandler` step2 重构：按项目聚合命中仓库 → Redisson 同一把锁 tryLock(0,30min) 跳过策略 → init/setCurrent/incr/finish 埋点 → 防御性 unlock
@@ -37,7 +37,7 @@
 ## D. 验收反馈调整 v3（design.md §11）
 
 - [ ] D1.（R1）`RepoServiceImpl` 抽取单仓同步体 `syncSingleRepoInfoFromRemote`（平台 API 刷新 + syncRepoBranch），手动 forEach 复用，进度埋点留调用方
-- [ ] D2.（R1）`XxlJobHandler#collectMatchedRepos` 扩展：matched 按 repoId 去重 + 收集 unmatchedRepos（repo_info 独有仓）；job 对 unmatched 走 `syncSingleRepoInfoFromRemote`，total = matched + unmatched
+- [ ] D2.（R1）`XxlJobHandler#collectSyncTasks` 聚合：matched 按 repoId 去重 + 收集 unmatchedRepos（repo_info 独有仓）；job 对 unmatched 走 `syncSingleRepoInfoFromRemote`，total = matched + unmatched
 - [ ] D3.（R2）`syncRepoInfoHandler` 支持 `projectId=xxx` 参数（parseJobParam 模式，非法值 handleFail）；step1/step2/step5-6/step8 项目列表过滤，step3/4/7 保持全局
 - [ ] D4.（R3）`syncAllRepoInfoFromRemote` 每仓循环前加代次检查点（generation 下传），被取代 break
 - [ ] D5.（R3）`submitProjectSyncTask` 增加 `lockWaitSeconds` 重载：全局配置触发与 token 变更触发传 60s；页面手动入口保持 0

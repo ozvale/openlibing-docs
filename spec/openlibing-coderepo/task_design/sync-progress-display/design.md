@@ -20,8 +20,8 @@
 ```
 ┌─ 页面/token变更链路 submitProjectSyncTask ──┐      ┌─ XxlJob step2/step8 ─────────────┐
 │ Redisson tryLock(0, 30min)（既有）          │      │ 逐项目 Redisson tryLock(0, 30min) │
-│   ├─ initProgress(total=0, manual|job)     │      │ 拿不到 → 日志+跳过该项目本轮       │
-│   ├─ step1 查到仓库后 setTotal(n)           │ 互斥  │ 拿到 → initProgress(total, job)   │
+│   ├─ initProgress(manual|job)               │      │ 拿不到 → 日志+跳过该项目本轮       │
+│   ├─ step1 查到仓库后 setTotal(n)           │ 互斥  │ 拿到 → initProgress(job)+setTotal │
 │   ├─ 每仓 setCurrentRepo + finally incr    │◄────►│ 逐仓 setCurrentRepo + finally incr│
 │   └─ finally: inFlight-- → finish → unlock │      │ finish → 防御性 unlock            │
 └────────────────────────────────────────────┘      └──────────────────────────────────┘
@@ -47,7 +47,7 @@
 
 ### 4.1 进度服务（SyncProgressService，仅进度）
 
-- `initProgress(projectId, total, triggerSource)`：覆盖写入全字段 + status=running + EXPIRE
+- `initProgress(projectId, triggerSource)`：覆盖写入全字段（total/completed 等初始 0）+ status=running + TTL；总数由 `setTotal` 在查到仓库列表后补充
 - `setTotal(projectId, total)`：total 在 step1 查到仓库列表后补充（锁成功时仓库数未知）
 - `setCurrentRepo(projectId, repoUrl)`：当前处理仓库
 - `incrCompleted(projectId, repoUrl, failed)`：HINCRBY completed 1；failed 时 HINCRBY failedCount 1；更新 currentRepo；EXPIRE 续期
@@ -56,7 +56,7 @@
 
 ### 4.2 manual/token变更链路埋点（submitProjectSyncTask 内）
 
-- tryLock 成功后 → `initProgress(projectId, 0, byJob ? "job" : "manual")`
+- tryLock 成功后 → `initProgress(projectId, byJob ? "job" : "manual")`
 - `runProjectSyncSteps` step1 查到 `repoInfoEntities` 后 → `setTotal(size)`
 - `syncAllRepoInfoFromRemote`：**删除内部内存锁 `projectLockMap`**（外层已有项目级 Redisson 锁，多实例下内存锁冗余且无效）；每仓 try 前 `setCurrentRepo`，既有 catch 分支标记 failed，finally `incrCompleted`
 - SIG 仓同步、用户同步不计入 completed（total 语义固定为"仓库分支同步进度"）
@@ -81,7 +81,7 @@ if (projectSyncLock.isHeldByCurrentThread()) projectSyncLock.unlock();
 1. 按项目收集所有 platform:org 条目命中的仓库（platform, repoInfo, projectRepo 三元组列表），业务行为不变
 2. 逐项目：`redissonClient.getLock(PROJECT_SYNC_LOCK_PREFIX + projectId).tryLock(0, 30, MINUTES)`
    - 拿不到 → log + 跳过该项目本轮（不阻塞整轮，下个周期再同步）
-   - 拿到 → `initProgress(matched.size(), "job")` → 逐仓 `setCurrentRepo` + try/finally `incrCompleted`（updateRepo + syncRepoBranch）→ `finishProgress` → finally 防御性 unlock
+   - 拿到 → `initProgress(projectId, "job")` + `setTotal(n)` → 逐仓 `setCurrentRepo` + try/finally `incrCompleted`（updateRepo + syncRepoBranch）→ `finishProgress` → finally 防御性 unlock
 3. 原 `updateExistingReposAndSyncBranches` 拆为"收集命中列表"与"逐仓处理"两个私有方法
 
 ### 4.5 XxlJob step8 加锁（SIG 仓同步，同 step2 模式）
@@ -197,7 +197,7 @@ none      → 停止轮询 + 按钮恢复（不提示；覆盖"另一实例同�
 
 **方案**：
 
-- `collectMatchedRepos` 扩展为同时返回两类任务：
+- `collectSyncTasks` 聚合返回两类任务（URL 命中任务与未命中仓）：
   - `matched`：URL 命中的（platform, repoInfo, projectRepo）三元组，**按 repoId 去重**（同一仓 URL 命中多个 `platform:org` 条目——如同时配置 gitee 组织+企业——只计一次），沿用现有"拷贝状态/可见性 + 刷分支"动作
   - `unmatchedRepos`：repo_info 中未被任何条目命中的仓，改走手动同款平台 API 全量刷新
 - `RepoServiceImpl` 抽取手动链路单仓同步体为 `syncSingleRepoInfoFromRemote(repoInfo, projectId, userName)`（平台 API 刷新仓信息 + syncRepoBranch），手动 forEach 与 job 共用；进度埋点（setCurrentRepo/incrCompleted）留在调用方循环
