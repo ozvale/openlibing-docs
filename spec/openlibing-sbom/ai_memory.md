@@ -21,15 +21,16 @@
 本项目存在两种 deleteBy 风格，AI 新增删除方法时必须按以下规则选择：
 
 **风格一：Spring Data 派生方法**（方法名即查询，无需 `@Query`）
+
 - 必须加 `@Modifying(flushAutomatically = true)` + `@Transactional(propagation = Propagation.REQUIRES_NEW)`
 - 适用场景：简单的按字段删除，Spring Data 能自动派生 SQL
 - 项目示例：`RepoMetaRepository.deleteByProductType()`、`FileRepository.deleteBySbomId()`、`ExternalPurlRefRepository.deleteByPkgIdAndCategory()`
 
 **风格二：自定义 `@Query` 原生 SQL**
+
 - 必须加 `@Modifying` + `@Transactional` + `@Query(value="...", nativeQuery=true)`
 - 适用场景：派生方法无法表达的复杂删除条件，或需要精确控制 SQL
 - 项目示例：`VulnerabilityLifecycleRepository.deleteByProductType()`、`ProductConfigValueRepository.deleteByProductConfigIdAndValue()`
-
 
 ## 远程 API 调用规则
 
@@ -65,9 +66,9 @@ for (Item item : items) {
 当两个或以上 Service 存在相同逻辑（如 purl 转换、字符串解析），必须提取到 `utils` 模块的公共工具类作为静态方法，各 Service 委托调用。禁止各 Service 各自实现一份。
 
 当前已有工具类：
+
 - `PurlUtil`：purl 解析、转换、规范化、版本匹配
 - `SignatureUtil`：签名相关
-
 
 ## 测试规则
 
@@ -83,6 +84,7 @@ for (Item item : items) {
 
 **G.CMT.01**：`public` 或 `protected` 修饰的元素（类、方法、字段）应添加 Javadoc 注释，说明其用途、参数含义、返回值语义及异常情况。
 示例如下：
+
 ```java
     /**
      * 根据产品名，包id，验证登记，漏洞编号查询漏洞信息
@@ -97,7 +99,6 @@ for (Item item : items) {
     PageVo<ShowVulnerabilityVo> queryVulnerability(String productName, String packageId, String severity,
                                                    String vulId, Pageable pageable);
 ```
-
 
 ### 代码格式规范
 
@@ -124,6 +125,7 @@ SBOM 中包与依赖关系规模大、层级深时，递归 CTE 性能不可控�
 ### PostgreSQL `uuid[]` 数组列 + `= ANY(uuid[])` 替代长 `IN (...)`
 
 当 Repository 方法按 ID 集合过滤，且集合规模可能较大（数百到数千）时：
+
 - entity 字段用 PostgreSQL 原生 `uuid[]` 数组列存储集合
 - Repository 查询用 `= ANY(:packageIds)` 替代 JPA 默认的 `IN (?, ?, ...)`
 - 原因：长 `IN` list 会导致 SQL 解析与计划生成开销显著；`= ANY(uuid[])` 参数固定为单个数组，可被 planner 更稳定地优化
@@ -133,6 +135,7 @@ SBOM 中包与依赖关系规模大、层级深时，递归 CTE 性能不可控�
 ### 图遍历用 projection 查询避免 N+1
 
 BFS/DFS 遍历关系表时，循环内查询关系数据必须用 projection DTO（如 `PackageIdAndSpdxId`）只 select 必要字段：
+
 - 避免加载大 TEXT 字段（如 `sbom_element_relationship` 的描述字段）
 - 避免 N+1 查询（projection 让 JPA 一次性拉取需要的列）
 - 配合 `visited` Set 防止重复访问
@@ -144,6 +147,7 @@ BFS/DFS 遍历关系表时，循环内查询关系数据必须用 projection DTO
 ### 缓存预计算的多触发入口模式
 
 缓存预计算服务提供 3 个触发入口，覆盖不同场景：
+
 1. **同步入口**：hook 在主流程末尾（如 `SpdxReader.readSbomFile` 末尾调 `precomputeForSbom`），让小数据量立即可查
 2. **异步 step**：spring-batch step 作为兜底，大数据量或同步失败时补算
 3. **REST API**：用于存量数据清洗 / 失败重试

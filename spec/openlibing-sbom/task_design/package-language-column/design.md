@@ -12,26 +12,26 @@
 
 **轨 A — 包管理器包**：`external_purl_ref`（category=PACKAGE_MANAGER）的 `purl->>'type'` 确定性映射语言，映射表与 openlibing-sbom-tools `LanguageByName` 一致。**存储与展示值（displayName）统一驼峰**（与平台 languages API 返回值风格一致，如 `JavaScript`、`TypeScript`、`Others`）：
 
-| purl type | 语言 |
-|-----------|------|
-| maven / gradle / java | Java |
-| npm | JavaScript |
-| pypi | Python |
-| composer | PHP |
-| gem | Ruby |
-| golang | Go |
-| cargo | Rust |
-| pub | Dart |
-| dotnet | Dotnet |
-| 其他 / 无 PACKAGE_MANAGER purl | Others |
+| purl type                      | 语言       |
+| ------------------------------ | ---------- |
+| maven / gradle / java          | Java       |
+| npm                            | JavaScript |
+| pypi                           | Python     |
+| composer                       | PHP        |
+| gem                            | Ruby       |
+| golang                         | Go         |
+| cargo                          | Rust       |
+| pub                            | Dart       |
+| dotnet                         | Dotnet     |
+| 其他 / 无 PACKAGE_MANAGER purl | Others     |
 
 **轨 B — 源码仓包**：判定条件为**包的第一个 PACKAGE_MANAGER purl 的 `type` ∈ {gitcode, gitee, github, atomgit}**（实现期从 `comment="source_code_url"` 判定改为按 purl type 判定——comment 判定依赖 `SpdxReader` 落库口径，type 判定更直接且覆盖 atomgit）。这类包按 purl 的 type/namespace/name 构造仓库 URL 调用平台 languages 接口取占比最高的语言：
 
-| 平台 | 接口 | 返回格式（实测） | 已有实现 |
-|------|------|-----------------|---------|
-| GitCode | `GET /api/v5/repos/{owner}/{repo}/languages` | `{"C++": 36.62, "C": 63.13, "Makefile": 0.26}`（语言→百分比） | `GitCodeApi`（带 PRIVATE-TOKEN + 重试 2 次） |
-| GitHub | `GET /repos/{owner}/{repo}/languages` | `{"C++": 5347064, "C": 782492, ...}`（语言→字节数） | `GithubApi` |
-| Gitee | `GET /api/v5/repos/{owner}/{repo}/languages` | `{"languages": [{"language":"Rust","percent":69.6,"bytes":1530232}, ...]}`（包装数组） | `GiteeApi` |
+| 平台    | 接口                                         | 返回格式（实测）                                                                       | 已有实现                                     |
+| ------- | -------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------- |
+| GitCode | `GET /api/v5/repos/{owner}/{repo}/languages` | `{"C++": 36.62, "C": 63.13, "Makefile": 0.26}`（语言→百分比）                          | `GitCodeApi`（带 PRIVATE-TOKEN + 重试 2 次） |
+| GitHub  | `GET /repos/{owner}/{repo}/languages`        | `{"C++": 5347064, "C": 782492, ...}`（语言→字节数）                                    | `GithubApi`                                  |
+| Gitee   | `GET /api/v5/repos/{owner}/{repo}/languages` | `{"languages": [{"language":"Rust","percent":69.6,"bytes":1530232}, ...]}`（包装数组） | `GiteeApi`                                   |
 
 三平台返回值单位不同（百分比 / 字节 / percent+bytes 对象），但**只取单次响应内 value 最大的语言，单位不影响比较**。统一契约：`VcsApi.getRepoLanguages(owner, repo)` 各实现解析后归一为 `Map<String, Double>`（语言 → 数值），`VcsServiceImpl` 取 value 最大 key。**C / C++ 统一归为 C/C++**；**平台调用失败或仓库无语言数据时默认 `C/C++`**；返回了语言但未收录 → Others。
 
@@ -77,40 +77,40 @@ AND (:languages IS NULL OR :languages = ''
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `model/.../enums/PackageLanguage.java` | 新增 | 语言枚举（displayName）+ `fromPurlType` + `fromRepoLanguage`（C/C++ 归一） |
-| `model/.../entity/PackageStatistics.java` | 修改 | 新增 `language` / `pkgManagerType` / `purl` 三列 |
-| `model/.../entity/RepoLanguageCache.java` | 新增 | 仓库语言缓存表实体（repo_url 唯一键 → language） |
-| `model/.../vo/sbom/PackageStatisticsVo.java` | 修改 | 新增 `language` / `pkgManagerType` / `purl` 字段 + `fromPackage` 填充（language / pkgManagerType 空值兜底 Others） |
-| `model/.../vo/sbom/VulCountSummaryVo.java` | 修改 | 新增 `dependencyTypeCounts` / `languageCounts` / `pkgManagerTypeCounts` 三个 Map 字段 |
-| `model/.../vo/sbom/RawSbomMetaVo.java` | 新增 | RawSbom 元信息投影 DTO（不含 value 大字段） |
-| `model/.../request/sbom/QuerySbomPackagesMultiFilterRequest.java` | 修改 | 新增 `languages` / `pkgManagerTypes` 字段 |
-| `utils/.../PackageLanguageUtils.java` | 新增 | `fillLanguageFields` 双轨推导统一入口（轨 B 判定 purl type ∈ 四平台），导入/回填共用 |
-| `batch/.../step/CollectStatisticsStep.java` | 修改 | 统计阶段调 `PackageLanguageUtils.fillLanguageFields` 落库三字段 |
-| `interface/.../api/vcs/VcsApi.java` | 修改 | 新增 `default Map<String, Double> getRepoLanguages(owner, repo)`（归一契约：语言→数值） |
-| `clients/.../vcs/GitCodeApi.java` | 修改 | 实现 `getRepoLanguages`：解析 `{"C++": 36.62, ...}`（百分比 map），retry 2 次 |
-| `clients/.../vcs/GithubApi.java` | 修改 | 实现 `getRepoLanguages`：解析 `{"C++": 5347064, ...}`（字节 map） |
-| `clients/.../vcs/GiteeApi.java` | 修改 | 实现 `getRepoLanguages`：解析 `{"languages": [{"language":..,"bytes":..}, ...]}` 包装数组 |
-| `clients/.../vcs/VcsServiceImpl.java` | 修改 | 新增 `getRepoTopLanguage(url)`：先查 `repo_language_cache`，miss 调远端并写回缓存 |
-| `dao/PackageRepository.java` | 修改 | MultiFilter DAO 新增 languages / pkgManagerTypes 过滤 + 3 个分布统计查询 + `findDistributionCandidatesByProduct` |
-| `dao/RepoLanguageCacheRepository.java` | 新增 | 缓存表 DAO（findByRepoUrl） |
-| `dao/RawSbomRepository.java` | 修改 | 新增 `queryRawSbomMeta` 轻量投影查询 + `updateRawSbomIfStatusAllowed` 原子条件更新 |
-| `api/sbom/SbomService.java` | 修改 | 新增 `refreshPackageLanguage(Integer pageNum)` 接口方法 |
-| `service/sbom/impl/SbomServiceImpl.java` | 修改 | MultiFilter 链路透传 languages / pkgManagerTypes + 分布统计合并 + `refreshPackageLanguage` 分页批处理实现 + `publishSbom` 原子条件覆盖 |
-| `controller/SbomController.java` | 修改 | 新增 `refreshPackageLanguage` 端点；`publishSbom` 错误消息分级透出（`SbomRuntimeException` 附带 message，其余固定文案） |
+| 文件                                                              | 操作 | 说明                                                                                                                                   |
+| ----------------------------------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `model/.../enums/PackageLanguage.java`                            | 新增 | 语言枚举（displayName）+ `fromPurlType` + `fromRepoLanguage`（C/C++ 归一）                                                             |
+| `model/.../entity/PackageStatistics.java`                         | 修改 | 新增 `language` / `pkgManagerType` / `purl` 三列                                                                                       |
+| `model/.../entity/RepoLanguageCache.java`                         | 新增 | 仓库语言缓存表实体（repo_url 唯一键 → language）                                                                                       |
+| `model/.../vo/sbom/PackageStatisticsVo.java`                      | 修改 | 新增 `language` / `pkgManagerType` / `purl` 字段 + `fromPackage` 填充（language / pkgManagerType 空值兜底 Others）                     |
+| `model/.../vo/sbom/VulCountSummaryVo.java`                        | 修改 | 新增 `dependencyTypeCounts` / `languageCounts` / `pkgManagerTypeCounts` 三个 Map 字段                                                  |
+| `model/.../vo/sbom/RawSbomMetaVo.java`                            | 新增 | RawSbom 元信息投影 DTO（不含 value 大字段）                                                                                            |
+| `model/.../request/sbom/QuerySbomPackagesMultiFilterRequest.java` | 修改 | 新增 `languages` / `pkgManagerTypes` 字段                                                                                              |
+| `utils/.../PackageLanguageUtils.java`                             | 新增 | `fillLanguageFields` 双轨推导统一入口（轨 B 判定 purl type ∈ 四平台），导入/回填共用                                                   |
+| `batch/.../step/CollectStatisticsStep.java`                       | 修改 | 统计阶段调 `PackageLanguageUtils.fillLanguageFields` 落库三字段                                                                        |
+| `interface/.../api/vcs/VcsApi.java`                               | 修改 | 新增 `default Map<String, Double> getRepoLanguages(owner, repo)`（归一契约：语言→数值）                                                |
+| `clients/.../vcs/GitCodeApi.java`                                 | 修改 | 实现 `getRepoLanguages`：解析 `{"C++": 36.62, ...}`（百分比 map），retry 2 次                                                          |
+| `clients/.../vcs/GithubApi.java`                                  | 修改 | 实现 `getRepoLanguages`：解析 `{"C++": 5347064, ...}`（字节 map）                                                                      |
+| `clients/.../vcs/GiteeApi.java`                                   | 修改 | 实现 `getRepoLanguages`：解析 `{"languages": [{"language":..,"bytes":..}, ...]}` 包装数组                                              |
+| `clients/.../vcs/VcsServiceImpl.java`                             | 修改 | 新增 `getRepoTopLanguage(url)`：先查 `repo_language_cache`，miss 调远端并写回缓存                                                      |
+| `dao/PackageRepository.java`                                      | 修改 | MultiFilter DAO 新增 languages / pkgManagerTypes 过滤 + 3 个分布统计查询 + `findDistributionCandidatesByProduct`                       |
+| `dao/RepoLanguageCacheRepository.java`                            | 新增 | 缓存表 DAO（findByRepoUrl）                                                                                                            |
+| `dao/RawSbomRepository.java`                                      | 修改 | 新增 `queryRawSbomMeta` 轻量投影查询 + `updateRawSbomIfStatusAllowed` 原子条件更新                                                     |
+| `api/sbom/SbomService.java`                                       | 修改 | 新增 `refreshPackageLanguage(Integer pageNum)` 接口方法                                                                                |
+| `service/sbom/impl/SbomServiceImpl.java`                          | 修改 | MultiFilter 链路透传 languages / pkgManagerTypes + 分布统计合并 + `refreshPackageLanguage` 分页批处理实现 + `publishSbom` 原子条件覆盖 |
+| `controller/SbomController.java`                                  | 修改 | 新增 `refreshPackageLanguage` 端点；`publishSbom` 错误消息分级透出（`SbomRuntimeException` 附带 message，其余固定文案）                |
 
 ## 风险 & 缓解
 
-| 风险 | 缓解 |
-|------|------|
-| 存量数据 language 为 NULL | SQL 过滤用 `COALESCE(language,'Others')`；提供回填接口 |
-| Hibernate 数组绑定缺陷 | 沿用逗号字符串 + `string_to_array`，不绑定 List |
-| 多包多 PACKAGE_MANAGER purl 取值不一致 | 取第一个 PACKAGE_MANAGER purl（稳定顺序），与导入期/回填期口径一致 |
-| 源码包多导致统计/回填耗时长（逐包同步调 REST） | 仅 git 托管 type 包触达 API；`repo_language_cache` 缓存去重远端调用；WebClient retry 2 次与超时；单包失败返回 C/C++ 不阻断 |
-| 生产环境 `ddl-auto=none` 不自动建 `repo_language_cache` 表 | 提供建表 SQL，发布时手动执行 |
-| 源码仓 purl 的 type 无对应域名 | 仅 gitcode/gitee/github/atomgit 四类型走轨 B，其余按轨 A/Others |
-| 覆盖 WAIT 任务时被调度器并发捞起（RUNNING） | 原子条件 UPDATE 仅允许 NULL/FINISH/FAILED_FINISH/WAIT 命中，0 行即抛异常拒绝发布 |
+| 风险                                                       | 缓解                                                                                                                       |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 存量数据 language 为 NULL                                  | SQL 过滤用 `COALESCE(language,'Others')`；提供回填接口                                                                     |
+| Hibernate 数组绑定缺陷                                     | 沿用逗号字符串 + `string_to_array`，不绑定 List                                                                            |
+| 多包多 PACKAGE_MANAGER purl 取值不一致                     | 取第一个 PACKAGE_MANAGER purl（稳定顺序），与导入期/回填期口径一致                                                         |
+| 源码包多导致统计/回填耗时长（逐包同步调 REST）             | 仅 git 托管 type 包触达 API；`repo_language_cache` 缓存去重远端调用；WebClient retry 2 次与超时；单包失败返回 C/C++ 不阻断 |
+| 生产环境 `ddl-auto=none` 不自动建 `repo_language_cache` 表 | 提供建表 SQL，发布时手动执行                                                                                               |
+| 源码仓 purl 的 type 无对应域名                             | 仅 gitcode/gitee/github/atomgit 四类型走轨 B，其余按轨 A/Others                                                            |
+| 覆盖 WAIT 任务时被调度器并发捞起（RUNNING）                | 原子条件 UPDATE 仅允许 NULL/FINISH/FAILED_FINISH/WAIT 命中，0 行即抛异常拒绝发布                                           |
 
 ## 跨仓影响
 

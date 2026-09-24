@@ -55,15 +55,15 @@
 
 ## 设计偏差与取舍
 
-| 项 | 原计划 | 实际交付 | 说明 |
-| ---- | ---- | ---- | ---- |
-| PackageStatistics 新增列 | 仅 language | language + pkgManagerType + purl 三列 | 查询与前端展示需要 |
-| 源码仓判定 | comment="source_code_url" + 三平台 | purl type ∈ {gitcode, gitee, github, atomgit} 四平台 | comment 判定依赖 SpdxReader 落库口径，type 判定更直接 |
-| 远端调用 | 无缓存 | repo_language_cache 表缓存 | 百万级 package 回填去重远端调用 |
-| 回填接口 | 按 productName 单产品 | pageNum 分页（每页 50 个 FINISH product） | 对齐 refreshDependencyType 模式，百万级包量可控 |
-| 推导逻辑位置 | CollectStatisticsStep 私有方法 | utils 模块 PackageLanguageUtils | 导入/回填共用，符合 ai_memory 工具类规则 |
-| publishSbom 冲突处理 | 不改动 | WAIT 覆盖 + 原子条件 UPDATE + 错误消息分级透出 | 搭车改动，超出本 Issue 范围；检视整改将 check-then-save 升级为原子条件 UPDATE |
-| owner 斜杠编码 | 透传 | 手动 %2F → 回退透传 | WebClient URI 模板自动编码变量，手动预编码产生 %252F 双重编码 404 |
+| 项                       | 原计划                             | 实际交付                                             | 说明                                                                          |
+| ------------------------ | ---------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------- |
+| PackageStatistics 新增列 | 仅 language                        | language + pkgManagerType + purl 三列                | 查询与前端展示需要                                                            |
+| 源码仓判定               | comment="source_code_url" + 三平台 | purl type ∈ {gitcode, gitee, github, atomgit} 四平台 | comment 判定依赖 SpdxReader 落库口径，type 判定更直接                         |
+| 远端调用                 | 无缓存                             | repo_language_cache 表缓存                           | 百万级 package 回填去重远端调用                                               |
+| 回填接口                 | 按 productName 单产品              | pageNum 分页（每页 50 个 FINISH product）            | 对齐 refreshDependencyType 模式，百万级包量可控                               |
+| 推导逻辑位置             | CollectStatisticsStep 私有方法     | utils 模块 PackageLanguageUtils                      | 导入/回填共用，符合 ai_memory 工具类规则                                      |
+| publishSbom 冲突处理     | 不改动                             | WAIT 覆盖 + 原子条件 UPDATE + 错误消息分级透出       | 搭车改动，超出本 Issue 范围；检视整改将 check-then-save 升级为原子条件 UPDATE |
+| owner 斜杠编码           | 透传                               | 手动 %2F → 回退透传                                  | WebClient URI 模板自动编码变量，手动预编码产生 %252F 双重编码 404             |
 
 ## 经验沉淀
 
