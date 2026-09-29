@@ -1,11 +1,11 @@
-# #1 [构建分布式harbor镜像仓] 测试报告
+# #1 [采集agent精度优化] 测试报告
 
 ## 1. 基本信息
 
-- **需求链接**: https://gitcode.com/openlibing/hidevlab-infra-manager-service/issues/49
-- **需求名称**: [需求]: 构建分布式harbor镜像仓
-- **开发责任人**: 周建成
-- **测试责任人**: 张晓璐
+- **需求链接**: 不涉及代码，因此无需求链接
+- **需求名称**: [需求]: 采集agent精度优化
+- **开发责任人**: 曾绍辉
+- **测试责任人**: 何启超
 - **最终结论：**： 通过
 - **测试维度** ：
 - [x] **功能自检测试**
@@ -20,12 +20,11 @@
 
 ### 2.1 功能测试专项
 
-**1.构建分布式harbor镜像仓**:验证harbor服务器页面基础功能（UI检查、筛选排序）；新增功能（字段校验、新增后镜像仓的使用）；镜像推送逻辑验证（首次推送镜像到剩余磁盘空间最大的harbor）;存量harbor迁移与查询（查询的降级逻辑）
+**1.采集agent精度优化**:HiDevLab新发放的裸金属，虚拟机，容器的agent上报数据精度优化
 
-- **对应task(issueID)链接:**: https://gitcode.com/openlibing/hidevlab-infra-manager-service/issues/49
-- **预期结果**: 基础功能正确；新增功能正确，镜像推送逻辑正确，存量数据迁移到正确表，存量harbor 查询逻辑正确
+- **预期结果**: HiDevLab新发放的裸金属，虚拟机，容器的agent上报数据精度优化
 - **测试结果**：Passed
-- **证明截图**: https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testcase?branch_id=vb1v00011jhcp8u2
+- **证明截图**: https://devcloud.cn-southwest-2.huaweicloud.com/cloudtestportal/project/709968f4a69145deba5559c5faf4eca8/testsuite?branch_id=vb1n00011m6houbb&suite_id=vb1n00011nv21814&detail=base
 
 ---
 
@@ -33,7 +32,7 @@
 
 | 测试维度             | 用例总数 | 重点测试点描述                         | 通过数 | 不通过数 | 结论 (Pass/Fail) |
 | -------------------- | -------- | -------------------------------------- | ------ | -------- | ---------------- |
-| **功能测试**         | 14       | 覆盖核心业务逻辑与 API 契约。          | 11     | 0        | Pass             |
+| **功能测试**         | 3        | 覆盖核心业务逻辑与 API 契约。          | 3      | 0        | Pass             |
 | **体验测试**         | 0        | 判定产品是否能让用户快速的接受和使用。 | 0      | 0        | /                |
 | **集成测试**         | 0        | 跨组件调用及上下游数据流转。           | 0      | 0        | /                |
 | **安全与隐私测试**   | 0        | 漏洞扫描、凭证加密及日志脱敏。         | 0      | 0        | /                |
