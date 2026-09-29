@@ -1,6 +1,6 @@
 # oss-pr-scan-action — 实现任务
 
-## 进度: 10/10 complete（PR 级插件已完成并由 workflow 实跑验证）
+## 进度: 11/11 complete（PR 级插件已完成并由 workflow 实跑验证）
 
 - [x] Task 1: 搭建插件目录骨架（oss-pr-scan-action/ + package.json + action.yml + .gitignore）
 - [x] Task 2: 实现 index.js 核心（inputs 解析 + trivy 探测/扫描 + JSON 解析统计 + 阈值判定 + Step Summary + core.setFailed）
@@ -19,6 +19,11 @@
       action.yml/workflow 增 8 个 `*-limit` 参数（废弃 ignore-vuln-count / ignore-license-count）；
       summary 增四级别计数表 + 提示行；补单测（PR 27/version 22 全绿）并重建 dist
       （commit master `3855f73` / main `e828128`）
+- [x] Task 11: show-all-vulnerabilities 展示参数：extractRiskCounts 增 `allVulnItems`（全量漏洞明细）
+      与 `vulnCountsFixed`（有修复版本计数）；门禁漏洞口径改为 vulnCountsFixed（无修复版本不阻断）；
+      show-all=true 时 trivy 加 `--ignore-unfixed=false`，明细/依赖树展示全量漏洞；false 维持现状。
+      @actions/core 降回 ^2.0.3（v3 exports 仅 import 致 ncc 构建失败；v2→undici 6.29 仍安全）。
+      补单测（PR 30/version 25 全绿）并重建 dist（commit master `54f17fa` / main `93dc042`）
 
 ### 开发中补充/修正（已并入）
 

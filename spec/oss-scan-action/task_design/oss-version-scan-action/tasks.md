@@ -1,6 +1,6 @@
 # oss-version-scan-action — 实现任务
 
-## 进度: 8/8 complete（共享核心 + PR/version 薄入口 + 单测 + dist + workflow + README 已完成）
+## 进度: 9/9 complete（共享核心 + PR/version 薄入口 + 单测 + dist + workflow + README 已完成）
 
 - [x] Task 1: 抽取 `shared/index.js`（从 oss-pr-scan-action 抽离扫描/解析/判定/summary 纯逻辑）
 - [x] Task 2: 重构 `oss-pr-scan-action/index.js` 为薄入口（引用 shared）+ 跑原单测回归
@@ -19,6 +19,11 @@
       （commit master `3855f73` / main `e828128`）
 
 - [x] Task 8: 质量门禁（npm test PR 27/version 22 全绿 + pre-commit 通过）+ 提交 commit
+
+* [x] Task 8.5: show-all-vulnerabilities 展示参数随 shared 下发：extractRiskCounts 增
+      `vulnCountsFixed`/`allVulnItems`，judge 漏洞门禁改用有修复版本计数，trivy
+      show-all 时加 `--ignore-unfixed=false`；action.yml/workflow 增参数 + version 单测
+      （25 例全绿）+ 重建 dist（commit master `54f17fa` / main `93dc042`）
 
 ## 验证方式
 

@@ -31,20 +31,21 @@ openlibing 版本级流水线「开源漏洞 + license 扫描」环节，使用�
 
 ## 输入参数（action.yml 草案）
 
-| 参数                     | 必填 | 默认值                                      | 说明                               |
-| ------------------------ | ---- | ------------------------------------------- | ---------------------------------- |
-| `scan-target`            | 否   | `.`（工作区根目录）                         | 待扫描的代码目录路径               |
-| `trivy-config`           | 否   | `/opt/cached_resources/trivy_db/trivy.yaml` | trivy 配置文件                     |
-| `cache-dir`              | 否   | `/opt/cached_resources/trivy_db`            | trivy 漏洞库缓存目录               |
-| `vuln-critical-limit`    | 否   | `0`                                         | CRITICAL 漏洞门禁（>门禁阻断）     |
-| `vuln-high-limit`        | 否   | `0`                                         | HIGH 漏洞门禁（>门禁阻断）         |
-| `vuln-medium-limit`      | 否   | `1000`                                      | MEDIUM 漏洞门禁（>门禁仅提示）     |
-| `vuln-low-limit`         | 否   | `1000`                                      | LOW 漏洞门禁（>门禁仅提示）        |
-| `license-critical-limit` | 否   | `0`                                         | CRITICAL license 门禁（>门禁阻断） |
-| `license-high-limit`     | 否   | `0`                                         | HIGH license 门禁（>门禁阻断）     |
-| `license-medium-limit`   | 否   | `1000`                                      | MEDIUM license 门禁（>门禁仅提示） |
-| `license-low-limit`      | 否   | `1000`                                      | LOW license 门禁（>门禁仅提示）    |
-| `debug`                  | 否   | `false`                                     | 开启调试日志                       |
+| 参数                       | 必填 | 默认值                                      | 说明                                                                                                    |
+| -------------------------- | ---- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `scan-target`              | 否   | `.`（工作区根目录）                         | 待扫描的代码目录路径                                                                                    |
+| `trivy-config`             | 否   | `/opt/cached_resources/trivy_db/trivy.yaml` | trivy 配置文件                                                                                          |
+| `cache-dir`                | 否   | `/opt/cached_resources/trivy_db`            | trivy 漏洞库缓存目录                                                                                    |
+| `vuln-critical-limit`      | 否   | `0`                                         | CRITICAL 漏洞门禁（>门禁阻断）                                                                          |
+| `vuln-high-limit`          | 否   | `0`                                         | HIGH 漏洞门禁（>门禁阻断）                                                                              |
+| `vuln-medium-limit`        | 否   | `1000`                                      | MEDIUM 漏洞门禁（>门禁仅提示）                                                                          |
+| `vuln-low-limit`           | 否   | `1000`                                      | LOW 漏洞门禁（>门禁仅提示）                                                                             |
+| `license-critical-limit`   | 否   | `0`                                         | CRITICAL license 门禁（>门禁阻断）                                                                      |
+| `license-high-limit`       | 否   | `0`                                         | HIGH license 门禁（>门禁阻断）                                                                          |
+| `license-medium-limit`     | 否   | `1000`                                      | MEDIUM license 门禁（>门禁仅提示）                                                                      |
+| `license-low-limit`        | 否   | `1000`                                      | LOW license 门禁（>门禁仅提示）                                                                         |
+| `show-all-vulnerabilities` | 否   | `false`                                     | 显示全量漏洞（含无修复版本与 MEDIUM/LOW）；仅改变展示，不改变门禁（门禁只看有修复版本的 CRITICAL/HIGH） |
+| `debug`                    | 否   | `false`                                     | 开启调试日志                                                                                            |
 
 > 与 PR 级插件输入完全一致；旧参数 `ignore-vuln-count` / `ignore-license-count` 已废弃，
 > 由上面 8 个 limit 参数取代。版本级不额外引入 repository/branch/create-issue 参数。

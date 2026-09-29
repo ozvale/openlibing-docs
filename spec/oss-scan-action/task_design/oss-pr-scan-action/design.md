@@ -41,6 +41,7 @@ inputs: scan-target(默认.) / trivy-config / cache-dir / debug
         / vuln-medium-limit(1000) / vuln-low-limit(1000)
         / license-critical-limit(0) / license-high-limit(0)
         / license-medium-limit(1000) / license-low-limit(1000)
+        / show-all-vulnerabilities(false)
 
 run():
  1. 解析 inputs + ATOMGIT_REPOSITORY/REFSAPP
@@ -55,21 +56,26 @@ run():
     trivy fs --skip-version-check
              --scanners vuln,license
              --severity HIGH,CRITICAL,MEDIUM,LOW,UNKNOWN  (对齐 scan_vuls.sh)
+             [--ignore-unfixed=false]  # 仅 show-all-vulnerabilities=true 时追加：
+                                      # 默认继承 trivy.yaml 的 ignore-unfixed=true（只扫有修复版本）
              --config <trivy-config 或 runner 预置>
              --cache-dir <cache-dir>
              --format json --output <tmp>/result.json <scan-target>
     不传 --skip-db-update：trivy 检测到缓存库过期时自动联网更新（对齐原脚本，保证库常新）
     （失败重试 10 次，间隔 1s，对齐 scan_vuls.sh MAX_RETRIES）
  5. 解析 result.json（四级别计数）:
-    counts.vulnCounts = { CRITICAL, HIGH, MEDIUM, LOW } 各级别漏洞数
+    counts.vulnCounts = { CRITICAL, HIGH, MEDIUM, LOW } 各级别漏洞数（全量）
+    counts.vulnCountsFixed = { CRITICAL, HIGH, MEDIUM, LOW } 仅"有修复版本"(FixedVersion 非空)漏洞数（门禁口径）
     counts.licenseCounts = { CRITICAL, HIGH, MEDIUM, LOW } 各级别 license 数
     vulnItems/licenseItems = 仅 HIGH/CRITICAL 明细
+    allVulnItems = 全量漏洞明细（所有级别 + 无修复版本，show-all=true 展示用）
     （UNKNOWN 不统计；空 Results / 缺字段按 0 处理，含空保护）
- 6. 判定（四级别门禁）:
-    block = (CRITICAL|HIGH 漏洞 > 对应门禁) || (CRITICAL|HIGH license > 对应门禁)
+ 6. 判定（四级别门禁，漏洞用 vulnCountsFixed）:
+    block = (CRITICAL|HIGH 漏洞[有修复版本] > 对应门禁) || (CRITICAL|HIGH license > 对应门禁)
     warnExceeded = (MEDIUM|LOW 漏洞 > 对应门禁) || (MEDIUM|LOW license > 对应门禁)
-    pass = !block        （warnExceeded 仅提示、不阻断）
- 7. Step Summary: 扫描信息表 + 四级别计数表 + ✅/❌ 结论 + CRITICAL/HIGH 明细表
+    pass = !block        （warnExceeded 仅提示、不阻断；无修复版本漏洞不参与门禁）
+ 7. Step Summary: 扫描信息表 + 四级别计数表 + ✅/❌ 结论 + 明细表（show-all ? 全量 : 高危）
+    + 组件依赖关系树（show-all ? 所有漏洞组件 : 高危组件）
     （MEDIUM/LOW 超门禁时追加提示行）
  8. no pass -> core.setFailed，阻断工作流
 ```
@@ -89,20 +95,21 @@ run():
 
 ## 输入参数默认值
 
-| 参数                     | 默认值（action.yml）                                               |
-| ------------------------ | ------------------------------------------------------------------ |
-| `vuln-critical-limit`    | `0`（>门禁阻断）                                                   |
-| `vuln-high-limit`        | `0`（>门禁阻断）                                                   |
-| `vuln-medium-limit`      | `1000`（>门禁仅提示）                                              |
-| `vuln-low-limit`         | `1000`（>门禁仅提示）                                              |
-| `license-critical-limit` | `0`（>门禁阻断）                                                   |
-| `license-high-limit`     | `0`（>门禁阻断）                                                   |
-| `license-medium-limit`   | `1000`（>门禁仅提示）                                              |
-| `license-low-limit`      | `1000`（>门禁仅提示）                                              |
-| `scan-target`            | `.`                                                                |
-| `trivy-config`           | `/opt/cached_resources/trivy_db/trivy.yaml`（存在才加 `--config`） |
-| `cache-dir`              | `/opt/cached_resources/trivy_db`（存在才加 `--cache-dir`）         |
-| `debug`                  | `false`                                                            |
+| 参数                       | 默认值（action.yml）                                                                                  |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `vuln-critical-limit`      | `0`（>门禁阻断）                                                                                      |
+| `vuln-high-limit`          | `0`（>门禁阻断）                                                                                      |
+| `vuln-medium-limit`        | `1000`（>门禁仅提示）                                                                                 |
+| `vuln-low-limit`           | `1000`（>门禁仅提示）                                                                                 |
+| `license-critical-limit`   | `0`（>门禁阻断）                                                                                      |
+| `license-high-limit`       | `0`（>门禁阻断）                                                                                      |
+| `license-medium-limit`     | `1000`（>门禁仅提示）                                                                                 |
+| `license-low-limit`        | `1000`（>门禁仅提示）                                                                                 |
+| `show-all-vulnerabilities` | `false`（true 时 trivy 加 `--ignore-unfixed=false`，展示全量漏洞含无修复版本与 MEDIUM/LOW；门禁不变） |
+| `scan-target`              | `.`                                                                                                   |
+| `trivy-config`             | `/opt/cached_resources/trivy_db/trivy.yaml`（存在才加 `--config`）                                    |
+| `cache-dir`                | `/opt/cached_resources/trivy_db`（存在才加 `--cache-dir`）                                            |
+| `debug`                    | `false`                                                                                               |
 
 ## 执行机 trivy 环境确认（2026-09-16 实测）
 
