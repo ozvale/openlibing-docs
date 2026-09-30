@@ -22,8 +22,15 @@
 - [x] Task 11: show-all-vulnerabilities 展示参数：extractRiskCounts 增 `allVulnItems`（全量漏洞明细）
       与 `vulnCountsFixed`（有修复版本计数）；门禁漏洞口径改为 vulnCountsFixed（无修复版本不阻断）；
       show-all=true 时 trivy 加 `--ignore-unfixed=false`，明细/依赖树展示全量漏洞；false 维持现状。
-      @actions/core 降回 ^2.0.3（v3 exports 仅 import 致 ncc 构建失败；v2→undici 6.29 仍安全）。
-      补单测（PR 30/version 25 全绿）并重建 dist（commit master `54f17fa` / main `93dc042`）
+      @actions/core 先升 ^3.0.1 再降 ^2.0.3（规避 ncc exports 限制）。补单测并重建 dist
+      （commit master `54f17fa` / main `93dc042`）
+- [x] Task 12: 移除 @actions/core 依赖，自实现极简 core。GitCode runner 仅支持 node16，
+      @actions/core 传递依赖 undici@6 模块顶层引用 Node18+ 全局（ReadableStream/Response/MessagePort）
+      致 node16 加载即崩；undici@5 又带 3 个 HIGH CVE。插件只用 getInput/info/setFailed（无网络），
+      故弃用依赖、shared 自实现（读 INPUT_<NAME> 环境变量 + console.log + ::error:: 与 exitCode=1）。
+      dist 1086kB→33kB，不再含 undici/http-client，Node16 兼容且无漏洞。
+      重装依赖清理 lock，同步测试（移除 @actions/core mock）。PR 30/version 25 绿
+      （commit master `d58d261` / main `894d056`）
 
 ### 开发中补充/修正（已并入）
 

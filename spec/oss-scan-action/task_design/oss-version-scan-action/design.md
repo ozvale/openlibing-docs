@@ -21,16 +21,16 @@
 
 ## 涉及文件
 
-| 文件                                      | 操作                         | 说明                                        |
-| ----------------------------------------- | ---------------------------- | ------------------------------------------- |
-| `shared/index.js`                         | 新增                         | 共享门禁引擎（从 oss-pr-scan-action 抽离）  |
-| `oss-pr-scan-action/index.js`             | 重构（改薄入口 + 引 shared） | 行为不变，单测回归                          |
-| `oss-version-scan-action/action.yml`      | 新增                         | 插件元数据（inputs = PR 级同款）            |
-| `oss-version-scan-action/index.js`        | 新增                         | `scan({logPrefix:'oss-version-scan'})`      |
-| `oss-version-scan-action/package.json`    | 新增                         | `@actions/core` + `@vercel/ncc`             |
-| `oss-version-scan-action/test/*.test.js`  | 新增                         | 复用 shared 纯函数单测                      |
-| `oss-version-scan-action/README.md`       | 新增                         | 使用文档                                    |
-| `.gitcode/workflows/oss-version-scan.yml` | 新增                         | workflow_dispatch（自测）/ schedule（预留） |
+| 文件                                      | 操作                         | 说明                                                 |
+| ----------------------------------------- | ---------------------------- | ---------------------------------------------------- |
+| `shared/index.js`                         | 新增                         | 共享门禁引擎（从 oss-pr-scan-action 抽离）           |
+| `oss-pr-scan-action/index.js`             | 重构（改薄入口 + 引 shared） | 行为不变，单测回归                                   |
+| `oss-version-scan-action/action.yml`      | 新增                         | 插件元数据（inputs = PR 级同款）                     |
+| `oss-version-scan-action/index.js`        | 新增                         | `scan({logPrefix:'oss-version-scan'})`               |
+| `oss-version-scan-action/package.json`    | 新增                         | `@vercel/ncc`（无运行时依赖，core 由 shared 自实现） |
+| `oss-version-scan-action/test/*.test.js`  | 新增                         | 复用 shared 纯函数单测                               |
+| `oss-version-scan-action/README.md`       | 新增                         | 使用文档                                             |
+| `.gitcode/workflows/oss-version-scan.yml` | 新增                         | workflow_dispatch（自测）/ schedule（预留）          |
 
 ## shared 导出接口
 

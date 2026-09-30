@@ -21,17 +21,17 @@
 
 ## 涉及文件
 
-| 文件                                 | 操作              | 说明                                    |
-| ------------------------------------ | ----------------- | --------------------------------------- |
-| `shared/index.js`                    | 新增（抽取）      | 共享门禁引擎（扫描/解析/判定/summary）  |
-| `oss-pr-scan-action/action.yml`      | 新增              | 插件元数据（inputs/runs）               |
-| `oss-pr-scan-action/index.js`        | 新增→重构为薄入口 | 引 shared，行为不变                     |
-| `oss-pr-scan-action/package.json`    | 新增              | `@actions/core` + `@vercel/ncc`         |
-| `oss-pr-scan-action/dist/index.js`   | 新增（构建产物）  | ncc 打包结果（内联 shared+core）        |
-| `oss-pr-scan-action/test/*.test.js`  | 新增              | 核心逻辑单测（改引 shared，mock trivy） |
-| `oss-pr-scan-action/README.md`       | 新增              | 使用文档                                |
-| `.gitcode/workflows/oss-pr-scan.yml` | 新增              | 本仓自测 workflow（会用插件扫自己）     |
-| `.pre-commit-config.yaml`            | 新增              | 代码规范钩子（对标 malicious-code 仓）  |
+| 文件                                 | 操作              | 说明                                                 |
+| ------------------------------------ | ----------------- | ---------------------------------------------------- |
+| `shared/index.js`                    | 新增（抽取）      | 共享门禁引擎（扫描/解析/判定/summary）               |
+| `oss-pr-scan-action/action.yml`      | 新增              | 插件元数据（inputs/runs）                            |
+| `oss-pr-scan-action/index.js`        | 新增→重构为薄入口 | 引 shared，行为不变                                  |
+| `oss-pr-scan-action/package.json`    | 新增              | `@vercel/ncc`（无运行时依赖，core 由 shared 自实现） |
+| `oss-pr-scan-action/dist/index.js`   | 新增（构建产物）  | ncc 打包结果（内联 shared；无 @actions/core/undici） |
+| `oss-pr-scan-action/test/*.test.js`  | 新增              | 核心逻辑单测（改引 shared，mock trivy）              |
+| `oss-pr-scan-action/README.md`       | 新增              | 使用文档                                             |
+| `.gitcode/workflows/oss-pr-scan.yml` | 新增              | 本仓自测 workflow（会用插件扫自己）                  |
+| `.pre-commit-config.yaml`            | 新增              | 代码规范钩子（对标 malicious-code 仓）               |
 
 ## 核心逻辑（index.js）
 

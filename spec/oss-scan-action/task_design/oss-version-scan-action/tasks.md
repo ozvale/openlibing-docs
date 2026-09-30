@@ -25,6 +25,12 @@
       show-all 时加 `--ignore-unfixed=false`；action.yml/workflow 增参数 + version 单测
       （25 例全绿）+ 重建 dist（commit master `54f17fa` / main `93dc042`）
 
+* [x] Task 8.6: 移除 @actions/core 依赖、自实现极简 core（随 shared 下发）：GitCode runner
+      仅支持 node16，@actions/core 传递依赖 undici@6 顶层引用 Node18+ 全局致 node16 崩，
+      undici@5 又带高危 CVE；弃用依赖后 dist 33kB 不再含 undici/http-client，Node16 兼容
+      且无漏洞。清理 node_modules/lock，同步测试。PR 30/version 25 绿
+      （commit master `d58d261` / main `894d056`）
+
 ## 验证方式
 
 - 单测：PR 级既有用例（8 个）改引 shared 后全部通过；version 复跑
