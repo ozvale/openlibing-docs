@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-- **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2109819443
 - **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/75
 - **需求名称**: 结果展示新增包语言列
 - **开发责任人**: 陈洪亮

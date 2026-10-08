@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-- **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2109712555
 - **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/81
 - **需求名称**: 查询页面优化-按表格查询产物信息并展示汇总信息
 - **核心目标**:
