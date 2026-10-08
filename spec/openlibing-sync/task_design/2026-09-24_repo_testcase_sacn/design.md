@@ -13,18 +13,18 @@
 
 ## 1. 设计目标与关键决策
 
-| # | 决策点 | 结论 |
-|---|--------|------|
-| 1 | 插件类型 | **SeaTunnel Transform**（同进程内算子），参考 `ParseTestcaseTransform` / `ParseFileCoverageTransform` |
-| 1a | 仓库归属 | `openlibing-seatunnel-plugins` 仓 `com.openlibing.transform.communityscan` 包，与 `parsetestcase` / `parsefilecoverage` 同级 |
-| 2 | 代码来源 | 插件**只读**本地挂载的共享存储；上游已落盘的目录为唯一输入；不下载、不克隆、不 `git fetch` |
-| 3 | 解析方式 | **Java 纯静态解析**（不执行任何仓库代码）：Python / Java 用正则 + 简易 AST 节点匹配；Go 用正则匹配 `func TestXxx(*testing.T)` + 子测试；C/C++ 用跨行宏正则（容忍换行与宏嵌套） |
-| 4 | 框架范围 | 本期：**pytest、unittest、go test、gtest**；后续补充 JUnit4/5、TestNG、Jest/Mocha/Vitest 等（仅需新增 `FrameworkScanner` SPI 实现 + `META-INF/services` 注册） |
-| 5 | 数据粒度 | **逐用例明细 + 汇总**：明细 = `List<TestCaseMetadata>`；汇总 = `TestCaseMeasureData`（同时含明细数组与框架级计数） |
-| 6 | 字段语义 | 明细字段 `frameType/repoUrl/repoBranch/caseFileName/caseFilePath/className/name/level/type` 与 `ParseTestcaseTransform` 产出的 `TestCaseMetadata` 完全对齐（**复用**其 `model.TestCaseMetadata` 类），便于后续把仓里定义了什么用例与流水线上报了什么执行结果做交叉分析 |
-| 7 | 配置机制 | 复用 SeaTunnel `ReadonlyConfig` + `Options` + `OptionRule`，**不**使用 Spring `@ConfigurationProperties` |
-| 8 | SPI 注册 | 通过 Java `ServiceLoader<FrameworkScanner>` + `META-INF/services/`，在 transform 启动时一次性加载（参考 `ParseFileCoverageTransform` 的 parser 初始化模式） |
-| 9 | 输出 | **单列 JSON 字符串**（与 `ParseTestcaseTransform` 一致），下游 SeaTunnel Sink 负责写 Doris；本插件不直连数据库 |
+| #   | 决策点   | 结论                                                                                                                                                                                                                                                                   |
+| --- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | 插件类型 | **SeaTunnel Transform**（同进程内算子），参考 `ParseTestcaseTransform` / `ParseFileCoverageTransform`                                                                                                                                                                  |
+| 1a  | 仓库归属 | `openlibing-seatunnel-plugins` 仓 `com.openlibing.transform.communityscan` 包，与 `parsetestcase` / `parsefilecoverage` 同级                                                                                                                                           |
+| 2   | 代码来源 | 插件**只读**本地挂载的共享存储；上游已落盘的目录为唯一输入；不下载、不克隆、不 `git fetch`                                                                                                                                                                             |
+| 3   | 解析方式 | **Java 纯静态解析**（不执行任何仓库代码）：Python / Java 用正则 + 简易 AST 节点匹配；Go 用正则匹配 `func TestXxx(*testing.T)` + 子测试；C/C++ 用跨行宏正则（容忍换行与宏嵌套）                                                                                         |
+| 4   | 框架范围 | 本期：**pytest、unittest、go test、gtest**；后续补充 JUnit4/5、TestNG、Jest/Mocha/Vitest 等（仅需新增 `FrameworkScanner` SPI 实现 + `META-INF/services` 注册）                                                                                                         |
+| 5   | 数据粒度 | **逐用例明细 + 汇总**：明细 = `List<TestCaseMetadata>`；汇总 = `TestCaseMeasureData`（同时含明细数组与框架级计数）                                                                                                                                                     |
+| 6   | 字段语义 | 明细字段 `frameType/repoUrl/repoBranch/caseFileName/caseFilePath/className/name/level/type` 与 `ParseTestcaseTransform` 产出的 `TestCaseMetadata` 完全对齐（**复用**其 `model.TestCaseMetadata` 类），便于后续把仓里定义了什么用例与流水线上报了什么执行结果做交叉分析 |
+| 7   | 配置机制 | 复用 SeaTunnel `ReadonlyConfig` + `Options` + `OptionRule`，**不**使用 Spring `@ConfigurationProperties`                                                                                                                                                               |
+| 8   | SPI 注册 | 通过 Java `ServiceLoader<FrameworkScanner>` + `META-INF/services/`，在 transform 启动时一次性加载（参考 `ParseFileCoverageTransform` 的 parser 初始化模式）                                                                                                            |
+| 9   | 输出     | **单列 JSON 字符串**（与 `ParseTestcaseTransform` 一致），下游 SeaTunnel Sink 负责写 Doris；本插件不直连数据库                                                                                                                                                         |
 
 ### 1.1 与 `ParseTestcaseTransform` 的关系
 
@@ -437,12 +437,12 @@ public record TestCaseDescriptor(
 
 ### 5.3 各框架识别规则
 
-| 框架 | 文件候选 | 静态识别要点 | skip / 特征 |
-|------|----------|--------------|-------------|
-| pytest | `test_*.py`、`*_test.py`、`tests/**/*.py` | **Java 正则 + 缩进感知**：模块级 `^def test_\w+`；`^class Test\w+(\(\))?:` 块内同缩进的 `def test_\w+`；嵌套类递归 | `@pytest.mark.skip/skipif`、`pytest.skip()`；markers 收集全部 `@pytest.mark.*`；`@pytest.mark.parametrize` 字面量参数尽力展开，否则置 `parametrized=true` + 表达式 |
-| unittest | 同上 | **Java 正则**：含 `unittest.TestCase` / 导入别名的类的 `def test_*` 方法 | `@skip/skipIf/skipUnless`、`self.skipTest()` |
-| go test | `*_test.go` | 正则：`func TestXxx(t *testing.T)`；同函数体内 `t.Run("sub",...)` 作为子用例，full_name 拼为 `TestXxx/sub`；包名取 `package` 声明 | `t.Skip(...)` / `t.SkipNow()` |
-| gtest | `*.cpp / *.cc / *.cxx / *.c++` 及头文件 | 宏正则（容忍换行/宏嵌套）：`TEST(suite, name)`、`TEST_F(fixture, name)`、`TEST_P(suite, name)`；`INSTANTIATE_TEST_SUITE_P/INSTANTIATE_TEST_CASE_P` 字面量列表按名展开 | `DISABLED_` 前缀视为 skipped；`GTEST_SKIP()` |
+| 框架     | 文件候选                                  | 静态识别要点                                                                                                                                                          | skip / 特征                                                                                                                                                        |
+| -------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| pytest   | `test_*.py`、`*_test.py`、`tests/**/*.py` | **Java 正则 + 缩进感知**：模块级 `^def test_\w+`；`^class Test\w+(\(\))?:` 块内同缩进的 `def test_\w+`；嵌套类递归                                                    | `@pytest.mark.skip/skipif`、`pytest.skip()`；markers 收集全部 `@pytest.mark.*`；`@pytest.mark.parametrize` 字面量参数尽力展开，否则置 `parametrized=true` + 表达式 |
+| unittest | 同上                                      | **Java 正则**：含 `unittest.TestCase` / 导入别名的类的 `def test_*` 方法                                                                                              | `@skip/skipIf/skipUnless`、`self.skipTest()`                                                                                                                       |
+| go test  | `*_test.go`                               | 正则：`func TestXxx(t *testing.T)`；同函数体内 `t.Run("sub",...)` 作为子用例，full_name 拼为 `TestXxx/sub`；包名取 `package` 声明                                     | `t.Skip(...)` / `t.SkipNow()`                                                                                                                                      |
+| gtest    | `*.cpp / *.cc / *.cxx / *.c++` 及头文件   | 宏正则（容忍换行/宏嵌套）：`TEST(suite, name)`、`TEST_F(fixture, name)`、`TEST_P(suite, name)`；`INSTANTIATE_TEST_SUITE_P/INSTANTIATE_TEST_CASE_P` 字面量列表按名展开 | `DISABLED_` 前缀视为 skipped；`GTEST_SKIP()`                                                                                                                       |
 
 通用补充：
 
@@ -454,13 +454,13 @@ public record TestCaseDescriptor(
 
 ### 6.1 输入行 schema（上游 SeaTunnel Source / Doris Source）
 
-| 字段名（默认） | 类型 | 必填 | 说明 |
-|----------------|------|------|------|
-| `repoUrl` | STRING | ✅ | 仓库 URL（与白名单表一致） |
-| `repoBranch` | STRING | ✅ | 仓库分支 |
-| `scanPath` | STRING | ❌ | 扫描子路径（`""` = 整仓） |
-| `projectId` | STRING | ✅ | 归属项目 |
-| `platform` | STRING | ✅ | gitcode / atomgit / github / gitlab / other |
+| 字段名（默认） | 类型   | 必填 | 说明                                        |
+| -------------- | ------ | ---- | ------------------------------------------- |
+| `repoUrl`      | STRING | ✅   | 仓库 URL（与白名单表一致）                  |
+| `repoBranch`   | STRING | ✅   | 仓库分支                                    |
+| `scanPath`     | STRING | ❌   | 扫描子路径（`""` = 整仓）                   |
+| `projectId`    | STRING | ✅   | 归属项目                                    |
+| `platform`     | STRING | ✅   | gitcode / atomgit / github / gitlab / other |
 
 ### 6.2 输出 schema（单列 JSON）
 
@@ -516,15 +516,15 @@ Doris (community_repo_whitelist + community_testcase_detail + community_testcase
 
 ### 7.2 扫描脚本职责（由 DolphinScheduler 触发，Java 实现）
 
-| 步骤 | 脚本内操作 |
-|------|-----------|
-| 1 | 从 Doris 读 `community_repo_whitelist`（`enabled=1`），生成待扫描单元列表 |
-| 2 | 对每个扫描单元：构造 SeaTunnel job `.conf`，提交到 SeaTunnel 集群 |
-| 3 | 等待 job 完成，**解析 job 输出**中的 `communityScanMeasureData` JSON 列 |
-| 4 | 遍历 `testCaseMetadataList` 元素，写入 Doris `community_testcase_detail` |
-| 5 | 按 `(repo_id, project_id, branch, framework)` 聚合，写入 Doris `community_testcase_summary` |
-| 6 | 回写 `community_repo_whitelist` 行的 `last_status / last_commit / last_scan_at` |
-| 7 | 失败重试 ≤ 2 次；连续 3 批失败告警（脚本退出码 + DolphinScheduler 告警通道） |
+| 步骤 | 脚本内操作                                                                                  |
+| ---- | ------------------------------------------------------------------------------------------- |
+| 1    | 从 Doris 读 `community_repo_whitelist`（`enabled=1`），生成待扫描单元列表                   |
+| 2    | 对每个扫描单元：构造 SeaTunnel job `.conf`，提交到 SeaTunnel 集群                           |
+| 3    | 等待 job 完成，**解析 job 输出**中的 `communityScanMeasureData` JSON 列                     |
+| 4    | 遍历 `testCaseMetadataList` 元素，写入 Doris `community_testcase_detail`                    |
+| 5    | 按 `(repo_id, project_id, branch, framework)` 聚合，写入 Doris `community_testcase_summary` |
+| 6    | 回写 `community_repo_whitelist` 行的 `last_status / last_commit / last_scan_at`             |
+| 7    | 失败重试 ≤ 2 次；连续 3 批失败告警（脚本退出码 + DolphinScheduler 告警通道）                |
 
 ### 7.3 插件与脚本的契约
 

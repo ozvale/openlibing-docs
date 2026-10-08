@@ -160,18 +160,18 @@
 
 ## 验收对照（proposal 验收标准 → 任务）
 
-| 验收项 | 关联任务 |
-|--------|----------|
-| SeaTunnel Factory 可识别插件标识 `CommunityScan` | 阶段 2 |
-| 输入行 schema 校验 + null 错误行 | 阶段 2、3 |
-| 输出 JSON 字段与 `ParseTestcaseTransform` 一致 | 阶段 1（复用 model）、3 |
-| 四框架逐用例明细正确 | 阶段 0、4 |
-| 纯静态、无代码执行 | 阶段 3（engine/util）、4 |
-| not_synced / path_invalid 走单列 null + 日志前缀 | 阶段 2、3 |
-| SPI 注册机制可用（新增框架不改 transform） | 阶段 1、4 |
-| 共享存储只读 | 阶段 3（util/PathGuard） |
-| 单行超时控制 | 阶段 2（Options）、3（perRowPool） |
-| Doris Sink 写入字段映射成功 | 阶段 5 |
+| 验收项                                           | 关联任务                           |
+| ------------------------------------------------ | ---------------------------------- |
+| SeaTunnel Factory 可识别插件标识 `CommunityScan` | 阶段 2                             |
+| 输入行 schema 校验 + null 错误行                 | 阶段 2、3                          |
+| 输出 JSON 字段与 `ParseTestcaseTransform` 一致   | 阶段 1（复用 model）、3            |
+| 四框架逐用例明细正确                             | 阶段 0、4                          |
+| 纯静态、无代码执行                               | 阶段 3（engine/util）、4           |
+| not_synced / path_invalid 走单列 null + 日志前缀 | 阶段 2、3                          |
+| SPI 注册机制可用（新增框架不改 transform）       | 阶段 1、4                          |
+| 共享存储只读                                     | 阶段 3（util/PathGuard）           |
+| 单行超时控制                                     | 阶段 2（Options）、3（perRowPool） |
+| Doris Sink 写入字段映射成功                      | 阶段 5                             |
 
 ## 后续可选增强（不在本期范围）
 
