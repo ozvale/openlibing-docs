@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097821980
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/1
 * **需求名称**: 【需求】【openLiBing】代码仓管理后端服务迁移
 * **开发责任人**: 张霁阳

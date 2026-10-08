@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104130314
 * **需求名称**: 【openLiBing-cicd】PR评论拉起流水线命令支持配置多个流水线
 * **开发责任人**: 陶获权
 * **测试责任人**: 刘东方

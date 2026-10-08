@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2109678135
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/228
 * **需求名称**: PR评论区流水线报告展示最新运行结果
 * **核心目标**:

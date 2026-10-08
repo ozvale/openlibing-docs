@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097804061
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/29
 * **需求名称**: 【openlibing】流水线测试结果添加用例名称、用例编号、执行结果列筛选
 * **开发责任人**: 陈宁

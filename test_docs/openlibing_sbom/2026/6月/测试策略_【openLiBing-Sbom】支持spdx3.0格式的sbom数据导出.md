@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2102896969
 * * * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/87
 * **需求名称**: 支持spdx3.0格式的sbom数据导出
 * **核心目标**:

@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2094745751
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/24
 * **需求名称**: 【需求】代码检查规则详情对其CodeArts Check呈现与筛选，支持上线状态、安全与质量等
 * **核心目标**:

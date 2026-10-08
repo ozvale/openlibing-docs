@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104866483
 * **对应task(issueID)链接**: 
 * **需求名称**: 【openLiBing】PR门禁切换开源代码检查与gitcode代码化流水线
 * **开发责任人**: 张霁阳

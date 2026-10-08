@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104840658
 * **需求编号**: US20260701083282
 * **需求名称**: 【openLiBing】流水线PR事件触发逻辑优化-彻底解决gitcodeApi限流问题
 * **核心目标**:

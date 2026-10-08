@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2101173366
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/58
 * **需求名称**: 【openLiBing-repo】代码仓管理支持筛选功能
 * **核心目标**:

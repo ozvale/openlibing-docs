@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2101165826
 * **需求名称**: 流水线详情的执行历史页面显示Merge ID
 * **核心目标**:
   在流水线详情页面的执行历史列表中增加Merge ID字段的显示，方便用户追踪和关联具体的代码合并请求。

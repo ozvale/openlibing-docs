@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2103480046
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/119
 * **需求名称**: openLIBing配置的流水线支持在gitcodePR的检查中正常呈现（排队/运行/结束）
 * **核心目标**:

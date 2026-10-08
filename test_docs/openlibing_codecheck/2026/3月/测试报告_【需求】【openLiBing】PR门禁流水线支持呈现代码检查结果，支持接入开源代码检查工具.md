@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097822363
 * **对应task(issueID)链接**: 无
 * **需求名称**: 【需求】【openLiBing】PR门禁流水线支持呈现代码检查结果，支持接入开源代码检查工具
 * **开发责任人**: 陶获权

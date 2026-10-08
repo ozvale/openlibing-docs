@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097823248
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/47
 * **需求名称**: 【openlibing】PR代码更新支持自动重置流水线标签，避免最新代码未检查
 * **开发责任人**: 杨宇萌

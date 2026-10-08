@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097867803
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/10
 * **需求名称**: 【SBOM】OpenHarmony获取三方组件元数据功能适配GitCode场景
 * **核心目标**:

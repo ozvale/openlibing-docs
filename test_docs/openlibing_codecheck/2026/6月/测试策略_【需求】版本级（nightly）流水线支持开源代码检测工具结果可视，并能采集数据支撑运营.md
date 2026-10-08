@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2101203870
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/107
 * **需求名称**: 版本级（nightly）流水线支持开源代码检测工具结果可视，并能采集数据支撑运营
 * **核心目标**:

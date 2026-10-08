@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104855653
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/177
 * **需求名称**: PR评论重试时，非最新commitID不允许重试
 * **核心目标**: PR重试时若commitID非最新，在流水线报告中提示用户最新commit与流水线启动时不一致，避免流水线结果标签产生偏差。

@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097867582
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/4
 * **需求名称**: 【需求】【openLiBing】代码仓管理自动拉取组织的全量代码仓，录入仓库支持选择录入管理，支持开关配置
 * **核心目标**:

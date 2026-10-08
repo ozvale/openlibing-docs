@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2099423079
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/15
 * **需求名称**: 【OpenLiBing-codecheck】自动识别PR开源代码检查注释屏蔽，并在PR评论中提示
 * **开发责任人**: 闫兆鸿

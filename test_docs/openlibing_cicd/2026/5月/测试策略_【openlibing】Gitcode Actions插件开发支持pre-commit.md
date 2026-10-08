@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2101194705
 * **对应task(issueID)链接**: 
 * **需求名称**: 【openlibing】Gitcode Actions插件开发支持pre-commit
 * **核心目标**:

@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2107354448
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/206
 * **需求名称**: 【coderepo】机机接口下线切换apig
 * **核心目标**:

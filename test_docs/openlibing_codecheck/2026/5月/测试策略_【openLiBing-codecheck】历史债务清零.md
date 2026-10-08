@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2099408716
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/88
 * **需求名称**: codecheck历史债务清零
 * **核心目标**:

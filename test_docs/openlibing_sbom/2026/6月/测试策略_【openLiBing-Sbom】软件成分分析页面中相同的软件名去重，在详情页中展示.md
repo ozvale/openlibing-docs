@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2102903379
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/37
 * **需求名称**: 软件成分分析页面中相同的软件名去重，在详情页中展示
 * **核心目标**:

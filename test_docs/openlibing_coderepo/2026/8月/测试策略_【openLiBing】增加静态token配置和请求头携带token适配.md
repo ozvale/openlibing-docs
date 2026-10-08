@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2107184901
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-ops-web/issues/35
 * **需求名称**: 增加静态token配置和请求头携带token适配-coderepo
 * **核心目标**:

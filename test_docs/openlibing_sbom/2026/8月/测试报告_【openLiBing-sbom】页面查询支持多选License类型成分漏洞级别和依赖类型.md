@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2107189118
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/60
 * **需求名称**: 页面查询支持多选License类型、成分、漏洞级别和依赖类型
 * **开发责任人**: 陈明旭

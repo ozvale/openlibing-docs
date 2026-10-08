@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104586651
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/67
 * **需求名称**: Github支持代码风格自动修复
 * **核心目标**:

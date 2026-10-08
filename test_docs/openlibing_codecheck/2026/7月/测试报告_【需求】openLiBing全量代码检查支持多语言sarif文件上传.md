@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104843895; https://portal.edevops.huawei.com/ipdproject/third/2104843653
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/136
 * **需求名称**: openLiBing全量代码检查支持多语言sarif文件上传
 * **开发责任人**: 杨宇萌、马菲飞

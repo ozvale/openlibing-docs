@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2099427867
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-web/issues/133
 * **需求名称**: 【openLiBing-codecheck】代码检查规则集支持导入安全增强规则
 * **核心目标**:

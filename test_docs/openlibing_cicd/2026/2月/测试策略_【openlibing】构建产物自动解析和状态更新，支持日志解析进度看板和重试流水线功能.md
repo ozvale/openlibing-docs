@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/295311205
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/27
 * **需求名称**: 【openlibing】构建产物自动解析和状态更新，支持日志解析进度看板和重试流水线功能
 * **核心目标**:

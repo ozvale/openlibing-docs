@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2099484306
 * **需求名称**: openEuler社区SBOM文件按版本归属归档
 * **开发责任人**: 陈洪亮
 * **测试责任人**: 赵威

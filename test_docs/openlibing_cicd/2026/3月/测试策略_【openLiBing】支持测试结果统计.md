@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2098708108
 * **对应task(issueID)链接**: 
 * **需求名称**: 【openLiBing】支持测试结果统计
 * **核心目标**:

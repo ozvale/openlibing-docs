@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2105377820
 * **需求编号**: US20260707222313
 * **需求名称**: 【黄蓝协同】冒烟流水线失败邮件通知带commit id
 * **核心目标**:

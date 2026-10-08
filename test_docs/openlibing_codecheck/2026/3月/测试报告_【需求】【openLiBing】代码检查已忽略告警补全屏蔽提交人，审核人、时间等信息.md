@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097745700
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/30
 * **需求名称**: 【需求】【openLiBing】代码检查已忽略告警补全屏蔽提交人，审核人、时间等信息
 * **开发责任人**: 杨宇萌

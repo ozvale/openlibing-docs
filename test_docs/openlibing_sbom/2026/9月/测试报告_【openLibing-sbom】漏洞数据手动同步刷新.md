@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2109713075
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/74
 * **需求名称**: 漏洞数据手动同步刷新
 * **开发责任人**: 陈明旭

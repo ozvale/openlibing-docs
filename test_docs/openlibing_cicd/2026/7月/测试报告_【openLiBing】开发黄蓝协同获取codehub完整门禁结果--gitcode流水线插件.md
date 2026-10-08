@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2102910775
 * **需求编号**: US20260530437315
 * **需求名称**: 【openLiBing】开发黄蓝协同获取codehub完整门禁结果--gitcode流水线插件
 * **开发责任人**: 崔世英

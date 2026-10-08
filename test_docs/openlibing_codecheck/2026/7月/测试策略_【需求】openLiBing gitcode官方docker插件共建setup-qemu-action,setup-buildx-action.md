@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2103073332; https://portal.edevops.huawei.com/ipdproject/third/2103073324
 * **对应task(issueID)链接**: 与GitCode平台共建，无openlibing相关issue
 * **需求名称**: openLiBing gitcode官方docker插件共建setup-qemu-action,setup-buildx-action
 * **核心目标**:

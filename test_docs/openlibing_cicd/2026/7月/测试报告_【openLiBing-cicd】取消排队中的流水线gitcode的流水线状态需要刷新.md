@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2106150592
 * * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/200
 * **需求名称**: 取消排队中的流水线gitcode的流水线状态需要刷新
 * **开发责任人**: 陶获权

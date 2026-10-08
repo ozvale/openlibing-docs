@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2101166216
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/89
 * **需求名称**: codecheck代码检查任务结果刷新机制切换消息队列
 * **核心目标**:

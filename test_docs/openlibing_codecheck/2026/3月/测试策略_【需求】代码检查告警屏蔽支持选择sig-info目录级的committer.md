@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097822238
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/23
 * **需求名称**: 【需求】代码检查告警屏蔽支持选择sig-info目录级的committer
 * **核心目标**:

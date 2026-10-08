@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2099472624
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/21
 * **需求名称**: openlibing-sbom代码与ORT从源码层面解耦并清理开源漏洞
 * **核心目标**:

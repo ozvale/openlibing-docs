@@ -1,6 +1,5 @@
 # #1 【蓝区】AI工具申请页面鉴权机制修改 测试报告
 ## 1. 基本信息
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097530016
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-ai/issues/18
 * **需求名称**: 【蓝区】AI工具申请页面鉴权机制修改
 * **开发责任人**: 毛聪聪、李娜

@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2102905705
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/102
 * **需求名称**: pre-commit自动修复适配gitcode流水线代码化
 * **核心目标**:

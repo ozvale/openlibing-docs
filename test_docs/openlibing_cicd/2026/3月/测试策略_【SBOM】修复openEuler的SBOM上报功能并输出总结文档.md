@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097874150
 * **对应task(issueID)链接**: 
 * **需求名称**: 【SBOM】修复openEuler的SBOM上报功能并输出总结文档
 * **核心目标**:

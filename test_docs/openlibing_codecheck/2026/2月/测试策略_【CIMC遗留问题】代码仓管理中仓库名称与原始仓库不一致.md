@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2096982877
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-web/issues/72
 * **需求名称**: 【CIMC遗留问题】代码仓管理中仓库名称与原始仓库不一致
 * **核心目标**:

@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097822996
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/207
 * **需求名称**: PR流水线报告支持任务结束刷新、任务状态增加文字提示
 * **开发责任人**: 陈洪亮

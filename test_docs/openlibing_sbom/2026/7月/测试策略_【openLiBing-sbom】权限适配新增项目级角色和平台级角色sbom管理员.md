@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104859429
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/47
 * **需求名称**: 权限适配新增项目级角色和平台级角色sbom管理员
 * **核心目标**: 新增项目级和平台级sbom管理员角色，网关增加sbom请求横向鉴权逻辑，拥有sbom菜单接口权限的角色可访问请求，不再仅限项目管理员。

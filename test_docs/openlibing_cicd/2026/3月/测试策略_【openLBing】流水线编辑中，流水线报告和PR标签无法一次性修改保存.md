@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097823804
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/56
 * **需求名称**: 【openLBing】流水线编辑中，流水线报告和PR标签无法一次性修改保存
 * **核心目标**:

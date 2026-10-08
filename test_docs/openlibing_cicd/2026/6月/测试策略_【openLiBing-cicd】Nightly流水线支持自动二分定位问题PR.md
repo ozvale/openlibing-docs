@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2102885541
 * **对应task(issueID)链接**: 
 * **需求名称**: 【openLiBing-cicd】Nightly流水线支持自动二分定位问题PR
 * **核心目标**:

@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2106360192
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/code-metrics-action/issues/8
 * **需求名称**: 【openlibing】GitCode插件流水线交互适配OIDC认证方案
 * **核心目标**:

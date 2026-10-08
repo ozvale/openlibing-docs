@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104931125
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/44
 * **需求名称**: 数据看板上报
 * **核心目标**: 接入sbom相关数据到openlibing数据看板，包括社区解析任务状态上报和新增制品数量指标上报，支持定时任务和手动触发。

@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104886811
 * * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/196
 * **需求名称**: 流水线配置支持排除指定分支/正则配置触发分支
 * **核心目标**:

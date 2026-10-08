@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2102989431
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/39
 * **需求名称**: 【openLiBing-代码检查】提供数据回传插件，与codeql-action解耦
 * **开发责任人**: 马菲飞

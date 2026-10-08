@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2099408616
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd-web/issues/7
 * **需求名称**: openlibing-cicd-web代码质量合规与安全加固
 * **开发责任人**: 马菲飞

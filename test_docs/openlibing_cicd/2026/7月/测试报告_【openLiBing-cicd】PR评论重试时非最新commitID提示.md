@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104855653
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/177
 * **需求名称**: PR评论重试时，非最新commitID不允许重试
 * **开发责任人**: 张霁阳

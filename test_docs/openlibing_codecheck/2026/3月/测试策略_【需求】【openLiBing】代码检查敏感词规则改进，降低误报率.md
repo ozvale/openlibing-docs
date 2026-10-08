@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097821933
 * **对应task(issueID)链接**: 无
 * **需求名称**: 【需求】【openLiBing】代码检查敏感词规则改进，降低误报率
 * **核心目标**:

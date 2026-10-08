@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2097822960
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/31
 * **需求名称**: 【openLiBing】降低PR代码检查任务结果刷新延迟（最高3min），尽可能实时
 * **开发责任人**: 闫兆鸿

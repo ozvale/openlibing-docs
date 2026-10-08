@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104859429
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/47
 * **需求名称**: 权限适配新增项目级角色和平台级角色sbom管理员
 * **开发责任人**: 陈明旭

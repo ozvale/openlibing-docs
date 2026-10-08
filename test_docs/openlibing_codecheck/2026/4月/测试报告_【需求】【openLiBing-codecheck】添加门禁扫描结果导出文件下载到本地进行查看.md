@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2099424101
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/59
 * **需求名称**: 【openLiBing-codecheck】添加门禁扫描结果导出文件下载到本地进行查看
 * **开发责任人**: 马菲飞

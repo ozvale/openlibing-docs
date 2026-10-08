@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2101160238
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/92
 * **需求名称**: 流水线的测试用例执行结果支持Excel导出
 * **核心目标**:

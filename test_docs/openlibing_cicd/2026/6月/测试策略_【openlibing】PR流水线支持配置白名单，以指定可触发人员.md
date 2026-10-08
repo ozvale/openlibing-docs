@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2103708877
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/120
 * **需求名称**: 【openlibing】PR流水线支持配置白名单，以指定可触发人员
 * **核心目标**:

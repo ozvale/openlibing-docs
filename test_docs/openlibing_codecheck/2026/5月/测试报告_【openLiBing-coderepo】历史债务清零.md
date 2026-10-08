@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2099408736
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-coderepo/issues/23
 * **需求名称**: coderepo历史债务清零
 * **开发责任人**: 张霁阳

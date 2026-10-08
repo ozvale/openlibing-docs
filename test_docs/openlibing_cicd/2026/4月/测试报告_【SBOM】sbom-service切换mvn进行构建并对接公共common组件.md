@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2099467694
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/17
 * **需求名称**: sbom-service切换mvn进行构建并对接公共common组件
 * **开发责任人**: 陈洪亮

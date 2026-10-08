@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2099411462
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/64
 * **需求名称**: 【openlibing-流水线】流水线支持批量编辑
 * **开发责任人**: 杨宇萌、陈宁

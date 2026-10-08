@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2104859656
 * **需求编号**: US20260701089992
 * **需求名称**: 【openlibing-ide】插件多机多卡适配
 * **开发责任人**: 夏泽祺

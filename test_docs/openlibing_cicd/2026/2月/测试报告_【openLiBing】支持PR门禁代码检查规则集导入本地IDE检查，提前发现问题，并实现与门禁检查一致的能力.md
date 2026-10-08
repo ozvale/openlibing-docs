@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2096982777
 * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-codecheck/issues/14
 * **需求名称**: 【openLiBing】支持PR门禁代码检查规则集导入本地IDE检查，提前发现问题，并实现与门禁检查一致的能力
 * **开发责任人**: 董家辉

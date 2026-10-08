@@ -2,7 +2,6 @@
 
 ## 1. 基本信息
 
-* **需求链接**: https://portal.edevops.huawei.com/ipdproject/third/2102887020
 * * **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-cicd/issues/425
 * **需求名称**: 流水线执行历史增加MERGE_ID，并支持筛选
 * **开发责任人**: 杨宇萌
