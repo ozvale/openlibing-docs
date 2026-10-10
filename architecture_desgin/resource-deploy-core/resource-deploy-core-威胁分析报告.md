@@ -11,7 +11,7 @@
 | 分析分支       | `master`                                                                                                       |
 | 基准提交       | `95bb043`（!46 merge feat-code-metrics-scan into master，2026-10-09 17:24:35 +0800）                           |
 | 分析开始 (UTC) | `2026-10-10 01:07:24`                                                                                          |
-| 分析完成 (UTC) | `2026-10-10 01:5X:XX`（以最后写入时间为准，见文末）                                                            |
+| 分析完成 (UTC) | `2026-10-10 01:35:00`（内容定稿于首次归档提交 01:35:53 UTC 前，见文末）                                        |
 | 分析模型       | `GLM-5.3`                                                                                                      |
 | 部署分类       | `K8S_SERVICE`（Kubernetes Deployment + ClusterIP Service）                                                     |
 | 分析范围       | `app/`、`deploy/`、`karmada_hook/`、部署清单与脚本；排除 `test/`（仅扫描硬编码凭据）、`.git`、`threat-model-*` |
@@ -176,25 +176,25 @@ flowchart LR
 
 ### 2.5 数据流表（双向流：请求-响应对计为一条）
 
-| 流 ID | 源 → 目标                           | 协议/内容                                                  | 安全属性                                      |
-| ----- | ----------------------------------- | ---------------------------------------------------------- | --------------------------------------------- |
-| DF01  | ApiCaller <--> ResourceApi          | HTTP，Bearer API-Key（`app/core/auth.py:148-174`）         | 无 TLS；key 即身份                            |
-| DF02  | Operator <--> WebUI                 | HTTP :8080（`deploy/web/deploy.yaml:24,69` hostNetwork）   | **无认证、无 TLS**                            |
-| DF03  | WebUI <--> ResourceApi              | HTTP 代理 `/api/`（`nginx.conf.template:14-19`）           | 明文集群内；API-Key 经页面注入                |
-| DF04  | ResourceApi <--> KubeAPIServer      | HTTPS，in-cluster SA token（`repository/client.py:17-24`） | ClusterRole 过宽（`deploy.yaml:42-78`）       |
-| DF05  | ResourceApi <--> ApiKeysSecret      | 文件挂载读取 keys.json                                     | Secret 仅 base64，无完整性校验                |
-| DF06  | ResourceApi <--> MachineInventoryCM | K8s API 读写台账                                           | 5s 本地缓存（`auth.py:51-61`）；无租户隔离    |
-| DF07  | ResourceApi <--> MachineSshSecrets  | K8s API 读写 root 密码/runner 暂存密码                     | 密码无轮换                                    |
-| DF08  | ResourceApi <--> MachineAuditLogCM  | 追加审计（上限 1000 条）                                   | 无 CAS，可多副本覆盖                          |
-| DF09  | ResourceApi <--> EnvMetaCMs         | 读写环境元数据（**含明文 ssh_password**）                  | 明文凭据落 CM                                 |
-| DF10  | ResourceApi <--> EnvPods            | exec（`sh -c` 初始化）/ 创建 Pod                           | bms Pod 恒 privileged+nsenter                 |
-| DF11  | ResourceApi <--> ManagedMachines    | SSH（`sshpass`，`StrictHostKeyChecking=no`）               | 主机校验禁用；root 执行                       |
-| DF12  | KarmadaWebhook <--> KubeAPIServer   | HTTPS AdmissionReview（`webhook/main.go:514-529`）         | 无调用方认证                                  |
-| DF13  | ManagedMachines <--> KubeAPIServer  | kubeadm join / CSR                                         | CSR 无条件批准（`admin_svc.py:142-169`）      |
-| DF14  | ManagedMachines <--> BinsServer     | HTTP 下载运行时包（`join-ai-node.sh:365-370`）             | 无 TLS；ascend 包无哈希校验                   |
-| DF15  | ApiCaller <--> EnvPods              | SSH :22（runner 密码，`policy.py:43-91` 放行）             | 密码明文交付；runner uid=0                    |
-| DF16  | NodedDaemonSet <--> KubeAPIServer   | DaemonSet 常驻上报                                         | privileged + /dev 挂载                        |
-| DF17  | Operator <--> WebUI（JoinWizard）   | SSH 密码输入                                               | 明文存 localStorage（`JoinWizard.vue:51-53`） |
+| 流 ID | 源 → 目标                           | 协议/内容                                                                   | 安全属性                                      |
+| ----- | ----------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------- |
+| DF01  | ApiCaller <--> ResourceApi          | HTTP，Bearer API-Key（`app/core/auth.py:148-174`）                          | 无 TLS；key 即身份                            |
+| DF02  | Operator <--> WebUI                 | HTTP :8080（`deploy/web/deploy.yaml:24` hostNetwork；Service 为 ClusterIP） | **无认证、无 TLS**                            |
+| DF03  | WebUI <--> ResourceApi              | HTTP 代理 `/api/`（`nginx.conf.template:14-19`）                            | 明文集群内；API-Key 经页面注入                |
+| DF04  | ResourceApi <--> KubeAPIServer      | HTTPS，in-cluster SA token（`repository/client.py:17-24`）                  | ClusterRole 过宽（`deploy.yaml:42-78`）       |
+| DF05  | ResourceApi <--> ApiKeysSecret      | 文件挂载读取 keys.json                                                      | Secret 仅 base64，无完整性校验                |
+| DF06  | ResourceApi <--> MachineInventoryCM | K8s API 读写台账                                                            | 5s 本地缓存（`auth.py:51-61`）；无租户隔离    |
+| DF07  | ResourceApi <--> MachineSshSecrets  | K8s API 读写 root 密码/runner 暂存密码                                      | 密码无轮换                                    |
+| DF08  | ResourceApi <--> MachineAuditLogCM  | 追加审计（上限 1000 条）                                                    | 无 CAS，可多副本覆盖                          |
+| DF09  | ResourceApi <--> EnvMetaCMs         | 读写环境元数据（**含明文 ssh_password**）                                   | 明文凭据落 CM                                 |
+| DF10  | ResourceApi <--> EnvPods            | exec（`sh -c` 初始化）/ 创建 Pod                                            | bms Pod 恒 privileged+nsenter                 |
+| DF11  | ResourceApi <--> ManagedMachines    | SSH（`sshpass`，`StrictHostKeyChecking=no`）                                | 主机校验禁用；root 执行                       |
+| DF12  | KarmadaWebhook <--> KubeAPIServer   | HTTPS AdmissionReview（`webhook/main.go:514-529`）                          | 无调用方认证                                  |
+| DF13  | ManagedMachines <--> KubeAPIServer  | kubeadm join / CSR                                                          | CSR 无条件批准（`admin_svc.py:142-169`）      |
+| DF14  | ManagedMachines <--> BinsServer     | HTTP 下载运行时包（`join-ai-node.sh:365-370`）                              | 无 TLS；ascend 包无哈希校验                   |
+| DF15  | ApiCaller <--> EnvPods              | SSH :22（runner 密码，`policy.py:43-91` 放行）                              | 密码明文交付；runner uid=0                    |
+| DF16  | NodedDaemonSet <--> KubeAPIServer   | DaemonSet 常驻上报                                                          | privileged + /dev 挂载                        |
+| DF17  | Operator <--> WebUI（JoinWizard）   | SSH 密码输入                                                                | 明文存 localStorage（`JoinWizard.vue:51-53`） |
 
 ### 2.6 关键安全流程（时序：环境创建 + 密码流）
 
@@ -407,12 +407,12 @@ N/A：**T** — SDK 默认 TLS 校验（`client.py:21-23`，无 verify=False）�
 
 ### 3.14 WebUI（`deploy/web/`，Deployment `web`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                            | 前提             | 层级 | 状态           |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ---- | -------------- |
-| T38 | S    | `hostNetwork: true`（`deploy/web/deploy.yaml:24,69`）+ nginx 无认证监听 :8080，API Key 经 `sub_filter` 注入每个 HTML（`nginx.conf.template:6-8`、`index.html:7`、`generate-config.sh:53-57`）——未认证攻击者打开页面即获全权 key | None             | T1   | Open → FIND-01 |
-| T39 | I    | JoinWizard 将 SSH 密码明文存 localStorage（`JoinWizard.vue:51-53`），共享主机/XSS 可窃取                                                                                                                                        | Host/OS Access   | T3   | Open → FIND-23 |
-| T40 | D    | Web 无速率限制/连接限制，未认证即可打满节点 8080 端口（影响同节点其他 hostNetwork 服务）                                                                                                                                        | None             | T1   | Open → FIND-02 |
-| T41 | T    | nginx 明文代理后端、`server_tokens` 未关闭、仅传 Host/X-Real-IP 缺 X-Forwarded-For/Proto（`nginx.conf.template:1-20`），代理层可被注入/欺骗                                                                                     | Internal Network | T2   | Open → FIND-11 |
+| ID  | 类别 | 威胁                                                                                                                                                                                                                         | 前提             | 层级 | 状态           |
+| --- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ---- | -------------- |
+| T38 | S    | `hostNetwork: true`（`deploy/web/deploy.yaml:24`）+ nginx 无认证监听 :8080，API Key 经 `sub_filter` 注入每个 HTML（`nginx.conf.template:6-8`、`index.html:7`、`generate-config.sh:53-57`）——未认证攻击者打开页面即获全权 key | None             | T1   | Open → FIND-01 |
+| T39 | I    | JoinWizard 将 SSH 密码明文存 localStorage（`JoinWizard.vue:51-53`），共享主机/XSS 可窃取                                                                                                                                     | Host/OS Access   | T3   | Open → FIND-23 |
+| T40 | D    | Web 无速率限制/连接限制，未认证即可打满节点 8080 端口（影响同节点其他 hostNetwork 服务）                                                                                                                                     | None             | T1   | Open → FIND-02 |
+| T41 | T    | nginx 明文代理后端、`server_tokens` 未关闭、仅传 Host/X-Real-IP 缺 X-Forwarded-For/Proto（`nginx.conf.template:1-20`），代理层可被注入/欺骗                                                                                  | Internal Network | T2   | Open → FIND-11 |
 
 N/A：**R/E/A** — 前端为静态资源 + 代理，无服务端状态。
 
@@ -528,7 +528,7 @@ Web Deployment 使用 `hostNetwork: true` 直接监听节点 8080 端口，nginx
 
 ##### 证据
 
-`deploy/web/deploy.yaml:24,69`（hostNetwork）；`deploy/web/nginx.conf.template:6-8`（sub_filter）；`deploy/web/index.html:7`（window.API_KEY）；`deploy/generate-config.sh:53-57`（key 写入 nginx.conf）。
+`deploy/web/deploy.yaml:24`（hostNetwork，Pod spec 直接监听节点 8080 端口；Service 本身即 ClusterIP（`deploy.yaml:69`），并非暴露源，根因是 Pod 以 hostNetwork 绕过了 Service 边界）；`deploy/web/nginx.conf.template:6-8`（sub_filter）；`deploy/web/index.html:7`（window.API_KEY）；`deploy/generate-config.sh:53-57`（key 写入 nginx.conf）。
 
 ##### 修复建议
 
@@ -577,7 +577,7 @@ Web 入口与 API 均无速率限制、请求体大小限制与并发配额；`P
 | STRIDE 类别  | E（Elevation of Privilege）/ S / T / A                                                                                                                                                       |
 | CVSS 4.0     | **8.1** — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H`                                                                                                                  |
 | CWE          | [CWE-250](https://cwe.mitre.org/data/definitions/250.html): Execution with Unnecessary Privileges；[CWE-269](https://cwe.mitre.org/data/definitions/269.html): Improper Privilege Management |
-| OWASP        | A06:2025 – Insecure Design                                                                                                                                                                   |
+| OWASP        | A04:2025 – Insecure Design                                                                                                                                                                   |
 | 利用前提     | Authenticated User（envs:write / 环境使用者）                                                                                                                                                |
 | 可利用性层级 | **Tier 2**                                                                                                                                                                                   |
 | 修复工作量   | High（架构调整）                                                                                                                                                                             |
@@ -606,7 +606,7 @@ SSH 登录 runner 执行 `id` 应非 uid=0；bms Pod 内 `nsenter` 应失败或�
 | STRIDE 类别  | A（Abuse）/ E                                                                                                        |
 | CVSS 4.0     | **7.5** — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:L/SI:L/SA:L`                                          |
 | CWE          | [CWE-829](https://cwe.mitre.org/data/definitions/829.html): Inclusion of Functionality from Untrusted Control Sphere |
-| OWASP        | A03:2025 – Software Supply Chain Failures                                                                            |
+| OWASP        | A05:2025 – Injection                                                                                                 |
 | 利用前提     | Authenticated User（leases:write / envs:write）                                                                      |
 | 可利用性层级 | **Tier 2**                                                                                                           |
 | 修复工作量   | Medium                                                                                                               |
@@ -635,7 +635,7 @@ SSH 登录 runner 执行 `id` 应非 uid=0；bms Pod 内 `nsenter` 应失败或�
 | STRIDE 类别  | I（Information Disclosure）                                                                                                                                                                                         |
 | CVSS 4.0     | **7.4** — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:L/SI:L/SA:N`                                                                                                                                         |
 | CWE          | [CWE-312](https://cwe.mitre.org/data/definitions/312.html): Cleartext Storage of Sensitive Information；[CWE-319](https://cwe.mitre.org/data/definitions/319.html): Cleartext Transmission of Sensitive Information |
-| OWASP        | A04:2025 – Cryptographic Failures                                                                                                                                                                                   |
+| OWASP        | A06:2025 – Cryptographic Failures                                                                                                                                                                                   |
 | 利用前提     | Authenticated User（对应读 scope）                                                                                                                                                                                  |
 | 可利用性层级 | **Tier 2**                                                                                                                                                                                                          |
 | 修复工作量   | Medium                                                                                                                                                                                                              |
@@ -838,7 +838,7 @@ ApiCaller→API（Bearer key）、Operator→WebUI、WebUI→API 代理、节点
 | STRIDE 类别  | T（Tampering）                                                                                   |
 | CVSS 4.0     | **5.5** — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:L/SI:N/SA:N`                      |
 | CWE          | [CWE-94](https://cwe.mitre.org/data/definitions/94.html): Improper Control of Generation of Code |
-| OWASP        | A03:2025 – Software Supply Chain Failures（注入类）                                              |
+| OWASP        | A05:2025 – Injection                                                                             |
 | 利用前提     | Authenticated User（envs:write）                                                                 |
 | 可利用性层级 | **Tier 2**                                                                                       |
 | 修复工作量   | Low                                                                                              |
@@ -896,7 +896,7 @@ ApiCaller→API（Bearer key）、Operator→WebUI、WebUI→API 代理、节点
 | STRIDE 类别  | I                                                                                                                        |
 | CVSS 4.0     | **3.7** — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`                                              |
 | CWE          | [CWE-209](https://cwe.mitre.org/data/definitions/209.html): Generation of Error Message Containing Sensitive Information |
-| OWASP        | A05:2025 – Security Misconfiguration                                                                                     |
+| OWASP        | A02:2025 – Security Misconfiguration                                                                                     |
 | 利用前提     | Authenticated User / Internal Network                                                                                    |
 | 可利用性层级 | **Tier 2**                                                                                                               |
 | 修复工作量   | Low                                                                                                                      |
@@ -1014,7 +1014,7 @@ SA `resource-api` 的 ClusterRole 覆盖全集群 pods 全动词（含 exec）�
 | STRIDE 类别  | E                                                                                                 |
 | CVSS 4.0     | **5.4** — `CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N`                       |
 | CWE          | [CWE-250](https://cwe.mitre.org/data/definitions/250.html): Execution with Unnecessary Privileges |
-| OWASP        | A05:2025 – Security Misconfiguration                                                              |
+| OWASP        | A02:2025 – Security Misconfiguration                                                              |
 | 利用前提     | Host/OS Access / Component Compromise                                                             |
 | 可利用性层级 | **Tier 3**                                                                                        |
 | 修复工作量   | Low                                                                                               |
@@ -1043,7 +1043,7 @@ git 版 `deploy.yaml` 的 api 容器无 securityContext（镜像默认 root，Do
 | STRIDE 类别  | T（Tampering）                                                                                                              |
 | CVSS 4.0     | **4.8** — `CVSS:4.0/AV:A/AC:H/AT:N/PR:H/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N`                                                 |
 | CWE          | [CWE-78](https://cwe.mitre.org/data/definitions/78.html): Improper Neutralization of Special Elements used in an OS Command |
-| OWASP        | A03:2025 – Software Supply Chain Failures（注入类）                                                                         |
+| OWASP        | A05:2025 – Injection                                                                                                        |
 | 利用前提     | Admin Credentials（台账/上游数据被篡改）或输入源改变                                                                        |
 | 可利用性层级 | **Tier 3**                                                                                                                  |
 | 修复工作量   | Low                                                                                                                         |
@@ -1072,7 +1072,7 @@ git 版 `deploy.yaml` 的 api 容器无 securityContext（镜像默认 root，Do
 | STRIDE 类别  | R（Repudiation）/ T / I                                                                                                                                      |
 | CVSS 4.0     | **4.4** — `CVSS:4.0/AV:A/AC:L/AT:N/PR:H/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`                                                                                  |
 | CWE          | [CWE-778](https://cwe.mitre.org/data/definitions/778.html): Insufficient Logging；[CWE-117](https://cwe.mitre.org/data/definitions/117.html)（日志注入相关） |
-| OWASP        | A09:2025 – Security Logging & Alerting Failures                                                                                                              |
+| OWASP        | A09:2025 – Logging & Alerting Failures                                                                                                                       |
 | 利用前提     | Authenticated User（伪造）/ Admin Credentials（删改）                                                                                                        |
 | 可利用性层级 | **Tier 3**                                                                                                                                                   |
 | 修复工作量   | Medium                                                                                                                                                       |
@@ -1378,7 +1378,7 @@ git 版 `deploy.yaml` 的 api 容器无 securityContext（镜像默认 root，Do
 | 威胁总数       | 56（T1=4 / T2=34 / T3=18）                             |
 | 发现总数       | 24（T1=2 / T2=12 / T3=10）                             |
 | 分析开始 (UTC) | `2026-10-10 01:07:24`                                  |
-| 分析完成 (UTC) | `2026-10-10 01:58:00`（约）                            |
+| 分析完成 (UTC) | `2026-10-10 01:35:00`                                  |     |
 | 分析模型       | `GLM-5.3`                                              |
 
 > 本报告由威胁建模分析自动生成，所有发现均附代码证据（文件:行号）。修复决策与风险接受由工程团队评审确定。
