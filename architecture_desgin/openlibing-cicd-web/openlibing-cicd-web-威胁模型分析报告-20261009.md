@@ -22,7 +22,7 @@
 
 ### 1.1 系统定位
 
-`openlibing-cicd-web` 是 OpenLibing 研发流程平台的 **CI/CD 流水线 Web 前端**，承担流水线管理、镜像管理、构建产物（备案/包详情）、流水线操作日志等子模块的浏览器端展示与交互。生产形态为 Nginx 静态站点 + 反向代理 `/gateway/*` 至后端微服务群。
+`openlibing-cicd-web` 是 OpenLibing 研发流程平台的 **CI/CD 流水线 Web 前端**，承担流水线管理、镜像管理、构建产物（备案/包详情）、流水线操作日志等子模块的浏览器端展示与交互。生产形态为 Nginx 静态站点——**2026-10-10 复核修正（见 7.3 FIND-06）：本仓 Nginx 仅托管静态资源与健康检查，无反向代理配置；`/gateway/*` 反向代理由 openlibing-web 平台出口 Nginx 承担**。
 
 - 纯前端 SPA（Vue 3.5 + Pinia 2 + Vue Router 4 + Element Plus + axios）
 - 构建工具：Vite 4（生产 `pnpm run prod` → `dist/`）
@@ -32,18 +32,18 @@
 
 ### 1.2 部署分类与组件暴露表
 
-部署分类：**INTERNET_FACING_WEB_APP**（互联网可达的 Web 前端 + 反向代理）。
+部署分类：**INTERNET_FACING_WEB_APP**（互联网可达的 Web 前端静态站点；`/gateway/*` 反向代理在 openlibing-web 出口 Nginx，见 7.3 FIND-06）。
 
-| 组件                                                                    | 监听地址                                         | 鉴权屏障                                        | 外部可达性                   | 最小前置条件       | 派生 Tier     |
-| ----------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------- | ---------------------------- | ------------------ | ------------- |
-| NginxContainer                                                          | `0.0.0.0:8099` TLS                               | 无（匿名可达静态资源；`/gateway/*` 由后端鉴权） | 外部（互联网）               | None               | T1            |
-| ApiClient（浏览器内 JS）                                                | 浏览器内                                         | Cookie 会话 + CSRF 头                           | 外部（执行于终端用户浏览器） | None               | T1            |
-| AppVue / PiniaAppStore / VueRouter / PipelineView / NoPermissionPopover | 浏览器内 JS                                      | 无（依赖后端授权）                              | 外部（执行于终端用户浏览器） | None               | T1            |
-| UemJsAgent / JsAgent                                                    | 浏览器内 JS                                      | 无                                              | 外部（终端用户浏览器）       | None               | T1            |
-| BackendGateway（外部服务）                                              | 内网 `/gateway/*`                                | OAuth2 会话 + 后端 ACL                          | 经 Nginx 代理后外部可达      | Authenticated User | T2            |
-| OAuthProvider（外部服务）                                               | `/gateway/oauth2/authorization/{gitee\|gitcode}` | 由网关管理                                      | 外部                         | None               | T1            |
-| WujieHostApp（外部服务）                                                | 主应用域名                                       | 主应用鉴权                                      | 外部                         | Authenticated User | T2            |
-| EndUser / Operator（外部 actor）                                        | —                                                | —                                               | —                            | —                  | 不参与 STRIDE |
+| 组件                                                                        | 监听地址                                         | 鉴权屏障                                        | 外部可达性                                  | 最小前置条件       | 派生 Tier     |
+| --------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------- | ------------------------------------------- | ------------------ | ------------- |
+| NginxContainer                                                              | `0.0.0.0:8099` TLS                               | 无（匿名可达静态资源；`/gateway/*` 由后端鉴权） | 外部（互联网）                              | None               | T1            |
+| ApiClient（浏览器内 JS）                                                    | 浏览器内                                         | Cookie 会话 + CSRF 头                           | 外部（执行于终端用户浏览器）                | None               | T1            |
+| AppVue / PiniaAppStore / VueRouter / PipelineView / NoPermissionPopover     | 浏览器内 JS                                      | 无（依赖后端授权）                              | 外部（执行于终端用户浏览器）                | None               | T1            |
+| UemJsAgent / JsAgent（死代码：全仓无 import，脚本从不加载，见 7.2/FIND-12） | 浏览器内 JS                                      | 无                                              | （链路当前不存在）                          | 恢复引入时生效     | （撤销）      |
+| BackendGateway（外部服务）                                                  | 内网 `/gateway/*`                                | OAuth2 会话 + 后端 ACL                          | 经 openlibing-web 出口 Nginx 代理后外部可达 | Authenticated User | T2            |
+| OAuthProvider（外部服务）                                                   | `/gateway/oauth2/authorization/{gitee\|gitcode}` | 由网关管理                                      | 外部                                        | None               | T1            |
+| WujieHostApp（外部服务）                                                    | 主应用域名                                       | 主应用鉴权                                      | 外部                                        | Authenticated User | T2            |
+| EndUser / Operator（外部 actor）                                            | —                                                | —                                               | —                                           | —                  | 不参与 STRIDE |
 
 > 注：本表是后续 Tier 与前置条件判定的"唯一事实源"，任何威胁/发现的前置条件不得低于组件暴露表的下限。
 
@@ -51,28 +51,28 @@
 
 按部署拓扑切分（非代码分层）：
 
-1. **BrowserBoundary**：终端用户浏览器，执行所有前端 JS（ApiClient、App.vue、Pinia store、Router、各 View、NoPermissionPopover、UemJsAgent、JsAgent）。该边界内所有代码对终端用户透明且可被同源脚本读写。
-2. **NginxContainerBoundary**：容器化 Nginx 进程，承担 TLS 终止、静态站点、`/gateway/*` 反向代理、安全响应头下发。`Dockerfile` + `nginx/nginx_prod.conf` + `entrypoint.sh` 锚定。
+1. **BrowserBoundary**：终端用户浏览器，执行所有前端 JS（ApiClient、App.vue、Pinia store、Router、各 View、NoPermissionPopover；UemJsAgent / JsAgent 属死代码、从不加载，见 7.2）。该边界内所有代码对终端用户透明且可被同源脚本读写。
+2. **NginxContainerBoundary**：容器化 Nginx 进程，承担 TLS 终止、静态站点与健康检查（**本仓无反向代理**，`/gateway/*` 由 openlibing-web 出口 Nginx 代理，见 7.3 FIND-06）。`Dockerfile` + `nginx/nginx_prod.conf` + `entrypoint.sh` 锚定。
 3. **ExternalServicesBoundary**：经 Nginx 代理或主应用桥接的所有外部服务——`BackendGateway`（openlibing-framework / openlibing-cicd / openlibing-coderepo / openlibing-codecheck / openlibing-sca / openlibing-platform-release 等微服务群）、`OAuthProvider`（gitee/gitcode OAuth）、`WujieHostApp`（openlibing-web 主应用）、UemBackend 与 ApmServer（华为 UEM/APM 监控后端）、上游 CDN/ELB（负责 HSTS / CSP / Referrer-Policy / X-Content-Type-Options 等头部的下发）。
 
 ### 1.4 顶层组件清单（确定性命名，锚点见证据列）
 
-| 组件 ID             | 类型                                       | 锚点（证据）                                                                                                            |
-| ------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| NginxContainer      | 进程（反向代理 + 静态站点）                | `Dockerfile`、`nginx/nginx_prod.conf`、`nginx/nginx_beta.conf`、`nginx/nginx_gamma.conf`、`entrypoint.sh`、`monitor.sh` |
-| ApiClient           | 进程（浏览器内 axios 封装）                | `src/api/ApiClient.ts`、`src/api/client.ts`（次要，简版）                                                               |
-| AppVue              | 进程（SPA 入口装配）                       | `src/App.vue`、`src/main.ts`                                                                                            |
-| PiniaAppStore       | 进程（前端鉴权态/权限元数据持有者）        | `src/stores/app.ts`                                                                                                     |
-| VueRouter           | 进程（前端路由）                           | `src/router/index.ts`                                                                                                   |
-| PipelineView        | 进程（流水线列表页 + sessionStorage 缓存） | `src/views/pipeline/pipeline.vue`                                                                                       |
-| NoPermissionPopover | 进程（无权限气泡 UX）                      | `src/components/NoPermissionPopover.vue`                                                                                |
-| UemJsAgent          | 进程（生产环境监控脚本注入）               | `src/utils/uem.js`                                                                                                      |
-| JsAgent             | 进程（BETA 环境 APM 脚本注入）             | `src/utils/jsagent.js`                                                                                                  |
-| BackendGateway      | 外部服务（后端微服务群）                   | `src/api/urls.ts`（`/gateway/*` 全部路径）                                                                              |
-| OAuthProvider       | 外部服务（gitee/gitcode OAuth）            | `src/api/ApiClient.ts` 中 `autoLoginPlatform()` 的 `/gateway/oauth2/authorization/{gitee\|gitcode}?autoLogin=complete`  |
-| WujieHostApp        | 外部服务（主应用）                         | `src/App.vue`、`src/api/ApiClient.ts` 中 `window.$wujie.bus` / `propsFromHost`                                          |
-| EndUser             | 外部 actor（浏览器用户）                   | —                                                                                                                       |
-| Operator            | 外部 actor（管理员/运维）                  | —                                                                                                                       |
+| 组件 ID             | 类型                                                            | 锚点（证据）                                                                                                            |
+| ------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| NginxContainer      | 进程（反向代理 + 静态站点）                                     | `Dockerfile`、`nginx/nginx_prod.conf`、`nginx/nginx_beta.conf`、`nginx/nginx_gamma.conf`、`entrypoint.sh`、`monitor.sh` |
+| ApiClient           | 进程（浏览器内 axios 封装）                                     | `src/api/ApiClient.ts`、`src/api/client.ts`（次要，简版）                                                               |
+| AppVue              | 进程（SPA 入口装配）                                            | `src/App.vue`、`src/main.ts`                                                                                            |
+| PiniaAppStore       | 进程（前端鉴权态/权限元数据持有者）                             | `src/stores/app.ts`                                                                                                     |
+| VueRouter           | 进程（前端路由）                                                | `src/router/index.ts`                                                                                                   |
+| PipelineView        | 进程（流水线列表页 + sessionStorage 缓存）                      | `src/views/pipeline/pipeline.vue`                                                                                       |
+| NoPermissionPopover | 进程（无权限气泡 UX）                                           | `src/components/NoPermissionPopover.vue`                                                                                |
+| UemJsAgent          | 死代码（生产监控脚本注入，全仓无 import，见 7.2/FIND-12）       | `src/utils/uem.js`                                                                                                      |
+| JsAgent             | 死代码（BETA 环境 APM 脚本注入，全仓无 import，见 7.2/FIND-12） | `src/utils/jsagent.js`                                                                                                  |
+| BackendGateway      | 外部服务（后端微服务群）                                        | `src/api/urls.ts`（`/gateway/*` 全部路径）                                                                              |
+| OAuthProvider       | 外部服务（gitee/gitcode OAuth）                                 | `src/api/ApiClient.ts` 中 `autoLoginPlatform()` 的 `/gateway/oauth2/authorization/{gitee\|gitcode}?autoLogin=complete`  |
+| WujieHostApp        | 外部服务（主应用）                                              | `src/App.vue`、`src/api/ApiClient.ts` 中 `window.$wujie.bus` / `propsFromHost`                                          |
+| EndUser             | 外部 actor（浏览器用户）                                        | —                                                                                                                       |
+| Operator            | 外部 actor（管理员/运维）                                       | —                                                                                                                       |
 
 > STRIDE 分析覆盖除外部 actor（EndUser / Operator）外的全部 12 个组件。
 
@@ -174,37 +174,37 @@ flowchart LR
     end
 
     EU <-->|DF01 HTTPS + cookie+CSRF| NG
-    NG <-->|DF02 反向代理 /gateway/*| BG
-    NG <-->|DF03 代理 OAuth 回调| OA
-    AC <-->|DF04 XHR via NG, withCredentials| BG
+    NG <-->|DF02 反向代理 /gateway/*（复核修正：实际由 openlibing-web 出口 Nginx 承担，见 7.3）| BG
+    NG <-->|DF03 代理 OAuth 回调（复核修正：实际由 openlibing-web 出口 Nginx 承担，见 7.3）| OA
+    AC <-->|DF04 XHR 经出口 Nginx, withCredentials| BG
     AV <-->|DF05 state 同步| PAS
     AV <-->|DF06 getOperationPermissions| BG
     AC <-->|DF07 autoLogin 重定向| OA
     WHA <-->|DF08 bus/props 双向通信| AV
     PV <-->|DF09 筛选/分页缓存读写| SS
-    UEM <-->|DF10 监控脚本加载+遥测 prod| UEMB
-    JSA <-->|DF11 APM 脚本加载+遥测 beta| UEMB
-    NG -.->|DF12 委托安全头| CDNU
+    UEM -.->|DF10 监控脚本加载+遥测 prod（死代码，从不加载，见 7.2）| UEMB
+    JSA -.->|DF11 APM 脚本加载+遥测 beta（死代码，从不加载，见 7.2）| UEMB
+    NG -.->|DF12 委托安全头（复核证实出口未下发 CSP/XFO，见 7.4）| CDNU
     OP <-->|DF13 运维 SSH/部署| NG
 ```
 
 ### 2.2 数据流说明
 
-| ID   | 流向                            | 协议/语义                                                                      | 携带敏感数据                                         |
-| ---- | ------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| DF01 | EndUser ↔ NginxContainer        | HTTPS（TLS1.2/1.3，ECDHE-RSA-AES256-GCM-SHA384）                               | Cookie 会话、CSRF token、请求体（用户输入）          |
-| DF02 | NginxContainer ↔ BackendGateway | HTTP/1.1 反向代理（`proxy_ssl_verify off`，`proxy_ssl_protocols TLSv1.2`）     | 完整请求/响应（含用户数据、权限元数据）              |
-| DF03 | NginxContainer ↔ OAuthProvider  | HTTPS 代理 OAuth 回调                                                          | OAuth code/state、token                              |
-| DF04 | ApiClient ↔ BackendGateway      | XHR（`withCredentials:true`，`Csrf-Token-Open-Li-Bing` 头）                    | 业务数据、用户身份                                   |
-| DF05 | AppVue ↔ PiniaAppStore          | 进程内对象引用                                                                 | user/projectInfo/operationPermissions                |
-| DF06 | AppVue ↔ BackendGateway         | GET `/gateway/.../get-operation-permissions`                                   | 权限元数据、用户角色清单                             |
-| DF07 | ApiClient ↔ OAuthProvider       | 浏览器跳转 `/gateway/oauth2/authorization/{gitee\|gitcode}?autoLogin=complete` | 平台标识、autoLogin 标志                             |
-| DF08 | WujieHostApp ↔ AppVue           | iframe postMessage + `bus.$emit/$on`                                           | projectInfo、路由信息、props.app                     |
-| DF09 | PipelineView ↔ sessionStorage   | `sessionStorage.setItem('pipeline_filter_cache_*')`                            | projectId、筛选条件、分页、分组                      |
-| DF10 | UemJsAgent ↔ UemBackend         | HTTPS 加载 `uem_f.js`（含 SRI）+ 遥测上报                                      | 终端用户行为、appId=3148b199664bd7a8b4d7cb7d889073ff |
-| DF11 | JsAgent ↔ ApmServer             | HTTPS 加载 `jsagent.min.js`（**无 SRI**）+ 遥测                                | 终端用户行为、appId=7ce312c1644247158ea1135331850b3c |
-| DF12 | NginxContainer ↔ 上游 CDN/ELB   | 上游负责 HSTS / CSP / Referrer-Policy / X-Content-Type-Options                 | 无                                                   |
-| DF13 | Operator ↔ NginxContainer       | 运维 SSH/部署链路（不属本仓代码）                                              | 部署凭据                                             |
+| ID   | 流向                                         | 协议/语义                                                                                                                                                            | 携带敏感数据                                         |
+| ---- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| DF01 | EndUser ↔ NginxContainer                     | HTTPS（TLS1.2/1.3，ECDHE-RSA-AES256-GCM-SHA384）                                                                                                                     | Cookie 会话、CSRF token、请求体（用户输入）          |
+| DF02 | 出口 Nginx（openlibing-web）↔ BackendGateway | HTTP/1.1 反向代理，由 **openlibing-web 出口 Nginx** 承担（本仓 Nginx 无 proxy_pass，见 7.3；`proxy_ssl_verify off` 存在于出口 Nginx，代理目标为 K8s 集群内 Service） | 完整请求/响应（含用户数据、权限元数据）              |
+| DF03 | 出口 Nginx（openlibing-web）↔ OAuthProvider  | HTTPS 代理 OAuth 回调（由 openlibing-web 出口 Nginx 承担，本仓不参与，见 7.3）                                                                                       | OAuth code/state、token                              |
+| DF04 | ApiClient ↔（出口 Nginx）↔ BackendGateway    | XHR（`withCredentials:true`，`Csrf-Token-Open-Li-Bing` 头）                                                                                                          | 业务数据、用户身份                                   |
+| DF05 | AppVue ↔ PiniaAppStore                       | 进程内对象引用                                                                                                                                                       | user/projectInfo/operationPermissions                |
+| DF06 | AppVue ↔ BackendGateway                      | GET `/gateway/.../get-operation-permissions`                                                                                                                         | 权限元数据、用户角色清单                             |
+| DF07 | ApiClient ↔ OAuthProvider                    | 浏览器跳转 `/gateway/oauth2/authorization/{gitee\|gitcode}?autoLogin=complete`                                                                                       | 平台标识、autoLogin 标志                             |
+| DF08 | WujieHostApp ↔ AppVue                        | iframe postMessage + `bus.$emit/$on`                                                                                                                                 | projectInfo、路由信息、props.app                     |
+| DF09 | PipelineView ↔ sessionStorage                | `sessionStorage.setItem('pipeline_filter_cache_*')`                                                                                                                  | projectId、筛选条件、分页、分组                      |
+| DF10 | UemJsAgent ↔ UemBackend                      | HTTPS 加载 `uem_f.js`（含 SRI）+ 遥测上报（**死代码：全仓无 import，链路当前不存在，见 7.2/FIND-12**）                                                               | 终端用户行为、appId=3148b199664bd7a8b4d7cb7d889073ff |
+| DF11 | JsAgent ↔ ApmServer                          | HTTPS 加载 `jsagent.min.js`（**无 SRI**）+ 遥测（**死代码：全仓无 import，链路当前不存在，见 7.2/FIND-12**）                                                         | 终端用户行为、appId=7ce312c1644247158ea1135331850b3c |
+| DF12 | NginxContainer ↔ 上游 CDN/ELB                | 本仓 conf 注释声称上游负责 HSTS / CSP / Referrer-Policy / X-Content-Type-Options（**复核证实未成立：出口 Nginx 未下发 CSP/XFO，HSTS 仅 prod，见 7.4 FIND-01**）      | 无                                                   |
+| DF13 | Operator ↔ NginxContainer                    | 运维 SSH/部署链路（不属本仓代码）                                                                                                                                    | 部署凭据                                             |
 
 ---
 
@@ -227,11 +227,11 @@ flowchart LR
 | VueRouter           | 0   | 0   | 0   | 1   | 0   | 1   | 0   | 2      |
 | PipelineView        | 0   | 0   | 0   | 1   | 0   | 0   | 0   | 1      |
 | NoPermissionPopover | 0   | 0   | 0   | 1   | 0   | 0   | 0   | 1      |
-| UemJsAgent          | 0   | 1   | 0   | 1   | 0   | 0   | 0   | 3      |
-| JsAgent             | 0   | 1   | 0   | 1   | 0   | 0   | 0   | 3      |
+| UemJsAgent          | 0   | 1   | 0   | 1   | 0   | 0   | 0   | 2      |
+| JsAgent             | 0   | 1   | 0   | 1   | 0   | 0   | 0   | 2      |
 | BackendGateway      | 1   | 1   | 1   | 1   | 1   | 1   | 1   | 7      |
 | OAuthProvider       | 1   | 0   | 0   | 1   | 0   | 1   | 1   | 4      |
-| WujieHostApp        | 1   | 1   | 0   | 1   | 0   | 1   | 1   | 6      |
+| WujieHostApp        | 1   | 1   | 0   | 1   | 0   | 1   | 1   | 5      |
 | **合计**            | 7   | 6   | 2   | 12  | 2   | 8   | 6   | **43** |
 
 > 各分类为 0 处已用"N/A — 理由"显式标注，避免分析浅化。
@@ -297,17 +297,17 @@ flowchart LR
 
 ### 3.10 UemJsAgent
 
-| Tier | ID    | STRIDE | 威胁                                                                                                                                                                                                                          | 前置条件 | 状态                 |
-| ---- | ----- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------- |
-| T1   | T25.T | T      | `uem.js` 仅在生产环境注入（`uem.js:4`），脚本源 `https://hwa.his.huawei.com/dist/uem_f.js` 带 SRI `integrity='sha384-...'`（`uem.js:18`）。SRI 已配置，但若华为 CDN 被攻陷且 SRI 哈希同步更新（供应链攻击），脚本可任意篡改。 | None     | Open（第三方供应链） |
-| T1   | T26.I | I      | UEM 上报 `appKey: '3148b199664bd7a8b4d7cb7d889073ff'`（`uem.js:28`）+ 用户行为到 `hwa.his.huawei.com`，未在前端向用户做数据出境/隐私声明（仓内未见 consent 弹窗与 UEM 的联动）。PII 跨域上报无前端告知。                      | None     | Open                 |
+| Tier | ID    | STRIDE | 威胁                                                                                                                                                                                                                          | 前置条件 | 状态                                |
+| ---- | ----- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------- |
+| T1   | T25.T | T      | `uem.js` 仅在生产环境注入（`uem.js:4`），脚本源 `https://hwa.his.huawei.com/dist/uem_f.js` 带 SRI `integrity='sha384-...'`（`uem.js:18`）。SRI 已配置，但若华为 CDN 被攻陷且 SRI 哈希同步更新（供应链攻击），脚本可任意篡改。 | None     | Closed（Dead Code，见 7.2/FIND-12） |
+| T1   | T26.I | I      | UEM 上报 `appKey: '3148b199664bd7a8b4d7cb7d889073ff'`（`uem.js:28`）+ 用户行为到 `hwa.his.huawei.com`，未在前端向用户做数据出境/隐私声明（仓内未见 consent 弹窗与 UEM 的联动）。PII 跨域上报无前端告知。                      | None     | Closed（Dead Code，见 7.2/FIND-12） |
 
 ### 3.11 JsAgent
 
-| Tier | ID    | STRIDE | 威胁                                                                                                                                                                                                                   | 前置条件 | 状态 |
-| ---- | ----- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---- |
-| T1   | T27.T | T      | `jsagent.js` 在 BETA 环境加载 `https://res.hc-cdn.com/js-agent-cdn/1.0.52/jsagent.min.js`（`jsagent.js:22`），**未配置 SRI**（与 uem.js 形成对比）。CDN 被攻陷或中间人篡改可在 BETA 环境注入任意脚本（XSS/凭证窃取）。 | None     | Open |
-| T1   | T28.I | I      | APM 配置 `appId: '7ce312c1644247158ea1135331850b3c'`（`jsagent.js:8`）+ `domain: 'https://apm-web.cn-north-4.myhuaweicloud.com'` 上报终端用户行为数据，同样缺前端 consent。                                            | None     | Open |
+| Tier | ID    | STRIDE | 威胁                                                                                                                                                                                                                   | 前置条件 | 状态                                |
+| ---- | ----- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------- |
+| T1   | T27.T | T      | `jsagent.js` 在 BETA 环境加载 `https://res.hc-cdn.com/js-agent-cdn/1.0.52/jsagent.min.js`（`jsagent.js:22`），**未配置 SRI**（与 uem.js 形成对比）。CDN 被攻陷或中间人篡改可在 BETA 环境注入任意脚本（XSS/凭证窃取）。 | None     | Closed（Dead Code，见 7.2/FIND-12） |
+| T1   | T28.I | I      | APM 配置 `appId: '7ce312c1644247158ea1135331850b3c'`（`jsagent.js:8`）+ `domain: 'https://apm-web.cn-north-4.myhuaweicloud.com'` 上报终端用户行为数据，同样缺前端 consent。                                            | None     | Closed（Dead Code，见 7.2/FIND-12） |
 
 ### 3.12 BackendGateway
 
@@ -366,7 +366,7 @@ flowchart LR
 
 **Evidence**：
 
-- [nginx_prod.conf](file:///d:/openlibing/openlibing-cicd-web/nginx/nginx_prod.conf) L92: `# HSTS / X-Content-Type-Options / Referrer-Policy 由上游（CDN/ELB）下发，此处不重复配置`
+- `nginx/nginx_prod.conf` L92: `# HSTS / X-Content-Type-Options / Referrer-Policy 由上游（CDN/ELB）下发，此处不重复配置`
 - L101: `# Content-Security-Policy 已移除（与上游策略保持一致，避免重复）`
 
 **Remediation**：在 Nginx server 块全局 `add_header` 处补回兜底：`Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`、`X-Content-Type-Options "nosniff" always;`、`Referrer-Policy "strict-origin-when-cross-origin" always;`，以及最小化 CSP（`default-src 'self'; script-src 'self' https://hwa.his.huawei.com https://res.hc-cdn.com; connect-src 'self' https://*.openlibing.com; frame-ancestors 'self'`）。重复声明对上游无副作用（Nginx `add_header` 行为按块覆盖，应按 location 内重复声明同上游相同的头）。
@@ -393,7 +393,7 @@ flowchart LR
 
 **Evidence**：
 
-- [ApiClient.ts](file:///d:/openlibing/openlibing-cicd-web/src/api/ApiClient.ts) L218-220: `} catch (error_) { console.log(error_); }`
+- `src/api/ApiClient.ts` L218-220: `} catch (error_) { console.log(error_); }`
 
 **Remediation**：移除或条件化（`import.meta.env.DEV` 时才输出）该 `console.log`；生产构建通过 Vite 的 `drop-console` 插件或 `terserOptions.compress.drop_console=true` 自动剥离。
 
@@ -419,7 +419,7 @@ flowchart LR
 
 **Evidence**：
 
-- [ApiClient.ts](file:///d:/openlibing/openlibing-cicd-web/src/api/ApiClient.ts) L52-54: `if (window.__POWERED_BY_WUJIE__ && window.top) { window.top.location.href = href; return true; }`
+- `src/api/ApiClient.ts` L52-54: `if (window.__POWERED_BY_WUJIE__ && window.top) { window.top.location.href = href; return true; }`
 
 **Remediation**：维护允许跳转 URL 白名单（仅本源 + 已知 OAuth 路径），`redirectByTopWindow` 调用前校验 `href` 命中白名单；同时主应用侧通过 Wujie `sandbox` 配置限制子应用对 `window.top` 的访问（`sandbox: { strict: true }` 或类似）。
 
@@ -443,12 +443,12 @@ flowchart LR
 
 **Evidence**：
 
-- [tools.ts](file:///d:/openlibing/openlibing-cicd-web/src/utils/tools.ts) L29-37: `parseRestfulUrl` 无校验
-- [api.ts](file:///d:/openlibing/openlibing-cicd-web/src/api/api.ts) L668: `apiClient.post(\`${urls.POST_INTERFACE_BASELINE}/${a?.params?.status}\`, a, s)`
+- `src/utils/tools.ts` L29-37: `parseRestfulUrl` 无校验
+- `src/api/api.ts` L668: `apiClient.post(\`${urls.POST_INTERFACE_BASELINE}/${a?.params?.status}\`, a, s)`
 
 **Remediation**：在 `parseRestfulUrl` 内对替换值做 `encodeURIComponent`，或对路径参数白名单（如 `status` 仅允许 `approved|rejected|pending`）；后端二次校验路径段格式。
 
-**跨仓裁定（2026-10-10，部分属实）**：前端无校验属实。跨仓复核另发现网关 [PermissionCheckFilter](file:///d:/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/PermissionCheckFilter.java) 仅对 `/project/(\d+)` **纯数字 projectId** 做项目权限校验——非数字变体路径会跳过网关权限检查直达后端，最终安全性取决于后端路径解析与鉴权一致性（详见 7.3）。维持 Medium，建议补 `encodeURIComponent` 并对后端发起畸形 projectId 实测。
+**跨仓裁定（2026-10-10，部分属实）**：前端无校验属实。跨仓复核另发现网关 `openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/PermissionCheckFilter.java` 仅对 `/project/(\d+)` **纯数字 projectId** 做项目权限校验——非数字变体路径会跳过网关权限检查直达后端，最终安全性取决于后端路径解析与鉴权一致性（详见 7.3）。维持 Medium（可利用性待后端实测确认），建议补 `encodeURIComponent` 并对后端发起畸形 projectId 实测。
 
 **Verification**：构造 `status=../../other` 调用接口，确认请求 URL 编码后无穿越；后端 400 拒绝。
 
@@ -470,7 +470,7 @@ flowchart LR
 
 **Evidence**：
 
-- [pipeline.vue](file:///d:/openlibing/openlibing-cicd-web/src/views/pipeline/pipeline.vue) L141-156: `getStorageKey = () => \`${STORAGE_KEY_PREFIX}_${app.projectInfo?.projectId || ''}\``+`sessionStorage.setItem(getStorageKey(), JSON.stringify(cache))`
+- `src/views/pipeline/pipeline.vue` L141-156: `getStorageKey = () => \`${STORAGE_KEY_PREFIX}_${app.projectInfo?.projectId || ''}\``+`sessionStorage.setItem(getStorageKey(), JSON.stringify(cache))`
 
 **Remediation**：在 `beforeunload` 或路由 `onDeactivated` 时清除 sessionStorage 缓存；或仅缓存非敏感字段（分页、分组名），不缓存用户输入的 `queryParam.name`。退出登录时调用 `sessionStorage.removeItem(getStorageKey())`。
 
@@ -496,12 +496,12 @@ flowchart LR
 
 **Evidence**：
 
-- [nginx_prod.conf](file:///d:/openlibing/openlibing-cicd-web/nginx/nginx_prod.conf) L60-62: `limit_req_zone $http_x_real_ip zone=frontendratelimit:10m rate=1000r/s;`
+- `nginx/nginx_prod.conf` L60-62: `limit_req_zone $http_x_real_ip zone=frontendratelimit:10m rate=1000r/s;`
 - L103: `proxy_set_header X-Real-IP $remote_addr;`（应改用 `$remote_addr` 而非信任客户端头）
 
 **Remediation**：限速键改为 `$remote_addr`（真实 TCP 源地址）而非 `$http_x_real_ip`；或加 CDN 段白名单校验（`real_ip_recursive on; set_real_ip_from <cdn-cidr>;`）。`rate` 下调至合理值（如 50r/s per IP）。
 
-**跨仓裁定（2026-10-10，确认）**：openlibing-web 平台出口 Nginx（[nginx_beta.conf#L58-62](file:///d:/openlibing/openlibing-web/apps/web-openlibing/nginx/nginx_beta.conf) 等全环境）与本仓 Nginx **同现此问题**。网关 [GatewayLimiterFilter](file:///d:/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/ratelimit/GatewayLimiterFilter.java) 有 Redis 漏桶兜底，但其键为 routeId（**按路由全局共享，非按 IP**）——攻击者无法绕过它，但打满全局桶会波及所有用户，DoS 风险真实。维持 Medium，详见 7.4。
+**跨仓裁定（2026-10-10，确认）**：openlibing-web 平台出口 Nginx（`openlibing-web/apps/web-openlibing/nginx/nginx_beta.conf` 等全环境）与本仓 Nginx **同现此问题**。网关 `openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/ratelimit/GatewayLimiterFilter.java` 有 Redis 漏桶兜底，但其键为 routeId（**按路由全局共享，非按 IP**）——攻击者无法绕过它，但打满全局桶会波及所有用户，DoS 风险真实。维持 Medium，详见 7.4。
 
 **Verification**：用伪造 `X-Real-IP` 头并发请求，应被限速；后端访问日志记录的源 IP 应为真实 TCP 地址。
 
@@ -524,8 +524,8 @@ flowchart LR
 **Evidence**：
 
 - 全仓 glob 检索 `utils/uem|utils/jsagent` 及动态 import 模式均无命中
-- [uem.js](file:///d:/openlibing/openlibing-cicd-web/src/utils/uem.js)：带 SRI + `crossOrigin` + `setEnable(false)`，仅 production；但同样未被引用
-- [pipeline.vue](file:///d:/openlibing/openlibing-cicd-web/src/views/pipeline/pipeline.vue)：`v-uem-record` 指令无注册来源（`majun/src/directives` 为 Vue 2 API）
+- `src/utils/uem.js`：带 SRI + `crossOrigin` + `setEnable(false)`，仅 production；但同样未被引用
+- `src/views/pipeline/pipeline.vue`：`v-uem-record` 指令无注册来源（`majun/src/directives` 为 Vue 2 API）
 
 **Remediation**：删除 `src/utils/uem.js` 与 `src/utils/jsagent.js`（连同 `v-uem-record` 指令残留）；若将来确需遥测，按新增依赖流程重新评审（SRI + consent 联动 + CSP 放行）。
 
@@ -537,51 +537,51 @@ flowchart LR
 
 > 注：下表保留原始威胁-Finding 映射记录。其中 FIND-02/03/05/10 已按 2026-10-10 裁定撤销（误报）、FIND-06 已移交 openlibing-web Nginx（非本仓问题），对应行的实际状态以第七章 7.2/7.3 裁定为准；FIND-12 为裁定后新增项。
 
-| 威胁 ID | 状态       | 对应 Finding                                                                       |
-| ------- | ---------- | ---------------------------------------------------------------------------------- |
-| T01.S   | ✅ Covered | FIND-11                                                                            |
-| T02.T   | ✅ Covered | （并入 FIND-06 上游 TLS 链路一致性）                                               |
-| T03.I   | ✅ Covered | FIND-01                                                                            |
-| T04.D   | ✅ Covered | FIND-11                                                                            |
-| T05.E   | ✅ Covered | （DNS resolver 第三方依赖，已并入 FIND-01 信任边界注释；可作为后续改进项）         |
-| T07.S   | ✅ Covered | FIND-03                                                                            |
-| T08.T   | ✅ Covered | FIND-08                                                                            |
-| T09.R   | ✅ Covered | （审计误导，已并入 FIND-04 控制台泄露的修复建议）                                  |
-| T10.I   | ✅ Covered | FIND-04                                                                            |
-| T11.E   | ✅ Covered | （disableToken 误用，已在 FIND-03 cookie 属性修复中建议后端二次防护）              |
-| T12.A   | ✅ Covered | FIND-05（consent 联动后，平台切换受同意态约束）                                    |
-| T13.S   | ✅ Covered | FIND-07（子应用沙箱建议）                                                          |
-| T14.I   | ✅ Covered | （loadOperationPermissions 失败静默，已并入 FIND-04 修复建议）                     |
-| T15.E   | ✅ Covered | FIND-07                                                                            |
-| T16.A   | ✅ Covered | （路由映射硬编码，已并入 FIND-10 路由 guard 建议）                                 |
-| T17.S   | ✅ Covered | （ready 状态注入，已并入 FIND-07 子应用沙箱建议）                                  |
-| T18.I   | ✅ Covered | （Pinia 内存明文，前端设计折中，已记录于 FIND-09 同类存储面）                      |
-| T19.E   | ✅ Covered | （仓库角色降级，建议后端 `hasPermission` 不可单独放行，已并入 FIND-03 后端核实项） |
-| T20.A   | ✅ Covered | （Wujie props 快照陈旧，已并入 FIND-07）                                           |
-| T21.I   | ✅ Covered | FIND-10                                                                            |
-| T22.E   | ✅ Covered | FIND-10                                                                            |
-| T23.I   | ✅ Covered | FIND-09                                                                            |
-| T24.I   | ✅ Covered | FIND-09（同类 UI 信息泄露，建议截屏脱敏）                                          |
-| T25.T   | ✅ Covered | （uem_f.js SRI 已配置，供应链风险已接受；可后续加入 FIND-02 同款 SRI 复核流程）    |
-| T26.I   | ✅ Covered | FIND-05                                                                            |
-| T27.T   | ✅ Covered | FIND-02                                                                            |
-| T28.I   | ✅ Covered | FIND-05                                                                            |
-| T29.S   | ✅ Covered | （后端 OAuth state/nonce，已并入 FIND-03 后端核实项）                              |
-| T30.T   | ✅ Covered | （重放幂等，已并入 FIND-03 后端核实项）                                            |
-| T31.R   | ✅ Covered | （日志篡改，已并入 FIND-03 后端核实项）                                            |
-| T32.I   | ✅ Covered | （EXPORT_USER_INFO GET 副作用，建议改 POST + CSRF，已并入 FIND-03）                |
-| T33.D   | ✅ Covered | （日志导出限流，建议后端加 rate limit，已并入 FIND-11 后端限速建议）               |
-| T34.E   | ✅ Covered | （批量绑定越权，建议后端逐资源校验，已并入 FIND-03）                               |
-| T35.A   | ✅ Covered | （多仓构建滥用，建议后端按仓限流，已并入 FIND-11）                                 |
-| T36.S   | ✅ Covered | （OAuth 回调 GET，建议改 POST + state，已并入 FIND-03）                            |
-| T37.I   | ✅ Covered | （autoLogin URL 标志泄露，已并入 FIND-05 consent 联动）                            |
-| T38.E   | ✅ Covered | FIND-03                                                                            |
-| T39.A   | ✅ Covered | （`gitlib`/`gitcode` 拼写歧义，建议统一为 `gitcode`，已并入 FIND-07 注释）         |
-| T40.S   | ✅ Covered | FIND-07                                                                            |
-| T41.T   | ✅ Covered | FIND-07                                                                            |
-| T42.I   | ✅ Covered | （props 一次性注入明文，建议主应用 + 子应用同源严格隔离，已并入 FIND-07）          |
-| T43.E   | ✅ Covered | （Wujie 沙箱配置，已并入 FIND-07 主应用核实项）                                    |
-| T44.A   | ✅ Covered | FIND-07                                                                            |
+| 威胁 ID | 状态       | 对应 Finding                                                                                      |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------- |
+| T01.S   | ✅ Covered | FIND-11                                                                                           |
+| T02.T   | ✅ Covered | （并入 FIND-06 上游 TLS 链路一致性）                                                              |
+| T03.I   | ✅ Covered | FIND-01                                                                                           |
+| T04.D   | ✅ Covered | FIND-11                                                                                           |
+| T05.E   | ✅ Covered | （DNS resolver 第三方依赖，已并入 FIND-01 信任边界注释；可作为后续改进项）                        |
+| T07.S   | ✅ Covered | （FIND-03 已撤销：CSRF 防线在网关服务端四道防线，见 7.2；无本仓 finding）                         |
+| T08.T   | ✅ Covered | FIND-08                                                                                           |
+| T09.R   | ✅ Covered | （审计误导，已并入 FIND-04 控制台泄露的修复建议）                                                 |
+| T10.I   | ✅ Covered | FIND-04                                                                                           |
+| T11.E   | ✅ Covered | （disableToken 误用；CSRF 防线在网关，见 7.2；建议后端二次防护兜底）                              |
+| T12.A   | ✅ Covered | （FIND-05 已撤销：遥测死代码从不加载，见 7.2；平台切换滥用由后端 OAuth 绑定校验兜底，待后端核实） |
+| T13.S   | ✅ Covered | FIND-07（子应用沙箱建议）                                                                         |
+| T14.I   | ✅ Covered | （loadOperationPermissions 失败静默，已并入 FIND-04 修复建议）                                    |
+| T15.E   | ✅ Covered | FIND-07                                                                                           |
+| T16.A   | ✅ Covered | （路由映射硬编码；FIND-10 已撤销，见 7.2，属维护性提示非安全项）                                  |
+| T17.S   | ✅ Covered | （ready 状态注入，已并入 FIND-07 子应用沙箱建议）                                                 |
+| T18.I   | ✅ Covered | （Pinia 内存明文，前端设计折中，已记录于 FIND-09 同类存储面）                                     |
+| T19.E   | ✅ Covered | （仓库角色降级，建议后端 `hasPermission` 不可单独放行，待后端核实）                               |
+| T20.A   | ✅ Covered | （Wujie props 快照陈旧，已并入 FIND-07）                                                          |
+| T21.I   | ✅ Covered | （FIND-10 已撤销：API 由网关强制认证，页面空壳无数据泄露，见 7.2）                                |
+| T22.E   | ✅ Covered | （FIND-10 已撤销：同上，见 7.2）                                                                  |
+| T23.I   | ✅ Covered | FIND-09                                                                                           |
+| T24.I   | ✅ Covered | FIND-09（同类 UI 信息泄露，建议截屏脱敏）                                                         |
+| T25.T   | ✅ Covered | （死代码链路从不加载，见 7.2/FIND-12；恢复引入时需补 SRI 复核流程）                               |
+| T26.I   | ✅ Covered | （FIND-05 已撤销：死代码无数据外发，见 7.2；恢复引入时需 consent 联动，见 FIND-12）               |
+| T27.T   | ✅ Covered | （FIND-02 已撤销：死代码，见 7.2；恢复引入时需补 SRI，见 FIND-12）                                |
+| T28.I   | ✅ Covered | （FIND-05 已撤销：死代码，见 7.2；恢复引入时需 consent 联动，见 FIND-12）                         |
+| T29.S   | ✅ Covered | （后端 OAuth state/nonce 校验，待后端核实；网关已有 state 机制，见 7.6）                          |
+| T30.T   | ✅ Covered | （重放幂等，待后端核实）                                                                          |
+| T31.R   | ✅ Covered | （日志篡改，待后端核实）                                                                          |
+| T32.I   | ✅ Covered | （EXPORT_USER_INFO GET 副作用，建议后端改 POST + CSRF 校验，待后端核实）                          |
+| T33.D   | ✅ Covered | （日志导出限流，建议后端加 rate limit，已并入 FIND-11 后端限速建议）                              |
+| T34.E   | ✅ Covered | （批量绑定越权，建议后端逐资源校验，待后端核实）                                                  |
+| T35.A   | ✅ Covered | （多仓构建滥用，建议后端按仓限流，已并入 FIND-11）                                                |
+| T36.S   | ✅ Covered | （OAuth 回调 GET，建议改 POST + state，待后端核实）                                               |
+| T37.I   | ✅ Covered | （autoLogin URL 标志泄露；FIND-05 已撤销，恢复遥测时随 consent 方案评估）                         |
+| T38.E   | ✅ Covered | （FIND-03 已撤销，见 7.2；平台切换滥用由后端 OAuth 绑定校验兜底，待后端核实）                     |
+| T39.A   | ✅ Covered | （`gitlib`/`gitcode` 拼写歧义，建议统一为 `gitcode`，已并入 FIND-07 注释）                        |
+| T40.S   | ✅ Covered | FIND-07                                                                                           |
+| T41.T   | ✅ Covered | FIND-07                                                                                           |
+| T42.I   | ✅ Covered | （props 一次性注入明文，建议主应用 + 子应用同源严格隔离，已并入 FIND-07）                         |
+| T43.E   | ✅ Covered | （Wujie 沙箱配置，已并入 FIND-07 主应用核实项）                                                   |
+| T44.A   | ✅ Covered | FIND-07                                                                                           |
 
 ---
 
@@ -660,14 +660,14 @@ flowchart LR
 
 ### 5.5 Report Metadata
 
-| 字段                     | 值                                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------- |
-| Model                    | `GLM-5.2`                                                                             |
-| Analysis Started (UTC)   | `2026-10-09 12:15:13Z`                                                                |
-| Analysis Completed (UTC) | `2026-10-09 12:50:00Z`                                                                |
-| Duration                 | ~35 分钟                                                                              |
-| 报告生成 Skill           | `awesome-copilot/threat-model-analyst`（Single Analysis 模式）                        |
-| 输出位置                 | `d:\openlibing\threat-model-reports\openlibing-cicd-web-威胁模型分析报告-20261009.md` |
+| 字段                     | 值                                                                                                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Model                    | `GLM-5.2`                                                                                                                                                                      |
+| Analysis Started (UTC)   | `2026-10-09 12:15:13Z`                                                                                                                                                         |
+| Analysis Completed (UTC) | `2026-10-09 12:50:00Z`                                                                                                                                                         |
+| Duration                 | ~35 分钟                                                                                                                                                                       |
+| 报告生成 Skill           | `awesome-copilot/threat-model-analyst`（Single Analysis 模式）                                                                                                                 |
+| 输出位置                 | 本文档（归档：`openlibing-docs/architecture_desgin/openlibing-cicd-web/openlibing-cicd-web-威胁模型分析报告-20261009.md`）；分析期工作区副本 `threat-model-reports/`（不入库） |
 
 ### 5.6 Classification Reference
 
@@ -694,19 +694,19 @@ flowchart LR
 
 ### 7.1 裁定总表
 
-| #       | Finding                    | 原判定    | 裁定                  | 修正后等级               | 一句话依据                                                                                                        |
-| ------- | -------------------------- | --------- | --------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| FIND-01 | 安全响应头委托上游         | T1/High   | ✅ 真问题（**加重**） | High                     | 上游根本没下发 CSP/X-Frame-Options，HSTS 仅 prod 有                                                               |
-| FIND-02 | jsagent.min.js 无 SRI      | T1/High   | ❌ **误报**           | 撤销（残留潜在隐患）     | `jsagent.js`/`uem.js` 均为死代码，全仓无 import，脚本从不加载                                                     |
-| FIND-03 | CSRF 双提交 cookie 属性    | T1/Medium | ❌ **误报**           | 撤销                     | 防线在网关服务端：Referer + Redis CSRF token + JWT 签名校验                                                       |
-| FIND-04 | `console.log(error_)`      | T1/Medium | ✅ 真问题             | **降级 Low**             | 属实，仅本机控制台可见                                                                                            |
-| FIND-05 | 遥测缺 consent 联动        | T1/Medium | ❌ **误报**           | 撤销                     | 同 FIND-02，遥测脚本从不加载，无数据外发                                                                          |
-| FIND-06 | `proxy_ssl_verify off`     | T2/High   | ⚠️ 部分属实           | **T3/Medium**            | 配置真实存在但归属错误：在本仓 Nginx 无任何 proxy；真实位置在 openlibing-web Nginx，代理目标是 K8s 集群内 Service |
-| FIND-07 | 子应用可重定向主应用       | T2/High   | ⚠️ 真问题（架构固有） | **降级 Medium**          | wujie 默认同源沙箱下属设计意图，前提是子应用先被 XSS 攻陷                                                         |
-| FIND-08 | `parseRestfulUrl` 路径注入 | T2/Medium | ⚠️ 部分属实           | 待后端确认（暂 Low-Med） | 前端无校验属实；网关权限过滤只覆盖纯数字 projectId，非数字路径绕过网关级检查、依赖后端兜底                        |
-| FIND-09 | sessionStorage 缓存        | T2/Low    | ✅ 真问题             | Low                      | 属实，纯客户端本地面                                                                                              |
-| FIND-10 | 路由无 navigation guard    | T2/Low    | ❌ **误报**           | 撤销                     | 所有数据接口经网关强制认证，页面仅空壳，无数据泄露                                                                |
-| FIND-11 | 限流键可伪造               | T3/Medium | ✅ 真问题（确认）     | Medium                   | 两仓 Nginx 全环境均以 `$http_x_real_ip` 为限流键，客户端可任意换桶                                                |
+| #       | Finding                    | 原判定    | 裁定                  | 修正后等级                       | 一句话依据                                                                                                        |
+| ------- | -------------------------- | --------- | --------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| FIND-01 | 安全响应头委托上游         | T1/High   | ✅ 真问题（**加重**） | High                             | 上游根本没下发 CSP/X-Frame-Options，HSTS 仅 prod 有                                                               |
+| FIND-02 | jsagent.min.js 无 SRI      | T1/High   | ❌ **误报**           | 撤销（残留潜在隐患）             | `jsagent.js`/`uem.js` 均为死代码，全仓无 import，脚本从不加载                                                     |
+| FIND-03 | CSRF 双提交 cookie 属性    | T1/Medium | ❌ **误报**           | 撤销                             | 防线在网关服务端：Referer + Redis CSRF token + JWT 签名校验                                                       |
+| FIND-04 | `console.log(error_)`      | T1/Medium | ✅ 真问题             | **降级 Low**                     | 属实，仅本机控制台可见                                                                                            |
+| FIND-05 | 遥测缺 consent 联动        | T1/Medium | ❌ **误报**           | 撤销                             | 同 FIND-02，遥测脚本从不加载，无数据外发                                                                          |
+| FIND-06 | `proxy_ssl_verify off`     | T2/High   | ⚠️ 部分属实           | **T3/Medium**                    | 配置真实存在但归属错误：在本仓 Nginx 无任何 proxy；真实位置在 openlibing-web Nginx，代理目标是 K8s 集群内 Service |
+| FIND-07 | 子应用可重定向主应用       | T2/High   | ⚠️ 真问题（架构固有） | **降级 Medium**                  | wujie 默认同源沙箱下属设计意图，前提是子应用先被 XSS 攻陷                                                         |
+| FIND-08 | `parseRestfulUrl` 路径注入 | T2/Medium | ⚠️ 部分属实           | Medium（可利用性待后端实测确认） | 前端无校验属实；网关权限过滤只覆盖纯数字 projectId，非数字路径绕过网关级检查、依赖后端兜底                        |
+| FIND-09 | sessionStorage 缓存        | T2/Low    | ✅ 真问题             | Low                              | 属实，纯客户端本地面                                                                                              |
+| FIND-10 | 路由无 navigation guard    | T2/Low    | ❌ **误报**           | 撤销                             | 所有数据接口经网关强制认证，页面仅空壳，无数据泄露                                                                |
+| FIND-11 | 限流键可伪造               | T3/Medium | ✅ 真问题（确认）     | Medium                           | 两仓 Nginx 全环境均以 `$http_x_real_ip` 为限流键，客户端可任意换桶                                                |
 
 **统计：4 真问题、3 部分属实、4 误报。**
 
@@ -716,45 +716,45 @@ flowchart LR
 
 全仓检索证实 `src/utils/jsagent.js` 与 `src/utils/uem.js` **没有被任何入口引用**：
 
-- [main.ts](file:///d:/openlibing/openlibing-cicd-web/src/main.ts)、`index.html`、`App.vue`、`vite.config.ts` 均无 import；
+- `src/main.ts`、`index.html`、`App.vue`、`vite.config.ts` 均无 import；
 - 全仓 glob 检索 `utils/uem|utils/jsagent` 及动态 import 模式均无命中。
 
-即 `jsagent.min.js`（res.hc-cdn.com）与 `uem_f.js`（hwa.his.huawei.com）两个外部脚本**在当前代码下从不加载**，不存在遥测数据外发，"缺 consent 联动"与"无 SRI 注入面"均不成立。此外 [uem.js](file:///d:/openlibing/openlibing-cicd-web/src/utils/uem.js) 本身带 SRI、`crossOrigin='anonymous'`、`window.hwa('setEnable', false)`、仅 production 生效。
+即 `jsagent.min.js`（res.hc-cdn.com）与 `uem_f.js`（hwa.his.huawei.com）两个外部脚本**在当前代码下从不加载**，不存在遥测数据外发，"缺 consent 联动"与"无 SRI 注入面"均不成立。此外 `src/utils/uem.js` 本身带 SRI、`crossOrigin='anonymous'`、`window.hwa('setEnable', false)`、仅 production 生效。
 
 **残留事项**：两个文件属未清理的死代码。若将来恢复引入，jsagent 无 SRI 的隐患即变为真（原 FIND-02 修复方案仍然适用）；建议要么删除这两个文件，要么恢复引入时同步补 SRI。另 `pipeline.vue` 使用的 `v-uem-record` 指令在 Vue 3 中未注册（majun 指令集为 Vue 2 API 且未挂载），属功能失效非安全问题。
 
 #### ❌ FIND-03：CSRF 防线在网关服务端，前端双提交只是载体
 
-网关 [AuthFilter.java#L797-842](file:///d:/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java#L797-L842) 的 `checkCsrfAttack` 实现完整服务端 CSRF 校验，四道防线：
+网关 `openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java L797-L842` 的 `checkCsrfAttack` 实现完整服务端 CSRF 校验，四道防线：
 
 1. **Referer 校验**：Referer 必须存在且包含平台域名（`jwtConfig.getDomainName()`），缺失即拒；
 2. **Redis 状态校验**：`Csrf-Token-Open-Li-Bing-{accountId}` 键必须存在（登录时由 `UserServiceImpl.generateAndSaveCsrfToken` 写入）；
 3. **JWT 签名校验**：客户端 CSRF token 必须通过 `JwtHelper.verifyToken` 签名验证；
-4. **失效凭证列表**：[AuthFilter.java#L939-982](file:///d:/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java#L939-L982) 对照 Redis 失效列表（登出后 token/csrf token 立即失效）。
+4. **失效凭证列表**：`openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java L939-L982` 对照 Redis 失效列表（登出后 token/csrf token 立即失效）。
 
-会话 cookie 本身由 [JwtHelper.generateCookie](file:///d:/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/common/utils/JwtHelper.java#L151-L168) 设置 `HttpOnly + Secure`。因此"前端 cookie 属性未验证导致 CSRF 退化"不成立——CSRF token cookie 由前端 JS 从登录响应 JSON 写入（`LoginServiceImpl` 仅在响应体返回 token），本就必须 JS 可读，其 cookie 属性不是安全边界。
+会话 cookie 本身由 `openlibing-gateway/src/main/java/com/openlibing/gateway/common/utils/JwtHelper.java L151-L168` 设置 `HttpOnly + Secure`。因此"前端 cookie 属性未验证导致 CSRF 退化"不成立——CSRF token cookie 由前端 JS 从登录响应 JSON 写入（`LoginServiceImpl` 仅在响应体返回 token），本就必须 JS 可读，其 cookie 属性不是安全边界。
 
 **残留 hardening 项**：`token` 会话 cookie 未显式设置 `SameSite`（依赖浏览器默认 Lax）；结合网关四道 CSRF 防线，实际风险极低，建议顺手补显式 `SameSite=Lax`。
 
 #### ❌ FIND-10：路由无 guard —— 无实际越权面
 
-所有业务数据接口均经网关 [AuthFilter.java#L112-155](file:///d:/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java#L112-L155) 强制链路：JWT 认证 → CSRF → 凭证失效 → 黑名单 → 纵向权限（`hasUserPermissionAuth`）→ [PermissionCheckFilter](file:///d:/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/PermissionCheckFilter.java) 项目级权限。未登录用户直连子应用路由只能渲染页面空壳（API 全部 401），无数据泄露。前端 guard 属体验增强非安全需求，撤销该 finding。
+所有业务数据接口均经网关 `openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/AuthFilter.java L112-L155` 强制链路：JWT 认证 → CSRF → 凭证失效 → 黑名单 → 纵向权限（`hasUserPermissionAuth`）→ `openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/PermissionCheckFilter.java` 项目级权限。未登录用户直连子应用路由只能渲染页面空壳（API 全部 401），无数据泄露。前端 guard 属体验增强非安全需求，撤销该 finding。
 
 ### 7.3 部分属实（归属/等级修正，3 条）
 
 #### ⚠️ FIND-06：`proxy_ssl_verify off` —— 配置真实存在，但归属与等级双修正
 
-- **归属修正**：本仓（cicd-web）三个 Nginx conf **没有任何 `proxy_pass`**（仅静态资源 + `/build/` + health-check），原报告归因到本仓错误。真实代理在 **openlibing-web 的 Nginx**：[nginx_beta.conf#L216-229](file:///d:/openlibing/openlibing-web/apps/web-openlibing/nginx/nginx_beta.conf#L216-L229)（prod/gamma 同）中 `/gateway`、`/ops`、`/argus`、`/ai`、`/build`、`/api-management`、`/lab` 全部 location 均 `proxy_ssl_verify off`。
+- **归属修正**：本仓（cicd-web）三个 Nginx conf **没有任何 `proxy_pass`**（仅静态资源 + `/build/` + health-check），原报告归因到本仓错误。真实代理在 **openlibing-web 的 Nginx**：`openlibing-web/apps/web-openlibing/nginx/nginx_beta.conf L216-L229`（prod/gamma 同）中 `/gateway`、`/ops`、`/argus`、`/ai`、`/build`、`/api-management`、`/lab` 全部 location 均 `proxy_ssl_verify off`。
 - **等级修正**：代理目标为 **K8s 集群内 Service**（`*.svc.cluster.local:8073/8097/...`），流量不出集群。利用前提是攻击者已获得集群内网位置（真实 Tier 为 T3），且 TLS 链路仍在（TLSv1.2/1.3，仅不校验证书）。T2/High → **T3/Medium**。
 - **修复方向不变**：为 Nginx 挂载集群 CA（`proxy_ssl_trusted_certificate` + `proxy_ssl_verify on`），或对集群内流量改用 mTLS/Service Mesh。
 
 #### ⚠️ FIND-07：子应用重定向主应用 —— 架构固有设计，条件触发
 
-[openlibing-web WujieMiddleware.vue](file:///d:/openlibing/openlibing-web/apps/web-openlibing/src/views/WujieMiddleware.vue) 使用 wujie 默认沙箱（同源 iframe + JS 沙箱），子应用 URL 来自路由 `meta.url`（第一方静态配置）；bus 事件（`host-router`/`switch-tab` 等）仅驱动主应用内部路由，`window.top.location` 可写是 wujie 同源沙箱的固有属性。`redirectByTopWindow`（登录过期整页跳 OAuth）为**设计意图**。风险成立前提：**子应用先被 XSS 攻陷**——当前全部子应用为第一方。降级 Medium，修复方向：子应用输出转义收敛 XSS 入口 + `redirectByTopWindow` 加跳转 URL 白名单（原修复建议保留）。
+`openlibing-web/apps/web-openlibing/src/views/WujieMiddleware.vue` 使用 wujie 默认沙箱（同源 iframe + JS 沙箱），子应用 URL 来自路由 `meta.url`（第一方静态配置）；bus 事件（`host-router`/`switch-tab` 等）仅驱动主应用内部路由，`window.top.location` 可写是 wujie 同源沙箱的固有属性。`redirectByTopWindow`（登录过期整页跳 OAuth）为**设计意图**。风险成立前提：**子应用先被 XSS 攻陷**——当前全部子应用为第一方。降级 Medium，修复方向：子应用输出转义收敛 XSS 入口 + `redirectByTopWindow` 加跳转 URL 白名单（原修复建议保留）。
 
 #### ⚠️ FIND-08：`parseRestfulUrl` —— 前端无校验属实，真实缺口在网关权限匹配
 
-跨仓验证发现一个比原描述更具体的问题：[PermissionCheckFilter.java#L36-37](file:///d:/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/PermissionCheckFilter.java#L36-L37) 仅以 `/project/(\d+)` 匹配**纯数字 projectId** 做项目级权限校验。非数字变体路径（如 `%2F` 编码、注入额外 path 段）不会命中该正则，从而**跳过网关项目权限检查**直达后端——最终安全性取决于 openlibing-cicd 后端自身的路径解析与鉴权一致性。前端 `parseRestfulUrl`（[tools.ts](file:///d:/openlibing/openlibing-cicd-web/src/utils/tools.ts)）无 `encodeURIComponent` 属实，但其影响上限是"构造请求路径"，鉴权兜底在后端。处置：前端补 `encodeURIComponent`（Low 成本）；并对后端发起畸形 projectId 实测后闭环定级。
+跨仓验证发现一个比原描述更具体的问题：`openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/PermissionCheckFilter.java L36-L37` 仅以 `/project/(\d+)` 匹配**纯数字 projectId** 做项目级权限校验。非数字变体路径（如 `%2F` 编码、注入额外 path 段）不会命中该正则，从而**跳过网关项目权限检查**直达后端——最终安全性取决于 openlibing-cicd 后端自身的路径解析与鉴权一致性。前端 `parseRestfulUrl`（`src/utils/tools.ts`）无 `encodeURIComponent` 属实，但其影响上限是"构造请求路径"，鉴权兜底在后端。处置：前端补 `encodeURIComponent`（Low 成本）；并对后端发起畸形 projectId 实测后闭环定级。
 
 ### 7.4 真问题确认（4 条）
 
@@ -762,18 +762,18 @@ flowchart LR
 
 "安全头由上游下发"的前提**不成立**。复核 openlibing-web 平台出口 Nginx：
 
-| 安全头                  | beta/gamma                                   | prod     | 证据                                                                                                                                                                                                                   |
-| ----------------------- | -------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Content-Security-Policy | 注释                                         | **注释** | [nginx_beta.conf#L99](file:///d:/openlibing/openlibing-web/apps/web-openlibing/nginx/nginx_beta.conf#L99)、[nginx_prod.conf#L103](file:///d:/openlibing/openlibing-web/apps/web-openlibing/nginx/nginx_prod.conf#L103) |
-| HSTS                    | 注释                                         | 启用     | [nginx_prod.conf#L101](file:///d:/openlibing/openlibing-web/apps/web-openlibing/nginx/nginx_prod.conf#L101)                                                                                                            |
-| X-Frame-Options         | 注释                                         | 注释     | 全环境 `# add_header X-Frame-Options SAMEORIGIN;`                                                                                                                                                                      |
-| 已生效                  | X-XSS-Protection / nosniff / Referrer-Policy | 同左     | 各 conf server 块                                                                                                                                                                                                      |
+| 安全头                  | beta/gamma                                   | prod     | 证据                                                                                                                            |
+| ----------------------- | -------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Content-Security-Policy | 注释                                         | **注释** | `openlibing-web/apps/web-openlibing/nginx/nginx_beta.conf L99`、`openlibing-web/apps/web-openlibing/nginx/nginx_prod.conf L103` |
+| HSTS                    | 注释                                         | 启用     | `openlibing-web/apps/web-openlibing/nginx/nginx_prod.conf L101`                                                                 |
+| X-Frame-Options         | 注释                                         | 注释     | 全环境 `# add_header X-Frame-Options SAMEORIGIN;`                                                                               |
+| 已生效                  | X-XSS-Protection / nosniff / Referrer-Policy | 同左     | 各 conf server 块                                                                                                               |
 
 即整条链路实际只有三件套，**任何一层都没有 CSP 与 X-Frame-Options**，XSS 防线完全依赖 Vue 框架转义；prod 之外无 HSTS。FIND-01 维持 High 并加重：修复时需同时在 openlibing-web Nginx（主入口）与本仓 Nginx（兜底）落地，prod 补 HSTS，全环境补 report-only CSP 起步。
 
 #### ✅ FIND-04：确认，降级 Low
 
-[ApiClient.ts#L219](file:///d:/openlibing/openlibing-cicd-web/src/api/ApiClient.ts) `console.log(error_)` 属实。仅本机浏览器控制台可见（非网络泄露），降级 Low；修复方案不变（删除或 `import.meta.env.DEV` 条件化）。
+`src/api/ApiClient.ts` `console.log(error_)` 属实。仅本机浏览器控制台可见（非网络泄露），降级 Low；修复方案不变（删除或 `import.meta.env.DEV` 条件化）。
 
 #### ✅ FIND-09：确认，Low 维持
 
@@ -781,10 +781,10 @@ flowchart LR
 
 #### ✅ FIND-11：完全确认，且两仓同现
 
-- **openlibing-web Nginx**（平台总入口）：[nginx_beta.conf#L58-62](file:///d:/openlibing/openlibing-web/apps/web-openlibing/nginx/nginx_beta.conf#L58-L62) 等全环境 `limit_req_zone/limit_conn_zone $http_x_real_ip`；
-- **本仓 Nginx**：[nginx_prod.conf#L60-62](file:///d:/openlibing/openlibing-cicd-web/nginx/nginx_prod.conf#L60-L62) 等全环境同样写法。
+- **openlibing-web Nginx**（平台总入口）：`openlibing-web/apps/web-openlibing/nginx/nginx_beta.conf L58-L62` 等全环境 `limit_req_zone/limit_conn_zone $http_x_real_ip`；
+- **本仓 Nginx**：`nginx/nginx_prod.conf L60-L62` 等全环境同样写法。
 
-客户端每请求随机 `X-Real-IP` 头即可换新桶绕过 Nginx 层限流。兜底为网关 [GatewayLimiterFilter](file:///d:/openlibing/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/ratelimit/GatewayLimiterFilter.java#L42-L63) 的 Redis 漏桶，但其键为 **routeId（按路由全局共享，非按 IP）**——攻击者无法绕过它，但打满全局桶会波及所有用户，DoS 风险真实。维持 Medium；修复键改 `$remote_addr`（入口层）并评估网关漏桶是否需按账号维度二级限流。
+客户端每请求随机 `X-Real-IP` 头即可换新桶绕过 Nginx 层限流。兜底为网关 `openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/ratelimit/GatewayLimiterFilter.java L42-L63` 的 Redis 漏桶，但其键为 **routeId（按路由全局共享，非按 IP）**——攻击者无法绕过它，但打满全局桶会波及所有用户，DoS 风险真实。维持 Medium；修复键改 `$remote_addr`（入口层）并评估网关漏桶是否需按账号维度二级限流。
 
 ### 7.5 修正后的整改优先级（已同步至 5.1；本节含跨仓联合动作全貌）
 
@@ -814,5 +814,5 @@ flowchart LR
 
 ### 7.7 复核中的补充观察（不在原 11 条内，记录备查）
 
-1. **CORS 反射**：openlibing-web Nginx 服务级 `add_header 'Access-Control-Allow-Origin' '$http_origin' always` + `Allow-Credentials true`（[nginx_beta.conf#L116-119](file:///d:/openlibing/openlibing-web/apps/web-openlibing/nginx/nginx_beta.conf#L116-L119)，全环境）。受 nginx `add_header` 继承规则影响未作用于自带 `add_header` 的 `/gateway` location，实际仅对公开静态资源生效，影响有限；但反射任意 Origin 属坏味道，建议改为域名白名单 + `map` 判空。
+1. **CORS 反射**：openlibing-web Nginx 服务级 `add_header 'Access-Control-Allow-Origin' '$http_origin' always` + `Allow-Credentials true`（`openlibing-web/apps/web-openlibing/nginx/nginx_beta.conf L116-L119`，全环境）。受 nginx `add_header` 继承规则影响未作用于自带 `add_header` 的 `/gateway` location，实际仅对公开静态资源生效，影响有限；但反射任意 Origin 属坏味道，建议改为域名白名单 + `map` 判空。
 2. **XFF 污染**：`proxy_set_header X-Forwarded-For $http_x_real_ip`（beta L126）把客户端可控头写入 XFF 传给上游，若下游信任 XFF 做审计/风控会被污染；建议统一 `$proxy_add_x_forwarded_for` 或 `$remote_addr`。
