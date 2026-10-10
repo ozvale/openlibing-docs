@@ -577,7 +577,7 @@ Web 入口与 API 均无速率限制、请求体大小限制与并发配额；`P
 | STRIDE 类别  | E（Elevation of Privilege）/ S / T / A                                                                                                                                                       |
 | CVSS 4.0     | **8.1** — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H`                                                                                                                  |
 | CWE          | [CWE-250](https://cwe.mitre.org/data/definitions/250.html): Execution with Unnecessary Privileges；[CWE-269](https://cwe.mitre.org/data/definitions/269.html): Improper Privilege Management |
-| OWASP        | A04:2025 – Insecure Design                                                                                                                                                                   |
+| OWASP        | A06:2025 – Insecure Design                                                                                                                                                                   |
 | 利用前提     | Authenticated User（envs:write / 环境使用者）                                                                                                                                                |
 | 可利用性层级 | **Tier 2**                                                                                                                                                                                   |
 | 修复工作量   | High（架构调整）                                                                                                                                                                             |
@@ -635,7 +635,7 @@ SSH 登录 runner 执行 `id` 应非 uid=0；bms Pod 内 `nsenter` 应失败或�
 | STRIDE 类别  | I（Information Disclosure）                                                                                                                                                                                         |
 | CVSS 4.0     | **7.4** — `CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:L/SI:L/SA:N`                                                                                                                                         |
 | CWE          | [CWE-312](https://cwe.mitre.org/data/definitions/312.html): Cleartext Storage of Sensitive Information；[CWE-319](https://cwe.mitre.org/data/definitions/319.html): Cleartext Transmission of Sensitive Information |
-| OWASP        | A06:2025 – Cryptographic Failures                                                                                                                                                                                   |
+| OWASP        | A04:2025 – Cryptographic Failures                                                                                                                                                                                   |
 | 利用前提     | Authenticated User（对应读 scope）                                                                                                                                                                                  |
 | 可利用性层级 | **Tier 2**                                                                                                                                                                                                          |
 | 修复工作量   | Medium                                                                                                                                                                                                              |
@@ -1378,7 +1378,7 @@ git 版 `deploy.yaml` 的 api 容器无 securityContext（镜像默认 root，Do
 | 威胁总数       | 56（T1=4 / T2=34 / T3=18）                             |
 | 发现总数       | 24（T1=2 / T2=12 / T3=10）                             |
 | 分析开始 (UTC) | `2026-10-10 01:07:24`                                  |
-| 分析完成 (UTC) | `2026-10-10 01:35:00`                                  |     |
+| 分析完成 (UTC) | `2026-10-10 01:35:00`                                  |
 | 分析模型       | `GLM-5.3`                                              |
 
 > 本报告由威胁建模分析自动生成，所有发现均附代码证据（文件:行号）。修复决策与风险接受由工程团队评审确定。
