@@ -14,16 +14,16 @@
 
 openlibing-cicd 是 OpenLibing CI/CD 平台的核心后端服务：它编排构建/流水线执行（委托华为云 CodeArts Pipeline/Build 与 SWR），消费 GitCode/Gitee 的代码托管 Webhook 以触发流水线与 PR 门禁，将构建状态/标签回写代码平台，并向平台前端暴露项目维度的业务 API（流水线、构建、PR、镜像、日志、看板）。
 
-本次分析覆盖 **31 个组件**（含 13 个外部服务/数据存储、1 个外部交互者），共识别 **139 条具体威胁**，并归纳为 **32 条风险发现（Finding）**（Tier 1 = 5、Tier 2 = 22、Tier 3 = 5）。
+本次分析覆盖 **31 个组件**（含 13 个外部服务/数据存储、1 个外部交互者），共识别 **139 条具体威胁**，并归纳为 **32 条风险发现（Finding）**（Tier 1 = 5、Tier 2 = 21、Tier 3 = 6）。
 
 **关键结论（按风险优先级）**：
 
 1. **入口鉴权薄弱且可被公网触达**：9 条 Tier 1 威胁全部集中在 Webhook/APIG 入口。APIG 对 Webhook 转发**不做任何调用方校验**，服务端 HMAC 成为唯一控制；且 HMAC 校验使用 `String.equals`（非恒定时间比较）、缺少时间戳/nonce 防重放、校验前完整读取请求体（无大小上限）。
 2. **出站 TLS 证书校验被关闭**：多个出站 HTTP 客户端（HwCloudClient、HwBuildClient、HwSwrClient、PipelineStatusThirdPartyApiClient，以及 PipelineServiceImpl/FileDownloadServiceImpl 调用点）使用"信任所有证书"的客户端，使网络位置攻击者可中间人篡改流水线/构建/镜像/PR 状态结果。相关修复已存在于分支但**未合入 master**。
-3. **加密密钥材料随仓库与镜像分发**：`keys/part1.ks`、`keys/rootSalt.ks` 被提交进仓库并打入镜像，任何人只要拥有仓库读权限即可解密全部受其保护的凭证（Redis、SMTP、华为云 AK/SK），密钥体系形同虚设。
-4. **身份可被客户端伪造**：POST 请求的 `userId` 取自请求体，`/logging/**` 的 `userId` 为客户端可见参数；网关注入的身份**无签名/无 mTLS 校验**，内网可绕过网关直连 8077 端口伪造任意身份。
-5. **内部机器接口完全无鉴权**：`/pr/machine-interface/**` 与 `/internal/**` 无任何应用层认证，任何内网调用方即可伪造 PR 构建内容、跨区同步、触发流水线。
-6. **敏感数据在日志中泄露**：`X-Gitee-Token`、`previewBody`、`access_token`（拼接在 URL 中）、构建日志中的口令等被写入日志；多个 Lombok `@Data` DTO 未对敏感字段加 `@ToString.Exclude`。
+3. **身份可被客户端伪造**：POST 请求的 `userId` 取自请求体，`/logging/**` 的 `userId` 为客户端可见参数；网关注入的身份**无签名/无 mTLS 校验**，内网可绕过网关直连 8077 端口伪造任意身份。
+4. **内部机器接口完全无鉴权**：`/pr/machine-interface/**` 与 `/internal/**` 无任何应用层认证，任何内网调用方即可伪造 PR 构建内容、跨区同步、触发流水线。
+5. **敏感数据在日志中泄露**：`X-Gitee-Token`、`previewBody`、`access_token`（拼接在 URL 中）、构建日志中的口令等被写入日志；多个 Lombok `@Data` DTO 未对敏感字段加 `@ToString.Exclude`。
+6. **加密密钥分片随镜像分发（已下调）**：三段式密钥分片文件 `keys/tcpFile.ks`、`keys/tcsFile.ks`、`keys/tcwFile.ks` 于构建期由 Dockerfile `COPY` 注入容器镜像（**不在 git 仓内**：`keys/` 已被 `.gitignore` 忽略且从未被 git 跟踪），镜像获取者可提取分片，配合 Nacos 配置 `security.part1` 即还原工作密钥、解密 Redis/SMTP/华为云 AK/SK 等凭证。经多仓核实，本项由原 Tier 2 / CVSS 9.3（Critical）下调为 Tier 3 / CVSS 5.7（Medium），详见 6.3 与 9.4。
 
 > **Note on threat counts:** 本报告的威胁计数以 `2-stride-analysis` 中的明细行 `T<组件序号>.<序号>` 为准（含每个组件 Tier 1/2/3 分层表中的具体威胁行），不含"类别不适用（N/A）"的说明行。总计 **139** 条：**Tier 1 = 9**、**Tier 2 = 112**、**Tier 3 = 18**。按 STRIDE-A 类别：**S=24、T=32、R=7、I=26、D=30、E=10、A=10**。原多文件汇总表中 `Totals` 行存在 3 处计数误差（PipelineServiceImpl 少计 1、Gitee 少计 1、各类别分布偏差），本报告已修正。
 
@@ -50,40 +50,40 @@ openlibing-cicd 承担以下职责：
 
 ### 2.2 关键组件清单
 
-| 组件                              | 类型       | 说明                                                                                                                                         |
-| --------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| OpenlibingCicdApplication         | 进程       | Spring Boot Servlet Web 应用（端口 8077），承载 `/project/**` 下约 20 个业务 Controller（流水线、构建、PR、镜像、标签、看板）                |
-| AuthInterceptor                   | 进程       | `/project/**` 的 Spring MVC 拦截器，提取 projectId/pipelineId/userId 并通过 userRoleMapper 校验项目权限                                      |
-| WebHookEventController            | 进程       | Webhook 入口 `/webhookEvent/hooks/{gitcode\|gitee}/{pipelineId}`，通过 MachineInterfaceAuthUtil 校验 HMAC 签名                               |
-| ApigWebhookController             | 进程       | APIG 前置 Webhook 入口 `/apig/webhook/**`（APIG 侧无鉴权透传，服务端做 HMAC 校验）                                                           |
-| PrMachineInterfaceController      | 进程       | 机器对机器接口 `/pr/machine-interface/**`（保存 PR 构建内容、跨区 PR 操作），**应用层无鉴权**                                                |
-| InternalPipelineController        | 进程       | 内部接口 `/internal/prStartPipeline`，供同类服务触发流水线，**应用层无鉴权**                                                                 |
-| LoggingController                 | 进程       | 流水线日志查询 `/logging/**`，userId 取自请求参数，依赖网关注入身份                                                                          |
-| PipelineServiceImpl               | 进程       | 核心流水线编排服务（构建触发、状态、产物、华为云委托）                                                                                       |
-| MessageListeners                  | 进程       | RabbitMQ 消费者集合：WebHookEventConsumer、PipelineEventConsumer、PipelineStatusUpdateConsumer、PrOpEventConsumer、PipelineFailEmailConsumer |
-| HwCloudClient                     | 进程       | 华为云 CodeArts Pipeline SDK 客户端，使用存于 MySQL（hw_project_info）的项目级 AK/SK                                                         |
-| HwBuildClient                     | 进程       | 华为云 CodeArts Build SDK 客户端，使用项目级 AK/SK                                                                                           |
-| HwSwrClient                       | 进程       | 华为云 SWR（镜像仓库）SDK 客户端，使用项目级 AK/SK                                                                                           |
-| PipelineStatusThirdPartyApiClient | 进程       | GitCode/Gitee REST 客户端（PRIVATE-TOKEN 头），用于 PR 标签与流水线状态回写                                                                  |
-| GitCodeContentsClient             | 进程       | GitCode 内容 API 客户端（PRIVATE-TOKEN），读取仓库文件/分支                                                                                  |
-| EmailSender                       | 进程       | SMTP 邮件发送器，使用由配置解密的账号/口令                                                                                                   |
-| ScheduleTaskImpl                  | 进程       | `@Scheduled` 定时任务：每日清理已删除流水线（cron `0 0 1 * * ?`）                                                                            |
-| XxlJobHandler                     | 进程       | XXL-Job 处理器（如工作流覆盖率），由 XXL-Job 管理端调度回调                                                                                  |
-| MySQL                             | 数据存储   | 业务数据库（user_role_info、pipeline、含加密 AK/SK 的 hw_project_info、PR/构建/镜像表），经 MyBatis + Liquibase 访问                         |
-| Redis                             | 数据存储   | Redis/Redisson，用于分布式锁（DistributedLockService）                                                                                       |
-| RabbitMQ                          | 数据存储   | 消息中间件，承载 Webhook 事件、构建任务、PR 操作事件、状态更新、失败邮件                                                                     |
-| KeyFiles                          | 数据存储   | 加密密钥材料 `keys/part1.ks` + `keys/rootSalt.ks`，随仓库与容器镜像分发，供 SecurityUtil 解密凭证                                            |
-| EndUser                           | 外部交互者 | 通过网关使用 Web UI 的平台开发者                                                                                                             |
-| OpenlibingGateway                 | 外部服务   | 平台 API 网关，执行 Cookie 会话鉴权并将 userId 注入查询参数                                                                                  |
-| APIG                              | 外部服务   | 华为 API 网关，将 GitCode/Gitee Webhook 转发至 `/apig/webhook`，网关层不做鉴权                                                               |
-| Nacos                             | 外部服务   | 配置中心 + 注册中心（各 profile 硬编码公有华为云 CSE 端点）                                                                                  |
-| GitCode                           | 外部服务   | 代码托管平台：Webhook 来源与 REST API 目标（PRIVATE-TOKEN）                                                                                  |
-| Gitee                             | 外部服务   | 代码托管平台：Webhook 来源与 REST API 目标（PRIVATE-TOKEN）                                                                                  |
-| HuaweiCloud                       | 外部服务   | 华为云 CodeArts Pipeline/Build/SWR 端点，使用项目级 AK/SK                                                                                    |
-| OpenlibingCoderepo                | 外部服务   | 内部代码仓服务，经 Feign 调用（https://openlibing-coderepo）                                                                                 |
-| OpenlibingFramework               | 外部服务   | 内部框架服务，经 Feign 调用（项目、度量、导出任务）                                                                                          |
-| SMTPServer                        | 外部服务   | 外部 SMTP 中继，用于流水线失败与通知邮件                                                                                                     |
-| XXLJobAdmin                       | 外部服务   | XXL-Job 调度管理端，触发 XxlJobHandler 回调                                                                                                  |
+| 组件                              | 类型       | 说明                                                                                                                                              |
+| --------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OpenlibingCicdApplication         | 进程       | Spring Boot Servlet Web 应用（端口 8077），承载 `/project/**` 下约 20 个业务 Controller（流水线、构建、PR、镜像、标签、看板）                     |
+| AuthInterceptor                   | 进程       | `/project/**` 的 Spring MVC 拦截器，提取 projectId/pipelineId/userId 并通过 userRoleMapper 校验项目权限                                           |
+| WebHookEventController            | 进程       | Webhook 入口 `/webhookEvent/hooks/{gitcode\|gitee}/{pipelineId}`，通过 MachineInterfaceAuthUtil 校验 HMAC 签名                                    |
+| ApigWebhookController             | 进程       | APIG 前置 Webhook 入口 `/apig/webhook/**`（APIG 侧无鉴权透传，服务端做 HMAC 校验）                                                                |
+| PrMachineInterfaceController      | 进程       | 机器对机器接口 `/pr/machine-interface/**`（保存 PR 构建内容、跨区 PR 操作），**应用层无鉴权**                                                     |
+| InternalPipelineController        | 进程       | 内部接口 `/internal/prStartPipeline`，供同类服务触发流水线，**应用层无鉴权**                                                                      |
+| LoggingController                 | 进程       | 流水线日志查询 `/logging/**`，userId 取自请求参数，依赖网关注入身份                                                                               |
+| PipelineServiceImpl               | 进程       | 核心流水线编排服务（构建触发、状态、产物、华为云委托）                                                                                            |
+| MessageListeners                  | 进程       | RabbitMQ 消费者集合：WebHookEventConsumer、PipelineEventConsumer、PipelineStatusUpdateConsumer、PrOpEventConsumer、PipelineFailEmailConsumer      |
+| HwCloudClient                     | 进程       | 华为云 CodeArts Pipeline SDK 客户端，使用存于 MySQL（hw_project_info）的项目级 AK/SK                                                              |
+| HwBuildClient                     | 进程       | 华为云 CodeArts Build SDK 客户端，使用项目级 AK/SK                                                                                                |
+| HwSwrClient                       | 进程       | 华为云 SWR（镜像仓库）SDK 客户端，使用项目级 AK/SK                                                                                                |
+| PipelineStatusThirdPartyApiClient | 进程       | GitCode/Gitee REST 客户端（PRIVATE-TOKEN 头），用于 PR 标签与流水线状态回写                                                                       |
+| GitCodeContentsClient             | 进程       | GitCode 内容 API 客户端（PRIVATE-TOKEN），读取仓库文件/分支                                                                                       |
+| EmailSender                       | 进程       | SMTP 邮件发送器，使用由配置解密的账号/口令                                                                                                        |
+| ScheduleTaskImpl                  | 进程       | `@Scheduled` 定时任务：每日清理已删除流水线（cron `0 0 1 * * ?`）                                                                                 |
+| XxlJobHandler                     | 进程       | XXL-Job 处理器（如工作流覆盖率），由 XXL-Job 管理端调度回调                                                                                       |
+| MySQL                             | 数据存储   | 业务数据库（user_role_info、pipeline、含加密 AK/SK 的 hw_project_info、PR/构建/镜像表），经 MyBatis + Liquibase 访问                              |
+| Redis                             | 数据存储   | Redis/Redisson，用于分布式锁（DistributedLockService）                                                                                            |
+| RabbitMQ                          | 数据存储   | 消息中间件，承载 Webhook 事件、构建任务、PR 操作事件、状态更新、失败邮件                                                                          |
+| KeyFiles                          | 数据存储   | 加密密钥分片 `keys/tcpFile.ks` + `keys/tcsFile.ks` + `keys/tcwFile.ks`，构建期注入容器镜像（不在 git 仓内），供 SecurityUtil 派生工作密钥解密凭证 |
+| EndUser                           | 外部交互者 | 通过网关使用 Web UI 的平台开发者                                                                                                                  |
+| OpenlibingGateway                 | 外部服务   | 平台 API 网关，执行 Cookie 会话鉴权并将 userId 注入查询参数                                                                                       |
+| APIG                              | 外部服务   | 华为 API 网关，将 GitCode/Gitee Webhook 转发至 `/apig/webhook`，网关层不做鉴权                                                                    |
+| Nacos                             | 外部服务   | 配置中心 + 注册中心（各 profile 硬编码公有华为云 CSE 端点）                                                                                       |
+| GitCode                           | 外部服务   | 代码托管平台：Webhook 来源与 REST API 目标（PRIVATE-TOKEN）                                                                                       |
+| Gitee                             | 外部服务   | 代码托管平台：Webhook 来源与 REST API 目标（PRIVATE-TOKEN）                                                                                       |
+| HuaweiCloud                       | 外部服务   | 华为云 CodeArts Pipeline/Build/SWR 端点，使用项目级 AK/SK                                                                                         |
+| OpenlibingCoderepo                | 外部服务   | 内部代码仓服务，经 Feign 调用（https://openlibing-coderepo）                                                                                      |
+| OpenlibingFramework               | 外部服务   | 内部框架服务，经 Feign 调用（项目、度量、导出任务）                                                                                               |
+| SMTPServer                        | 外部服务   | 外部 SMTP 中继，用于流水线失败与通知邮件                                                                                                          |
+| XXLJobAdmin                       | 外部服务   | XXL-Job 调度管理端，触发 XxlJobHandler 回调                                                                                                       |
 
 ### 2.3 组件关系图
 
@@ -287,17 +287,17 @@ XXLJobAdmin 调用 XxlJobHandler 回调；处理器经 Feign 查询 OpenlibingFr
 
 ### 2.5 技术栈
 
-| 层次     | 技术                                                                                                                                                                             |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 语言     | Java 21                                                                                                                                                                          |
-| 框架     | Spring Boot（Servlet/Tomcat）、Spring MVC 拦截器、Spring Cloud（Nacos 发现、Feign/Ribbon）、MyBatis、Liquibase、Redisson                                                         |
-| 数据存储 | MySQL（业务数据）、Redis（分布式锁）、RabbitMQ（事件）、本地密钥文件（part1.ks、rootSalt.ks）                                                                                    |
-| 基础设施 | Docker（openlibing 用户）、entrypoint/start/monitor 脚本、华为云 CSE（Nacos）、XXL-Job、华为 APIG                                                                                |
-| 安全机制 | HMAC-SHA256 Webhook 签名、网关 Cookie 鉴权 + userId 注入、AuthInterceptor 基于 userRoleMapper 的 RBAC、SecurityUtil 基于随仓密钥的解密、gitleaks/SpotBugs/findsecbugs 预提交门禁 |
+| 层次     | 技术                                                                                                                                                                                   |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 语言     | Java 21                                                                                                                                                                                |
+| 框架     | Spring Boot（Servlet/Tomcat）、Spring MVC 拦截器、Spring Cloud（Nacos 发现、Feign/Ribbon）、MyBatis、Liquibase、Redisson                                                               |
+| 数据存储 | MySQL（业务数据）、Redis（分布式锁）、RabbitMQ（事件）、镜像内本地密钥分片文件（tcpFile.ks、tcsFile.ks、tcwFile.ks）                                                                   |
+| 基础设施 | Docker（openlibing 用户）、entrypoint/start/monitor 脚本、华为云 CSE（Nacos）、XXL-Job、华为 APIG                                                                                      |
+| 安全机制 | HMAC-SHA256 Webhook 签名、网关 Cookie 鉴权 + userId 注入、AuthInterceptor 基于 userRoleMapper 的 RBAC、SecurityUtil 基于镜像内密钥分片的解密、gitleaks/SpotBugs/findsecbugs 预提交门禁 |
 
 ### 2.6 部署模型与组件暴露面
 
-服务为容器化 Spring Boot 应用，监听 `0.0.0.0:8077`（Tomcat），部署于平台容器基础设施并注册到 Nacos（各 profile 使用公有华为云 CSE 端点）。业务 API（`/project/**`、`/logging/**`）仅能经 OpenlibingGateway 到达，由网关鉴权会话 Cookie 并注入 userId 到查询参数。Webhook 端点（`/webhookEvent/**`、`/apig/webhook/**`）可被公网代码平台直接经网关或经华为 APIG 到达，**APIG 层无鉴权**。内部机器端点（`/pr/machine-interface/**`、`/internal/**`）无应用层鉴权，依赖网络隔离。配置（数据源、Redis、RabbitMQ、SMTP 凭证）由 Nacos 配置中心导入；加密密钥材料（`keys/part1.ks`、`keys/rootSalt.ks`）随仓库与容器镜像分发。华为云项目级 AK/SK 以加密形式存于 MySQL `hw_project_info` 表。
+服务为容器化 Spring Boot 应用，监听 `0.0.0.0:8077`（Tomcat），部署于平台容器基础设施并注册到 Nacos（各 profile 使用公有华为云 CSE 端点）。业务 API（`/project/**`、`/logging/**`）仅能经 OpenlibingGateway 到达，由网关鉴权会话 Cookie 并注入 userId 到查询参数。Webhook 端点（`/webhookEvent/**`、`/apig/webhook/**`）可被公网代码平台直接经网关或经华为 APIG 到达，**APIG 层无鉴权**。内部机器端点（`/pr/machine-interface/**`、`/internal/**`）无应用层鉴权，依赖网络隔离。配置（数据源、Redis、RabbitMQ、SMTP 凭证）由 Nacos 配置中心导入；加密密钥分片（`keys/tcpFile.ks`、`tcsFile.ks`、`tcwFile.ks`）由构建期 `Dockerfile COPY` 注入容器镜像（不在 git 仓内）。华为云项目级 AK/SK 以加密形式存于 MySQL `hw_project_info` 表。
 
 **部署分类（Deployment Classification）：** `K8S_SERVICE`
 
@@ -346,27 +346,27 @@ XXLJobAdmin 调用 XxlJobHandler 回调；处理器经 Feign 查询 OpenlibingFr
 | AuthInterceptor                                     | `/project/**` 授权（基于 userRoleMapper 的项目权限）                                      | 在 WebConfig 中仅对 `/project/**` 注册             | 非 `/project` 端点无拦截器覆盖                   |
 | RequestBodyFilter                                   | 对 `/project/*` 下 POST/PUT/PATCH/DELETE 的请求体缓存包装                                 | 在 WebConfig 中注册                                | master 上无 JSON 请求体大小上限（修复待合入）    |
 | MachineInterfaceAuthUtil                            | HMAC-SHA256 Webhook 签名校验（GitCode X-GitCode-Signature-256、Gitee X-Gitee-Token HMAC） | 校验时解密各流水线密钥                             | master 上使用 `String.equals` 非恒定时间比较     |
-| SecurityUtil                                        | 使用随仓密钥材料解密 Redis/SMTP/AK-SK 凭证                                                | `keys/part1.ks` + `keys/rootSalt.ks`               | 密钥材料已提交进仓库                             |
+| SecurityUtil                                        | 使用镜像内密钥分片派生工作密钥解密 Redis/SMTP/AK-SK 凭证                                  | `keys/tcpFile.ks` + `tcsFile.ks` + `tcwFile.ks`    | 密钥分片由构建期注入镜像（不在 git 仓内）        |
 | Spring multipart 限制                               | 上传大小上限 16MB                                                                         | application.yaml（max-file-size/max-request-size） | 仅对 multipart 生效；master 上 JSON 请求体无上限 |
 | gitleaks + SpotBugs(findsecbugs) + CheckStyle + PMD | 提交/合入前的密钥与漏洞扫描                                                               | .gitleaks.toml、spotbugs-include.xml、pom.xml 插件 | 仅排除 openlibing.pfx                            |
 
 ### 2.8 仓库结构
 
-| 目录                                                        | 用途                                                                                                                  |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| src/main/java/com/openlibing/cicd/business/controller       | REST 入口（约 23 个 Controller：流水线、构建、PR、镜像、Webhook、日志）                                               |
-| src/main/java/com/openlibing/cicd/business/client           | 第三方 API 客户端（PipelineStatusThirdPartyApiClient）                                                                |
-| src/main/java/com/openlibing/cicd/business/feign            | 内部 Feign 客户端（CodeRepoClient、FrameworkProjectClient）                                                           |
-| src/main/java/com/openlibing/cicd/business/service/impl     | 业务服务（PipelineServiceImpl、ImageServiceImpl、FileDownloadServiceImpl、WorkflowCoverageServiceImpl）               |
-| src/main/java/com/openlibing/cicd/business/listener         | RabbitMQ 消费者（webhook、pipeline、PR 事件、邮件）                                                                   |
-| src/main/java/com/openlibing/cicd/common/auth               | AuthInterceptor、WebConfig、RequestBodyFilter                                                                         |
-| src/main/java/com/openlibing/cicd/common/utils              | HwCloudClient、HwBuildClient、HwSwrClient、GitCodeContentsClient、MachineInterfaceAuthUtil、邮件工具                  |
-| src/main/java/com/openlibing/cicd/common/config             | RedisConfig、DistributedLockService、WorkflowCoverageConfig                                                           |
-| src/main/java/com/openlibing/cicd/common/job                | XxlJobHandler                                                                                                         |
-| src/main/java/com/openlibing/cicd/common/constants/pipeline | SSLCipherSuiteUtil（信任所有证书 / 校验证书 两种 HTTP 客户端工厂）                                                    |
-| src/main/resources                                          | application*.yaml（Nacos 端点、端口、multipart 限制）、Liquibase changelog、mapper XML、模板、cacerts、openlibing.pfx |
-| keys/                                                       | 加密密钥材料（part1.ks、rootSalt.ks），被打入容器镜像                                                                 |
-| Dockerfile、entrypoint.sh、start.sh、monitor.sh             | 容器构建与运行时脚本                                                                                                  |
+| 目录                                                        | 用途                                                                                                                                   |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| src/main/java/com/openlibing/cicd/business/controller       | REST 入口（约 23 个 Controller：流水线、构建、PR、镜像、Webhook、日志）                                                                |
+| src/main/java/com/openlibing/cicd/business/client           | 第三方 API 客户端（PipelineStatusThirdPartyApiClient）                                                                                 |
+| src/main/java/com/openlibing/cicd/business/feign            | 内部 Feign 客户端（CodeRepoClient、FrameworkProjectClient）                                                                            |
+| src/main/java/com/openlibing/cicd/business/service/impl     | 业务服务（PipelineServiceImpl、ImageServiceImpl、FileDownloadServiceImpl、WorkflowCoverageServiceImpl）                                |
+| src/main/java/com/openlibing/cicd/business/listener         | RabbitMQ 消费者（webhook、pipeline、PR 事件、邮件）                                                                                    |
+| src/main/java/com/openlibing/cicd/common/auth               | AuthInterceptor、WebConfig、RequestBodyFilter                                                                                          |
+| src/main/java/com/openlibing/cicd/common/utils              | HwCloudClient、HwBuildClient、HwSwrClient、GitCodeContentsClient、MachineInterfaceAuthUtil、邮件工具                                   |
+| src/main/java/com/openlibing/cicd/common/config             | RedisConfig、DistributedLockService、WorkflowCoverageConfig                                                                            |
+| src/main/java/com/openlibing/cicd/common/job                | XxlJobHandler                                                                                                                          |
+| src/main/java/com/openlibing/cicd/common/constants/pipeline | SSLCipherSuiteUtil（信任所有证书 / 校验证书 两种 HTTP 客户端工厂）                                                                     |
+| src/main/resources                                          | application*.yaml（Nacos 端点、端口、multipart 限制）、Liquibase changelog、mapper XML、模板、cacerts、openlibing.pfx                  |
+| keys/                                                       | 加密密钥分片（tcpFile.ks、tcsFile.ks、tcwFile.ks），构建期由 Dockerfile `COPY` 注入镜像（`keys/` 被 `.gitignore` 忽略，不在 git 仓内） |
+| Dockerfile、entrypoint.sh、start.sh、monitor.sh             | 容器构建与运行时脚本                                                                                                                   |
 
 ---
 
@@ -390,7 +390,7 @@ XXLJobAdmin 调用 XxlJobHandler 回调；处理器经 Feign 查询 OpenlibingFr
 | DF05 | AuthInterceptor                   | MySQL                             | SQL/JDBC       | userRoleMapper.hasPermission 权限查询                                   |
 | DF06 | OpenlibingCicdApplication         | MySQL                             | SQL/JDBC       | 流水线、构建、PR、镜像、标签的 CRUD                                     |
 | DF07 | OpenlibingCicdApplication         | Redis                             | RESP           | 分布式锁获取/释放（Redisson）                                           |
-| DF08 | OpenlibingCicdApplication         | KeyFiles                          | 本地文件读     | SecurityUtil 读取 part1.ks/rootSalt.ks 解密凭证                         |
+| DF08 | OpenlibingCicdApplication         | KeyFiles                          | 本地文件读     | SecurityUtil 读取 tcpFile.ks/tcsFile.ks/tcwFile.ks 派生工作密钥解密凭证 |
 | DF09 | OpenlibingCicdApplication         | Nacos                             | HTTPS          | 配置导入与注册中心注册                                                  |
 | DF10 | GitCode                           | APIG                              | HTTPS          | Webhook 事件推送，携带 X-GitCode-Signature-256                          |
 | DF11 | Gitee                             | APIG                              | HTTPS          | Webhook 事件推送，携带 X-Gitee-Token                                    |
@@ -457,7 +457,7 @@ flowchart LR
         EmailSender(("EmailSender")):::process
         ScheduleTaskImpl(("ScheduleTaskImpl")):::process
         XxlJobHandler(("XxlJobHandler")):::process
-        KeyFiles[("KeyFiles<br/>（part1.ks, rootSalt.ks）")]:::datastore
+        KeyFiles[("KeyFiles<br/>（tcpFile/tcsFile/tcwFile.ks）")]:::datastore
     end
 
     subgraph External["External Services（外部服务与数据存储）"]
@@ -547,7 +547,7 @@ flowchart LR
         PipelineServiceImpl(("PipelineServiceImpl")):::process
         MessageListeners(("MessageListeners<br/>（RabbitMQ 消费者）")):::process
         OutboundClients(("出站客户端<br/>（HwCloud, HwBuild, HwSwr,<br/>ThirdPartyApi, GitCodeContents, EmailSender）")):::process
-        KeyFiles[("KeyFiles<br/>（part1.ks, rootSalt.ks）")]:::datastore
+        KeyFiles[("KeyFiles<br/>（tcpFile/tcsFile/tcwFile.ks）")]:::datastore
     end
 
     subgraph External["External Services（外部服务与数据存储）"]
@@ -939,10 +939,10 @@ _未识别 Tier 1 威胁。_ 服务经内部调用（底线：Internal Network�
 
 #### Tier 3 — 纵深防御
 
-| 编号   | 类别      | 威胁                                                                                                | 前提                           | 涉及流 | 缓解方向                                            | 状态 |
-| ------ | --------- | --------------------------------------------------------------------------------------------------- | ------------------------------ | ------ | --------------------------------------------------- | ---- |
-| T08.10 | Spoofing  | 项目级 AK/SK（hw_project_info）叠加随仓密钥材料，使同时具备 DB 与密钥访问者可冒用平台身份访问华为云 | MySQL 被攻陷 + KeyFiles 被攻陷 | DF32   | 将 AK/SK 迁至密钥管理服务；轮换并最小化云凭证授权   | Open |
-| T08.11 | Tampering | 直接 MySQL 写入可改写流水线定义或 hw_project_info，将构建重定向到攻击者选定的仓库/凭证              | MySQL 被攻陷                   | DF22   | 最小权限 DB 账号；通过校验和/审计触发器检测数据篡改 | Open |
+| 编号   | 类别      | 威胁                                                                                                       | 前提                           | 涉及流 | 缓解方向                                            | 状态 |
+| ------ | --------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------ | ------ | --------------------------------------------------- | ---- |
+| T08.10 | Spoofing  | 项目级 AK/SK（hw_project_info）叠加镜像内密钥分片，使同时具备 DB 与镜像/密钥访问者可冒用平台身份访问华为云 | MySQL 被攻陷 + KeyFiles 被攻陷 | DF32   | 将 AK/SK 迁至密钥管理服务；轮换并最小化云凭证授权   | Open |
+| T08.11 | Tampering | 直接 MySQL 写入可改写流水线定义或 hw_project_info，将构建重定向到攻击者选定的仓库/凭证                     | MySQL 被攻陷                   | DF22   | 最小权限 DB 账号；通过校验和/审计触发器检测数据篡改 | Open |
 
 #### 不适用的类别
 
@@ -1150,7 +1150,7 @@ _未识别 Tier 1 威胁。_ 仅出站组件（底线：Internal Network）。
 
 | 编号  | 类别                   | 威胁                                                                                                                 | 前提             | 涉及流 | 缓解方向                                            | 状态 |
 | ----- | ---------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------- | ------ | --------------------------------------------------- | ---- |
-| T15.1 | Spoofing               | SMTP 凭证从 Nacos 配置解密（密钥随仓分发），任何内部持有者可重放并以平台名义发信                                     | Internal Network | DF38   | 凭证迁移到密钥管理器；轮换；按来源限制中继访问      | Open |
+| T15.1 | Spoofing               | SMTP 凭证从 Nacos 配置解密（密钥分片随镜像分发），任何内部持有者可重放并以平台名义发信                               | Internal Network | DF38   | 凭证迁移到密钥管理器；轮换；按来源限制中继访问      | Open |
 | T15.2 | Tampering              | 事件派生的邮件字段（PR 标题、外部贡献者提交的分支名）在模板化时未做头/内容净化，可注入邮件头并把钓鱼内容植入平台通知 | Internal Network | DF38   | 对主题与正文字段做编码/转义；拒绝所有头值中的 CR/LF | Open |
 | T15.3 | Information Disclosure | 失败通知邮件内嵌构建日志摘录，可能含构建期间打印的密钥，并群发给所有项目成员                                         | Internal Network | DF31   | 在并入邮件前用 MessageMaskUtils 脱敏构建日志摘录    | Open |
 | T15.4 | Denial of Service      | 失败事件（经 MQ）洪泛导致邮件风暴耗尽 SMTP 中继并使平台被限流                                                        | Internal Network | DF38   | 限制失败邮件频率；按流水线/时间窗口去重             | Open |
@@ -1234,24 +1234,24 @@ _未识别 Tier 3 威胁。_
 
 ### 5.18 KeyFiles
 
-**信任边界**：Application ｜ **职责**：随仓与镜像分发的加密密钥材料 `keys/part1.ks` + `keys/rootSalt.ks`，供 SecurityUtil 解密凭证 ｜ **涉及数据流**：DF08
+**信任边界**：Application ｜ **职责**：构建期注入镜像的加密密钥分片 `keys/tcpFile.ks`/`tcsFile.ks`/`tcwFile.ks`（不在 git 仓内），供 SecurityUtil 派生工作密钥解密凭证 ｜ **涉及数据流**：DF08
 
 #### Tier 1 — 直接暴露（无前提）
 
-_未识别 Tier 1 威胁。_ 密钥材料无网络监听（底线：仓库访问需 Authenticated User）。
+_未识别 Tier 1 威胁。_ 密钥分片无网络监听（底线：需镜像仓库或宿主访问）。
 
 #### Tier 2 — 条件风险
 
-| 编号  | 类别                   | 威胁                                                                                                                        | 前提               | 涉及流 | 缓解方向                                                                | 状态 |
-| ----- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------ | ----------------------------------------------------------------------- | ---- |
-| T18.1 | Tampering              | 密钥文件提交进仓库并固化进镜像：任何具仓库写权限者可替换它们，静默破坏或重定向所有部署的凭证解密                            | Authenticated User | DF08   | 从仓库移除密钥；部署时以 K8s Secrets/vault 分发；启动时哈希固定密钥文件 | Open |
-| T18.2 | Information Disclosure | 同一随仓密钥材料使任何仓库成员/镜像持有者可解密以其加密的全部凭证（Redis、SMTP、AK/SK），使机密性塌缩为"任何有仓库读权限者" | Authenticated User | DF08   | 迁移到仓库/镜像外的按环境密钥管理；轮换所有受影响凭证                   | Open |
+| 编号  | 类别                   | 威胁                                                                                                                       | 前提                   | 涉及流 | 缓解方向                                                               | 状态 |
+| ----- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ------ | ---------------------------------------------------------------------- | ---- |
+| T18.1 | Tampering              | 密钥分片于构建期注入镜像：任何可替换构建输入或持有镜像仓库写权限者可替换分片，静默破坏或重定向所有部署的凭证解密           | 构建输入/镜像仓库访问  | DF08   | 镜像不含密钥、改运行时挂载；构建输入完整性校验；启动时哈希固定密钥分片 | Open |
+| T18.2 | Information Disclosure | 同一镜像内密钥分片使任何镜像获取者可提取分片，配合 Nacos `security.part1` 还原工作密钥并解密全部凭证（Redis、SMTP、AK/SK） | 镜像仓库凭证/Host 访问 | DF08   | 迁移到镜像外的按环境密钥管理（K8s Secret/加密机）；轮换所有受影响凭证  | Open |
 
 #### Tier 3 — 纵深防御
 
-| 编号  | 类别              | 威胁                                                                                       | 前提         | 涉及流 | 缓解方向                                             | 状态 |
-| ----- | ----------------- | ------------------------------------------------------------------------------------------ | ------------ | ------ | ---------------------------------------------------- | ---- |
-| T18.3 | Denial of Service | 运行时损坏或删除密钥文件会阻断 SecurityUtil 解密，导致服务启动失败及所有依赖凭证的连接中断 | Host/OS 访问 | DF08   | 启动时校验密钥文件（校验和）；快速失败并给出清晰诊断 | Open |
+| 编号  | 类别              | 威胁                                                                                               | 前提         | 涉及流 | 缓解方向                                             | 状态 |
+| ----- | ----------------- | -------------------------------------------------------------------------------------------------- | ------------ | ------ | ---------------------------------------------------- | ---- |
+| T18.3 | Denial of Service | 运行时损坏或删除密钥分片会阻断 SecurityUtil 派生工作密钥，导致服务启动失败及所有依赖凭证的连接中断 | Host/OS 访问 | DF08   | 启动时校验密钥分片（校验和）；快速失败并给出清晰诊断 | Open |
 
 #### 不适用的类别
 
@@ -1274,12 +1274,12 @@ _未识别 Tier 1 威胁。_ 数据库仅限内网（底线：Internal Network�
 
 #### Tier 2 — 条件风险
 
-| 编号  | 类别                   | 威胁                                                                                                                              | 前提               | 涉及流 | 缓解方向                                                   | 状态 |
-| ----- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------ | ---------------------------------------------------------- | ---- |
-| T19.1 | Tampering              | MyBatis mapper XML 中任何 `${}` 插值都会让搜索/过滤字段操纵 SQL（需核查 mapper 文件；基线中 SpotBugs 已标记 XML 注入形态）        | Authenticated User | DF06   | 审计所有 mapper XML 的 `${}` 用法；改为 `#{}` 参数绑定     | Open |
-| T19.2 | Repudiation            | 业务表对破坏性操作（删除流水线/镜像）缺乏仅追加的审计轨迹，事后无法归因                                                           | Internal Network   | DF06   | 为破坏性操作增加操作历史表                                 | Open |
-| T19.3 | Information Disclosure | hw_project_info 存有项目级 AK/SK、user_role_info 存有角色授权：单次数据库泄露即暴露所有项目云凭证（以随仓密钥加密，故实际可恢复） | Internal Network   | DF22   | 云凭证迁移到密钥管理器；轮换；使用不随仓分发的专用加密密钥 | Open |
-| T19.4 | Denial of Service      | 慢/锁查询导致连接池耗尽（每请求权限查询、未分批清理）使整个服务降级                                                               | Internal Network   | DF05   | 查询超时、连接池上限、慢查询告警                           | Open |
+| 编号  | 类别                   | 威胁                                                                                                                                                             | 前提               | 涉及流 | 缓解方向                                                          | 状态 |
+| ----- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------ | ----------------------------------------------------------------- | ---- |
+| T19.1 | Tampering              | MyBatis mapper XML 中任何 `${}` 插值都会让搜索/过滤字段操纵 SQL（需核查 mapper 文件；基线中 SpotBugs 已标记 XML 注入形态）                                       | Authenticated User | DF06   | 审计所有 mapper XML 的 `${}` 用法；改为 `#{}` 参数绑定            | Open |
+| T19.2 | Repudiation            | 业务表对破坏性操作（删除流水线/镜像）缺乏仅追加的审计轨迹，事后无法归因                                                                                          | Internal Network   | DF06   | 为破坏性操作增加操作历史表                                        | Open |
+| T19.3 | Information Disclosure | hw_project_info 存有项目级 AK/SK、user_role_info 存有角色授权：单次数据库泄露即暴露所有项目云凭证（以镜像内密钥分片派生的密钥加密，配合镜像与 Nacos 配置可恢复） | Internal Network   | DF22   | 云凭证迁移到密钥管理器；轮换；使用不随镜像/仓库分发的专用加密密钥 | Open |
+| T19.4 | Denial of Service      | 慢/锁查询导致连接池耗尽（每请求权限查询、未分批清理）使整个服务降级                                                                                              | Internal Network   | DF05   | 查询超时、连接池上限、慢查询告警                                  | Open |
 
 #### Tier 3 — 纵深防御
 
@@ -1307,7 +1307,7 @@ _未识别 Tier 1 威胁。_ Redis 仅限内网（底线：Internal Network）�
 
 | 编号  | 类别                   | 威胁                                                                                 | 前提             | 涉及流 | 缓解方向                                             | 状态 |
 | ----- | ---------------------- | ------------------------------------------------------------------------------------ | ---------------- | ------ | ---------------------------------------------------- | ---- |
-| T20.1 | Spoofing               | Redis 密码可被任何持有随仓密钥材料者解密，内部攻击者由此完全冒充服务访问 Redis       | Internal Network | DF07   | 密钥管理器凭证；网络 ACL 限制 Redis 仅服务可达       | Open |
+| T20.1 | Spoofing               | Redis 密码可被任何持有镜像内密钥分片者解密，内部攻击者由此完全冒充服务访问 Redis     | Internal Network | DF07   | 密钥管理器凭证；网络 ACL 限制 Redis 仅服务可达       | Open |
 | T20.2 | Tampering              | 具 Redis 访问权的攻击者可删除/改写其他租户的锁键，释放在途流水线锁并促成重复并发运行 | Internal Network | DF07   | 锁值携带所有者令牌并在释放时校验；键前缀 ACL         | Open |
 | T20.3 | Information Disclosure | 键空间枚举向任何内部 Redis 会话暴露流水线标识与操作模式                              | Internal Network | DF07   | rename-command 加固与 ACL 用户；避免键名携带敏感数据 | Open |
 | T20.4 | Denial of Service      | 键洪泛/驱逐压力或 FLUSH 类命令（若 ACL 允许）可清空锁状态并使所有流水线操作停摆      | Internal Network | DF07   | 以 rename/ACL 禁用危险命令；内存上限与驱逐监控       | Open |
@@ -1624,7 +1624,7 @@ _未识别 Tier 1 威胁。_ 中继要求账号凭证。
 
 | 编号  | 类别                   | 威胁                                                                         | 前提             | 涉及流 | 缓解方向                             | 状态 |
 | ----- | ---------------------- | ---------------------------------------------------------------------------- | ---------------- | ------ | ------------------------------------ | ---- |
-| T30.1 | Spoofing               | SMTP 凭证可由随仓密钥材料解密：内部攻击者向中继鉴权并以平台名义发信          | Internal Network | DF38   | 密钥管理器凭证、轮换与中继侧来源限制 | Open |
+| T30.1 | Spoofing               | SMTP 凭证可由镜像内密钥分片解密：内部攻击者向中继鉴权并以平台名义发信        | Internal Network | DF38   | 密钥管理器凭证、轮换与中继侧来源限制 | Open |
 | T30.2 | Tampering              | 若中继侧未强制 TLS，未鉴权的 SMTP 拦截使网络位置攻击者可篡改传输中的通知内容 | Internal Network | DF38   | 强制 SMTP over TLS；校验中继证书     | Open |
 | T30.3 | Information Disclosure | 窃听中继流量暴露通知中的失败详情与构建日志摘录                               | Internal Network | DF38   | 到中继的 TLS；最小化邮件中的敏感内容 | Open |
 | T30.4 | Denial of Service      | 经中继的邮件洪泛耗尽其队列并使平台发信方被限流或拉黑                         | Internal Network | DF38   | 发送侧限速与按项目邮件配额           | Open |
@@ -1770,24 +1770,14 @@ _未识别 Tier 3 威胁。_
 - **修复建议**：全部出站客户端改用校验证书与主机名的实现。修复已在 `fix/security-vuln-cicd-v2` 分支，**尚未合入 master**；合入后需验证华为云 API（流水线列表、镜像构建）连通性。
 - **验证方式**：自建 MITM 代理场景下握手失败（快速失败）；正常出站调用成功。
 
-#### FIND-10 密钥材料随仓库与镜像分发
-
-- **关联威胁**：T18.1、T18.2、T19.3、T20.1、T30.1、T15.1
-- **CVSS 4.0**：`CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N` → **9.3（Critical）**
-- **CWE**：[CWE-321](https://cwe.mitre.org/data/definitions/321.html) Use of Hard-coded Cryptographic Key、[CWE-798](https://cwe.mitre.org/data/definitions/798.html) Use of Hard-coded Credentials
-- **OWASP:2025**：A02:2025 Security Misconfiguration、A04:2025 Cryptographic Failures
-- **证据**：`keys/part1.ks` 与 `keys/rootSalt.ks` 提交进仓库并固化进容器镜像，供 `SecurityUtil` 解密 Redis/SMTP/AK_SK 等全部凭证；任何具仓库读权限者即可解密全部受保护凭证，机密性塌缩为"任何有仓库读权限者"。
-- **修复建议**：从仓库与镜像移除密钥材料；改用部署期注入的 K8s Secrets/vault；轮换所有以该密钥加密的凭证；启动时对密钥文件做校验和固定。
-- **验证方式**：仓库与镜像中不再包含密钥文件；凭证解密在部署期注入密钥后仍正常。
-
-#### FIND-11 云 AK/SK 集中存库且以随仓密钥加密
+#### FIND-11 云 AK/SK 集中存库且以镜像内密钥加密
 
 - **关联威胁**：T19.3、T08.10、T27.2
 - **CVSS 4.0**：`CVSS:4.0/AV:A/AC:L/AT:P/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N` → **8.7（High）**
 - **CWE**：[CWE-522](https://cwe.mitre.org/data/definitions/522.html) Insufficiently Protected Credentials
 - **OWASP:2025**：A04:2025 Cryptographic Failures
-- **证据**：`hw_project_info` 表集中存有各项目 AK/SK，且以随仓密钥（见 FIND-10）加密，故数据库泄露即等同全项目云凭证泄露。
-- **修复建议**：将云凭证迁移到密钥管理服务（按项目隔离）；使用不随仓分发的专用加密密钥；轮换现有 AK/SK 并按项目最小权限收紧 IAM 策略。
+- **证据**：`hw_project_info` 表集中存有各项目 AK/SK，且以镜像内密钥分片派生的工作密钥（见 FIND-10）加密，故数据库泄露叠加镜像获取即等同全项目云凭证泄露。
+- **修复建议**：将云凭证迁移到密钥管理服务（按项目隔离）；使用不随镜像/仓库分发的专用加密密钥；轮换现有 AK/SK 并按项目最小权限收紧 IAM 策略。
 - **验证方式**：数据库内不再直接持有可恢复的明文凭证；云调用经密钥管理服务获取短期凭证成功。
 
 #### FIND-12 敏感信息写入日志与应用日志
@@ -1866,7 +1856,7 @@ _未识别 Tier 3 威胁。_
 - **CVSS 4.0**：`CVSS:4.0/AV:A/AC:L/AT:P/PR:L/UI:N/VC:L/VI:H/VA:H/SC:N/SI:N/SA:N` → **7.6（High）**
 - **CWE**：[CWE-284](https://cwe.mitre.org/data/definitions/284.html) Improper Access Control
 - **OWASP:2025**：A01:2025 Broken Access Control
-- **证据**：Redis 密码可由随仓密钥解密（见 FIND-10）；锁释放时未见基于所有者令牌的校验；危险命令（FLUSH 类）未通过 rename/ACL 禁用，键空间可被枚举。
+- **证据**：Redis 密码可由镜像内密钥分片解密（见 FIND-10）；锁释放时未见基于所有者令牌的校验；危险命令（FLUSH 类）未通过 rename/ACL 禁用，键空间可被枚举。
 - **修复建议**：凭证迁密钥管理器并以网络 ACL 限制 Redis 仅服务可达；锁值携带所有者令牌并在释放时校验；禁用危险命令，设置内存上限与驱逐监控。
 - **验证方式**：非持有者可删除他租户锁键的尝试失败；危险命令被禁用。
 
@@ -1953,14 +1943,26 @@ _未识别 Tier 3 威胁。_
 
 ### 6.3 Tier 3 发现（需多重前置或基础设施访问）
 
+> **FIND-10 分级调整**：原列于 6.2（Tier 2，CVSS 9.3 Critical）。经多仓核实：`keys/` 目录已被 `.gitignore` 忽略且**从未被 git 跟踪**，生产代码不读取 `part1.ks/rootSalt.ks`（实际分片文件名为 `tcpFile/tcsFile/tcwFile.ks`，构建期经 `Dockerfile COPY` 注入镜像）——"随仓分发"前提不成立，真实暴露面是镜像仓库访问控制（高前提），故下调至 Tier 3（CVSS 5.7 Medium）。详见 9.4 Finding Overrides。
+
+#### FIND-10 密钥材料随镜像分发
+
+- **关联威胁**：T18.1、T18.2、T19.3、T20.1、T30.1、T15.1
+- **CVSS 4.0**：`CVSS:4.0/AV:L/AC:H/AT:N/PR:H/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H` → **5.7（Medium）**
+- **CWE**：[CWE-798](https://cwe.mitre.org/data/definitions/798.html) Use of Hard-coded Credentials
+- **OWASP:2025**：A02:2025 Security Misconfiguration、A04:2025 Cryptographic Failures
+- **证据**：三段式密钥分片 `keys/tcpFile.ks`、`keys/tcsFile.ks`、`keys/tcwFile.ks` 由构建期 `Dockerfile:39-41` `COPY` 注入容器镜像（`keys/` 被 `.gitignore` 忽略，**从未被 git 跟踪**；运行时由 `openlibing-common` `ReadFileUtils` 读取），`part1` 来自 Nacos 配置 `security.part1`、`rootSalt` 来自环境变量/系统属性。任何可获取镜像者即可提取分片，配合 `part1` 还原工作密钥、解密全部受保护凭证；暴露面为镜像仓库访问控制（非仓库读权限）。
+- **修复建议**：密钥分片改运行时挂载（K8s Secret/加密机），镜像不含 `keys/`；镜像仓库最小化拉取权限；轮换所有以该密钥加密的凭证；启动时对分片做校验和固定。
+- **验证方式**：解包镜像确认无 `keys/`；凭证解密在运行时挂载密钥后仍正常。
+
 #### FIND-28 密钥文件运行时失效导致服务不可用
 
 - **关联威胁**：T18.3
 - **CVSS 4.0**：`CVSS:4.0/AV:L/AC:H/AT:P/PR:H/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N` → **4.6（Medium）**
 - **CWE**：[CWE-754](https://cwe.mitre.org/data/definitions/754.html) Improper Check for Unusual or Exceptional Conditions
 - **OWASP:2025**：A10:2025 Mishandling of Exceptional Conditions
-- **证据**：运行时损坏/删除 `keys/part1.ks`、`keys/rootSalt.ks` 会阻断 `SecurityUtil` 解密，导致启动失败及所有依赖凭证的连接中断。
-- **修复建议**：启动时校验密钥文件（校验和）并快速失败、给出清晰诊断；密钥改由部署期注入后该风险随 FIND-10 一并缓解。
+- **证据**：运行时损坏/删除 `keys/tcpFile.ks`、`keys/tcsFile.ks`、`keys/tcwFile.ks` 会阻断 `SecurityUtil` 派生工作密钥，导致启动失败及所有依赖凭证的连接中断。
+- **修复建议**：启动时校验密钥分片（校验和）并快速失败、给出清晰诊断；密钥改由运行时挂载后该风险随 FIND-10 一并缓解。
 - **验证方式**：缺失/损坏密钥时启动明确失败并输出可诊断信息。
 
 #### FIND-29 定时清理任务的破坏性硬删除
@@ -2020,32 +2022,32 @@ _未识别 Tier 3 威胁。_
 
 ### 7.2 优先处置清单
 
-| 优先级 | 行动                                                                                           | 关联发现                                    | 责任方      | 复杂度             |
-| ------ | ---------------------------------------------------------------------------------------------- | ------------------------------------------- | ----------- | ------------------ |
-| P0     | 合入 `fix/security-vuln-cicd-v2`（出站 TLS 校验、恒定时间签名比较、JSON 请求体上限、日志脱敏） | FIND-02、FIND-04、FIND-09、FIND-12          | 后端        | 低（已开发待合入） |
-| P0     | 从仓库/镜像移除并轮换密钥材料，凭证迁移密钥管理器                                              | FIND-10、FIND-11、FIND-19、FIND-21、FIND-25 | 后端 + 运维 | 中                 |
-| P0     | 为机器接口/内部端点/RabbitMQ 消费/XXL-Job 回调引入服务间鉴权                                   | FIND-06、FIND-18、FIND-26、FIND-27          | 后端        | 中                 |
-| P0     | 身份仅接受网关注入的签名参数；以网络策略限制 8077 仅网关入站                                   | FIND-07、FIND-08、FIND-22、FIND-23          | 后端 + 平台 | 中                 |
-| P1     | APIG 为 webhook 路由启用签名/来源白名单/限流/大小上限                                          | FIND-01、FIND-16                            | 平台        | 中                 |
-| P1     | 触发路径（流水线/导出/邮件/MQ/Webhook）引入限流与配额                                          | FIND-16                                     | 后端        | 中                 |
-| P1     | 为破坏性操作与状态迁移写入追加式审计                                                           | FIND-17                                     | 后端        | 中                 |
-| P1     | 构建参数白名单化 + 自动触发限制到受保护分支 + 产物完整性校验                                   | FIND-14                                     | 后端        | 中                 |
-| P1     | 日志/邮件脱敏与邮件头 CRLF 清洗                                                                | FIND-12、FIND-13、FIND-24                   | 后端        | 低                 |
-| P2     | Redis 分布式锁所有者校验与危险命令加固                                                         | FIND-19                                     | 后端        | 低                 |
-| P2     | 请求体/日志读取/仓库内容拉取的大小与分页上限                                                   | FIND-15                                     | 后端        | 低                 |
-| P2     | 多区域兜底与降级运行设计                                                                       | FIND-30                                     | 架构 + 运维 | 高                 |
-| P2     | 配置校验（URL 规范化/方法校验）与权限矩阵审计                                                  | FIND-31                                     | 平台 + 后端 | 中                 |
-| P2     | MyBatis mapper `${}` 全量审计并改为 `#{}`                                                      | FIND-20                                     | 后端        | 低                 |
-| P3     | 密钥文件启动校验和与快速失败                                                                   | FIND-28                                     | 后端        | 低                 |
-| P3     | 清理任务分批执行并提供 dry-run/报表模式                                                        | FIND-29                                     | 后端        | 低                 |
-| P3     | 关键表篡改检测（校验和/审计触发器）                                                            | FIND-32                                     | 后端 + 运维 | 中                 |
+| 优先级 | 行动                                                                                           | 关联发现                           | 责任方      | 复杂度             |
+| ------ | ---------------------------------------------------------------------------------------------- | ---------------------------------- | ----------- | ------------------ |
+| P0     | 合入 `fix/security-vuln-cicd-v2`（出站 TLS 校验、恒定时间签名比较、JSON 请求体上限、日志脱敏） | FIND-02、FIND-04、FIND-09、FIND-12 | 后端        | 低（已开发待合入） |
+| P0     | 凭证迁移密钥管理器并轮换受影响凭证                                                             | FIND-11、FIND-19、FIND-21、FIND-25 | 后端 + 运维 | 中                 |
+| P0     | 为机器接口/内部端点/RabbitMQ 消费/XXL-Job 回调引入服务间鉴权                                   | FIND-06、FIND-18、FIND-26、FIND-27 | 后端        | 中                 |
+| P0     | 身份仅接受网关注入的签名参数；以网络策略限制 8077 仅网关入站                                   | FIND-07、FIND-08、FIND-22、FIND-23 | 后端 + 平台 | 中                 |
+| P1     | APIG 为 webhook 路由启用签名/来源白名单/限流/大小上限                                          | FIND-01、FIND-16                   | 平台        | 中                 |
+| P1     | 触发路径（流水线/导出/邮件/MQ/Webhook）引入限流与配额                                          | FIND-16                            | 后端        | 中                 |
+| P1     | 为破坏性操作与状态迁移写入追加式审计                                                           | FIND-17                            | 后端        | 中                 |
+| P1     | 构建参数白名单化 + 自动触发限制到受保护分支 + 产物完整性校验                                   | FIND-14                            | 后端        | 中                 |
+| P1     | 日志/邮件脱敏与邮件头 CRLF 清洗                                                                | FIND-12、FIND-13、FIND-24          | 后端        | 低                 |
+| P2     | Redis 分布式锁所有者校验与危险命令加固                                                         | FIND-19                            | 后端        | 低                 |
+| P2     | 请求体/日志读取/仓库内容拉取的大小与分页上限                                                   | FIND-15                            | 后端        | 低                 |
+| P2     | 多区域兜底与降级运行设计                                                                       | FIND-30                            | 架构 + 运维 | 高                 |
+| P2     | 配置校验（URL 规范化/方法校验）与权限矩阵审计                                                  | FIND-31                            | 平台 + 后端 | 中                 |
+| P2     | MyBatis mapper `${}` 全量审计并改为 `#{}`                                                      | FIND-20                            | 后端        | 低                 |
+| P3     | 密钥分片启动校验和与快速失败                                                                   | FIND-28                            | 后端        | 低                 |
+| P3     | 密钥分片改运行时挂载，镜像不含 keys/                                                           | FIND-10                            | 运维        | 高                 |
+| P3     | 清理任务分批执行并提供 dry-run/报表模式                                                        | FIND-29                            | 后端        | 低                 |
+| P3     | 关键表篡改检测（校验和/审计触发器）                                                            | FIND-32                            | 后端 + 运维 | 中                 |
 
 ### 7.3 Quick Wins（低投入高收益）
 
 | 发现                               | 标题                                                | 为何 Quick                                                                                       |
 | ---------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | FIND-09、FIND-02、FIND-04、FIND-12 | 出站 TLS 校验 / 恒定时间比较 / JSON 上限 / 日志脱敏 | 代码已开发完成，仅待 `fix/security-vuln-cicd-v2` 合入 master 并回归验证                          |
-| FIND-10                            | 密钥材料随仓分发                                    | 移除 `keys/*.ks` 并轮换受影响凭证，单点改动即根除"任何仓库读权限者解密全部凭证"                  |
 | FIND-12                            | 敏感信息写日志                                      | 为 4 个 Lombok `@Data` 类补 `@ToString.Exclude` 并把 `access_token` 从 URL 移到 header，改动面小 |
 | FIND-13、FIND-24                   | CRLF 日志/邮件注入                                  | 统一 CR/LF 净化工具，单点收敛                                                                    |
 | FIND-07                            | 客户端可控身份参数                                  | 服务端改为仅信任网关注入身份（忽略客户端 userId），单点消除参数污染越权                          |
@@ -2221,20 +2223,20 @@ _未识别 Tier 3 威胁。_
 
 ### 9.3 Needs Verification（待核实项）
 
-| 项                   | 问题                                                        | 需核查                                       | 不确定性来源                                            |
-| -------------------- | ----------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------- |
-| FIND-20 MyBatis 注入 | mapper XML 中是否实际存在 `${}` 字符串插值？                | 全仓检索 mapper XML 的 `${}` 用法            | 基线 SpotBugs 已标记 XML 注入形态，但未逐一确认可利用性 |
-| FIND-01 APIG 路由    | APIG 是否将 `/apig/webhook/**` 暴露到公网且未配置签名？     | 核对 APIG 路由与策略配置（网关配置不在本仓） | 决定 FIND-01 是否可由公网直接触达                       |
-| FIND-08 网络分段     | 8077 端口的内网可达范围与网络策略现状                       | 确认集群 NetworkPolicy/VPC 隔离              | 影响 FIND-06/07/08 的实际前置条件等级                   |
-| FIND-10 密钥下发     | `keys/part1.ks`、`keys/rootSalt.ks` 在生产是否确由镜像携带  | 确认生产部署中密钥文件的下发方式             | 决定 FIND-10 的实际利用难度                             |
-| FIND-12 日志可见性   | 生产日志的访问范围与保留策略                                | 确认日志采集/存储的访问控制                  | 影响 FIND-12 的影响面判定                               |
-| 修复合入状态         | `fix/security-vuln-cicd-v2` 分支的多项修复是否已合入 master | 核对分支与 master 的差异                     | 决定 FIND-02/04/09/12 当前是否仍为 Open                 |
+| 项                   | 问题                                                            | 需核查                                       | 不确定性来源                                            |
+| -------------------- | --------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------- |
+| FIND-20 MyBatis 注入 | mapper XML 中是否实际存在 `${}` 字符串插值？                    | 全仓检索 mapper XML 的 `${}` 用法            | 基线 SpotBugs 已标记 XML 注入形态，但未逐一确认可利用性 |
+| FIND-01 APIG 路由    | APIG 是否将 `/apig/webhook/**` 暴露到公网且未配置签名？         | 核对 APIG 路由与策略配置（网关配置不在本仓） | 决定 FIND-01 是否可由公网直接触达                       |
+| FIND-08 网络分段     | 8077 端口的内网可达范围与网络策略现状                           | 确认集群 NetworkPolicy/VPC 隔离              | 影响 FIND-06/07/08 的实际前置条件等级                   |
+| FIND-10 镜像密钥     | 生产镜像是否确含 `keys/tcpFile.ks` 等分片、镜像仓库拉取权限现状 | 确认生产镜像内容与镜像仓库 ACL               | 决定 FIND-10 的实际利用难度                             |
+| FIND-12 日志可见性   | 生产日志的访问范围与保留策略                                    | 确认日志采集/存储的访问控制                  | 影响 FIND-12 的影响面判定                               |
+| 修复合入状态         | `fix/security-vuln-cicd-v2` 分支的多项修复是否已合入 master     | 核对分支与 master 的差异                     | 决定 FIND-02/04/09/12 当前是否仍为 Open                 |
 
 ### 9.4 Finding Overrides
 
-| 发现 | 原始分级 | 覆盖 | 理由                               | 新状态 |
-| ---- | -------- | ---- | ---------------------------------- | ------ |
-| —    | —        | —    | 未应用覆盖，评审后如需调整在此更新 | —      |
+| 发现    | 原始分级                                                        | 覆盖                                                    | 理由                                                                                                                                                                                                                                | 新状态         |
+| ------- | --------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| FIND-10 | Tier 2 · CVSS 9.3（Critical），标题「密钥材料随仓库与镜像分发」 | Tier 3 · CVSS 5.7（Medium），标题「密钥材料随镜像分发」 | 多仓核实：`keys/` 被 `.gitignore` 忽略且从未被 git 跟踪，生产代码不读取 `part1.ks/rootSalt.ks`（实际分片为 tcpFile/tcsFile/tcwFile.ks，构建期经 Dockerfile 注入镜像），"随仓分发"前提不成立，真实暴露面为镜像仓库访问控制（高前提） | 降级并移入 6.3 |
 
 ### 9.5 分析局限
 
