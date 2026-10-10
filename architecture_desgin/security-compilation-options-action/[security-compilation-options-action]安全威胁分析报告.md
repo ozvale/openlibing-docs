@@ -32,12 +32,12 @@
 
 ### 1.2 关键安全风险表
 
-| 严重级别 | 数量 | 关键问题 |
-|---------|------|---------|
-| **严重（Critical）** | 1 | PR 代码在自托管执行机上执行（`pull_request_target` + `allow-unsafe-pr-checkout` + `npm install`） |
-| **高危（High/Important）** | 5 | CI 流水线可变引用与超范围 OIDC 授权、Python 依赖无哈希校验、身份可被环境变量与未校验 URL 伪造、合规结果全链路可篡改、合规门禁可被绕过 |
-| **中危（Medium/Moderate）** | 8 | 解压/递归无资源预算、凭证与内部路径写入 CI 日志、外部输入直达特权文件/URL/子进程操作、明文 HTTP 默认值与无证书固定、出站请求无超时与子进程输出无上限、Windows 可预测世界可写临时目录、打包内 TLS 校验旁路与可变 `fetch`、分发两份重复扫描脚本且无完整性校验 |
-| **低危（Low）** | 1 | 已有防御控制（归档穿越防护、SHA 固定插件、STS 凭证脱敏）确认有效，存在残余缺口 |
+| 严重级别                    | 数量 | 关键问题                                                                                                                                                                                                                                                    |
+| --------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **严重（Critical）**        | 1    | PR 代码在自托管执行机上执行（`pull_request_target` + `allow-unsafe-pr-checkout` + `npm install`）                                                                                                                                                           |
+| **高危（High/Important）**  | 5    | CI 流水线可变引用与超范围 OIDC 授权、Python 依赖无哈希校验、身份可被环境变量与未校验 URL 伪造、合规结果全链路可篡改、合规门禁可被绕过                                                                                                                       |
+| **中危（Medium/Moderate）** | 8    | 解压/递归无资源预算、凭证与内部路径写入 CI 日志、外部输入直达特权文件/URL/子进程操作、明文 HTTP 默认值与无证书固定、出站请求无超时与子进程输出无上限、Windows 可预测世界可写临时目录、打包内 TLS 校验旁路与可变 `fetch`、分发两份重复扫描脚本且无完整性校验 |
+| **低危（Low）**             | 1    | 已有防御控制（归档穿越防护、SHA 固定插件、STS 凭证脱敏）确认有效，存在残余缺口                                                                                                                                                                              |
 
 ### 1.3 核心结论
 
@@ -57,45 +57,45 @@
 
 ### 2.1 技术栈
 
-| 类别 | 技术 | 版本 |
-|------|------|------|
-| 语言 | JavaScript / Node.js | Node.js 16 运行时 |
-| 语言 | Python | Python 3（扫描脚本） |
-| 框架/库 | @actions/core | ^1.10.0 |
-| 框架/库 | @openlibing/huaweicloud-oidc-client | 0.0.5 |
-| 框架/库 | axios | ^1.6.0 |
-| 框架/库 | js-yaml | ^4.1.0 |
-| 框架/库 | winston | ^3.11.0 |
-| 框架/库 | pyelftools | 0.31（运行时安装） |
-| 打包 | @vercel/ncc | ^0.38.1 |
-| 打包 | adm-zip | ^0.5.16 |
-| 数据存储 | 本地文件系统 | 构建产物归档、`sec-option-result.json`、`.git/config` |
-| 基础设施 | GitCode Actions 自托管执行机 | `["self-hosted", "region=cn"]` / `region=overseas` |
-| 安全机制 | APIG 签名（SDK-HMAC-SHA256 / V11-HMAC-SHA256）、OIDC 联邦认证（华为云 STS）、HTTPS/TLS、归档路径穿越校验、gitleaks + detect-private-key pre-commit 钩子 | — |
+| 类别     | 技术                                                                                                                                                    | 版本                                                  |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| 语言     | JavaScript / Node.js                                                                                                                                    | Node.js 16 运行时                                     |
+| 语言     | Python                                                                                                                                                  | Python 3（扫描脚本）                                  |
+| 框架/库  | @actions/core                                                                                                                                           | ^1.10.0                                               |
+| 框架/库  | @openlibing/huaweicloud-oidc-client                                                                                                                     | 0.0.5                                                 |
+| 框架/库  | axios                                                                                                                                                   | ^1.6.0                                                |
+| 框架/库  | js-yaml                                                                                                                                                 | ^4.1.0                                                |
+| 框架/库  | winston                                                                                                                                                 | ^3.11.0                                               |
+| 框架/库  | pyelftools                                                                                                                                              | 0.31（运行时安装）                                    |
+| 打包     | @vercel/ncc                                                                                                                                             | ^0.38.1                                               |
+| 打包     | adm-zip                                                                                                                                                 | ^0.5.16                                               |
+| 数据存储 | 本地文件系统                                                                                                                                            | 构建产物归档、`sec-option-result.json`、`.git/config` |
+| 基础设施 | GitCode Actions 自托管执行机                                                                                                                            | `["self-hosted", "region=cn"]` / `region=overseas`    |
+| 安全机制 | APIG 签名（SDK-HMAC-SHA256 / V11-HMAC-SHA256）、OIDC 联邦认证（华为云 STS）、HTTPS/TLS、归档路径穿越校验、gitleaks + detect-private-key pre-commit 钩子 | —                                                     |
 
 > 依赖清单依据 `package.json`（`main: dist/index.js`，`engines.node >=16.0.0`）。
 
 ### 2.2 关键组件
 
-| 组件 ID | 类型 | 说明 | 源码位置 |
-|---------|------|------|---------|
-| ActionEntrypoint | Process | `run()` 入口，解析插件输入、选择认证模式、安装 Python 依赖、驱动扫描与输出 | `dist/index.js:54334` |
-| SecOptionScanner | Process | 单个产物的扫描编排器，写结果 JSON 并触发上报 | `dist/scanner.js:16` |
-| SecOptionDetector | Process | 通过 `child_process.spawn` 派生 Python 扫描脚本并解析其 JSON 输出 | `dist/detectors/SecOptionDetector.js:5` |
-| SecOptionScanScript | Process | Python ELF 扫描脚本：递归解压、ELF 解析、14 项检测 | `dist/bin/sec_option_scan.py` |
-| CicdUploader / ApigSigner | Process | 构建上报体并执行签名 HTTPS 上传 | `dist/uploaders/CicdUploader.js:16`、`:246` |
-| HuaweiCloudOIDCClient | Process | 内置 OIDC/STS 客户端：Token 获取、凭证交换、V11 签名、日志脱敏 | `dist/index.js`（打包模块 5186-5763） |
-| PreCommitWorkflow | Process | `pull_request_target` 流水线，检出 PR 代码并运行 pre-commit/ESLint | `.gitcode/workflows/pre-commit.yml` |
-| NightlyScanWorkflow | Process | 每日定时全仓 pre-commit 扫描（含 SARIF 上传） | `.gitcode/workflows/nightly-schedule-scan.yml` |
-| CodeMetricsScanWorkflow | Process | 推送触发、调用 commit-SHA 固定的第三方度量插件 | `.gitcode/workflows/code-metrics-scan.yml` |
-| BuildArtifact | Data Store | 通过 `artifact-path` 传入的 ELF 产物或归档 | 执行机本地文件 |
-| ScanResultFile | Data Store | `sec-option-result.json`（或 `output` 指定路径），承载 `summary`/`details` | 执行机本地文件 |
-| GitRepository | Data Store | 检出的工作树与 `.git/config`，用于 `gitUrl` 溯源字段 | 执行机本地文件 |
-| WorkflowAuthor | External Interactor | 编排工作流/提交 PR 的构建发布工程师 | 外部 |
-| APIGGateway | External Service | `https://apig.openlibing.com:443`，接收合规报告 | 外部服务 |
-| HuaweiCloudSTS | External Service | `https://sts.cn-southwest-2.myhuaweicloud.com`，OIDC 换证 | 外部服务 |
-| GitCodeOIDCEndpoint | External Service | Actions 运行时 OIDC 端点（`ACTIONS_ID_TOKEN_REQUEST_URL`），签发流水线 ID Token | 外部服务 |
-| PyPIMirror | External Service | `https://mirrors.aliyun.com/pypi/simple/`，安装 `pyelftools==0.31` | 外部服务 |
+| 组件 ID                   | 类型                | 说明                                                                            | 源码位置                                       |
+| ------------------------- | ------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------- |
+| ActionEntrypoint          | Process             | `run()` 入口，解析插件输入、选择认证模式、安装 Python 依赖、驱动扫描与输出      | `dist/index.js:54334`                          |
+| SecOptionScanner          | Process             | 单个产物的扫描编排器，写结果 JSON 并触发上报                                    | `dist/scanner.js:16`                           |
+| SecOptionDetector         | Process             | 通过 `child_process.spawn` 派生 Python 扫描脚本并解析其 JSON 输出               | `dist/detectors/SecOptionDetector.js:5`        |
+| SecOptionScanScript       | Process             | Python ELF 扫描脚本：递归解压、ELF 解析、14 项检测                              | `dist/bin/sec_option_scan.py`                  |
+| CicdUploader / ApigSigner | Process             | 构建上报体并执行签名 HTTPS 上传                                                 | `dist/uploaders/CicdUploader.js:16`、`:246`    |
+| HuaweiCloudOIDCClient     | Process             | 内置 OIDC/STS 客户端：Token 获取、凭证交换、V11 签名、日志脱敏                  | `dist/index.js`（打包模块 5186-5763）          |
+| PreCommitWorkflow         | Process             | `pull_request_target` 流水线，检出 PR 代码并运行 pre-commit/ESLint              | `.gitcode/workflows/pre-commit.yml`            |
+| NightlyScanWorkflow       | Process             | 每日定时全仓 pre-commit 扫描（含 SARIF 上传）                                   | `.gitcode/workflows/nightly-schedule-scan.yml` |
+| CodeMetricsScanWorkflow   | Process             | 推送触发、调用 commit-SHA 固定的第三方度量插件                                  | `.gitcode/workflows/code-metrics-scan.yml`     |
+| BuildArtifact             | Data Store          | 通过 `artifact-path` 传入的 ELF 产物或归档                                      | 执行机本地文件                                 |
+| ScanResultFile            | Data Store          | `sec-option-result.json`（或 `output` 指定路径），承载 `summary`/`details`      | 执行机本地文件                                 |
+| GitRepository             | Data Store          | 检出的工作树与 `.git/config`，用于 `gitUrl` 溯源字段                            | 执行机本地文件                                 |
+| WorkflowAuthor            | External Interactor | 编排工作流/提交 PR 的构建发布工程师                                             | 外部                                           |
+| APIGGateway               | External Service    | `https://apig.openlibing.com:443`，接收合规报告                                 | 外部服务                                       |
+| HuaweiCloudSTS            | External Service    | `https://sts.cn-southwest-2.myhuaweicloud.com`，OIDC 换证                       | 外部服务                                       |
+| GitCodeOIDCEndpoint       | External Service    | Actions 运行时 OIDC 端点（`ACTIONS_ID_TOKEN_REQUEST_URL`），签发流水线 ID Token | 外部服务                                       |
+| PyPIMirror                | External Service    | `https://mirrors.aliyun.com/pypi/simple/`，安装 `pyelftools==0.31`              | 外部服务                                       |
 
 ### 2.3 信任边界
 
@@ -245,17 +245,17 @@ flowchart LR
 
 ### 3.3 关键数据流说明
 
-| 数据流 ID | 源 → 目标 | 协议 | 数据内容 | 安全风险 |
-|-----------|-----------|------|---------|---------|
-| DF04 | WorkflowAuthor → ActionEntrypoint | 进程环境 / `INPUT_*` | 插件输入（`artifact-path`、`output`、`scan-options`、`apig-app-key`、`apig-app-secret`、`artifact-download-url`） | 环境变量可覆盖身份类输入（FIND-04、FIND-09） |
-| DF06 | ActionEntrypoint → PyPIMirror | HTTPS | `pip install --break-system-packages pyelftools==0.31` | 第三方镜像无哈希校验（FIND-03） |
-| DF07 | ActionEntrypoint → GitRepository | 本地 git / `.git/config` | `git remote get-url origin`（`gitUrl` 溯源字段） | 可变配置 + PATH 解析 `git`（FIND-05、FIND-08） |
-| DF09 | SecOptionDetector → SecOptionScanScript | `child_process.spawn` argv | 脚本路径、扫描路径、输出路径、扫描项 | argv 拼装、无 shell（FIND-09、FIND-11） |
-| DF10/DF12/DF13 | 扫描器/脚本 → ScanResultFile | 文件系统读/写 | `summary`/`details` | 结果写可预测路径后重读（FIND-05） |
-| DF11 | SecOptionScanScript → BuildArtifact | 文件系统 / 归档解压 | 递归读取目录、解压嵌套归档 | 无资源预算、Windows 临时目录（FIND-07、FIND-12） |
-| DF16 | CicdUploader → APIGGateway | HTTPS POST | 签名合规报告（OIDC V11 或 AK/SK SDK-HMAC-SHA256） | 上传体无溯源绑定、无证书固定（FIND-05、FIND-10） |
-| DF17/DF18 | HuaweiCloudOIDCClient → OIDC 端点 / STS | HTTPS | OIDC ID Token、临时凭证 | 环境变量可注入 Token、请求 URL 未校验（FIND-04） |
-| DF19 | PreCommitWorkflow → GitRepository | Git | 检出 PR 合并提交（`allow-unsafe-pr-checkout: true`） | 不受信任 PR 代码进入特权任务（FIND-01） |
+| 数据流 ID      | 源 → 目标                               | 协议                       | 数据内容                                                                                                          | 安全风险                                         |
+| -------------- | --------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| DF04           | WorkflowAuthor → ActionEntrypoint       | 进程环境 / `INPUT_*`       | 插件输入（`artifact-path`、`output`、`scan-options`、`apig-app-key`、`apig-app-secret`、`artifact-download-url`） | 环境变量可覆盖身份类输入（FIND-04、FIND-09）     |
+| DF06           | ActionEntrypoint → PyPIMirror           | HTTPS                      | `pip install --break-system-packages pyelftools==0.31`                                                            | 第三方镜像无哈希校验（FIND-03）                  |
+| DF07           | ActionEntrypoint → GitRepository        | 本地 git / `.git/config`   | `git remote get-url origin`（`gitUrl` 溯源字段）                                                                  | 可变配置 + PATH 解析 `git`（FIND-05、FIND-08）   |
+| DF09           | SecOptionDetector → SecOptionScanScript | `child_process.spawn` argv | 脚本路径、扫描路径、输出路径、扫描项                                                                              | argv 拼装、无 shell（FIND-09、FIND-11）          |
+| DF10/DF12/DF13 | 扫描器/脚本 → ScanResultFile            | 文件系统读/写              | `summary`/`details`                                                                                               | 结果写可预测路径后重读（FIND-05）                |
+| DF11           | SecOptionScanScript → BuildArtifact     | 文件系统 / 归档解压        | 递归读取目录、解压嵌套归档                                                                                        | 无资源预算、Windows 临时目录（FIND-07、FIND-12） |
+| DF16           | CicdUploader → APIGGateway              | HTTPS POST                 | 签名合规报告（OIDC V11 或 AK/SK SDK-HMAC-SHA256）                                                                 | 上传体无溯源绑定、无证书固定（FIND-05、FIND-10） |
+| DF17/DF18      | HuaweiCloudOIDCClient → OIDC 端点 / STS | HTTPS                      | OIDC ID Token、临时凭证                                                                                           | 环境变量可注入 Token、请求 URL 未校验（FIND-04） |
+| DF19           | PreCommitWorkflow → GitRepository       | Git                        | 检出 PR 合并提交（`allow-unsafe-pr-checkout: true`）                                                              | 不受信任 PR 代码进入特权任务（FIND-01）          |
 
 ---
 
@@ -263,35 +263,35 @@ flowchart LR
 
 ### 4.1 威胁等级定义
 
-| 等级 | 说明 | 前提条件 |
-|------|------|---------|
-| **Tier 1 (T1)** | 直接暴露，无需前置条件 | 攻击者可直接从网络利用（前提字段必须为 `None`） |
-| **Tier 2 (T2)** | 需要单一前置条件 | 需要认证用户、特权用户、内网或单一 `{边界} Access` |
-| **Tier 3 (T3)** | 需要高权限或多项前置条件 | 需要主机/OS 访问、管理员凭证、组件失陷或物理访问 |
+| 等级            | 说明                     | 前提条件                                           |
+| --------------- | ------------------------ | -------------------------------------------------- |
+| **Tier 1 (T1)** | 直接暴露，无需前置条件   | 攻击者可直接从网络利用（前提字段必须为 `None`）    |
+| **Tier 2 (T2)** | 需要单一前置条件         | 需要认证用户、特权用户、内网或单一 `{边界} Access` |
+| **Tier 3 (T3)** | 需要高权限或多项前置条件 | 需要主机/OS 访问、管理员凭证、组件失陷或物理访问   |
 
 > 说明：本仓部署分类为 `LOCALHOST_DESKTOP`（无入站监听），因此无任何威胁或发现的前置条件为 `None`，不存在 Tier 1 发现；`AV:N` 仅在攻击路径确实源自执行机边界之外（已认证的 CI 平台用户或出站连接被拦截）时使用。
 
 ### 4.2 威胁汇总表
 
-| 组件 | S (欺骗) | T (篡改) | R (抵赖) | I (信息泄露) | D (拒绝服务) | E (提权) | A (滥用) | 总计 | 风险 |
-|------|---------|---------|---------|-------------|-------------|---------|---------|------|------|
-| ActionEntrypoint | 1 | 1 | 0 | 1 | 1 | 1 | 1 | **6** | High |
-| SecOptionScanner | 0 | 1 | 0 | 0 | 1 | 0 | 1 | **3** | Medium |
-| SecOptionDetector | 0 | 1 | 0 | 1 | 1 | 0 | 0 | **3** | Medium |
-| SecOptionScanScript | 0 | 3 | 0 | 1 | 1 | 1 | 1 | **7** | High |
-| CicdUploader | 1 | 1 | 0 | 1 | 0 | 0 | 0 | **3** | Medium |
-| HuaweiCloudOIDCClient | 1 | 1 | 0 | 1 | 1 | 0 | 0 | **4** | High |
-| PreCommitWorkflow | 1 | 1 | 0 | 1 | 0 | 1 | 1 | **5** | Critical |
-| NightlyScanWorkflow | 1 | 1 | 0 | 0 | 0 | 1 | 0 | **3** | Medium |
-| CodeMetricsScanWorkflow | 0 | 1 | 0 | 0 | 0 | 1 | 0 | **2** | Low |
-| BuildArtifact | 0 | 2 | 0 | 0 | 0 | 0 | 0 | **2** | Medium |
-| ScanResultFile | 0 | 1 | 0 | 1 | 0 | 0 | 0 | **2** | Medium |
-| GitRepository | 0 | 1 | 0 | 1 | 0 | 0 | 0 | **2** | Medium |
-| APIGGateway | 1 | 1 | 0 | 0 | 0 | 0 | 0 | **2** | Medium |
-| HuaweiCloudSTS | 1 | 0 | 0 | 1 | 0 | 0 | 0 | **2** | Medium |
-| GitCodeOIDCEndpoint | 1 | 0 | 0 | 1 | 0 | 0 | 0 | **2** | Medium |
-| PyPIMirror | 1 | 1 | 0 | 0 | 0 | 0 | 0 | **2** | High |
-| **总计** | **9** | **17** | **0** | **10** | **5** | **5** | **4** | **50** | |
+| 组件                    | S (欺骗) | T (篡改) | R (抵赖) | I (信息泄露) | D (拒绝服务) | E (提权) | A (滥用) | 总计   | 风险     |
+| ----------------------- | -------- | -------- | -------- | ------------ | ------------ | -------- | -------- | ------ | -------- |
+| ActionEntrypoint        | 1        | 1        | 0        | 1            | 1            | 1        | 1        | **6**  | High     |
+| SecOptionScanner        | 0        | 1        | 0        | 0            | 1            | 0        | 1        | **3**  | Medium   |
+| SecOptionDetector       | 0        | 1        | 0        | 1            | 1            | 0        | 0        | **3**  | Medium   |
+| SecOptionScanScript     | 0        | 3        | 0        | 1            | 1            | 1        | 1        | **7**  | High     |
+| CicdUploader            | 1        | 1        | 0        | 1            | 0            | 0        | 0        | **3**  | Medium   |
+| HuaweiCloudOIDCClient   | 1        | 1        | 0        | 1            | 1            | 0        | 0        | **4**  | High     |
+| PreCommitWorkflow       | 1        | 1        | 0        | 1            | 0            | 1        | 1        | **5**  | Critical |
+| NightlyScanWorkflow     | 1        | 1        | 0        | 0            | 0            | 1        | 0        | **3**  | Medium   |
+| CodeMetricsScanWorkflow | 0        | 1        | 0        | 0            | 0            | 1        | 0        | **2**  | Low      |
+| BuildArtifact           | 0        | 2        | 0        | 0            | 0            | 0        | 0        | **2**  | Medium   |
+| ScanResultFile          | 0        | 1        | 0        | 1            | 0            | 0        | 0        | **2**  | Medium   |
+| GitRepository           | 0        | 1        | 0        | 1            | 0            | 0        | 0        | **2**  | Medium   |
+| APIGGateway             | 1        | 1        | 0        | 0            | 0            | 0        | 0        | **2**  | Medium   |
+| HuaweiCloudSTS          | 1        | 0        | 0        | 1            | 0            | 0        | 0        | **2**  | Medium   |
+| GitCodeOIDCEndpoint     | 1        | 0        | 0        | 1            | 0            | 0        | 0        | **2**  | Medium   |
+| PyPIMirror              | 1        | 1        | 0        | 0            | 0            | 0        | 0        | **2**  | High     |
+| **总计**                | **9**    | **17**   | **0**    | **10**       | **5**        | **5**    | **4**    | **50** |          |
 
 > Repudiation（抵赖）为 0：每个组件要么自身不做安全相关决策，要么依赖平台侧审计记录。
 
@@ -301,149 +301,149 @@ flowchart LR
 
 **锚点：** `dist/index.js:54334`（`run()`）
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T01.S | S | `getInput()` 优先读取 `process.env.INPUT_*`，执行机上可预置环境变量的进程可伪造 `artifact-path`/`output`/`apig-app-key`/`apig-app-secret` | T2 | Authenticated User |
-| T01.T | T | 溯源字段来自 `execSync('git remote get-url origin')`，被劫持的 `PATH` 上 `git` 或篡改的 `.git/config` 可改写上报的 `gitUrl` | T2 | Authenticated User |
-| T01.I | I | `core.info` 打印 `artifact-path`/`gitUrl`/`pipelineName`/`runNumber`，清洗正则仅处理 `https://user@host` 形式 | T2 | Authenticated User |
-| T01.D | D | 出站 HTTP 用 `fetch` 且无 `AbortSignal`/超时，端点不响应则阻塞到 CI 级超时 | T2 | Authenticated User |
-| T01.E | E | `output` 输入与 `ATOMGIT_OUTPUT` 环境变量被直接用于 `fs.mkdirSync(recursive)` 与 `fs.writeFileSync`，可越界写入 | T2 | Authenticated User |
-| T01.A | A | `artifact-download-url` 未校验即转发后端，工作流作者可定义展示给报告消费方的下载链接 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                                                                  | Tier | 前置条件           |
+| ----- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------- | ---- | ------------------ |
+| T01.S | S      | `getInput()` 优先读取 `process.env.INPUT_*`，执行机上可预置环境变量的进程可伪造 `artifact-path`/`output`/`apig-app-key`/`apig-app-secret` | T2   | Authenticated User |
+| T01.T | T      | 溯源字段来自 `execSync('git remote get-url origin')`，被劫持的 `PATH` 上 `git` 或篡改的 `.git/config` 可改写上报的 `gitUrl`               | T2   | Authenticated User |
+| T01.I | I      | `core.info` 打印 `artifact-path`/`gitUrl`/`pipelineName`/`runNumber`，清洗正则仅处理 `https://user@host` 形式                             | T2   | Authenticated User |
+| T01.D | D      | 出站 HTTP 用 `fetch` 且无 `AbortSignal`/超时，端点不响应则阻塞到 CI 级超时                                                                | T2   | Authenticated User |
+| T01.E | E      | `output` 输入与 `ATOMGIT_OUTPUT` 环境变量被直接用于 `fs.mkdirSync(recursive)` 与 `fs.writeFileSync`，可越界写入                           | T2   | Authenticated User |
+| T01.A | A      | `artifact-download-url` 未校验即转发后端，工作流作者可定义展示给报告消费方的下载链接                                                      | T2   | Authenticated User |
 
 #### 4.3.2 SecOptionScanner
 
 **锚点：** `dist/scanner.js:16`（`SecOptionScanner`）
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T02.T | T | 结果写入可预测路径后在上报前被重新读取，同主机进程可在扫描后替换文件篡改合规率 | T2 | Local Process Access |
-| T02.D | D | 全量处理产物树且无文件数/字节/时间预算，超大产物可占满执行机直至任务被杀 | T2 | Authenticated User |
-| T02.A | A | 上报失败时仅记 `uploadInfo.success=false` 且从不使步骤失败，流水线可在无合规记录时转绿 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                               | Tier | 前置条件             |
+| ----- | ------ | -------------------------------------------------------------------------------------- | ---- | -------------------- |
+| T02.T | T      | 结果写入可预测路径后在上报前被重新读取，同主机进程可在扫描后替换文件篡改合规率         | T2   | Local Process Access |
+| T02.D | D      | 全量处理产物树且无文件数/字节/时间预算，超大产物可占满执行机直至任务被杀               | T2   | Authenticated User   |
+| T02.A | A      | 上报失败时仅记 `uploadInfo.success=false` 且从不使步骤失败，流水线可在无合规记录时转绿 | T2   | Authenticated User   |
 
 #### 4.3.3 SecOptionDetector
 
 **锚点：** `dist/detectors/SecOptionDetector.js:5`
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T03.T | T | Python argv 由调用方提供的扫描路径/输出路径/扫描项拼装；安全性仅依赖“从不使用 shell”这一未被断言的不变量 | T2 | Authenticated User |
-| T03.I | I | Python `stdout`/`stderr`（含 `traceback.print_exc` 内部路径）被原样回显到 CI 日志 | T2 | Authenticated User |
-| T03.D | D | `spawn` 无超时且两路输出累积进无界字符串，恶意产物可挂起任务并耗尽内存 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                                 | Tier | 前置条件           |
+| ----- | ------ | -------------------------------------------------------------------------------------------------------- | ---- | ------------------ |
+| T03.T | T      | Python argv 由调用方提供的扫描路径/输出路径/扫描项拼装；安全性仅依赖“从不使用 shell”这一未被断言的不变量 | T2   | Authenticated User |
+| T03.I | I      | Python `stdout`/`stderr`（含 `traceback.print_exc` 内部路径）被原样回显到 CI 日志                        | T2   | Authenticated User |
+| T03.D | D      | `spawn` 无超时且两路输出累积进无界字符串，恶意产物可挂起任务并耗尽内存                                   | T2   | Authenticated User |
 
 #### 4.3.4 SecOptionScanScript
 
 **锚点：** `dist/bin/sec_option_scan.py`
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T04.T | T | 归档条目经路径校验后解压；校验拒绝 `..`/绝对路径/盘符，但不含 Windows 尾点/尾空格、保留设备名、UNC 前缀等怪癖 | T2 | Authenticated User |
-| T04.T2 | T | `tarfile.open(...)` 与 `tf.extract(...)` 未显式传 `filter=`，采用解释器默认 `fully_trusted`，安全完全依赖手工预校验 | T2 | Authenticated User |
-| T04.I | I | 每条失败路径都向 stderr 打印产物路径与完整 traceback，JS 层转发到 CI 日志，泄露内部目录结构 | T2 | Authenticated User |
-| T04.D | D | 无解压字节数、条目数、嵌套深度或递归上限，解压炸弹/深层嵌套包可耗尽磁盘或挂起扫描 | T2 | Authenticated User |
-| T04.E | E | Windows 下创建并使用可预测的世界可写基目录 `D:\sec_option_tmp` / `C:\sec_option_tmp`，本地攻击者可预创建目录或重解析点 | T2 | Local Process Access |
-| T04.A | A | 无法判定的选项返回 `N/A` 并从分母剔除，静态/Go/strip 产物可虚高开启率 | T2 | Authenticated User |
-| T04.T3 | T | 仓内存在两份逐字节相同的扫描脚本，仅 `bin/` 副本被执行，打包无完整性校验，漂移/静默替换不可检测 | T3 | Host/OS Access |
+| ID     | STRIDE | 威胁描述                                                                                                               | Tier | 前置条件             |
+| ------ | ------ | ---------------------------------------------------------------------------------------------------------------------- | ---- | -------------------- |
+| T04.T  | T      | 归档条目经路径校验后解压；校验拒绝 `..`/绝对路径/盘符，但不含 Windows 尾点/尾空格、保留设备名、UNC 前缀等怪癖          | T2   | Authenticated User   |
+| T04.T2 | T      | `tarfile.open(...)` 与 `tf.extract(...)` 未显式传 `filter=`，采用解释器默认 `fully_trusted`，安全完全依赖手工预校验    | T2   | Authenticated User   |
+| T04.I  | I      | 每条失败路径都向 stderr 打印产物路径与完整 traceback，JS 层转发到 CI 日志，泄露内部目录结构                            | T2   | Authenticated User   |
+| T04.D  | D      | 无解压字节数、条目数、嵌套深度或递归上限，解压炸弹/深层嵌套包可耗尽磁盘或挂起扫描                                      | T2   | Authenticated User   |
+| T04.E  | E      | Windows 下创建并使用可预测的世界可写基目录 `D:\sec_option_tmp` / `C:\sec_option_tmp`，本地攻击者可预创建目录或重解析点 | T2   | Local Process Access |
+| T04.A  | A      | 无法判定的选项返回 `N/A` 并从分母剔除，静态/Go/strip 产物可虚高开启率                                                  | T2   | Authenticated User   |
+| T04.T3 | T      | 仓内存在两份逐字节相同的扫描脚本，仅 `bin/` 副本被执行，打包无完整性校验，漂移/静默替换不可检测                        | T3   | Host/OS Access       |
 
 #### 4.3.5 CicdUploader
 
 **锚点：** `dist/uploaders/CicdUploader.js:246`
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T05.S | S | 类默认 `baseUrl` 为 `http://localhost:8080`，省略 `cicdUrl` 的调用方将以明文 HTTP 传输签名报告 | T2 | Authenticated User |
-| T05.T | T | 上报体自身无完整性绑定，签名器对所交付 body 照签，同主机进程可先改合规数值再签名 | T2 | Authenticated User |
-| T05.I | I | 上传诊断打印 `gitUrl`/`packageName`/`pipelineRunId`/`runNumber`，AK/SK 以明文对象字段常驻进程生命周期 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                              | Tier | 前置条件           |
+| ----- | ------ | ----------------------------------------------------------------------------------------------------- | ---- | ------------------ |
+| T05.S | S      | 类默认 `baseUrl` 为 `http://localhost:8080`，省略 `cicdUrl` 的调用方将以明文 HTTP 传输签名报告        | T2   | Authenticated User |
+| T05.T | T      | 上报体自身无完整性绑定，签名器对所交付 body 照签，同主机进程可先改合规数值再签名                      | T2   | Authenticated User |
+| T05.I | I      | 上传诊断打印 `gitUrl`/`packageName`/`pipelineRunId`/`runNumber`，AK/SK 以明文对象字段常驻进程生命周期 | T2   | Authenticated User |
 
 #### 4.3.6 HuaweiCloudOIDCClient
 
 **锚点：** `dist/index.js`（打包模块，`getOidcToken` / `_assumeAgencyWithOIDC`）
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T06.S | S | 攻击者可控的 OIDC ID Token 可经 `HUAWEICLOUD_OIDC_TOKEN` 环境变量注入，客户端优先于运行时端点使用它 | T2 | Local Process Access |
-| T06.I | I | `_printTokenClaims` 在 error 级（非调试模式）打印 `iss/aud/azp/sub`，`mask()` 仅截断不完整脱敏 | T2 | Authenticated User |
-| T06.D | D | `sendRequest` 的 `fetch` 无超时且凭证缓存无有界重试，STS/OIDC 不响应可无限阻塞 | T2 | Authenticated User |
-| T06.T | T | `sendRequest` 在运行时选取 `globalThis.fetch`，进程内任意代码或失陷依赖替换全局 `fetch` 即可拦截 Token/凭证/Authorization 头 | T3 | Host/OS Access |
+| ID    | STRIDE | 威胁描述                                                                                                                     | Tier | 前置条件             |
+| ----- | ------ | ---------------------------------------------------------------------------------------------------------------------------- | ---- | -------------------- |
+| T06.S | S      | 攻击者可控的 OIDC ID Token 可经 `HUAWEICLOUD_OIDC_TOKEN` 环境变量注入，客户端优先于运行时端点使用它                          | T2   | Local Process Access |
+| T06.I | I      | `_printTokenClaims` 在 error 级（非调试模式）打印 `iss/aud/azp/sub`，`mask()` 仅截断不完整脱敏                               | T2   | Authenticated User   |
+| T06.D | D      | `sendRequest` 的 `fetch` 无超时且凭证缓存无有界重试，STS/OIDC 不响应可无限阻塞                                               | T2   | Authenticated User   |
+| T06.T | T      | `sendRequest` 在运行时选取 `globalThis.fetch`，进程内任意代码或失陷依赖替换全局 `fetch` 即可拦截 Token/凭证/Authorization 头 | T3   | Host/OS Access       |
 
 #### 4.3.7 PreCommitWorkflow
 
 **锚点：** `.gitcode/workflows/pre-commit.yml`
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T07.S | S | 流水线以共享静态 `secrets.ROBOT_TOKEN` 认证，而非绑定本次运行的短时任务级令牌 | T2 | Authenticated User |
-| T07.T | T | `pull_request_target` 结合 `allow-unsafe-pr-checkout: true` 检出 PR 代码并 `npm install`，在自托管执行机执行 PR 提供的生命周期脚本 | T2 | Authenticated User |
-| T07.I | I | 任务将插件输入暴露为 `INPUT_*` 环境变量且检出步骤已获令牌，同任务内运行的 PR 代码可读取 | T2 | Authenticated User |
-| T07.E | E | `extra_args: ${{ inputs.extra_args }}` 将表达式值直接插入插件输入 | T2 | Authenticated User |
-| T07.A | A | 后置阶段由工作流表达式推导 `ci-pipeline-passed`/`ci-pipeline-failed` 标签，修改工作流可在检查未通过时标记为通过 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                                                           | Tier | 前置条件           |
+| ----- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- | ---- | ------------------ |
+| T07.S | S      | 流水线以共享静态 `secrets.ROBOT_TOKEN` 认证，而非绑定本次运行的短时任务级令牌                                                      | T2   | Authenticated User |
+| T07.T | T      | `pull_request_target` 结合 `allow-unsafe-pr-checkout: true` 检出 PR 代码并 `npm install`，在自托管执行机执行 PR 提供的生命周期脚本 | T2   | Authenticated User |
+| T07.I | I      | 任务将插件输入暴露为 `INPUT_*` 环境变量且检出步骤已获令牌，同任务内运行的 PR 代码可读取                                            | T2   | Authenticated User |
+| T07.E | E      | `extra_args: ${{ inputs.extra_args }}` 将表达式值直接插入插件输入                                                                  | T2   | Authenticated User |
+| T07.A | A      | 后置阶段由工作流表达式推导 `ci-pipeline-passed`/`ci-pipeline-failed` 标签，修改工作流可在检查未通过时标记为通过                    | T2   | Authenticated User |
 
 #### 4.3.8 NightlyScanWorkflow
 
 **锚点：** `.gitcode/workflows/nightly-schedule-scan.yml`
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T08.S | S | 检出步骤以 `token: ${{ secrets.ROBOT_TOKEN }}`（长期共享身份）读取 `master` | T2 | Authenticated User |
-| T08.T | T | 引用可变标签的第三方插件（`pre-commit-action@v1.0.2`、`upload-sarif-action@v1.0.0`），且 `npm install` 执行生命周期脚本 | T2 | Authenticated User |
-| T08.E | E | 工作流级授予 `id-token: write`，每个步骤（含第三方插件）都可铸造 OIDC Token 并换云凭证 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                                                | Tier | 前置条件           |
+| ----- | ------ | ----------------------------------------------------------------------------------------------------------------------- | ---- | ------------------ |
+| T08.S | S      | 检出步骤以 `token: ${{ secrets.ROBOT_TOKEN }}`（长期共享身份）读取 `master`                                             | T2   | Authenticated User |
+| T08.T | T      | 引用可变标签的第三方插件（`pre-commit-action@v1.0.2`、`upload-sarif-action@v1.0.0`），且 `npm install` 执行生命周期脚本 | T2   | Authenticated User |
+| T08.E | E      | 工作流级授予 `id-token: write`，每个步骤（含第三方插件）都可铸造 OIDC Token 并换云凭证                                  | T2   | Authenticated User |
 
 #### 4.3.9 CodeMetricsScanWorkflow
 
 **锚点：** `.gitcode/workflows/code-metrics-scan.yml`
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T09.T | T | `code-metrics-action` 固定到完整 commit SHA（`117c0606...`），可防止标签重定向与仿冒——已有且正确的控制 | T2 | Authenticated User |
-| T09.E | E | 任务运行第三方插件的同时授予 `id-token: write`，失陷插件可获取联邦云凭证 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                               | Tier | 前置条件           |
+| ----- | ------ | ------------------------------------------------------------------------------------------------------ | ---- | ------------------ |
+| T09.T | T      | `code-metrics-action` 固定到完整 commit SHA（`117c0606...`），可防止标签重定向与仿冒——已有且正确的控制 | T2   | Authenticated User |
+| T09.E | E      | 任务运行第三方插件的同时授予 `id-token: write`，失陷插件可获取联邦云凭证                               | T2   | Authenticated User |
 
 #### 4.3.10 BuildArtifact
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T10.T | T | 解压前不校验产物完整性与来源，产物内容单独决定上报的合规结果 | T2 | Authenticated User |
-| T10.T2 | T | `artifact-path` 仅以 `fs.existsSync` 检查，跟随符号链接与工作区外路径 | T2 | Local Process Access |
+| ID     | STRIDE | 威胁描述                                                              | Tier | 前置条件             |
+| ------ | ------ | --------------------------------------------------------------------- | ---- | -------------------- |
+| T10.T  | T      | 解压前不校验产物完整性与来源，产物内容单独决定上报的合规结果          | T2   | Authenticated User   |
+| T10.T2 | T      | `artifact-path` 仅以 `fs.existsSync` 检查，跟随符号链接与工作区外路径 | T2   | Local Process Access |
 
 #### 4.3.11 ScanResultFile
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T11.T | T | 结果路径可预测且写后被重读，同主机进程可预创建或替换以伪造合规记录 | T2 | Local Process Access |
-| T11.I | I | 结果文件记录包内相对路径且以默认（可读）权限创建于工作区 | T2 | Local Process Access |
+| ID    | STRIDE | 威胁描述                                                           | Tier | 前置条件             |
+| ----- | ------ | ------------------------------------------------------------------ | ---- | -------------------- |
+| T11.T | T      | 结果路径可预测且写后被重读，同主机进程可预创建或替换以伪造合规记录 | T2   | Local Process Access |
+| T11.I | I      | 结果文件记录包内相对路径且以默认（可读）权限创建于工作区           | T2   | Local Process Access |
 
 #### 4.3.12 GitRepository
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T12.T | T | 远端 URL 从可变 `.git/config` 读取并作为溯源提交，篡改配置可改写合规记录归属 | T2 | Local Process Access |
-| T12.I | I | 远端常内嵌凭证（`https://user:token@host/...`），清洗仅去除 HTTPS userinfo，其他编码可进入日志与上报体 | T2 | Local Process Access |
+| ID    | STRIDE | 威胁描述                                                                                               | Tier | 前置条件             |
+| ----- | ------ | ------------------------------------------------------------------------------------------------------ | ---- | -------------------- |
+| T12.T | T      | 远端 URL 从可变 `.git/config` 读取并作为溯源提交，篡改配置可改写合规记录归属                           | T2   | Local Process Access |
+| T12.I | I      | 远端常内嵌凭证（`https://user:token@host/...`），清洗仅去除 HTTPS userinfo，其他编码可进入日志与上报体 | T2   | Local Process Access |
 
 #### 4.3.13 APIGGateway
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T13.S | S | 网关身份仅依赖 TLS、无证书固定，执行机级 CA 或代理失陷可让仿冒端点接收签名报告 | T2 | Authenticated User |
-| T13.T | T | 任何持有效 OIDC Token 或 AK/SK 的调用方都可提交 `gitUrl`/`packagePath` 任意的报告，伪造合规记录 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                        | Tier | 前置条件           |
+| ----- | ------ | ----------------------------------------------------------------------------------------------- | ---- | ------------------ |
+| T13.S | S      | 网关身份仅依赖 TLS、无证书固定，执行机级 CA 或代理失陷可让仿冒端点接收签名报告                  | T2   | Authenticated User |
+| T13.T | T      | 任何持有效 OIDC Token 或 AK/SK 的调用方都可提交 `gitUrl`/`packagePath` 任意的报告，伪造合规记录 | T2   | Authenticated User |
 
 #### 4.3.14 HuaweiCloudSTS
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T14.S | S | 临时凭证的可信度取决于 IAM 信任策略；`oidc:sub`/`oidc:aud` 通配过大可让非预期仓库/ref 的令牌承担委托 | T2 | Authenticated User |
-| T14.I | I | 返回的 `access_key_id`/`secret_access_key`/`security_token` 在 info 与 debug 路径均先脱敏——已有且有效的控制 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                                    | Tier | 前置条件           |
+| ----- | ------ | ----------------------------------------------------------------------------------------------------------- | ---- | ------------------ |
+| T14.S | S      | 临时凭证的可信度取决于 IAM 信任策略；`oidc:sub`/`oidc:aud` 通配过大可让非预期仓库/ref 的令牌承担委托        | T2   | Authenticated User |
+| T14.I | I      | 返回的 `access_key_id`/`secret_access_key`/`security_token` 在 info 与 debug 路径均先脱敏——已有且有效的控制 | T2   | Authenticated User |
 
 #### 4.3.15 GitCodeOIDCEndpoint
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T15.S | S | Token 请求目标来自未校验的 `ACTIONS_ID_TOKEN_REQUEST_URL`，同主机进程可重定向到返回攻击者所选 Token 的仿冒端点 | T2 | Local Process Access |
-| T15.I | I | ID Token 为 STS 接受的不记名凭证，`HUAWEICLOUD_OIDC_TOKEN` 回退使其可经环境变量提供，对子进程与崩溃转储可见 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                                       | Tier | 前置条件             |
+| ----- | ------ | -------------------------------------------------------------------------------------------------------------- | ---- | -------------------- |
+| T15.S | S      | Token 请求目标来自未校验的 `ACTIONS_ID_TOKEN_REQUEST_URL`，同主机进程可重定向到返回攻击者所选 Token 的仿冒端点 | T2   | Local Process Access |
+| T15.I | I      | ID Token 为 STS 接受的不记名凭证，`HUAWEICLOUD_OIDC_TOKEN` 回退使其可经环境变量提供，对子进程与崩溃转储可见    | T2   | Authenticated User   |
 
 #### 4.3.16 PyPIMirror
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T16.S | S | 仅依赖 TLS 信任镜像（无索引签名、无 `--require-hashes`），失陷镜像/DNS/代理可投递仿冒发行包 | T2 | Authenticated User |
-| T16.T | T | `pip install --break-system-packages pyelftools==0.31 -i ...aliyun...` 无哈希校验执行发行包安装钩子，被篡改的包可在执行机内代码执行 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                                                            | Tier | 前置条件           |
+| ----- | ------ | ----------------------------------------------------------------------------------------------------------------------------------- | ---- | ------------------ |
+| T16.S | S      | 仅依赖 TLS 信任镜像（无索引签名、无 `--require-hashes`），失陷镜像/DNS/代理可投递仿冒发行包                                         | T2   | Authenticated User |
+| T16.T | T      | `pip install --break-system-packages pyelftools==0.31 -i ...aliyun...` 无哈希校验执行发行包安装钩子，被篡改的包可在执行机内代码执行 | T2   | Authenticated User |
 
 ---
 
@@ -459,15 +459,15 @@ flowchart LR
 
 **复核结论：** ✅ 确认（核心“不受信任 PR 代码在持久共享执行机上执行”经源码逐项核实；令牌作用域机制细节见 [7.2](#72-漏洞误报复核结果) 说明）
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Critical |
-| **CVSS 4.0 评分** | 8.7 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:L/SI:L/SA:L` |
-| **CWE** | [CWE-94: Improper Control of Generation of Code ('Code Injection')](https://cwe.mitre.org/data/definitions/94.html) |
-| **OWASP** | A03:2025 – Software Supply Chain Failures |
-| **Tier** | Tier 2（Authenticated User） |
-| **修复工作量** | Medium |
+| 属性              | 值                                                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Critical                                                                                                            |
+| **CVSS 4.0 评分** | 8.7                                                                                                                 |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:L/SI:L/SA:L`                                                   |
+| **CWE**           | [CWE-94: Improper Control of Generation of Code ('Code Injection')](https://cwe.mitre.org/data/definitions/94.html) |
+| **OWASP**         | A03:2025 – Software Supply Chain Failures                                                                           |
+| **Tier**          | Tier 2（Authenticated User）                                                                                        |
+| **修复工作量**    | Medium                                                                                                              |
 
 **描述：**
 
@@ -476,6 +476,7 @@ flowchart LR
 **证据：**
 
 `.gitcode/workflows/pre-commit.yml`：
+
 - 第 8 行：`pull_request_target: ## 使用 pull_request_target 确保 PR 流水线始终读取默认分支（master）的最新配置文件`
 - 第 47 行：`ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.event.pull_request.head.sha }}`
 - 第 48 行：`allow-unsafe-pr-checkout: true # 关闭 fork PR 检出拦截，避免流水线在 fork PR 场景失败`
@@ -484,6 +485,7 @@ flowchart LR
 - 第 33 行：`token: ${{ secrets.ROBOT_TOKEN }}`（同工作流内 `pr-label-running` 任务使用长期机器人令牌）
 
 `dist/index.js:54278`（插件输入以 `INPUT_*` 形式暴露）：
+
 ```javascript
 const hyphenKey = `INPUT_${name.toUpperCase()}`;
 ```
@@ -506,15 +508,15 @@ const hyphenKey = `INPUT_${name.toUpperCase()}`;
 
 **复核结论：** ⚠️ 部分成立（可变标签引用、workflow 级 `id-token: write`、标签状态由表达式推导均确认；`extra_args` 表达式注入子项因工作流未声明 `inputs` 上下文而不成立——详见 [7.2](#72-漏洞误报复核结果)）
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Important（复核后维持；理由见 7.2） |
-| **CVSS 4.0 评分** | 8.3（原始评分，主要针对确认成立的可变引用 + 超范围 OIDC 组合） |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')](https://cwe.mitre.org/data/definitions/78.html) |
-| **OWASP** | A05:2025 – Injection |
-| **Tier** | Tier 2（Authenticated User） |
-| **修复工作量** | Medium |
+| 属性              | 值                                                                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Important（复核后维持；理由见 7.2）                                                                                                                  |
+| **CVSS 4.0 评分** | 8.3（原始评分，主要针对确认成立的可变引用 + 超范围 OIDC 组合）                                                                                       |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N`                                                                                    |
+| **CWE**           | [CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')](https://cwe.mitre.org/data/definitions/78.html) |
+| **OWASP**         | A05:2025 – Injection                                                                                                                                 |
+| **Tier**          | Tier 2（Authenticated User）                                                                                                                         |
+| **修复工作量**    | Medium                                                                                                                                               |
 
 **描述：**
 
@@ -525,15 +527,18 @@ const hyphenKey = `INPUT_${name.toUpperCase()}`;
 **证据：**
 
 `.gitcode/workflows/pre-commit.yml`：
+
 - 第 74 行：`extra_args: ${{ inputs.extra_args }}`（子项 1，值实际为空）
 - 第 87 行：`add_labels: ${{ pipeline.upstream_status == 'COMPLETED' && 'ci-pipeline-passed' || 'ci-pipeline-failed' }}`（由表达式推导标签）
 
 `.gitcode/workflows/nightly-schedule-scan.yml`：
+
 - 第 10 行：`id-token: write`（工作流级）
 - 第 47 行：`uses: openlibing/pre-commit-action@v1.0.2`（可变标签）
 - 第 55 行：`uses: openlibing/upload-sarif-action@v1.0.0`（可变标签）
 
 `.gitcode/workflows/code-metrics-scan.yml`：
+
 - 第 11 行：`id-token: write`（授予一个只运行第三方插件的任务）
 
 **修复建议：**
@@ -550,15 +555,15 @@ const hyphenKey = `INPUT_${name.toUpperCase()}`;
 
 **复核结论：** ✅ 确认
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Important |
-| **CVSS 4.0 评分** | 8.1 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:L/SI:L/SA:N` |
-| **CWE** | [CWE-494: Download of Code Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html) |
-| **OWASP** | A03:2025 – Software Supply Chain Failures |
-| **Tier** | Tier 2（Authenticated User） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Important                                                                                            |
+| **CVSS 4.0 评分** | 8.1                                                                                                  |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:L/SI:L/SA:N`                                    |
+| **CWE**           | [CWE-494: Download of Code Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html) |
+| **OWASP**         | A03:2025 – Software Supply Chain Failures                                                            |
+| **Tier**          | Tier 2（Authenticated User）                                                                         |
+| **修复工作量**    | Low                                                                                                  |
 
 **描述：**
 
@@ -567,6 +572,7 @@ const hyphenKey = `INPUT_${name.toUpperCase()}`;
 **证据：**
 
 `dist/index.js:54385-54392`：
+
 ```javascript
 const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
 const pipInstallArgs = [
@@ -577,6 +583,7 @@ try {
   core.info('Installing Python dependencies (pyelftools)...');
   execSync([pythonCmd, ...pipInstallArgs].join(' '), { stdio: 'inherit', timeout: 120000 });
 ```
+
 无 `--require-hashes`、无 `--only-binary`、无 `PIP_CONFIG_FILE` 固定。
 
 **修复建议：**
@@ -593,15 +600,15 @@ try {
 
 **复核结论：** ✅ 确认（身份输入的取值渠道经源码核实；最终换证可行性取决于外部 IAM 信任策略，见 Needs Verification）
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Important |
-| **CVSS 4.0 评分** | 7.7 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-290: Authentication Bypass by Spoofing](https://cwe.mitre.org/data/definitions/290.html) |
-| **OWASP** | A07:2025 – Authentication Failures |
-| **Tier** | Tier 2（Authenticated User） |
-| **修复工作量** | Medium |
+| 属性              | 值                                                                                            |
+| ----------------- | --------------------------------------------------------------------------------------------- |
+| **严重级别**      | Important                                                                                     |
+| **CVSS 4.0 评分** | 7.7                                                                                           |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N`                             |
+| **CWE**           | [CWE-290: Authentication Bypass by Spoofing](https://cwe.mitre.org/data/definitions/290.html) |
+| **OWASP**         | A07:2025 – Authentication Failures                                                            |
+| **Tier**          | Tier 2（Authenticated User）                                                                  |
+| **修复工作量**    | Medium                                                                                        |
 
 **描述：**
 
@@ -610,16 +617,22 @@ try {
 **证据：**
 
 `dist/index.js`：
+
 - 第 54280 行：`return process.env[hyphenKey] || process.env[underscoreKey] || core.getInput(name) || '';`
 - 第 5719-5723 行：
+
 ```javascript
 const fromEnv = process.env.HUAWEICLOUD_OIDC_TOKEN;
 if (fromEnv) {
-  info('-- OIDC ID Token 获取成功：来自环境变量 HUAWEICLOUD_OIDC_TOKEN 注入 --');
+  info(
+    "-- OIDC ID Token 获取成功：来自环境变量 HUAWEICLOUD_OIDC_TOKEN 注入 --",
+  );
   return fromEnv;
 }
 ```
+
 - 第 5744-5750 行：
+
 ```javascript
 const reqUrl = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
 const reqToken = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
@@ -627,9 +640,11 @@ if (!reqUrl || !reqToken) {
   return null;
 }
 const url = new URL(reqUrl);
-url.searchParams.append('audience', cfg.audience);
+url.searchParams.append("audience", cfg.audience);
 ```
+
 - 第 5189-5197 行：
+
 ```javascript
 accountId: '4d29a984c4fe4e6eb5d404a853d0084e',
 audience: 'huawei-cloud-service',
@@ -651,15 +666,15 @@ oidcProviderName: 'GitCodeActions',
 
 **复核结论：** ✅ 确认
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Important |
-| **CVSS 4.0 评分** | 7.6 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:H/VA:N/SC:L/SI:H/SA:N` |
-| **CWE** | [CWE-345: Insufficient Verification of Data Authenticity](https://cwe.mitre.org/data/definitions/345.html) |
-| **OWASP** | A08:2025 – Software/Data Integrity Failures |
-| **Tier** | Tier 2（Authenticated User） |
-| **修复工作量** | Medium |
+| 属性              | 值                                                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Important                                                                                                  |
+| **CVSS 4.0 评分** | 7.6                                                                                                        |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:H/VA:N/SC:L/SI:H/SA:N`                                          |
+| **CWE**           | [CWE-345: Insufficient Verification of Data Authenticity](https://cwe.mitre.org/data/definitions/345.html) |
+| **OWASP**         | A08:2025 – Software/Data Integrity Failures                                                                |
+| **Tier**          | Tier 2（Authenticated User）                                                                               |
+| **修复工作量**    | Medium                                                                                                     |
 
 **描述：**
 
@@ -668,29 +683,38 @@ oidcProviderName: 'GitCodeActions',
 **证据：**
 
 - `dist/index.js:54411-54415`（产物仅做存在性检查）：
+
 ```javascript
-const resolvedArtifact = path.isAbsolute(line) ? line : path.resolve(process.cwd(), line);
+const resolvedArtifact = path.isAbsolute(line)
+  ? line
+  : path.resolve(process.cwd(), line);
 if (!fs.existsSync(resolvedArtifact)) {
   throw new Error(`指定的构建产物文件不存在: ${resolvedArtifact}`);
 }
 ```
+
 - `dist/scanner.js:97-101`（结果写可预测路径后重读）：
+
 ```javascript
 const outputDir = path.dirname(outputFile);
 if (outputDir && !fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
-fs.writeFileSync(outputFile, JSON.stringify(result, null, 2), 'utf8');
+fs.writeFileSync(outputFile, JSON.stringify(result, null, 2), "utf8");
 ```
+
 - `dist/detectors/SecOptionDetector.js:120-133`（重读并解析文件）：
+
 ```javascript
-const content = fs.readFileSync(outputFile, 'utf8');
+const content = fs.readFileSync(outputFile, "utf8");
 const result = JSON.parse(content);
 if (!result.summary || !Array.isArray(result.details)) {
-  throw new Error('Invalid scan result format: missing summary or details');
+  throw new Error("Invalid scan result format: missing summary or details");
 }
 ```
+
 - `dist/uploaders/CicdUploader.js:299` 与 `:323-329`（签名覆盖“被交到手上的 body”）：
+
 ```javascript
 const body = JSON.stringify(payload);
 ...
@@ -698,6 +722,7 @@ const signer = new ApigSigner(this.apigAppKey, this.apigAppSecret);
 const headers = signer.sign({ method: 'POST', url: url, headers: { 'Content-Type': 'application/json' }, body: body });
 const response = await axios.post(url, body, { headers, timeout: this.timeout });
 ```
+
 - `dist/index.js:54368`（来源经 `PATH` 解析的 `git`）：`const remoteUrl = execSync('git remote get-url origin', { encoding: 'utf8', cwd: process.cwd() }).trim();`
 
 **修复建议：**
@@ -714,15 +739,15 @@ const response = await axios.post(url, body, { headers, timeout: this.timeout })
 
 **复核结论：** ✅ 确认
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Important |
-| **CVSS 4.0 评分** | 7.1 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:H/VA:N/SC:N/SI:L/SA:N` |
-| **CWE** | [CWE-693: Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html) |
-| **OWASP** | A09:2025 – Security Logging & Alerting Failures |
-| **Tier** | Tier 2（Authenticated User） |
-| **修复工作量** | Medium |
+| 属性              | 值                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| **严重级别**      | Important                                                                                |
+| **CVSS 4.0 评分** | 7.1                                                                                      |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:H/VA:N/SC:N/SI:L/SA:N`                        |
+| **CWE**           | [CWE-693: Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html) |
+| **OWASP**         | A09:2025 – Security Logging & Alerting Failures                                          |
+| **Tier**          | Tier 2（Authenticated User）                                                             |
+| **修复工作量**    | Medium                                                                                   |
 
 **描述：**
 
@@ -731,6 +756,7 @@ const response = await axios.post(url, body, { headers, timeout: this.timeout })
 **证据：**
 
 - `dist/bin/sec_option_scan.py:483-495`（N/A 从分母剔除）：
+
 ```python
 total_files = yes_count + no_count + na_count
 applicable_files = yes_count + no_count
@@ -739,7 +765,9 @@ if applicable_files > 0:
 else:
     rate = -1
 ```
+
 - `dist/bin/sec_option_scan.py:992-999`（`scan-options` 逐字作为 14 项子集被接受）：
+
 ```python
 if len(sys.argv) >= 4 and sys.argv[3]:
     scan_options = [opt.strip() for opt in sys.argv[3].split(',') if opt.strip()]
@@ -748,16 +776,23 @@ if len(sys.argv) >= 4 and sys.argv[3]:
         print(f"ERROR: Invalid scan-options: {invalid}", file=sys.stderr)
         sys.exit(1)
 ```
+
 - `dist/scanner.js:120-127`（上传失败不使步骤失败）：
+
 ```javascript
 if (uploadResult.success) {
-  this.logger.info(`Successfully uploaded sec-option report, recordId: ${uploadResult.recordId}`);
+  this.logger.info(
+    `Successfully uploaded sec-option report, recordId: ${uploadResult.recordId}`,
+  );
   result.uploadInfo = { success: true, recordId: uploadResult.recordId };
 } else {
-  this.logger.error(`Failed to upload sec-option report: ${uploadResult.error}`);
+  this.logger.error(
+    `Failed to upload sec-option report: ${uploadResult.error}`,
+  );
   result.uploadInfo = { success: false, error: uploadResult.error };
 }
 ```
+
 - `dist/index.js:54602`（入口在扫描/上报后继续以成功收尾）：`core.info('Sec-option scan completed successfully');`
 
 **修复建议：**
@@ -778,15 +813,15 @@ if (uploadResult.success) {
 
 **复核结论：** ✅ 确认
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate |
-| **CVSS 4.0 评分** | 6.9 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:L` |
-| **CWE** | [CWE-409: Improper Handling of Highly Compressed Data (Data Amplification)](https://cwe.mitre.org/data/definitions/409.html) |
-| **OWASP** | A10:2025 – Mishandling of Exceptional Conditions |
-| **Tier** | Tier 2（Authenticated User） |
-| **修复工作量** | Medium |
+| 属性              | 值                                                                                                                           |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate                                                                                                                     |
+| **CVSS 4.0 评分** | 6.9                                                                                                                          |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:L`                                                            |
+| **CWE**           | [CWE-409: Improper Handling of Highly Compressed Data (Data Amplification)](https://cwe.mitre.org/data/definitions/409.html) |
+| **OWASP**         | A10:2025 – Mishandling of Exceptional Conditions                                                                             |
+| **Tier**          | Tier 2（Authenticated User）                                                                                                 |
+| **修复工作量**    | Medium                                                                                                                       |
 
 **描述：**
 
@@ -795,6 +830,7 @@ if (uploadResult.success) {
 **证据：**
 
 - `dist/bin/sec_option_scan.py:161-177`（解压无大小/条目计量，仅校验路径）：
+
 ```python
 try:
     if is_zip:
@@ -809,14 +845,18 @@ try:
             _safe_extract_tar(tf, tmp_dir)
     return tmp_dir
 ```
+
 - `dist/bin/sec_option_scan.py:95-99`（对嵌套归档无界递归）：
+
 ```python
 extracted = try_extract_archive(item.path)
 if extracted:
     extracted_dirs.append(extracted)
     result.extend(scan_directory(extracted, extracted_dirs, scan_options, extracted, visited))
 ```
+
 - `dist/scanner.js:63-69`（状态仅由 `summary` 推导，无预算强制）：
+
 ```javascript
 const succeededCount = scanResult.summary?.totalScannedFiles || 0;
 const failedCount = scanResult.summary?.failedCount || 0;
@@ -841,15 +881,15 @@ if (failedCount > 0) {
 
 **复核结论：** ✅ 确认
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate |
-| **CVSS 4.0 评分** | 6.7 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-532: Insertion of Sensitive Information into Log File](https://cwe.mitre.org/data/definitions/532.html) |
-| **OWASP** | A09:2025 – Security Logging & Alerting Failures |
-| **Tier** | Tier 2（Authenticated User） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| **严重级别**      | Moderate                                                                                                     |
+| **CVSS 4.0 评分** | 6.7                                                                                                          |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`                                            |
+| **CWE**           | [CWE-532: Insertion of Sensitive Information into Log File](https://cwe.mitre.org/data/definitions/532.html) |
+| **OWASP**         | A09:2025 – Security Logging & Alerting Failures                                                              |
+| **Tier**          | Tier 2（Authenticated User）                                                                                 |
+| **修复工作量**    | Low                                                                                                          |
 
 **描述：**
 
@@ -858,6 +898,7 @@ if (failedCount > 0) {
 **证据：**
 
 - `dist/index.js:5308-5319` 与 `:5368`（error 级打印声明）：
+
 ```javascript
 function _printTokenClaims(claims, logFn) {
   if (!claims) { logFn('（无法解析 OIDC Token payload）'); return; }
@@ -870,23 +911,33 @@ function _printTokenClaims(claims, logFn) {
 ...
 _printTokenClaims(claims, error);
 ```
+
 - `dist/index.js:5632-5637`（截断式脱敏）：
+
 ```javascript
 function mask(value, head = 6, tail = 4) {
-  if (!value) return '(空)';
+  if (!value) return "(空)";
   const s = String(value);
-  if (s.length <= head + tail) return s.slice(0, 2) + '***' + s.slice(-2);
-  return s.slice(0, head) + '***' + s.slice(-tail) + `（长度 ${s.length}）`;
+  if (s.length <= head + tail) return s.slice(0, 2) + "***" + s.slice(-2);
+  return s.slice(0, head) + "***" + s.slice(-tail) + `（长度 ${s.length}）`;
 }
 ```
+
 - `dist/index.js:54369`（仅去除 HTTPS userinfo）：`gitUrl = remoteUrl.replace(/https:\/\/[^@]+@/, 'https://');`
 - `dist/index.js:54454-54456`（记录标识）：`core.info(\`gitUrl: ${gitUrl || '(empty)'}\`)` 等
 - `dist/detectors/SecOptionDetector.js:94-99`（逐字回显子进程输出）：
+
 ```javascript
-if (stdout.trim()) { this.logger.info(`Python stdout: ${stdout.trim()}`); }
-if (stderr.trim()) { this.logger.warn(`Python stderr: ${stderr.trim()}`); }
+if (stdout.trim()) {
+  this.logger.info(`Python stdout: ${stdout.trim()}`);
+}
+if (stderr.trim()) {
+  this.logger.warn(`Python stderr: ${stderr.trim()}`);
+}
 ```
+
 - `dist/bin/sec_option_scan.py:179-181`（打印完整 traceback）：
+
 ```python
 print(f"Warning: failed to extract {file_path}: {e}", file=sys.stderr)
  traceback.print_exc(file=sys.stderr)
@@ -906,15 +957,15 @@ print(f"Warning: failed to extract {file_path}: {e}", file=sys.stderr)
 
 **复核结论：** ✅ 确认
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate |
-| **CVSS 4.0 评分** | 6.3 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:N/SI:L/SA:N` |
-| **CWE** | [CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')](https://cwe.mitre.org/data/definitions/22.html) |
-| **OWASP** | A05:2025 – Injection |
-| **Tier** | Tier 2（Authenticated User） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate                                                                                                                                 |
+| **CVSS 4.0 评分** | 6.3                                                                                                                                      |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:N/SI:L/SA:N`                                                                        |
+| **CWE**           | [CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')](https://cwe.mitre.org/data/definitions/22.html) |
+| **OWASP**         | A05:2025 – Injection                                                                                                                     |
+| **Tier**          | Tier 2（Authenticated User）                                                                                                             |
+| **修复工作量**    | Low                                                                                                                                      |
 
 **描述：**
 
@@ -923,6 +974,7 @@ print(f"Warning: failed to extract {file_path}: {e}", file=sys.stderr)
 **证据：**
 
 - `dist/index.js:54338` 与 `:54481-54483`（`output` 直接构建结果路径）：
+
 ```javascript
 const outputFile = getInput('output') || 'sec-option-result.json';
 ...
@@ -930,7 +982,9 @@ const targetOutput = scanTargets.length > 1
   ? path.join(path.dirname(outputFile), `sec-option-result-${target.packageName || i}.json`)
   : outputFile;
 ```
+
 - `dist/scanner.js:49-51` 与 `:97-101`（`path.resolve` 后可越出工作区，随后递归建目录与写文件）：
+
 ```javascript
 const outputFile = path.isAbsolute(options.output || this.config.output)
   ? (options.output || this.config.output)
@@ -940,15 +994,20 @@ const outputDir = path.dirname(outputFile);
 if (outputDir && !fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
 fs.writeFileSync(outputFile, JSON.stringify(result, null, 2), 'utf8');
 ```
+
 - `dist/index.js:54493-54499`（下载 URL 未校验转发）：
+
 ```javascript
 let resolvedDownloadUrl = artifactDownloadUrl;
-if (artifactDownloadUrl && artifactDownloadUrl.endsWith('/')) {
+if (artifactDownloadUrl && artifactDownloadUrl.endsWith("/")) {
   const subdir = target.downloadSubdir;
-  resolvedDownloadUrl = artifactDownloadUrl + (subdir ? subdir + '/' : '') + target.artifactName;
+  resolvedDownloadUrl =
+    artifactDownloadUrl + (subdir ? subdir + "/" : "") + target.artifactName;
 }
 ```
+
 - `dist/detectors/SecOptionDetector.js:71-80`（argv 数组 spawn，无 shell）：
+
 ```javascript
 const args = [this.scriptPath, sourceDir, outputFile];
 if (scanOptions && scanOptions.length > 0) { args.push(scanOptions.join(',')); }
@@ -970,15 +1029,15 @@ const proc = spawn(pythonCmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
 
 **复核结论：** ✅ 确认（明文默认值本仓入口不可达，属防御纵深；无证书固定为真实弱项）
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate |
-| **CVSS 4.0 评分** | 5.9 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-319: Cleartext Transmission of Sensitive Information](https://cwe.mitre.org/data/definitions/319.html) |
-| **OWASP** | A04:2025 – Cryptographic Failures |
-| **Tier** | Tier 2（Authenticated User） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                                          |
+| ----------------- | ----------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate                                                                                                    |
+| **CVSS 4.0 评分** | 5.9                                                                                                         |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N`                                           |
+| **CWE**           | [CWE-319: Cleartext Transmission of Sensitive Information](https://cwe.mitre.org/data/definitions/319.html) |
+| **OWASP**         | A04:2025 – Cryptographic Failures                                                                           |
+| **Tier**          | Tier 2（Authenticated User）                                                                                |
+| **修复工作量**    | Low                                                                                                         |
 
 **描述：**
 
@@ -1004,15 +1063,15 @@ const proc = spawn(pythonCmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
 
 **复核结论：** ✅ 确认
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate |
-| **CVSS 4.0 评分** | 5.3 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-400: Uncontrolled Resource Consumption](https://cwe.mitre.org/data/definitions/400.html) |
-| **OWASP** | A10:2025 – Mishandling of Exceptional Conditions |
-| **Tier** | Tier 2（Authenticated User） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                            |
+| ----------------- | --------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate                                                                                      |
+| **CVSS 4.0 评分** | 5.3                                                                                           |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N`                             |
+| **CWE**           | [CWE-400: Uncontrolled Resource Consumption](https://cwe.mitre.org/data/definitions/400.html) |
+| **OWASP**         | A10:2025 – Mishandling of Exceptional Conditions                                              |
+| **Tier**          | Tier 2（Authenticated User）                                                                  |
+| **修复工作量**    | Low                                                                                           |
 
 **描述：**
 
@@ -1021,17 +1080,27 @@ const proc = spawn(pythonCmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
 **证据：**
 
 - `dist/index.js:5463-5468`（无 `signal`/超时）：
+
 ```javascript
-const fetchImpl = typeof fetch === 'function' ? fetch : (...args) => (__nccwpck_require2_(6752).fetch)(...args);
+const fetchImpl =
+  typeof fetch === "function"
+    ? fetch
+    : (...args) => __nccwpck_require2_(6752).fetch(...args);
 res = await fetchImpl(url, { method, headers, body: body || undefined });
 ```
+
 - `dist/detectors/SecOptionDetector.js:78-91`（无 `timeout` 且无界累积）：
+
 ```javascript
-const proc = spawn(pythonCmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
-let stdout = '';
-let stderr = '';
-proc.stdout.on('data', (data) => { stdout += data.toString(); });
-proc.stderr.on('data', (data) => { stderr += data.toString(); });
+const proc = spawn(pythonCmd, args, { stdio: ["ignore", "pipe", "pipe"] });
+let stdout = "";
+let stderr = "";
+proc.stdout.on("data", (data) => {
+  stdout += data.toString();
+});
+proc.stderr.on("data", (data) => {
+  stderr += data.toString();
+});
 ```
 
 **修复建议：**
@@ -1048,15 +1117,15 @@ proc.stderr.on('data', (data) => { stderr += data.toString(); });
 
 **复核结论：** ✅ 确认（前缀随机子目录削弱了“预填充”场景，但重解析点/占用基目录场景成立）
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate |
-| **CVSS 4.0 评分** | 5.1 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:H/AT:N/PR:L/UI:N/VC:N/VI:L/VA:N/SC:N/SI:L/SA:N` |
-| **CWE** | [CWE-379: Creation of Temporary File in Directory with Insecure Permissions](https://cwe.mitre.org/data/definitions/379.html) |
-| **OWASP** | A01:2025 – Broken Access Control |
-| **Tier** | Tier 2（Local Process Access） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                                                            |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate                                                                                                                      |
+| **CVSS 4.0 评分** | 5.1                                                                                                                           |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:H/AT:N/PR:L/UI:N/VC:N/VI:L/VA:N/SC:N/SI:L/SA:N`                                                             |
+| **CWE**           | [CWE-379: Creation of Temporary File in Directory with Insecure Permissions](https://cwe.mitre.org/data/definitions/379.html) |
+| **OWASP**         | A01:2025 – Broken Access Control                                                                                              |
+| **Tier**          | Tier 2（Local Process Access）                                                                                                |
+| **修复工作量**    | Low                                                                                                                           |
 
 **描述：**
 
@@ -1065,6 +1134,7 @@ Windows 下解压器为规避过长的默认临时路径，在调用 `tempfile.m
 **证据：**
 
 `dist/bin/sec_option_scan.py:150-159`：
+
 ```python
 if sys.platform == 'win32':
     for short_base in (r'D:\sec_option_tmp', r'C:\sec_option_tmp'):
@@ -1075,6 +1145,7 @@ if sys.platform == 'win32':
         except Exception:
             continue
 ```
+
 解压目录成为该归档的扫描根（`scan_directory(extracted, ..., extracted, visited)`，见 `dist/bin/sec_option_scan.py:99`），其内容被当作产物信任。
 
 **修复建议：**
@@ -1091,15 +1162,15 @@ if sys.platform == 'win32':
 
 **复核结论：** ✅ 确认（属防御纵深：`ignoreSslError` 路径当前不可达，但能力随包分发）
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate |
-| **CVSS 4.0 评分** | 4.6 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:H/AT:N/PR:H/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-295: Improper Certificate Validation](https://cwe.mitre.org/data/definitions/295.html) |
-| **OWASP** | A04:2025 – Cryptographic Failures |
-| **Tier** | Tier 3（Host/OS Access） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate                                                                                    |
+| **CVSS 4.0 评分** | 4.6                                                                                         |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:H/AT:N/PR:H/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N`                           |
+| **CWE**           | [CWE-295: Improper Certificate Validation](https://cwe.mitre.org/data/definitions/295.html) |
+| **OWASP**         | A04:2025 – Cryptographic Failures                                                           |
+| **Tier**          | Tier 3（Host/OS Access）                                                                    |
+| **修复工作量**    | Low                                                                                         |
 
 **描述：**
 
@@ -1108,12 +1179,17 @@ ncc 打包内联了 `@actions/http-client`，当 `requestOptions.ignoreSslError`
 **证据：**
 
 - `dist/index.js:3230-3237` 与 `:3254-3260`：
+
 ```javascript
 if (usingSsl && this._ignoreSslError) {
-  agent.options = Object.assign(agent.options || {}, { rejectUnauthorized: false });
+  agent.options = Object.assign(agent.options || {}, {
+    rejectUnauthorized: false,
+  });
 }
 ```
+
 - `dist/index.js:2840` 与 `:2851-2854`：
+
 ```javascript
 this._ignoreSslError = false;
 ...
@@ -1121,9 +1197,14 @@ if (requestOptions) {
   if (requestOptions.ignoreSslError != null) {
     this._ignoreSslError = requestOptions.ignoreSslError;
 ```
+
 - `dist/index.js:5463`（运行时选取全局 `fetch`）：
+
 ```javascript
-const fetchImpl = typeof fetch === 'function' ? fetch : (...args) => (__nccwpck_require2_(6752).fetch)(...args);
+const fetchImpl =
+  typeof fetch === "function"
+    ? fetch
+    : (...args) => __nccwpck_require2_(6752).fetch(...args);
 ```
 
 **修复建议：**
@@ -1140,15 +1221,15 @@ const fetchImpl = typeof fetch === 'function' ? fetch : (...args) => (__nccwpck_
 
 **复核结论：** ✅ 确认（含实测哈希一致）
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate |
-| **CVSS 4.0 评分** | 4.2 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:H/AT:N/PR:H/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-1059: Insufficient Technical Documentation](https://cwe.mitre.org/data/definitions/1059.html) |
-| **OWASP** | A08:2025 – Software/Data Integrity Failures |
-| **Tier** | Tier 3（Host/OS Access） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate                                                                                           |
+| **CVSS 4.0 评分** | 4.2                                                                                                |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:H/AT:N/PR:H/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N`                                  |
+| **CWE**           | [CWE-1059: Insufficient Technical Documentation](https://cwe.mitre.org/data/definitions/1059.html) |
+| **OWASP**         | A08:2025 – Software/Data Integrity Failures                                                        |
+| **Tier**          | Tier 3（Host/OS Access）                                                                           |
+| **修复工作量**    | Low                                                                                                |
 
 **描述：**
 
@@ -1178,15 +1259,15 @@ const fetchImpl = typeof fetch === 'function' ? fetch : (...args) => (__nccwpck_
 
 **复核结论：** ✅ 确认（本条为“已有控制”记录，非漏洞）
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Low |
-| **CVSS 4.0 评分** | 3.1 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-693: Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html) |
-| **OWASP** | A08:2025 – Software/Data Integrity Failures |
-| **Tier** | Tier 2（Authenticated User） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| **严重级别**      | Low                                                                                      |
+| **CVSS 4.0 评分** | 3.1                                                                                      |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N`                        |
+| **CWE**           | [CWE-693: Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html) |
+| **OWASP**         | A08:2025 – Software/Data Integrity Failures                                              |
+| **Tier**          | Tier 2（Authenticated User）                                                             |
+| **修复工作量**    | Low                                                                                      |
 
 **描述：**
 
@@ -1196,12 +1277,14 @@ const fetchImpl = typeof fetch === 'function' ? fetch : (...args) => (__nccwpck_
 
 - `dist/bin/sec_option_scan.py:186-233`：`_entry_path_unsafe`、`_safe_extract_zip`、`_safe_extract_tar`（成员与 `linkname` 校验）。
 - `dist/bin/sec_option_scan.py:78-82`（符号链接环保护）：
+
 ```python
 real = os.path.realpath(scan_path)
 if real in visited:
     return result
 visited.add(real)
 ```
+
 - `.gitcode/workflows/code-metrics-scan.yml:23`：`uses: openlibing/code-metrics-action@117c0606ad741ef5e6b564dca9307e25e1d9e2e8`
 - `dist/index.js:5640-5644`（`SENSITIVE_KEYS`）、`:5670-5676`（`maskHeaders`/`maskBody`）、`:5387`（`debug(\`SecurityToken : ${mask(cred.security_token, 10, 10)}\`)`）。
 
@@ -1221,28 +1304,28 @@ visited.add(real)
 
 以下修复工作量低、影响大，建议立即实施：
 
-| 优先级 | 漏洞编号 | 修复内容 | 工作量 |
-|--------|---------|---------|--------|
-| P0 | FIND-03 | Python 依赖改用 `--require-hashes` + 受审索引，去除 `--break-system-packages` | Low |
-| P0 | FIND-08 | 声明打印改由调试开关控制、令牌完整脱敏、停止记录原始远端 URL | Low |
-| P0 | FIND-09 | 结果路径限定工作区 + `O_EXCL`/`0600`；`artifact-download-url` 加 scheme/主机允许清单 | Low |
-| P0 | FIND-10 | 删除 `http://localhost:8080` 默认值，构造/请求时拒绝非 HTTPS | Low |
-| P1 | FIND-11 | 出站请求加 `AbortSignal.timeout()`；`spawn` 加 `timeout`；捕获输出设上限 | Low |
-| P1 | FIND-12 | 用 OS 临时目录下的 `tempfile.mkdtemp()` 替换固定基目录，校验非重解析点 | Low |
-| P1 | FIND-15 | 保留单一扫描脚本、删除重复副本、产出 `SHA256SUMS` | Low |
-| P1 | FIND-13 | 保留既有控制，扩展穿越防护到 Windows 名称怪癖，`tarfile` 传 `filter='data'` | Low |
+| 优先级 | 漏洞编号 | 修复内容                                                                             | 工作量 |
+| ------ | -------- | ------------------------------------------------------------------------------------ | ------ |
+| P0     | FIND-03  | Python 依赖改用 `--require-hashes` + 受审索引，去除 `--break-system-packages`        | Low    |
+| P0     | FIND-08  | 声明打印改由调试开关控制、令牌完整脱敏、停止记录原始远端 URL                         | Low    |
+| P0     | FIND-09  | 结果路径限定工作区 + `O_EXCL`/`0600`；`artifact-download-url` 加 scheme/主机允许清单 | Low    |
+| P0     | FIND-10  | 删除 `http://localhost:8080` 默认值，构造/请求时拒绝非 HTTPS                         | Low    |
+| P1     | FIND-11  | 出站请求加 `AbortSignal.timeout()`；`spawn` 加 `timeout`；捕获输出设上限             | Low    |
+| P1     | FIND-12  | 用 OS 临时目录下的 `tempfile.mkdtemp()` 替换固定基目录，校验非重解析点               | Low    |
+| P1     | FIND-15  | 保留单一扫描脚本、删除重复副本、产出 `SHA256SUMS`                                    | Low    |
+| P1     | FIND-13  | 保留既有控制，扩展穿越防护到 Windows 名称怪癖，`tarfile` 传 `filter='data'`          | Low    |
 
 ### 6.2 中期修复
 
-| 优先级 | 漏洞编号 | 修复内容 | 工作量 |
-|--------|---------|---------|--------|
-| P0 | FIND-01 | 拆分/隔离不受信任 PR 检出与执行；移除 `allow-unsafe-pr-checkout`；`npm ci --ignore-scripts`；以任务级令牌替换 `ROBOT_TOKEN` | Medium |
-| P0 | FIND-02 | 第三方插件全部 SHA 固定；`id-token: write` 收敛到单步骤并加任务级 `permissions`；标签依据平台任务状态推导 | Medium |
-| P0 | FIND-04 | 仅经 `core.getInput` 接收身份输入；移除 `HUAWEICLOUD_OIDC_TOKEN` 回退；校验 `ACTIONS_ID_TOKEN_REQUEST_URL` 主机/HTTPS；约束 IAM 信任策略 | Medium |
-| P1 | FIND-05 | 计算被扫产物摘要并纳入上报体；签名内存对象而非重读文件；`gitUrl` 取自平台变量；后端拒绝摘要不符报告 | Medium |
-| P1 | FIND-06 | 门禁失败关闭：最低适用文件比例/N/A 比例、选项集签名入报告、上传失败使步骤失败 | Medium |
-| P1 | FIND-07 | 扫描器设定解压字节/条目数/嵌套深度/墙钟硬限制，越限显式失败 | Medium |
-| P2 | FIND-14 | 模块加载时捕获 `fetch` 引用；禁止并可检测 `ignoreSslError` | Low |
+| 优先级 | 漏洞编号 | 修复内容                                                                                                                                 | 工作量 |
+| ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| P0     | FIND-01  | 拆分/隔离不受信任 PR 检出与执行；移除 `allow-unsafe-pr-checkout`；`npm ci --ignore-scripts`；以任务级令牌替换 `ROBOT_TOKEN`              | Medium |
+| P0     | FIND-02  | 第三方插件全部 SHA 固定；`id-token: write` 收敛到单步骤并加任务级 `permissions`；标签依据平台任务状态推导                                | Medium |
+| P0     | FIND-04  | 仅经 `core.getInput` 接收身份输入；移除 `HUAWEICLOUD_OIDC_TOKEN` 回退；校验 `ACTIONS_ID_TOKEN_REQUEST_URL` 主机/HTTPS；约束 IAM 信任策略 | Medium |
+| P1     | FIND-05  | 计算被扫产物摘要并纳入上报体；签名内存对象而非重读文件；`gitUrl` 取自平台变量；后端拒绝摘要不符报告                                      | Medium |
+| P1     | FIND-06  | 门禁失败关闭：最低适用文件比例/N/A 比例、选项集签名入报告、上传失败使步骤失败                                                            | Medium |
+| P1     | FIND-07  | 扫描器设定解压字节/条目数/嵌套深度/墙钟硬限制，越限显式失败                                                                              | Medium |
+| P2     | FIND-14  | 模块加载时捕获 `fetch` 引用；禁止并可检测 `ignoreSslError`                                                                               | Low    |
 
 ### 6.3 长期安全改进
 
@@ -1281,80 +1364,80 @@ visited.add(real)
 
 ### 7.1 威胁覆盖验证表
 
-| 威胁 ID | 对应发现 | 状态 |
-|---------|---------|------|
-| T01.S | FIND-04 | ✅ 已覆盖 |
-| T01.T | FIND-05 | ✅ 已覆盖 |
-| T01.I | FIND-08 | ✅ 已覆盖 |
-| T01.D | FIND-11 | ✅ 已覆盖 |
-| T01.E | FIND-09 | ✅ 已覆盖 |
-| T01.A | FIND-09 | ✅ 已覆盖 |
-| T02.T | FIND-05 | ✅ 已覆盖 |
-| T02.D | FIND-07 | ✅ 已覆盖 |
-| T02.A | FIND-06 | ✅ 已覆盖 |
-| T03.T | FIND-09 | ✅ 已覆盖 |
-| T03.I | FIND-08 | ✅ 已覆盖 |
-| T03.D | FIND-11 | ✅ 已覆盖 |
-| T04.T | FIND-13 | ✅ 已缓解（既有控制） |
-| T04.T2 | FIND-13 | ✅ 已覆盖 |
-| T04.T3 | FIND-15 | ✅ 已覆盖 |
-| T04.I | FIND-08 | ✅ 已覆盖 |
-| T04.D | FIND-07 | ✅ 已覆盖 |
-| T04.E | FIND-12 | ✅ 已覆盖 |
-| T04.A | FIND-06 | ✅ 已覆盖 |
-| T05.S | FIND-10 | ✅ 已覆盖 |
-| T05.T | FIND-05 | ✅ 已覆盖 |
-| T05.I | FIND-08 | ✅ 已覆盖 |
-| T06.S | FIND-04 | ✅ 已覆盖 |
-| T06.T | FIND-14 | ✅ 已覆盖 |
-| T06.I | FIND-08 | ✅ 已覆盖 |
-| T06.D | FIND-11 | ✅ 已覆盖 |
-| T07.S | FIND-01 | ✅ 已覆盖 |
-| T07.T | FIND-01 | ✅ 已覆盖 |
-| T07.I | FIND-01 | ✅ 已覆盖 |
-| T07.E | FIND-02 | ⚠️ 部分成立（表达式注入子项证据不足，整项保留） |
-| T07.A | FIND-02 | ✅ 已覆盖 |
-| T08.S | FIND-02 | ✅ 已覆盖 |
-| T08.T | FIND-02 | ✅ 已覆盖 |
-| T08.E | FIND-02 | ✅ 已覆盖 |
-| T09.T | FIND-13 | ✅ 已缓解（既有控制） |
-| T09.E | FIND-02 | ✅ 已覆盖 |
-| T10.T | FIND-05 | ✅ 已覆盖 |
-| T10.T2 | FIND-05 | ✅ 已覆盖 |
-| T11.T | FIND-05 | ✅ 已覆盖 |
-| T11.I | FIND-08 | ✅ 已覆盖 |
-| T12.T | FIND-08 | ✅ 已覆盖 |
-| T12.I | FIND-08 | ✅ 已覆盖 |
-| T13.S | FIND-10 | ✅ 已覆盖 |
-| T13.T | FIND-10 | ✅ 已覆盖 |
-| T14.S | FIND-04 | ✅ 已覆盖 |
-| T14.I | FIND-13 | ✅ 已缓解（既有控制） |
-| T15.S | FIND-04 | ✅ 已覆盖 |
-| T15.I | FIND-04 | ✅ 已覆盖 |
-| T16.S | FIND-03 | ✅ 已覆盖 |
-| T16.T | FIND-03 | ✅ 已覆盖 |
+| 威胁 ID | 对应发现 | 状态                                            |
+| ------- | -------- | ----------------------------------------------- |
+| T01.S   | FIND-04  | ✅ 已覆盖                                       |
+| T01.T   | FIND-05  | ✅ 已覆盖                                       |
+| T01.I   | FIND-08  | ✅ 已覆盖                                       |
+| T01.D   | FIND-11  | ✅ 已覆盖                                       |
+| T01.E   | FIND-09  | ✅ 已覆盖                                       |
+| T01.A   | FIND-09  | ✅ 已覆盖                                       |
+| T02.T   | FIND-05  | ✅ 已覆盖                                       |
+| T02.D   | FIND-07  | ✅ 已覆盖                                       |
+| T02.A   | FIND-06  | ✅ 已覆盖                                       |
+| T03.T   | FIND-09  | ✅ 已覆盖                                       |
+| T03.I   | FIND-08  | ✅ 已覆盖                                       |
+| T03.D   | FIND-11  | ✅ 已覆盖                                       |
+| T04.T   | FIND-13  | ✅ 已缓解（既有控制）                           |
+| T04.T2  | FIND-13  | ✅ 已覆盖                                       |
+| T04.T3  | FIND-15  | ✅ 已覆盖                                       |
+| T04.I   | FIND-08  | ✅ 已覆盖                                       |
+| T04.D   | FIND-07  | ✅ 已覆盖                                       |
+| T04.E   | FIND-12  | ✅ 已覆盖                                       |
+| T04.A   | FIND-06  | ✅ 已覆盖                                       |
+| T05.S   | FIND-10  | ✅ 已覆盖                                       |
+| T05.T   | FIND-05  | ✅ 已覆盖                                       |
+| T05.I   | FIND-08  | ✅ 已覆盖                                       |
+| T06.S   | FIND-04  | ✅ 已覆盖                                       |
+| T06.T   | FIND-14  | ✅ 已覆盖                                       |
+| T06.I   | FIND-08  | ✅ 已覆盖                                       |
+| T06.D   | FIND-11  | ✅ 已覆盖                                       |
+| T07.S   | FIND-01  | ✅ 已覆盖                                       |
+| T07.T   | FIND-01  | ✅ 已覆盖                                       |
+| T07.I   | FIND-01  | ✅ 已覆盖                                       |
+| T07.E   | FIND-02  | ⚠️ 部分成立（表达式注入子项证据不足，整项保留） |
+| T07.A   | FIND-02  | ✅ 已覆盖                                       |
+| T08.S   | FIND-02  | ✅ 已覆盖                                       |
+| T08.T   | FIND-02  | ✅ 已覆盖                                       |
+| T08.E   | FIND-02  | ✅ 已覆盖                                       |
+| T09.T   | FIND-13  | ✅ 已缓解（既有控制）                           |
+| T09.E   | FIND-02  | ✅ 已覆盖                                       |
+| T10.T   | FIND-05  | ✅ 已覆盖                                       |
+| T10.T2  | FIND-05  | ✅ 已覆盖                                       |
+| T11.T   | FIND-05  | ✅ 已覆盖                                       |
+| T11.I   | FIND-08  | ✅ 已覆盖                                       |
+| T12.T   | FIND-08  | ✅ 已覆盖                                       |
+| T12.I   | FIND-08  | ✅ 已覆盖                                       |
+| T13.S   | FIND-10  | ✅ 已覆盖                                       |
+| T13.T   | FIND-10  | ✅ 已覆盖                                       |
+| T14.S   | FIND-04  | ✅ 已覆盖                                       |
+| T14.I   | FIND-13  | ✅ 已缓解（既有控制）                           |
+| T15.S   | FIND-04  | ✅ 已覆盖                                       |
+| T15.I   | FIND-04  | ✅ 已覆盖                                       |
+| T16.S   | FIND-03  | ✅ 已覆盖                                       |
+| T16.T   | FIND-03  | ✅ 已覆盖                                       |
 
 ### 7.2 漏洞误报复核结果
 
 对 `3-findings.md` 中 FIND-01..FIND-15 逐条打开真实源码（`dist/` 打包产物、`action.yml`、`.gitcode/workflows/*.yml`、`zip.js`、`package.json`、`.pre-commit-config.yaml`）核验。**结论分布：确认 14 条、部分成立 1 条、误报 0 条、无法验证 0 条。**
 
-| 发现 ID | 原严重级别 | 复核结论 | 证据（文件:行号） | 说明 |
-|---------|-----------|---------|------------------|------|
-| FIND-01 | Critical | ✅ 确认 | `.gitcode/workflows/pre-commit.yml:8,42,47,48,56-57,33`；`dist/index.js:54278` | `pull_request_target` + `allow-unsafe-pr-checkout: true` + 自托管执行机 + `npm install` 均核实。**说明：** `ROBOT_TOKEN` 由同工作流内 `pr-label-running`/`label-pr` 任务使用，`pre-commit` 任务的检出步骤本身未显式传 token；但在 `pull_request_target` 语境下工作流可访问仓库 Secrets，且不受信任 PR 代码运行于持久共享执行机上，RCE 与跨任务/跨仓库影响面成立，严重级别维持 Critical。 |
-| FIND-02 | Important | ⚠️ 部分成立 | `.gitcode/workflows/pre-commit.yml:74,87`；`nightly-schedule-scan.yml:10,47,55`；`code-metrics-scan.yml:11` | 子项 (2) 可变标签引用、(3) workflow 级 `id-token: write`、标签由表达式推导（第 87 行）均**确认**。子项 (1) `extra_args: ${{ inputs.extra_args }}` 行存在，但本工作流**未声明 `inputs`**（`workflow_dispatch` 无 `inputs`、非 `workflow_call`），故该表达式求值为空、不能构成命令/表达式注入，此子项**不成立**。因确认子项各自达高危，严重级别维持 Important（未按“部分成立下调”处理，理由：降级会使真实供应链风险被低估）。 |
-| FIND-03 | Important | ✅ 确认 | `dist/index.js:54385-54392` | `--break-system-packages pyelftools==0.31 -i https://mirrors.aliyun.com/pypi/simple/` 核实，无 `--require-hashes`/`--only-binary`。 |
-| FIND-04 | Important | ✅ 确认 | `dist/index.js:54280,5719-5723,5744-5750,5189-5197` | 环境覆盖 `INPUT_*`、`HUAWEICLOUD_OIDC_TOKEN` 回退、未校验 `ACTIONS_ID_TOKEN_REQUEST_URL`、IAM 固定配置均核实；换证可行性依赖外部 IAM 信任策略（报告已列为 Needs Verification）。 |
-| FIND-05 | Important | ✅ 确认 | `dist/index.js:54411-54415,54368`；`dist/scanner.js:97-101`；`dist/detectors/SecOptionDetector.js:120-133`；`dist/uploaders/CicdUploader.js:299,323-329` | 产物仅存在性检查、结果写后重读、签名覆盖所交付 body、`gitUrl` 经 `git` 命令取全部核实。 |
-| FIND-06 | Important | ✅ 确认 | `dist/bin/sec_option_scan.py:483-495,992-999`；`dist/scanner.js:120-127`；`dist/index.js:54602` | N/A 剔除分母、`scan-options` 逐字接受、上传失败不使步骤失败（入口以 `completed successfully` 收尾）均核实。 |
-| FIND-07 | Moderate | ✅ 确认 | `dist/bin/sec_option_scan.py:161-177,95-99`；`dist/scanner.js:63-69` | 解压无大小/条目计量、对嵌套归档无界递归、状态无预算强制均核实。 |
-| FIND-08 | Moderate | ✅ 确认 | `dist/index.js:5308-5319,5368,5632-5637,54369,54454-54456`；`dist/detectors/SecOptionDetector.js:94-99`；`dist/bin/sec_option_scan.py:179-181` | error 级声明打印、截断式脱敏、仅去 HTTPS userinfo、子进程输出逐字回显、traceback 打印均核实。 |
-| FIND-09 | Moderate | ✅ 确认 | `dist/index.js:54338,54481-54483,54493-54499`；`dist/scanner.js:49-51,97-101`；`dist/detectors/SecOptionDetector.js:71-80` | `output` 越界建目录/写文件、下载 URL 未校验、argv spawn 无 shell 均核实。 |
-| FIND-10 | Moderate | ✅ 确认 | `dist/uploaders/CicdUploader.js:248,329`；`dist/index.js:54354` | 明文默认值存在且本仓入口用 HTTPS 覆盖（明文路径需其他嵌入方）；无证书固定（`axios.post` 无 agent）核实。 |
-| FIND-11 | Moderate | ✅ 确认 | `dist/index.js:5463-5468`；`dist/detectors/SecOptionDetector.js:78-91` | `fetch` 无 `signal`/超时、`spawn` 无 `timeout`、输出无界累积均核实。 |
-| FIND-12 | Moderate | ✅ 确认 | `dist/bin/sec_option_scan.py:150-159,99` | 固定基目录 `D:\sec_option_tmp`/`C:\sec_option_tmp` + `mkdtemp(prefix='s_')` 核实。说明：前缀随机子目录削弱“预填充”场景，但 junction/占用基目录场景成立。 |
-| FIND-13 | Low | ✅ 确认 | `dist/bin/sec_option_scan.py:186-233,78-82`；`code-metrics-scan.yml:23`；`dist/index.js:5640-5644,5670-5676,5387` | 归档穿越/链接校验、符号链接环保护、SHA 固定插件、STS 凭证脱敏均核实；本条为“已有控制”记录。 |
-| FIND-14 | Moderate | ✅ 确认 | `dist/index.js:3230-3237,3254-3260,2840,2851-2854,5463` | TLS 旁路代码存在但当前不可达（`_ignoreSslError` 默认 false，无调用方设置）、运行时选取全局 `fetch` 均核实；属防御纵深。 |
-| FIND-15 | Moderate | ✅ 确认 | `dist/detectors/SecOptionDetector.js:10`；`zip.js:15`；实测哈希 | 两份脚本 SHA-256 实测一致（`183DB31A...D3ACC700`，均 46944 字节），仅 `bin/` 副本被执行、`zip.js` 打包整个 `dist` 树均核实。 |
+| 发现 ID | 原严重级别 | 复核结论    | 证据（文件:行号）                                                                                                                                        | 说明                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------- | ---------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FIND-01 | Critical   | ✅ 确认     | `.gitcode/workflows/pre-commit.yml:8,42,47,48,56-57,33`；`dist/index.js:54278`                                                                           | `pull_request_target` + `allow-unsafe-pr-checkout: true` + 自托管执行机 + `npm install` 均核实。**说明：** `ROBOT_TOKEN` 由同工作流内 `pr-label-running`/`label-pr` 任务使用，`pre-commit` 任务的检出步骤本身未显式传 token；但在 `pull_request_target` 语境下工作流可访问仓库 Secrets，且不受信任 PR 代码运行于持久共享执行机上，RCE 与跨任务/跨仓库影响面成立，严重级别维持 Critical。                                    |
+| FIND-02 | Important  | ⚠️ 部分成立 | `.gitcode/workflows/pre-commit.yml:74,87`；`nightly-schedule-scan.yml:10,47,55`；`code-metrics-scan.yml:11`                                              | 子项 (2) 可变标签引用、(3) workflow 级 `id-token: write`、标签由表达式推导（第 87 行）均**确认**。子项 (1) `extra_args: ${{ inputs.extra_args }}` 行存在，但本工作流**未声明 `inputs`**（`workflow_dispatch` 无 `inputs`、非 `workflow_call`），故该表达式求值为空、不能构成命令/表达式注入，此子项**不成立**。因确认子项各自达高危，严重级别维持 Important（未按“部分成立下调”处理，理由：降级会使真实供应链风险被低估）。 |
+| FIND-03 | Important  | ✅ 确认     | `dist/index.js:54385-54392`                                                                                                                              | `--break-system-packages pyelftools==0.31 -i https://mirrors.aliyun.com/pypi/simple/` 核实，无 `--require-hashes`/`--only-binary`。                                                                                                                                                                                                                                                                                         |
+| FIND-04 | Important  | ✅ 确认     | `dist/index.js:54280,5719-5723,5744-5750,5189-5197`                                                                                                      | 环境覆盖 `INPUT_*`、`HUAWEICLOUD_OIDC_TOKEN` 回退、未校验 `ACTIONS_ID_TOKEN_REQUEST_URL`、IAM 固定配置均核实；换证可行性依赖外部 IAM 信任策略（报告已列为 Needs Verification）。                                                                                                                                                                                                                                            |
+| FIND-05 | Important  | ✅ 确认     | `dist/index.js:54411-54415,54368`；`dist/scanner.js:97-101`；`dist/detectors/SecOptionDetector.js:120-133`；`dist/uploaders/CicdUploader.js:299,323-329` | 产物仅存在性检查、结果写后重读、签名覆盖所交付 body、`gitUrl` 经 `git` 命令取全部核实。                                                                                                                                                                                                                                                                                                                                     |
+| FIND-06 | Important  | ✅ 确认     | `dist/bin/sec_option_scan.py:483-495,992-999`；`dist/scanner.js:120-127`；`dist/index.js:54602`                                                          | N/A 剔除分母、`scan-options` 逐字接受、上传失败不使步骤失败（入口以 `completed successfully` 收尾）均核实。                                                                                                                                                                                                                                                                                                                 |
+| FIND-07 | Moderate   | ✅ 确认     | `dist/bin/sec_option_scan.py:161-177,95-99`；`dist/scanner.js:63-69`                                                                                     | 解压无大小/条目计量、对嵌套归档无界递归、状态无预算强制均核实。                                                                                                                                                                                                                                                                                                                                                             |
+| FIND-08 | Moderate   | ✅ 确认     | `dist/index.js:5308-5319,5368,5632-5637,54369,54454-54456`；`dist/detectors/SecOptionDetector.js:94-99`；`dist/bin/sec_option_scan.py:179-181`           | error 级声明打印、截断式脱敏、仅去 HTTPS userinfo、子进程输出逐字回显、traceback 打印均核实。                                                                                                                                                                                                                                                                                                                               |
+| FIND-09 | Moderate   | ✅ 确认     | `dist/index.js:54338,54481-54483,54493-54499`；`dist/scanner.js:49-51,97-101`；`dist/detectors/SecOptionDetector.js:71-80`                               | `output` 越界建目录/写文件、下载 URL 未校验、argv spawn 无 shell 均核实。                                                                                                                                                                                                                                                                                                                                                   |
+| FIND-10 | Moderate   | ✅ 确认     | `dist/uploaders/CicdUploader.js:248,329`；`dist/index.js:54354`                                                                                          | 明文默认值存在且本仓入口用 HTTPS 覆盖（明文路径需其他嵌入方）；无证书固定（`axios.post` 无 agent）核实。                                                                                                                                                                                                                                                                                                                    |
+| FIND-11 | Moderate   | ✅ 确认     | `dist/index.js:5463-5468`；`dist/detectors/SecOptionDetector.js:78-91`                                                                                   | `fetch` 无 `signal`/超时、`spawn` 无 `timeout`、输出无界累积均核实。                                                                                                                                                                                                                                                                                                                                                        |
+| FIND-12 | Moderate   | ✅ 确认     | `dist/bin/sec_option_scan.py:150-159,99`                                                                                                                 | 固定基目录 `D:\sec_option_tmp`/`C:\sec_option_tmp` + `mkdtemp(prefix='s_')` 核实。说明：前缀随机子目录削弱“预填充”场景，但 junction/占用基目录场景成立。                                                                                                                                                                                                                                                                    |
+| FIND-13 | Low        | ✅ 确认     | `dist/bin/sec_option_scan.py:186-233,78-82`；`code-metrics-scan.yml:23`；`dist/index.js:5640-5644,5670-5676,5387`                                        | 归档穿越/链接校验、符号链接环保护、SHA 固定插件、STS 凭证脱敏均核实；本条为“已有控制”记录。                                                                                                                                                                                                                                                                                                                                 |
+| FIND-14 | Moderate   | ✅ 确认     | `dist/index.js:3230-3237,3254-3260,2840,2851-2854,5463`                                                                                                  | TLS 旁路代码存在但当前不可达（`_ignoreSslError` 默认 false，无调用方设置）、运行时选取全局 `fetch` 均核实；属防御纵深。                                                                                                                                                                                                                                                                                                     |
+| FIND-15 | Moderate   | ✅ 确认     | `dist/detectors/SecOptionDetector.js:10`；`zip.js:15`；实测哈希                                                                                          | 两份脚本 SHA-256 实测一致（`183DB31A...D3ACC700`，均 46944 字节），仅 `bin/` 副本被执行、`zip.js` 打包整个 `dist` 树均核实。                                                                                                                                                                                                                                                                                                |
 
 **复核结论汇总：** 确认 `14` / 误报 `0` / 部分成立 `1`（FIND-02）/ 无法验证 `0`。经复核无发现被移除，第 5 章各级别数量与原报告一致（仅 FIND-02 标注为部分成立，严重级别维持高危）。
 
@@ -1362,43 +1445,43 @@ visited.add(real)
 
 #### 安全标准
 
-| 标准 | 链接 |
-|------|------|
-| Microsoft SDL Bug Bar | https://www.microsoft.com/en-us/msrc/sdlbugbar |
-| OWASP Top 10:2025 | https://owasp.org/Top10/2025/ |
-| CVSS 4.0 规范 | https://www.first.org/cvss/v4.0/specification-document |
-| CWE 弱点库 | https://cwe.mitre.org/ |
-| STRIDE 威胁建模 | https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats |
-| NIST SP 800-53 Rev. 5 | https://csrc.nist.gov/pubs/sp/800-53/r5/upd1/final |
-| Python tarfile 解压过滤器 | https://docs.python.org/3/library/tarfile.html#extraction-filters |
-| GitHub Actions 安全加固 | https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions |
+| 标准                      | 链接                                                                                                                 |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Microsoft SDL Bug Bar     | https://www.microsoft.com/en-us/msrc/sdlbugbar                                                                       |
+| OWASP Top 10:2025         | https://owasp.org/Top10/2025/                                                                                        |
+| CVSS 4.0 规范             | https://www.first.org/cvss/v4.0/specification-document                                                               |
+| CWE 弱点库                | https://cwe.mitre.org/                                                                                               |
+| STRIDE 威胁建模           | https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats                                |
+| NIST SP 800-53 Rev. 5     | https://csrc.nist.gov/pubs/sp/800-53/r5/upd1/final                                                                   |
+| Python tarfile 解压过滤器 | https://docs.python.org/3/library/tarfile.html#extraction-filters                                                    |
+| GitHub Actions 安全加固   | https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions |
 
 #### 组件文档
 
-| 组件 | 链接 |
-|------|------|
-| GitCode / GitHub Actions toolkit（`@actions/core`） | https://github.com/actions/toolkit/tree/main/packages/core |
-| 华为云 APIG 签名（SDK-HMAC-SHA256 / V11） | https://support.huaweicloud.com/devg-apig/apig-devguide-python-sdk.html |
-| 华为云 STS `AssumeAgencyWithOIDC` | https://support.huaweicloud.com/api-iam/iam_08_0020.html |
-| 华为云 OIDC 身份提供商 / 委托 | https://support.huaweicloud.com/usermanual-iam/iam_08_0013.html |
-| Axios 请求超时与 TLS/agent 配置 | https://axios-http.com/docs/req_config |
-| winston 日志传输与级别 | https://github.com/winstonjs/winston |
-| pyelftools | https://github.com/eliben/pyelftools |
-| adm-zip | https://github.com/cthackers/adm-zip |
+| 组件                                                | 链接                                                                    |
+| --------------------------------------------------- | ----------------------------------------------------------------------- |
+| GitCode / GitHub Actions toolkit（`@actions/core`） | https://github.com/actions/toolkit/tree/main/packages/core              |
+| 华为云 APIG 签名（SDK-HMAC-SHA256 / V11）           | https://support.huaweicloud.com/devg-apig/apig-devguide-python-sdk.html |
+| 华为云 STS `AssumeAgencyWithOIDC`                   | https://support.huaweicloud.com/api-iam/iam_08_0020.html                |
+| 华为云 OIDC 身份提供商 / 委托                       | https://support.huaweicloud.com/usermanual-iam/iam_08_0013.html         |
+| Axios 请求超时与 TLS/agent 配置                     | https://axios-http.com/docs/req_config                                  |
+| winston 日志传输与级别                              | https://github.com/winstonjs/winston                                    |
+| pyelftools                                          | https://github.com/eliben/pyelftools                                    |
+| adm-zip                                             | https://github.com/cthackers/adm-zip                                    |
 
 ### 7.4 报告元数据
 
-| 属性 | 值 |
-|------|-----|
-| 分析模型 | DeepSeek-V4.1-Flash |
-| 分析方法 | STRIDE-A 威胁建模 + 源码逐条复核 |
-| 分析日期 | 2026-10-09 |
-| 分析版本 | 分支 `full-check-update` / commit `4a2caef`（2026-10-09） |
-| 工作副本路径 | `c:\Users\abing\Documents\develop\openLiBing\security-compilation-options-action` |
-| 原始 STRIDE-A 报告集 | `threat-model-20261009-103731/`（0-assessment、0.1-architecture、1-threatmodel、2-stride-analysis、3-findings、threat-inventory.json、report.md） |
-| 报告版本 | 1.0（中文单文件版，含误报复核） |
-| 分析范围 | 全仓（`action.yml`、`dist/` 运行时、两份 `sec_option_scan.py`、3 个 `.gitcode/workflows/`、`.pre-commit-config.yaml`、`package.json`、`zip.js`）；排除 `node_modules/`、`.git/`、`.idea/` |
-| 部署分类 | `LOCALHOST_DESKTOP`（无入站监听端口） |
+| 属性                 | 值                                                                                                                                                                                        |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 分析模型             | DeepSeek-V4.1-Flash                                                                                                                                                                       |
+| 分析方法             | STRIDE-A 威胁建模 + 源码逐条复核                                                                                                                                                          |
+| 分析日期             | 2026-10-09                                                                                                                                                                                |
+| 分析版本             | 分支 `full-check-update` / commit `4a2caef`（2026-10-09）                                                                                                                                 |
+| 工作副本路径         | `c:\Users\abing\Documents\develop\openLiBing\security-compilation-options-action`                                                                                                         |
+| 原始 STRIDE-A 报告集 | `threat-model-20261009-103731/`（0-assessment、0.1-architecture、1-threatmodel、2-stride-analysis、3-findings、threat-inventory.json、report.md）                                         |
+| 报告版本             | 1.0（中文单文件版，含误报复核）                                                                                                                                                           |
+| 分析范围             | 全仓（`action.yml`、`dist/` 运行时、两份 `sec_option_scan.py`、3 个 `.gitcode/workflows/`、`.pre-commit-config.yaml`、`package.json`、`zip.js`）；排除 `node_modules/`、`.git/`、`.idea/` |
+| 部署分类             | `LOCALHOST_DESKTOP`（无入站监听端口）                                                                                                                                                     |
 
 ---
 

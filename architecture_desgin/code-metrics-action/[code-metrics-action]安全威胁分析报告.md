@@ -39,12 +39,12 @@ code-metrics-action 是一个面向 GitCode / GitHub Actions 的**代码度量�
 
 本次分析共识别出 **14 个安全问题**（经误报复核后全部保留，其中 1 条下调级别），其中：
 
-| 严重级别 | 数量 | 关键问题 |
-|---------|------|---------|
-| **严重（Critical）** | 0 | 无（本仓库无入站监听面，不存在无需前置条件的直接暴露漏洞） |
-| **高危（Important）** | 7 | 命令注入、任意文件写入（路径遍历）、源码明文外泄、lizard/obsutil/scc 三处未校验的第三方代码、OIDC 令牌可被环境变量覆盖 |
-| **中危（Moderate）** | 6 | 凭证出现在进程命令行、跨租户 OBS 对象键混淆、YAML 资源耗尽、无界资源消耗、本地 git 元数据被信任、配置覆盖导致指标操纵 |
-| **低危（Low）** | 1 | 本地日志/临时产物残留敏感信息（经复核由中危下调） |
+| 严重级别              | 数量 | 关键问题                                                                                                               |
+| --------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------- |
+| **严重（Critical）**  | 0    | 无（本仓库无入站监听面，不存在无需前置条件的直接暴露漏洞）                                                             |
+| **高危（Important）** | 7    | 命令注入、任意文件写入（路径遍历）、源码明文外泄、lizard/obsutil/scc 三处未校验的第三方代码、OIDC 令牌可被环境变量覆盖 |
+| **中危（Moderate）**  | 6    | 凭证出现在进程命令行、跨租户 OBS 对象键混淆、YAML 资源耗尽、无界资源消耗、本地 git 元数据被信任、配置覆盖导致指标操纵  |
+| **低危（Low）**       | 1    | 本地日志/临时产物残留敏感信息（经复核由中危下调）                                                                      |
 
 > 说明：原报告将 FIND-12 定为 Moderate（中危），本次复核认为其"仅成功路径清理、失败路径不清理"的断言与实际代码不符（失败路径亦执行清理），故下调为低危，详见第 5.4 节与第 7.2 节。
 
@@ -67,40 +67,40 @@ code-metrics-action 是一个面向 GitCode / GitHub Actions 的**代码度量�
 
 ### 2.1 技术栈
 
-| 类别 | 技术 | 版本 / 说明 |
-|------|------|------|
-| 语言 / 运行时 | JavaScript（Node.js） | `runs.using: node16`，engines `>=16.0.0` |
-| 打包工具 | `@vercel/ncc` | devDependency `^0.38.1`，产物 `dist/index.js`（约 2.25 MB） |
-| Actions 运行时 | `@actions/core` | `^1.10.0` |
-| HTTP 客户端 | `axios` | `^1.6.0` |
-| 配置解析 | `js-yaml` | `^4.1.0`（YAML config） |
-| 日志 | `winston` | `^3.11.0` |
-| OIDC 联邦客户端 | `@openlibing/huaweicloud-oidc-client` | `0.0.5`（OIDC ID Token → STS 临时凭证 + V11 签名） |
-| 打包压缩 | `adm-zip` | devDependency `^0.5.16`（`zip.js`） |
-| 内置二进制 | `scc`（Sloc Cloc and Code） | 随仓提交，`dist/bin/scc`（4550840 字节 ELF，MIT） |
-| 外部工具 | `lizard` | 运行时 `pip install lizard==1.24.0` |
-| 外部工具 | `obsutil` | 运行时下载 `obsutil_linux_amd64.tar.gz` 到 `os.tmpdir()` 后执行 |
-| 远端服务 | 华为云 OBS / APIG / STS | 桶 `openlibing-gitcode-action`，网关 `https://apig.openlibing.com:443` |
+| 类别            | 技术                                  | 版本 / 说明                                                            |
+| --------------- | ------------------------------------- | ---------------------------------------------------------------------- |
+| 语言 / 运行时   | JavaScript（Node.js）                 | `runs.using: node16`，engines `>=16.0.0`                               |
+| 打包工具        | `@vercel/ncc`                         | devDependency `^0.38.1`，产物 `dist/index.js`（约 2.25 MB）            |
+| Actions 运行时  | `@actions/core`                       | `^1.10.0`                                                              |
+| HTTP 客户端     | `axios`                               | `^1.6.0`                                                               |
+| 配置解析        | `js-yaml`                             | `^4.1.0`（YAML config）                                                |
+| 日志            | `winston`                             | `^3.11.0`                                                              |
+| OIDC 联邦客户端 | `@openlibing/huaweicloud-oidc-client` | `0.0.5`（OIDC ID Token → STS 临时凭证 + V11 签名）                     |
+| 打包压缩        | `adm-zip`                             | devDependency `^0.5.16`（`zip.js`）                                    |
+| 内置二进制      | `scc`（Sloc Cloc and Code）           | 随仓提交，`dist/bin/scc`（4550840 字节 ELF，MIT）                      |
+| 外部工具        | `lizard`                              | 运行时 `pip install lizard==1.24.0`                                    |
+| 外部工具        | `obsutil`                             | 运行时下载 `obsutil_linux_amd64.tar.gz` 到 `os.tmpdir()` 后执行        |
+| 远端服务        | 华为云 OBS / APIG / STS               | 桶 `openlibing-gitcode-action`，网关 `https://apig.openlibing.com:443` |
 
 ### 2.2 关键组件
 
-| 组件 ID | 类型 | 说明 | 源码位置 |
-|---------|------|------|---------|
-| MetricsScanner | Process | 编排器：解析源码根、驱动三类检测器、合并指标、写 `metrics.json`、触发上传 | `dist/scanner.js` |
-| ConfigLoader | Process | 用 `js-yaml` 加载配置并与默认值递归深合并 | `dist/config/loader.js` |
-| FileCollector | Process | 递归目录遍历 + 扩展名白名单 + `exclude-dirs` glob 剪枝 | `dist/utils/fileCollector.js` |
-| SlocDetector | Process | 经 shell 调用内置 `scc` 并解析 `--by-file` JSON 得到 SLOC | `dist/detectors/SlocDetector.js` |
-| LizardDetector | Process | 经 shell 调用 `python3 -m lizard` 计算函数数与圈复杂度 | `dist/detectors/LizardDetector.js` |
-| DuplicationDetector | Process | 进程内行级重复/完全一致文件检测，并调用 `scc` 对临时镜像复算重复行 | `dist/detectors/DuplicationDetector.js` |
-| CoderepoUploader | Process | 组装全量上报载荷、经 `obsutil` 上传 OBS、再向 APIG 上报元数据 | `dist/uploaders/CoderepoUploader.js` |
-| SccBinary | Process | 内置第三方 `scc` 可执行文件（`dist/bin/scc`） | `dist/bin/scc` |
-| ObsutilTool | Process | 运行时下载到临时目录并执行的华为 `obsutil` | `dist/uploaders/CoderepoUploader.js` |
-| MetricsFile | Data Store | 本地 `metrics.json` 输出（总体指标 + 文件明细） | `dist/utils/fileUtils.js`、`dist/scanner.js` |
-| APIGGateway | External | 华为 APIG 网关（`/action-api` OIDC 或 `/openlibing-coderepo` AK/SK） | 外部服务 |
-| HuaweiOBS | External | 私有 OBS 桶 `openlibing-gitcode-action` | 外部服务 |
-| PyPIRegistry | External | Python 包索引（`pypi.org` 或华为镜像） | 外部服务 |
-| ActionsOIDCProvider | External | CI OIDC 令牌端点 + 华为云 STS 换证 | 外部服务 |
-| WorkflowAuthor | External Interactor | 提供 action 输入与被扫描仓库内容的仓库/工作流作者 | `action.yml` |
+| 组件 ID             | 类型                | 说明                                                                      | 源码位置                                     |
+| ------------------- | ------------------- | ------------------------------------------------------------------------- | -------------------------------------------- |
+| MetricsScanner      | Process             | 编排器：解析源码根、驱动三类检测器、合并指标、写 `metrics.json`、触发上传 | `dist/scanner.js`                            |
+| ConfigLoader        | Process             | 用 `js-yaml` 加载配置并与默认值递归深合并                                 | `dist/config/loader.js`                      |
+| FileCollector       | Process             | 递归目录遍历 + 扩展名白名单 + `exclude-dirs` glob 剪枝                    | `dist/utils/fileCollector.js`                |
+| SlocDetector        | Process             | 经 shell 调用内置 `scc` 并解析 `--by-file` JSON 得到 SLOC                 | `dist/detectors/SlocDetector.js`             |
+| LizardDetector      | Process             | 经 shell 调用 `python3 -m lizard` 计算函数数与圈复杂度                    | `dist/detectors/LizardDetector.js`           |
+| DuplicationDetector | Process             | 进程内行级重复/完全一致文件检测，并调用 `scc` 对临时镜像复算重复行        | `dist/detectors/DuplicationDetector.js`      |
+| CoderepoUploader    | Process             | 组装全量上报载荷、经 `obsutil` 上传 OBS、再向 APIG 上报元数据             | `dist/uploaders/CoderepoUploader.js`         |
+| SccBinary           | Process             | 内置第三方 `scc` 可执行文件（`dist/bin/scc`）                             | `dist/bin/scc`                               |
+| ObsutilTool         | Process             | 运行时下载到临时目录并执行的华为 `obsutil`                                | `dist/uploaders/CoderepoUploader.js`         |
+| MetricsFile         | Data Store          | 本地 `metrics.json` 输出（总体指标 + 文件明细）                           | `dist/utils/fileUtils.js`、`dist/scanner.js` |
+| APIGGateway         | External            | 华为 APIG 网关（`/action-api` OIDC 或 `/openlibing-coderepo` AK/SK）      | 外部服务                                     |
+| HuaweiOBS           | External            | 私有 OBS 桶 `openlibing-gitcode-action`                                   | 外部服务                                     |
+| PyPIRegistry        | External            | Python 包索引（`pypi.org` 或华为镜像）                                    | 外部服务                                     |
+| ActionsOIDCProvider | External            | CI OIDC 令牌端点 + 华为云 STS 换证                                        | 外部服务                                     |
+| WorkflowAuthor      | External Interactor | 提供 action 输入与被扫描仓库内容的仓库/工作流作者                         | `action.yml`                                 |
 
 ### 2.3 信任边界
 
@@ -206,24 +206,24 @@ flowchart LR
 
 ### 3.1 关键数据流说明
 
-| 数据流 ID | 源 → 目标 | 协议 | 数据内容 | 安全风险 |
-|-----------|-----------|------|---------|---------|
-| DF01 | WorkflowAuthor → MetricsScanner | 环境变量输入 / 仓库文件 | action 输入（`exclude-dirs`/`allowed-extensions`/`output`/`config-file`/凭证）与检出仓内容 | 输入可注入 shell（FIND-01）、可控制输出路径（FIND-02）、可覆盖配置（FIND-11） |
-| DF02 | MetricsScanner → ConfigLoader | 进程内 | 解析 YAML/JSON 并与默认值深合并 | YAML 别名炸弹（FIND-08）、配置篡改（FIND-11） |
-| DF03 | MetricsScanner → FileCollector | 进程内 | 源码根与过滤条件；返回文件列表 | 白名单含配置类扩展名（FIND-03）、无深度/条目上限（FIND-09） |
-| DF04 | MetricsScanner → SlocDetector | 进程内 | 源码根；返回 SLOC 与文件明细 | - |
-| DF05 | MetricsScanner → LizardDetector | 进程内 | 文件列表；返回函数/复杂度指标 | shell 拼接（FIND-01）、临时产物残留（FIND-12） |
-| DF06 | MetricsScanner → DuplicationDetector | 进程内 | 文件与 SLOC 结果；返回重复指标与出现位置 | 载荷内嵌源码明文（FIND-03） |
-| DF07 | MetricsScanner → CoderepoUploader | 进程内 | 合并指标 + git/branch/run 元数据 | 本地 git 元数据被信任（FIND-10） |
-| DF08 | SlocDetector → SccBinary | 子进程（shell） | `scc -f json --no-cocomo --no-size --by-file <sources>` | shell 注入（FIND-01）、内置二进制未校验（FIND-13） |
-| DF09 | DuplicationDetector → SccBinary | 子进程（shell） | 对临时镜像复算重复行 | shell 注入（FIND-01） |
-| DF10 | MetricsScanner → PyPIRegistry | HTTPS | 索引测速与 `pip install lizard==1.24.0` | 无哈希校验、运行时选源（FIND-04） |
-| DF11 | CoderepoUploader → APIGGateway | HTTPS | 元数据 + obsUrl（HMAC/OIDC 签名） | 无重试（FIND-09）、元数据泄露（FIND-10） |
-| DF12 | CoderepoUploader → HuaweiOBS | HTTPS | 全量报告 JSON（含源码片段）经临时文件上传 | 共享桶 + 源码明文（FIND-03、FIND-07） |
-| DF13 | CoderepoUploader → ObsutilTool | 子进程 | `execFileSync(obsutil, ['cp', local, 'obs://...', '-i=', '-k=', '-t='])` | 凭证在 argv（FIND-06）、运行时下载未校验（FIND-05） |
-| DF14 | CoderepoUploader → ActionsOIDCProvider | HTTPS | OIDC ID Token 请求与 STS 换证 | 令牌可被环境变量覆盖（FIND-14） |
-| DF15 | MetricsScanner → MetricsFile | 文件 I/O | 写入 `metrics.json`（剥离大字段后的指标） | 路径遍历任意写（FIND-02）、文件残留（FIND-12） |
-| DF16 | ObsutilTool → HuaweiOBS | HTTPS | 对象 PUT 到 `code-metrics-action/{owner}/{repo}/{runId}/` | 对象键前缀来自本地 git（FIND-07） |
+| 数据流 ID | 源 → 目标                              | 协议                    | 数据内容                                                                                   | 安全风险                                                                      |
+| --------- | -------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| DF01      | WorkflowAuthor → MetricsScanner        | 环境变量输入 / 仓库文件 | action 输入（`exclude-dirs`/`allowed-extensions`/`output`/`config-file`/凭证）与检出仓内容 | 输入可注入 shell（FIND-01）、可控制输出路径（FIND-02）、可覆盖配置（FIND-11） |
+| DF02      | MetricsScanner → ConfigLoader          | 进程内                  | 解析 YAML/JSON 并与默认值深合并                                                            | YAML 别名炸弹（FIND-08）、配置篡改（FIND-11）                                 |
+| DF03      | MetricsScanner → FileCollector         | 进程内                  | 源码根与过滤条件；返回文件列表                                                             | 白名单含配置类扩展名（FIND-03）、无深度/条目上限（FIND-09）                   |
+| DF04      | MetricsScanner → SlocDetector          | 进程内                  | 源码根；返回 SLOC 与文件明细                                                               | -                                                                             |
+| DF05      | MetricsScanner → LizardDetector        | 进程内                  | 文件列表；返回函数/复杂度指标                                                              | shell 拼接（FIND-01）、临时产物残留（FIND-12）                                |
+| DF06      | MetricsScanner → DuplicationDetector   | 进程内                  | 文件与 SLOC 结果；返回重复指标与出现位置                                                   | 载荷内嵌源码明文（FIND-03）                                                   |
+| DF07      | MetricsScanner → CoderepoUploader      | 进程内                  | 合并指标 + git/branch/run 元数据                                                           | 本地 git 元数据被信任（FIND-10）                                              |
+| DF08      | SlocDetector → SccBinary               | 子进程（shell）         | `scc -f json --no-cocomo --no-size --by-file <sources>`                                    | shell 注入（FIND-01）、内置二进制未校验（FIND-13）                            |
+| DF09      | DuplicationDetector → SccBinary        | 子进程（shell）         | 对临时镜像复算重复行                                                                       | shell 注入（FIND-01）                                                         |
+| DF10      | MetricsScanner → PyPIRegistry          | HTTPS                   | 索引测速与 `pip install lizard==1.24.0`                                                    | 无哈希校验、运行时选源（FIND-04）                                             |
+| DF11      | CoderepoUploader → APIGGateway         | HTTPS                   | 元数据 + obsUrl（HMAC/OIDC 签名）                                                          | 无重试（FIND-09）、元数据泄露（FIND-10）                                      |
+| DF12      | CoderepoUploader → HuaweiOBS           | HTTPS                   | 全量报告 JSON（含源码片段）经临时文件上传                                                  | 共享桶 + 源码明文（FIND-03、FIND-07）                                         |
+| DF13      | CoderepoUploader → ObsutilTool         | 子进程                  | `execFileSync(obsutil, ['cp', local, 'obs://...', '-i=', '-k=', '-t='])`                   | 凭证在 argv（FIND-06）、运行时下载未校验（FIND-05）                           |
+| DF14      | CoderepoUploader → ActionsOIDCProvider | HTTPS                   | OIDC ID Token 请求与 STS 换证                                                              | 令牌可被环境变量覆盖（FIND-14）                                               |
+| DF15      | MetricsScanner → MetricsFile           | 文件 I/O                | 写入 `metrics.json`（剥离大字段后的指标）                                                  | 路径遍历任意写（FIND-02）、文件残留（FIND-12）                                |
+| DF16      | ObsutilTool → HuaweiOBS                | HTTPS                   | 对象 PUT 到 `code-metrics-action/{owner}/{repo}/{runId}/`                                  | 对象键前缀来自本地 git（FIND-07）                                             |
 
 ---
 
@@ -233,33 +233,33 @@ flowchart LR
 
 ### 4.1 威胁等级定义
 
-| 等级 | 说明 | 利用条件 |
-|------|------|---------|
-| **Tier 1（T1）** | 直接暴露，无需前置条件 | 攻击者可直接从网络利用（前置条件必须为 `None`） |
-| **Tier 2（T2）** | 需要单一前置条件 | 需要认证用户、内部网络或单一访问面 |
-| **Tier 3（T3）** | 需要高权限或多个前置条件 | 需要主机/OS 访问、仓库被攻陷或多个条件叠加 |
+| 等级             | 说明                     | 利用条件                                        |
+| ---------------- | ------------------------ | ----------------------------------------------- |
+| **Tier 1（T1）** | 直接暴露，无需前置条件   | 攻击者可直接从网络利用（前置条件必须为 `None`） |
+| **Tier 2（T2）** | 需要单一前置条件         | 需要认证用户、内部网络或单一访问面              |
+| **Tier 3（T3）** | 需要高权限或多个前置条件 | 需要主机/OS 访问、仓库被攻陷或多个条件叠加      |
 
 > 本仓库部署分类为 LOCALHOST_DESKTOP，**不存在 Tier 1 威胁**（无入站监听面，不允许 `AV:N`）。
 
 ### 4.2 威胁汇总表
 
-| 组件 | S | T | R | I | D | E | A | 总计 | T1 | T2 | T3 | 风险 |
-|------|---|---|---|---|---|---|---|------|----|----|----|------|
-| MetricsScanner | 1 | 1 | 1 | 1 | 1 | 0 | 1 | 6 | 0 | 5 | 1 | Critical |
-| ConfigLoader | 0 | 1 | 0 | 0 | 1 | 0 | 1 | 3 | 0 | 3 | 0 | Medium |
-| FileCollector | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 2 | 0 | 2 | 0 | Medium |
-| SlocDetector | 0 | 1 | 0 | 0 | 1 | 1 | 0 | 3 | 0 | 3 | 0 | Medium |
-| LizardDetector | 0 | 1 | 0 | 1 | 1 | 0 | 0 | 3 | 0 | 3 | 0 | Medium |
-| DuplicationDetector | 0 | 1 | 0 | 1 | 1 | 0 | 0 | 3 | 0 | 3 | 0 | Medium |
-| CoderepoUploader | 1 | 1 | 0 | 1 | 1 | 1 | 0 | 5 | 0 | 5 | 0 | Critical |
-| SccBinary | 0 | 1 | 0 | 0 | 0 | 1 | 0 | 2 | 0 | 0 | 2 | High |
-| ObsutilTool | 0 | 1 | 0 | 0 | 0 | 1 | 0 | 2 | 0 | 2 | 0 | Medium |
-| MetricsFile | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 2 | 0 | 2 | 0 | Medium |
-| APIGGateway | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 2 | 0 | 2 | 0 | Low |
-| HuaweiOBS | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 2 | 0 | 2 | 0 | Low |
-| PyPIRegistry | 0 | 1 | 0 | 0 | 1 | 0 | 0 | 2 | 0 | 2 | 0 | Low |
-| ActionsOIDCProvider | 1 | 0 | 0 | 0 | 1 | 1 | 0 | 3 | 0 | 2 | 1 | Medium |
-| **总计** | **3** | **11** | **1** | **8** | **10** | **5** | **2** | **40** | **0** | **36** | **4** | |
+| 组件                | S     | T      | R     | I     | D      | E     | A     | 总计   | T1    | T2     | T3    | 风险     |
+| ------------------- | ----- | ------ | ----- | ----- | ------ | ----- | ----- | ------ | ----- | ------ | ----- | -------- |
+| MetricsScanner      | 1     | 1      | 1     | 1     | 1      | 0     | 1     | 6      | 0     | 5      | 1     | Critical |
+| ConfigLoader        | 0     | 1      | 0     | 0     | 1      | 0     | 1     | 3      | 0     | 3      | 0     | Medium   |
+| FileCollector       | 0     | 0      | 0     | 1     | 1      | 0     | 0     | 2      | 0     | 2      | 0     | Medium   |
+| SlocDetector        | 0     | 1      | 0     | 0     | 1      | 1     | 0     | 3      | 0     | 3      | 0     | Medium   |
+| LizardDetector      | 0     | 1      | 0     | 1     | 1      | 0     | 0     | 3      | 0     | 3      | 0     | Medium   |
+| DuplicationDetector | 0     | 1      | 0     | 1     | 1      | 0     | 0     | 3      | 0     | 3      | 0     | Medium   |
+| CoderepoUploader    | 1     | 1      | 0     | 1     | 1      | 1     | 0     | 5      | 0     | 5      | 0     | Critical |
+| SccBinary           | 0     | 1      | 0     | 0     | 0      | 1     | 0     | 2      | 0     | 0      | 2     | High     |
+| ObsutilTool         | 0     | 1      | 0     | 0     | 0      | 1     | 0     | 2      | 0     | 2      | 0     | Medium   |
+| MetricsFile         | 0     | 1      | 0     | 1     | 0      | 0     | 0     | 2      | 0     | 2      | 0     | Medium   |
+| APIGGateway         | 0     | 0      | 0     | 1     | 1      | 0     | 0     | 2      | 0     | 2      | 0     | Low      |
+| HuaweiOBS           | 0     | 1      | 0     | 1     | 0      | 0     | 0     | 2      | 0     | 2      | 0     | Low      |
+| PyPIRegistry        | 0     | 1      | 0     | 0     | 1      | 0     | 0     | 2      | 0     | 2      | 0     | Low      |
+| ActionsOIDCProvider | 1     | 0      | 0     | 0     | 1      | 1     | 0     | 3      | 0     | 2      | 1     | Medium   |
+| **总计**            | **3** | **11** | **1** | **8** | **10** | **5** | **2** | **40** | **0** | **36** | **4** |          |
 
 ---
 
@@ -270,152 +270,152 @@ flowchart LR
 **锚点：** `dist/scanner.js`、`dist/index.js`
 **数据流：** DF01、DF02、DF03、DF04、DF05、DF06、DF07、DF10、DF15
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T01.S | S | 本地 git 元数据（`git remote get-url origin`、`ATOMGIT_*`）被信任为上报身份，仓库可把指标错误归属到其他项目 | T2 | Authenticated User |
-| T01.T | T | `config-file` 深合并覆盖默认值，可静默重定向/禁用检测器或上传器 | T2 | Authenticated User |
-| T01.I | I | gitUrl/branch/run id 与含文件明细的 metrics.json 被记录/落盘，可被同主机进程读取 | T2 | Local Process Access |
-| T01.D | D | 来自配置的 `sourceDir` 无边界扫描，超大/超深仓库耗尽内存/磁盘 | T2 | Authenticated User |
-| T01.A | A | `push`/`schedule` 触发自动发布指标，仓库可塑形指标以通过质量门禁 | T2 | Authenticated User |
-| T01.R | R | 缺少将上报指标绑定到被扫描 commit 的独立证明，可上报未真正扫描的 commit | T3 | Local Process Access + Host/OS Access |
+| ID    | STRIDE | 威胁描述                                                                                                    | Tier | 前置条件                              |
+| ----- | ------ | ----------------------------------------------------------------------------------------------------------- | ---- | ------------------------------------- |
+| T01.S | S      | 本地 git 元数据（`git remote get-url origin`、`ATOMGIT_*`）被信任为上报身份，仓库可把指标错误归属到其他项目 | T2   | Authenticated User                    |
+| T01.T | T      | `config-file` 深合并覆盖默认值，可静默重定向/禁用检测器或上传器                                             | T2   | Authenticated User                    |
+| T01.I | I      | gitUrl/branch/run id 与含文件明细的 metrics.json 被记录/落盘，可被同主机进程读取                            | T2   | Local Process Access                  |
+| T01.D | D      | 来自配置的 `sourceDir` 无边界扫描，超大/超深仓库耗尽内存/磁盘                                               | T2   | Authenticated User                    |
+| T01.A | A      | `push`/`schedule` 触发自动发布指标，仓库可塑形指标以通过质量门禁                                            | T2   | Authenticated User                    |
+| T01.R | R      | 缺少将上报指标绑定到被扫描 commit 的独立证明，可上报未真正扫描的 commit                                     | T3   | Local Process Access + Host/OS Access |
 
 #### 4.3.2 ConfigLoader
 
 **锚点：** `dist/config/loader.js`
 **数据流：** DF02
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T02.T | T | `mergeConfig` 递归应用任意用户键，可覆盖 `detectors.*` 与 `uploader.*`（含路径） | T2 | Authenticated User |
-| T02.D | D | `yaml.load` 解析无别名/递归/大小上限，YAML 别名炸弹耗尽内存 | T2 | Authenticated User |
-| T02.A | A | 配置可设 `detectors.*.enabled=false`，产出清零的有利报告 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                         | Tier | 前置条件           |
+| ----- | ------ | -------------------------------------------------------------------------------- | ---- | ------------------ |
+| T02.T | T      | `mergeConfig` 递归应用任意用户键，可覆盖 `detectors.*` 与 `uploader.*`（含路径） | T2   | Authenticated User |
+| T02.D | D      | `yaml.load` 解析无别名/递归/大小上限，YAML 别名炸弹耗尽内存                      | T2   | Authenticated User |
+| T02.A | A      | 配置可设 `detectors.*.enabled=false`，产出清零的有利报告                         | T2   | Authenticated User |
 
 #### 4.3.3 FileCollector
 
 **锚点：** `dist/utils/fileCollector.js`
 **数据流：** DF03
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T03.I | I | 白名单含配置/数据类扩展名（`.json`/`.yml`/`.ini`/`.properties`），凭证类文件被收集并随报告离开主机 | T2 | Authenticated User |
-| T03.D | D | 递归遍历无深度/条目上限，病态目录树拖垮执行机 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                           | Tier | 前置条件           |
+| ----- | ------ | -------------------------------------------------------------------------------------------------- | ---- | ------------------ |
+| T03.I | I      | 白名单含配置/数据类扩展名（`.json`/`.yml`/`.ini`/`.properties`），凭证类文件被收集并随报告离开主机 | T2   | Authenticated User |
+| T03.D | D      | 递归遍历无深度/条目上限，病态目录树拖垮执行机                                                      | T2   | Authenticated User |
 
 #### 4.3.4 SlocDetector
 
 **锚点：** `dist/detectors/SlocDetector.js`
 **数据流：** DF04、DF08
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T04.T | T | `execSync(\`"${this.sccPath}" ${args.join(' ')}\`)` 由 shell 拼接命令，参数（源码路径、`--include-ext`）中的 shell 元字符被执行 | T2 | Authenticated User |
-| T04.D | D | `scc` 全树扫描，100 MB buffer + 300 s 超时，大仓耗尽内存/CPU | T2 | Authenticated User |
-| T04.E | E | 找不到内置二进制时 `command -v scc` 会执行 PATH 中任意 `scc` | T2 | Local Process Access |
+| ID    | STRIDE | 威胁描述                                                                                                                        | Tier | 前置条件             |
+| ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------- | ---- | -------------------- |
+| T04.T | T      | `execSync(\`"${this.sccPath}" ${args.join(' ')}\`)` 由 shell 拼接命令，参数（源码路径、`--include-ext`）中的 shell 元字符被执行 | T2   | Authenticated User   |
+| T04.D | D      | `scc` 全树扫描，100 MB buffer + 300 s 超时，大仓耗尽内存/CPU                                                                    | T2   | Authenticated User   |
+| T04.E | E      | 找不到内置二进制时 `command -v scc` 会执行 PATH 中任意 `scc`                                                                    | T2   | Local Process Access |
 
 #### 4.3.5 LizardDetector
 
 **锚点：** `dist/detectors/LizardDetector.js`
 **数据流：** DF05
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T05.T | T | `execSync('python3 -m lizard ' + args.join(' '))` 把参数（临时路径）拼入 shell 字符串 | T2 | Authenticated User |
-| T05.D | D | 对每个收集文件调用 lizard，300 s 超时，超大仓/病态文件耗尽 CPU | T2 | Authenticated User |
-| T05.I | I | `./lizard_output.json` 写入工作目录，进程被强杀时残留函数级路径/数据 | T2 | Local Process Access |
+| ID    | STRIDE | 威胁描述                                                                              | Tier | 前置条件             |
+| ----- | ------ | ------------------------------------------------------------------------------------- | ---- | -------------------- |
+| T05.T | T      | `execSync('python3 -m lizard ' + args.join(' '))` 把参数（临时路径）拼入 shell 字符串 | T2   | Authenticated User   |
+| T05.D | D      | 对每个收集文件调用 lizard，300 s 超时，超大仓/病态文件耗尽 CPU                        | T2   | Authenticated User   |
+| T05.I | I      | `./lizard_output.json` 写入工作目录，进程被强杀时残留函数级路径/数据                  | T2   | Local Process Access |
 
 #### 4.3.6 DuplicationDetector
 
 **锚点：** `dist/detectors/DuplicationDetector.js`
 **数据流：** DF06、DF09
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T06.T | T | 复算步骤构造 `execSync(\`"${sccPath}" ... "${tmpRoot}"\`)` 的 shell 插值命令 | T2 | Authenticated User |
-| T06.I | I | 构建完整源码快照（`snapshotData`）与 Base64 块内容（`contentB64`）随载荷上传 OBS，内嵌明文源码 | T2 | Authenticated User |
-| T06.D | D | 代表文件两两比较近似超线性，重复多的仓消耗大量 CPU/内存 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                       | Tier | 前置条件           |
+| ----- | ------ | ---------------------------------------------------------------------------------------------- | ---- | ------------------ |
+| T06.T | T      | 复算步骤构造 `execSync(\`"${sccPath}" ... "${tmpRoot}"\`)` 的 shell 插值命令                   | T2   | Authenticated User |
+| T06.I | I      | 构建完整源码快照（`snapshotData`）与 Base64 块内容（`contentB64`）随载荷上传 OBS，内嵌明文源码 | T2   | Authenticated User |
+| T06.D | D      | 代表文件两两比较近似超线性，重复多的仓消耗大量 CPU/内存                                        | T2   | Authenticated User |
 
 #### 4.3.7 CoderepoUploader
 
 **锚点：** `dist/uploaders/CoderepoUploader.js`
 **数据流：** DF07、DF11、DF12、DF13、DF14
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T07.S | S | 静态 `apig-app-secret` / `obs-sk` 若泄露，攻击者可冒充插件上报任意报告 | T2 | Authenticated User |
-| T07.T | T | `ensureObsutil` 下载并 `chmod 755` 执行 `obsutil_linux_amd64.tar.gz`，无校验 | T2 | Internal Network |
-| T07.I | I | OBS/APIG 凭证经 `obsutil` 命令行（`-i=`/`-k=`/`-t=`）传递且 `stdio:'inherit'`，同主机进程可读 | T2 | Local Process Access |
-| T07.E | E | OBS 对象键的 `owner/repo` 取自仓库可控的 `git remote`，可写入其他项目前缀 | T2 | Authenticated User |
-| T07.D | D | 载荷大小无上限，上报失败无重试/退避 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                                      | Tier | 前置条件             |
+| ----- | ------ | --------------------------------------------------------------------------------------------- | ---- | -------------------- |
+| T07.S | S      | 静态 `apig-app-secret` / `obs-sk` 若泄露，攻击者可冒充插件上报任意报告                        | T2   | Authenticated User   |
+| T07.T | T      | `ensureObsutil` 下载并 `chmod 755` 执行 `obsutil_linux_amd64.tar.gz`，无校验                  | T2   | Internal Network     |
+| T07.I | I      | OBS/APIG 凭证经 `obsutil` 命令行（`-i=`/`-k=`/`-t=`）传递且 `stdio:'inherit'`，同主机进程可读 | T2   | Local Process Access |
+| T07.E | E      | OBS 对象键的 `owner/repo` 取自仓库可控的 `git remote`，可写入其他项目前缀                     | T2   | Authenticated User   |
+| T07.D | D      | 载荷大小无上限，上报失败无重试/退避                                                           | T2   | Authenticated User   |
 
 #### 4.3.8 SccBinary
 
 **锚点：** `dist/bin/scc`、`dist/detectors/SlocDetector.js`、`dist/detectors/DuplicationDetector.js`
 **数据流：** DF08、DF09
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T08.T | T | 内置二进制随仓提交并以无完整性校验/无版本钉扎方式执行，可被替换且不可检测 | T3 | Repository Compromise |
-| T08.E | E | 被替换的二进制以执行机完整权限运行于流水线上下文 | T3 | Repository Compromise |
+| ID    | STRIDE | 威胁描述                                                                  | Tier | 前置条件              |
+| ----- | ------ | ------------------------------------------------------------------------- | ---- | --------------------- |
+| T08.T | T      | 内置二进制随仓提交并以无完整性校验/无版本钉扎方式执行，可被替换且不可检测 | T3   | Repository Compromise |
+| T08.E | E      | 被替换的二进制以执行机完整权限运行于流水线上下文                          | T3   | Repository Compromise |
 
 #### 4.3.9 ObsutilTool
 
 **锚点：** `dist/uploaders/CoderepoUploader.js`
 **数据流：** DF13、DF16
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T09.T | T | `ensureObsutil` 拉取的 tarball 解压执行无校验，仅依赖 TLS | T2 | Internal Network |
-| T09.E | E | `ensureObsutil` 经 shell 执行 `mkdir -p`/`wget`/`curl`/`tar zxf`/`chmod 755`，可控路径/元字符导致命令执行 | T2 | Local Process Access |
+| ID    | STRIDE | 威胁描述                                                                                                  | Tier | 前置条件             |
+| ----- | ------ | --------------------------------------------------------------------------------------------------------- | ---- | -------------------- |
+| T09.T | T      | `ensureObsutil` 拉取的 tarball 解压执行无校验，仅依赖 TLS                                                 | T2   | Internal Network     |
+| T09.E | E      | `ensureObsutil` 经 shell 执行 `mkdir -p`/`wget`/`curl`/`tar zxf`/`chmod 755`，可控路径/元字符导致命令执行 | T2   | Local Process Access |
 
 #### 4.3.10 MetricsFile
 
 **锚点：** `dist/utils/fileUtils.js`、`dist/scanner.js`
 **数据流：** DF15
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T10.T | T | `output` 输入未做工作区约束，`output: ../../path` 可写/截断执行机可写文件 | T2 | Authenticated User |
-| T10.I | I | 文件含文件路径/函数明细/源码片段，默认权限创建且运行后残留 | T2 | Local Process Access |
+| ID    | STRIDE | 威胁描述                                                                  | Tier | 前置条件             |
+| ----- | ------ | ------------------------------------------------------------------------- | ---- | -------------------- |
+| T10.T | T      | `output` 输入未做工作区约束，`output: ../../path` 可写/截断执行机可写文件 | T2   | Authenticated User   |
+| T10.I | I      | 文件含文件路径/函数明细/源码片段，默认权限创建且运行后残留                | T2   | Local Process Access |
 
 #### 4.3.11 APIGGateway
 
 **锚点：** `dist/uploaders/CoderepoUploader.js`
 **数据流：** DF11
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T11.I | I | 上报元数据（git URL、分支、commit、run id、obsUrl）暴露给网关 | T2 | Authenticated User |
-| T11.D | D | 上报失败无重试/退避，瞬态网关错误静默丢弃该次运行 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                      | Tier | 前置条件           |
+| ----- | ------ | ------------------------------------------------------------- | ---- | ------------------ |
+| T11.I | I      | 上报元数据（git URL、分支、commit、run id、obsUrl）暴露给网关 | T2   | Authenticated User |
+| T11.D | D      | 上报失败无重试/退避，瞬态网关错误静默丢弃该次运行             | T2   | Authenticated User |
 
 #### 4.3.12 HuaweiOBS
 
 **锚点：** `dist/uploaders/CoderepoUploader.js`
 **数据流：** DF12、DF16
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T12.I | I | 上传对象含源码片段，机密性完全取决于所有 `gitcode-action` 插件共享桶的策略 | T2 | Authenticated User |
-| T12.T | T | 共享桶 + 由可影响元数据派生的对象键前缀，可被覆写或错置 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                   | Tier | 前置条件           |
+| ----- | ------ | -------------------------------------------------------------------------- | ---- | ------------------ |
+| T12.I | I      | 上传对象含源码片段，机密性完全取决于所有 `gitcode-action` 插件共享桶的策略 | T2   | Authenticated User |
+| T12.T | T      | 共享桶 + 由可影响元数据派生的对象键前缀，可被覆写或错置                    | T2   | Authenticated User |
 
 #### 4.3.13 PyPIRegistry
 
 **锚点：** `dist/index.js`
 **数据流：** DF10
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T13.T | T | 运行时仅按版本钉扎安装 `lizard==1.24.0`（无哈希），索引运行时选择，可依赖混淆/换源 | T2 | Internal Network |
-| T13.D | D | 索引选择为尽力而为，两源均慢/不可用时安装失败，函数级指标静默变 0 | T2 | Authenticated User |
+| ID    | STRIDE | 威胁描述                                                                           | Tier | 前置条件           |
+| ----- | ------ | ---------------------------------------------------------------------------------- | ---- | ------------------ |
+| T13.T | T      | 运行时仅按版本钉扎安装 `lizard==1.24.0`（无哈希），索引运行时选择，可依赖混淆/换源 | T2   | Internal Network   |
+| T13.D | D      | 索引选择为尽力而为，两源均慢/不可用时安装失败，函数级指标静默变 0                  | T2   | Authenticated User |
 
 #### 4.3.14 ActionsOIDCProvider
 
 **锚点：** `dist/index.js`
 **数据流：** DF14
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T14.D | D | OIDC 令牌端点不可用时认证失败，运行中止 | T2 | Authenticated User |
-| T14.E | E | 换取的 STS 凭证携带平台信任策略授予的任意范围 | T2 | Authenticated User |
-| T14.S | S | `getOidcToken` 先返回环境变量 `HUAWEICLOUD_OIDC_TOKEN`，能设置该变量者可提供任意身份令牌 | T3 | Host/OS Access |
+| ID    | STRIDE | 威胁描述                                                                                 | Tier | 前置条件           |
+| ----- | ------ | ---------------------------------------------------------------------------------------- | ---- | ------------------ |
+| T14.D | D      | OIDC 令牌端点不可用时认证失败，运行中止                                                  | T2   | Authenticated User |
+| T14.E | E      | 换取的 STS 凭证携带平台信任策略授予的任意范围                                            | T2   | Authenticated User |
+| T14.S | S      | `getOidcToken` 先返回环境变量 `HUAWEICLOUD_OIDC_TOKEN`，能设置该变量者可提供任意身份令牌 | T3   | Host/OS Access     |
 
 #### 4.3.15 WorkflowAuthor（外部实体）
 
@@ -440,15 +440,15 @@ flowchart LR
 
 #### FIND-01: Shell 拼接导致的 OS 命令注入
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 高危（Important） |
-| **CVSS 4.0 评分** | 8.5 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-78: Improper Neutralization of Special Elements used in an OS Command](https://cwe.mitre.org/data/definitions/78.html) |
-| **OWASP** | A05:2025 – Injection |
-| **利用难度** | Tier 2（需要工作流/配置输入权限） |
-| **修复工作量** | 中（Medium） |
+| 属性              | 值                                                                                                                          |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | 高危（Important）                                                                                                           |
+| **CVSS 4.0 评分** | 8.5                                                                                                                         |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N`                                                           |
+| **CWE**           | [CWE-78: Improper Neutralization of Special Elements used in an OS Command](https://cwe.mitre.org/data/definitions/78.html) |
+| **OWASP**         | A05:2025 – Injection                                                                                                        |
+| **利用难度**      | Tier 2（需要工作流/配置输入权限）                                                                                           |
+| **修复工作量**    | 中（Medium）                                                                                                                |
 
 **描述：**
 
@@ -457,36 +457,49 @@ flowchart LR
 **证据：**
 
 `dist/detectors/SlocDetector.js:103,105`：
+
 ```javascript
-const cmd = `"${this.sccPath}" ${args.join(' ')}`;
+const cmd = `"${this.sccPath}" ${args.join(" ")}`;
 const output = execSync(cmd, {
-  encoding: 'utf8',
+  encoding: "utf8",
   maxBuffer: 100 * 1024 * 1024,
   timeout: 300000,
-  stdio: ['pipe', 'pipe', 'pipe']
+  stdio: ["pipe", "pipe", "pipe"],
 });
 ```
+
 其中 `args` 由 `buildSccArgs` 组装，`allowed-extensions` 经 `this.allowedExtensions.map(e => e.replace(/^\./, '')).join(',')` 后作为 `--include-ext` 注入（`dist/detectors/SlocDetector.js:86-91`）。
 
 `dist/detectors/DuplicationDetector.js:315`：
+
 ```javascript
 const cmd = `"${sccPath}" -f json --no-cocomo --no-size --by-file "${tmpRoot}"`;
-const output = execSync(cmd, { /* ... */ });
+const output = execSync(cmd, {/* ... */});
 ```
 
 `dist/detectors/LizardDetector.js:89`：
+
 ```javascript
-execSync('python3 -m lizard ' + args.join(' '), {
-  encoding: 'utf8', maxBuffer: 50 * 1024 * 1024, timeout: 300000, stdio: ['pipe', 'pipe', 'pipe']
+execSync("python3 -m lizard " + args.join(" "), {
+  encoding: "utf8",
+  maxBuffer: 50 * 1024 * 1024,
+  timeout: 300000,
+  stdio: ["pipe", "pipe", "pipe"],
 });
 ```
 
 `dist/uploaders/CoderepoUploader.js:444,446-451`：
+
 ```javascript
-execSync(`mkdir -p "${extractedDir}"`, { shell: '/bin/bash' });
-execSync(`wget -q "${downloadUrl}" -O "${tarball}" 2>/dev/null || curl -sL "${downloadUrl}" -o "${tarball}"`, { shell: '/bin/bash' });
-execSync(`tar zxf "${tarball}" -C "${extractedDir}" --strip-components=1`, { shell: '/bin/bash' });
-execSync(`chmod 755 "${extractedDir}/obsutil"`, { shell: '/bin/bash' });
+execSync(`mkdir -p "${extractedDir}"`, { shell: "/bin/bash" });
+execSync(
+  `wget -q "${downloadUrl}" -O "${tarball}" 2>/dev/null || curl -sL "${downloadUrl}" -o "${tarball}"`,
+  { shell: "/bin/bash" },
+);
+execSync(`tar zxf "${tarball}" -C "${extractedDir}" --strip-components=1`, {
+  shell: "/bin/bash",
+});
+execSync(`chmod 755 "${extractedDir}/obsutil"`, { shell: "/bin/bash" });
 ```
 
 **修复建议：**
@@ -503,15 +516,15 @@ execSync(`chmod 755 "${extractedDir}/obsutil"`, { shell: '/bin/bash' });
 
 #### FIND-02: `output` 路径遍历导致任意文件写入
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 高危（Important） |
-| **CVSS 4.0 评分** | 7.3 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-22: Improper Limitation of a Pathname to a Restricted Directory](https://cwe.mitre.org/data/definitions/22.html) |
-| **OWASP** | A01:2025 – Broken Access Control |
-| **利用难度** | Tier 2（需要工作流 `output` 输入权限） |
-| **修复工作量** | 低（Low） |
+| 属性              | 值                                                                                                                    |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | 高危（Important）                                                                                                     |
+| **CVSS 4.0 评分** | 7.3                                                                                                                   |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N`                                                     |
+| **CWE**           | [CWE-22: Improper Limitation of a Pathname to a Restricted Directory](https://cwe.mitre.org/data/definitions/22.html) |
+| **OWASP**         | A01:2025 – Broken Access Control                                                                                      |
+| **利用难度**      | Tier 2（需要工作流 `output` 输入权限）                                                                                |
+| **修复工作量**    | 低（Low）                                                                                                             |
 
 **描述：**
 
@@ -520,6 +533,7 @@ execSync(`chmod 755 "${extractedDir}/obsutil"`, { shell: '/bin/bash' });
 **证据：**
 
 `dist/scanner.js:140-143`：
+
 ```javascript
 if (options.output || this.config.output) {
   const outputPath = path.isAbsolute(options.output || this.config.output)
@@ -528,6 +542,7 @@ if (options.output || this.config.output) {
 ```
 
 `dist/utils/fileUtils.js:5-13`：
+
 ```javascript
 static writeJsonFile(filePath, data, pretty = true) {
   const dir = path.dirname(filePath);
@@ -538,6 +553,7 @@ static writeJsonFile(filePath, data, pretty = true) {
   fs.writeFileSync(filePath, content, 'utf8');
 }
 ```
+
 路径来源 `output` 输入：`dist/index.js:62396` `const outputFile = getInput('output') || 'metrics.json';`。
 
 **修复建议：**
@@ -553,15 +569,15 @@ static writeJsonFile(filePath, data, pretty = true) {
 
 #### FIND-03: 被扫描源码内容与指标外泄至外部服务
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 高危（Important） |
-| **CVSS 4.0 评分** | 7.1 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:H/SI:N/SA:N` |
-| **CWE** | [CWE-200: Exposure of Sensitive Information to an Unauthorized Actor](https://cwe.mitre.org/data/definitions/200.html) |
-| **OWASP** | A01:2025 – Broken Access Control |
-| **利用难度** | Tier 2（被扫描仓库内容可控） |
-| **修复工作量** | 中（Medium） |
+| 属性              | 值                                                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | 高危（Important）                                                                                                      |
+| **CVSS 4.0 评分** | 7.1                                                                                                                    |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:H/SI:N/SA:N`                                                      |
+| **CWE**           | [CWE-200: Exposure of Sensitive Information to an Unauthorized Actor](https://cwe.mitre.org/data/definitions/200.html) |
+| **OWASP**         | A01:2025 – Broken Access Control                                                                                       |
+| **利用难度**      | Tier 2（被扫描仓库内容可控）                                                                                           |
+| **修复工作量**    | 中（Medium）                                                                                                           |
 
 **描述：**
 
@@ -572,16 +588,18 @@ static writeJsonFile(filePath, data, pretty = true) {
 `dist/uploaders/CoderepoUploader.js:291-304`（`fullPayload` 含 `fileDetails`、`identicalFileDetails`、`encodeOccurrences(...)`）：`duplicationOccurrences: this.encodeOccurrences(duplicationOccurrences || [])`；`encodeOccurrences` 将明文内容 Base64 化（`dist/uploaders/CoderepoUploader.js:508-520`，`contentB64: this.encodeB64(occ.content)`）。
 
 `dist/detectors/DuplicationDetector.js:1120-1127`：
+
 ```javascript
 const snapshotDataObj = {
   totalLines: totalLines,
   contextLines: contextLines,
-  segments: segments,          // 每段含 contentB64 = base64(源码文本)
-  truncated: false
+  segments: segments, // 每段含 contentB64 = base64(源码文本)
+  truncated: false,
 };
 const snapshotJson = JSON.stringify(snapshotDataObj);
-fileDetail.snapshotData = Buffer.from(snapshotJson, 'utf8').toString('base64');
+fileDetail.snapshotData = Buffer.from(snapshotJson, "utf8").toString("base64");
 ```
+
 分段内容 Base64 化见 `dist/detectors/DuplicationDetector.js:1090-1096`。
 
 `dist/utils/fileCollector.js:20`（默认白名单含 `.json`, `.xml`, `.yml`, `.yaml`, `.toml`, `.ini`, `.cfg`, `.conf`, `.properties`）。
@@ -604,15 +622,15 @@ fileDetail.snapshotData = Buffer.from(snapshotJson, 'utf8').toString('base64');
 
 #### FIND-04: 运行时 `pip install lizard` 无完整性校验
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 高危（Important） |
-| **CVSS 4.0 评分** | 7.0 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-1357: Reliance on Insufficiently Trustworthy Component](https://cwe.mitre.org/data/definitions/1357.html) |
-| **OWASP** | A03:2025 – Software Supply Chain Failures |
-| **利用难度** | Tier 2（需要内部网络/镜像替换） |
-| **修复工作量** | 中（Medium） |
+| 属性              | 值                                                                                                             |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | 高危（Important）                                                                                              |
+| **CVSS 4.0 评分** | 7.0                                                                                                            |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N`                                              |
+| **CWE**           | [CWE-1357: Reliance on Insufficiently Trustworthy Component](https://cwe.mitre.org/data/definitions/1357.html) |
+| **OWASP**         | A03:2025 – Software Supply Chain Failures                                                                      |
+| **利用难度**      | Tier 2（需要内部网络/镜像替换）                                                                                |
+| **修复工作量**    | 中（Medium）                                                                                                   |
 
 **描述：**
 
@@ -622,20 +640,27 @@ fileDetail.snapshotData = Buffer.from(snapshotJson, 'utf8').toString('base64');
 
 `dist/index.js:62511`：`const LIZARD_VERSION = '1.24.0';`
 `dist/index.js:62529-62533`：
+
 ```javascript
 const pipInstallArgs = [
-  '-m', 'pip', 'install',
-  ...(supportsBreakSystemPackages ? ['--break-system-packages'] : []),
-  `lizard==${LIZARD_VERSION}`
+  "-m",
+  "pip",
+  "install",
+  ...(supportsBreakSystemPackages ? ["--break-system-packages"] : []),
+  `lizard==${LIZARD_VERSION}`,
 ];
 ```
+
 `dist/index.js:62536-62540`：
+
 ```javascript
-execSync(['python3', ...pipInstallArgs].join(' '), {
-  stdio: 'inherit', timeout: 120000,
-  env: { ...process.env, PIP_INDEX_URL: pipIndexUrl }
+execSync(["python3", ...pipInstallArgs].join(" "), {
+  stdio: "inherit",
+  timeout: 120000,
+  env: { ...process.env, PIP_INDEX_URL: pipIndexUrl },
 });
 ```
+
 索引选择逻辑 `dist/index.js:62329-62330`（`PIP_MIRROR_DEFAULT` / `PIP_ORIGINAL`）与 `detectPipIndexUrl()`（`dist/index.js:62359-62379`）。无 `--require-hashes`/哈希钉扎。
 
 **修复建议：**
@@ -651,15 +676,15 @@ execSync(['python3', ...pipInstallArgs].join(' '), {
 
 #### FIND-05: 运行时下载并执行 `obsutil` 无完整性校验
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 高危（Important） |
-| **CVSS 4.0 评分** | 6.9 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-494: Download of Code Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html) |
-| **OWASP** | A03:2025 – Software Supply Chain Failures |
-| **利用难度** | Tier 2（需要内部网络/信道替换） |
-| **修复工作量** | 低（Low） |
+| 属性              | 值                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| **严重级别**      | 高危（Important）                                                                                    |
+| **CVSS 4.0 评分** | 6.9                                                                                                  |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N`                                    |
+| **CWE**           | [CWE-494: Download of Code Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html) |
+| **OWASP**         | A03:2025 – Software Supply Chain Failures                                                            |
+| **利用难度**      | Tier 2（需要内部网络/信道替换）                                                                      |
+| **修复工作量**    | 低（Low）                                                                                            |
 
 **描述：**
 
@@ -668,6 +693,7 @@ execSync(['python3', ...pipInstallArgs].join(' '), {
 **证据：**
 
 `dist/uploaders/CoderepoUploader.js:438-452`：
+
 ```javascript
 const downloadUrl =
   'https://obs-community.obs.cn-north-1.myhuaweicloud.com/obsutil/current/obsutil_linux_amd64.tar.gz';
@@ -682,6 +708,7 @@ try {
   execSync(`chmod 755 "${extractedDir}/obsutil"`, { shell: '/bin/bash' });
   this.obsutilPath = path.join(extractedDir, 'obsutil');
 ```
+
 执行点见 `dist/uploaders/CoderepoUploader.js:426`。无哈希检查。
 
 **修复建议：**
@@ -697,15 +724,15 @@ try {
 
 #### FIND-13: 内置 `scc` 二进制执行无完整性校验
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 高危（Important） |
-| **CVSS 4.0 评分** | 7.8 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-494: Download of Code Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html) |
-| **OWASP** | A03:2025 – Software Supply Chain Failures |
-| **利用难度** | Tier 3（需要仓库/制品被攻陷） |
-| **修复工作量** | 中（Medium） |
+| 属性              | 值                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| **严重级别**      | 高危（Important）                                                                                    |
+| **CVSS 4.0 评分** | 7.8                                                                                                  |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N`                                    |
+| **CWE**           | [CWE-494: Download of Code Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html) |
+| **OWASP**         | A03:2025 – Software Supply Chain Failures                                                            |
+| **利用难度**      | Tier 3（需要仓库/制品被攻陷）                                                                        |
+| **修复工作量**    | 中（Medium）                                                                                         |
 
 **描述：**
 
@@ -732,15 +759,15 @@ try {
 
 #### FIND-14: OIDC 身份令牌可被环境变量覆盖
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 高危（Important） |
-| **CVSS 4.0 评分** | 7.5 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-290: Authentication Bypass by Spoofing](https://cwe.mitre.org/data/definitions/290.html) |
-| **OWASP** | A07:2025 – Authentication Failures |
-| **利用难度** | Tier 3（需要主机/OS 访问） |
-| **修复工作量** | 低（Low） |
+| 属性              | 值                                                                                            |
+| ----------------- | --------------------------------------------------------------------------------------------- |
+| **严重级别**      | 高危（Important）                                                                             |
+| **CVSS 4.0 评分** | 7.5                                                                                           |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N`                             |
+| **CWE**           | [CWE-290: Authentication Bypass by Spoofing](https://cwe.mitre.org/data/definitions/290.html) |
+| **OWASP**         | A07:2025 – Authentication Failures                                                            |
+| **利用难度**      | Tier 3（需要主机/OS 访问）                                                                    |
+| **修复工作量**    | 低（Low）                                                                                     |
 
 **描述：**
 
@@ -749,6 +776,7 @@ try {
 **证据：**
 
 `dist/index.js:7677-7682`：
+
 ```javascript
 async function getOidcToken() {
   const fromEnv = process.env.HUAWEICLOUD_OIDC_TOKEN;
@@ -776,15 +804,15 @@ async function getOidcToken() {
 
 #### FIND-06: OBS 与 APIG 凭证暴露在进程命令行
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 中危（Moderate） |
-| **CVSS 4.0 评分** | 5.5 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-214: Invocation of Process Using Visible Sensitive Information](https://cwe.mitre.org/data/definitions/214.html) |
-| **OWASP** | A02:2025 – Security Misconfiguration |
-| **利用难度** | Tier 2（需要本地进程访问） |
-| **修复工作量** | 低（Low） |
+| 属性              | 值                                                                                                                    |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | 中危（Moderate）                                                                                                      |
+| **CVSS 4.0 评分** | 5.5                                                                                                                   |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N`                                                     |
+| **CWE**           | [CWE-214: Invocation of Process Using Visible Sensitive Information](https://cwe.mitre.org/data/definitions/214.html) |
+| **OWASP**         | A02:2025 – Security Misconfiguration                                                                                  |
+| **利用难度**      | Tier 2（需要本地进程访问）                                                                                            |
+| **修复工作量**    | 低（Low）                                                                                                             |
 
 **描述：**
 
@@ -793,13 +821,19 @@ OBS AK/SK（`-i=`、`-k=`）与 STS 临时凭证（`-t=`）作为 `obsutil` 命�
 **证据：**
 
 `dist/uploaders/CoderepoUploader.js:416-421`：
+
 ```javascript
 if (this.useOidc) {
-  args.push(`-i=${cred.accessKeyId}`, `-k=${cred.secretAccessKey}`, `-t=${cred.securityToken}`);
+  args.push(
+    `-i=${cred.accessKeyId}`,
+    `-k=${cred.secretAccessKey}`,
+    `-t=${cred.securityToken}`,
+  );
 } else {
   args.push(`-i=${this.obsAk}`, `-k=${this.obsSk}`);
 }
 ```
+
 `dist/uploaders/CoderepoUploader.js:424`（掩码仅作用于打印串）与 `:426`（`execFileSync(obsutil, args, { stdio: 'inherit' })`）。
 
 **修复建议：**
@@ -815,15 +849,15 @@ if (this.useOidc) {
 
 #### FIND-07: 跨租户 OBS 对象键混淆
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 中危（Moderate） |
-| **CVSS 4.0 评分** | 5.3 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-639: Authorization Bypass Through User-Controlled Key](https://cwe.mitre.org/data/definitions/639.html) |
-| **OWASP** | A01:2025 – Broken Access Control |
-| **利用难度** | Tier 2（仓库可控的 `origin` URL） |
-| **修复工作量** | 中（Medium） |
+| 属性              | 值                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| **严重级别**      | 中危（Moderate）                                                                                             |
+| **CVSS 4.0 评分** | 5.3                                                                                                          |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N`                                            |
+| **CWE**           | [CWE-639: Authorization Bypass Through User-Controlled Key](https://cwe.mitre.org/data/definitions/639.html) |
+| **OWASP**         | A01:2025 – Broken Access Control                                                                             |
+| **利用难度**      | Tier 2（仓库可控的 `origin` URL）                                                                            |
+| **修复工作量**    | 中（Medium）                                                                                                 |
 
 **描述：**
 
@@ -832,6 +866,7 @@ OBS 对象键为 `code-metrics-action/{owner}/{repo}/{pipelineRunId}/{ts}-metric
 **证据：**
 
 `dist/uploaders/CoderepoUploader.js:475-492`：
+
 ```javascript
 buildObjectKey(options) {
   const ownerRepo = this.extractOwnerRepo(options.gitUrl) || 'unknown';
@@ -840,11 +875,17 @@ buildObjectKey(options) {
   return `code-metrics-action/${ownerRepo}/${pipelineRunId}/${ts}-metrics.json`;
 }
 ```
+
 `dist/index.js:62441-62443`：
+
 ```javascript
-const remoteUrl = execSync('git remote get-url origin', { encoding: 'utf8', cwd: gitCwd }).trim();
-gitUrl = remoteUrl.replace(/https:\/\/[^@]+@/, 'https://');
+const remoteUrl = execSync("git remote get-url origin", {
+  encoding: "utf8",
+  cwd: gitCwd,
+}).trim();
+gitUrl = remoteUrl.replace(/https:\/\/[^@]+@/, "https://");
 ```
+
 共享桶见 `dist/uploaders/CoderepoUploader.js:263`。
 
 **修复建议：**
@@ -860,15 +901,15 @@ gitUrl = remoteUrl.replace(/https:\/\/[^@]+@/, 'https://');
 
 #### FIND-08: 配置解析中的 YAML 资源耗尽
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 中危（Moderate） |
-| **CVSS 4.0 评分** | 5.3 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-400: Uncontrolled Resource Consumption](https://cwe.mitre.org/data/definitions/400.html) |
-| **OWASP** | A10:2025 – Mishandling of Exceptional Conditions |
-| **利用难度** | Tier 2（`config-file` 输入） |
-| **修复工作量** | 低（Low） |
+| 属性              | 值                                                                                            |
+| ----------------- | --------------------------------------------------------------------------------------------- |
+| **严重级别**      | 中危（Moderate）                                                                              |
+| **CVSS 4.0 评分** | 5.3                                                                                           |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N`                             |
+| **CWE**           | [CWE-400: Uncontrolled Resource Consumption](https://cwe.mitre.org/data/definitions/400.html) |
+| **OWASP**         | A10:2025 – Mishandling of Exceptional Conditions                                              |
+| **利用难度**      | Tier 2（`config-file` 输入）                                                                  |
+| **修复工作量**    | 低（Low）                                                                                     |
 
 **描述：**
 
@@ -877,6 +918,7 @@ gitUrl = remoteUrl.replace(/https:\/\/[^@]+@/, 'https://');
 **证据：**
 
 `dist/config/loader.js:41,45-46`：
+
 ```javascript
 const fileContent = fs.readFileSync(configPath, 'utf8');
 const ext = path.extname(configPath).toLowerCase();
@@ -885,6 +927,7 @@ if (ext === '.yaml' || ext === '.yml') {
   userConfig = yaml.load(fileContent);
 }
 ```
+
 无 `maxAliasCount`、无大小上限；异常处理仅 `console.warn`（`dist/config/loader.js:54-55`）。递归深合并见 `dist/config/loader.js:62-85`。
 
 **修复建议：**
@@ -901,15 +944,15 @@ if (ext === '.yaml' || ext === '.yml') {
 
 #### FIND-09: 无界资源消耗与上报缺乏重试
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 中危（Moderate） |
-| **CVSS 4.0 评分** | 5.1 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-400: Uncontrolled Resource Consumption](https://cwe.mitre.org/data/definitions/400.html) |
-| **OWASP** | A10:2025 – Mishandling of Exceptional Conditions |
-| **利用难度** | Tier 2（被扫描仓库内容可控） |
-| **修复工作量** | 中（Medium） |
+| 属性              | 值                                                                                            |
+| ----------------- | --------------------------------------------------------------------------------------------- |
+| **严重级别**      | 中危（Moderate）                                                                              |
+| **CVSS 4.0 评分** | 5.1                                                                                           |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N`                             |
+| **CWE**           | [CWE-400: Uncontrolled Resource Consumption](https://cwe.mitre.org/data/definitions/400.html) |
+| **OWASP**         | A10:2025 – Mishandling of Exceptional Conditions                                              |
+| **利用难度**      | Tier 2（被扫描仓库内容可控）                                                                  |
+| **修复工作量**    | 中（Medium）                                                                                  |
 
 **描述：**
 
@@ -936,15 +979,15 @@ if (ext === '.yaml' || ext === '.yml') {
 
 #### FIND-10: 上报归属信任本地 Git 元数据
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 中危（Moderate） |
-| **CVSS 4.0 评分** | 5.0 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:P/PR:L/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-345: Insufficient Verification of Data Authenticity](https://cwe.mitre.org/data/definitions/345.html) |
-| **OWASP** | A08:2025 – Software/Data Integrity Failures |
-| **利用难度** | Tier 2（仓库可控的本地 git 状态） |
-| **修复工作量** | 低（Low） |
+| 属性              | 值                                                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | 中危（Moderate）                                                                                           |
+| **CVSS 4.0 评分** | 5.0                                                                                                        |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:P/PR:L/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N`                                          |
+| **CWE**           | [CWE-345: Insufficient Verification of Data Authenticity](https://cwe.mitre.org/data/definitions/345.html) |
+| **OWASP**         | A08:2025 – Software/Data Integrity Failures                                                                |
+| **利用难度**      | Tier 2（仓库可控的本地 git 状态）                                                                          |
+| **修复工作量**    | 低（Low）                                                                                                  |
 
 **描述：**
 
@@ -953,6 +996,7 @@ if (ext === '.yaml' || ext === '.yml') {
 **证据：**
 
 `dist/index.js:62441-62468`：
+
 ```javascript
 const remoteUrl = execSync('git remote get-url origin', { encoding: 'utf8', cwd: gitCwd }).trim();
 gitUrl = remoteUrl.replace(/https:\/\/[^@]+@/, 'https://');
@@ -960,6 +1004,7 @@ branchName = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8', cwd
 ...
 const commitId = process.env['ATOMGIT_SHA'] || '';
 ```
+
 转发入上传：`dist/scanner.js:174-183`（`gitUrl/branchName/pipelineRunId/commitId` 传入 `uploader.upload`）。
 
 **修复建议：**
@@ -974,15 +1019,15 @@ const commitId = process.env['ATOMGIT_SHA'] || '';
 
 #### FIND-11: 输入与配置驱动的覆盖导致指标操纵
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 中危（Moderate） |
-| **CVSS 4.0 评分** | 4.8 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-693: Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html) |
-| **OWASP** | A08:2025 – Software/Data Integrity Failures |
-| **利用难度** | Tier 2（`config-file` / 输入） |
-| **修复工作量** | 中（Medium） |
+| 属性              | 值                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| **严重级别**      | 中危（Moderate）                                                                         |
+| **CVSS 4.0 评分** | 4.8                                                                                      |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N`                        |
+| **CWE**           | [CWE-693: Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html) |
+| **OWASP**         | A08:2025 – Software/Data Integrity Failures                                              |
+| **利用难度**      | Tier 2（`config-file` / 输入）                                                           |
+| **修复工作量**    | 中（Medium）                                                                             |
 
 **描述：**
 
@@ -1012,15 +1057,15 @@ const commitId = process.env['ATOMGIT_SHA'] || '';
 
 #### FIND-12: 敏感数据残留在本地日志与临时产物（经复核下调）
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | 低危（Low）（原 Moderate，经复核下调） |
-| **CVSS 4.0 评分** | 4.6 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:L/SI:N/SA:N` |
-| **CWE** | [CWE-532: Insertion of Sensitive Information into Log File](https://cwe.mitre.org/data/definitions/532.html) |
-| **OWASP** | A09:2025 – Security Logging & Alerting Failures |
-| **利用难度** | Tier 2（本地进程访问） |
-| **修复工作量** | 低（Low） |
+| 属性              | 值                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| **严重级别**      | 低危（Low）（原 Moderate，经复核下调）                                                                       |
+| **CVSS 4.0 评分** | 4.6                                                                                                          |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:L/SI:N/SA:N`                                            |
+| **CWE**           | [CWE-532: Insertion of Sensitive Information into Log File](https://cwe.mitre.org/data/definitions/532.html) |
+| **OWASP**         | A09:2025 – Security Logging & Alerting Failures                                                              |
+| **利用难度**      | Tier 2（本地进程访问）                                                                                       |
+| **修复工作量**    | 低（Low）                                                                                                    |
 
 **描述：**
 
@@ -1030,11 +1075,12 @@ const commitId = process.env['ATOMGIT_SHA'] || '';
 
 `dist/detectors/LizardDetector.js:11`：`this.tempJsonFile = './lizard_output.json';`
 `dist/index.js:62550-62553`：
+
 ```javascript
-core.info(`gitUrl: ${gitUrl || '(empty)'}`);
-core.info(`branchName: ${branchName || '(empty)'}`);
-core.info(`pipelineRunId: ${pipelineRunId || '(empty)'}`);
-core.info(`commitId: ${commitId || '(empty)'}`);
+core.info(`gitUrl: ${gitUrl || "(empty)"}`);
+core.info(`branchName: ${branchName || "(empty)"}`);
+core.info(`pipelineRunId: ${pipelineRunId || "(empty)"}`);
+core.info(`commitId: ${commitId || "(empty)"}`);
 ```
 
 **复核修正（下调依据）：** 原报告称临时文件"仅成功路径清理，未在 `finally` 中清理"。实际核验发现 `runLizard` 在 `catch` 分支中**同样执行了清理**：`dist/detectors/LizardDetector.js:118-140` 会读取并 `fs.unlinkSync(tempJsonPath)` 删除该文件，输入列表临时文件亦在异常路径删除（`:119-122`）。因此"仅成功路径清理"的断言**不成立**，仅在进程被强杀（如 OOM-Kill、`SIGKILL`）时才会残留。残余风险真实但范围明显缩小，故严重级别由中危下调为低危。
@@ -1056,28 +1102,28 @@ core.info(`commitId: ${commitId || '(empty)'}`);
 
 以下修复工作量低、影响大，建议立即实施：
 
-| 优先级 | 漏洞编号 | 修复内容 | 工作量 |
-|--------|---------|---------|--------|
-| P0 | FIND-02 | 在 `writeJsonFile`/`scan` 增加输出路径工作区约束 | Low |
-| P0 | FIND-05 | 解压前对下载的 `obsutil` tarball 校验钉扎哈希 | Low |
-| P0 | FIND-06 | `obsutil` 凭证从 argv 改为受限配置文件/环境变量 | Low |
-| P0 | FIND-14 | 移除或门控 `HUAWEICLOUD_OIDC_TOKEN` 环境变量覆盖 | Low |
-| P1 | FIND-08 | 在唯一 `yaml.load` 处增加大小/别名上限 | Low |
-| P1 | FIND-10 | 优先使用平台提供的仓库/commit 上下文 | Low |
-| P1 | FIND-12 | 临时输出移至 `os.tmpdir()` 并在 `finally` 删除 | Low |
-| P2 | FIND-13 | 移除裸 `PATH` 的 `scc` 兜底（fail-closed） | Low |
+| 优先级 | 漏洞编号 | 修复内容                                         | 工作量 |
+| ------ | -------- | ------------------------------------------------ | ------ |
+| P0     | FIND-02  | 在 `writeJsonFile`/`scan` 增加输出路径工作区约束 | Low    |
+| P0     | FIND-05  | 解压前对下载的 `obsutil` tarball 校验钉扎哈希    | Low    |
+| P0     | FIND-06  | `obsutil` 凭证从 argv 改为受限配置文件/环境变量  | Low    |
+| P0     | FIND-14  | 移除或门控 `HUAWEICLOUD_OIDC_TOKEN` 环境变量覆盖 | Low    |
+| P1     | FIND-08  | 在唯一 `yaml.load` 处增加大小/别名上限           | Low    |
+| P1     | FIND-10  | 优先使用平台提供的仓库/commit 上下文             | Low    |
+| P1     | FIND-12  | 临时输出移至 `os.tmpdir()` 并在 `finally` 删除   | Low    |
+| P2     | FIND-13  | 移除裸 `PATH` 的 `scc` 兜底（fail-closed）       | Low    |
 
 ### 6.2 中期修复
 
-| 优先级 | 漏洞编号 | 修复内容 | 工作量 |
-|--------|---------|---------|--------|
-| P0 | FIND-01 | 全部 shell `execSync` 改为 `execFileSync(bin, [args])`；校验 `allowed-extensions` | Medium |
-| P0 | FIND-03 | 上报载荷剔除/脱敏逐字源码，收紧默认白名单 | Medium |
-| P0 | FIND-04 | `pip install` 按哈希钉扎或预置 `lizard` | Medium |
-| P1 | FIND-07 | 对象键命名空间改为平台验证的租户身份 | Medium |
-| P1 | FIND-09 | 边界化遍历/载荷并为上报加有界重试 | Medium |
-| P1 | FIND-11 | 可配置键白名单，指标视为不可信 | Medium |
-| P2 | FIND-13 | 为内置 `scc` 校验发布哈希/签名并最小权限执行 | Medium |
+| 优先级 | 漏洞编号 | 修复内容                                                                          | 工作量 |
+| ------ | -------- | --------------------------------------------------------------------------------- | ------ |
+| P0     | FIND-01  | 全部 shell `execSync` 改为 `execFileSync(bin, [args])`；校验 `allowed-extensions` | Medium |
+| P0     | FIND-03  | 上报载荷剔除/脱敏逐字源码，收紧默认白名单                                         | Medium |
+| P0     | FIND-04  | `pip install` 按哈希钉扎或预置 `lizard`                                           | Medium |
+| P1     | FIND-07  | 对象键命名空间改为平台验证的租户身份                                              | Medium |
+| P1     | FIND-09  | 边界化遍历/载荷并为上报加有界重试                                                 | Medium |
+| P1     | FIND-11  | 可配置键白名单，指标视为不可信                                                    | Medium |
+| P2     | FIND-13  | 为内置 `scc` 校验发布哈希/签名并最小权限执行                                      | Medium |
 
 ### 6.3 长期安全改进
 
@@ -1120,69 +1166,69 @@ core.info(`commitId: ${commitId || '(empty)'}`);
 
 ### 7.1 威胁覆盖验证表
 
-| 威胁 ID | 对应发现 | 状态 |
-|---------|---------|------|
-| T01.S | FIND-10 | ✅ 已覆盖 |
-| T01.T | FIND-11 | ✅ 已覆盖 |
-| T01.R | FIND-10 | ✅ 已覆盖 |
-| T01.I | FIND-12 | ✅ 已覆盖 |
-| T01.D | FIND-09 | ✅ 已覆盖 |
-| T01.A | FIND-11 | ✅ 已覆盖 |
-| T02.T | FIND-11 | ✅ 已覆盖 |
-| T02.D | FIND-08 | ✅ 已覆盖 |
-| T02.A | FIND-11 | ✅ 已覆盖 |
-| T03.I | FIND-03 | ✅ 已覆盖 |
-| T03.D | FIND-09 | ✅ 已覆盖 |
-| T04.T | FIND-01 | ✅ 已覆盖 |
-| T04.D | FIND-09 | ✅ 已覆盖 |
-| T04.E | FIND-13 | ✅ 已覆盖 |
-| T05.T | FIND-01 | ✅ 已覆盖 |
-| T05.D | FIND-09 | ✅ 已覆盖 |
-| T05.I | FIND-12 | ✅ 已覆盖 |
-| T06.T | FIND-01 | ✅ 已覆盖 |
-| T06.I | FIND-03 | ✅ 已覆盖 |
-| T06.D | FIND-09 | ✅ 已覆盖 |
-| T07.S | FIND-06 | ✅ 已覆盖 |
-| T07.T | FIND-05 | ✅ 已覆盖 |
-| T07.I | FIND-06 | ✅ 已覆盖 |
-| T07.E | FIND-07 | ✅ 已覆盖 |
-| T07.D | FIND-09 | ✅ 已覆盖 |
-| T08.T | FIND-13 | ✅ 已覆盖 |
-| T08.E | FIND-13 | ✅ 已覆盖 |
-| T09.T | FIND-05 | ✅ 已覆盖 |
-| T09.E | FIND-01 | ✅ 已覆盖 |
-| T10.T | FIND-02 | ✅ 已覆盖 |
-| T10.I | FIND-03 | ✅ 已覆盖 |
-| T11.I | FIND-03 | ✅ 已覆盖 |
-| T11.D | FIND-09 | ✅ 已覆盖 |
-| T12.I | FIND-03 | ✅ 已覆盖 |
-| T12.T | FIND-07 | ✅ 已覆盖 |
-| T13.T | FIND-04 | ✅ 已覆盖 |
-| T13.D | FIND-04 | ✅ 已覆盖 |
-| T14.S | FIND-14 | ✅ 已覆盖 |
-| T14.D | — | 🔄 平台缓解（OIDC 端点可用性由 CI 平台管理） |
-| T14.E | — | 🔄 平台缓解（STS 凭证范围由华为云信任策略约束） |
+| 威胁 ID | 对应发现 | 状态                                            |
+| ------- | -------- | ----------------------------------------------- |
+| T01.S   | FIND-10  | ✅ 已覆盖                                       |
+| T01.T   | FIND-11  | ✅ 已覆盖                                       |
+| T01.R   | FIND-10  | ✅ 已覆盖                                       |
+| T01.I   | FIND-12  | ✅ 已覆盖                                       |
+| T01.D   | FIND-09  | ✅ 已覆盖                                       |
+| T01.A   | FIND-11  | ✅ 已覆盖                                       |
+| T02.T   | FIND-11  | ✅ 已覆盖                                       |
+| T02.D   | FIND-08  | ✅ 已覆盖                                       |
+| T02.A   | FIND-11  | ✅ 已覆盖                                       |
+| T03.I   | FIND-03  | ✅ 已覆盖                                       |
+| T03.D   | FIND-09  | ✅ 已覆盖                                       |
+| T04.T   | FIND-01  | ✅ 已覆盖                                       |
+| T04.D   | FIND-09  | ✅ 已覆盖                                       |
+| T04.E   | FIND-13  | ✅ 已覆盖                                       |
+| T05.T   | FIND-01  | ✅ 已覆盖                                       |
+| T05.D   | FIND-09  | ✅ 已覆盖                                       |
+| T05.I   | FIND-12  | ✅ 已覆盖                                       |
+| T06.T   | FIND-01  | ✅ 已覆盖                                       |
+| T06.I   | FIND-03  | ✅ 已覆盖                                       |
+| T06.D   | FIND-09  | ✅ 已覆盖                                       |
+| T07.S   | FIND-06  | ✅ 已覆盖                                       |
+| T07.T   | FIND-05  | ✅ 已覆盖                                       |
+| T07.I   | FIND-06  | ✅ 已覆盖                                       |
+| T07.E   | FIND-07  | ✅ 已覆盖                                       |
+| T07.D   | FIND-09  | ✅ 已覆盖                                       |
+| T08.T   | FIND-13  | ✅ 已覆盖                                       |
+| T08.E   | FIND-13  | ✅ 已覆盖                                       |
+| T09.T   | FIND-05  | ✅ 已覆盖                                       |
+| T09.E   | FIND-01  | ✅ 已覆盖                                       |
+| T10.T   | FIND-02  | ✅ 已覆盖                                       |
+| T10.I   | FIND-03  | ✅ 已覆盖                                       |
+| T11.I   | FIND-03  | ✅ 已覆盖                                       |
+| T11.D   | FIND-09  | ✅ 已覆盖                                       |
+| T12.I   | FIND-03  | ✅ 已覆盖                                       |
+| T12.T   | FIND-07  | ✅ 已覆盖                                       |
+| T13.T   | FIND-04  | ✅ 已覆盖                                       |
+| T13.D   | FIND-04  | ✅ 已覆盖                                       |
+| T14.S   | FIND-14  | ✅ 已覆盖                                       |
+| T14.D   | —        | 🔄 平台缓解（OIDC 端点可用性由 CI 平台管理）    |
+| T14.E   | —        | 🔄 平台缓解（STS 凭证范围由华为云信任策略约束） |
 
 ### 7.2 漏洞误报复核结果
 
 对 `3-findings.md` 的 FIND-01 至 FIND-14 **逐条打开真实源码核验**（无 `src/`，读 `dist/` 打包代码、`action.yml`、workflow）。结论：**确认 13 条、误报 0 条、部分成立 1 条、无法验证 0 条**；误报 0 条故第 5 章保留全部 14 条。
 
-| 发现 ID | 原严重级别 | 复核结论 | 证据（路径:行号） | 说明 |
-|---------|-----------|---------|------------------|------|
-| FIND-01 | Important | 确认 | `dist/detectors/SlocDetector.js:103,105`；`dist/detectors/DuplicationDetector.js:315`；`dist/detectors/LizardDetector.js:89`；`dist/uploaders/CoderepoUploader.js:444,446-451` | shell 字符串 `execSync` 确存在；现实可控注入向量为 `allowed-extensions`（`SlocDetector.js:86-91`），其余参数多为内部生成值 |
-| FIND-02 | Important | 确认 | `dist/scanner.js:140-143`；`dist/utils/fileUtils.js:5-13` | `output` 路径无工作区约束，`writeJsonFile` 无包含性检查 |
-| FIND-03 | Important | 确认 | `dist/uploaders/CoderepoUploader.js:291-304,508-520,263`；`dist/detectors/DuplicationDetector.js:1090-1096,1120-1127`；`dist/utils/fileCollector.js:20` | 逐字源码（`contentB64`/`snapshotData`）确被打包并上传共享桶；"未授权暴露"程度取决于桶策略（仓外） |
-| FIND-04 | Important | 确认 | `dist/index.js:62511,62529-62533,62536-62540,62329-62330,62359-62379` | 仅版本钉扎、无哈希；索引运行时探测选择 |
-| FIND-05 | Important | 确认 | `dist/uploaders/CoderepoUploader.js:438-452,426` | 运行时下载/解压/`chmod 755`/执行，无哈希校验 |
-| FIND-06 | Moderate | 确认 | `dist/uploaders/CoderepoUploader.js:416-421,424,426` | AK/SK 与 STS 凭证经 argv 且 `stdio:'inherit'`；掩码只作用于打印串 |
-| FIND-07 | Moderate | 确认 | `dist/uploaders/CoderepoUploader.js:475-492,263`；`dist/index.js:62441-62443` | 对象键前缀 `owner/repo` 取自本地 `git remote` |
-| FIND-08 | Moderate | 确认 | `dist/config/loader.js:41,45-46,54-55,62-85`；`dist/index.js:18829` | 无大小/别名上限；`js-yaml` 4.x 别名按共享引用记录，放大发生在 `mergeConfig` 递归 |
-| FIND-09 | Moderate | 确认 | `dist/detectors/SlocDetector.js:107-108`；`dist/detectors/LizardDetector.js:91-92`；`dist/detectors/DuplicationDetector.js:69-90`；`dist/utils/fileCollector.js:231-264`；`dist/uploaders/CoderepoUploader.js:336-343` | buffer/超时/无界遍历/无重试均属实 |
-| FIND-10 | Moderate | 确认 | `dist/index.js:62441-62468`；`dist/scanner.js:174-183` | 上报身份取自本地 git 与 `ATOMGIT_*`，无独立证明 |
-| FIND-11 | Moderate | 确认 | `dist/config/loader.js:62-85,13-25`；`dist/scanner.js:86-100`；`dist/index.js:62482-62491` | `mergeConfig` 覆盖任意键；输入可覆盖检测器相关设置 |
-| FIND-12 | Moderate | **部分成立** | `dist/detectors/LizardDetector.js:11,118-140`；`dist/index.js:62550-62553` | 临时文件确写入 cwd，但"仅成功路径清理"不成立——`catch` 分支亦删除；仅强杀时残留。**下调为 Low** |
-| FIND-13 | Important | 确认 | `dist/detectors/SlocDetector.js:8-47`；`dist/detectors/DuplicationDetector.js:348-384`；`dist/bin/scc`(4550840B)、`dist/bin/LICENSE` | 内置二进制无完整性/版本校验，且存在裸 `PATH` 兜底 |
-| FIND-14 | Important | 确认 | `dist/index.js:7677-7682` | `HUAWEICLOUD_OIDC_TOKEN` 优先于流水线端点返回 |
+| 发现 ID | 原严重级别 | 复核结论     | 证据（路径:行号）                                                                                                                                                                                                      | 说明                                                                                                                       |
+| ------- | ---------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| FIND-01 | Important  | 确认         | `dist/detectors/SlocDetector.js:103,105`；`dist/detectors/DuplicationDetector.js:315`；`dist/detectors/LizardDetector.js:89`；`dist/uploaders/CoderepoUploader.js:444,446-451`                                         | shell 字符串 `execSync` 确存在；现实可控注入向量为 `allowed-extensions`（`SlocDetector.js:86-91`），其余参数多为内部生成值 |
+| FIND-02 | Important  | 确认         | `dist/scanner.js:140-143`；`dist/utils/fileUtils.js:5-13`                                                                                                                                                              | `output` 路径无工作区约束，`writeJsonFile` 无包含性检查                                                                    |
+| FIND-03 | Important  | 确认         | `dist/uploaders/CoderepoUploader.js:291-304,508-520,263`；`dist/detectors/DuplicationDetector.js:1090-1096,1120-1127`；`dist/utils/fileCollector.js:20`                                                                | 逐字源码（`contentB64`/`snapshotData`）确被打包并上传共享桶；"未授权暴露"程度取决于桶策略（仓外）                          |
+| FIND-04 | Important  | 确认         | `dist/index.js:62511,62529-62533,62536-62540,62329-62330,62359-62379`                                                                                                                                                  | 仅版本钉扎、无哈希；索引运行时探测选择                                                                                     |
+| FIND-05 | Important  | 确认         | `dist/uploaders/CoderepoUploader.js:438-452,426`                                                                                                                                                                       | 运行时下载/解压/`chmod 755`/执行，无哈希校验                                                                               |
+| FIND-06 | Moderate   | 确认         | `dist/uploaders/CoderepoUploader.js:416-421,424,426`                                                                                                                                                                   | AK/SK 与 STS 凭证经 argv 且 `stdio:'inherit'`；掩码只作用于打印串                                                          |
+| FIND-07 | Moderate   | 确认         | `dist/uploaders/CoderepoUploader.js:475-492,263`；`dist/index.js:62441-62443`                                                                                                                                          | 对象键前缀 `owner/repo` 取自本地 `git remote`                                                                              |
+| FIND-08 | Moderate   | 确认         | `dist/config/loader.js:41,45-46,54-55,62-85`；`dist/index.js:18829`                                                                                                                                                    | 无大小/别名上限；`js-yaml` 4.x 别名按共享引用记录，放大发生在 `mergeConfig` 递归                                           |
+| FIND-09 | Moderate   | 确认         | `dist/detectors/SlocDetector.js:107-108`；`dist/detectors/LizardDetector.js:91-92`；`dist/detectors/DuplicationDetector.js:69-90`；`dist/utils/fileCollector.js:231-264`；`dist/uploaders/CoderepoUploader.js:336-343` | buffer/超时/无界遍历/无重试均属实                                                                                          |
+| FIND-10 | Moderate   | 确认         | `dist/index.js:62441-62468`；`dist/scanner.js:174-183`                                                                                                                                                                 | 上报身份取自本地 git 与 `ATOMGIT_*`，无独立证明                                                                            |
+| FIND-11 | Moderate   | 确认         | `dist/config/loader.js:62-85,13-25`；`dist/scanner.js:86-100`；`dist/index.js:62482-62491`                                                                                                                             | `mergeConfig` 覆盖任意键；输入可覆盖检测器相关设置                                                                         |
+| FIND-12 | Moderate   | **部分成立** | `dist/detectors/LizardDetector.js:11,118-140`；`dist/index.js:62550-62553`                                                                                                                                             | 临时文件确写入 cwd，但"仅成功路径清理"不成立——`catch` 分支亦删除；仅强杀时残留。**下调为 Low**                             |
+| FIND-13 | Important  | 确认         | `dist/detectors/SlocDetector.js:8-47`；`dist/detectors/DuplicationDetector.js:348-384`；`dist/bin/scc`(4550840B)、`dist/bin/LICENSE`                                                                                   | 内置二进制无完整性/版本校验，且存在裸 `PATH` 兜底                                                                          |
+| FIND-14 | Important  | 确认         | `dist/index.js:7677-7682`                                                                                                                                                                                              | `HUAWEICLOUD_OIDC_TOKEN` 优先于流水线端点返回                                                                              |
 
 **复核后严重级别分布（第 5 章口径）：** 严重 0 / 高危 7（FIND-01、02、03、04、05、13、14）/ 中危 6（FIND-06、07、08、09、10、11）/ 低危 1（FIND-12），合计 14。
 
@@ -1190,41 +1236,41 @@ core.info(`commitId: ${commitId || '(empty)'}`);
 
 #### 安全标准
 
-| 标准 | 链接 |
-|------|------|
-| STRIDE Threat Model | https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats |
-| Microsoft SDL Bug Bar | https://www.microsoft.com/en-us/msrc/sdlbugbar |
-| OWASP Top 10:2025 | https://owasp.org/Top10/2025/ |
-| CVSS 4.0 | https://www.first.org/cvss/v4.0/specification-document |
-| CWE | https://cwe.mitre.org/ |
-| SLSA 供应链分级 | https://slsa.dev/spec/v1.0/levels |
+| 标准                  | 链接                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| STRIDE Threat Model   | https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats |
+| Microsoft SDL Bug Bar | https://www.microsoft.com/en-us/msrc/sdlbugbar                                        |
+| OWASP Top 10:2025     | https://owasp.org/Top10/2025/                                                         |
+| CVSS 4.0              | https://www.first.org/cvss/v4.0/specification-document                                |
+| CWE                   | https://cwe.mitre.org/                                                                |
+| SLSA 供应链分级       | https://slsa.dev/spec/v1.0/levels                                                     |
 
 #### 组件文档
 
-| 组件 | 链接 |
-|------|------|
-| Node.js child_process（execSync vs execFileSync） | https://nodejs.org/api/child_process.html |
-| js-yaml | https://github.com/nodeca/js-yaml |
-| Huawei OBS / obsutil | https://support.huaweicloud.com/intl/en-us/utiltg-obs/obs_11_0001.html |
-| Huawei APIG | https://support.huaweicloud.com/intl/en-us/devg-apig/apig-devguide.pdf |
-| Actions OIDC 加固 | https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect |
-| scc (Sloc Cloc and Code) | https://github.com/boyter/scc |
+| 组件                                              | 链接                                                                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Node.js child_process（execSync vs execFileSync） | https://nodejs.org/api/child_process.html                                                                                      |
+| js-yaml                                           | https://github.com/nodeca/js-yaml                                                                                              |
+| Huawei OBS / obsutil                              | https://support.huaweicloud.com/intl/en-us/utiltg-obs/obs_11_0001.html                                                         |
+| Huawei APIG                                       | https://support.huaweicloud.com/intl/en-us/devg-apig/apig-devguide.pdf                                                         |
+| Actions OIDC 加固                                 | https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect |
+| scc (Sloc Cloc and Code)                          | https://github.com/boyter/scc                                                                                                  |
 
 ### 7.4 报告元数据
 
-| 属性 | 值 |
-|------|-----|
-| 分析模型 | DeepSeek-V4.1-Flash |
-| 分析日期 | 2026-10-09 |
-| 分析版本 | 分支 `master`，commit `f236b87`（2026-10-09 16:09:03 +0800） |
-| 分析方法 | STRIDE-A + 逐条代码复核（误报复核） |
-| 分析范围 | 整个 `code-metrics-action` 仓库（`dist/` bundle 及可读模块、`action.yml`、`.gitcode/workflows/`、打包脚本） |
-| 排除范围 | `node_modules/`、`.git/`、`.idea/`（`dist/` 为真实执行代码，纳入分析） |
-| 部署分类 | LOCALHOST_DESKTOP（CI 执行机本地进程，无监听端口） |
-| 数据来源 | 基础 STRIDE-A 报告集 `threat-model-20261009-103800/`（0-assessment / 0.1-architecture / 1-threatmodel / 2-stride-analysis / 3-findings / threat-inventory.json） |
-| 威胁/发现统计 | 15 组件、2 信任边界、16 数据流、40 威胁、14 发现 |
-| 误报复核 | 确认 13 / 误报 0 / 部分成立 1 / 无法验证 0 |
-| 报告版本 | 1.0 |
+| 属性          | 值                                                                                                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 分析模型      | DeepSeek-V4.1-Flash                                                                                                                                              |
+| 分析日期      | 2026-10-09                                                                                                                                                       |
+| 分析版本      | 分支 `master`，commit `f236b87`（2026-10-09 16:09:03 +0800）                                                                                                     |
+| 分析方法      | STRIDE-A + 逐条代码复核（误报复核）                                                                                                                              |
+| 分析范围      | 整个 `code-metrics-action` 仓库（`dist/` bundle 及可读模块、`action.yml`、`.gitcode/workflows/`、打包脚本）                                                      |
+| 排除范围      | `node_modules/`、`.git/`、`.idea/`（`dist/` 为真实执行代码，纳入分析）                                                                                           |
+| 部署分类      | LOCALHOST_DESKTOP（CI 执行机本地进程，无监听端口）                                                                                                               |
+| 数据来源      | 基础 STRIDE-A 报告集 `threat-model-20261009-103800/`（0-assessment / 0.1-architecture / 1-threatmodel / 2-stride-analysis / 3-findings / threat-inventory.json） |
+| 威胁/发现统计 | 15 组件、2 信任边界、16 数据流、40 威胁、14 发现                                                                                                                 |
+| 误报复核      | 确认 13 / 误报 0 / 部分成立 1 / 无法验证 0                                                                                                                       |
+| 报告版本      | 1.0                                                                                                                                                              |
 
 ---
 

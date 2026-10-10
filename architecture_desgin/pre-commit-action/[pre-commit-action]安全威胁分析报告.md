@@ -37,12 +37,12 @@
 
 本次分析共识别出 **14 个安全问题**（经本轮源码误报复核后全部保留），其中：
 
-| 严重级别 | 数量 | 关键问题 |
-|---------|------|---------|
-| **严重（Critical）** | 1 | 不可信 PR 代码在特权自托管执行机执行（pwn-request） |
-| **高危（High）** | 4 | `extra_args` 白名单绕过、`gc_token` 明文落盘、pip 版本未固定、钩子 `rev` 可变 |
-| **中危（Medium）** | 8 | PAT 暴露（复核下调）、shell 拼接命令、SARIF 内容注入、任意文件收集、子进程无超时、可变 action tag/OIDC、`GONOSUMDB=*`、打包不可复现 |
-| **低危（Low）** | 1 | 输入/健壮性控制覆盖面有限 |
+| 严重级别             | 数量 | 关键问题                                                                                                                            |
+| -------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **严重（Critical）** | 1    | 不可信 PR 代码在特权自托管执行机执行（pwn-request）                                                                                 |
+| **高危（High）**     | 4    | `extra_args` 白名单绕过、`gc_token` 明文落盘、pip 版本未固定、钩子 `rev` 可变                                                       |
+| **中危（Medium）**   | 8    | PAT 暴露（复核下调）、shell 拼接命令、SARIF 内容注入、任意文件收集、子进程无超时、可变 action tag/OIDC、`GONOSUMDB=*`、打包不可复现 |
+| **低危（Low）**      | 1    | 输入/健壮性控制覆盖面有限                                                                                                           |
 
 > **关于数量与误报复核：** 原始报告共 14 条发现。本轮对 FIND-01..FIND-14 **逐条打开仓库真实源码核验**，结论为：确认 13 条、部分成立 1 条（FIND-03，已下调严重级别）、误报 0 条、无法验证 0 条。详见 [7.2 漏洞误报复核结果](#72-漏洞误报复核结果)。
 
@@ -60,37 +60,37 @@
 
 ### 2.1 技术栈
 
-| 类别 | 技术 | 版本/说明 |
-|------|------|----------|
-| 语言 | JavaScript (Node.js) | `node16` 运行时（`action.yml:65`） |
-| 语言 | Python | pre-commit 运行时（`python -m pre_commit`） |
-| 语言 | Go | 可选（`go version` 存在时才配置代理） |
-| 语言 | YAML | workflow / 钩子配置 |
-| 框架 | GitCode/GitHub Actions | `action.yml`，`runs.using: node16` |
-| 框架 | pre-commit hook framework | 钩子执行框架 |
-| 打包 | @vercel/ncc | devDependency，`ncc build index.js -o dist` |
-| 打包 | adm-zip | devDependency，`zip.js` 打包分发件 |
-| 数据存储 | 本地文件系统 | `dist/`、`.git/config`、`/tmp/pre-commit-reports/`、`pre-commit-action.zip` |
-| 基础设施 | 自托管执行机 | `self-hosted`（`region=cn` / `region=overseas`）与云端 `codearts-hosted` |
-| 版本控制 | GitCode 代码托管 | git 远端、PR 事件、`gc_token` 认证 |
+| 类别     | 技术                      | 版本/说明                                                                   |
+| -------- | ------------------------- | --------------------------------------------------------------------------- |
+| 语言     | JavaScript (Node.js)      | `node16` 运行时（`action.yml:65`）                                          |
+| 语言     | Python                    | pre-commit 运行时（`python -m pre_commit`）                                 |
+| 语言     | Go                        | 可选（`go version` 存在时才配置代理）                                       |
+| 语言     | YAML                      | workflow / 钩子配置                                                         |
+| 框架     | GitCode/GitHub Actions    | `action.yml`，`runs.using: node16`                                          |
+| 框架     | pre-commit hook framework | 钩子执行框架                                                                |
+| 打包     | @vercel/ncc               | devDependency，`ncc build index.js -o dist`                                 |
+| 打包     | adm-zip                   | devDependency，`zip.js` 打包分发件                                          |
+| 数据存储 | 本地文件系统              | `dist/`、`.git/config`、`/tmp/pre-commit-reports/`、`pre-commit-action.zip` |
+| 基础设施 | 自托管执行机              | `self-hosted`（`region=cn` / `region=overseas`）与云端 `codearts-hosted`    |
+| 版本控制 | GitCode 代码托管          | git 远端、PR 事件、`gc_token` 认证                                          |
 
 ### 2.2 关键组件
 
-| 组件 ID | 类型 | 说明 | 源码位置 |
-|---------|------|------|---------|
-| PreCommitAction | Process | 动作主运行时：读取输入、测速选源、安装 pip/go 依赖、注入 git 凭证、执行 `pre-commit`、收集/兜底生成 SARIF、写 STEP_OUTPUT | `index.js` / `dist/index.js` |
-| ToolParsers | Process | SARIF 生成与工具日志解析模块（clang-tidy/bandit/gosec/spotbugs/rust-clippy/eslint/gitleaks/detect-secrets） | `tool-parsers.js` |
-| PreCommitWorkflow | Process | 仓库 PR 门禁工作流（`pull_request_target` 触发、检出合并 commit、pr-label 编排） | `.gitcode/workflows/pre-commit.yml` |
-| CodeMetricsWorkflow | Process | 仓库代码度量工作流（push/workflow_dispatch 触发、OIDC `id-token: write`） | `.gitcode/workflows/code-metrics-scan.yml` |
-| PreCommitConfig | Data Store | 仓库自身钩子配置（pre-commit-hooks 镜像、gitleaks、local prettier） | `.pre-commit-config.yaml` |
-| PackagingScript | Process | 打包/版本脚本（改写 `action.yml` 版本号并将 `dist/` 打入 zip） | `zip.js`、`bump-version.js` |
-| GitCodeSCM | External | GitCode 代码托管平台：git 远端、`gc_token` 认证、PR/推送事件 | 外部服务 |
-| PyPIRegistry | External | Python 包索引：`pypi.org` 与华为云镜像 | 外部服务 |
-| GoModuleProxy | External | Go 模块代理：`proxy.golang.org` 与华为云镜像 | 外部服务 |
-| HookRepos | External | pre-commit 钩子仓库（gitcode 镜像 / GitHub） | 外部服务 |
-| ThirdPartyActions | External | 工作流引用的第三方 action（`uses:`） | 外部服务 |
-| UploadSarifAction | External | 下游 SARIF 上传动作 `openlibing/openlibing-upload-sarif` | 外部服务 |
-| DeveloperUser | External | 业务仓开发者 / CI 使用者（威胁来源，不单独出具 STRIDE 章节） | 外部实体 |
+| 组件 ID             | 类型       | 说明                                                                                                                      | 源码位置                                   |
+| ------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| PreCommitAction     | Process    | 动作主运行时：读取输入、测速选源、安装 pip/go 依赖、注入 git 凭证、执行 `pre-commit`、收集/兜底生成 SARIF、写 STEP_OUTPUT | `index.js` / `dist/index.js`               |
+| ToolParsers         | Process    | SARIF 生成与工具日志解析模块（clang-tidy/bandit/gosec/spotbugs/rust-clippy/eslint/gitleaks/detect-secrets）               | `tool-parsers.js`                          |
+| PreCommitWorkflow   | Process    | 仓库 PR 门禁工作流（`pull_request_target` 触发、检出合并 commit、pr-label 编排）                                          | `.gitcode/workflows/pre-commit.yml`        |
+| CodeMetricsWorkflow | Process    | 仓库代码度量工作流（push/workflow_dispatch 触发、OIDC `id-token: write`）                                                 | `.gitcode/workflows/code-metrics-scan.yml` |
+| PreCommitConfig     | Data Store | 仓库自身钩子配置（pre-commit-hooks 镜像、gitleaks、local prettier）                                                       | `.pre-commit-config.yaml`                  |
+| PackagingScript     | Process    | 打包/版本脚本（改写 `action.yml` 版本号并将 `dist/` 打入 zip）                                                            | `zip.js`、`bump-version.js`                |
+| GitCodeSCM          | External   | GitCode 代码托管平台：git 远端、`gc_token` 认证、PR/推送事件                                                              | 外部服务                                   |
+| PyPIRegistry        | External   | Python 包索引：`pypi.org` 与华为云镜像                                                                                    | 外部服务                                   |
+| GoModuleProxy       | External   | Go 模块代理：`proxy.golang.org` 与华为云镜像                                                                              | 外部服务                                   |
+| HookRepos           | External   | pre-commit 钩子仓库（gitcode 镜像 / GitHub）                                                                              | 外部服务                                   |
+| ThirdPartyActions   | External   | 工作流引用的第三方 action（`uses:`）                                                                                      | 外部服务                                   |
+| UploadSarifAction   | External   | 下游 SARIF 上传动作 `openlibing/openlibing-upload-sarif`                                                                  | 外部服务                                   |
+| DeveloperUser       | External   | 业务仓开发者 / CI 使用者（威胁来源，不单独出具 STRIDE 章节）                                                              | 外部实体                                   |
 
 ### 2.3 信任边界
 
@@ -203,23 +203,23 @@ flowchart LR
 
 ### 3.2 关键数据流说明
 
-| 数据流 ID | 源 → 目标 | 协议 | 数据内容 | 安全风险 |
-|-----------|-----------|------|---------|---------|
-| DF01 | DeveloperUser → PreCommitWorkflow | HTTPS（SCM 事件） | 开发者提交 PR / 触发工作流事件 | PR 内容为不可信输入 |
-| DF02 | PreCommitWorkflow → PreCommitAction | Action 调用（env/inputs） | `extra_args`/`gc_token`/`report-dir`/`sarif-file` | 参数白名单可绕过 |
-| DF03 | PreCommitWorkflow → GitCodeSCM | HTTPS git + REST | checkout 与 pr-label（`secrets.ROBOT_TOKEN`） | 长期 PAT |
-| DF04 | CodeMetricsWorkflow → GitCodeSCM | HTTPS git + OIDC | checkout 与 OIDC 联邦认证上传 | OIDC 权限较广 |
-| DF05 | PreCommitAction → GitCodeSCM | HTTPS git | `git remote set-url`（gc_token）与 `git fetch origin <base>` | token 明文写入 `.git/config` |
-| DF06 | PreCommitAction → PyPIRegistry | HTTPS | `pip config set index-url`、`pip install pre-commit`、`curl` 测速 | 未固定版本/哈希、动态选源 |
-| DF07 | PreCommitAction → GoModuleProxy | HTTPS | `go env -w GOPROXY/GONOSUMDB` 与 `curl` 测速 | `GONOSUMDB=*` 关闭校验 |
-| DF08 | PreCommitAction → HookRepos | HTTPS/SSH git | pre-commit 克隆钩子仓并执行钩子 | 可变 `rev`、仓库可控钩子执行 |
-| DF09 | PreCommitAction → PreCommitConfig | 文件读取 | 读取 `.pre-commit-config.yaml` 驱动钩子执行 | 不可信配置驱动执行 |
-| DF10 | PreCommitAction → UploadSarifAction | Output channel | 通过 `sarif-files` output 传递报告路径 | 任意文件路径纳入上传 |
-| DF11 | DeveloperUser → PreCommitConfig | git commit | 开发者编写/提交钩子配置 | 配置可含任意钩子 |
-| DF12 | DeveloperUser → GitCodeSCM | HTTPS | 开发者打开 PR / 推送代码 | 攻击入口 |
-| DF13 | PackagingScript → PreCommitAction | 文件/制品 | 打包 `dist/` 并改写 `action.yml` 版本 | 就地改写、产物漂移 |
-| DF14 | PreCommitWorkflow → ThirdPartyActions | Action 调用 | `uses:` 引用 checkout/setup-node/setup-go/pr-label-action | 可变 tag |
-| DF15 | CodeMetricsWorkflow → ThirdPartyActions | Action 调用 | `uses:` 引用 checkout/code-metrics-action | SHA 已固定（对照） |
+| 数据流 ID | 源 → 目标                               | 协议                      | 数据内容                                                          | 安全风险                     |
+| --------- | --------------------------------------- | ------------------------- | ----------------------------------------------------------------- | ---------------------------- |
+| DF01      | DeveloperUser → PreCommitWorkflow       | HTTPS（SCM 事件）         | 开发者提交 PR / 触发工作流事件                                    | PR 内容为不可信输入          |
+| DF02      | PreCommitWorkflow → PreCommitAction     | Action 调用（env/inputs） | `extra_args`/`gc_token`/`report-dir`/`sarif-file`                 | 参数白名单可绕过             |
+| DF03      | PreCommitWorkflow → GitCodeSCM          | HTTPS git + REST          | checkout 与 pr-label（`secrets.ROBOT_TOKEN`）                     | 长期 PAT                     |
+| DF04      | CodeMetricsWorkflow → GitCodeSCM        | HTTPS git + OIDC          | checkout 与 OIDC 联邦认证上传                                     | OIDC 权限较广                |
+| DF05      | PreCommitAction → GitCodeSCM            | HTTPS git                 | `git remote set-url`（gc_token）与 `git fetch origin <base>`      | token 明文写入 `.git/config` |
+| DF06      | PreCommitAction → PyPIRegistry          | HTTPS                     | `pip config set index-url`、`pip install pre-commit`、`curl` 测速 | 未固定版本/哈希、动态选源    |
+| DF07      | PreCommitAction → GoModuleProxy         | HTTPS                     | `go env -w GOPROXY/GONOSUMDB` 与 `curl` 测速                      | `GONOSUMDB=*` 关闭校验       |
+| DF08      | PreCommitAction → HookRepos             | HTTPS/SSH git             | pre-commit 克隆钩子仓并执行钩子                                   | 可变 `rev`、仓库可控钩子执行 |
+| DF09      | PreCommitAction → PreCommitConfig       | 文件读取                  | 读取 `.pre-commit-config.yaml` 驱动钩子执行                       | 不可信配置驱动执行           |
+| DF10      | PreCommitAction → UploadSarifAction     | Output channel            | 通过 `sarif-files` output 传递报告路径                            | 任意文件路径纳入上传         |
+| DF11      | DeveloperUser → PreCommitConfig         | git commit                | 开发者编写/提交钩子配置                                           | 配置可含任意钩子             |
+| DF12      | DeveloperUser → GitCodeSCM              | HTTPS                     | 开发者打开 PR / 推送代码                                          | 攻击入口                     |
+| DF13      | PackagingScript → PreCommitAction       | 文件/制品                 | 打包 `dist/` 并改写 `action.yml` 版本                             | 就地改写、产物漂移           |
+| DF14      | PreCommitWorkflow → ThirdPartyActions   | Action 调用               | `uses:` 引用 checkout/setup-node/setup-go/pr-label-action         | 可变 tag                     |
+| DF15      | CodeMetricsWorkflow → ThirdPartyActions | Action 调用               | `uses:` 引用 checkout/code-metrics-action                         | SHA 已固定（对照）           |
 
 ---
 
@@ -229,31 +229,31 @@ flowchart LR
 
 ### 4.1 威胁等级定义
 
-| 等级 | 说明 | 前置条件 |
-|------|------|---------|
-| **Tier 1 (T1)** | 直接暴露，无需前置条件 | 攻击者可直接利用（前置条件必须为 `None`） |
-| **Tier 2 (T2)** | 需要单一前置条件 | `Authenticated User` / `Privileged User` / 单一 `{Boundary} Access` |
-| **Tier 3 (T3)** | 需要较高前置或纵深防御 | `Host/OS Access`、`{Component} Compromise`、多前置条件组合 |
+| 等级            | 说明                   | 前置条件                                                            |
+| --------------- | ---------------------- | ------------------------------------------------------------------- |
+| **Tier 1 (T1)** | 直接暴露，无需前置条件 | 攻击者可直接利用（前置条件必须为 `None`）                           |
+| **Tier 2 (T2)** | 需要单一前置条件       | `Authenticated User` / `Privileged User` / 单一 `{Boundary} Access` |
+| **Tier 3 (T3)** | 需要较高前置或纵深防御 | `Host/OS Access`、`{Component} Compromise`、多前置条件组合          |
 
 由于部署分类为 `LOCALHOST_DESKTOP`（无监听端口的本地 CI 进程），**不存在 Tier 1 威胁**；无入站监听组件的“最小前置条件”以 `Privileged User` 表达（其唯一调用路径是 CI 工作流与调用方可控输入）。
 
 ### 4.2 威胁汇总表
 
-| 组件 | S | T | R | I | D | E | A | 总计 | T1 | T2 | T3 | 风险 |
-|------|---|---|---|---|---|---|---|------|----|----|----|------|
-| PreCommitAction | 1 | 5 | 1 | 2 | 1 | 1 | 2 | **13** | 0 | 11 | 2 | 高 |
-| ToolParsers | 1 | 1 | 1 | 2 | 1 | 0 | 1 | **7** | 0 | 7 | 0 | 中 |
-| PreCommitWorkflow | 1 | 1 | 1 | 1 | 1 | 1 | 1 | **7** | 0 | 7 | 0 | 严重 |
-| CodeMetricsWorkflow | 0 | 1 | 0 | 1 | 0 | 1 | 1 | **4** | 0 | 4 | 0 | 中 |
-| PreCommitConfig | 0 | 2 | 0 | 1 | 0 | 1 | 1 | **5** | 0 | 4 | 1 | 高 |
-| PackagingScript | 0 | 2 | 0 | 1 | 0 | 0 | 1 | **4** | 0 | 0 | 4 | 中 |
-| GitCodeSCM | 1 | 0 | 0 | 1 | 0 | 1 | 0 | **3** | 0 | 3 | 0 | 中 |
-| PyPIRegistry | 1 | 1 | 0 | 1 | 0 | 0 | 0 | **3** | 0 | 0 | 3 | 高 |
-| GoModuleProxy | 0 | 1 | 0 | 1 | 0 | 1 | 0 | **3** | 0 | 0 | 3 | 中 |
-| HookRepos | 1 | 1 | 0 | 1 | 0 | 0 | 0 | **3** | 0 | 0 | 3 | 高 |
-| ThirdPartyActions | 1 | 1 | 0 | 0 | 0 | 1 | 0 | **3** | 0 | 0 | 3 | 高 |
-| UploadSarifAction | 0 | 1 | 0 | 1 | 0 | 0 | 1 | **3** | 0 | 2 | 1 | 中 |
-| **总计** | **7** | **17** | **3** | **13** | **3** | **7** | **8** | **58** | **0** | **38** | **20** | |
+| 组件                | S     | T      | R     | I      | D     | E     | A     | 总计   | T1    | T2     | T3     | 风险 |
+| ------------------- | ----- | ------ | ----- | ------ | ----- | ----- | ----- | ------ | ----- | ------ | ------ | ---- |
+| PreCommitAction     | 1     | 5      | 1     | 2      | 1     | 1     | 2     | **13** | 0     | 11     | 2      | 高   |
+| ToolParsers         | 1     | 1      | 1     | 2      | 1     | 0     | 1     | **7**  | 0     | 7      | 0      | 中   |
+| PreCommitWorkflow   | 1     | 1      | 1     | 1      | 1     | 1     | 1     | **7**  | 0     | 7      | 0      | 严重 |
+| CodeMetricsWorkflow | 0     | 1      | 0     | 1      | 0     | 1     | 1     | **4**  | 0     | 4      | 0      | 中   |
+| PreCommitConfig     | 0     | 2      | 0     | 1      | 0     | 1     | 1     | **5**  | 0     | 4      | 1      | 高   |
+| PackagingScript     | 0     | 2      | 0     | 1      | 0     | 0     | 1     | **4**  | 0     | 0      | 4      | 中   |
+| GitCodeSCM          | 1     | 0      | 0     | 1      | 0     | 1     | 0     | **3**  | 0     | 3      | 0      | 中   |
+| PyPIRegistry        | 1     | 1      | 0     | 1      | 0     | 0     | 0     | **3**  | 0     | 0      | 3      | 高   |
+| GoModuleProxy       | 0     | 1      | 0     | 1      | 0     | 1     | 0     | **3**  | 0     | 0      | 3      | 中   |
+| HookRepos           | 1     | 1      | 0     | 1      | 0     | 0     | 0     | **3**  | 0     | 0      | 3      | 高   |
+| ThirdPartyActions   | 1     | 1      | 0     | 0      | 0     | 1     | 0     | **3**  | 0     | 0      | 3      | 高   |
+| UploadSarifAction   | 0     | 1      | 0     | 1      | 0     | 0     | 1     | **3**  | 0     | 2      | 1      | 中   |
+| **总计**            | **7** | **17** | **3** | **13** | **3** | **7** | **8** | **58** | **0** | **38** | **20** |      |
 
 ### 4.3 各组件详细威胁分析
 
@@ -261,35 +261,35 @@ flowchart LR
 
 **信任边界：** Application ｜ **数据流：** DF02, DF05, DF06, DF07, DF08, DF09, DF10, DF13
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T01.S | S | 动作直接信任 `INPUT_*` 环境变量与 `origin` 远端 URL，同宿主机其他步骤可伪造输入以重定向凭证/报告路径 | T2 | Local Process Access |
-| T01.T1 | T | 未固定版本的 `pip install pre-commit` 可被执行替代包 | T3 | PyPIRegistry Compromise |
-| T01.T2 | T | `execSync(cmd, {shell:'/bin/bash'})` 以字符串拼接 token/URL 构造命令，存在命令注入面 | T2 | Local Process Access |
-| T01.T3 | T | `go env -w GONOSUMDB=*` 关闭 Go 模块校验和验证 | T3 | GoModuleProxy Compromise |
-| T01.T4 | T | `report-dir` 下 `*.sarif` 被当作可信报告直接纳入上传列表，未做内容校验 | T2 | Privileged User |
-| T01.T5 | T | 恶意 `WORKSPACE` 值可能将动作重定向到非预期目录 —— 已被 `^\/[\w\-\/.]+$` 正则约束 | T2 | Local Process Access |
-| T01.R1 | R | 凭证注入、抓取的 ref、执行的钩子与生成的报告均无审计记录 | T2 | Local Process Access |
-| T01.I1 | I | `gc_token` 明文写入 `.git/config` remote URL，运行结束后持续驻留执行机 | T2 | Local Process Access |
-| T01.I2 | I | token/secret 可能经子进程回显输出与收集到的 SARIF 路径泄漏 | T2 | Local Process Access |
-| T01.D1 | D | 无超时/大小上限地 spawn pre-commit，恶意钩子可挂起或耗尽执行机 | T2 | Local Process Access |
-| T01.E1 | E | 动作以执行机身份运行仓库可控钩子，PR 作者借此获得执行机代码执行 | T2 | Authenticated User |
-| T01.A1 | A | `extra_args` 白名单对未知长选项放行（如 `--config=`），可指定任意钩子配置 | T2 | Privileged User |
-| T01.A2 | A | `sarif-file`/`report-dir` 输入可指向任意文件路径，被纳入下游上传列表 | T2 | Privileged User |
+| ID     | STRIDE | 威胁描述                                                                                             | Tier | 前置条件                 |
+| ------ | ------ | ---------------------------------------------------------------------------------------------------- | ---- | ------------------------ |
+| T01.S  | S      | 动作直接信任 `INPUT_*` 环境变量与 `origin` 远端 URL，同宿主机其他步骤可伪造输入以重定向凭证/报告路径 | T2   | Local Process Access     |
+| T01.T1 | T      | 未固定版本的 `pip install pre-commit` 可被执行替代包                                                 | T3   | PyPIRegistry Compromise  |
+| T01.T2 | T      | `execSync(cmd, {shell:'/bin/bash'})` 以字符串拼接 token/URL 构造命令，存在命令注入面                 | T2   | Local Process Access     |
+| T01.T3 | T      | `go env -w GONOSUMDB=*` 关闭 Go 模块校验和验证                                                       | T3   | GoModuleProxy Compromise |
+| T01.T4 | T      | `report-dir` 下 `*.sarif` 被当作可信报告直接纳入上传列表，未做内容校验                               | T2   | Privileged User          |
+| T01.T5 | T      | 恶意 `WORKSPACE` 值可能将动作重定向到非预期目录 —— 已被 `^\/[\w\-\/.]+$` 正则约束                    | T2   | Local Process Access     |
+| T01.R1 | R      | 凭证注入、抓取的 ref、执行的钩子与生成的报告均无审计记录                                             | T2   | Local Process Access     |
+| T01.I1 | I      | `gc_token` 明文写入 `.git/config` remote URL，运行结束后持续驻留执行机                               | T2   | Local Process Access     |
+| T01.I2 | I      | token/secret 可能经子进程回显输出与收集到的 SARIF 路径泄漏                                           | T2   | Local Process Access     |
+| T01.D1 | D      | 无超时/大小上限地 spawn pre-commit，恶意钩子可挂起或耗尽执行机                                       | T2   | Local Process Access     |
+| T01.E1 | E      | 动作以执行机身份运行仓库可控钩子，PR 作者借此获得执行机代码执行                                      | T2   | Authenticated User       |
+| T01.A1 | A      | `extra_args` 白名单对未知长选项放行（如 `--config=`），可指定任意钩子配置                            | T2   | Privileged User          |
+| T01.A2 | A      | `sarif-file`/`report-dir` 输入可指向任意文件路径，被纳入下游上传列表                                 | T2   | Privileged User          |
 
 #### 4.3.2 ToolParsers（工具日志解析与 SARIF 构建）
 
 **信任边界：** Application ｜ **数据流：** DF08
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T02.S | S | 伪造的钩子状态行/`hook id` 可让解析器把 findings 归因到受信工具名 | T2 | Privileged User |
-| T02.T1 | T | 不可信日志内容（路径、rule id、message）被原样写入 SARIF（`artifactLocation.uri`/`ruleId`） | T2 | Privileged User |
-| T02.R1 | R | 解析结果无来源/完整性标记，无法审计某条 SARIF 由哪行日志产生 | T2 | Privileged User |
-| T02.I1 | I | gitleaks/detect-secrets 检出的 secret 片段被拼入 SARIF `message`，随报告外传 | T2 | Privileged User |
-| T02.I2 | I | 解析/错误输出可能泄漏内部 IP 地址 —— 已被 `sanitizePath` 脱敏 | T2 | Local Process Access |
-| T02.D1 | D | 构造的超长/畸形日志行触发正则回溯与超大内存占用 | T2 | Privileged User |
-| T02.A1 | A | `partialFingerprints` 仅由 tool/rule/file/line 组成，可被构造以制造指纹碰撞、绕过去重 | T2 | Privileged User |
+| ID     | STRIDE | 威胁描述                                                                                    | Tier | 前置条件             |
+| ------ | ------ | ------------------------------------------------------------------------------------------- | ---- | -------------------- |
+| T02.S  | S      | 伪造的钩子状态行/`hook id` 可让解析器把 findings 归因到受信工具名                           | T2   | Privileged User      |
+| T02.T1 | T      | 不可信日志内容（路径、rule id、message）被原样写入 SARIF（`artifactLocation.uri`/`ruleId`） | T2   | Privileged User      |
+| T02.R1 | R      | 解析结果无来源/完整性标记，无法审计某条 SARIF 由哪行日志产生                                | T2   | Privileged User      |
+| T02.I1 | I      | gitleaks/detect-secrets 检出的 secret 片段被拼入 SARIF `message`，随报告外传                | T2   | Privileged User      |
+| T02.I2 | I      | 解析/错误输出可能泄漏内部 IP 地址 —— 已被 `sanitizePath` 脱敏                               | T2   | Local Process Access |
+| T02.D1 | D      | 构造的超长/畸形日志行触发正则回溯与超大内存占用                                             | T2   | Privileged User      |
+| T02.A1 | A      | `partialFingerprints` 仅由 tool/rule/file/line 组成，可被构造以制造指纹碰撞、绕过去重       | T2   | Privileged User      |
 
 > Elevation of Privilege 类别不适用：解析模块在动作进程内运行，不跨越权限边界。
 
@@ -297,15 +297,15 @@ flowchart LR
 
 **信任边界：** CIPipeline ｜ **数据流：** DF01, DF02, DF03, DF14
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T03.S | S | `pull_request_target` 从默认分支读取工作流却检出 PR 合并 commit，受信配置与不可信代码信任错配 | T2 | Authenticated User |
-| T03.T1 | T | 不可信 PR 可修改 `.pre-commit-config.yaml`/钩子，并在特权作业中被执行 | T2 | Authenticated User |
-| T03.R1 | R | `secrets.ROBOT_TOKEN` 的使用无逐作业可审计记录 | T2 | Authenticated User |
-| T03.I1 | I | `secrets.ROBOT_TOKEN` 暴露给会运行不可信代码的作业，可被窃取 | T2 | Authenticated User |
-| T03.D1 | D | 不可信 PR 洪泛可占满自托管执行机 | T2 | Authenticated User |
-| T03.E1 | E | `permissions: pr: write` 叠加不可信检出，PR 作者可触达 PR 写 API | T2 | Authenticated User |
-| T03.A1 | A | `allow-unsafe-pr-checkout: true` 关闭 fork PR 检出拦截，可被滥用为 pwn-request | T2 | Authenticated User |
+| ID     | STRIDE | 威胁描述                                                                                      | Tier | 前置条件           |
+| ------ | ------ | --------------------------------------------------------------------------------------------- | ---- | ------------------ |
+| T03.S  | S      | `pull_request_target` 从默认分支读取工作流却检出 PR 合并 commit，受信配置与不可信代码信任错配 | T2   | Authenticated User |
+| T03.T1 | T      | 不可信 PR 可修改 `.pre-commit-config.yaml`/钩子，并在特权作业中被执行                         | T2   | Authenticated User |
+| T03.R1 | R      | `secrets.ROBOT_TOKEN` 的使用无逐作业可审计记录                                                | T2   | Authenticated User |
+| T03.I1 | I      | `secrets.ROBOT_TOKEN` 暴露给会运行不可信代码的作业，可被窃取                                  | T2   | Authenticated User |
+| T03.D1 | D      | 不可信 PR 洪泛可占满自托管执行机                                                              | T2   | Authenticated User |
+| T03.E1 | E      | `permissions: pr: write` 叠加不可信检出，PR 作者可触达 PR 写 API                              | T2   | Authenticated User |
+| T03.A1 | A      | `allow-unsafe-pr-checkout: true` 关闭 fork PR 检出拦截，可被滥用为 pwn-request                | T2   | Authenticated User |
 
 > 说明：T03.I1/T03.R1 的“PAT 暴露给运行不可信代码的作业”这一断言在复核中被判定为**部分成立**（见 FIND-03）：`secrets.ROBOT_TOKEN` 实际引用在 `region=cn` 的 pr-label 作业，而不可信代码运行于 `region=overseas` 的 pre-commit 作业，二者非同一作业；跨作业可达性存疑，详见 [7.2](#72-漏洞误报复核结果)。
 
@@ -313,12 +313,12 @@ flowchart LR
 
 **信任边界：** CIPipeline ｜ **数据流：** DF04, DF15
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T04.T1 | T | 作业声明 `id-token: write`，任一被污染的步骤可铸造联邦云凭证 | T2 | Privileged User |
-| T04.I1 | I | OIDC token/临时云凭证可被受污染步骤外传 | T2 | Privileged User |
-| T04.E1 | E | 工作流内 token 权限范围较广，被利用可越权 | T2 | Privileged User |
-| T04.A1 | A | 以固定 SHA 引用度量 action，但工作流仍可在无评审下运行任意已固定 action | T2 | Privileged User |
+| ID     | STRIDE | 威胁描述                                                                | Tier | 前置条件        |
+| ------ | ------ | ----------------------------------------------------------------------- | ---- | --------------- |
+| T04.T1 | T      | 作业声明 `id-token: write`，任一被污染的步骤可铸造联邦云凭证            | T2   | Privileged User |
+| T04.I1 | I      | OIDC token/临时云凭证可被受污染步骤外传                                 | T2   | Privileged User |
+| T04.E1 | E      | 工作流内 token 权限范围较广，被利用可越权                               | T2   | Privileged User |
+| T04.A1 | A      | 以固定 SHA 引用度量 action，但工作流仍可在无评审下运行任意已固定 action | T2   | Privileged User |
 
 > Spoofing / Repudiation / Denial of Service 类别不适用：执行主体由平台身份系统判定，运行记录由平台留存，且工作流仅面向 push/手动触发。
 
@@ -326,13 +326,13 @@ flowchart LR
 
 **信任边界：** CIPipeline ｜ **数据流：** DF09, DF11
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T05.T1 | T | 钩子以可变 `rev:` tag 引用（如 `v6.0.0`、`v8.30.1`），上游/镜像可替换内容 | T3 | HookRepos Compromise |
-| T05.T2 | T | `local` 钩子 `language: system` 运行 `npx prettier --write`，运行期从 npm 拉取依赖 | T2 | Privileged User |
-| T05.I1 | I | gitleaks/detect-secrets 输出（含命中片段）进入日志与报告 | T2 | Privileged User |
-| T05.E1 | E | 仓库可控钩子以执行机权限执行 | T2 | Authenticated User |
-| T05.A1 | A | `exclude: ^dist/` 使构建产物绕过扫描 | T2 | Privileged User |
+| ID     | STRIDE | 威胁描述                                                                           | Tier | 前置条件             |
+| ------ | ------ | ---------------------------------------------------------------------------------- | ---- | -------------------- |
+| T05.T1 | T      | 钩子以可变 `rev:` tag 引用（如 `v6.0.0`、`v8.30.1`），上游/镜像可替换内容          | T3   | HookRepos Compromise |
+| T05.T2 | T      | `local` 钩子 `language: system` 运行 `npx prettier --write`，运行期从 npm 拉取依赖 | T2   | Privileged User      |
+| T05.I1 | I      | gitleaks/detect-secrets 输出（含命中片段）进入日志与报告                           | T2   | Privileged User      |
+| T05.E1 | E      | 仓库可控钩子以执行机权限执行                                                       | T2   | Authenticated User   |
+| T05.A1 | A      | `exclude: ^dist/` 使构建产物绕过扫描                                               | T2   | Privileged User      |
 
 > Spoofing / Repudiation / Denial of Service 类别不适用：配置文件不承载身份，其变更由 git 历史记录，且本身不处理运行期请求量。
 
@@ -340,12 +340,12 @@ flowchart LR
 
 **信任边界：** CIPipeline ｜ **数据流：** DF13
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T06.T1 | T | `bump-version.js` 用正则改写 `action.yml` 版本号，无结构校验，可能误改或被滥用 | T3 | Host/OS Access |
-| T06.T2 | T | 打包将已提交的 `dist/` 与源码一起打包，无“源码↔构建产物”一致性校验，存在漂移 | T3 | Host/OS Access |
-| T06.I1 | I | `zip.addLocalFolder("./dist")` 可能纳入非预期文件或密钥 | T3 | Host/OS Access |
-| T06.A1 | A | 打包脚本以副作用方式就地修改源 `action.yml`，可制造版本混乱 | T3 | Host/OS Access |
+| ID     | STRIDE | 威胁描述                                                                       | Tier | 前置条件       |
+| ------ | ------ | ------------------------------------------------------------------------------ | ---- | -------------- |
+| T06.T1 | T      | `bump-version.js` 用正则改写 `action.yml` 版本号，无结构校验，可能误改或被滥用 | T3   | Host/OS Access |
+| T06.T2 | T      | 打包将已提交的 `dist/` 与源码一起打包，无“源码↔构建产物”一致性校验，存在漂移   | T3   | Host/OS Access |
+| T06.I1 | I      | `zip.addLocalFolder("./dist")` 可能纳入非预期文件或密钥                        | T3   | Host/OS Access |
+| T06.A1 | A      | 打包脚本以副作用方式就地修改源 `action.yml`，可制造版本混乱                    | T3   | Host/OS Access |
 
 > Spoofing / Repudiation / Denial of Service / Elevation of Privilege 类别不适用：构建脚本不承载身份，运行与产物提交有 git 历史，且以调用者权限运行。
 
@@ -353,11 +353,11 @@ flowchart LR
 
 **信任边界：** External ｜ **数据流：** DF03, DF04, DF05, DF12
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T07.S1 | S | 动作信任 `origin` 远端与 token 身份，未对 git 服务端身份做独立校验 | T2 | Authenticated User |
-| T07.I1 | I | git token 以 URL 形式传输/存储，易被日志或进程列表捕获 | T2 | Authenticated User |
-| T07.E1 | E | token 权限超出 fetch 所需（可达仓库写） | T2 | Authenticated User |
+| ID     | STRIDE | 威胁描述                                                           | Tier | 前置条件           |
+| ------ | ------ | ------------------------------------------------------------------ | ---- | ------------------ |
+| T07.S1 | S      | 动作信任 `origin` 远端与 token 身份，未对 git 服务端身份做独立校验 | T2   | Authenticated User |
+| T07.I1 | I      | git token 以 URL 形式传输/存储，易被日志或进程列表捕获             | T2   | Authenticated User |
+| T07.E1 | E      | token 权限超出 fetch 所需（可达仓库写）                            | T2   | Authenticated User |
 
 > Tampering / Repudiation / Denial of Service / Abuse 类别不适用：动作对 GitCode 仅做 fetch/read。
 
@@ -365,11 +365,11 @@ flowchart LR
 
 **信任边界：** External ｜ **数据流：** DF06
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T08.S1 | S | 测速按延迟选源，攻击者可影响选择到恶意/冒充索引 | T3 | PyPIRegistry Compromise |
-| T08.T1 | T | 未固定版本/哈希的 `pre-commit` 包可被替换 | T3 | PyPIRegistry Compromise |
-| T08.I1 | I | pip/curl 请求向外部镜像暴露环境信息与依赖画像 | T3 | PyPIRegistry Compromise |
+| ID     | STRIDE | 威胁描述                                        | Tier | 前置条件                |
+| ------ | ------ | ----------------------------------------------- | ---- | ----------------------- |
+| T08.S1 | S      | 测速按延迟选源，攻击者可影响选择到恶意/冒充索引 | T3   | PyPIRegistry Compromise |
+| T08.T1 | T      | 未固定版本/哈希的 `pre-commit` 包可被替换       | T3   | PyPIRegistry Compromise |
+| T08.I1 | I      | pip/curl 请求向外部镜像暴露环境信息与依赖画像   | T3   | PyPIRegistry Compromise |
 
 > Repudiation / Denial of Service / Elevation of Privilege / Abuse 类别不适用：索引交互为单向拉取。
 
@@ -377,11 +377,11 @@ flowchart LR
 
 **信任边界：** External ｜ **数据流：** DF07
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T09.T1 | T | `GONOSUMDB=*`/镜像使模块校验和验证失效，模块内容可被替换 | T3 | GoModuleProxy Compromise |
-| T09.I1 | I | 模块拉取元数据暴露给镜像 | T3 | GoModuleProxy Compromise |
-| T09.E1 | E | 恶意 Go 模块可在构建/钩子阶段执行 | T3 | GoModuleProxy Compromise |
+| ID     | STRIDE | 威胁描述                                                 | Tier | 前置条件                 |
+| ------ | ------ | -------------------------------------------------------- | ---- | ------------------------ |
+| T09.T1 | T      | `GONOSUMDB=*`/镜像使模块校验和验证失效，模块内容可被替换 | T3   | GoModuleProxy Compromise |
+| T09.I1 | I      | 模块拉取元数据暴露给镜像                                 | T3   | GoModuleProxy Compromise |
+| T09.E1 | E      | 恶意 Go 模块可在构建/钩子阶段执行                        | T3   | GoModuleProxy Compromise |
 
 > Spoofing / Repudiation / Denial of Service / Abuse 类别不适用：代理不承载本系统身份与行为。
 
@@ -389,11 +389,11 @@ flowchart LR
 
 **信任边界：** External ｜ **数据流：** DF08
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T10.S1 | S | 钩子仓/rev 未校验，镜像可冒充上游仓库 | T3 | HookRepos Compromise |
-| T10.T1 | T | 可变 rev 的钩子代码可在执行机执行任意命令 | T3 | HookRepos Compromise |
-| T10.I1 | I | 钩子可访问执行机环境与凭证 | T3 | HookRepos Compromise |
+| ID     | STRIDE | 威胁描述                                  | Tier | 前置条件             |
+| ------ | ------ | ----------------------------------------- | ---- | -------------------- |
+| T10.S1 | S      | 钩子仓/rev 未校验，镜像可冒充上游仓库     | T3   | HookRepos Compromise |
+| T10.T1 | T      | 可变 rev 的钩子代码可在执行机执行任意命令 | T3   | HookRepos Compromise |
+| T10.I1 | I      | 钩子可访问执行机环境与凭证                | T3   | HookRepos Compromise |
 
 > Repudiation / Denial of Service / Elevation of Privilege / Abuse 类别不适用：钩子仓自身不授予权限。
 
@@ -401,11 +401,11 @@ flowchart LR
 
 **信任边界：** External ｜ **数据流：** DF14, DF15
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T11.S1 | S | 可变 action tag（如 `@v1.0.0`）可被劫持指向恶意代码 | T3 | ThirdPartyActions Compromise |
-| T11.T1 | T | 第三方 action 代码可静默变更 | T3 | ThirdPartyActions Compromise |
-| T11.E1 | E | 第三方 action 获得作业 permissions/token | T3 | ThirdPartyActions Compromise |
+| ID     | STRIDE | 威胁描述                                            | Tier | 前置条件                     |
+| ------ | ------ | --------------------------------------------------- | ---- | ---------------------------- |
+| T11.S1 | S      | 可变 action tag（如 `@v1.0.0`）可被劫持指向恶意代码 | T3   | ThirdPartyActions Compromise |
+| T11.T1 | T      | 第三方 action 代码可静默变更                        | T3   | ThirdPartyActions Compromise |
+| T11.E1 | E      | 第三方 action 获得作业 permissions/token            | T3   | ThirdPartyActions Compromise |
 
 > Repudiation / Information Disclosure / Denial of Service / Abuse 类别不适用：action 引用为受控声明式调用。
 
@@ -413,11 +413,11 @@ flowchart LR
 
 **信任边界：** External ｜ **数据流：** DF10
 
-| ID | STRIDE | 威胁描述 | Tier | 前置条件 |
-|----|--------|---------|------|---------|
-| T12.T1 | T | 上传的 SARIF 内容缺乏完整性保护，可被篡改 | T3 | UploadSarifAction Compromise |
-| T12.I1 | I | 收集到的 SARIF 可能含任意文件路径与密钥片段 | T2 | Privileged User |
-| T12.A1 | A | 通过 `sarif-files` 将任意文件上传到 OBS | T2 | Privileged User |
+| ID     | STRIDE | 威胁描述                                    | Tier | 前置条件                     |
+| ------ | ------ | ------------------------------------------- | ---- | ---------------------------- |
+| T12.T1 | T      | 上传的 SARIF 内容缺乏完整性保护，可被篡改   | T3   | UploadSarifAction Compromise |
+| T12.I1 | I      | 收集到的 SARIF 可能含任意文件路径与密钥片段 | T2   | Privileged User              |
+| T12.A1 | A      | 通过 `sarif-files` 将任意文件上传到 OBS     | T2   | Privileged User              |
 
 > Spoofing / Repudiation / Denial of Service / Elevation of Privilege 类别不适用：上传动作以受信凭证调用。
 
@@ -434,15 +434,15 @@ flowchart LR
 
 #### FIND-01: 不可信 PR 代码在特权自托管执行机上执行
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Critical（严重） |
-| **CVSS 4.0 评分** | 8.6 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-829: Inclusion of Functionality from Untrusted Control Sphere](https://cwe.mitre.org/data/definitions/829.html) |
-| **OWASP** | A08:2025 – Software/Data Integrity Failures |
-| **利用难度** | Tier 2（Authenticated User） |
-| **修复工作量** | Medium |
+| 属性              | 值                                                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Critical（严重）                                                                                                     |
+| **CVSS 4.0 评分** | 8.6                                                                                                                  |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N`                                                    |
+| **CWE**           | [CWE-829: Inclusion of Functionality from Untrusted Control Sphere](https://cwe.mitre.org/data/definitions/829.html) |
+| **OWASP**         | A08:2025 – Software/Data Integrity Failures                                                                          |
+| **利用难度**      | Tier 2（Authenticated User）                                                                                         |
+| **修复工作量**    | Medium                                                                                                               |
 
 **描述：**
 
@@ -451,11 +451,13 @@ flowchart LR
 **证据：**
 
 `.gitcode/workflows/pre-commit.yml:8`（触发方式）：
+
 ```yaml
-  pull_request_target: ## 使用 pull_request_target 确保 PR 流水线始终读取默认分支（master）的最新配置文件
+pull_request_target: ## 使用 pull_request_target 确保 PR 流水线始终读取默认分支（master）的最新配置文件
 ```
 
 `.gitcode/workflows/pre-commit.yml:17-19`（权限）：
+
 ```yaml
 permissions:
   repository: read
@@ -463,36 +465,40 @@ permissions:
 ```
 
 `.gitcode/workflows/pre-commit.yml:44-48`（检出 PR 合并 commit 且关闭拦截）：
+
 ```yaml
-          - name: Checkout repository
-            uses: checkout
-            with:
-              ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.event.pull_request.head.sha || atomgit.sha }}
-              allow-unsafe-pr-checkout: true # 关闭 fork PR 检出拦截，避免流水线在 fork PR 场景失败
+- name: Checkout repository
+  uses: checkout
+  with:
+    ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.event.pull_request.head.sha || atomgit.sha }}
+    allow-unsafe-pr-checkout: true # 关闭 fork PR 检出拦截，避免流水线在 fork PR 场景失败
 ```
 
 `index.js:611-614`（读取被检出目录的钩子配置）：
+
 ```javascript
-  if (!fs.existsSync('.pre-commit-config.yaml')) {
-    console.log('[INFO] 未找到 .pre-commit-config.yaml，跳过 pre-commit 检查');
-    return;
-  }
-  console.log('[OK] 找到 .pre-commit-config.yaml');
+if (!fs.existsSync(".pre-commit-config.yaml")) {
+  console.log("[INFO] 未找到 .pre-commit-config.yaml，跳过 pre-commit 检查");
+  return;
+}
+console.log("[OK] 找到 .pre-commit-config.yaml");
 ```
 
 `index.js:627`（执行钩子）：
+
 ```javascript
-  const preCommitResult = await runPreCommit(cmdResult);
+const preCommitResult = await runPreCommit(cmdResult);
 ```
 
 `.pre-commit-config.yaml:30-36`（`language: system` 钩子会以执行机身份运行命令）：
+
 ```yaml
-  - repo: local
-    hooks:
-      - id: prettier-format
-        name: prettier format
-        entry: npx prettier --write
-        language: system
+- repo: local
+  hooks:
+    - id: prettier-format
+      name: prettier format
+      entry: npx prettier --write
+      language: system
 ```
 
 **修复建议：**
@@ -514,15 +520,15 @@ permissions:
 
 #### FIND-02: `extra_args` 白名单绕过允许任意 pre-commit 选项
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Important（高危） |
-| **CVSS 4.0 评分** | 7.3 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:L/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-88: Improper Neutralization of Argument Delimiters in a Command](https://cwe.mitre.org/data/definitions/88.html) |
-| **OWASP** | A05:2025 – Injection |
-| **利用难度** | Tier 2（Privileged User） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                                                    |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Important（高危）                                                                                                     |
+| **CVSS 4.0 评分** | 7.3                                                                                                                   |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:L/SC:N/SI:N/SA:N`                                                     |
+| **CWE**           | [CWE-88: Improper Neutralization of Argument Delimiters in a Command](https://cwe.mitre.org/data/definitions/88.html) |
+| **OWASP**         | A05:2025 – Injection                                                                                                  |
+| **利用难度**      | Tier 2（Privileged User）                                                                                             |
+| **修复工作量**    | Low                                                                                                                   |
 
 **描述：**
 
@@ -531,24 +537,42 @@ permissions:
 **证据：**
 
 `index.js:25-44`：
+
 ```javascript
-  if (name === 'extra_args' && trimmed) {
-    const allowedArgs = ['--all', '--all-files', '--help', '--show-diff-on-failure', '--from-ref', '--to-ref', '--files'];
-    const argsWithValue = ['--from-ref', '--to-ref', '--files'];
-    const args = trimmed.split(' ');
-    let skipNext = false;
-    for (const arg of args) {
-      if (skipNext) { skipNext = false; continue; }
-      if (argsWithValue.includes(arg)) { skipNext = true; continue; }
-      if (!allowedArgs.includes(arg) && !arg.startsWith('--')) {
-        console.log(`[ERROR] Invalid extra_args: ${arg}. Only -- arguments are allowed.`);
-        process.exit(1);
-      }
+if (name === "extra_args" && trimmed) {
+  const allowedArgs = [
+    "--all",
+    "--all-files",
+    "--help",
+    "--show-diff-on-failure",
+    "--from-ref",
+    "--to-ref",
+    "--files",
+  ];
+  const argsWithValue = ["--from-ref", "--to-ref", "--files"];
+  const args = trimmed.split(" ");
+  let skipNext = false;
+  for (const arg of args) {
+    if (skipNext) {
+      skipNext = false;
+      continue;
+    }
+    if (argsWithValue.includes(arg)) {
+      skipNext = true;
+      continue;
+    }
+    if (!allowedArgs.includes(arg) && !arg.startsWith("--")) {
+      console.log(
+        `[ERROR] Invalid extra_args: ${arg}. Only -- arguments are allowed.`,
+      );
+      process.exit(1);
     }
   }
+}
 ```
 
 `index.js:619-621`（`extraArgs` 直接作为运行参数）与 `index.js:252-254`（拼入 `pre_commit run`）：
+
 ```javascript
   if (extraArgs) {
     console.log(`[INFO] 检测到自定义参数: ${extraArgs}`);
@@ -567,15 +591,15 @@ permissions:
 
 #### FIND-04: `gc_token` 明文持久化到 `.git/config` remote URL
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Important（高危） |
-| **CVSS 4.0 评分** | 6.8 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:L/SI:N/SA:N` |
-| **CWE** | [CWE-522: Insufficiently Protected Credentials](https://cwe.mitre.org/data/definitions/522.html) |
-| **OWASP** | A04:2025 – Cryptographic Failures |
-| **利用难度** | Tier 2（Local Process Access） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| **严重级别**      | Important（高危）                                                                                |
+| **CVSS 4.0 评分** | 6.8                                                                                              |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:L/SI:N/SA:N`                                |
+| **CWE**           | [CWE-522: Insufficiently Protected Credentials](https://cwe.mitre.org/data/definitions/522.html) |
+| **OWASP**         | A04:2025 – Cryptographic Failures                                                                |
+| **利用难度**      | Tier 2（Local Process Access）                                                                   |
+| **修复工作量**    | Low                                                                                              |
 
 **描述：**
 
@@ -584,23 +608,28 @@ permissions:
 **证据：**
 
 `index.js:166-175`：
+
 ```javascript
-    // 使用 gc_token 注入 remote URL 认证，确保 git fetch 能访问私有仓库
-    const token = getInput('gc_token');
-    if (token) {
-      const remoteUrl = execCapture('git remote get-url origin');
-      if (remoteUrl && remoteUrl.startsWith('https://')) {
-        const encodedToken = encodeURIComponent(token);
-        const authUrl = remoteUrl.replace('https://', `https://oauth2:${encodedToken}@`);
-        execCapture(`git remote set-url origin "${authUrl}"`);
-      }
-    }
+// 使用 gc_token 注入 remote URL 认证，确保 git fetch 能访问私有仓库
+const token = getInput("gc_token");
+if (token) {
+  const remoteUrl = execCapture("git remote get-url origin");
+  if (remoteUrl && remoteUrl.startsWith("https://")) {
+    const encodedToken = encodeURIComponent(token);
+    const authUrl = remoteUrl.replace(
+      "https://",
+      `https://oauth2:${encodedToken}@`,
+    );
+    execCapture(`git remote set-url origin "${authUrl}"`);
+  }
+}
 ```
 
 `index.js:654-659`（顶层 catch 仅对错误消息做 IP 脱敏，不涉及凭证清理）：
+
 ```javascript
 if (require.main === module) {
-  run().catch(err => {
+  run().catch((err) => {
     const sanitizedMessage = sanitizePath(err.message);
     console.error(`Action 执行失败: ${sanitizedMessage}`);
     process.exit(1);
@@ -620,15 +649,15 @@ if (require.main === module) {
 
 #### FIND-10: 未固定的 `pip install pre-commit` 与动态选源
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Important（高危） |
-| **CVSS 4.0 评分** | 6.5 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:P/PR:N/UI:N/VC:L/VI:H/VA:L/SC:L/SI:L/SA:N` |
-| **CWE** | [CWE-494: Download of Code Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html) |
-| **OWASP** | A03:2025 – Software Supply Chain Failures |
-| **利用难度** | Tier 3（PyPIRegistry Compromise） |
-| **修复工作量** | Medium |
+| 属性              | 值                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Important（高危）                                                                                    |
+| **CVSS 4.0 评分** | 6.5                                                                                                  |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:P/PR:N/UI:N/VC:L/VI:H/VA:L/SC:L/SI:L/SA:N`                                    |
+| **CWE**           | [CWE-494: Download of Code Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html) |
+| **OWASP**         | A03:2025 – Software Supply Chain Failures                                                            |
+| **利用难度**      | Tier 3（PyPIRegistry Compromise）                                                                    |
+| **修复工作量**    | Medium                                                                                               |
 
 **描述：**
 
@@ -637,14 +666,17 @@ if (require.main === module) {
 **证据：**
 
 `index.js:6-13`（固定源与常量）：
+
 ```javascript
-const PIP_MIRROR_DEFAULT = 'https://mirrors.huaweicloud.com/repository/pypi/simple';
-const PIP_ORIGINAL = 'https://pypi.org/simple';
+const PIP_MIRROR_DEFAULT =
+  "https://mirrors.huaweicloud.com/repository/pypi/simple";
+const PIP_ORIGINAL = "https://pypi.org/simple";
 const SPEED_TEST_TIMEOUT = 5;
-let PIP_MIRROR = '';
+let PIP_MIRROR = "";
 ```
 
 `index.js:94-100`（`curl` 测速，用于动态选源）：
+
 ```javascript
 function testUrlSpeed(url) {
   const result = execCapture(`curl -s -o /dev/null -w "%{time_total}" --max-time ${SPEED_TEST_TIMEOUT} "${url}" 2>/dev/null`);
@@ -652,6 +684,7 @@ function testUrlSpeed(url) {
 ```
 
 `index.js:550`（写入动态选择的源）与 `index.js:577`（无版本/哈希固定地安装）：
+
 ```javascript
   execFile('python', ['-m', 'pip', 'config', 'set', 'global.index-url', PIP_MIRROR]);
   ...
@@ -670,15 +703,15 @@ function testUrlSpeed(url) {
 
 #### FIND-11: `.pre-commit-config.yaml` 中钩子 `rev` 可变与运行期 `npx` 拉取
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Important（高危） |
-| **CVSS 4.0 评分** | 6.4 |
-| **CVSS 向量** | `CVSS:4.0/AV:A/AC:L/AT:P/PR:L/UI:N/VC:L/VI:H/VA:L/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-829: Inclusion of Functionality from Untrusted Control Sphere](https://cwe.mitre.org/data/definitions/829.html) |
-| **OWASP** | A03:2025 – Software Supply Chain Failures |
-| **利用难度** | Tier 3（HookRepos Compromise） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Important（高危）                                                                                                    |
+| **CVSS 4.0 评分** | 6.4                                                                                                                  |
+| **CVSS 向量**     | `CVSS:4.0/AV:A/AC:L/AT:P/PR:L/UI:N/VC:L/VI:H/VA:L/SC:N/SI:N/SA:N`                                                    |
+| **CWE**           | [CWE-829: Inclusion of Functionality from Untrusted Control Sphere](https://cwe.mitre.org/data/definitions/829.html) |
+| **OWASP**         | A03:2025 – Software Supply Chain Failures                                                                            |
+| **利用难度**      | Tier 3（HookRepos Compromise）                                                                                       |
+| **修复工作量**    | Low                                                                                                                  |
 
 **描述：**
 
@@ -687,11 +720,13 @@ function testUrlSpeed(url) {
 **证据：**
 
 `.pre-commit-config.yaml:4`（排除构建产物）：
+
 ```yaml
 exclude: ^dist/ # 排除构建产物目录
 ```
 
 `.pre-commit-config.yaml:8-9` 与 `23-24`（可变 `rev`）：
+
 ```yaml
   - repo: https://gitcode.com/gh_mirrors/pr/pre-commit-hooks # 使用gitcode镜像加速
     rev: v6.0.0
@@ -701,14 +736,15 @@ exclude: ^dist/ # 排除构建产物目录
 ```
 
 `.pre-commit-config.yaml:30-36`（运行期 `npx` 拉取）：
+
 ```yaml
-  - repo: local
-    hooks:
-      - id: prettier-format
-        name: prettier format
-        entry: npx prettier --write
-        language: system
-        files: \.(json|yml|yaml|md)$
+- repo: local
+  hooks:
+    - id: prettier-format
+      name: prettier format
+      entry: npx prettier --write
+      language: system
+      files: \.(json|yml|yaml|md)$
 ```
 
 **修复建议：**
@@ -729,15 +765,15 @@ exclude: ^dist/ # 排除构建产物目录
 
 #### FIND-03: 长期 PAT 暴露于会执行不可信 PR 代码的流水线（复核下调）
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate（中危，复核由高危下调） |
-| **CVSS 4.0 评分** | 7.1（沿用原报告；该评分基于“token 直接暴露于不可信作业”的假设，复核发现该假设不成立） |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:L/SI:L/SA:N` |
-| **CWE** | [CWE-522: Insufficiently Protected Credentials](https://cwe.mitre.org/data/definitions/522.html) |
-| **OWASP** | A04:2025 – Cryptographic Failures |
-| **利用难度** | Tier 2（Authenticated User） |
-| **修复工作量** | Medium |
+| 属性              | 值                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| **严重级别**      | Moderate（中危，复核由高危下调）                                                                 |
+| **CVSS 4.0 评分** | 7.1（沿用原报告；该评分基于“token 直接暴露于不可信作业”的假设，复核发现该假设不成立）            |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:L/SI:L/SA:N`                                |
+| **CWE**           | [CWE-522: Insufficiently Protected Credentials](https://cwe.mitre.org/data/definitions/522.html) |
+| **OWASP**         | A04:2025 – Cryptographic Failures                                                                |
+| **利用难度**      | Tier 2（Authenticated User）                                                                     |
+| **修复工作量**    | Medium                                                                                           |
 
 **描述：**
 
@@ -748,21 +784,24 @@ exclude: ^dist/ # 排除构建产物目录
 **证据：**
 
 `.gitcode/workflows/pre-commit.yml:30-35`（ROBOT_TOKEN 用于 pr-label 作业，运行于 region=cn）：
+
 ```yaml
-          - name: pr-label-running
-            uses: openlibing/pr-label-action@v1.0.0
-            with:
-              token: ${{ secrets.ROBOT_TOKEN }}
-              add_labels: ci-pipeline-running
-              remove_labels: ci-pipeline-passed,ci-pipeline-failed
+- name: pr-label-running
+  uses: openlibing/pr-label-action@v1.0.0
+  with:
+    token: ${{ secrets.ROBOT_TOKEN }}
+    add_labels: ci-pipeline-running
+    remove_labels: ci-pipeline-passed,ci-pipeline-failed
 ```
 
 `.gitcode/workflows/pre-commit.yml:42`（承载不可信代码执行的作业运行于不同执行机池）：
+
 ```yaml
-        runs-on: ["self-hosted", "region=overseas"]
+runs-on: ["self-hosted", "region=overseas"]
 ```
 
 `.gitcode/workflows/pre-commit.yml:17-19`（顶层 `pr: write` 权限，作用于所有作业）：
+
 ```yaml
 permissions:
   repository: read
@@ -781,15 +820,15 @@ permissions:
 
 #### FIND-05: `exec` 辅助函数中的 shell 字符串拼接命令构造
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate（中危） |
-| **CVSS 4.0 评分** | 5.6 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:H/AT:N/PR:L/UI:N/VC:L/VI:H/VA:L/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-78: Improper Neutralization of Special Elements used in an OS Command](https://cwe.mitre.org/data/definitions/78.html) |
-| **OWASP** | A05:2025 – Injection |
-| **利用难度** | Tier 2（Local Process Access） |
-| **修复工作量** | Medium |
+| 属性              | 值                                                                                                                          |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate（中危）                                                                                                            |
+| **CVSS 4.0 评分** | 5.6                                                                                                                         |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:H/AT:N/PR:L/UI:N/VC:L/VI:H/VA:L/SC:N/SI:N/SA:N`                                                           |
+| **CWE**           | [CWE-78: Improper Neutralization of Special Elements used in an OS Command](https://cwe.mitre.org/data/definitions/78.html) |
+| **OWASP**         | A05:2025 – Injection                                                                                                        |
+| **利用难度**      | Tier 2（Local Process Access）                                                                                              |
+| **修复工作量**    | Medium                                                                                                                      |
 
 **描述：**
 
@@ -798,6 +837,7 @@ permissions:
 **证据：**
 
 `index.js:72-75` 与 `index.js:86-92`（定义 shell 字符串执行辅助函数；`exec()` 目前未被调用，但模式一致）：
+
 ```javascript
 function exec(cmd) {
   console.log(`> ${cmd}`);
@@ -814,14 +854,21 @@ function execCapture(cmd) {
 ```
 
 `index.js:94-95`（`curl` 测速命令拼接）：
+
 ```javascript
-  const result = execCapture(`curl -s -o /dev/null -w "%{time_total}" --max-time ${SPEED_TEST_TIMEOUT} "${url}" 2>/dev/null`);
+const result = execCapture(
+  `curl -s -o /dev/null -w "%{time_total}" --max-time ${SPEED_TEST_TIMEOUT} "${url}" 2>/dev/null`,
+);
 ```
 
 `index.js:172-173`（凭证命令拼接）：
+
 ```javascript
-        const authUrl = remoteUrl.replace('https://', `https://oauth2:${encodedToken}@`);
-        execCapture(`git remote set-url origin "${authUrl}"`);
+const authUrl = remoteUrl.replace(
+  "https://",
+  `https://oauth2:${encodedToken}@`,
+);
+execCapture(`git remote set-url origin "${authUrl}"`);
 ```
 
 **修复建议：**
@@ -836,15 +883,15 @@ function execCapture(cmd) {
 
 #### FIND-06: 不可信的 pre-commit 日志内容被原样写入 SARIF
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate（中危） |
-| **CVSS 4.0 评分** | 5.3 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-20: Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html) |
-| **OWASP** | A05:2025 – Injection |
-| **利用难度** | Tier 2（Privileged User） |
-| **修复工作量** | Medium |
+| 属性              | 值                                                                                  |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate（中危）                                                                    |
+| **CVSS 4.0 评分** | 5.3                                                                                 |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N`                   |
+| **CWE**           | [CWE-20: Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html) |
+| **OWASP**         | A05:2025 – Injection                                                                |
+| **利用难度**      | Tier 2（Privileged User）                                                           |
+| **修复工作量**    | Medium                                                                              |
 
 **描述：**
 
@@ -853,37 +900,51 @@ function execCapture(cmd) {
 **证据：**
 
 `tool-parsers.js:41-54`（不可信字段原样写入 SARIF）：
+
 ```javascript
-    results.push({
+results.push({
+  ruleId,
+  level: f.level || LEVEL_ERROR,
+  message: { text: f.message || ruleId },
+  locations: [
+    {
+      physicalLocation: {
+        artifactLocation: { uri: f.file || toolName },
+        region,
+      },
+    },
+  ],
+  partialFingerprints: {
+    primaryLocationLineHash: _locationHash(
+      toolName,
       ruleId,
-      level: f.level || LEVEL_ERROR,
-      message: { text: f.message || ruleId },
-      locations: [{
-        physicalLocation: {
-          artifactLocation: { uri: f.file || toolName },
-          region
-        }
-      }],
-      partialFingerprints: {
-        primaryLocationLineHash: _locationHash(toolName, ruleId, f.file, f.line, f.column)
-      }
-    });
+      f.file,
+      f.line,
+      f.column,
+    ),
+  },
+});
 ```
 
 `tool-parsers.js:17-20`（可预测指纹）：
+
 ```javascript
 function _locationHash(toolName, ruleId, file, line, column) {
-  const raw = [toolName, ruleId, file || '', line || '', column || ''].join('|');
-  return crypto.createHash('sha256').update(raw, 'utf8').digest('hex');
+  const raw = [toolName, ruleId, file || "", line || "", column || ""].join(
+    "|",
+  );
+  return crypto.createHash("sha256").update(raw, "utf8").digest("hex");
 }
 ```
 
 `tool-parsers.js:273`（gitleaks 命中片段被截断后写入 message）：
+
 ```javascript
       else if (k === 'Secret' || k === 'Match') cur.message = (cur.message ? cur.message + ' ' : '') + v.slice(0, 60);
 ```
 
 `index.js:465-469`（既有 `*.sarif` 直接纳入，无内容校验）：
+
 ```javascript
   if (fs.existsSync(reportDir)) {
     fs.readdirSync(reportDir)
@@ -904,15 +965,15 @@ function _locationHash(toolName, ruleId, file, line, column) {
 
 #### FIND-07: 通过 `sarif-file` / `report-dir` 收集任意文件并送入下游上传
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate（中危） |
-| **CVSS 4.0 评分** | 5.0 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-73: External Control of File Name or Path](https://cwe.mitre.org/data/definitions/73.html) |
-| **OWASP** | A01:2025 – Broken Access Control |
-| **利用难度** | Tier 2（Privileged User） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                              |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate（中危）                                                                                |
+| **CVSS 4.0 评分** | 5.0                                                                                             |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N`                               |
+| **CWE**           | [CWE-73: External Control of File Name or Path](https://cwe.mitre.org/data/definitions/73.html) |
+| **OWASP**         | A01:2025 – Broken Access Control                                                                |
+| **利用难度**      | Tier 2（Privileged User）                                                                       |
+| **修复工作量**    | Low                                                                                             |
 
 **描述：**
 
@@ -921,15 +982,21 @@ function _locationHash(toolName, ruleId, file, line, column) {
 **证据：**
 
 `index.js:460-464`（任意路径进入候选列表）：
+
 ```javascript
-  const candidatePaths = [];
-  const sarifFileInput = getInput('sarif-file');
-  if (sarifFileInput) {
-    sarifFileInput.split(',').map(s => s.trim()).filter(Boolean).forEach(p => candidatePaths.push(p));
-  }
+const candidatePaths = [];
+const sarifFileInput = getInput("sarif-file");
+if (sarifFileInput) {
+  sarifFileInput
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .forEach((p) => candidatePaths.push(p));
+}
 ```
 
 `index.js:476-495`（仅做存在性/目录判断，无路径白名单与扩展名校验）：
+
 ```javascript
   for (const rawPath of candidatePaths) {
     let p = rawPath;
@@ -945,11 +1012,12 @@ function _locationHash(toolName, ruleId, file, line, column) {
 ```
 
 `index.js:630-634`（结果写入 `sarif-files` output）：
+
 ```javascript
-  const sarifFiles = collectScanReports(preCommitResult.output);
-  if (sarifFiles.length > 0) {
-    setOutput('sarif-files', sarifFiles.join(','));
-  }
+const sarifFiles = collectScanReports(preCommitResult.output);
+if (sarifFiles.length > 0) {
+  setOutput("sarif-files", sarifFiles.join(","));
+}
 ```
 
 **修复建议：**
@@ -964,15 +1032,15 @@ function _locationHash(toolName, ruleId, file, line, column) {
 
 #### FIND-08: 派生的 `pre-commit` 子进程无超时与输出上限
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate（中危） |
-| **CVSS 4.0 评分** | 4.8 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-400: Uncontrolled Resource Consumption](https://cwe.mitre.org/data/definitions/400.html) |
-| **OWASP** | A10:2025 – Mishandling of Exceptional Conditions |
-| **利用难度** | Tier 2（Local Process Access） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                            |
+| ----------------- | --------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate（中危）                                                                              |
+| **CVSS 4.0 评分** | 4.8                                                                                           |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N`                             |
+| **CWE**           | [CWE-400: Uncontrolled Resource Consumption](https://cwe.mitre.org/data/definitions/400.html) |
+| **OWASP**         | A10:2025 – Mishandling of Exceptional Conditions                                              |
+| **利用难度**      | Tier 2（Local Process Access）                                                                |
+| **修复工作量**    | Low                                                                                           |
 
 **描述：**
 
@@ -981,6 +1049,7 @@ function _locationHash(toolName, ruleId, file, line, column) {
 **证据：**
 
 `index.js:199-242`（`spawn` 无 `timeout`，`output += chunk` 无上限）：
+
 ```javascript
 function runStreaming(command, args, options = {}) {
   return new Promise((resolve) => {
@@ -995,8 +1064,11 @@ function runStreaming(command, args, options = {}) {
 ```
 
 `index.js:257`（无超时控制地执行）：
+
 ```javascript
-  const { status, error, output } = await runStreaming('python', runArgs, { cwd: process.cwd() });
+const { status, error, output } = await runStreaming("python", runArgs, {
+  cwd: process.cwd(),
+});
 ```
 
 **修复建议：**
@@ -1011,15 +1083,15 @@ function runStreaming(command, args, options = {}) {
 
 #### FIND-12: 工作流中第三方 action tag 可变与 OIDC 授权过宽
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate（中危） |
-| **CVSS 4.0 评分** | 6.1 |
-| **CVSS 向量** | `CVSS:4.0/AV:N/AC:H/AT:P/PR:L/UI:N/VC:L/VI:H/VA:N/SC:L/SI:L/SA:N` |
-| **CWE** | [CWE-1104: Use of Unmaintained Third Party Components](https://cwe.mitre.org/data/definitions/1104.html) |
-| **OWASP** | A03:2025 – Software Supply Chain Failures |
-| **利用难度** | Tier 3（ThirdPartyActions Compromise） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                                       |
+| ----------------- | -------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate（中危）                                                                                         |
+| **CVSS 4.0 评分** | 6.1                                                                                                      |
+| **CVSS 向量**     | `CVSS:4.0/AV:N/AC:H/AT:P/PR:L/UI:N/VC:L/VI:H/VA:N/SC:L/SI:L/SA:N`                                        |
+| **CWE**           | [CWE-1104: Use of Unmaintained Third Party Components](https://cwe.mitre.org/data/definitions/1104.html) |
+| **OWASP**         | A03:2025 – Software Supply Chain Failures                                                                |
+| **利用难度**      | Tier 3（ThirdPartyActions Compromise）                                                                   |
+| **修复工作量**    | Low                                                                                                      |
 
 **描述：**
 
@@ -1028,28 +1100,31 @@ function runStreaming(command, args, options = {}) {
 **证据：**
 
 `.gitcode/workflows/pre-commit.yml:31`（可变 tag）与 `45,51,63`（未固定版本）：
+
 ```yaml
-            uses: openlibing/pr-label-action@v1.0.0
+uses: openlibing/pr-label-action@v1.0.0
 ...
-            uses: checkout
+uses: checkout
 ...
-            uses: setup-node
+uses: setup-node
 ...
-            uses: setup-go
+uses: setup-go
 ```
 
 `.gitcode/workflows/pre-commit.yml:69`：
+
 ```yaml
-            uses: openlibing/pre-commit-action@v1.0.2
+uses: openlibing/pre-commit-action@v1.0.2
 ```
 
 `.gitcode/workflows/code-metrics-scan.yml:9-11` 与 `23`：
+
 ```yaml
 permissions:
   repository: read
   id-token: write
 ...
-        uses: openlibing/code-metrics-action@117c0606ad741ef5e6b564dca9307e25e1d9e2e8
+uses: openlibing/code-metrics-action@117c0606ad741ef5e6b564dca9307e25e1d9e2e8
 ```
 
 **修复建议：**
@@ -1064,15 +1139,15 @@ permissions:
 
 #### FIND-13: `GONOSUMDB=*` 关闭 Go 模块校验和验证
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate（中危） |
-| **CVSS 4.0 评分** | 5.6 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:L/AT:P/PR:N/UI:N/VC:L/VI:L/VA:L/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-494: Download of Code Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html) |
-| **OWASP** | A08:2025 – Software/Data Integrity Failures |
-| **利用难度** | Tier 3（GoModuleProxy Compromise） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate（中危）                                                                                     |
+| **CVSS 4.0 评分** | 5.6                                                                                                  |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:L/AT:P/PR:N/UI:N/VC:L/VI:L/VA:L/SC:N/SI:N/SA:N`                                    |
+| **CWE**           | [CWE-494: Download of Code Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html) |
+| **OWASP**         | A08:2025 – Software/Data Integrity Failures                                                          |
+| **利用难度**      | Tier 3（GoModuleProxy Compromise）                                                                   |
+| **修复工作量**    | Low                                                                                                  |
 
 **描述：**
 
@@ -1081,15 +1156,17 @@ permissions:
 **证据：**
 
 `index.js:554-557`：
+
 ```javascript
-  if (goVersion) {
-    execFile('go', ['env', '-w', 'GO111MODULE=on']);
-    execFile('go', ['env', '-w', `GOPROXY=${GO_PROXY}`]);
-    execFile('go', ['env', '-w', 'GONOSUMDB=*']);
-  }
+if (goVersion) {
+  execFile("go", ["env", "-w", "GO111MODULE=on"]);
+  execFile("go", ["env", "-w", `GOPROXY=${GO_PROXY}`]);
+  execFile("go", ["env", "-w", "GONOSUMDB=*"]);
+}
 ```
 
 `index.js:7,9,128-155`（Go 代理镜像常量与测速选源逻辑）：
+
 ```javascript
 const GO_PROXY_DEFAULT = 'https://mirrors.huaweicloud.com/repository/goproxy/';
 const GO_PROXY_ORIGINAL = 'https://proxy.golang.org/';
@@ -1111,15 +1188,15 @@ const GO_PROXY_ORIGINAL = 'https://proxy.golang.org/';
 
 #### FIND-14: 打包不可复现与清单就地改写
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Moderate（中危） |
-| **CVSS 4.0 评分** | 4.8 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:H/AT:P/PR:H/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-345: Insufficient Verification of Data Authenticity](https://cwe.mitre.org/data/definitions/345.html) |
-| **OWASP** | A08:2025 – Software/Data Integrity Failures |
-| **利用难度** | Tier 3（Host/OS Access） |
-| **修复工作量** | Medium |
+| 属性              | 值                                                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| **严重级别**      | Moderate（中危）                                                                                           |
+| **CVSS 4.0 评分** | 4.8                                                                                                        |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:H/AT:P/PR:H/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N`                                          |
+| **CWE**           | [CWE-345: Insufficient Verification of Data Authenticity](https://cwe.mitre.org/data/definitions/345.html) |
+| **OWASP**         | A08:2025 – Software/Data Integrity Failures                                                                |
+| **利用难度**      | Tier 3（Host/OS Access）                                                                                   |
+| **修复工作量**    | Medium                                                                                                     |
 
 **描述：**
 
@@ -1128,11 +1205,13 @@ const GO_PROXY_ORIGINAL = 'https://proxy.golang.org/';
 **证据：**
 
 `zip.js:5-16`（就地改写版本号 + 白名单外打包 + 无一致性校验）：
+
 ```javascript
 const action = fs.readFileSync(path.join(__dirname, "action.yml")).toString();
 const newVersionAction = action.replace(
   /version:\s?'?(\d{1,2})\.(\d{1,2})\.(\d{1,2})'?/,
-  (match, grep1, grep2, grep3) => `version: ${grep1}.${grep2}.${parseInt(grep3) + 1}`
+  (match, grep1, grep2, grep3) =>
+    `version: ${grep1}.${grep2}.${parseInt(grep3) + 1}`,
 );
 fs.writeFileSync("action.yml", newVersionAction);
 
@@ -1144,6 +1223,7 @@ zip.writeZip("./pre-commit-action.zip");
 ```
 
 `bump-version.js:8-15`（正则改写且无结构校验）：
+
 ```javascript
 const versionMatch = content.match(/version:\s*'([\d.]+)'/);
 if (versionMatch) {
@@ -1154,6 +1234,7 @@ if (versionMatch) {
 ```
 
 `package.json:6-9` 与 `action.yml:64-66`（执行的是已提交产物 `dist/index.js`）：
+
 ```json
   "scripts": {
     "package": "ncc build index.js -o dist",
@@ -1161,6 +1242,7 @@ if (versionMatch) {
     "build": "npm run package && npm run zip"
   },
 ```
+
 ```yaml
 runs:
   using: "node16"
@@ -1185,15 +1267,15 @@ runs:
 
 #### FIND-09: 输入/健壮性控制覆盖面有限（既有控制评估）
 
-| 属性 | 值 |
-|------|-----|
-| **严重级别** | Low（低危） |
-| **CVSS 4.0 评分** | 2.0 |
-| **CVSS 向量** | `CVSS:4.0/AV:L/AC:H/AT:P/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N` |
-| **CWE** | [CWE-693: Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html) |
-| **OWASP** | A02:2025 – Security Misconfiguration |
-| **利用难度** | Tier 2（Local Process Access） |
-| **修复工作量** | Low |
+| 属性              | 值                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| **严重级别**      | Low（低危）                                                                              |
+| **CVSS 4.0 评分** | 2.0                                                                                      |
+| **CVSS 向量**     | `CVSS:4.0/AV:L/AC:H/AT:P/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N`                        |
+| **CWE**           | [CWE-693: Protection Mechanism Failure](https://cwe.mitre.org/data/definitions/693.html) |
+| **OWASP**         | A02:2025 – Security Misconfiguration                                                     |
+| **利用难度**      | Tier 2（Local Process Access）                                                           |
+| **修复工作量**    | Low                                                                                      |
 
 **描述：**
 
@@ -1202,21 +1284,24 @@ runs:
 **证据：**
 
 `index.js:82-84`（IP 脱敏仅替换 IPv4）：
+
 ```javascript
 function sanitizePath(pathStr) {
-  return pathStr.replace(/(\d+\.\d+\.\d+\.\d+)/g, '[IP_ADDRESS]');
+  return pathStr.replace(/(\d+\.\d+\.\d+\.\d+)/g, "[IP_ADDRESS]");
 }
 ```
 
 `index.js:583-586`（WORKSPACE 路径正则，字符类含 `.`，未显式约束 `..`）：
+
 ```javascript
-  if (!/^\/[\w\-\/.]+$/.test(workspace)) {
-    console.log('[ERROR] Invalid workspace path');
-    process.exit(1);
-  }
+if (!/^\/[\w\-\/.]+$/.test(workspace)) {
+  console.log("[ERROR] Invalid workspace path");
+  process.exit(1);
+}
 ```
 
 `index.js:465-472`（`report-dir` 缺失仅告警）：
+
 ```javascript
   if (fs.existsSync(reportDir)) {
     fs.readdirSync(reportDir)
@@ -1242,27 +1327,27 @@ function sanitizePath(pathStr) {
 
 以下修复工作量低、影响大，建议立即实施：
 
-| 优先级 | 漏洞编号 | 修复内容 | 工作量 |
-|--------|---------|---------|--------|
-| P0 | FIND-02 | `extra_args` 白名单改为精确匹配，显式拒绝 `--config` 等未列出长选项 | Low |
-| P0 | FIND-04 | `gc_token` 改用 credential helper/header，并在 `finally` 中清理 remote URL | Low |
-| P0 | FIND-07 | `sarif-file`/`report-dir` 增加报告目录白名单与 `.sarif` 扩展名校验 | Low |
-| P1 | FIND-08 | 为子进程设置 `timeout`/`killSignal` 与输出上限 | Low |
-| P1 | FIND-11 | 钩子 `rev` 固定为 commit SHA；prettier 本地锁定版本 | Low |
-| P1 | FIND-12 | 第三方 action 引用全部固定为 commit SHA；OIDC 作业最小化权限 | Low |
-| P1 | FIND-13 | 移除 `GONOSUMDB=*`，收紧 `GOPROXY`/`GONOSUMDB` | Low |
-| P2 | FIND-09 | 扩展路径校验（`..` 规范化）与输出脱敏覆盖面 | Low |
+| 优先级 | 漏洞编号 | 修复内容                                                                   | 工作量 |
+| ------ | -------- | -------------------------------------------------------------------------- | ------ |
+| P0     | FIND-02  | `extra_args` 白名单改为精确匹配，显式拒绝 `--config` 等未列出长选项        | Low    |
+| P0     | FIND-04  | `gc_token` 改用 credential helper/header，并在 `finally` 中清理 remote URL | Low    |
+| P0     | FIND-07  | `sarif-file`/`report-dir` 增加报告目录白名单与 `.sarif` 扩展名校验         | Low    |
+| P1     | FIND-08  | 为子进程设置 `timeout`/`killSignal` 与输出上限                             | Low    |
+| P1     | FIND-11  | 钩子 `rev` 固定为 commit SHA；prettier 本地锁定版本                        | Low    |
+| P1     | FIND-12  | 第三方 action 引用全部固定为 commit SHA；OIDC 作业最小化权限               | Low    |
+| P1     | FIND-13  | 移除 `GONOSUMDB=*`，收紧 `GOPROXY`/`GONOSUMDB`                             | Low    |
+| P2     | FIND-09  | 扩展路径校验（`..` 规范化）与输出脱敏覆盖面                                | Low    |
 
 ### 6.2 中期修复
 
-| 优先级 | 漏洞编号 | 修复内容 | 工作量 |
-|--------|---------|---------|--------|
-| P0 | FIND-01 | 门禁作业去掉 `pr: write`、恢复 `allow-unsafe-pr-checkout` 拦截、job 级隔离 | Medium |
-| P1 | FIND-03 | 收敛顶层 `pr: write`，按作业最小化权限；PAT 短时效化 | Medium |
-| P1 | FIND-10 | pip 版本 + `--require-hashes` 固定，去除运行时动态选源 | Medium |
-| P2 | FIND-05 | 改用 `execFileSync`/`spawn` 数组传参，禁止凭证进命令行 | Medium |
-| P2 | FIND-06 | SARIF 字段转义/长度校验，secret 命中掩码 | Medium |
-| P2 | FIND-14 | 可复现构建与源码↔`dist/` 一致性校验，版本集中管理 | Medium |
+| 优先级 | 漏洞编号 | 修复内容                                                                   | 工作量 |
+| ------ | -------- | -------------------------------------------------------------------------- | ------ |
+| P0     | FIND-01  | 门禁作业去掉 `pr: write`、恢复 `allow-unsafe-pr-checkout` 拦截、job 级隔离 | Medium |
+| P1     | FIND-03  | 收敛顶层 `pr: write`，按作业最小化权限；PAT 短时效化                       | Medium |
+| P1     | FIND-10  | pip 版本 + `--require-hashes` 固定，去除运行时动态选源                     | Medium |
+| P2     | FIND-05  | 改用 `execFileSync`/`spawn` 数组传参，禁止凭证进命令行                     | Medium |
+| P2     | FIND-06  | SARIF 字段转义/长度校验，secret 命中掩码                                   | Medium |
+| P2     | FIND-14  | 可复现构建与源码↔`dist/` 一致性校验，版本集中管理                          | Medium |
 
 ### 6.3 长期改进
 
@@ -1301,59 +1386,59 @@ function sanitizePath(pathStr) {
 
 ### 7.1 威胁覆盖验证表
 
-| 威胁 ID | 对应发现 | 状态 |
-|---------|---------|------|
-| T01.S | FIND-04 | ✅ 已覆盖 |
-| T01.T1 | FIND-10 | ✅ 已覆盖 |
-| T01.T2 | FIND-05 | ✅ 已覆盖 |
-| T01.T3 | FIND-13 | ✅ 已覆盖 |
-| T01.T4 | FIND-06 | ✅ 已覆盖 |
-| T01.T5 | FIND-09 | ✅ 已缓解（既有控制） |
-| T01.R1 | FIND-04 | ✅ 已覆盖 |
-| T01.I1 | FIND-04 | ✅ 已覆盖 |
-| T01.I2 | FIND-04 | ✅ 已覆盖 |
-| T01.D1 | FIND-08 | ✅ 已覆盖 |
-| T01.E1 | FIND-01 | ✅ 已覆盖 |
-| T01.A1 | FIND-02 | ✅ 已覆盖 |
-| T01.A2 | FIND-07 | ✅ 已覆盖 |
-| T02.S / T02.T1 / T02.R1 / T02.I1 / T02.D1 / T02.A1 | FIND-06 | ✅ 已覆盖 |
-| T02.I2 | FIND-09 | ✅ 已缓解（既有控制） |
-| T03.S / T03.T1 / T03.D1 / T03.E1 / T03.A1 | FIND-01 | ✅ 已覆盖 |
-| T03.R1 / T03.I1 | FIND-03 | ⚠️ 部分成立（复核下调） |
-| T04.T1 / T04.I1 / T04.E1 / T04.A1 | FIND-12 | ✅ 已覆盖 |
-| T05.T1 / T05.A1 | FIND-11 | ✅ 已覆盖 |
-| T05.T2 | FIND-11 / FIND-12 | ✅ 已覆盖 |
-| T05.I1 | FIND-06 | ✅ 已覆盖 |
-| T05.E1 | FIND-01 | ✅ 已覆盖 |
-| T06.T1 / T06.T2 / T06.I1 / T06.A1 | FIND-14 | ✅ 已覆盖 |
-| T07.S1 / T07.I1 | FIND-04 | ✅ 已覆盖 |
-| T07.E1 | FIND-03 | ⚠️ 部分成立（复核下调） |
-| T08.S1 / T08.T1 / T08.I1 | FIND-10 | ✅ 已覆盖 |
-| T09.T1 / T09.I1 / T09.E1 | FIND-13 | ✅ 已覆盖 |
-| T10.S1 / T10.T1 / T10.I1 | FIND-11 | ✅ 已覆盖 |
-| T11.S1 / T11.T1 / T11.E1 | FIND-12 | ✅ 已覆盖 |
-| T12.T1 / T12.I1 / T12.A1 | FIND-07 | ✅ 已覆盖 |
+| 威胁 ID                                            | 对应发现          | 状态                    |
+| -------------------------------------------------- | ----------------- | ----------------------- |
+| T01.S                                              | FIND-04           | ✅ 已覆盖               |
+| T01.T1                                             | FIND-10           | ✅ 已覆盖               |
+| T01.T2                                             | FIND-05           | ✅ 已覆盖               |
+| T01.T3                                             | FIND-13           | ✅ 已覆盖               |
+| T01.T4                                             | FIND-06           | ✅ 已覆盖               |
+| T01.T5                                             | FIND-09           | ✅ 已缓解（既有控制）   |
+| T01.R1                                             | FIND-04           | ✅ 已覆盖               |
+| T01.I1                                             | FIND-04           | ✅ 已覆盖               |
+| T01.I2                                             | FIND-04           | ✅ 已覆盖               |
+| T01.D1                                             | FIND-08           | ✅ 已覆盖               |
+| T01.E1                                             | FIND-01           | ✅ 已覆盖               |
+| T01.A1                                             | FIND-02           | ✅ 已覆盖               |
+| T01.A2                                             | FIND-07           | ✅ 已覆盖               |
+| T02.S / T02.T1 / T02.R1 / T02.I1 / T02.D1 / T02.A1 | FIND-06           | ✅ 已覆盖               |
+| T02.I2                                             | FIND-09           | ✅ 已缓解（既有控制）   |
+| T03.S / T03.T1 / T03.D1 / T03.E1 / T03.A1          | FIND-01           | ✅ 已覆盖               |
+| T03.R1 / T03.I1                                    | FIND-03           | ⚠️ 部分成立（复核下调） |
+| T04.T1 / T04.I1 / T04.E1 / T04.A1                  | FIND-12           | ✅ 已覆盖               |
+| T05.T1 / T05.A1                                    | FIND-11           | ✅ 已覆盖               |
+| T05.T2                                             | FIND-11 / FIND-12 | ✅ 已覆盖               |
+| T05.I1                                             | FIND-06           | ✅ 已覆盖               |
+| T05.E1                                             | FIND-01           | ✅ 已覆盖               |
+| T06.T1 / T06.T2 / T06.I1 / T06.A1                  | FIND-14           | ✅ 已覆盖               |
+| T07.S1 / T07.I1                                    | FIND-04           | ✅ 已覆盖               |
+| T07.E1                                             | FIND-03           | ⚠️ 部分成立（复核下调） |
+| T08.S1 / T08.T1 / T08.I1                           | FIND-10           | ✅ 已覆盖               |
+| T09.T1 / T09.I1 / T09.E1                           | FIND-13           | ✅ 已覆盖               |
+| T10.S1 / T10.T1 / T10.I1                           | FIND-11           | ✅ 已覆盖               |
+| T11.S1 / T11.T1 / T11.E1                           | FIND-12           | ✅ 已覆盖               |
+| T12.T1 / T12.I1 / T12.A1                           | FIND-07           | ✅ 已覆盖               |
 
 ### 7.2 漏洞误报复核结果
 
 > 复核方法：对 `3-findings.md` 的 FIND-01..FIND-14 **逐条打开仓库真实源码**，比对断言的真伪、可达性与严重级别。证据列为可回溯的 `路径:行号`。结论定义：**确认**＝脆弱代码确实存在且可达；**误报**＝断言不成立/已被缓解/不可达；**部分成立**＝方向对但严重性/可达性被夸大；**无法验证**＝需运行时/平台事实。
 
-| 发现ID | 原严重级别 | 复核结论 | 证据（路径:行号） | 说明 |
-|--------|-----------|---------|------------------|------|
-| FIND-01 | Critical | **确认** | `.gitcode/workflows/pre-commit.yml:8,17-19,44-48`；`index.js:611-614,627`；`.pre-commit-config.yaml:30-36` | `pull_request_target` + `allow-unsafe-pr-checkout: true` 检出 PR 合并 commit，动作读取并执行被检出仓库的钩子配置，pwn-request 链成立；保留严重。 |
-| FIND-02 | Important | **确认** | `index.js:25-44,619-621,252-254` | `!allowedArgs.includes(arg) && !arg.startsWith('--')` 对任意 `--` 长选项放行，`--config=` 等可绕过；保留高危。 |
-| FIND-03 | Important | **部分成立** | `.gitcode/workflows/pre-commit.yml:30-35,42,17-19` | `secrets.ROBOT_TOKEN` 引用在 `region=cn` 的 pr-label 作业，不可信代码运行于 `region=overseas` 的 pre-commit 作业，非同一作业/执行机；“token 直接暴露给不可信作业”不成立；真实风险为长期 PAT + 顶层 `pr: write`。**下调为中危**。 |
-| FIND-04 | Important | **确认** | `index.js:166-175,654-659` | `git remote set-url origin "https://oauth2:<token>@..."` 使 token 明文持久化至 `.git/config`，仅校验 `https://` 前缀未校验 host；保留高危。 |
-| FIND-05 | Moderate | **确认** | `index.js:72-75,86-92,94-95,172-173` | `execCapture` 使用 `shell:'/bin/bash'` 拼接命令，凭证/URL 经字符串插值；`encodeURIComponent` 降低注入面但模式脆弱（注：`exec()` 定义后未被调用）。保留中危。 |
-| FIND-06 | Moderate | **确认** | `tool-parsers.js:41-54,17-20,273`；`index.js:465-469` | 不可信日志字段（含 gitleaks `Secret`/`Match` 截断片段）原样写入 SARIF 并被下游上传；保留中危。 |
-| FIND-07 | Moderate | **确认** | `index.js:460-464,476-495,630-634` | `sarif-file` 任意路径经存在性判断后进入 `sarif-files` output，无白名单/扩展名校验；保留中危。 |
-| FIND-08 | Moderate | **确认** | `index.js:199-242,257` | `spawn` 无 `timeout`，`output += chunk` 无上限；保留中危。 |
-| FIND-09 | Low | **确认** | `index.js:82-84,583-586,465-472` | 控制确实存在且覆盖面有限（正则字符类含 `.` 未显式约束 `..`；脱敏仅顶层错误）；如实描述，保留低危。 |
-| FIND-10 | Important | **确认** | `index.js:6-13,94-100,550,577` | `curl` 测速动态选源 + `pip install pre-commit` 无版本/哈希固定；保留高危。 |
-| FIND-11 | Important | **确认** | `.pre-commit-config.yaml:4,8-9,23-24,30-36` | 钩子 `rev` 为可变 tag（`v6.0.0`/`v8.30.1`）、`local` 钩子运行期 `npx prettier`；保留高危（工作流已锁定 prettier@3.9.5，部分缓解 `npx` 面）。 |
-| FIND-12 | Moderate | **确认** | `.gitcode/workflows/pre-commit.yml:31,45,51,63,69`；`code-metrics-scan.yml:9-11,23` | 第三方 action 多用可变 tag/未固定版本；OIDC `id-token: write`；度量 action 已固定 SHA 作对照；保留中危。 |
-| FIND-13 | Moderate | **确认** | `index.js:554-557,7,9,128-155` | `go env -w GONOSUMDB=*` 确实存在，`GOPROXY` 指向镜像；保留中危（`GONOSUMDB` 的实际生效依赖 Go 工具链版本，见正文说明）。 |
-| FIND-14 | Moderate | **确认** | `zip.js:5-16`；`bump-version.js:8-15`；`package.json:6-9`；`action.yml:64-66` | 打包前就地改写 `action.yml` 版本、无源码↔`dist/` 一致性校验、产物为已提交 `dist/`；保留中危（`bump-version.js` 正则要求带引号，对当前未加引号版本会失配，实际改写点在 `zip.js:10`）。 |
+| 发现ID  | 原严重级别 | 复核结论     | 证据（路径:行号）                                                                                          | 说明                                                                                                                                                                                                                             |
+| ------- | ---------- | ------------ | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FIND-01 | Critical   | **确认**     | `.gitcode/workflows/pre-commit.yml:8,17-19,44-48`；`index.js:611-614,627`；`.pre-commit-config.yaml:30-36` | `pull_request_target` + `allow-unsafe-pr-checkout: true` 检出 PR 合并 commit，动作读取并执行被检出仓库的钩子配置，pwn-request 链成立；保留严重。                                                                                 |
+| FIND-02 | Important  | **确认**     | `index.js:25-44,619-621,252-254`                                                                           | `!allowedArgs.includes(arg) && !arg.startsWith('--')` 对任意 `--` 长选项放行，`--config=` 等可绕过；保留高危。                                                                                                                   |
+| FIND-03 | Important  | **部分成立** | `.gitcode/workflows/pre-commit.yml:30-35,42,17-19`                                                         | `secrets.ROBOT_TOKEN` 引用在 `region=cn` 的 pr-label 作业，不可信代码运行于 `region=overseas` 的 pre-commit 作业，非同一作业/执行机；“token 直接暴露给不可信作业”不成立；真实风险为长期 PAT + 顶层 `pr: write`。**下调为中危**。 |
+| FIND-04 | Important  | **确认**     | `index.js:166-175,654-659`                                                                                 | `git remote set-url origin "https://oauth2:<token>@..."` 使 token 明文持久化至 `.git/config`，仅校验 `https://` 前缀未校验 host；保留高危。                                                                                      |
+| FIND-05 | Moderate   | **确认**     | `index.js:72-75,86-92,94-95,172-173`                                                                       | `execCapture` 使用 `shell:'/bin/bash'` 拼接命令，凭证/URL 经字符串插值；`encodeURIComponent` 降低注入面但模式脆弱（注：`exec()` 定义后未被调用）。保留中危。                                                                     |
+| FIND-06 | Moderate   | **确认**     | `tool-parsers.js:41-54,17-20,273`；`index.js:465-469`                                                      | 不可信日志字段（含 gitleaks `Secret`/`Match` 截断片段）原样写入 SARIF 并被下游上传；保留中危。                                                                                                                                   |
+| FIND-07 | Moderate   | **确认**     | `index.js:460-464,476-495,630-634`                                                                         | `sarif-file` 任意路径经存在性判断后进入 `sarif-files` output，无白名单/扩展名校验；保留中危。                                                                                                                                    |
+| FIND-08 | Moderate   | **确认**     | `index.js:199-242,257`                                                                                     | `spawn` 无 `timeout`，`output += chunk` 无上限；保留中危。                                                                                                                                                                       |
+| FIND-09 | Low        | **确认**     | `index.js:82-84,583-586,465-472`                                                                           | 控制确实存在且覆盖面有限（正则字符类含 `.` 未显式约束 `..`；脱敏仅顶层错误）；如实描述，保留低危。                                                                                                                               |
+| FIND-10 | Important  | **确认**     | `index.js:6-13,94-100,550,577`                                                                             | `curl` 测速动态选源 + `pip install pre-commit` 无版本/哈希固定；保留高危。                                                                                                                                                       |
+| FIND-11 | Important  | **确认**     | `.pre-commit-config.yaml:4,8-9,23-24,30-36`                                                                | 钩子 `rev` 为可变 tag（`v6.0.0`/`v8.30.1`）、`local` 钩子运行期 `npx prettier`；保留高危（工作流已锁定 prettier@3.9.5，部分缓解 `npx` 面）。                                                                                     |
+| FIND-12 | Moderate   | **确认**     | `.gitcode/workflows/pre-commit.yml:31,45,51,63,69`；`code-metrics-scan.yml:9-11,23`                        | 第三方 action 多用可变 tag/未固定版本；OIDC `id-token: write`；度量 action 已固定 SHA 作对照；保留中危。                                                                                                                         |
+| FIND-13 | Moderate   | **确认**     | `index.js:554-557,7,9,128-155`                                                                             | `go env -w GONOSUMDB=*` 确实存在，`GOPROXY` 指向镜像；保留中危（`GONOSUMDB` 的实际生效依赖 Go 工具链版本，见正文说明）。                                                                                                         |
+| FIND-14 | Moderate   | **确认**     | `zip.js:5-16`；`bump-version.js:8-15`；`package.json:6-9`；`action.yml:64-66`                              | 打包前就地改写 `action.yml` 版本、无源码↔`dist/` 一致性校验、产物为已提交 `dist/`；保留中危（`bump-version.js` 正则要求带引号，对当前未加引号版本会失配，实际改写点在 `zip.js:10`）。                                            |
 
 **复核统计：** 确认 13 条、误报 0 条、部分成立 1 条（FIND-03，已下调）、无法验证 0 条。第 5 章共收录 14 条发现（严重 1 / 高危 4 / 中危 8 / 低危 1），与上表逐条对应。
 
@@ -1361,42 +1446,42 @@ function sanitizePath(pathStr) {
 
 #### 安全标准
 
-| 标准 | 链接 |
-|------|------|
-| Microsoft SDL Bug Bar | https://www.microsoft.com/en-us/msrc/sdlbugbar |
-| OWASP Top 10:2025 | https://owasp.org/Top10/2025/ |
-| CVSS 4.0 规范 | https://www.first.org/cvss/v4.0/specification-document |
-| CWE | https://cwe.mitre.org/ |
-| STRIDE 威胁枚举 | https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats |
-| NIST SP 800-53 Rev. 5 | https://csrc.nist.gov/pubs/sp/800-53/r5/upd1/final |
-| SLSA 供应链完整性 | https://slsa.dev/spec/v1.0/ |
+| 标准                    | 链接                                                                                                                 |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Microsoft SDL Bug Bar   | https://www.microsoft.com/en-us/msrc/sdlbugbar                                                                       |
+| OWASP Top 10:2025       | https://owasp.org/Top10/2025/                                                                                        |
+| CVSS 4.0 规范           | https://www.first.org/cvss/v4.0/specification-document                                                               |
+| CWE                     | https://cwe.mitre.org/                                                                                               |
+| STRIDE 威胁枚举         | https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats                                |
+| NIST SP 800-53 Rev. 5   | https://csrc.nist.gov/pubs/sp/800-53/r5/upd1/final                                                                   |
+| SLSA 供应链完整性       | https://slsa.dev/spec/v1.0/                                                                                          |
 | GitHub Actions 安全加固 | https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions |
 
 #### 组件文档
 
-| 组件 | 文档链接 |
-|------|---------|
-| pre-commit | https://pre-commit.com/ |
+| 组件                              | 文档链接                                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------------------- |
+| pre-commit                        | https://pre-commit.com/                                                                           |
 | GitCode Actions / pre-commit 方案 | https://gitcode.com/openlibing/docs/blob/main/static-code-analysis/solutions/pre-commit/README.md |
-| pip 安全安装（哈希校验） | https://pip.pypa.io/en/stable/topics/secure-installs/ |
-| Go modules（checksum database） | https://go.dev/ref/mod#checksum-database |
-| SARIF 2.1.0 | https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html |
-| @vercel/ncc | https://github.com/vercel/ncc |
-| adm-zip | https://github.com/cthackers/adm-zip |
+| pip 安全安装（哈希校验）          | https://pip.pypa.io/en/stable/topics/secure-installs/                                             |
+| Go modules（checksum database）   | https://go.dev/ref/mod#checksum-database                                                          |
+| SARIF 2.1.0                       | https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html                                  |
+| @vercel/ncc                       | https://github.com/vercel/ncc                                                                     |
+| adm-zip                           | https://github.com/cthackers/adm-zip                                                              |
 
 ### 7.4 报告元数据
 
-| 属性 | 值 |
-|------|-----|
-| 分析模型 | DeepSeek-V4.1-Flash |
-| 分析开始时间 | 2026-10-09 |
-| 分析方法 | STRIDE-A + 源码逐条核验（误报复核） |
-| 分析范围 | 整个 pre-commit-action 代码库（含 `index.js`/`tool-parsers.js`/`dist/index.js`、`action.yml`、`.pre-commit-config.yaml`、`.gitcode/workflows/*.yml`、`zip.js`/`bump-version.js`、`package.json`、`README.md`） |
-| 排除范围 | `node_modules/`、`.git/`、`.idea/`、`pre-commit-action.zip`（二进制分发件） |
-| 部署分类 | LOCALHOST_DESKTOP（无监听端口的本地 CI 进程） |
-| 分析版本 | master 分支 · commit `756183f`（2026-10-09） |
-| 原始报告集 | `threat-model-20261009-103747/`（英文，13 组件/58 威胁/14 发现） |
-| 报告版本 | 1.0 |
+| 属性         | 值                                                                                                                                                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 分析模型     | DeepSeek-V4.1-Flash                                                                                                                                                                                            |
+| 分析开始时间 | 2026-10-09                                                                                                                                                                                                     |
+| 分析方法     | STRIDE-A + 源码逐条核验（误报复核）                                                                                                                                                                            |
+| 分析范围     | 整个 pre-commit-action 代码库（含 `index.js`/`tool-parsers.js`/`dist/index.js`、`action.yml`、`.pre-commit-config.yaml`、`.gitcode/workflows/*.yml`、`zip.js`/`bump-version.js`、`package.json`、`README.md`） |
+| 排除范围     | `node_modules/`、`.git/`、`.idea/`、`pre-commit-action.zip`（二进制分发件）                                                                                                                                    |
+| 部署分类     | LOCALHOST_DESKTOP（无监听端口的本地 CI 进程）                                                                                                                                                                  |
+| 分析版本     | master 分支 · commit `756183f`（2026-10-09）                                                                                                                                                                   |
+| 原始报告集   | `threat-model-20261009-103747/`（英文，13 组件/58 威胁/14 发现）                                                                                                                                               |
+| 报告版本     | 1.0                                                                                                                                                                                                            |
 
 ---
 
