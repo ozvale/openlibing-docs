@@ -4,7 +4,7 @@
 **分析版本：** 分支 `full-check-update` / commit `4a2caef`
 **分析方法：** STRIDE-A 威胁建模
 **项目仓库：** https://gitcode.com/openlibing/security-compilation-options-action
-**复核说明：** 本报告已对原始 STRIDE-A 报告（`threat-model-20261009-103731/`）的 15 条发现逐条打开真实源码核验（工作副本 `security-compilation-options-action`，该仓无 `src/`，执行代码位于 `dist/` 打包产物），核验结论见第 5 章与 7.2 节。
+**复核说明：** 本报告已对原始 STRIDE-A 分析的 15 条发现逐条打开真实源码核验（仓库 `openlibing/security-compilation-options-action`，该仓无 `src/`，执行代码位于 `dist/` 打包产物），核验结论见第 5 章与 7.2 节。
 
 ---
 
@@ -1477,8 +1477,7 @@ visited.add(real)
 | 分析方法             | STRIDE-A 威胁建模 + 源码逐条复核                                                                                                                                                          |
 | 分析日期             | 2026-10-09                                                                                                                                                                                |
 | 分析版本             | 分支 `full-check-update` / commit `4a2caef`（2026-10-09）                                                                                                                                 |
-| 工作副本路径         | `c:\Users\abing\Documents\develop\openLiBing\security-compilation-options-action`                                                                                                         |
-| 原始 STRIDE-A 报告集 | `threat-model-20261009-103731/`（0-assessment、0.1-architecture、1-threatmodel、2-stride-analysis、3-findings、threat-inventory.json、report.md）                                         |
+| 原始 STRIDE-A 报告集 | 本地 STRIDE-A 分析产物（未随本仓库提交），核心结论已并入本报告                                                                                                                            |
 | 报告版本             | 1.0（中文单文件版，含误报复核）                                                                                                                                                           |
 | 分析范围             | 全仓（`action.yml`、`dist/` 运行时、两份 `sec_option_scan.py`、3 个 `.gitcode/workflows/`、`.pre-commit-config.yaml`、`package.json`、`zip.js`）；排除 `node_modules/`、`.git/`、`.idea/` |
 | 部署分类             | `LOCALHOST_DESKTOP`（无入站监听端口）                                                                                                                                                     |
