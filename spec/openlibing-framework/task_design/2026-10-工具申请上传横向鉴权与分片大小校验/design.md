@@ -35,13 +35,13 @@
 
 ## 2. 变更清单
 
-| 文件 | 变更 |
-| --- | --- |
-| `business/controller/ToolApplyController.java` | `saveToolIcon` 增加 `projectId`（`@NotNull`+`@Min(0)`）；`saveToolSoftwarePack` 增加 `userId`（`@NotBlank`）、`projectId`（`@NotNull`+`@Min(0)`），透传 Service |
-| `business/service/ToolApplyService.java` | 两个方法签名同步新增参数 |
+| 文件                                              | 变更                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `business/controller/ToolApplyController.java`    | `saveToolIcon` 增加 `projectId`（`@NotNull`+`@Min(0)`）；`saveToolSoftwarePack` 增加 `userId`（`@NotBlank`）、`projectId`（`@NotNull`+`@Min(0)`），透传 Service                                                                                                          |
+| `business/service/ToolApplyService.java`          | 两个方法签名同步新增参数                                                                                                                                                                                                                                                 |
 | `business/service/impl/ToolApplyServiceImpl.java` | 两个方法入口新增 `verifyPermissions`；新增 `MAX_SOFTWARE_PACK_SIZE`/`CHUNK_SIZE_PREFIX` 常量；新增 `validateChunkSize`、`validateChunkFileType`/`isZipHeader` 与 zip 魔数常量；`chunkUpload` 调用校验；`cleanupChunkSession` 增删键；`validateSoftwarePackFile` 复用常量 |
-| `test/.../ToolApplyControllerTest.java` | 更新调用签名，补充用例 |
-| `test/.../ToolApplyServiceImplTest.java` | 新增鉴权与分片大小校验用例；`cleanupChunkSession` 断言改为 4 次删除 |
+| `test/.../ToolApplyControllerTest.java`           | 更新调用签名，补充用例                                                                                                                                                                                                                                                   |
+| `test/.../ToolApplyServiceImplTest.java`          | 新增鉴权与分片大小校验用例；`cleanupChunkSession` 断言改为 4 次删除                                                                                                                                                                                                      |
 
 ## 3. 兼容性与风险
 
@@ -51,9 +51,9 @@
 
 ## 4. 测试策略
 
-| 层级 | 用例 |
-| --- | --- |
-| Controller | `saveToolIcon`/`saveToolSoftwarePack` 新签名调用与透传（含空文件参数校验） |
+| 层级        | 用例                                                                                                                                                                                                                                                                             |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Controller  | `saveToolIcon`/`saveToolSoftwarePack` 新签名调用与透传（含空文件参数校验）                                                                                                                                                                                                       |
 | ServiceImpl | `saveToolIcon`、`saveToolSoftwarePack` 均调用 `verifyPermissions`（绝对路径 `SAVE_TOOL_APPLY`）；`validateChunkSize`：空分片 / 单分片超限 / 累计超限 / 正常；`validateChunkFileType`：空分片 / 非 zip / 头部不足 4 字节 / zip 首片 / 读取异常；`cleanupChunkSession` 清理 4 个键 |
-| 质量门禁 | `spotless:apply checkstyle:check compile spotbugs:check pmd:check` 全通过 |
-| 安全审查 | 鉴权/上传相关改动执行安全审查 |
+| 质量门禁    | `spotless:apply checkstyle:check compile spotbugs:check pmd:check` 全通过                                                                                                                                                                                                        |
+| 安全审查    | 鉴权/上传相关改动执行安全审查                                                                                                                                                                                                                                                    |
