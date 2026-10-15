@@ -1,6 +1,6 @@
 # 用例清单 — issue_210_【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现
 
-> 团队：IPD管理控制与测试仿真 | 月度：202610 | 版本：20261015 | issue 编号：210 | issue 标题：【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现 | 用例总数：20（自动化 20 / 手工 0） | 更新日期：2026-10-15 | 由 testcase_pro 维护
+> 团队：IPD管理控制与测试仿真 | 月度：202610 | 版本：20261015 | issue 编号：210 | issue 标题：【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现 | 用例总数：19（自动化 19 / 手工 0） | 更新日期：2026-10-15 | 由 testcase_pro 维护
 
 > 月度版本树（进行中）：用例先落本 issue 目录（四类类型子目录与特性树同构），月底 consolidate 归集到 01~04 特性树；过程文档（测试策略/测试设计/测试串讲/测试反串讲/版本历史/测试报告）见本目录 测试过程数据/。
 
@@ -9,9 +9,9 @@
 | 用例等级 | 自动化 | 手工 | 合计   |
 | -------- | ------ | ---- | ------ |
 | P0       | 5      | 0    | 5      |
-| P1       | 13     | 0    | 13     |
+| P1       | 12     | 0    | 12     |
 | P2       | 2      | 0    | 2      |
-| **合计** | 20     | 0    | **20** |
+| **合计** | 19     | 0    | **19** |
 
 ## 用例清单
 
@@ -31,14 +31,13 @@
 | TC-ISSUE210-037 | 独占资源池卡片信息准确                          | P1       | 自动化   | auto_ui    | [assets/testcase_pro/IPD管理控制与测试仿真/05_202610/20261015/issue_210_【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现/01_系统测试/运营运维/工程能力运营看板/TC-ISSUE210-037_独占资源池卡片信息准确.md](../01_系统测试/运营运维/工程能力运营看板/TC-ISSUE210-037_独占资源池卡片信息准确.md)                                                   | [src/automation/ipd-management/ui/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_037.py](../../../../../../../src/automation/ipd-management/ui/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_037.py) |
 | TC-ISSUE210-039 | 共享资源池卡片信息准确                          | P1       | 自动化   | auto_ui    | [assets/testcase_pro/IPD管理控制与测试仿真/05_202610/20261015/issue_210_【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现/01_系统测试/运营运维/工程能力运营看板/TC-ISSUE210-039_共享资源池卡片信息准确.md](../01_系统测试/运营运维/工程能力运营看板/TC-ISSUE210-039_共享资源池卡片信息准确.md)                                                   | [src/automation/ipd-management/ui/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_039.py](../../../../../../../src/automation/ipd-management/ui/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_039.py) |
 
-### 02_API测试（9 条）
+### 02_API测试（8 条）
 
 | 用例编号        | 用例标题                                | 用例等级 | 执行方式 | 自动化方式 | 用例文本位置                                                                                                                                                                                                                                                                                                                             | 用例脚本位置                                                                                                                                                                                                                                                          |
 | --------------- | --------------------------------------- | -------- | -------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | TC-ISSUE210-029 | 工程效率运营看板NPU使用率数据计算       | P0       | 自动化   | auto_api   | [assets/testcase_pro/IPD管理控制与测试仿真/05_202610/20261015/issue_210_【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现/02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-029_工程效率运营看板NPU使用率数据计算.md](../02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-029_工程效率运营看板NPU使用率数据计算.md)             | [src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_029.py](../../../../../../../src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_029.py) |
 | TC-ISSUE210-030 | 工程效率运营看板独占池NPU使用率数据计算 | P1       | 自动化   | auto_api   | [assets/testcase_pro/IPD管理控制与测试仿真/05_202610/20261015/issue_210_【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现/02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-030_工程效率运营看板独占池NPU使用率数据计算.md](../02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-030_工程效率运营看板独占池NPU使用率数据计算.md) | [src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_030.py](../../../../../../../src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_030.py) |
 | TC-ISSUE210-031 | 工程效率运营看板共享池NPU使用率数据计算 | P1       | 自动化   | auto_api   | [assets/testcase_pro/IPD管理控制与测试仿真/05_202610/20261015/issue_210_【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现/02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-031_工程效率运营看板共享池NPU使用率数据计算.md](../02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-031_工程效率运营看板共享池NPU使用率数据计算.md) | [src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_031.py](../../../../../../../src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_031.py) |
-| TC-ISSUE210-033 | 汇总资源池数量统计                      | P1       | 自动化   | auto_api   | [assets/testcase_pro/IPD管理控制与测试仿真/05_202610/20261015/issue_210_【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现/02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-033_汇总资源池数量统计.md](../02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-033_汇总资源池数量统计.md)                                           | [src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_033.py](../../../../../../../src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_033.py) |
 | TC-ISSUE210-034 | NPU使用（占用）率计算                   | P0       | 自动化   | auto_api   | [assets/testcase_pro/IPD管理控制与测试仿真/05_202610/20261015/issue_210_【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现/02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-034_NPU使用（占用）率计算.md](../02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-034_NPU使用（占用）率计算.md)                                     | [src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_034.py](../../../../../../../src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_034.py) |
 | TC-ISSUE210-035 | NPU使用（占用）卡时计算                 | P1       | 自动化   | auto_api   | [assets/testcase_pro/IPD管理控制与测试仿真/05_202610/20261015/issue_210_【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现/02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-035_NPU使用（占用）卡时计算.md](../02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-035_NPU使用（占用）卡时计算.md)                                 | [src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_035.py](../../../../../../../src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_035.py) |
 | TC-ISSUE210-036 | 总卡时计算                              | P0       | 自动化   | auto_api   | [assets/testcase_pro/IPD管理控制与测试仿真/05_202610/20261015/issue_210_【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现/02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-036_总卡时计算.md](../02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-036_总卡时计算.md)                                                           | [src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_036.py](../../../../../../../src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_036.py) |
@@ -428,29 +427,6 @@
 **测试步骤**：1.计算共享池NPU利用率
 
 **预期结果**：1.工程效率运营看板看板下钻资源环境-NPU资源-共享资源池的NPU使用率数据一致
-
-#### TC-ISSUE210-033 汇总资源池数量统计
-
-**测试功能场景**：测试设计脑图 > 工程效率运营看板看板下钻资源环境-NPU资源 > 汇总资源池 > 汇总资源池数量统计
-
-**用例等级**：P1<br>
-**执行方式**：自动化<br>
-**自动化方式**：auto_api<br>
-**用例类型**：API测试<br>
-**用例状态**：active<br>
-**用例作者**：AI 辅助测试<br>
-**创建时间**：2026-10-13<br>
-**关联需求**：https://gitcode.com/openlibing/openlibing-ops/issues/210<br>
-**来源模块**：openlibing-ops/engineering_capability_dashboard
-
-**用例文本位置**：[assets/testcase_pro/IPD管理控制与测试仿真/05_202610/20261015/issue_210_【1015】【蓝区】【运营看板】工程能力运营看板-使用率指标实现/02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-033_汇总资源池数量统计.md](../02_API测试/运营运维/工程能力运营看板/TC-ISSUE210-033_汇总资源池数量统计.md)<br>
-**用例脚本位置**：[src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_033.py](../../../../../../../src/automation/ipd-management/api/operations_maintenance/engineering_capability_dashboard/beta/test_tc_issue210_033.py)
-
-**前置条件**：进入工程效率运营看板下钻-资源环境-NPU资源页面
-
-**测试步骤**：1.统计汇总资源池
-
-**预期结果**：与资源运营对应项目的i资源池一致
 
 #### TC-ISSUE210-034 NPU使用（占用）率计算
 
