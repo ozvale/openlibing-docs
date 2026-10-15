@@ -53,7 +53,7 @@ sec-option-scan 插件上报扫描结果后，工作流概览仅输出 14 项编
 
 1. 链接参数收敛（联调后定稿）：设计初版链接携带 `codeHostingPlatformFlag`（对齐流水线跳转链接范式、用于未登录无感授权）；联调评估后判定非必需（详情页取数仅依赖 recordId），链接收敛为最小参数集 `recordId + projectId`（commit `2f7ea9735`）
 2. 文案定稿：「安全编译选项扫描结果（<包名>）」，便于多插件场景识别归属；OUTPUT 链接行 key 为「扫描结果（<包名>）url」、提示行 key 为「扫描结果（<包名>）」
-3. 遗留（合入前处理，用户指示暂缓）：两插件分支当前 `cicdUrl`/`coderepoUrl` 指向 APIC 测试网关（beta 联调用），合入前需还原为各自主干原值
+3. 测试网关还原（已闭环）：联调期两插件分支 `cicdUrl`/`coderepoUrl` 曾指向 APIC 测试网关（beta 联调用）；联调完成后 sec 插件 `cicdUrl` 已还原为主干原值 `https://apig.openlibing.com:443`（commit `e0173f7`），cm 插件 `coderepoUrl` 同步还原（commit `ea73f9e`）
 4. 链接域名随服务端环境变化：beta/gamma/生产分别生成 `beta.openlibing.com` / `gamma.openlibing.com` / `www.openlibing.com` 域名链接，插件不感知环境（仅消费服务端返回的 detailLink）
 
 ## 可复用经验

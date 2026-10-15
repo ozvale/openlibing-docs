@@ -52,7 +52,7 @@
 1. 链接参数收敛（联调后定稿）：设计初版链接携带 `codeHostingPlatformFlag`（对齐流水线跳转链接范式、用于未登录无感授权）；联调评估后判定非必需，从链接中移除（commit `ed41c4a4`）；platforms 保留分支页筛选语义，platform 非 gitcode/gitee 时省略 platforms
 2. 文案定稿：显示文本「代码度量指标扫描结果」；OUTPUT 链接行 key「扫描结果url」（末尾小写 url 触发可点击渲染）、提示行 key「扫描结果」
 3. 前端侧协同定性：落地契约与前端侧对齐（三筛选自动应用 + 精确置顶 + 气泡口径 + 异步导入窗口提示文案），前端代码交付由前端团队负责，不随本需求提业务 PR
-4. 遗留（合入前处理，用户指示暂缓）：插件分支当前 `coderepoUrl` 指向 APIC 测试网关（beta 联调用），合入前需还原为主干原值
+4. 测试网关还原（已闭环）：联调期插件分支 `coderepoUrl` 曾指向 APIC 测试网关（beta 联调用）；联调完成后已还原为主干原值 `https://apig.openlibing.com:443`（commit `ea73f9e`）
 
 ## 可复用经验
 
