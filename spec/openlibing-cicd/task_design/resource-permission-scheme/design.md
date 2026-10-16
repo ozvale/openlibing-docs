@@ -152,9 +152,31 @@ SELECT CASE WHEN EXISTS (
 > join 字段已核实：`rpm.role_id` / `mui.menu_id` / `mui.menu_url`（该表无 `role_type_id` 字段，`menu_url_info` 字段非 `id`/`url`，勿回退错误字段名）。
 > 原设计的 EXISTS 成员兜底、`isValidProjectMember` 僵尸标记、双数据源复制分支——**全部消失**（同表红利）。
 
-### 4.3 插入位置（不变，v4 结论保留）
+### 4.3 插入位置（2026/10/14 定案反转：公开仓仅操作类感知，原"绑定优先"结论作废）
 
-绑定查询插在 `extractPermissionContext` 之后、`isGitUrlPublic` **之前**——否则绑定的公开仓资源被短路和匿名放行绕过。命中绑定跳过公开仓短路与匿名分支；未绑定零改动。绑定查询经内部 RPC 调 framework（见 4.4）+ 独立 Guava 缓存（TTL 5 秒，未绑定结果也缓存防穿透）。
+**原 v4 结论（绑定查询插在 isGitUrlPublic 之前、命中绑定跳过公开仓短路与匿名分支）已作废**——该设计使公开仓绑定资源对匿名/登录用户全量收紧（查看也要登录+组鉴权），与"公开仓零感知"的产品语义冲突（2026/10/14 领导定案）。
+
+新判定链（`@CheckPermission` 注解新增 `operate` 属性区分端点类型，操作类 6 个端点显式打标）：
+
+| # | 场景 | 行为 | 对照改造前（master） |
+|---|---|---|---|
+| 1 | 匿名 + 查看类（含绑定资源） | 走存量 checkAnonymousAccess（公开仓放行/私有仓拒绝），**绑定查询不触发** | = master |
+| 2 | 匿名 + 操作类 + 绑定资源 | 401 LOGIN_REQUIRED_BY_GROUP 提示登录 | master 是 400 缺 userId 参数（UX 改进） |
+| 3 | 匿名 + 操作类 + 未绑定 | 走 checkAnonymousAccess，Controller 层参数校验兜底 | = master |
+| 4 | 已登录 + 公开仓 + 查看类（含绑定） | 放行，**零绑定查询**（完全不感知权限组） | = master |
+| 5 | 已登录 + 公开仓 + 操作类 + 未绑定 | 放行（任何登录用户可操作） | = master |
+| 6 | 已登录 + 公开仓 + 操作类 + 绑定组 | 组鉴权：组内角色过矩阵放行 / 组外 4030001 | **收紧**（master 任何登录用户可操作，有意的行为变更） |
+| 7 | 已登录 + 私有仓 + 绑定组 | 组鉴权（查看/操作统一收紧，定案 #6 维持） | 收紧（需求本体） |
+| 8 | 已登录 + 私有仓 + 未绑定 | hasPermission | = master |
+
+**操作类端点清单（`operate=true`，6 个）**：`/run`、`/retry`、`/stop`、`/syncPipelineInfo`、`/syncAllPipelineInfos`、`/whitelist/status`。其余 21 个查看类端点零改动（注解默认 false）；`/bisect/create`、`/bisect/reset` 为运行级操作（参数 pipelineRunId，绑定查询定位不到资源）维持现状；`/whitelist` 查看类（service 层自带项目管理员门禁）。
+
+**已知边界（有意不感知，2026/10/14 定案）**：
+
+- `/syncAllPipelineInfos` 项目级批量同步无 pipelineId，组不感知——同步是保持配置一致性的无危险操作，若跳过绑定流水线反而制造配置滞后，管控语义不应进入数据同步层；
+- 匿名 + 私有仓 + 绑定 + 查看的报错由组专属 401 变为存量 visibility 拒绝——不向未认证者暴露"该资源被特殊管控"的信息（匿名者眼中绑定组私有仓与普通私有仓无差别），登录后才揭晓 4030001 组提示，报错梯度合理。
+
+绑定查询经内部 RPC 调 framework（见 4.4）+ 独立 Guava 缓存（TTL 5 秒，未绑定结果也缓存防穿透）。
 
 ### 4.4 方案管理链路与 RPC 分阶段策略（2026/09/17 定案）
 
@@ -323,6 +345,8 @@ ALTER TABLE user_role_info ADD COLUMN perm_group_id INT NOT NULL DEFAULT 0
 | 9   | 按钮点亮数据供给（2026/10/13）                            | framework 通用端点 `query-resource-permissions` 为唯一数据源（framework commit `ae91a740`）：列表页不传 resourceIds 全量取绑定关系、详情页传单个 id；cicd 内联字段（`/detailInfo` 三字段）与专用列表端点（`group-permissions`）拆除（cicd commit `d428f1e6a`）；resourceType 白名单当前仅 PIPELINE，后续模块接入仅扩白名单          |
 | 10  | 组拒绝响应码（2026/10/13）                                | 业务码 **4030001**（响应体 code 字段，cicd commit `20ca0829b`），替代 common 包 errorCode 透传方案（解除 common 发版依赖）；前端按 code 单字段分流组版提示，存量 403/401/500 语义零改动                                                                                                                                             |
 | 11  | 绑定资源列表分页（2026/10/13）                            | `query-bindings-by-group` 服务端分页（pageNum/pageSize 必填、上限 100）+ resourceType/resourceName 可选筛选（resourceName 只匹配 `resource_display_info` 展示名，**定案不搜 resourceId**）+ id desc；响应 `{count, bindings}`（framework commit `8fc4fce`）；列表展示定为"资源名主列 + 资源 ID 次列（截断/可隐藏），搜索框只搜名字" |
+| 12  | 公开仓感知范围（2026/10/14，反转 4.3 原定案）              | 公开仓**仅操作类感知**权限组：`@CheckPermission(operate=true)` 6 端点（run/retry/stop/两个 sync/whitelist-status）——匿名+操作+绑定→401 提示登录；已登录+公开仓+操作+绑定→组鉴权（组外 4030001，有意收紧，master 任何登录用户可操作）；查看类（21 端点）与未绑定资源对公开仓**零感知**（含匿名查看绑定资源放行，行为=master）；私有仓场景维持原定案 #6 全量收紧 |
+| 13  | 不感知边界（2026/10/14）                                  | ① `/syncAllPipelineInfos` 项目级批量同步有意不感知组（同步为无危险操作，跳过绑定流水线反致配置滞后）；② 匿名+私有仓+绑定+查看报错由 401 组提示改为存量 visibility 拒绝（不向未认证者暴露管控信息）；③ bisect 两端点运行级操作维持现状 |
 
 ### v4 → v5 消失的设计（同表红利，Claude 审视时重点看这些删得对不对）
 

@@ -104,9 +104,9 @@ resourceBindings 里有 resourceId？
 
 ---
 
-## 二、组拒绝响应业务码 4030001
+## 二、组拒绝响应业务码 4030001（2026/10/14 口径更新：401 仅操作类触发）
 
-组拒绝场景（绑定资源 + 已登录 + 非组内成员）操作接口响应体 `code` 为 **4030001**（区别于存量 403），前端据此单字段精确匹配分流组版无权限提示；`errorCode` 字符串（`PERMISSION_DENIED_BY_GROUP`）仅后端日志排障用，前端不消费。401 匿名提示登录（`LOGIN_REQUIRED_BY_GROUP`）、RPC fail-closed 500、存量 403 语义均不变。
+组拒绝场景（绑定资源 + 已登录 + 非组内成员）**操作类**接口响应体 `code` 为 **4030001**（区别于存量 403），前端据此单字段精确匹配分流组版无权限提示；`errorCode` 字符串（`PERMISSION_DENIED_BY_GROUP`）仅后端日志排障用，前端不消费。401 匿名提示登录（`LOGIN_REQUIRED_BY_GROUP`）**仅在匿名调用操作类接口且资源绑定组时出现**（操作类 = run/retry/stop/两个 sync/whitelist-status 共 6 端点；公开仓绑定资源的查看类接口对匿名与登录用户均放行）。RPC fail-closed 500、存量 403 语义均不变。
 
 ---
 
