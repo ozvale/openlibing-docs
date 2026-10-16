@@ -4,7 +4,7 @@
 
 - 业务 Issue: https://gitcode.com/openlibing/openlibing-cicd/issues/450
 - 业务 PR: 无独立业务 PR——业务分支 operation_log_architecture_v2 由多人协作提交，最终由同事统一合入 develop_202610_iter1；业务改动以下方交付历程中的 cicd 分支提交为准
-- docs PR: <创建后回填>
+- docs PR: https://gitcode.com/openlibing/openlibing-docs/pull/1131
 
 ## 交付历程
 
