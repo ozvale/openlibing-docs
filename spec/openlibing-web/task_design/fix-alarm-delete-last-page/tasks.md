@@ -20,9 +20,9 @@
 
 ## Phase 4: PR 提交
 
-- [ ] 推送分支到 fork 仓
-- [ ] 创建 PR 到主仓并关联 Issue #358，补打 `ai-assisted` 标签
-- [ ] 更新 proposal.md 关联 PR 链接
+- [x] 推送分支到 fork 仓
+- [x] 创建业务 PR 到主仓并关联 Issue #358，补打 `ai-assisted` 标签
+- [x] 更新 proposal.md 关联 PR 链接（[docs 归档 PR !1132](https://gitcode.com/openlibing/openlibing-docs/merge_requests/1132)）
 
 ## Phase 5: 归档
 

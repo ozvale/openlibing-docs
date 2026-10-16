@@ -25,4 +25,5 @@
 
 ## 关联 PR
 
-- 待创建（分支 `fix-alarm-delete-last-page`，commit `0e8d2aaf`）
+- 业务 PR：待创建（分支 `fix-alarm-delete-last-page`，commit `0e8d2aaf`）
+- spec 归档 PR：[openlibing/openlibing-docs!1132](https://gitcode.com/openlibing/openlibing-docs/merge_requests/1132)
