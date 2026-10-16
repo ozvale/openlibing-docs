@@ -48,12 +48,12 @@
 - [ ] 未匹配到项目（repoUrl 在 repo_info 中无关联行）不输出链接、输出提示「当前仓未录入openLiBing平台，无法生成跳转链接，请先联系SRE完成代码仓录入。」，上报受理语义不受影响（仍返回"上报已受理"）
 - [ ] 多项目场景仅取查询第一个项目：其分支未登记则输出分支提示（不回退其他项目）；异常场景（查询/拼接异常）不输出链接也不输出提示（不误报"未录入"）
 - [ ] 上报失败时不输出任何链接；无 ATOMGIT_STEP_SUMMARY / ATOMGIT_OUTPUT 环境变量时跳过对应通道（互不影响）
-- [ ] 插件鉴权模式保持现状（OIDC 与 AK/SK 双模式并存、`apig-app-key`/`apig-app-secret`/`obs-ak`/`obs-sk` 输入项保留）；file-detail 接口移除 pipelineRunId 入参后，旧前端/旧调用携带该参数不报错、按该分支最新成功记录返回
+- [ ] 插件鉴权模式保持现状（OIDC 与 AK/SK 双模式并存、`apig-app-key`/`apig-app-secret`/`obs-ak`/`obs-sk` 输入项保留）；file-detail 接口的 `pipelineRunId` 为**可选**入参：传则按 (git_url, branch_name, pipeline_run_id) 返回该次历史记录，不传则按 (git_url, branch_name, status=0) 返回该分支最新成功记录，两种调用均不报错
 - [ ] 插件现有 5 项指标数值输出保持不变
 
 ## 4. 影响范围
 
 - `openlibing/code-metrics-action`：`dist/index.js`（输出规则改造：STEP_SUMMARY Markdown 超链接 + ATOMGIT_OUTPUT 概览行双通道；固定 1 行链接/提示行）、`dist/scanner.js`（uploadInfo 携带 detailLink/tip）、`dist/uploaders/CoderepoUploader.js`（响应解析扩展；AK/SK 逻辑保留不动）、`action.yml`（不改）、README（输出章节双通道链接与提示说明）
-- `openlibing/openlibing-coderepo`：`CodeMetricsController`（上报响应类型与组装）、`CodeMetricsService(+Impl)`（`buildReportVO` 四态；`getFileMetricDetail` 改按分支最新记录）、`RepoUrlUtil` 新增 URL 归一化（`UtCoverageServiceImpl` 委托复用）、`FileMetricDetailQueryDTO`（移除 `pipelineRunId`）、`CodeMetricsRecordMapper`（新增 `selectLatestByGitAndBranch`）、`RepoBranchInfoMapper.xml`（`projectBranchOrderBy` 精确命中置顶）、新增 VO（`CodeMetricsReportVO`，`detailLink` 单条链接 + tip）、平台域名复用既有配置 `openlibing.domain`（不新增配置项、无 yaml 变更）
-- `openlibing/openlibing-web`（前端侧协同，不随本需求提 PR）：`views/Repos/index.vue`（`autoGoBranch` 无 metricType 落地：三筛选参数透传 + 清理 pipelineRunId 传递）、`views/Repos/branches.vue`（三筛选参数自动应用、指标说明气泡口径文案、异步导入窗口页面提示文案）、`views/Repos/dialog/MetricsDetailDialog.vue`（移除 pipelineRunId prop 与传参）；落地能力与前端侧对齐（beta 端到端已验证）；异步导入窗口的页面提示文案已由前端侧更新
+- `openlibing/openlibing-coderepo`：`CodeMetricsController`（上报响应类型与组装）、`CodeMetricsService(+Impl)`（`buildReportVO` 四态；`getFileMetricDetail` 抽出 `locateMetricsRecord`，按 pipelineRunId 可选定位：传则精确查该次记录、不传取分支最新成功记录）、`RepoUrlUtil` 新增 URL 归一化（`UtCoverageServiceImpl` 委托复用）、`FileMetricDetailQueryDTO`（`pipelineRunId` 改为可选入参）、`CodeMetricsRecordMapper`（新增 `selectLatestByGitAndBranch`；`selectByPipelineRunId` 复用回 file-detail）、`RepoBranchInfoMapper.xml`（`projectBranchOrderBy` 精确命中置顶）、新增 VO（`CodeMetricsReportVO`，`detailLink` 单条链接 + tip）、平台域名复用既有配置 `openlibing.domain`（不新增配置项、无 yaml 变更）
+- `openlibing/openlibing-web`（前端侧协同，不随本需求提 PR）：`views/Repos/index.vue`（`autoGoBranch` 无 metricType 落地：三筛选参数透传 + 清理 pipelineRunId 传递）、`views/Repos/branches.vue`（三筛选参数自动应用、指标说明气泡口径文案、异步导入窗口页面提示文案）、`views/Repos/dialog/MetricsDetailDialog.vue`（曾按「file-detail 撤参」移除 pipelineRunId prop 与传参；服务端恢复可选入参后该清理非必需，前端可按需保留传参）；落地能力与前端侧对齐（beta 端到端已验证）；异步导入窗口的页面提示文案已由前端侧更新
 - 无数据库表结构变更、无新增接口、无新增依赖
