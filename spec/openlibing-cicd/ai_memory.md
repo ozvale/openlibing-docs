@@ -23,3 +23,11 @@
 ## MQS 消息契约（PR 同步/编译）
 
 - PR 同步主动触发走 `req_type=compile`；触发人只用统一 `account` 字段（不建平台账号组）；`br_name`=目标分支、`tgt_branch`=源分支；整体字段与 coderepo `MqsMessageSenderImpl#buildMessage` 契约对齐。
+
+## Common 升级（Boot 3→4 / Jackson 2→3）
+
+- Boot 3 时代 starter 的自动配置类引用 Boot 3 内部类（Boot 4 模块化移包），运行期 NoClassDefFoundError 且构建期不报错：redisson-spring-boot-starter（手动装配场景拆用 redisson core）、springdoc 2.x（拆钉扎走 BOM 3.1.1）、pagehelper 2.x（升 4.x）。
+- `@WebMvcTest` 在 Boot 4 拆到独立构件 `spring-boot-starter-webmvc-test`（test scope，无版本号走 Boot BOM），import 迁至 `org.springframework.boot.webmvc.test.autoconfigure`。
+- Jackson 2→3：core/databind 包名 `com.fasterxml.jackson` → `tools.jackson`，annotation 包保留原名；`JsonDeserializer` → `ValueDeserializer`；`JsonProcessingException` → `JacksonException`（unchecked）；yaml 配 `spring.jackson.use-jackson2-defaults: true` 保持 Jackson 2 序列化默认行为。
+- mybatis-plus 3.5.17 的 `AbstractWrapper.in()` 在构建期即解析 Lambda 列名，纯 Mockito 单测需 `TableInfoHelper.initTableInfo(...)` 初始化实体元数据，否则报 "can not find lambda cache"。
+- spring-rabbit 4.1.1 移除 `RetryInterceptorBuilder.maxAttempts(int)`，改用 `maxRetries(int)`，总尝试 = 1 + maxRetries（`maxAttempts(3)` 等价 `maxRetries(2)`）。
