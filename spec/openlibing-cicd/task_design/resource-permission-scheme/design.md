@@ -54,13 +54,13 @@
 
 ### 3.1 当前已知直查分布（grep 扫描，全集待组织确认）
 
-| 服务      | 直查处 | 写入情况                                                                                                                                                                                                                                     |
-| --------- | :----: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| framework |   46   | **写入大头**：成员 CRUD、三方同步、项目级联删除。**✅ 2026/09/17 全量审计整改完成（见 3.1.1）**                                                                                                                                              |
-| coderepo  |   20   | 待细查（`RepoUserRoleInfoMapper` 疑有仓级角色写入）                                                                                                                                                                                          |
-| gateway   | **6**  | ⚠️ 有写入：`insertUserRoles` / `deleteSyncUserByUserId`（历史同步落库残留）。**高危标注：`AuthMapper.queryMenuUrlByUserId` 查用户全部可访问 URL 白名单（仅按 user_id 过滤），自定义组角色会扩大用户的 URL 白名单，必须加 `perm_group_id=0`** |
-| codecheck |   8    | 纯查看                                                                                                                                                                                                                                       |
-| cicd      |   6    | 纯查看（鉴权 + 成员展示 + `HwProjectInfoMapper` 的 isProjectAdmin/isProjectMember——角色过滤判断）。**✅ 2026/09/17 全量审计整改完成（见 3.1.1）**                                                                                            |
+| 服务      | 直查处 | 写入情况                                                                                                                                                                                                                                                                                                                                                    |
+| --------- | :----: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| framework |   46   | **写入大头**：成员 CRUD、三方同步、项目级联删除。**✅ 2026/09/17 全量审计整改完成（见 3.1.1）**                                                                                                                                                                                                                                                             |
+| coderepo  |   20   | 待细查（`RepoUserRoleInfoMapper` 疑有仓级角色写入）                                                                                                                                                                                                                                                                                                         |
+| gateway   | **6**  | ⚠️ 有写入：`insertUserRoles` / `deleteSyncUserByUserId`（历史同步落库残留）。**高危标注：`AuthMapper.queryMenuUrlByUserId` 查用户全部可访问 URL 白名单（仅按 user_id 过滤），自定义组角色会扩大用户的 URL 白名单，必须加 `perm_group_id=0`**（2026/10/15 修订：一刀切钉 0 会反向误杀自定义组的合法操作请求，最终升级为扩展表双集合方案，见 4.5 / 定案 #14） |
+| codecheck |   8    | 纯查看                                                                                                                                                                                                                                                                                                                                                      |
+| cicd      |   6    | 纯查看（鉴权 + 成员展示 + `HwProjectInfoMapper` 的 isProjectAdmin/isProjectMember——角色过滤判断）。**✅ 2026/09/17 全量审计整改完成（见 3.1.1）**                                                                                                                                                                                                           |
 
 **排查方法（四层搜索，防漏）**：① 表名字符串 `user_role_info`（XML/注解 SQL/文档）；② Entity 类名（`UserRoleInfoEntity`——MyBatis-Plus QueryWrapper 在 Java 拼 WHERE，XML 搜不到）；③ MP 泛型签名（`BaseMapper<UserRoleInfo` 等，自带无 XML 方法）；④ Liquibase changelog 引用。
 
@@ -130,6 +130,8 @@
 
 **职责边界原则（网关只查默认组为何正确且不会错杀）**：网关对 `/pipeline/` 路径**直接放行**（现状代码注释"流水线在openlibing-cicd仓库校验权限"），资源级裁决完全由 cicd 按绑定组执行。网关的用户级白名单只裁决"接口级/角色级"权限——组内角色本就不该影响这类判断，所以它只看默认组是职责边界的正确映射，而非妥协：**网关白名单是粗筛下限，资源级鉴权是精筛，精筛严于粗筛时网关永不错杀**。推论（对后续 codecheck/coderepo 接入的约束）：每个接入资源级权限的服务须具备自己的绑定组鉴权拦截层，并保证该资源路径能过网关粗筛（路径放行约定，或默认组角色天然覆盖）。
 
+**⚠️ 2026/10/15 修订（BETA 验证期问题 2）**：上述"只看默认组"在一刀切实现下**已被证伪**——`queryMenuUrlByUserId` 统一加 `perm_group_id=0` 后，仅在自定义组拥有项目管理员的用户（无任何默认组项目管理员）的菜单 URL 集合中不含流水线操作 URL，请求在网关粗闸门即被 403，根本到不了 cicd 组鉴权，"精筛严于粗筛"的前提（请求能到达精筛）不成立。最终升级为扩展表双集合放行（见 4.5 / 定案 #14）；推论部分（下游须具备绑定组鉴权拦截层）仍然成立，且升级为 RESOURCE 登记的前置条件。
+
 ### 4.2 cicd 鉴权 SQL（同表后大幅简化）
 
 存量 `hasPermission` / `hasPublicPermission` **属整改项**：逻辑结构不动，加 `perm_group_id=0`（与项目匹配段同级，全局角色穿透段保持不滤组）。新增 `hasPermissionByGroup`，同表后**不再需要 UNION ALL 和 EXISTS 兜底**；该 SQL 落在 **framework 仓 `UserRoleMapper`**，cicd 经内部 RPC 调用（见 4.4）：
@@ -158,16 +160,16 @@ SELECT CASE WHEN EXISTS (
 
 新判定链（`@CheckPermission` 注解新增 `operate` 属性区分端点类型，操作类 6 个端点显式打标）：
 
-| # | 场景 | 行为 | 对照改造前（master） |
-|---|---|---|---|
-| 1 | 匿名 + 查看类（含绑定资源） | 走存量 checkAnonymousAccess（公开仓放行/私有仓拒绝），**绑定查询不触发** | = master |
-| 2 | 匿名 + 操作类 + 绑定资源 | 401 LOGIN_REQUIRED_BY_GROUP 提示登录 | master 是 400 缺 userId 参数（UX 改进） |
-| 3 | 匿名 + 操作类 + 未绑定 | 走 checkAnonymousAccess，Controller 层参数校验兜底 | = master |
-| 4 | 已登录 + 公开仓 + 查看类（含绑定） | 放行，**零绑定查询**（完全不感知权限组） | = master |
-| 5 | 已登录 + 公开仓 + 操作类 + 未绑定 | 放行（任何登录用户可操作） | = master |
-| 6 | 已登录 + 公开仓 + 操作类 + 绑定组 | 组鉴权：组内角色过矩阵放行 / 组外 4030001 | **收紧**（master 任何登录用户可操作，有意的行为变更） |
-| 7 | 已登录 + 私有仓 + 绑定组 | 组鉴权（查看/操作统一收紧，定案 #6 维持） | 收紧（需求本体） |
-| 8 | 已登录 + 私有仓 + 未绑定 | hasPermission | = master |
+| #   | 场景                               | 行为                                                                     | 对照改造前（master）                                  |
+| --- | ---------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------- |
+| 1   | 匿名 + 查看类（含绑定资源）        | 走存量 checkAnonymousAccess（公开仓放行/私有仓拒绝），**绑定查询不触发** | = master                                              |
+| 2   | 匿名 + 操作类 + 绑定资源           | 401 LOGIN_REQUIRED_BY_GROUP 提示登录                                     | master 是 400 缺 userId 参数（UX 改进）               |
+| 3   | 匿名 + 操作类 + 未绑定             | 走 checkAnonymousAccess，Controller 层参数校验兜底                       | = master                                              |
+| 4   | 已登录 + 公开仓 + 查看类（含绑定） | 放行，**零绑定查询**（完全不感知权限组）                                 | = master                                              |
+| 5   | 已登录 + 公开仓 + 操作类 + 未绑定  | 放行（任何登录用户可操作）                                               | = master                                              |
+| 6   | 已登录 + 公开仓 + 操作类 + 绑定组  | 组鉴权：组内角色过矩阵放行 / 组外 4030001                                | **收紧**（master 任何登录用户可操作，有意的行为变更） |
+| 7   | 已登录 + 私有仓 + 绑定组           | 组鉴权（查看/操作统一收紧，定案 #6 维持）                                | 收紧（需求本体）                                      |
+| 8   | 已登录 + 私有仓 + 未绑定           | hasPermission                                                            | = master                                              |
 
 **操作类端点清单（`operate=true`，6 个）**：`/run`、`/retry`、`/stop`、`/syncPipelineInfo`、`/syncAllPipelineInfos`、`/whitelist/status`。其余 21 个查看类端点零改动（注解默认 false）；`/bisect/create`、`/bisect/reset` 为运行级操作（参数 pipelineRunId，绑定查询定位不到资源）维持现状；`/whitelist` 查看类（service 层自带项目管理员门禁）。
 
@@ -198,6 +200,34 @@ SELECT CASE WHEN EXISTS (
 - **超时**：connect 1s / read 2s（短超时快速失败）
 - **缓存**：组鉴权热路径独立 Guava 缓存，键 `(userId, permGroupId, url)`，TTL 5 秒；绑定查询沿用既有独立缓存（TTL 5~10 秒）
 - **失败语义（fail-closed）**：RPC 调用失败一律鉴权拒绝、绝不降级放行；绑定查询失败按全拒绝处理；**拒绝结果不缓存**（防故障期间拒绝被固化）
+
+### 4.5 网关菜单鉴权双集合放行（2026/10/15 定案，BETA 验证期修复）
+
+**问题背景**（问题 2）：用户仅在自定义组拥有项目管理员（默认组无该角色）时，对绑定该组的流水线，前端按钮正常渲染（按钮数据源走 framework 通用端点，组内角色判定通过），但点击执行/同步等操作被网关 403——`queryMenuUrlByUserId` 的一刀切 `perm_group_id=0` 把自定义组角色整体排除出菜单 URL 集合，请求到不了 cicd 组鉴权（见 4.1 修订）。反向约束：网关菜单鉴权同时是 sbom / sca / codecheck 等无下游防线服务的唯一兜底，简单删除滤组会让自定义组角色扩权到这些服务的全部 URL。
+
+**方案（扩展表 + 双集合放行，"登记即例外"）**：framework 新增 `perm_group_url_auth_level` 表，以 `menu_url` 为关联键登记资源级 URL；网关 `queryMenuUrlByUserId` 改造为：
+
+```sql
+select ... from user_role_info uri
+left join menu_url_info mui on ...
+left join perm_group_url_auth_level ual on ual.menu_url = mui.menu_url
+where uri.user_id = #{userId}
+  and (uri.perm_group_id = 0 or coalesce(ual.auth_level,'MENU') = 'RESOURCE')
+```
+
+语义：**未登记 URL 隐式 MENU 口径**（自定义组角色不命中，只认默认组——无下游防线服务的兜底原样保留）；**显式登记 RESOURCE 的 URL**（自定义组角色命中，放行至下游组鉴权由 cicd `@CheckPermission(operate=true)` 精筛）。放行集合 = 默认组角色集合 ∪ RESOURCE URL 上的自定义组角色集合。
+
+**为什么是独立扩展表而非 menu_url_info 加列**：菜单更新是先删后插（`MenuServiceImpl`），整行重导入会静默重置 auth_level 标记；独立表以 menu_url 为逻辑键，不受菜单行生命周期影响。
+
+**登记前提（三条，写入表注释）**：① 下游必须已实现强制资源级鉴权（`downstream_guard` 字段登记证据）；② 同一路径不得混布查看/操作类 method；③ 不得同时登记网关登录豁免白名单（whitelist_interface_info）。
+
+**回填清单（9 个 URL，全部 cicd 流水线操作类，liquibase 幂等回填）**：`/openlibing-cicd/project/pipeline/{run,stop,retry,syncPipelineInfo,syncAllPipelineInfos,whitelist/status}` + `/openlibing-cicd/project/{projectId}/pipeline/{run,stop,retry}`。
+
+**孤儿清理**：菜单 URL 删除后扩展表残留行不影响鉴权（LEFT JOIN 不命中即 MENU 口径），仅造成登记语义漂移——framework 内 `@Scheduled` 每日 4 点清理 `menu_url_info` 已无对应 URL 的行，7 天宽限期防菜单"删后重插"窗口误删。
+
+**部署顺序**：framework 先行（建表 + 回填随服务启动完成），gateway 跟进（SQL 引用新表，先部署会报表不存在）；部署完成后需对验证账号执行一次角色变更以清 `userIdMenuUrls` Redis 缓存（TTL 24h，角色变更触发失效）。
+
+**演进预留**：下游声明式登记（服务自注册 RESOURCE 标记）作为 G 方案演进目标，触发条件为资源类型 ≥2 或再发生登记漂移事故；当前单模块（PIPELINE）下集中登记成本最低。
 
 ## 5. 类设计
 
@@ -261,6 +291,20 @@ ALTER TABLE user_role_info ADD COLUMN perm_group_id INT NOT NULL DEFAULT 0
 | create_time / update_time | datetime           |                                      |
 
 唯一索引 `(project_id, resource_type, resource_id)`。解绑 = 删除记录，自动回退默认组。
+
+### perm_group_url_auth_level（网关鉴权级别扩展表，2026/10/15 新增，framework 仓）
+
+| 字段                      | 类型         | 说明                                                                                     |
+| ------------------------- | ------------ | ---------------------------------------------------------------------------------------- |
+| id                        | bigint       | 主键                                                                                     |
+| menu_url                  | varchar(500) | 菜单 URL，逻辑关联 `menu_url_info.menu_url`，唯一键；不建外键（菜单更新为删后重插）      |
+| auth_level                | varchar(16)  | MENU=仅默认权限组角色可命中（默认）；RESOURCE=自定义组角色也可命中，由下游强制资源级鉴权 |
+| downstream_guard          | varchar(255) | 下游防线证据（如 cicd AuthInterceptor `@CheckPermission(operate=true)`）                 |
+| create_by                 | varchar(64)  | 登记人                                                                                   |
+| remark                    | varchar(500) | 登记原因/说明                                                                            |
+| create_time / update_time | datetime     | update_time 为孤儿清理宽限期依据                                                         |
+
+登记前提（写入表注释）：① 下游必须已实现强制资源级鉴权；② 同一路径不得混布查看/操作类 method；③ 不得同时登记网关登录豁免白名单。孤儿行由 framework `@Scheduled` 每日清理（7 天宽限期），不做级联删除。用法与网关 SQL 见 4.5。
 
 ## 7. 性能设计（相对 v4 的变化点）
 
@@ -332,21 +376,22 @@ ALTER TABLE user_role_info ADD COLUMN perm_group_id INT NOT NULL DEFAULT 0
 
 ### 业务决策定案（v5 评审更新）
 
-| #   | 决策项                                                    | 结论                                                                                                                                                                                                                                                                                                                                |
-| --- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | 数据模型                                                  | **同表加列**（评审否决独立建表：跨服务直查已不合理，不再新增被直查的表）                                                                                                                                                                                                                                                            |
-| 2   | 命名                                                      | **权限组**（Permission Group），字段 `perm_group_id`，表 `perm_group`                                                                                                                                                                                                                                                               |
-| 3   | 组地位                                                    | 同等地位；同步仅默认组（务实差异，领导确认）                                                                                                                                                                                                                                                                                        |
-| 4   | 删除语义                                                  | **勾选式连带删除**：删一行默认；删默认组行走存量删除 + 弹窗勾选其他组记录连带删（opt-in）；删自定义组行静默只删该行。**一页化增强**取代两页并存，`query-project-user` 原地增强                                                                                                                                                      |
-| 5   | 查看收紧 / pm 不穿透 / EXISTS 口径 / userId 不修 / 防死锁 | 沿用 v4 定案                                                                                                                                                                                                                                                                                                                        |
-| 6   | 整改范围                                                  | 组织内全部直查服务；RPC 化独立专项不捆绑本次                                                                                                                                                                                                                                                                                        |
-| 7   | 成员管理接口（2026/09/16）                                | 平行成员接口（`POST/PUT /groups/{id}/members`、`PUT/DELETE /members` 等）判定过度设计净删除；成员增删改复用存量项目成员链路 + permGroupId 入参，权限点复用 `PROJECT_USER_ADD`/`UPDATE`/`DELETE`                                                                                                                                     |
-| 8   | RPC 分阶段（2026/09/17）                                  | 新增查询（`hasPermissionByGroup`、`queryBoundPermGroup` 等）本次走 RPC（framework 4 个内部接口，`InternalPermGroupController`）；存量热路径维持本地直查只补滤组；其余存量 RPC 化留任务二各仓选项（见 4.4）                                                                                                                          |
-| 9   | 按钮点亮数据供给（2026/10/13）                            | framework 通用端点 `query-resource-permissions` 为唯一数据源（framework commit `ae91a740`）：列表页不传 resourceIds 全量取绑定关系、详情页传单个 id；cicd 内联字段（`/detailInfo` 三字段）与专用列表端点（`group-permissions`）拆除（cicd commit `d428f1e6a`）；resourceType 白名单当前仅 PIPELINE，后续模块接入仅扩白名单          |
-| 10  | 组拒绝响应码（2026/10/13）                                | 业务码 **4030001**（响应体 code 字段，cicd commit `20ca0829b`），替代 common 包 errorCode 透传方案（解除 common 发版依赖）；前端按 code 单字段分流组版提示，存量 403/401/500 语义零改动                                                                                                                                             |
-| 11  | 绑定资源列表分页（2026/10/13）                            | `query-bindings-by-group` 服务端分页（pageNum/pageSize 必填、上限 100）+ resourceType/resourceName 可选筛选（resourceName 只匹配 `resource_display_info` 展示名，**定案不搜 resourceId**）+ id desc；响应 `{count, bindings}`（framework commit `8fc4fce`）；列表展示定为"资源名主列 + 资源 ID 次列（截断/可隐藏），搜索框只搜名字" |
-| 12  | 公开仓感知范围（2026/10/14，反转 4.3 原定案）              | 公开仓**仅操作类感知**权限组：`@CheckPermission(operate=true)` 6 端点（run/retry/stop/两个 sync/whitelist-status）——匿名+操作+绑定→401 提示登录；已登录+公开仓+操作+绑定→组鉴权（组外 4030001，有意收紧，master 任何登录用户可操作）；查看类（21 端点）与未绑定资源对公开仓**零感知**（含匿名查看绑定资源放行，行为=master）；私有仓场景维持原定案 #6 全量收紧 |
-| 13  | 不感知边界（2026/10/14）                                  | ① `/syncAllPipelineInfos` 项目级批量同步有意不感知组（同步为无危险操作，跳过绑定流水线反致配置滞后）；② 匿名+私有仓+绑定+查看报错由 401 组提示改为存量 visibility 拒绝（不向未认证者暴露管控信息）；③ bisect 两端点运行级操作维持现状 |
+| #   | 决策项                                                    | 结论                                                                                                                                                                                                                                                                                                                                                           |
+| --- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | 数据模型                                                  | **同表加列**（评审否决独立建表：跨服务直查已不合理，不再新增被直查的表）                                                                                                                                                                                                                                                                                       |
+| 2   | 命名                                                      | **权限组**（Permission Group），字段 `perm_group_id`，表 `perm_group`                                                                                                                                                                                                                                                                                          |
+| 3   | 组地位                                                    | 同等地位；同步仅默认组（务实差异，领导确认）                                                                                                                                                                                                                                                                                                                   |
+| 4   | 删除语义                                                  | **勾选式连带删除**：删一行默认；删默认组行走存量删除 + 弹窗勾选其他组记录连带删（opt-in）；删自定义组行静默只删该行。**一页化增强**取代两页并存，`query-project-user` 原地增强                                                                                                                                                                                 |
+| 5   | 查看收紧 / pm 不穿透 / EXISTS 口径 / userId 不修 / 防死锁 | 沿用 v4 定案                                                                                                                                                                                                                                                                                                                                                   |
+| 6   | 整改范围                                                  | 组织内全部直查服务；RPC 化独立专项不捆绑本次                                                                                                                                                                                                                                                                                                                   |
+| 7   | 成员管理接口（2026/09/16）                                | 平行成员接口（`POST/PUT /groups/{id}/members`、`PUT/DELETE /members` 等）判定过度设计净删除；成员增删改复用存量项目成员链路 + permGroupId 入参，权限点复用 `PROJECT_USER_ADD`/`UPDATE`/`DELETE`                                                                                                                                                                |
+| 8   | RPC 分阶段（2026/09/17）                                  | 新增查询（`hasPermissionByGroup`、`queryBoundPermGroup` 等）本次走 RPC（framework 4 个内部接口，`InternalPermGroupController`）；存量热路径维持本地直查只补滤组；其余存量 RPC 化留任务二各仓选项（见 4.4）                                                                                                                                                     |
+| 9   | 按钮点亮数据供给（2026/10/13）                            | framework 通用端点 `query-resource-permissions` 为唯一数据源（framework commit `ae91a740`）：列表页不传 resourceIds 全量取绑定关系、详情页传单个 id；cicd 内联字段（`/detailInfo` 三字段）与专用列表端点（`group-permissions`）拆除（cicd commit `d428f1e6a`）；resourceType 白名单当前仅 PIPELINE，后续模块接入仅扩白名单                                     |
+| 10  | 组拒绝响应码（2026/10/13）                                | 业务码 **4030001**（响应体 code 字段，cicd commit `20ca0829b`），替代 common 包 errorCode 透传方案（解除 common 发版依赖）；前端按 code 单字段分流组版提示，存量 403/401/500 语义零改动                                                                                                                                                                        |
+| 11  | 绑定资源列表分页（2026/10/13）                            | `query-bindings-by-group` 服务端分页（pageNum/pageSize 必填、上限 100）+ resourceType/resourceName 可选筛选（resourceName 只匹配 `resource_display_info` 展示名，**定案不搜 resourceId**）+ id desc；响应 `{count, bindings}`（framework commit `8fc4fce`）；列表展示定为"资源名主列 + 资源 ID 次列（截断/可隐藏），搜索框只搜名字"                            |
+| 12  | 公开仓感知范围（2026/10/14，反转 4.3 原定案）             | 公开仓**仅操作类感知**权限组：`@CheckPermission(operate=true)` 6 端点（run/retry/stop/两个 sync/whitelist-status）——匿名+操作+绑定→401 提示登录；已登录+公开仓+操作+绑定→组鉴权（组外 4030001，有意收紧，master 任何登录用户可操作）；查看类（21 端点）与未绑定资源对公开仓**零感知**（含匿名查看绑定资源放行，行为=master）；私有仓场景维持原定案 #6 全量收紧 |
+| 13  | 不感知边界（2026/10/14）                                  | ① `/syncAllPipelineInfos` 项目级批量同步有意不感知组（同步为无危险操作，跳过绑定流水线反致配置滞后）；② 匿名+私有仓+绑定+查看报错由 401 组提示改为存量 visibility 拒绝（不向未认证者暴露管控信息）；③ bisect 两端点运行级操作维持现状                                                                                                                          |
+| 14  | 网关菜单鉴权双集合放行（2026/10/15，BETA 验证期修复）     | `perm_group_url_auth_level` 扩展表 + 网关 `queryMenuUrlByUserId` 改造为 `(perm_group_id=0 or coalesce(auth_level,'MENU')='RESOURCE')`：未登记 URL 隐式 MENU 只认默认组（无下游防线服务兜底原样保留），显式登记 RESOURCE 的 9 个 cicd 流水线操作 URL 放行至下游组鉴权（登记即例外）。方案详见 4.5，表结构见第 6 章                                              |
 
 ### v4 → v5 消失的设计（同表红利，Claude 审视时重点看这些删得对不对）
 
