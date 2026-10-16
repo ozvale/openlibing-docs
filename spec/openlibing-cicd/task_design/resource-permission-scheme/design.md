@@ -245,14 +245,14 @@ where uri.user_id = #{userId}
 
 ### CICD 层
 
-| 类名                            | 改造内容                                                                                                                                                                                                                                               |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `AuthInterceptor`               | 插入绑定分支（同 v4 位置结论）；未命中零改动                                                                                                                                                                                                           |
-| `UserRoleMapper`                | 存量 `hasPermission` 加 `perm_group_id=0`（组鉴权 SQL `hasPermissionByGroup` 落在 framework 侧，cicd 经 RPC 调用，见 4.2/4.4）                                                                                                                         |
-| `PermGroupQueryService`（新增） | 组查询统一入口（已 RPC 化）：经 Feign 调 framework 内部接口——绑定组查询（独立 Guava 缓存 TTL 5 秒，未绑定结果也缓存防穿透）+ 单组/项目级组操作权限计算 + 项目绑定关系总览                                                                              |
-| `PermGroupFeignClient`（新增）  | Feign 客户端（Spring Cloud Feign + OkHttp 连接池，配套 `PermGroupOkHttpConfig`：连接事件监听与失败日志，connect 1s / read 2s）；取代早期设计的本地只读 `PermGroupResourceBindingLocalMapper` 方案                                                      |
-| `PipelineServiceImpl`           | `fillPermGroupInfo` 填充逻辑所在（2026/09/17 从 controller 下沉）：3 参重载 `getPipelineDetail(projectId, pipelineId, userId)` 供 controller 用；2 参重载供事件监听器 / AuthInterceptor 等 6 处内部调用方使用（不触发绑定查询）；controller 仅协议透传 |
-| `ShortcutServiceImpl`           | `checkUserPermission` Wrapper 补 `perm_group_id=0`（2026/09/17 审计）                                                                                                                                                                                  |
+| 类名                            | 改造内容                                                                                                                                                                                                                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AuthInterceptor`               | 判定链重排（2026/10/14 定案反转，见 4.3 / 定案表 #12/#13、任务 C9）：已登录分支公开仓判断先行——公开仓查看类（含绑定资源）零绑定查询，仅操作类端点绑定走组鉴权（组外 4030001）；匿名分支仅操作类查绑定（401 提示登录）；私有仓维持全量收紧。原 v4「绑定查询先于公开仓短路与匿名分支」结论已作废 |
+| `UserRoleMapper`                | 存量 `hasPermission` 加 `perm_group_id=0`（组鉴权 SQL `hasPermissionByGroup` 落在 framework 侧，cicd 经 RPC 调用，见 4.2/4.4）                                                                                                                                                                 |
+| `PermGroupQueryService`（新增） | 组查询统一入口（已 RPC 化）：经 Feign 调 framework 内部接口——绑定组查询（独立 Guava 缓存 TTL 5 秒，未绑定结果也缓存防穿透）+ 单组/项目级组操作权限计算 + 项目绑定关系总览                                                                                                                      |
+| `PermGroupFeignClient`（新增）  | Feign 客户端（Spring Cloud Feign + OkHttp 连接池，配套 `PermGroupOkHttpConfig`：连接事件监听与失败日志，connect 1s / read 2s）；取代早期设计的本地只读 `PermGroupResourceBindingLocalMapper` 方案                                                                                              |
+| `PipelineServiceImpl`           | 无权限相关改造（2026/10/13 勘误）：早期 `/detailInfo` 内联供给方案（`fillPermGroupInfo` 与 3 参 `getPipelineDetail` 重载）随内联字段整体净删除，数据供给收敛到 framework 通用端点（见第 8 章、任务 C7）                                                                                        |
+| `ShortcutServiceImpl`           | `checkUserPermission` Wrapper 补 `perm_group_id=0`（2026/09/17 审计）                                                                                                                                                                                                                          |
 
 ## 6. 数据模型设计
 
