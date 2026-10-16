@@ -1,0 +1,115 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'background': '#ffffff', 'primaryColor': '#ffffff', 'lineColor': '#666666' }}}%%
+flowchart LR
+    classDef process fill:#6baed6,stroke:#2171b5,stroke-width:2px,color:#000000
+    classDef external fill:#fdae61,stroke:#d94701,stroke-width:2px,color:#000000
+    classDef datastore fill:#74c476,stroke:#238b45,stroke-width:2px,color:#000000
+
+    EndUser["EndUser"]:::external
+    MachineCaller["MachineCaller"]:::external
+    Operator["Operator"]:::external
+
+    subgraph CodecheckService["CodecheckService (openlibing-codecheck pod)"]
+        OpenlibingCodecheckApplication(("OpenlibingCodecheckApplication")):::process
+        HwApigController(("HwApigController")):::process
+        WebhookController(("WebhookController")):::process
+        InternalController(("InternalController")):::process
+        StaticAlarmReceiveController(("StaticAlarmReceiveController")):::process
+        InternalCodeFullController(("InternalCodeFullController")):::process
+        InternalCodeIncController(("InternalCodeIncController")):::process
+        FileDownLoadController(("FileDownLoadController")):::process
+        CheckboardController(("CheckboardController")):::process
+        AuthUtils(("AuthUtils")):::process
+        RuleSetScheduleTask(("RuleSetScheduleTask")):::process
+        SaveFullTaskResult(("SaveFullTaskResult")):::process
+        SaveIncTaskResult(("SaveIncTaskResult")):::process
+        CodeCheckEventConsumer(("CodeCheckEventConsumer")):::process
+        StaticAlarmEventConsumer(("StaticAlarmEventConsumer")):::process
+        ShieldAllConsumer(("ShieldAllConsumer")):::process
+        StaticAlarmExportConsumer(("StaticAlarmExportConsumer")):::process
+        SarifParseServiceImpl(("SarifParseServiceImpl")):::process
+        ObsBucketServiceImpl(("ObsBucketServiceImpl")):::process
+    end
+
+    subgraph ClusterServices["ClusterServices (K8s/VPC backing services)"]
+        MongoDB[("MongoDB")]:::datastore
+        MySQL[("MySQL")]:::datastore
+        Redis[("Redis")]:::datastore
+        RabbitMQ[("RabbitMQ")]:::datastore
+        OpenlibingCicd["OpenlibingCicd"]:::external
+        OpenlibingFramework["OpenlibingFramework"]:::external
+        OpenlibingCoderepo["OpenlibingCoderepo"]:::external
+        XxlJob["XxlJob"]:::external
+    end
+
+    subgraph ExternalServices["ExternalServices (public cloud / internet)"]
+        Nacos["Nacos"]:::external
+        HuaweiOBS["HuaweiOBS"]:::external
+        HuaweiApiG["HuaweiApiG"]:::external
+        HuaweiCodeCheck["HuaweiCodeCheck"]:::external
+        GitCode["GitCode"]:::external
+        Gitee["Gitee"]:::external
+        Github["Github"]:::external
+        SmtpServer["SmtpServer"]:::external
+    end
+
+    EndUser <-->|"DF01: HTTP via ci-portal backend, webhook data query"| WebhookController
+    EndUser <-->|"DF02: HTTP via ci-portal backend, board queries"| CheckboardController
+    EndUser <-->|"DF03: HTTP via ci-portal backend, Excel export"| FileDownLoadController
+    EndUser <-->|"DF04: HTTP via ci-portal backend, full task ops"| InternalCodeFullController
+    EndUser <-->|"DF05: HTTP via ci-portal backend, gate ops"| InternalCodeIncController
+    MachineCaller <-->|"DF06: HTTPS, M2M API calls"| HuaweiApiG
+    HuaweiApiG <-->|"DF07: HTTPS, authenticated forwarding"| HwApigController
+    MachineCaller <-->|"DF08: HTTP, machine API task trigger"| InternalCodeFullController
+    MachineCaller <-->|"DF09: HTTP, machine API gate calls"| InternalCodeIncController
+    Operator <-->|"DF10: HTTPS, config administration"| Nacos
+    OpenlibingCoderepo <-->|"DF11: HTTP, rule-set recompute and full task invoke callbacks"| InternalController
+    OpenlibingCicd <-->|"DF12: HTTP, scan result delivery"| StaticAlarmReceiveController
+    InternalCodeFullController <-->|"DF13: AMQP, publish full task events"| RabbitMQ
+    InternalCodeIncController <-->|"DF14: AMQP, publish inc task events"| RabbitMQ
+    StaticAlarmReceiveController <-->|"DF15: AMQP, publish alarm parse events"| RabbitMQ
+    RabbitMQ <-->|"DF16: AMQP, consume check events"| CodeCheckEventConsumer
+    RabbitMQ <-->|"DF17: AMQP, consume alarm parse events"| StaticAlarmEventConsumer
+    RabbitMQ <-->|"DF18: AMQP, consume shield-all tasks"| ShieldAllConsumer
+    RabbitMQ <-->|"DF19: AMQP, consume export tasks"| StaticAlarmExportConsumer
+    WebhookController <-->|"DF20: NoSQL/BSON, whitelisted queries"| MongoDB
+    CheckboardController <-->|"DF21: NoSQL/BSON, summary and detail queries"| MongoDB
+    CheckboardController <-->|"DF22: SQL, project/repo/user data"| MySQL
+    CheckboardController <-->|"DF23: HTTPS Feign, code metrics"| OpenlibingCoderepo
+    FileDownLoadController <-->|"DF24: NoSQL/BSON, export data queries"| MongoDB
+    FileDownLoadController <-->|"DF25: RESP, Excel task state"| Redis
+    InternalCodeFullController <-->|"DF26: NoSQL/BSON, task records"| MongoDB
+    InternalCodeFullController <-->|"DF27: HTTPS AK/SK, create full scan task"| HuaweiCodeCheck
+    InternalCodeIncController <-->|"DF28: NoSQL/BSON, task records"| MongoDB
+    InternalCodeIncController <-->|"DF29: HTTPS AK/SK, create inc task"| HuaweiCodeCheck
+    AuthUtils <-->|"DF30: SQL, roles/permissions/menus"| MySQL
+    AuthUtils <-->|"DF31: NoSQL/BSON, summaries for permission checks"| MongoDB
+    CodeCheckEventConsumer <-->|"DF32: NoSQL/BSON, task state writes"| MongoDB
+    StaticAlarmEventConsumer <-->|"DF33: NoSQL/BSON, alarm writes"| MongoDB
+    ShieldAllConsumer <-->|"DF34: NoSQL/BSON, bulk shield writes"| MongoDB
+    StaticAlarmExportConsumer <-->|"DF35: NoSQL/BSON, export data reads"| MongoDB
+    StaticAlarmExportConsumer <-->|"DF36: HTTPS Feign, export file delivery"| OpenlibingFramework
+    RuleSetScheduleTask <-->|"DF37: RESP, task queues, locks, AK/SK cache"| Redis
+    RuleSetScheduleTask <-->|"DF38: SQL, tenants/projects/repos"| MySQL
+    RuleSetScheduleTask <-->|"DF39: HTTPS AK/SK, rule set sync"| HuaweiCodeCheck
+    SaveFullTaskResult <-->|"DF40: NoSQL/BSON, result writes"| MongoDB
+    SaveFullTaskResult <-->|"DF41: HTTPS AK/SK, poll progress/results"| HuaweiCodeCheck
+    SaveFullTaskResult <-->|"DF42: SMTP, result notifications"| SmtpServer
+    SaveIncTaskResult <-->|"DF43: NoSQL/BSON, result writes"| MongoDB
+    SaveIncTaskResult <-->|"DF44: HTTPS AK/SK, poll results"| HuaweiCodeCheck
+    SaveIncTaskResult <-->|"DF45: HTTPS, token-based repo/PR ops"| GitCode
+    SaveIncTaskResult <-->|"DF46: HTTPS, token-based repo/PR ops"| Gitee
+    SaveIncTaskResult <-->|"DF47: HTTPS, token-based repo/PR ops"| Github
+    SaveIncTaskResult <-->|"DF48: SMTP, result notifications"| SmtpServer
+    SarifParseServiceImpl <-->|"DF49: HTTPS, SARIF download"| HuaweiOBS
+    SarifParseServiceImpl <-->|"DF50: NoSQL/BSON, parsed alarm writes"| MongoDB
+    ObsBucketServiceImpl <-->|"DF51: HTTPS, file ops"| HuaweiOBS
+    OpenlibingCodecheckApplication <-->|"DF52: HTTPS, config fetch and discovery"| Nacos
+    OpenlibingCodecheckApplication <-->|"DF53: HTTP, executor registration"| XxlJob
+    InternalController <-->|"DF54: HTTPS Feign, pipeline trigger"| OpenlibingCicd
+    InternalController <-->|"DF55: HTTPS, PR event processing with token"| GitCode
+
+    style CodecheckService fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+    style ClusterServices fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+    style ExternalServices fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+
+    linkStyle default stroke:#666666,stroke-width:2px

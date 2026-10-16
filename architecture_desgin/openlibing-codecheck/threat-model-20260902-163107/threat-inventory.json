@@ -1,0 +1,3577 @@
+{
+  "schema_version": "1.0",
+  "report_folder": "threat-model-20260902-163107",
+  "commit": "d7c7af22",
+  "commit_date": "2026-09-02 01:26:04",
+  "branch": "master",
+  "repository": "https://gitcode.com/openlibing/openlibing-codecheck.git",
+  "analysis_timestamp": "2026-09-03 01:24:33",
+  "model": "DeepSeek-V4-Flash",
+  "components": [
+    {
+      "id": "AuthUtils",
+      "display": "AuthUtils",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/common/utils/codecheck"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/common/utils/codecheck"
+        ],
+        "class_names": ["AuthUtils"],
+        "namespace": "com.openlibing.codecheck.common.utils.codecheck",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["MySQL", "MongoDB"],
+        "inbound_from": [],
+        "outbound_to": ["MySQL", "MongoDB"],
+        "protocols": ["SQL", "NoSQL/BSON"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "CheckboardController",
+      "display": "CheckboardController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/CheckboardController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/controller/CheckboardController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/controller"
+        ],
+        "class_names": ["CheckboardController"],
+        "namespace": "com.openlibing.codecheck.business.controller",
+        "config_keys": [],
+        "api_routes": ["/ci-portal/v1/**"],
+        "dependencies": ["MongoDB", "MySQL", "OpenlibingCoderepo"],
+        "inbound_from": ["EndUser"],
+        "outbound_to": ["MongoDB", "MySQL", "OpenlibingCoderepo"],
+        "protocols": ["HTTP", "NoSQL/BSON", "SQL", "HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "CodeCheckEventConsumer",
+      "display": "CodeCheckEventConsumer",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/consumer/CodeCheckEventConsumer.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/service/consumer"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/service/consumer/CodeCheckEventConsumer.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/service/consumer"
+        ],
+        "class_names": ["CodeCheckEventConsumer"],
+        "namespace": "com.openlibing.codecheck.business.service.consumer",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["RabbitMQ", "MongoDB"],
+        "inbound_from": ["RabbitMQ"],
+        "outbound_to": ["MongoDB"],
+        "protocols": ["AMQP", "NoSQL/BSON"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "EndUser",
+      "display": "EndUser",
+      "type": "external_interactor",
+      "tmt_type": "SE.EI.TMCore.User",
+      "boundary": "ExternalServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/CheckboardController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "external_interactor",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/controller/CheckboardController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/controller"
+        ],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [],
+        "outbound_to": [
+          "WebhookController",
+          "CheckboardController",
+          "FileDownLoadController",
+          "InternalCodeFullController",
+          "InternalCodeIncController"
+        ],
+        "protocols": ["HTTP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "FileDownLoadController",
+      "display": "FileDownLoadController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/FileDownLoadController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/controller/FileDownLoadController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/controller"
+        ],
+        "class_names": ["FileDownLoadController"],
+        "namespace": "com.openlibing.codecheck.business.controller",
+        "config_keys": [],
+        "api_routes": ["/ci-portal/excel/v1/**"],
+        "dependencies": ["MongoDB", "Redis"],
+        "inbound_from": ["EndUser"],
+        "outbound_to": ["MongoDB", "Redis"],
+        "protocols": ["HTTP", "NoSQL/BSON", "RESP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "GitCode",
+      "display": "GitCode",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ExternalServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/common/codeplate/GitCodeHelper.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/common/codeplate"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/common/codeplate/GitCodeHelper.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/common/codeplate"
+        ],
+        "class_names": ["GitCodeHelper"],
+        "namespace": "com.openlibing.codecheck.common.codeplate",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["SaveIncTaskResult", "InternalController"],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "Gitee",
+      "display": "Gitee",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ExternalServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/common/codeplate/GiteeHelper.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/common/codeplate"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/common/codeplate/GiteeHelper.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/common/codeplate"
+        ],
+        "class_names": ["GiteeHelper"],
+        "namespace": "com.openlibing.codecheck.common.codeplate",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["SaveIncTaskResult"],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "Github",
+      "display": "Github",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ExternalServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/common/codeplate/GithubHelper.java",
+        "src/main/java/com/openlibing/codecheck/common/codeplate/GithubPlate.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/common/codeplate"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/common/codeplate/GithubHelper.java",
+          "src/main/java/com/openlibing/codecheck/common/codeplate/GithubPlate.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/common/codeplate"
+        ],
+        "class_names": ["GithubHelper", "GithubPlate"],
+        "namespace": "com.openlibing.codecheck.common.codeplate",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["SaveIncTaskResult"],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "HuaweiApiG",
+      "display": "HuaweiApiG",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ExternalServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/controller"
+        ],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": ["/apig/v1/**"],
+        "dependencies": [],
+        "inbound_from": ["MachineCaller"],
+        "outbound_to": ["HwApigController"],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "HuaweiCodeCheck",
+      "display": "HuaweiCodeCheck",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ExternalServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/common/utils/codecheck/RestCodeCheckUtil.java",
+        "src/main/java/com/openlibing/codecheck/common/enums/CodeCheckOrganization.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/common/utils/codecheck",
+        "src/main/java/com/openlibing/codecheck/common/enums"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/common/utils/codecheck/RestCodeCheckUtil.java",
+          "src/main/java/com/openlibing/codecheck/common/enums/CodeCheckOrganization.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/common/utils/codecheck",
+          "src/main/java/com/openlibing/codecheck/common/enums"
+        ],
+        "class_names": ["RestCodeCheckUtil", "CodeCheckOrganization"],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [
+          "InternalCodeFullController",
+          "InternalCodeIncController",
+          "RuleSetScheduleTask",
+          "SaveFullTaskResult",
+          "SaveIncTaskResult"
+        ],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "HuaweiOBS",
+      "display": "HuaweiOBS",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ExternalServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/impl/ObsBucketServiceImpl.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/service/impl"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/service/impl/ObsBucketServiceImpl.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/service/impl"
+        ],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": ["obs.access-key-id", "obs.secret-access-key"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["SarifParseServiceImpl", "ObsBucketServiceImpl"],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "HwApigController",
+      "display": "HwApigController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/controller"
+        ],
+        "class_names": ["HwApigController"],
+        "namespace": "com.openlibing.codecheck.business.controller",
+        "config_keys": [],
+        "api_routes": ["/apig/v1/**"],
+        "dependencies": [],
+        "inbound_from": ["HuaweiApiG"],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "InternalCodeFullController",
+      "display": "InternalCodeFullController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/InternalCodeFullController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/controller/InternalCodeFullController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/controller"
+        ],
+        "class_names": ["InternalCodeFullController"],
+        "namespace": "com.openlibing.codecheck.business.controller",
+        "config_keys": [],
+        "api_routes": ["/ci-portal/webhook/codecheck/full/**"],
+        "dependencies": ["RabbitMQ", "MongoDB", "HuaweiCodeCheck"],
+        "inbound_from": ["EndUser", "MachineCaller"],
+        "outbound_to": ["RabbitMQ", "MongoDB", "HuaweiCodeCheck"],
+        "protocols": ["HTTP", "AMQP", "NoSQL/BSON", "HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "InternalCodeIncController",
+      "display": "InternalCodeIncController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/InternalCodeIncController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/controller/InternalCodeIncController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/controller"
+        ],
+        "class_names": ["InternalCodeIncController"],
+        "namespace": "com.openlibing.codecheck.business.controller",
+        "config_keys": [],
+        "api_routes": ["/ci-portal/webhook/codecheck/v1/**"],
+        "dependencies": ["RabbitMQ", "MongoDB", "HuaweiCodeCheck"],
+        "inbound_from": ["EndUser", "MachineCaller"],
+        "outbound_to": ["RabbitMQ", "MongoDB", "HuaweiCodeCheck"],
+        "protocols": ["HTTP", "AMQP", "NoSQL/BSON", "HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "InternalController",
+      "display": "InternalController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/InternalController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/controller/InternalController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/controller"
+        ],
+        "class_names": ["InternalController"],
+        "namespace": "com.openlibing.codecheck.business.controller",
+        "config_keys": [],
+        "api_routes": ["/internal/**"],
+        "dependencies": ["OpenlibingCicd", "GitCode"],
+        "inbound_from": ["OpenlibingCoderepo"],
+        "outbound_to": ["OpenlibingCicd", "GitCode"],
+        "protocols": ["HTTP", "HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "MachineCaller",
+      "display": "MachineCaller",
+      "type": "external_interactor",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ExternalServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "external_interactor",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/controller"
+        ],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [],
+        "outbound_to": [
+          "HuaweiApiG",
+          "InternalCodeFullController",
+          "InternalCodeIncController"
+        ],
+        "protocols": ["HTTPS", "HTTP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "MongoDB",
+      "display": "MongoDB",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.NoSQL",
+      "boundary": "ClusterServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/common/config/mongo/MongoConfig.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/common/config/mongo"
+      ],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/common/config/mongo/MongoConfig.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/common/config/mongo"
+        ],
+        "class_names": ["MongoConfig"],
+        "namespace": "com.openlibing.codecheck.common.config.mongo",
+        "config_keys": ["spring.data.mongodb.uri"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [
+          "WebhookController",
+          "CheckboardController",
+          "FileDownLoadController",
+          "InternalCodeFullController",
+          "InternalCodeIncController",
+          "AuthUtils",
+          "CodeCheckEventConsumer",
+          "StaticAlarmEventConsumer",
+          "ShieldAllConsumer",
+          "StaticAlarmExportConsumer",
+          "SaveFullTaskResult",
+          "SaveIncTaskResult",
+          "SarifParseServiceImpl"
+        ],
+        "outbound_to": [],
+        "protocols": ["NoSQL/BSON"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "MySQL",
+      "display": "MySQL",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.SQL",
+      "boundary": "ClusterServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/common/config/mongo/DataSourceConfig.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/common/config/mongo"
+      ],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/common/config/mongo/DataSourceConfig.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/common/config/mongo"
+        ],
+        "class_names": ["DataSourceConfig"],
+        "namespace": "com.openlibing.codecheck.common.config.mongo",
+        "config_keys": ["spring.datasource.url", "spring.datasource.password"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [
+          "CheckboardController",
+          "AuthUtils",
+          "RuleSetScheduleTask"
+        ],
+        "outbound_to": [],
+        "protocols": ["SQL"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "Nacos",
+      "display": "Nacos",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ExternalServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/resources/application-prod.yaml",
+        "src/main/resources/application-beta.yaml"
+      ],
+      "source_directories": ["src/main/resources"],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/resources/application-prod.yaml",
+          "src/main/resources/application-beta.yaml"
+        ],
+        "source_directories": ["src/main/resources"],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": ["security.part1"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["Operator", "OpenlibingCodecheckApplication"],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "ObsBucketServiceImpl",
+      "display": "ObsBucketServiceImpl",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/impl/ObsBucketServiceImpl.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/service/impl"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/service/impl/ObsBucketServiceImpl.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/service/impl"
+        ],
+        "class_names": ["ObsBucketServiceImpl"],
+        "namespace": "com.openlibing.codecheck.business.service.impl",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["HuaweiOBS"],
+        "inbound_from": [],
+        "outbound_to": ["HuaweiOBS"],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "OpenlibingCicd",
+      "display": "OpenlibingCicd",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ClusterServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/delegate/OpenlibingCicdClient.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/delegate"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/delegate/OpenlibingCicdClient.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/delegate"
+        ],
+        "class_names": ["OpenlibingCicdClient"],
+        "namespace": "com.openlibing.codecheck.business.delegate",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["InternalController"],
+        "outbound_to": ["StaticAlarmReceiveController"],
+        "protocols": ["HTTPS", "HTTP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "OpenlibingCodecheckApplication",
+      "display": "OpenlibingCodecheckApplication",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/OpenlibingCodecheckApplication.java",
+        "Dockerfile"
+      ],
+      "source_directories": ["src/main/java/com/openlibing/codecheck"],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/OpenlibingCodecheckApplication.java",
+          "Dockerfile"
+        ],
+        "source_directories": ["src/main/java/com/openlibing/codecheck"],
+        "class_names": ["OpenlibingCodecheckApplication"],
+        "namespace": "com.openlibing.codecheck",
+        "config_keys": ["security.part1"],
+        "api_routes": [],
+        "dependencies": ["Nacos", "XxlJob"],
+        "inbound_from": [],
+        "outbound_to": ["Nacos", "XxlJob"],
+        "protocols": ["HTTPS", "HTTP"]
+      },
+      "sidecars": ["RASP agent"]
+    },
+    {
+      "id": "OpenlibingCoderepo",
+      "display": "OpenlibingCoderepo",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ClusterServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/delegate/CodeMetricsFeignClient.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/delegate"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/delegate/CodeMetricsFeignClient.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/delegate"
+        ],
+        "class_names": ["CodeMetricsFeignClient"],
+        "namespace": "com.openlibing.codecheck.business.delegate",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["CheckboardController"],
+        "outbound_to": ["InternalController"],
+        "protocols": ["HTTPS", "HTTP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "OpenlibingFramework",
+      "display": "OpenlibingFramework",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ClusterServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/delegate/OpenlibingFrameworkClient.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/delegate"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/delegate/OpenlibingFrameworkClient.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/delegate"
+        ],
+        "class_names": ["OpenlibingFrameworkClient"],
+        "namespace": "com.openlibing.codecheck.business.delegate",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["StaticAlarmExportConsumer"],
+        "outbound_to": [],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "Operator",
+      "display": "Operator",
+      "type": "external_interactor",
+      "tmt_type": "SE.EI.TMCore.User",
+      "boundary": "ExternalServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": ["src/main/resources/application-prod.yaml"],
+      "source_directories": ["src/main/resources"],
+      "fingerprint": {
+        "component_type": "external_interactor",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": ["src/main/resources/application-prod.yaml"],
+        "source_directories": ["src/main/resources"],
+        "class_names": [],
+        "namespace": "",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [],
+        "outbound_to": ["Nacos"],
+        "protocols": ["HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "RabbitMQ",
+      "display": "RabbitMQ",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.NoSQL",
+      "boundary": "ClusterServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/common/config/rabbitmq/RabbitConnectionFactoryConfig.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/common/config/rabbitmq"
+      ],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/common/config/rabbitmq/RabbitConnectionFactoryConfig.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/common/config/rabbitmq"
+        ],
+        "class_names": ["RabbitConnectionFactoryConfig"],
+        "namespace": "com.openlibing.codecheck.common.config.rabbitmq",
+        "config_keys": ["spring.rabbitmq.port"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": [
+          "InternalCodeFullController",
+          "InternalCodeIncController",
+          "StaticAlarmReceiveController"
+        ],
+        "outbound_to": [
+          "CodeCheckEventConsumer",
+          "StaticAlarmEventConsumer",
+          "ShieldAllConsumer",
+          "StaticAlarmExportConsumer"
+        ],
+        "protocols": ["AMQP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "Redis",
+      "display": "Redis",
+      "type": "data_store",
+      "tmt_type": "SE.DS.TMCore.Cache",
+      "boundary": "ClusterServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/common/config/redis/RedisConfig.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/common/config/redis"
+      ],
+      "fingerprint": {
+        "component_type": "data_store",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/common/config/redis/RedisConfig.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/common/config/redis"
+        ],
+        "class_names": ["RedisConfig"],
+        "namespace": "com.openlibing.codecheck.common.config.redis",
+        "config_keys": ["spring.redis.*"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["FileDownLoadController", "RuleSetScheduleTask"],
+        "outbound_to": [],
+        "protocols": ["RESP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "RuleSetScheduleTask",
+      "display": "RuleSetScheduleTask",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/schedule/RuleSetScheduleTask.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/schedule"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/schedule/RuleSetScheduleTask.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/schedule"
+        ],
+        "class_names": ["RuleSetScheduleTask"],
+        "namespace": "com.openlibing.codecheck.business.schedule",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["Redis", "MySQL", "HuaweiCodeCheck"],
+        "inbound_from": [],
+        "outbound_to": ["Redis", "MySQL", "HuaweiCodeCheck"],
+        "protocols": ["RESP", "SQL", "HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "SarifParseServiceImpl",
+      "display": "SarifParseServiceImpl",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java",
+        "src/main/java/com/openlibing/codecheck/business/service/parser/CodeQlSarifParser.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/service/impl/alarm",
+        "src/main/java/com/openlibing/codecheck/business/service/parser"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java",
+          "src/main/java/com/openlibing/codecheck/business/service/parser/CodeQlSarifParser.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/service/impl/alarm",
+          "src/main/java/com/openlibing/codecheck/business/service/parser"
+        ],
+        "class_names": ["SarifParseServiceImpl", "CodeQlSarifParser"],
+        "namespace": "com.openlibing.codecheck.business.service",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["HuaweiOBS", "MongoDB"],
+        "inbound_from": [],
+        "outbound_to": ["HuaweiOBS", "MongoDB"],
+        "protocols": ["HTTPS", "NoSQL/BSON"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "SaveFullTaskResult",
+      "display": "SaveFullTaskResult",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/schedule/SaveFullTaskResult.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/schedule"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/schedule/SaveFullTaskResult.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/schedule"
+        ],
+        "class_names": ["SaveFullTaskResult"],
+        "namespace": "com.openlibing.codecheck.business.schedule",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["MongoDB", "HuaweiCodeCheck", "SmtpServer"],
+        "inbound_from": [],
+        "outbound_to": ["MongoDB", "HuaweiCodeCheck", "SmtpServer"],
+        "protocols": ["NoSQL/BSON", "HTTPS", "SMTP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "SaveIncTaskResult",
+      "display": "SaveIncTaskResult",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/schedule/SaveIncTaskResult.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/schedule"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/schedule/SaveIncTaskResult.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/schedule"
+        ],
+        "class_names": ["SaveIncTaskResult"],
+        "namespace": "com.openlibing.codecheck.business.schedule",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": [
+          "MongoDB",
+          "HuaweiCodeCheck",
+          "GitCode",
+          "Gitee",
+          "Github",
+          "SmtpServer"
+        ],
+        "inbound_from": [],
+        "outbound_to": [
+          "MongoDB",
+          "HuaweiCodeCheck",
+          "GitCode",
+          "Gitee",
+          "Github",
+          "SmtpServer"
+        ],
+        "protocols": ["NoSQL/BSON", "HTTPS", "SMTP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "ShieldAllConsumer",
+      "display": "ShieldAllConsumer",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/consumer/ShieldAllConsumer.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/service/consumer"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/service/consumer/ShieldAllConsumer.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/service/consumer"
+        ],
+        "class_names": ["ShieldAllConsumer"],
+        "namespace": "com.openlibing.codecheck.business.service.consumer",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["RabbitMQ", "MongoDB"],
+        "inbound_from": ["RabbitMQ"],
+        "outbound_to": ["MongoDB"],
+        "protocols": ["AMQP", "NoSQL/BSON"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "SmtpServer",
+      "display": "SmtpServer",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ExternalServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/common/utils/email/EmailUtil.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/common/utils/email"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/common/utils/email/EmailUtil.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/common/utils/email"
+        ],
+        "class_names": ["EmailUtil"],
+        "namespace": "com.openlibing.codecheck.common.utils.email",
+        "config_keys": ["commom.email.password"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["SaveFullTaskResult", "SaveIncTaskResult"],
+        "outbound_to": [],
+        "protocols": ["SMTP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "StaticAlarmEventConsumer",
+      "display": "StaticAlarmEventConsumer",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/consumer/StaticAlarmEventConsumer.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/service/consumer"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/service/consumer/StaticAlarmEventConsumer.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/service/consumer"
+        ],
+        "class_names": ["StaticAlarmEventConsumer"],
+        "namespace": "com.openlibing.codecheck.business.service.consumer",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["RabbitMQ", "MongoDB"],
+        "inbound_from": ["RabbitMQ"],
+        "outbound_to": ["MongoDB"],
+        "protocols": ["AMQP", "NoSQL/BSON"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "StaticAlarmExportConsumer",
+      "display": "StaticAlarmExportConsumer",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.NonMS",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/consumer/StaticAlarmExportConsumer.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/service/consumer"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/service/consumer/StaticAlarmExportConsumer.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/service/consumer"
+        ],
+        "class_names": ["StaticAlarmExportConsumer"],
+        "namespace": "com.openlibing.codecheck.business.service.consumer",
+        "config_keys": [],
+        "api_routes": [],
+        "dependencies": ["RabbitMQ", "MongoDB", "OpenlibingFramework"],
+        "inbound_from": ["RabbitMQ"],
+        "outbound_to": ["MongoDB", "OpenlibingFramework"],
+        "protocols": ["AMQP", "NoSQL/BSON", "HTTPS"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "StaticAlarmReceiveController",
+      "display": "StaticAlarmReceiveController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/alarm/StaticAlarmReceiveController.java",
+        "src/main/java/com/openlibing/codecheck/business/controller/alarm/StaticAlarmInternalController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/controller/alarm"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/controller/alarm/StaticAlarmReceiveController.java",
+          "src/main/java/com/openlibing/codecheck/business/controller/alarm/StaticAlarmInternalController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/controller/alarm"
+        ],
+        "class_names": [
+          "StaticAlarmReceiveController",
+          "StaticAlarmInternalController"
+        ],
+        "namespace": "com.openlibing.codecheck.business.controller.alarm",
+        "config_keys": [],
+        "api_routes": ["/codescan/v1/result/receive"],
+        "dependencies": ["RabbitMQ"],
+        "inbound_from": ["OpenlibingCicd"],
+        "outbound_to": ["RabbitMQ"],
+        "protocols": ["HTTP", "AMQP"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "WebhookController",
+      "display": "WebhookController",
+      "type": "process",
+      "tmt_type": "SE.P.TMCore.WebSvc",
+      "boundary": "CodecheckService",
+      "boundary_kind": "ProcessBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/WebhookController.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/business/controller"
+      ],
+      "fingerprint": {
+        "component_type": "process",
+        "boundary_kind": "ProcessBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/business/controller/WebhookController.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/business/controller"
+        ],
+        "class_names": ["WebhookController"],
+        "namespace": "com.openlibing.codecheck.business.controller",
+        "config_keys": [],
+        "api_routes": ["/ci-portal/webhook/codecheck/v1/find/by/mongoDB"],
+        "dependencies": ["MongoDB"],
+        "inbound_from": ["EndUser"],
+        "outbound_to": ["MongoDB"],
+        "protocols": ["HTTP", "NoSQL/BSON"]
+      },
+      "sidecars": []
+    },
+    {
+      "id": "XxlJob",
+      "display": "XxlJob",
+      "type": "external_service",
+      "tmt_type": "SE.EI.TMCore.WebSvc",
+      "boundary": "ClusterServices",
+      "boundary_kind": "NetworkBoundary",
+      "aliases": [],
+      "source_files": [
+        "src/main/java/com/openlibing/codecheck/common/config/XxlJobConfig.java",
+        "src/main/java/com/openlibing/codecheck/common/job/XxlJobHandler.java"
+      ],
+      "source_directories": [
+        "src/main/java/com/openlibing/codecheck/common/config",
+        "src/main/java/com/openlibing/codecheck/common/job"
+      ],
+      "fingerprint": {
+        "component_type": "external_service",
+        "boundary_kind": "NetworkBoundary",
+        "source_files": [
+          "src/main/java/com/openlibing/codecheck/common/config/XxlJobConfig.java",
+          "src/main/java/com/openlibing/codecheck/common/job/XxlJobHandler.java"
+        ],
+        "source_directories": [
+          "src/main/java/com/openlibing/codecheck/common/config",
+          "src/main/java/com/openlibing/codecheck/common/job"
+        ],
+        "class_names": ["XxlJobConfig", "XxlJobHandler"],
+        "namespace": "com.openlibing.codecheck.common",
+        "config_keys": ["xxl.job.admin.accessToken"],
+        "api_routes": [],
+        "dependencies": [],
+        "inbound_from": ["OpenlibingCodecheckApplication"],
+        "outbound_to": [],
+        "protocols": ["HTTP"]
+      },
+      "sidecars": []
+    }
+  ],
+  "boundaries": [
+    {
+      "id": "ClusterServices",
+      "display": "ClusterServices (K8s/VPC backing services)",
+      "kind": "NetworkBoundary",
+      "aliases": [],
+      "contains": [
+        "MongoDB",
+        "MySQL",
+        "OpenlibingCicd",
+        "OpenlibingCoderepo",
+        "OpenlibingFramework",
+        "RabbitMQ",
+        "Redis",
+        "XxlJob"
+      ],
+      "contains_fingerprint": "MongoDB|MySQL|OpenlibingCicd|OpenlibingCoderepo|OpenlibingFramework|RabbitMQ|Redis|XxlJob"
+    },
+    {
+      "id": "CodecheckService",
+      "display": "CodecheckService (openlibing-codecheck pod)",
+      "kind": "ProcessBoundary",
+      "aliases": [],
+      "contains": [
+        "AuthUtils",
+        "CheckboardController",
+        "CodeCheckEventConsumer",
+        "FileDownLoadController",
+        "HwApigController",
+        "InternalCodeFullController",
+        "InternalCodeIncController",
+        "InternalController",
+        "ObsBucketServiceImpl",
+        "OpenlibingCodecheckApplication",
+        "RuleSetScheduleTask",
+        "SarifParseServiceImpl",
+        "SaveFullTaskResult",
+        "SaveIncTaskResult",
+        "ShieldAllConsumer",
+        "StaticAlarmEventConsumer",
+        "StaticAlarmExportConsumer",
+        "StaticAlarmReceiveController",
+        "WebhookController"
+      ],
+      "contains_fingerprint": "AuthUtils|CheckboardController|CodeCheckEventConsumer|FileDownLoadController|HwApigController|InternalCodeFullController|InternalCodeIncController|InternalController|ObsBucketServiceImpl|OpenlibingCodecheckApplication|RuleSetScheduleTask|SarifParseServiceImpl|SaveFullTaskResult|SaveIncTaskResult|ShieldAllConsumer|StaticAlarmEventConsumer|StaticAlarmExportConsumer|StaticAlarmReceiveController|WebhookController"
+    },
+    {
+      "id": "ExternalServices",
+      "display": "ExternalServices (public cloud / internet)",
+      "kind": "NetworkBoundary",
+      "aliases": [],
+      "contains": [
+        "EndUser",
+        "Gitee",
+        "Github",
+        "GitCode",
+        "HuaweiApiG",
+        "HuaweiCodeCheck",
+        "HuaweiOBS",
+        "MachineCaller",
+        "Nacos",
+        "Operator",
+        "SmtpServer"
+      ],
+      "contains_fingerprint": "EndUser|Gitee|Github|GitCode|HuaweiApiG|HuaweiCodeCheck|HuaweiOBS|MachineCaller|Nacos|Operator|SmtpServer"
+    }
+  ],
+  "flows": [
+    {
+      "id": "DF_AuthUtils_to_MongoDB",
+      "from": "AuthUtils",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF31: Summary lookups for permission checks."
+    },
+    {
+      "id": "DF_AuthUtils_to_MySQL",
+      "from": "AuthUtils",
+      "to": "MySQL",
+      "protocol": "SQL",
+      "description": "DF30: Roles/permissions/menus lookups."
+    },
+    {
+      "id": "DF_CheckboardController_to_MongoDB",
+      "from": "CheckboardController",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF21: Summary/detail queries."
+    },
+    {
+      "id": "DF_CheckboardController_to_MySQL",
+      "from": "CheckboardController",
+      "to": "MySQL",
+      "protocol": "SQL",
+      "description": "DF22: Project/repo/user data queries."
+    },
+    {
+      "id": "DF_CheckboardController_to_OpenlibingCoderepo",
+      "from": "CheckboardController",
+      "to": "OpenlibingCoderepo",
+      "protocol": "HTTPS (Feign)",
+      "description": "DF23: Code metrics queries."
+    },
+    {
+      "id": "DF_CodeCheckEventConsumer_to_MongoDB",
+      "from": "CodeCheckEventConsumer",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF32: Task state writes."
+    },
+    {
+      "id": "DF_EndUser_to_CheckboardController",
+      "from": "EndUser",
+      "to": "CheckboardController",
+      "protocol": "HTTP/JSON",
+      "description": "DF02: Board/summary queries via ci-portal backend proxy."
+    },
+    {
+      "id": "DF_EndUser_to_FileDownLoadController",
+      "from": "EndUser",
+      "to": "FileDownLoadController",
+      "protocol": "HTTP/JSON",
+      "description": "DF03: Excel export requests via ci-portal backend proxy."
+    },
+    {
+      "id": "DF_EndUser_to_InternalCodeFullController",
+      "from": "EndUser",
+      "to": "InternalCodeFullController",
+      "protocol": "HTTP/JSON",
+      "description": "DF04: Full task operations via ci-portal backend proxy."
+    },
+    {
+      "id": "DF_EndUser_to_InternalCodeIncController",
+      "from": "EndUser",
+      "to": "InternalCodeIncController",
+      "protocol": "HTTP/JSON",
+      "description": "DF05: Gate operations via ci-portal backend proxy."
+    },
+    {
+      "id": "DF_EndUser_to_WebhookController",
+      "from": "EndUser",
+      "to": "WebhookController",
+      "protocol": "HTTP/JSON",
+      "description": "DF01: Webhook data query via ci-portal backend proxy."
+    },
+    {
+      "id": "DF_FileDownLoadController_to_MongoDB",
+      "from": "FileDownLoadController",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF24: Export data queries."
+    },
+    {
+      "id": "DF_FileDownLoadController_to_Redis",
+      "from": "FileDownLoadController",
+      "to": "Redis",
+      "protocol": "RESP",
+      "description": "DF25: Excel task state."
+    },
+    {
+      "id": "DF_HuaweiApiG_to_HwApigController",
+      "from": "HuaweiApiG",
+      "to": "HwApigController",
+      "protocol": "HTTPS",
+      "description": "DF07: Authenticated forwarding to /apig/v1/**."
+    },
+    {
+      "id": "DF_InternalCodeFullController_to_HuaweiCodeCheck",
+      "from": "InternalCodeFullController",
+      "to": "HuaweiCodeCheck",
+      "protocol": "HTTPS (AK/SK)",
+      "description": "DF27: Create full scan task."
+    },
+    {
+      "id": "DF_InternalCodeFullController_to_MongoDB",
+      "from": "InternalCodeFullController",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF26: Full task records."
+    },
+    {
+      "id": "DF_InternalCodeFullController_to_RabbitMQ",
+      "from": "InternalCodeFullController",
+      "to": "RabbitMQ",
+      "protocol": "AMQP",
+      "description": "DF13: Publish full task events."
+    },
+    {
+      "id": "DF_InternalCodeIncController_to_HuaweiCodeCheck",
+      "from": "InternalCodeIncController",
+      "to": "HuaweiCodeCheck",
+      "protocol": "HTTPS (AK/SK)",
+      "description": "DF29: Create inc check task."
+    },
+    {
+      "id": "DF_InternalCodeIncController_to_MongoDB",
+      "from": "InternalCodeIncController",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF28: Inc task records."
+    },
+    {
+      "id": "DF_InternalCodeIncController_to_RabbitMQ",
+      "from": "InternalCodeIncController",
+      "to": "RabbitMQ",
+      "protocol": "AMQP",
+      "description": "DF14: Publish inc task events."
+    },
+    {
+      "id": "DF_InternalController_to_GitCode",
+      "from": "InternalController",
+      "to": "GitCode",
+      "protocol": "HTTPS",
+      "description": "DF55: PR event processing with account token."
+    },
+    {
+      "id": "DF_InternalController_to_OpenlibingCicd",
+      "from": "InternalController",
+      "to": "OpenlibingCicd",
+      "protocol": "HTTPS (Feign)",
+      "description": "DF54: Pipeline trigger (pre-commit)."
+    },
+    {
+      "id": "DF_MachineCaller_to_HuaweiApiG",
+      "from": "MachineCaller",
+      "to": "HuaweiApiG",
+      "protocol": "HTTPS",
+      "description": "DF06: M2M API calls to gateway."
+    },
+    {
+      "id": "DF_MachineCaller_to_InternalCodeFullController",
+      "from": "MachineCaller",
+      "to": "InternalCodeFullController",
+      "protocol": "HTTP/JSON",
+      "description": "DF08: Machine API full task trigger (ci-portal path)."
+    },
+    {
+      "id": "DF_MachineCaller_to_InternalCodeIncController",
+      "from": "MachineCaller",
+      "to": "InternalCodeIncController",
+      "protocol": "HTTP/JSON",
+      "description": "DF09: Machine API gate calls (ci-portal path)."
+    },
+    {
+      "id": "DF_ObsBucketServiceImpl_to_HuaweiOBS",
+      "from": "ObsBucketServiceImpl",
+      "to": "HuaweiOBS",
+      "protocol": "HTTPS",
+      "description": "DF51: File create/query/update operations."
+    },
+    {
+      "id": "DF_OpenlibingCicd_to_StaticAlarmReceiveController",
+      "from": "OpenlibingCicd",
+      "to": "StaticAlarmReceiveController",
+      "protocol": "HTTP/JSON",
+      "description": "DF12: Static-alarm scan result delivery."
+    },
+    {
+      "id": "DF_OpenlibingCodecheckApplication_to_Nacos",
+      "from": "OpenlibingCodecheckApplication",
+      "to": "Nacos",
+      "protocol": "HTTPS",
+      "description": "DF52: Config fetch and service discovery."
+    },
+    {
+      "id": "DF_OpenlibingCodecheckApplication_to_XxlJob",
+      "from": "OpenlibingCodecheckApplication",
+      "to": "XxlJob",
+      "protocol": "HTTP",
+      "description": "DF53: Executor registration and task dispatch."
+    },
+    {
+      "id": "DF_OpenlibingCoderepo_to_InternalController",
+      "from": "OpenlibingCoderepo",
+      "to": "InternalController",
+      "protocol": "HTTP/JSON",
+      "description": "DF11: Rule-set recompute and full task invoke callbacks."
+    },
+    {
+      "id": "DF_Operator_to_Nacos",
+      "from": "Operator",
+      "to": "Nacos",
+      "protocol": "HTTPS",
+      "description": "DF10: Configuration administration."
+    },
+    {
+      "id": "DF_RabbitMQ_to_CodeCheckEventConsumer",
+      "from": "RabbitMQ",
+      "to": "CodeCheckEventConsumer",
+      "protocol": "AMQP",
+      "description": "DF16: Consume code-check events."
+    },
+    {
+      "id": "DF_RabbitMQ_to_ShieldAllConsumer",
+      "from": "RabbitMQ",
+      "to": "ShieldAllConsumer",
+      "protocol": "AMQP",
+      "description": "DF18: Consume shield-all tasks."
+    },
+    {
+      "id": "DF_RabbitMQ_to_StaticAlarmEventConsumer",
+      "from": "RabbitMQ",
+      "to": "StaticAlarmEventConsumer",
+      "protocol": "AMQP",
+      "description": "DF17: Consume alarm parse events."
+    },
+    {
+      "id": "DF_RabbitMQ_to_StaticAlarmExportConsumer",
+      "from": "RabbitMQ",
+      "to": "StaticAlarmExportConsumer",
+      "protocol": "AMQP",
+      "description": "DF19: Consume export tasks."
+    },
+    {
+      "id": "DF_RuleSetScheduleTask_to_HuaweiCodeCheck",
+      "from": "RuleSetScheduleTask",
+      "to": "HuaweiCodeCheck",
+      "protocol": "HTTPS (AK/SK)",
+      "description": "DF39: Rule set sync."
+    },
+    {
+      "id": "DF_RuleSetScheduleTask_to_MySQL",
+      "from": "RuleSetScheduleTask",
+      "to": "MySQL",
+      "protocol": "SQL",
+      "description": "DF38: Tenant/project/repo reads."
+    },
+    {
+      "id": "DF_RuleSetScheduleTask_to_Redis",
+      "from": "RuleSetScheduleTask",
+      "to": "Redis",
+      "protocol": "RESP",
+      "description": "DF37: Task queues, Redisson locks, AK/SK cache."
+    },
+    {
+      "id": "DF_SarifParseServiceImpl_to_HuaweiOBS",
+      "from": "SarifParseServiceImpl",
+      "to": "HuaweiOBS",
+      "protocol": "HTTPS",
+      "description": "DF49: SARIF file download."
+    },
+    {
+      "id": "DF_SarifParseServiceImpl_to_MongoDB",
+      "from": "SarifParseServiceImpl",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF50: Parsed alarm writes."
+    },
+    {
+      "id": "DF_SaveFullTaskResult_to_HuaweiCodeCheck",
+      "from": "SaveFullTaskResult",
+      "to": "HuaweiCodeCheck",
+      "protocol": "HTTPS (AK/SK)",
+      "description": "DF41: Poll full task progress/results."
+    },
+    {
+      "id": "DF_SaveFullTaskResult_to_MongoDB",
+      "from": "SaveFullTaskResult",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF40: Full result writes."
+    },
+    {
+      "id": "DF_SaveFullTaskResult_to_SmtpServer",
+      "from": "SaveFullTaskResult",
+      "to": "SmtpServer",
+      "protocol": "SMTP",
+      "description": "DF42: Result notifications."
+    },
+    {
+      "id": "DF_SaveIncTaskResult_to_GitCode",
+      "from": "SaveIncTaskResult",
+      "to": "GitCode",
+      "protocol": "HTTPS",
+      "description": "DF45: Token-based repo/PR operations."
+    },
+    {
+      "id": "DF_SaveIncTaskResult_to_Gitee",
+      "from": "SaveIncTaskResult",
+      "to": "Gitee",
+      "protocol": "HTTPS",
+      "description": "DF46: Token-based repo/PR operations."
+    },
+    {
+      "id": "DF_SaveIncTaskResult_to_Github",
+      "from": "SaveIncTaskResult",
+      "to": "Github",
+      "protocol": "HTTPS",
+      "description": "DF47: Token-based repo/PR operations."
+    },
+    {
+      "id": "DF_SaveIncTaskResult_to_HuaweiCodeCheck",
+      "from": "SaveIncTaskResult",
+      "to": "HuaweiCodeCheck",
+      "protocol": "HTTPS (AK/SK)",
+      "description": "DF44: Poll inc task results."
+    },
+    {
+      "id": "DF_SaveIncTaskResult_to_MongoDB",
+      "from": "SaveIncTaskResult",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF43: Inc result writes."
+    },
+    {
+      "id": "DF_SaveIncTaskResult_to_SmtpServer",
+      "from": "SaveIncTaskResult",
+      "to": "SmtpServer",
+      "protocol": "SMTP",
+      "description": "DF48: Result notifications."
+    },
+    {
+      "id": "DF_ShieldAllConsumer_to_MongoDB",
+      "from": "ShieldAllConsumer",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF34: Bulk shield writes."
+    },
+    {
+      "id": "DF_StaticAlarmEventConsumer_to_MongoDB",
+      "from": "StaticAlarmEventConsumer",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF33: Alarm writes."
+    },
+    {
+      "id": "DF_StaticAlarmExportConsumer_to_MongoDB",
+      "from": "StaticAlarmExportConsumer",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF35: Export data reads."
+    },
+    {
+      "id": "DF_StaticAlarmExportConsumer_to_OpenlibingFramework",
+      "from": "StaticAlarmExportConsumer",
+      "to": "OpenlibingFramework",
+      "protocol": "HTTPS (Feign)",
+      "description": "DF36: Export file delivery."
+    },
+    {
+      "id": "DF_StaticAlarmReceiveController_to_RabbitMQ",
+      "from": "StaticAlarmReceiveController",
+      "to": "RabbitMQ",
+      "protocol": "AMQP",
+      "description": "DF15: Publish alarm parse events."
+    },
+    {
+      "id": "DF_WebhookController_to_MongoDB",
+      "from": "WebhookController",
+      "to": "MongoDB",
+      "protocol": "NoSQL/BSON",
+      "description": "DF20: Whitelisted webhook queries."
+    }
+  ],
+  "threats": [
+    {
+      "id": "T01.1",
+      "title": "Nacos configuration spoofing injects attacker-controlled credentials and endpoints",
+      "description": "An attacker able to publish config (or poison discovery) can inject attacker-controlled credentials and endpoints, steering the application to hostile services via Nacos config loading of security.part1 and all datastore credentials.",
+      "stride_category": "S",
+      "tier": 3,
+      "prerequisites": "Nacos Compromise",
+      "status": "Open",
+      "mitigation": "Restrict Nacos write/read access to trusted operators; use Nacos ACL/namespace isolation; validate config source integrity; separate discovery from sensitive config.",
+      "identity_key": {
+        "component_id": "OpenlibingCodecheckApplication",
+        "data_flow_id": "DF_OpenlibingCodecheckApplication_to_Nacos",
+        "stride_category": "S",
+        "attack_surface": "Nacos config loading (DF52) for security.part1 and datastore credentials"
+      }
+    },
+    {
+      "id": "T01.2",
+      "title": "AES key and ciphertext co-located in the same Nacos namespace",
+      "description": "The AES key security.part1 and the encrypted secrets it protects are stored in the same Nacos namespace and config group (OPENLIBING), so one config compromise reveals both key and ciphertexts.",
+      "stride_category": "I",
+      "tier": 3,
+      "prerequisites": "Nacos Compromise",
+      "status": "Open",
+      "mitigation": "Move the key to a dedicated secrets manager with independent access control and rotation; avoid co-locating key and ciphertext in the same config artifact.",
+      "identity_key": {
+        "component_id": "OpenlibingCodecheckApplication",
+        "data_flow_id": "DF_OpenlibingCodecheckApplication_to_Nacos",
+        "stride_category": "I",
+        "attack_surface": "Nacos config group OPENLIBING holding security.part1 key and ciphertexts (DF52)"
+      }
+    },
+    {
+      "id": "T02.1",
+      "title": "No code-level authentication on /apig/v1/** endpoints",
+      "description": "All four /apig/v1/** endpoints rely entirely on the Huawei APIG gateway for auth, so a gateway misconfiguration, weak AppCode, or bypass exposes unauthenticated task-trigger and status-read APIs.",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Enforce a second in-code auth barrier (HMAC/API-key/signature validation) on /apig/v1/**; do not single-source auth to the gateway.",
+      "identity_key": {
+        "component_id": "HwApigController",
+        "data_flow_id": "DF_HuaweiApiG_to_HwApigController",
+        "stride_category": "E",
+        "attack_surface": "/apig/v1/** M2M endpoints (DF07)"
+      }
+    },
+    {
+      "id": "T02.2",
+      "title": "Full request bodies logged at INFO on /apig/v1/** endpoints",
+      "description": "logger.info on every endpoint logs full request params including repoUrl, task params, and caller-supplied fields, landing sensitive data in log pipelines.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Redact or truncate request payloads before logging; log only non-sensitive identifiers (taskId, uuid); review log retention/access.",
+      "identity_key": {
+        "component_id": "HwApigController",
+        "data_flow_id": "DF_HuaweiApiG_to_HwApigController",
+        "stride_category": "I",
+        "attack_surface": "INFO request logging on /apig/v1/** endpoints (DF06/DF07)"
+      }
+    },
+    {
+      "id": "T02.3",
+      "title": "Arbitrary scan task submission without quota or ownership checks",
+      "description": "Any authenticated (gateway-authorized) machine caller can submit arbitrary full/inc scan tasks for arbitrary repo URLs without quota or ownership checks, consuming Huawei CodeCheck scan quota and compute cost.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Add per-caller rate/quota limits and repo-ownership validation in code; bind machine callers to registered projects.",
+      "identity_key": {
+        "component_id": "HwApigController",
+        "data_flow_id": "DF_MachineCaller_to_HuaweiApiG",
+        "stride_category": "A",
+        "attack_surface": "M2M task-trigger endpoints /apig/v1/** (DF06/DF07)"
+      }
+    },
+    {
+      "id": "T03.1",
+      "title": "Unauthenticated MongoDB read access via webhook endpoint",
+      "description": "Any in-cluster caller can query 17 whitelisted collections (TASK_INC, TASK_RESULT_DETAILS, STATIC_ALARM_ISSUE, etc.) because the endpoint performs no authentication, so task/defect/alarm data is readable without permission.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Add an authentication/authorization barrier for this endpoint; scope queryable collections per-caller; audit reads.",
+      "identity_key": {
+        "component_id": "WebhookController",
+        "data_flow_id": "DF_EndUser_to_WebhookController",
+        "stride_category": "I",
+        "attack_surface": "Webhook MongoDB query endpoint /ci-portal/webhook/codecheck/v1/find/by/mongoDB (DF01/DF20)"
+      }
+    },
+    {
+      "id": "T03.2",
+      "title": "NoSQL injection via webhook whitelist gaps on insert paths",
+      "description": "WebhookInputValidator blocks non-whitelisted table/field names on the readMongoDB path, but insertData validates only tableName and leaves nested queryData/mongoData unvalidated, so injection surface persists on future reachable paths.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Extend validateFieldName/validateValue to all write/insert paths; unit-test validator against operator objects and array types.",
+      "identity_key": {
+        "component_id": "WebhookController",
+        "data_flow_id": "DF_WebhookController_to_MongoDB",
+        "stride_category": "I",
+        "attack_surface": "Webhook insertData path to MongoDB (DF20)"
+      }
+    },
+    {
+      "id": "T04.1",
+      "title": "Unauthenticated internal endpoints allow unauthorized task triggers",
+      "description": "/internal/** relies on service-to-service trust with no credential, so any in-cluster pod can invoke pre-commit, rule-set recompute, and full task invoke endpoints.",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Enforce mutual authentication (mTLS/API token) for /internal/**; verify caller identity (service account) before acting; restrict to the actual sibling services.",
+      "identity_key": {
+        "component_id": "InternalController",
+        "data_flow_id": "DF_OpenlibingCoderepo_to_InternalController",
+        "stride_category": "E",
+        "attack_surface": "/internal/** endpoints (DF11/DF54)"
+      }
+    },
+    {
+      "id": "T04.2",
+      "title": "Option injection into the auto-fix process via branch name",
+      "description": "CommandArgSanitizer.sanitizeBranchName allows a leading '-' and '..' sequences, so a branch like '--flag' is accepted and passed as an option value to auto-fix.sh -b, enabling option/argument injection into the shell script.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Reject branch names starting with '-'; strengthen sanitizeBranchName regex; pass branch via environment or stdin rather than argv.",
+      "identity_key": {
+        "component_id": "InternalController",
+        "data_flow_id": "DF_OpenlibingCoderepo_to_InternalController",
+        "stride_category": "A",
+        "attack_surface": "/internal/pre-commit auto-fix.sh option injection (DF11)"
+      }
+    },
+    {
+      "id": "T04.3",
+      "title": "Decrypted repo access tokens passed as process command-line arguments",
+      "description": "PipelineDelegateImpl.preMergeAndFix runs auto-fix.sh with decrypted tokens as argv, so the tokens are visible in the host process list (ps//proc) to any local observer.",
+      "stride_category": "I",
+      "tier": 3,
+      "prerequisites": "Host/OS Access",
+      "status": "Open",
+      "mitigation": "Pass tokens via environment variables or a temp file with 0600 permissions; use ProcessBuilder with env; avoid argv for secrets.",
+      "identity_key": {
+        "component_id": "InternalController",
+        "data_flow_id": "DF_OpenlibingCoderepo_to_InternalController",
+        "stride_category": "I",
+        "attack_surface": "auto-fix.sh process argv with decrypted tokens (DF11)"
+      }
+    },
+    {
+      "id": "T05.1",
+      "title": "Unauthenticated result ingestion lets any in-cluster service spoof the CICD source",
+      "description": "POST /codescan/v1/result/receive (and /internal/codescan/v1/result/receive) accepts scan results from any caller, enabling injection of forged scan-run records and triggering SARIF parsing.",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Authenticate the CICD caller (mTLS/service token); verify pipeline context integrity; audit ingestion.",
+      "identity_key": {
+        "component_id": "StaticAlarmReceiveController",
+        "data_flow_id": "DF_OpenlibingCicd_to_StaticAlarmReceiveController",
+        "stride_category": "S",
+        "attack_surface": "/codescan/v1/result/receive result ingestion (DF12)"
+      }
+    },
+    {
+      "id": "T05.2",
+      "title": "Unvalidated obsUrl enables SSRF and malicious-content parsing",
+      "description": "The DTO field obsUrl has only @NotEmpty with no scheme/host/domain whitelist, and arbitrary URLs are persisted and later fetched server-side by SarifParseServiceImpl, enabling SSRF and malicious-content parsing.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Validate obsUrl against an allowed OBS host/scheme allowlist; reject private/internal IP ranges and redirects.",
+      "identity_key": {
+        "component_id": "StaticAlarmReceiveController",
+        "data_flow_id": "DF_OpenlibingCicd_to_StaticAlarmReceiveController",
+        "stride_category": "T",
+        "attack_surface": "obsUrl field on /codescan/v1/result/receive (DF12)"
+      }
+    },
+    {
+      "id": "T05.3",
+      "title": "Full DTO logged at INFO including obsUrl, repoUrl, and pipeline context",
+      "description": "Static alarm receive logs the full DTO at INFO, sending sensitive pipeline and repository data into log pipelines.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Log only scanRecordId and non-sensitive identifiers; redact URLs.",
+      "identity_key": {
+        "component_id": "StaticAlarmReceiveController",
+        "data_flow_id": "DF_OpenlibingCicd_to_StaticAlarmReceiveController",
+        "stride_category": "I",
+        "attack_surface": "INFO DTO logging on result receive (DF12)"
+      }
+    },
+    {
+      "id": "T05.4",
+      "title": "Arbitrary obsUrl + resource consumption via unbounded parse events",
+      "description": "An in-cluster caller can submit unbounded parse events that cause repeated outbound OBS downloads and parsing work with no per-source quota/rate limit.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Rate-limit ingestion per source; cap concurrent parse work; validate URL before enqueue.",
+      "identity_key": {
+        "component_id": "StaticAlarmReceiveController",
+        "data_flow_id": "DF_OpenlibingCicd_to_StaticAlarmReceiveController",
+        "stride_category": "A",
+        "attack_surface": "Unbounded parse event ingestion (DF12/DF15)"
+      }
+    },
+    {
+      "id": "T06.1",
+      "title": "No authentication/authorization on full-task trigger",
+      "description": "POST /ci-portal/webhook/codecheck/full/task performs only a repoUrl blank-check with no format whitelisting, so any in-cluster caller can trigger full scans for arbitrary repo URLs.",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Enforce caller authentication and repo-ownership validation; apply repoUrl format whitelisting on this path too.",
+      "identity_key": {
+        "component_id": "InternalCodeFullController",
+        "data_flow_id": "DF_MachineCaller_to_InternalCodeFullController",
+        "stride_category": "E",
+        "attack_surface": "/ci-portal/webhook/codecheck/full/task (DF08/DF27)"
+      }
+    },
+    {
+      "id": "T06.2",
+      "title": "Full request params logged at INFO including repoUrl",
+      "description": "startFullTask logs the full params at INFO including repoUrl and project/branch, landing sensitive repository identifiers in logs.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Log only taskId after creation; redact request payloads.",
+      "identity_key": {
+        "component_id": "InternalCodeFullController",
+        "data_flow_id": "DF_MachineCaller_to_InternalCodeFullController",
+        "stride_category": "I",
+        "attack_surface": "INFO request param logging on full task trigger (DF08)"
+      }
+    },
+    {
+      "id": "T07.1",
+      "title": "Gate status exposed by capability value (uuid) without authentication",
+      "description": "POST /ci-portal/webhook/codecheck/v1/task/status returns gate results for any uuid with no authentication; the uuid acts as a bearer credential, so a leaked/guessed uuid exposes and can manipulate gate outcomes.",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Bind status queries to authenticated callers; require an additional auth factor; rotate/shorten token exposure.",
+      "identity_key": {
+        "component_id": "InternalCodeIncController",
+        "data_flow_id": "DF_MachineCaller_to_InternalCodeIncController",
+        "stride_category": "E",
+        "attack_surface": "/ci-portal/webhook/codecheck/v1/task/status by uuid (DF09/DF28)"
+      }
+    },
+    {
+      "id": "T07.2",
+      "title": "Unencoded concatenation of client-supplied values into URLs",
+      "description": "InternalCodeIncDelegateImpl.handleFinishedTask builds openlibingDomain + '/apps/entryCheckDashCode/' + taskId + '/' + uuid with unencoded taskId/uuid, allowing parameter injection into the returned result URL.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "URL-encode path/query components; validate taskId/uuid format before concatenation.",
+      "identity_key": {
+        "component_id": "InternalCodeIncController",
+        "data_flow_id": "DF_MachineCaller_to_InternalCodeIncController",
+        "stride_category": "T",
+        "attack_surface": "handleFinishedTask result URL concatenation (DF09)"
+      }
+    },
+    {
+      "id": "T07.3",
+      "title": "Malformed pr_url triggers exception churn",
+      "description": "pr_url.split('/') requires >=5 segments but indexes up to prStrings[6], throwing ArrayIndexOutOfBoundsException for 5-6 segment URLs and causing repeated error handling and 500s.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Validate PR-URL segment count and format up front; return 4xx for malformed input.",
+      "identity_key": {
+        "component_id": "InternalCodeIncController",
+        "data_flow_id": "DF_MachineCaller_to_InternalCodeIncController",
+        "stride_category": "D",
+        "attack_surface": "pr_url parsing in InternalCodeIncDelegateImpl (DF09)"
+      }
+    },
+    {
+      "id": "T08.1",
+      "title": "Missing permission checks on 6 of 8 export endpoints",
+      "description": "Only /rule/set and /rule/set/export call AuthUtils.checkPermission; /download/log and summary/rule export endpoints expose task logs and rule data to any in-cluster caller without authorization.",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Add permission checks to all export endpoints, especially /download/log; apply a consistent authorization filter.",
+      "identity_key": {
+        "component_id": "FileDownLoadController",
+        "data_flow_id": "DF_EndUser_to_FileDownLoadController",
+        "stride_category": "E",
+        "attack_surface": "/ci-portal/excel/v1/** export endpoints (DF03/DF24)"
+      }
+    },
+    {
+      "id": "T08.2",
+      "title": "Client-supplied identity (userId) enables user impersonation",
+      "description": "userId is a @RequestParam on permission-checked export endpoints, so any caller can impersonate another user by passing their userId to satisfy AuthUtils.checkPermission.",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Derive the user identity from an authenticated session/token, never from a client-supplied parameter.",
+      "identity_key": {
+        "component_id": "FileDownLoadController",
+        "data_flow_id": "DF_EndUser_to_FileDownLoadController",
+        "stride_category": "S",
+        "attack_surface": "userId @RequestParam on export endpoints (DF03)"
+      }
+    },
+    {
+      "id": "T08.3",
+      "title": "Unvalidated filename concatenation enables header/response injection",
+      "description": "tableName + '.xlsx', fileName + '.log', projectName + '规则集.xlsx' build Content-Disposition filenames from unvalidated request parameters, enabling header/response injection and misleading filenames.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Sanitize/whitelist filename components; use Content-Disposition with safe encoding; validate tableName/fileName format.",
+      "identity_key": {
+        "component_id": "FileDownLoadController",
+        "data_flow_id": "DF_EndUser_to_FileDownLoadController",
+        "stride_category": "I",
+        "attack_surface": "Content-Disposition filename building (DF03)"
+      }
+    },
+    {
+      "id": "T09.1",
+      "title": "Client-supplied identity on bulk shield-all operation",
+      "description": "POST /codecheck/inc/task/shield-all-result performs bulk defect shielding with userId taken from the request; the delegate's isReviewer check compares against the spoofable client value, allowing unauthorized shielding.",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Derive userId from an authenticated session; require server-side reviewer identity; audit shield operations.",
+      "identity_key": {
+        "component_id": "CheckboardController",
+        "data_flow_id": "DF_EndUser_to_CheckboardController",
+        "stride_category": "E",
+        "attack_surface": "/codecheck/inc/task/shield-all-result with spoofable userId (DF02)"
+      }
+    },
+    {
+      "id": "T09.2",
+      "title": "Unauthenticated summary/detail reads on board endpoints",
+      "description": "The 13 query endpoints under /ci-portal/v1/** have no controller-level auth, so board summaries, defect details, task file contents, and full/inc metrics are readable by any in-cluster caller.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Add consistent authorization for all read endpoints; enforce repo-level permission checks.",
+      "identity_key": {
+        "component_id": "CheckboardController",
+        "data_flow_id": "DF_EndUser_to_CheckboardController",
+        "stride_category": "I",
+        "attack_surface": "/ci-portal/v1/** read endpoints (DF02/DF21)"
+      }
+    },
+    {
+      "id": "T09.3",
+      "title": "NoSQL query injection via unvalidated query models",
+      "description": "QueryDetailModel, QueryTaskFileContentModel, and IgnoredExtendDTO lack @Valid and whitelisting, so query criteria fields flow into MongoDB queries unsanitized.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Add @Valid + field whitelisting to all query DTOs; centralize NoSQL query construction.",
+      "identity_key": {
+        "component_id": "CheckboardController",
+        "data_flow_id": "DF_CheckboardController_to_MongoDB",
+        "stride_category": "I",
+        "attack_surface": "Unvalidated query DTOs into MongoDB (DF21)"
+      }
+    },
+    {
+      "id": "T10.1",
+      "title": "Over-broad authorization bypasses in AuthUtils.checkPermission",
+      "description": "checkPermission returns true unconditionally for roles admin/platform_operator regardless of project and for any menu with identification general_config, and assertAuthFromSummary returns true for any public repo, widening the authorization surface beyond least privilege.",
+      "stride_category": "E",
+      "tier": 2,
+      "prerequisites": "Authenticated User",
+      "status": "Open",
+      "mitigation": "Restrict admin bypasses to explicit project scopes; validate general_config handling; tighten public-repo assumptions.",
+      "identity_key": {
+        "component_id": "AuthUtils",
+        "data_flow_id": "DF_AuthUtils_to_MySQL",
+        "stride_category": "E",
+        "attack_surface": "AuthUtils.checkPermission role/menu bypass logic (DF30)"
+      }
+    },
+    {
+      "id": "T10.2",
+      "title": "Permission decisions consume client-supplied userId",
+      "description": "AuthUtils permission decisions consume client-supplied userId from FileDownLoadController and CheckboardController rather than a server-authenticated identity, so horizontal privilege escalation is trivial by spoofing another user's id.",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Replace client-supplied userId with session/token-derived identity at all checkPermission call sites.",
+      "identity_key": {
+        "component_id": "AuthUtils",
+        "data_flow_id": "DF_AuthUtils_to_MySQL",
+        "stride_category": "S",
+        "attack_surface": "checkPermission call sites consuming client-supplied userId (DF30)"
+      }
+    },
+    {
+      "id": "T11.1",
+      "title": "Credential material (AK/SK ciphertext) in Redis queues and error logs",
+      "description": "syncRule() serializes {region, akSkVo} ciphertext AK/SK into a Redis task queue, and error paths log the map/JSON containing the AkSkVo ciphertext.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Do not persist AK/SK (even ciphertext) in task queues; redact credential fields from log messages; cache decrypted credentials in-memory with TTL instead.",
+      "identity_key": {
+        "component_id": "RuleSetScheduleTask",
+        "data_flow_id": "DF_RuleSetScheduleTask_to_Redis",
+        "stride_category": "I",
+        "attack_surface": "Redis queue rule_set:languages_severity_rule_set_task_queue and error logs (DF37)"
+      }
+    },
+    {
+      "id": "T11.2",
+      "title": "Rule-set sync dequeue/consume phase runs outside the Redisson lock",
+      "description": "For getAllAccountRule/syncRule/getProjectRuleSets only queue initialization is locked; if the lock is not acquired, consumers still process stale queue content, enabling duplicate or inconsistent rule-set sync.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Move the consume phase inside the lock or use idempotent consumption keys; clear queues on lock failure.",
+      "identity_key": {
+        "component_id": "RuleSetScheduleTask",
+        "data_flow_id": "DF_RuleSetScheduleTask_to_Redis",
+        "stride_category": "A",
+        "attack_surface": "Unlocked dequeue/consume of rule-set sync queues (DF37)"
+      }
+    },
+    {
+      "id": "T12.1",
+      "title": "HTML injection in full-task notification emails",
+      "description": "executionDurationJudgment builds an HTML email body by concatenating repoName, gitUrl, branch, and triggerTime without escaping, so attacker-influenced task metadata can inject HTML/phishing content into recipients' mail clients.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "HTML-escape all interpolated fields; use a templating engine; send text/plain or sanitized HTML.",
+      "identity_key": {
+        "component_id": "SaveFullTaskResult",
+        "data_flow_id": "DF_SaveFullTaskResult_to_SmtpServer",
+        "stride_category": "I",
+        "attack_surface": "Full-task notification email HTML body (DF42)"
+      }
+    },
+    {
+      "id": "T12.2",
+      "title": "Unsanitized persisted defect data enables stored injection",
+      "description": "Huawei CodeCheck API responses are written to MongoDB with only status/emptiness checks and no field-level sanitization of filePath/defectContent, allowing stored XSS/injection content to flow into downstream board rendering and exports.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Sanitize/normalize persisted defect fields; escape at render time.",
+      "identity_key": {
+        "component_id": "SaveFullTaskResult",
+        "data_flow_id": "DF_SaveFullTaskResult_to_MongoDB",
+        "stride_category": "I",
+        "attack_surface": "Unsanitized defect filePath/defectContent persisted to MongoDB (DF40)"
+      }
+    },
+    {
+      "id": "T13.1",
+      "title": "HTML injection in gate-notification emails",
+      "description": "sendExceedThresholdEmail and executionDurationJudgment interpolate taskIncEntity.getId(), mrUrl, triggerTime, projectName into unsanitized HTML bodies, so attacker-influenced MR data can inject HTML/phishing content.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "HTML-escape interpolated fields; use a templating engine.",
+      "identity_key": {
+        "component_id": "SaveIncTaskResult",
+        "data_flow_id": "DF_SaveIncTaskResult_to_SmtpServer",
+        "stride_category": "I",
+        "attack_surface": "Gate-notification email HTML body (DF48)"
+      }
+    },
+    {
+      "id": "T13.2",
+      "title": "Token-based repo operations on spoofable task data",
+      "description": "Decrypted account tokens drive git platform operations for task-supplied git URLs; tampered task records could redirect token use or trigger unwanted platform calls.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Validate git URL against registered repos before using tokens; bind token use to authenticated task origins.",
+      "identity_key": {
+        "component_id": "SaveIncTaskResult",
+        "data_flow_id": "DF_SaveIncTaskResult_to_GitCode",
+        "stride_category": "A",
+        "attack_surface": "Token-based git platform operations keyed on task gitUrl (DF45/DF46/DF47)"
+      }
+    },
+    {
+      "id": "T14.1",
+      "title": "Raw dead-letter content logged by consumer",
+      "description": "handleDeadLetterEvent logs the raw dead-letter message; if task records or sensitive payloads enter the dead-letter queue, their content lands in logs.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Truncate/sanitize dead-letter payloads before logging.",
+      "identity_key": {
+        "component_id": "CodeCheckEventConsumer",
+        "data_flow_id": "DF_RabbitMQ_to_CodeCheckEventConsumer",
+        "stride_category": "I",
+        "attack_surface": "Dead-letter event logging (DF16)"
+      }
+    },
+    {
+      "id": "T15.1",
+      "title": "Unbounded SARIF download causes memory exhaustion",
+      "description": "SarifParseServiceImpl downloads the persisted obsUrl via openStream() with no content-length cap, byte limit, or connect/read timeout, so a malicious or oversized URL causes memory exhaustion in the Jackson parse.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Enforce max download size and timeouts; stream with a bounded reader; validate URL against an allowlist before download.",
+      "identity_key": {
+        "component_id": "StaticAlarmEventConsumer",
+        "data_flow_id": "DF_RabbitMQ_to_StaticAlarmEventConsumer",
+        "stride_category": "D",
+        "attack_surface": "Unbounded SARIF download triggered by parse event (DF17)"
+      }
+    },
+    {
+      "id": "T15.2",
+      "title": "No duplicate-parse protection on static-alarm consumer",
+      "description": "The consumer runs with concurrency 1-3 and takes no Redisson lock; duplicate parse events cause repeated OBS downloads, re-parses, and repeated MongoDB upserts, inflating cost and state churn.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Add idempotency/lock keyed on scanRunId; skip already-parsed runs.",
+      "identity_key": {
+        "component_id": "StaticAlarmEventConsumer",
+        "data_flow_id": "DF_RabbitMQ_to_StaticAlarmEventConsumer",
+        "stride_category": "A",
+        "attack_surface": "Duplicate parse events without idempotency (DF17)"
+      }
+    },
+    {
+      "id": "T16.1",
+      "title": "Message-trusted identity for bulk state changes",
+      "description": "ShieldAllMessage carries userId/op/type/scope published from client-supplied values, so a forged-userId message within the broker causes unauthorized bulk shielding and notification spam.",
+      "stride_category": "A",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Re-validate the operator identity and permission at consume time; bind messages to authenticated callers; verify count/scope against source data.",
+      "identity_key": {
+        "component_id": "ShieldAllConsumer",
+        "data_flow_id": "DF_RabbitMQ_to_ShieldAllConsumer",
+        "stride_category": "A",
+        "attack_surface": "ShieldAllMessage userId/op trusted from broker message (DF18)"
+      }
+    },
+    {
+      "id": "T16.2",
+      "title": "HTML injection in shield notification email",
+      "description": "sendEmail builds an HTML body by concatenating detailUrl without escaping, enabling HTML injection into recipient mail clients.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "HTML-escape detailUrl and all interpolated fields.",
+      "identity_key": {
+        "component_id": "ShieldAllConsumer",
+        "data_flow_id": "DF_RabbitMQ_to_ShieldAllConsumer",
+        "stride_category": "I",
+        "attack_surface": "Shield notification email detailUrl HTML body (DF18)"
+      }
+    },
+    {
+      "id": "T17.1",
+      "title": "Stored query-DTO tampering alters export scope",
+      "description": "StaticAlarmServiceImpl.processExport deserializes the stored export query StaticAlarmQueryDTO from the framework obs_file record and exports matching defects; tampering with the stored DTO changes which defect data is exported to files.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Verify the export query/scope against the requesting user's permissions before export; authenticate the export record origin.",
+      "identity_key": {
+        "component_id": "StaticAlarmExportConsumer",
+        "data_flow_id": "DF_StaticAlarmExportConsumer_to_MongoDB",
+        "stride_category": "I",
+        "attack_surface": "Stored StaticAlarmQueryDTO export scope (DF35)"
+      }
+    },
+    {
+      "id": "T18.1",
+      "title": "SSRF via server-side URL fetch of obsUrl",
+      "description": "downloadAndParse executes URI.create(obsUrl).toURL().openStream() with no scheme/host allowlist, redirect policy, or timeout; an in-cluster caller can make the service fetch arbitrary internal endpoints (metadata, internal services) and parse the response.",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Validate obsUrl against an allowed OBS domain allowlist; block private/internal IP ranges and redirects; add connect/read timeouts.",
+      "identity_key": {
+        "component_id": "SarifParseServiceImpl",
+        "data_flow_id": "DF_SarifParseServiceImpl_to_HuaweiOBS",
+        "stride_category": "I",
+        "attack_surface": "Server-side obsUrl fetch in downloadAndParse (DF49)"
+      }
+    },
+    {
+      "id": "T18.2",
+      "title": "Unbounded download/parse of oversized SARIF",
+      "description": "There is no content-length or byte cap on the SARIF InputStream fed to Jackson and no result/message size bounds in CodeQlSarifParser, so oversized SARIF causes memory exhaustion.",
+      "stride_category": "D",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Enforce max download size, max parse elements, and timeouts; stream with a bounded reader.",
+      "identity_key": {
+        "component_id": "SarifParseServiceImpl",
+        "data_flow_id": "DF_SarifParseServiceImpl_to_HuaweiOBS",
+        "stride_category": "D",
+        "attack_surface": "Unbounded SARIF InputStream fed to Jackson parser (DF49)"
+      }
+    },
+    {
+      "id": "T19.1",
+      "title": "Missing object-key validation in OBS bucket operations",
+      "description": "uploadFile/deleteObject/getObject pass the caller-supplied objectKey straight to the OBS SDK with no key-format or scope validation, so any caller with service access could address any object in the single configured bucket (defense-in-depth).",
+      "stride_category": "I",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Enforce an object-key namespace/pattern allowlist; scope operations to the export prefix.",
+      "identity_key": {
+        "component_id": "ObsBucketServiceImpl",
+        "data_flow_id": "DF_ObsBucketServiceImpl_to_HuaweiOBS",
+        "stride_category": "I",
+        "attack_surface": "OBS object-key passed unvalidated to SDK (DF51)"
+      }
+    },
+    {
+      "id": "T20.1",
+      "title": "MongoDB TLS hostname verification disabled",
+      "description": "MongoConfig enables SSL but sets builder.invalidHostNameAllowed(true), so the client does not verify the MongoDB server hostname, enabling MITM/eavesdropping on the MongoDB connection within the cluster (CWE-295).",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Set invalidHostNameAllowed(false); pin the MongoDB server certificate/CA; enforce hostname verification.",
+      "identity_key": {
+        "component_id": "MongoDB",
+        "data_flow_id": "DF_WebhookController_to_MongoDB",
+        "stride_category": "T",
+        "attack_surface": "MongoConfig SSL hostname verification (DF20-DF50)"
+      }
+    },
+    {
+      "id": "T20.2",
+      "title": "Single shared MongoDB account with no least privilege",
+      "description": "The application uses one decrypted MongoDB credential for all collections and operations, so any application compromise or DB account leak grants full read/write over all scan/defect/alarm data with no per-collection or per-role separation.",
+      "stride_category": "E",
+      "tier": 3,
+      "prerequisites": "MongoDB Compromise",
+      "status": "Open",
+      "mitigation": "Use separate MongoDB roles/users per function; enable MongoDB RBAC; scope credentials to least privilege.",
+      "identity_key": {
+        "component_id": "MongoDB",
+        "data_flow_id": "DF_WebhookController_to_MongoDB",
+        "stride_category": "E",
+        "attack_surface": "Single shared MongoDB credential (DF20-DF50)"
+      }
+    },
+    {
+      "id": "T21.1",
+      "title": "MySQL transport encryption depends on config-center JDBC URL",
+      "description": "DataSourceConfig decrypts the password but configures no TLS in code; if the JDBC URL does not enforce useSSL/requireSSL, MySQL traffic (including roles/permissions queries) travels plaintext in the cluster.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Enforce TLS/SSL in the JDBC URL (useSSL=true&requireSSL=true); verify via config and connection.",
+      "identity_key": {
+        "component_id": "MySQL",
+        "data_flow_id": "DF_AuthUtils_to_MySQL",
+        "stride_category": "T",
+        "attack_surface": "JDBC URL TLS enforcement (DF30/DF38)"
+      }
+    },
+    {
+      "id": "T22.1",
+      "title": "Credential ciphertext at rest in Redis queues",
+      "description": "RuleSetScheduleTask persists {region, akSkVo} ciphertext AK/SK in a Redis list and task status markers; a Redis compromise exposes encrypted credential material and task data despite TLS.",
+      "stride_category": "I",
+      "tier": 3,
+      "prerequisites": "Redis Compromise",
+      "status": "Open",
+      "mitigation": "Avoid persisting credential material in Redis; if needed, use short TTLs and encrypt at a separate layer; restrict Redis access via ACL/network policy.",
+      "identity_key": {
+        "component_id": "Redis",
+        "data_flow_id": "DF_RuleSetScheduleTask_to_Redis",
+        "stride_category": "I",
+        "attack_surface": "Redis queue rule_set:languages_severity_rule_set_task_queue (DF37)"
+      }
+    },
+    {
+      "id": "T23.1",
+      "title": "Plaintext AMQP messaging outside the prod profile",
+      "description": "RabbitConnectionFactoryConfig enables SSL only when the prod profile is active; beta/gama/icsl profiles inherit port 5672 and connect without TLS, so task/alarm messages travel in cleartext across the cluster.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Enable AMQPS (TLS) for all non-local profiles; enforce TLS via config; consider message signing for integrity.",
+      "identity_key": {
+        "component_id": "RabbitMQ",
+        "data_flow_id": "DF_InternalCodeFullController_to_RabbitMQ",
+        "stride_category": "T",
+        "attack_surface": "Non-prod RabbitMQ connections on port 5672 (DF13-DF19)"
+      }
+    },
+    {
+      "id": "T24.1",
+      "title": "Scan results delivered without integrity verification",
+      "description": "The CICD service posts scan results to /codescan/v1/result/receive over plain service-to-service HTTP with no signature or mutual auth, so tampered scan results (altered SARIF/obsUrl) would be accepted and parsed as authoritative.",
+      "stride_category": "T",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Add message signature/HMAC or mTLS between CICD and codecheck; verify pipeline context integrity.",
+      "identity_key": {
+        "component_id": "OpenlibingCicd",
+        "data_flow_id": "DF_OpenlibingCicd_to_StaticAlarmReceiveController",
+        "stride_category": "T",
+        "attack_surface": "Unsigned scan result delivery to /codescan/v1/result/receive (DF12)"
+      }
+    },
+    {
+      "id": "T25.1",
+      "title": "No mutual authentication on Feign calls to framework service",
+      "description": "openlibingFrameworkClient calls are HTTPS but not mutually authenticated; an in-cluster actor could impersonate the framework service and return forged export-task state, altering the CAS export workflow.",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Enable mTLS/service-account identity verification for Feign calls.",
+      "identity_key": {
+        "component_id": "OpenlibingFramework",
+        "data_flow_id": "DF_StaticAlarmExportConsumer_to_OpenlibingFramework",
+        "stride_category": "S",
+        "attack_surface": "Feign call to openlibing-framework without mTLS (DF36)"
+      }
+    },
+    {
+      "id": "T26.1",
+      "title": "Internal callbacks to /internal/** are unauthenticated",
+      "description": "openlibing-coderepo calls /internal/** (rule-set recompute, full task invoke) with no credential, so the trust relationship can be impersonated by any in-cluster actor to trigger recompute/full-scan work.",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Authenticate sibling-service callbacks (mTLS/service token); verify caller identity in /internal/**.",
+      "identity_key": {
+        "component_id": "OpenlibingCoderepo",
+        "data_flow_id": "DF_OpenlibingCoderepo_to_InternalController",
+        "stride_category": "S",
+        "attack_surface": "Unauthenticated /internal/** callbacks from coderepo (DF11)"
+      }
+    },
+    {
+      "id": "T27.1",
+      "title": "Weak or absent XXL-Job executor accessToken",
+      "description": "xxl.job.admin.accessToken is injected from config; if the token is empty or weak, an in-cluster actor can register a spoofed executor or dispatch forged jobs to the application.",
+      "stride_category": "S",
+      "tier": 2,
+      "prerequisites": "Internal Network",
+      "status": "Open",
+      "mitigation": "Enforce a strong, rotated accessToken for executor registration; restrict xxl-job admin network access.",
+      "identity_key": {
+        "component_id": "XxlJob",
+        "data_flow_id": "DF_OpenlibingCodecheckApplication_to_XxlJob",
+        "stride_category": "S",
+        "attack_surface": "XXL-Job executor registration accessToken (DF53)"
+      }
+    },
+    {
+      "id": "T28.1",
+      "title": "Nacos key/ciphertext co-location defeats encryption at rest",
+      "description": "The AES key security.part1 and every encrypted secret reside in the same Nacos group/namespace (OPENLIBING); one Nacos read compromise yields both key and ciphertexts, defeating encryption at rest.",
+      "stride_category": "I",
+      "tier": 3,
+      "prerequisites": "Admin Credentials",
+      "status": "Open",
+      "mitigation": "Store the key in a dedicated secrets manager with independent ACLs and rotation; split sensitive config from application config; enable Nacos ACL/encryption-at-rest.",
+      "identity_key": {
+        "component_id": "Nacos",
+        "data_flow_id": "DF_OpenlibingCodecheckApplication_to_Nacos",
+        "stride_category": "I",
+        "attack_surface": "Nacos group OPENLIBING co-locating security.part1 and ciphertexts (DF10/DF52)"
+      }
+    },
+    {
+      "id": "T29.1",
+      "title": "OBS AK/SK dependency from config exposes all bucket artifacts",
+      "description": "Bucket access uses obs.access-key-id/obs.secret-access-key decrypted from config; a config/credential leak exposes all SARIF scan artifacts and export files in the single bucket.",
+      "stride_category": "I",
+      "tier": 3,
+      "prerequisites": "Admin Credentials",
+      "status": "Open",
+      "mitigation": "Rotate OBS AK/SK; use STS short-lived credentials; restrict bucket ACL to the service account.",
+      "identity_key": {
+        "component_id": "HuaweiOBS",
+        "data_flow_id": "DF_SarifParseServiceImpl_to_HuaweiOBS",
+        "stride_category": "I",
+        "attack_surface": "OBS AK/SK from config-center credentials (DF49/DF51)"
+      }
+    },
+    {
+      "id": "T30.1",
+      "title": "Single point of auth on the /apig/v1/** boundary",
+      "description": "The entire /apig/v1/** boundary trusts the APIG gateway for authentication/rate limiting/audit; a gateway misconfiguration, AppCode leak, or bypass would expose unauthenticated M2M endpoints.",
+      "stride_category": "E",
+      "tier": 3,
+      "prerequisites": "Admin Credentials",
+      "status": "Open",
+      "mitigation": "Add an in-code secondary auth barrier; monitor gateway config; restrict AppCode rotation.",
+      "identity_key": {
+        "component_id": "HuaweiApiG",
+        "data_flow_id": "DF_HuaweiApiG_to_HwApigController",
+        "stride_category": "E",
+        "attack_surface": "APIG gateway as sole auth for /apig/v1/** (DF06/DF07)"
+      }
+    },
+    {
+      "id": "T31.1",
+      "title": "AK/SK dependency and request-object logging to HuaweiCodeCheck",
+      "description": "Scan delegation, rule sync, and result polling use tenant AK/SK; error paths log the whole APIG Request object holding the decrypted key/secret, and an AK/SK leak grants control of scan creation, rule-set sync, and full result readback for all tenants.",
+      "stride_category": "I",
+      "tier": 3,
+      "prerequisites": "Admin Credentials",
+      "status": "Open",
+      "mitigation": "Rotate AK/SK; enforce per-tenant scoping; avoid logging credential-bearing request objects.",
+      "identity_key": {
+        "component_id": "HuaweiCodeCheck",
+        "data_flow_id": "DF_InternalCodeFullController_to_HuaweiCodeCheck",
+        "stride_category": "I",
+        "attack_surface": "Tenant AK/SK signed requests and Request-object logging (DF27/DF29/DF39/DF41/DF44)"
+      }
+    },
+    {
+      "id": "T32.1",
+      "title": "Access tokens in GitCode API URL query parameters",
+      "description": "GitCodeHelper appends ?access_token=<decrypted token> to API URLs; tokens can leak via proxy/access logs, browser history, or Referer headers (CWE-598).",
+      "stride_category": "I",
+      "tier": 3,
+      "prerequisites": "Admin Credentials",
+      "status": "Open",
+      "mitigation": "Send tokens via Authorization header instead of query params; ensure HTTP client does not log URLs.",
+      "identity_key": {
+        "component_id": "GitCode",
+        "data_flow_id": "DF_SaveIncTaskResult_to_GitCode",
+        "stride_category": "I",
+        "attack_surface": "access_token in GitCode API URL query string (DF45/DF55)"
+      }
+    },
+    {
+      "id": "T33.1",
+      "title": "Access tokens in Gitee API URL query parameters",
+      "description": "GiteeHelper appends ?access_token=<decrypted token> to API URLs; tokens can leak via logs, browser history, or Referer (CWE-598).",
+      "stride_category": "I",
+      "tier": 3,
+      "prerequisites": "Admin Credentials",
+      "status": "Open",
+      "mitigation": "Send tokens via Authorization header; avoid logging full URLs.",
+      "identity_key": {
+        "component_id": "Gitee",
+        "data_flow_id": "DF_SaveIncTaskResult_to_Gitee",
+        "stride_category": "I",
+        "attack_surface": "access_token in Gitee API URL query string (DF46)"
+      }
+    },
+    {
+      "id": "T34.1",
+      "title": "Inconsistent GitHub token handling causes mis-credential usage",
+      "description": "GithubPlate.getAccessToken returns accountInfo.getGithubAccessToken() without SecurityHelper.decrypt and getAccountInfo never populates the github token, so GitHub flows may use an un-decrypted/empty token, masking the real auth state.",
+      "stride_category": "A",
+      "tier": 3,
+      "prerequisites": "Admin Credentials",
+      "status": "Open",
+      "mitigation": "Align GitHub token decryption with other platforms; populate/persist github token consistently; fail closed on missing token.",
+      "identity_key": {
+        "component_id": "Github",
+        "data_flow_id": "DF_SaveIncTaskResult_to_Github",
+        "stride_category": "A",
+        "attack_surface": "GitHub token decryption/population inconsistency (DF47)"
+      }
+    },
+    {
+      "id": "T35.1",
+      "title": "SMTP without TLS transmits password and email bodies in plaintext",
+      "description": "EmailUtil.sendEmail configures only mail.smtp.auth=true with no STARTTLS/TLS property, so the sender password and email bodies are transmitted to the mail server in plaintext.",
+      "stride_category": "T",
+      "tier": 3,
+      "prerequisites": "Admin Credentials",
+      "status": "Open",
+      "mitigation": "Enable STARTTLS/TLS (mail.smtp.starttls.enable=true / mail.smtp.ssl.enable=true); enforce server certificate validation.",
+      "identity_key": {
+        "component_id": "SmtpServer",
+        "data_flow_id": "DF_SaveFullTaskResult_to_SmtpServer",
+        "stride_category": "T",
+        "attack_surface": "EmailUtil SMTP transport without TLS (DF42/DF48)"
+      }
+    }
+  ],
+  "findings": [
+    {
+      "id": "FIND-01",
+      "title": "Missing code-level authentication on M2M /apig/v1/** endpoints",
+      "severity": "Important",
+      "cvss_score": 7.8,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-306",
+      "owasp": "A07:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T02.1", "T30.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java"
+      ],
+      "component": "HwApigController",
+      "identity_key": {
+        "component_id": "HwApigController",
+        "vulnerability": "CWE-306",
+        "attack_surface": "/apig/v1/** M2M endpoints (HwApigController.java lines 69-141)"
+      }
+    },
+    {
+      "id": "FIND-02",
+      "title": "Unauthenticated internal & machine endpoints allow unauthorized task triggers",
+      "severity": "Important",
+      "cvss_score": 8,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-306",
+      "owasp": "A07:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T04.1", "T06.1", "T07.1", "T26.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/InternalController.java",
+        "src/main/java/com/openlibing/codecheck/business/controller/InternalCodeFullController.java",
+        "src/main/java/com/openlibing/codecheck/business/controller/InternalCodeIncController.java",
+        "src/main/java/com/openlibing/codecheck/business/operation/codecheck/IncTaskOperation.java"
+      ],
+      "component": "InternalController",
+      "identity_key": {
+        "component_id": "InternalController",
+        "vulnerability": "CWE-306",
+        "attack_surface": "/internal/**, /ci-portal/webhook/codecheck/full/** and /ci-portal/webhook/codecheck/v1/** endpoints"
+      }
+    },
+    {
+      "id": "FIND-03",
+      "title": "Missing authorization on portal/board/webhook read endpoints",
+      "severity": "Important",
+      "cvss_score": 7.2,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-862",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T03.1", "T08.1", "T09.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/FileDownLoadController.java",
+        "src/main/java/com/openlibing/codecheck/business/controller/WebhookController.java",
+        "src/main/java/com/openlibing/codecheck/business/controller/CheckboardController.java"
+      ],
+      "component": "CheckboardController",
+      "identity_key": {
+        "component_id": "CheckboardController",
+        "vulnerability": "CWE-862",
+        "attack_surface": "/ci-portal/excel/v1/**, /ci-portal/v1/** and webhook query endpoints"
+      }
+    },
+    {
+      "id": "FIND-04",
+      "title": "Client-supplied identity enables authorization bypass",
+      "severity": "Critical",
+      "cvss_score": 8.7,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-639",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T08.2", "T09.1", "T10.2", "T16.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/FileDownLoadController.java",
+        "src/main/java/com/openlibing/codecheck/business/controller/CheckboardController.java",
+        "src/main/java/com/openlibing/codecheck/business/impl/ProblemshieldDelegateImpl.java",
+        "src/main/java/com/openlibing/codecheck/business/entity/ShieldAllMessage.java",
+        "src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java"
+      ],
+      "component": "AuthUtils",
+      "identity_key": {
+        "component_id": "AuthUtils",
+        "vulnerability": "CWE-639",
+        "attack_surface": "client-supplied userId in FileDownLoadController lines 128/153, CheckboardController line 239, ShieldAllMessage"
+      }
+    },
+    {
+      "id": "FIND-05",
+      "title": "SSRF via SARIF obsUrl server-side fetch",
+      "severity": "Important",
+      "cvss_score": 7.5,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-918",
+      "owasp": "A06:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T18.1", "T05.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java",
+        "src/main/java/com/openlibing/codecheck/business/entity/dto/alarm/StaticAlarmReceiveDTO.java",
+        "src/main/java/com/openlibing/codecheck/business/controller/alarm/StaticAlarmInternalController.java"
+      ],
+      "component": "SarifParseServiceImpl",
+      "identity_key": {
+        "component_id": "SarifParseServiceImpl",
+        "vulnerability": "CWE-918",
+        "attack_surface": "SarifParseServiceImpl.downloadAndParse obsUrl fetch (line 160)"
+      }
+    },
+    {
+      "id": "FIND-06",
+      "title": "NoSQL injection via insufficient input validation",
+      "severity": "Important",
+      "cvss_score": 8.1,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-943",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T09.3", "T03.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/CheckboardController.java",
+        "src/main/java/com/openlibing/codecheck/business/impl/WebhookDelegateImpl.java"
+      ],
+      "component": "CheckboardController",
+      "identity_key": {
+        "component_id": "CheckboardController",
+        "vulnerability": "CWE-943",
+        "attack_surface": "unvalidated QueryDetailModel/QueryTaskFileContentModel/IgnoredExtendDTO query criteria"
+      }
+    },
+    {
+      "id": "FIND-07",
+      "title": "Sensitive data logged at INFO across controllers",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-532",
+      "owasp": "A09:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T02.2", "T05.3", "T06.2", "T14.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java",
+        "src/main/java/com/openlibing/codecheck/business/service/impl/alarm/StaticAlarmReceiveServiceImpl.java",
+        "src/main/java/com/openlibing/codecheck/business/controller/InternalCodeFullController.java",
+        "src/main/java/com/openlibing/codecheck/business/controller/InternalCodeIncController.java",
+        "src/main/java/com/openlibing/codecheck/business/service/consumer/CodeCheckEventConsumer.java"
+      ],
+      "component": "HwApigController",
+      "identity_key": {
+        "component_id": "HwApigController",
+        "vulnerability": "CWE-532",
+        "attack_surface": "INFO request-body logging (HwApigController line 94, StaticAlarmReceiveServiceImpl line 52, CodeCheckEventConsumer lines 124-127)"
+      }
+    },
+    {
+      "id": "FIND-08",
+      "title": "HTML injection in notification emails",
+      "severity": "Moderate",
+      "cvss_score": 5.4,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:L/SI:L/SA:N",
+      "cwe": "CWE-79",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T12.1", "T13.1", "T16.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/common/utils/email/EmailUtil.java",
+        "src/main/java/com/openlibing/codecheck/business/schedule/SaveFullTaskResult.java",
+        "src/main/java/com/openlibing/codecheck/business/schedule/SaveIncTaskResult.java",
+        "src/main/java/com/openlibing/codecheck/business/impl/ProblemshieldDelegateImpl.java"
+      ],
+      "component": "SaveFullTaskResult",
+      "identity_key": {
+        "component_id": "SaveFullTaskResult",
+        "vulnerability": "CWE-79",
+        "attack_surface": "text/html email bodies built by concatenation (EmailUtil line 165, SaveFullTaskResult lines 294-299)"
+      }
+    },
+    {
+      "id": "FIND-09",
+      "title": "Unbounded SARIF download/parse causes resource exhaustion",
+      "severity": "Important",
+      "cvss_score": 7.5,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+      "cwe": "CWE-770",
+      "owasp": "A06:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T15.1", "T18.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java",
+        "src/main/java/com/openlibing/codecheck/business/service/parser/CodeQlSarifParser.java"
+      ],
+      "component": "SarifParseServiceImpl",
+      "identity_key": {
+        "component_id": "SarifParseServiceImpl",
+        "vulnerability": "CWE-770",
+        "attack_surface": "unbounded SARIF InputStream into Jackson (SarifParseServiceImpl lines 159-168)"
+      }
+    },
+    {
+      "id": "FIND-10",
+      "title": "Scan/parse resource abuse via arbitrary tasking",
+      "severity": "Moderate",
+      "cvss_score": 5,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-400",
+      "owasp": "A06:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T02.3", "T05.4"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java",
+        "src/main/java/com/openlibing/codecheck/business/impl/InternalCodeFullDelegateImpl.java",
+        "src/main/java/com/openlibing/codecheck/business/service/impl/alarm/StaticAlarmReceiveServiceImpl.java"
+      ],
+      "component": "HwApigController",
+      "identity_key": {
+        "component_id": "HwApigController",
+        "vulnerability": "CWE-400",
+        "attack_surface": "arbitrary scan task/parse submission without quota or ownership checks"
+      }
+    },
+    {
+      "id": "FIND-11",
+      "title": "Command/option injection into auto-fix script via branch name",
+      "severity": "Moderate",
+      "cvss_score": 6,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-88",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T04.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/common/security/CommandArgSanitizer.java",
+        "src/main/java/com/openlibing/codecheck/business/impl/PipelineDelegateImpl.java"
+      ],
+      "component": "InternalController",
+      "identity_key": {
+        "component_id": "InternalController",
+        "vulnerability": "CWE-88",
+        "attack_surface": "sanitizeBranchName leading '-' to auto-fix.sh -b (CommandArgSanitizer line 41)"
+      }
+    },
+    {
+      "id": "FIND-12",
+      "title": "Injection via unencoded URL/filename concatenation",
+      "severity": "Moderate",
+      "cvss_score": 5.5,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-93",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T07.2", "T08.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/impl/InternalCodeIncDelegateImpl.java",
+        "src/main/java/com/openlibing/codecheck/business/controller/FileDownLoadController.java"
+      ],
+      "component": "InternalCodeIncController",
+      "identity_key": {
+        "component_id": "InternalCodeIncController",
+        "vulnerability": "CWE-93",
+        "attack_surface": "unencoded URL/filename concatenation (InternalCodeIncDelegateImpl lines 254-273, FileDownLoadController lines 109/193)"
+      }
+    },
+    {
+      "id": "FIND-13",
+      "title": "Malformed PR URL causes exception churn",
+      "severity": "Low",
+      "cvss_score": 3.5,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-20",
+      "owasp": "A10:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T07.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/impl/InternalCodeIncDelegateImpl.java"
+      ],
+      "component": "InternalCodeIncController",
+      "identity_key": {
+        "component_id": "InternalCodeIncController",
+        "vulnerability": "CWE-20",
+        "attack_surface": "pr_url.split('/') ArrayIndexOutOfBounds for 5-6 segment URLs (InternalCodeIncDelegateImpl line 163)"
+      }
+    },
+    {
+      "id": "FIND-14",
+      "title": "AK/SK ciphertext in Redis queues and error logs",
+      "severity": "Important",
+      "cvss_score": 7,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-532",
+      "owasp": "A04:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T11.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/schedule/RuleSetScheduleTask.java"
+      ],
+      "component": "RuleSetScheduleTask",
+      "identity_key": {
+        "component_id": "RuleSetScheduleTask",
+        "vulnerability": "CWE-532",
+        "attack_surface": "AK/SK ciphertext serialized into Redis queue and error logs (RuleSetScheduleTask lines 319-331, 327, 354)"
+      }
+    },
+    {
+      "id": "FIND-15",
+      "title": "Rule-set sync consume phase runs outside lock",
+      "severity": "Moderate",
+      "cvss_score": 5,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-362",
+      "owasp": "A06:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T11.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/schedule/RuleSetScheduleTask.java"
+      ],
+      "component": "RuleSetScheduleTask",
+      "identity_key": {
+        "component_id": "RuleSetScheduleTask",
+        "vulnerability": "CWE-362",
+        "attack_surface": "dequeue/consume phase outside Redisson lock (RuleSetScheduleTask lines 143, 295, 473)"
+      }
+    },
+    {
+      "id": "FIND-16",
+      "title": "Unsanitized persisted defect data enables stored injection",
+      "severity": "Moderate",
+      "cvss_score": 5.4,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:L/SI:L/SA:N",
+      "cwe": "CWE-116",
+      "owasp": "A05:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T12.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/schedule/SaveFullTaskResult.java",
+        "src/main/java/com/openlibing/codecheck/business/operation/codecheck/FullSummaryOperation.java",
+        "src/main/java/com/openlibing/codecheck/business/operation/codecheck/FullDetailsOperation.java"
+      ],
+      "component": "SaveFullTaskResult",
+      "identity_key": {
+        "component_id": "SaveFullTaskResult",
+        "vulnerability": "CWE-116",
+        "attack_surface": "unsanitized filePath/defectContent persisted to MongoDB (SaveFullTaskResult lines 873-914)"
+      }
+    },
+    {
+      "id": "FIND-17",
+      "title": "Duplicate static-alarm parsing without idempotency",
+      "severity": "Low",
+      "cvss_score": 3.8,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-799",
+      "owasp": "A06:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T15.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/consumer/StaticAlarmEventConsumer.java",
+        "src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java"
+      ],
+      "component": "StaticAlarmEventConsumer",
+      "identity_key": {
+        "component_id": "StaticAlarmEventConsumer",
+        "vulnerability": "CWE-799",
+        "attack_surface": "duplicate parse events without idempotency/lock (StaticAlarmEventConsumer lines 34-44)"
+      }
+    },
+    {
+      "id": "FIND-18",
+      "title": "Stored export DTO tampering alters export scope",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-345",
+      "owasp": "A08:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T17.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/impl/alarm/StaticAlarmServiceImpl.java"
+      ],
+      "component": "StaticAlarmExportConsumer",
+      "identity_key": {
+        "component_id": "StaticAlarmExportConsumer",
+        "vulnerability": "CWE-345",
+        "attack_surface": "stored StaticAlarmQueryDTO deserialized for export (StaticAlarmServiceImpl lines 1211-1217)"
+      }
+    },
+    {
+      "id": "FIND-19",
+      "title": "MongoDB TLS hostname verification disabled",
+      "severity": "Important",
+      "cvss_score": 7.4,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-295",
+      "owasp": "A04:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T20.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/common/config/mongo/MongoConfig.java"
+      ],
+      "component": "MongoDB",
+      "identity_key": {
+        "component_id": "MongoDB",
+        "vulnerability": "CWE-295",
+        "attack_surface": "invalidHostNameAllowed(true) disables hostname verification (MongoConfig lines 66-70)"
+      }
+    },
+    {
+      "id": "FIND-20",
+      "title": "Datastore transport encryption gaps (MySQL, RabbitMQ)",
+      "severity": "Moderate",
+      "cvss_score": 5.9,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-319",
+      "owasp": "A04:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T21.1", "T23.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/common/config/mongo/DataSourceConfig.java",
+        "src/main/java/com/openlibing/codecheck/common/config/rabbitmq/RabbitConnectionFactoryConfig.java"
+      ],
+      "component": "RabbitMQ",
+      "identity_key": {
+        "component_id": "RabbitMQ",
+        "vulnerability": "CWE-319",
+        "attack_surface": "MySQL JDBC URL no TLS enforcement; RabbitMQ TLS only in prod profile (DataSourceConfig line 73, RabbitConnectionFactoryConfig lines 57-60)"
+      }
+    },
+    {
+      "id": "FIND-21",
+      "title": "Scan results delivered without integrity verification",
+      "severity": "Important",
+      "cvss_score": 7,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-345",
+      "owasp": "A08:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T24.1", "T05.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/controller/alarm/StaticAlarmReceiveController.java",
+        "src/main/java/com/openlibing/codecheck/business/controller/alarm/StaticAlarmInternalController.java",
+        "src/main/java/com/openlibing/codecheck/business/service/impl/alarm/StaticAlarmReceiveServiceImpl.java"
+      ],
+      "component": "StaticAlarmReceiveController",
+      "identity_key": {
+        "component_id": "StaticAlarmReceiveController",
+        "vulnerability": "CWE-345",
+        "attack_surface": "scan results delivered over unauthenticated HTTP without signature (StaticAlarmReceiveController lines 37-40)"
+      }
+    },
+    {
+      "id": "FIND-22",
+      "title": "Feign service calls without mutual authentication",
+      "severity": "Moderate",
+      "cvss_score": 5.6,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-306",
+      "owasp": "A07:2025",
+      "tier": 2,
+      "effort": "High",
+      "related_threats": ["T25.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/consumer/StaticAlarmExportConsumer.java"
+      ],
+      "component": "OpenlibingFramework",
+      "identity_key": {
+        "component_id": "OpenlibingFramework",
+        "vulnerability": "CWE-306",
+        "attack_surface": "Feign calls to sibling microservices without mTLS (StaticAlarmExportConsumer lines 963-1042)"
+      }
+    },
+    {
+      "id": "FIND-23",
+      "title": "XXL-Job executor registration token may be weak or absent",
+      "severity": "Moderate",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:N/VI:L/VA:L/SC:N/SI:N/SA:N",
+      "cwe": "CWE-306",
+      "owasp": "A07:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T27.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/common/config/XxlJobConfig.java",
+        "src/main/java/com/openlibing/codecheck/common/job/XxlJobHandler.java"
+      ],
+      "component": "XxlJob",
+      "identity_key": {
+        "component_id": "XxlJob",
+        "vulnerability": "CWE-306",
+        "attack_surface": "xxl.job.admin.accessToken may be empty or weak (XxlJobConfig lines 27-28, 58)"
+      }
+    },
+    {
+      "id": "FIND-24",
+      "title": "Over-broad authorization bypasses in AuthUtils",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-862",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T10.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java"
+      ],
+      "component": "AuthUtils",
+      "identity_key": {
+        "component_id": "AuthUtils",
+        "vulnerability": "CWE-862",
+        "attack_surface": "admin/platform_operator unconditional bypass and general_config menu bypass (AuthUtils lines 155-168, 357-359, 371-377)"
+      }
+    },
+    {
+      "id": "FIND-25",
+      "title": "OBS object-key validation absent (defense-in-depth)",
+      "severity": "Low",
+      "cvss_score": 3.7,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-284",
+      "owasp": "A01:2025",
+      "tier": 2,
+      "effort": "Low",
+      "related_threats": ["T19.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/impl/ObsBucketServiceImpl.java",
+        "src/main/java/com/openlibing/codecheck/business/service/impl/alarm/StaticAlarmServiceImpl.java"
+      ],
+      "component": "ObsBucketServiceImpl",
+      "identity_key": {
+        "component_id": "ObsBucketServiceImpl",
+        "vulnerability": "CWE-284",
+        "attack_surface": "caller-supplied objectKey passed to OBS SDK unvalidated (ObsBucketServiceImpl lines 88-129)"
+      }
+    },
+    {
+      "id": "FIND-26",
+      "title": "Token use redirectable via tampered task git URL",
+      "severity": "Moderate",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-345",
+      "owasp": "A08:2025",
+      "tier": 2,
+      "effort": "Medium",
+      "related_threats": ["T13.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/schedule/SaveIncTaskResult.java",
+        "src/main/java/com/openlibing/codecheck/common/codeplate/CodePlateHelper.java"
+      ],
+      "component": "SaveIncTaskResult",
+      "identity_key": {
+        "component_id": "SaveIncTaskResult",
+        "vulnerability": "CWE-345",
+        "attack_surface": "token use driven by task-supplied gitUrl (SaveIncTaskResult lines 307-320, CodePlateHelper lines 117-133)"
+      }
+    },
+    {
+      "id": "FIND-27",
+      "title": "Nacos key/ciphertext co-location and config spoofing",
+      "severity": "Important",
+      "cvss_score": 8,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+      "cwe": "CWE-321",
+      "owasp": "A04:2025",
+      "tier": 3,
+      "effort": "High",
+      "related_threats": ["T01.1", "T01.2", "T28.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/common/utils/security/SecurityHelper.java",
+        "src/main/resources/application-prod.yaml",
+        "src/main/resources/application-beta.yaml"
+      ],
+      "component": "Nacos",
+      "identity_key": {
+        "component_id": "Nacos",
+        "vulnerability": "CWE-321",
+        "attack_surface": "security.part1 and ciphertexts co-located in Nacos group OPENLIBING (SecurityHelper lines 27-38, application-prod.yaml lines 3-20)"
+      }
+    },
+    {
+      "id": "FIND-28",
+      "title": "Decrypted repo tokens exposed in process argv",
+      "severity": "Important",
+      "cvss_score": 6.8,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-200",
+      "owasp": "A04:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T04.3"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/impl/PipelineDelegateImpl.java"
+      ],
+      "component": "InternalController",
+      "identity_key": {
+        "component_id": "InternalController",
+        "vulnerability": "CWE-200",
+        "attack_surface": "decrypted tokens passed as argv to auto-fix.sh (PipelineDelegateImpl lines 147-197)"
+      }
+    },
+    {
+      "id": "FIND-29",
+      "title": "Single shared MongoDB credential, no least privilege",
+      "severity": "Moderate",
+      "cvss_score": 5,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-250",
+      "owasp": "A01:2025",
+      "tier": 3,
+      "effort": "High",
+      "related_threats": ["T20.2"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/common/config/mongo/MongoConfig.java"
+      ],
+      "component": "MongoDB",
+      "identity_key": {
+        "component_id": "MongoDB",
+        "vulnerability": "CWE-250",
+        "attack_surface": "single MongoDB credential for all collections and operations (MongoConfig lines 54-73)"
+      }
+    },
+    {
+      "id": "FIND-30",
+      "title": "AK/SK ciphertext at rest in Redis",
+      "severity": "Moderate",
+      "cvss_score": 5,
+      "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-312",
+      "owasp": "A04:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T22.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/schedule/RuleSetScheduleTask.java",
+        "src/main/java/com/openlibing/codecheck/common/config/RedisConfig.java"
+      ],
+      "component": "Redis",
+      "identity_key": {
+        "component_id": "Redis",
+        "vulnerability": "CWE-312",
+        "attack_surface": "AK/SK ciphertext persisted in Redis queue (RuleSetScheduleTask lines 319-331, RedisConfig lines 67-73)"
+      }
+    },
+    {
+      "id": "FIND-31",
+      "title": "Access tokens transmitted in URL query parameters",
+      "severity": "Important",
+      "cvss_score": 6.5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-598",
+      "owasp": "A04:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T32.1", "T33.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/common/codeplate/GitCodeHelper.java",
+        "src/main/java/com/openlibing/codecheck/common/codeplate/GiteeHelper.java"
+      ],
+      "component": "GitCode",
+      "identity_key": {
+        "component_id": "GitCode",
+        "vulnerability": "CWE-598",
+        "attack_surface": "access_token in GitCode/Gitee API URL query string (GitCodeHelper lines 89-93, GiteeHelper lines 70-71)"
+      }
+    },
+    {
+      "id": "FIND-32",
+      "title": "Inconsistent GitHub token handling",
+      "severity": "Low",
+      "cvss_score": 3,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-696",
+      "owasp": "A07:2025",
+      "tier": 3,
+      "effort": "Low",
+      "related_threats": ["T34.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/common/codeplate/GithubPlate.java",
+        "src/main/java/com/openlibing/codecheck/common/enums/CodeCheckOrganization.java"
+      ],
+      "component": "Github",
+      "identity_key": {
+        "component_id": "Github",
+        "vulnerability": "CWE-696",
+        "attack_surface": "GithubPlate.getAccessToken lacks decrypt; github token never populated (GithubPlate lines 59-64, CodeCheckOrganization lines 141-157)"
+      }
+    },
+    {
+      "id": "FIND-33",
+      "title": "SMTP without TLS",
+      "severity": "Moderate",
+      "cvss_score": 5.9,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-319",
+      "owasp": "A04:2025",
+      "tier": 3,
+      "effort": "Low",
+      "related_threats": ["T35.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/common/utils/email/EmailUtil.java",
+        "src/main/java/com/openlibing/codecheck/common/utils/email/EmailAccount.java"
+      ],
+      "component": "SmtpServer",
+      "identity_key": {
+        "component_id": "SmtpServer",
+        "vulnerability": "CWE-319",
+        "attack_surface": "SMTP transport without STARTTLS/TLS (EmailUtil lines 67-71)"
+      }
+    },
+    {
+      "id": "FIND-34",
+      "title": "OBS credential dependency",
+      "severity": "Moderate",
+      "cvss_score": 5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-522",
+      "owasp": "A04:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T29.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/business/service/impl/ObsBucketServiceImpl.java"
+      ],
+      "component": "HuaweiOBS",
+      "identity_key": {
+        "component_id": "HuaweiOBS",
+        "vulnerability": "CWE-522",
+        "attack_surface": "OBS AK/SK decrypted from config (ObsBucketServiceImpl lines 42-52)"
+      }
+    },
+    {
+      "id": "FIND-35",
+      "title": "HuaweiCodeCheck AK/SK handling and request-object logging",
+      "severity": "Moderate",
+      "cvss_score": 5,
+      "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N",
+      "cwe": "CWE-532",
+      "owasp": "A04:2025",
+      "tier": 3,
+      "effort": "Medium",
+      "related_threats": ["T31.1"],
+      "evidence_files": [
+        "src/main/java/com/openlibing/codecheck/common/utils/codecheck/RestCodeCheckUtil.java",
+        "src/main/java/com/openlibing/codecheck/common/enums/CodeCheckOrganization.java"
+      ],
+      "component": "HuaweiCodeCheck",
+      "identity_key": {
+        "component_id": "HuaweiCodeCheck",
+        "vulnerability": "CWE-532",
+        "attack_surface": "APIG Request object holding decrypted AK/SK logged on error paths (RestCodeCheckUtil lines 525-526, 167/209/751/797-800/838/1001/1080/1193/1356)"
+      }
+    }
+  ],
+  "metrics": {
+    "total_components": 38,
+    "total_boundaries": 3,
+    "total_flows": 55,
+    "total_threats": 59,
+    "total_findings": 35,
+    "threats_by_tier": {
+      "T1": 0,
+      "T2": 46,
+      "T3": 13
+    },
+    "findings_by_tier": {
+      "T1": 0,
+      "T2": 26,
+      "T3": 9
+    },
+    "threats_by_stride": {
+      "S": 7,
+      "T": 7,
+      "R": 0,
+      "I": 25,
+      "D": 3,
+      "E": 9,
+      "A": 8
+    },
+    "findings_by_severity": {
+      "Critical": 1,
+      "Important": 12,
+      "Moderate": 18,
+      "Low": 4
+    }
+  }
+}

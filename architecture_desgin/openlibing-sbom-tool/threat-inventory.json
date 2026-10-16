@@ -1,0 +1,214 @@
+{
+  "meta": {
+    "generated_at": "2026-09-02T18:33:00+08:00",
+    "analysis_mode": "single-repository-full",
+    "tool": "threat-model-analyst",
+    "repo_root": "d:/CODE/JAVACODE/openlibing-sbom/sbom-tools",
+    "scope": [
+      "sbom-generator",
+      "sbom-tracer",
+      "sbom-ort",
+      "sbom-server (JAR integration surface)"
+    ],
+    "report_file": "threat-model-report.md",
+    "notes": "sbom-generator 与 sbom-tracer 为离线 SBOM 生成工具；sbom-ort 通过 Maven JAR 交付给 sbom-server 进程内调用。"
+  },
+  "findings": [
+    {
+      "id": "FIND-01",
+      "tier": 1,
+      "title": "构建日志 wget/curl URL 内嵌凭据未剥离即写入 SBOM downloadLocation 并发布",
+      "threats": ["T02.I1", "T05.I1"],
+      "cvss": 8.7,
+      "status": "OPEN",
+      "location": "sbom-generator/sbom_runner/sbomAnalyzeLog.py:118-152",
+      "fix_priority": "P1"
+    },
+    {
+      "id": "FIND-02",
+      "tier": 1,
+      "title": "bash -c 字符串拼接 venv 路径与 requirements 路径，命令注入",
+      "threats": ["T01.T2"],
+      "cvss": 9.3,
+      "status": "OPEN",
+      "location": "sbom-generator/syft/source/extractor.go installDependencies()",
+      "fix_priority": "P1"
+    },
+    {
+      "id": "FIND-03",
+      "tier": 1,
+      "title": "sbom-server JVM 内运行 ORT analyzer 解析不可信项目，项目内构建脚本获得服务端代码执行",
+      "threats": ["T12.E1", "T12.A1"],
+      "cvss": 10.0,
+      "status": "OPEN",
+      "location": "analyzer/src/main/java/org/opensourceway/sbom/analyzer/AbstractBaseAnalyzer.java:187-228",
+      "fix_priority": "P0"
+    },
+    {
+      "id": "FIND-04",
+      "tier": 2,
+      "title": "OBS AK/SK 经 CLI 位置参数与环境变量传递，ps/日志可见并过度传播",
+      "threats": ["T02.I2", "T02.E1", "T06.S1"],
+      "cvss": 6.9,
+      "status": "OPEN",
+      "location": "sbom-generator/sbom_runner/run.sh:1-8",
+      "fix_priority": "P1"
+    },
+    {
+      "id": "FIND-05",
+      "tier": 2,
+      "title": "发布签名 HMAC(secret, accountid+timestamp) 无 nonce、未绑定请求体，可重放",
+      "threats": ["T02.S1", "T07.S1"],
+      "cvss": 6.3,
+      "status": "OPEN",
+      "location": "sbom-generator/sbom_runner/sbom-gen-upload.py:150-186",
+      "fix_priority": "P2"
+    },
+    {
+      "id": "FIND-06",
+      "tier": 2,
+      "title": "SSH 私钥 COPY 进镜像层 + StrictHostKeyChecking=no + 克隆未固定 commit",
+      "threats": ["T08.S1", "T08.T1", "T06.S1"],
+      "cvss": 6.9,
+      "status": "OPEN",
+      "location": "sbom-generator/Dockerfile_CodeArts",
+      "fix_priority": "P1"
+    },
+    {
+      "id": "FIND-07",
+      "tier": 2,
+      "title": "go env -w GONOSUMDB=* 禁用 sumdb 校验，模块可被任意替换",
+      "threats": ["T09.T2"],
+      "cvss": 7.1,
+      "status": "OPEN",
+      "location": "sbom-generator Dockerfile",
+      "fix_priority": "P1"
+    },
+    {
+      "id": "FIND-08",
+      "tier": 2,
+      "title": "SBOM 全程无签名；OBS meta.json 无 schema/来源校验即驱动发布",
+      "threats": ["T02.A1", "T05.T1", "T06.T1", "T07.T1"],
+      "cvss": 7.7,
+      "status": "OPEN",
+      "location": "sbom-generator/sbom_runner/sbom-gen-upload.py",
+      "fix_priority": "P1"
+    },
+    {
+      "id": "FIND-09",
+      "tier": 2,
+      "title": "默认 http scheme 代码路径与可传 http 的 OBS/SBOM endpoint，明文传输凭据与 SBOM",
+      "threats": ["T01.I2", "T07.T1"],
+      "cvss": 6.9,
+      "status": "OPEN",
+      "location": "sbom-generator/internal/anchore/client.go:63-69",
+      "fix_priority": "P2"
+    },
+    {
+      "id": "FIND-10",
+      "tier": 2,
+      "title": "ORT Dockerfile 删除 gradle wrapper distributionSha256Sum，构建期 wrapper 可被替换",
+      "threats": ["T03.T1"],
+      "cvss": 7.1,
+      "status": "OPEN",
+      "location": "sbom-ort/Dockerfile:52-54",
+      "fix_priority": "P1"
+    },
+    {
+      "id": "FIND-11",
+      "tier": 2,
+      "title": "恶意归档内 symlink 指向宿主敏感文件，cataloger 跟随读取后内容进入 SBOM",
+      "threats": ["T01.I1", "T04.T1"],
+      "cvss": 5.9,
+      "status": "OPEN",
+      "location": "sbom-generator/syft/source/extractor.go",
+      "fix_priority": "P2"
+    },
+    {
+      "id": "FIND-12",
+      "tier": 2,
+      "title": "zip 炸弹与 OBS 全量下载无总量上限，CI 磁盘/CPU 资源耗尽",
+      "threats": ["T01.D1", "T02.D1", "T04.D1"],
+      "cvss": 5.9,
+      "status": "OPEN",
+      "location": "sbom-generator/sbom_runner/download_file_from_obs.py",
+      "fix_priority": "P2"
+    },
+    {
+      "id": "FIND-13",
+      "tier": 2,
+      "title": "sbom-ort 发布 JAR 无签名、消费侧固定 1.0.0 引入且无校验和校验，制品仓库篡改即向 sbom-server 类路径注入代码",
+      "threats": ["T11.T1", "T11.E1"],
+      "cvss": 8.1,
+      "status": "OPEN",
+      "location": "sbom-ort/build.gradle.kts:364-393",
+      "fix_priority": "P1"
+    },
+    {
+      "id": "FIND-14",
+      "tier": 2,
+      "title": "JAR 发布身份未做密码学绑定、版本无不可变保护，同坐标版本可被恶意覆盖发布",
+      "threats": ["T11.S1"],
+      "cvss": 6.3,
+      "status": "OPEN",
+      "location": "sbom-ort/build.gradle.kts",
+      "fix_priority": "P2"
+    },
+    {
+      "id": "FIND-15",
+      "tier": 2,
+      "title": "ORT 传递依赖未做审计/门禁，恶意或含漏洞的传递依赖随 JAR 进入 sbom-server 类路径",
+      "threats": ["T11.T2"],
+      "cvss": 5.9,
+      "status": "OPEN",
+      "location": "sbom-ort/build.gradle.kts",
+      "fix_priority": "P2"
+    },
+    {
+      "id": "FIND-16",
+      "tier": 2,
+      "title": "进程内分析与服务端凭据共享权限域，无进程/权限隔离，代码执行直达数据库连接串与配置中心",
+      "threats": ["T12.I1", "T12.T1"],
+      "cvss": 6.9,
+      "status": "OPEN",
+      "location": "analyzer/src/main/java/org/opensourceway/sbom/analyzer/AbstractBaseAnalyzer.java:79-100",
+      "fix_priority": "P2"
+    },
+    {
+      "id": "FIND-17",
+      "tier": 3,
+      "title": "扫描与发布行为无持久化/防篡改审计日志，不可归责",
+      "threats": ["T01.R1", "T02.R1", "T07.R1"],
+      "cvss": 5.3,
+      "status": "OPEN",
+      "location": "sbom-generator/sbom_runner/",
+      "fix_priority": "P3"
+    },
+    {
+      "id": "FIND-18",
+      "tier": 3,
+      "title": "advisor 漏洞咨询响应无完整性校验，可被篡改导致漏报/误报",
+      "threats": ["T10.T1"],
+      "cvss": 5.3,
+      "status": "OPEN",
+      "location": "sbom-ort/clients/",
+      "fix_priority": "P3"
+    },
+    {
+      "id": "FIND-19",
+      "tier": 3,
+      "title": "容器加固缺失：root 运行、基础镜像 EOL、环境变量过度传播",
+      "threats": ["T02.E1", "T04.T1", "T04.I1"],
+      "cvss": 6.2,
+      "status": "OPEN",
+      "location": "sbom-generator Dockerfile",
+      "fix_priority": "P3"
+    }
+  ],
+  "summary": {
+    "total": 19,
+    "by_tier": { "tier1": 3, "tier2": 13, "tier3": 3 },
+    "by_status": { "OPEN": 19 },
+    "by_priority": { "P0": 1, "P1": 8, "P2": 7, "P3": 3 }
+  }
+}

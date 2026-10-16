@@ -1,0 +1,69 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'background': '#ffffff', 'primaryColor': '#ffffff', 'lineColor': '#666666' }}}%%
+flowchart LR
+    classDef process fill:#6baed6,stroke:#2171b5,stroke-width:2px,color:#000000
+    classDef external fill:#fdae61,stroke:#d94701,stroke-width:2px,color:#000000
+    classDef datastore fill:#74c476,stroke:#238b45,stroke-width:2px,color:#000000
+
+    EndUser["EndUser"]:::external
+    MachineCaller["MachineCaller"]:::external
+    Operator["Operator"]:::external
+
+    subgraph CodecheckService["CodecheckService (openlibing-codecheck pod)"]
+        HwApigController(("HwApigController")):::process
+        WebhookController(("WebhookController")):::process
+        InternalController(("InternalController")):::process
+        StaticAlarmReceiveController(("StaticAlarmReceiveController")):::process
+        PortalAPIs(("Portal APIs<br/>(InternalCodeFull, InternalCodeInc,<br/>FileDownLoad, Checkboard)")):::process
+        BackgroundJobs(("Background Jobs<br/>(RuleSetScheduleTask, SaveFull/IncTaskResult,<br/>CodeCheck/StaticAlarm/ShieldAll/Export Consumers)")):::process
+        CoreServices(("App Host & Core Services<br/>(OpenlibingCodecheckApplication,<br/>AuthUtils, SarifParseServiceImpl, ObsBucketServiceImpl)")):::process
+    end
+
+    subgraph ClusterServices["ClusterServices (K8s/VPC backing services)"]
+        MongoDB[("MongoDB")]:::datastore
+        MySQL[("MySQL")]:::datastore
+        Redis[("Redis")]:::datastore
+        RabbitMQ[("RabbitMQ")]:::datastore
+        SiblingServices["Sibling Services<br/>(OpenlibingCicd, OpenlibingFramework,<br/>OpenlibingCoderepo, XxlJob)"]:::external
+    end
+
+    subgraph ExternalServices["ExternalServices (public cloud / internet)"]
+        Nacos["Nacos"]:::external
+        HuaweiApiG["HuaweiApiG"]:::external
+        HuaweiCodeCheck["HuaweiCodeCheck"]:::external
+        CloudPlatforms["Cloud & Platforms<br/>(HuaweiOBS, GitCode, Gitee, Github, SmtpServer)"]:::external
+    end
+
+    EndUser <-->|"SDF01: HTTP via ci-portal backend, portal ops"| PortalAPIs
+    EndUser <-->|"SDF02: HTTP via ci-portal backend, webhook query"| WebhookController
+    MachineCaller <-->|"SDF03: HTTPS, M2M API calls"| HuaweiApiG
+    HuaweiApiG <-->|"SDF04: HTTPS, authenticated forwarding"| HwApigController
+    MachineCaller <-->|"SDF05: HTTP, machine API calls"| PortalAPIs
+    Operator <-->|"SDF06: HTTPS, config administration"| Nacos
+    SiblingServices <-->|"SDF07: HTTP, service callbacks"| InternalController
+    SiblingServices <-->|"SDF08: HTTP, scan result delivery"| StaticAlarmReceiveController
+    PortalAPIs <-->|"SDF09: AMQP, task events"| RabbitMQ
+    StaticAlarmReceiveController <-->|"SDF10: AMQP, alarm parse events"| RabbitMQ
+    RabbitMQ <-->|"SDF11: AMQP, consume tasks"| BackgroundJobs
+    PortalAPIs <-->|"SDF12: NoSQL/BSON, data queries and task records"| MongoDB
+    PortalAPIs <-->|"SDF13: SQL, project/repo/user data"| MySQL
+    CoreServices <-->|"SDF14: SQL, roles/permissions"| MySQL
+    CoreServices <-->|"SDF15: NoSQL/BSON, summaries and parsed alarms"| MongoDB
+    PortalAPIs <-->|"SDF16: HTTPS AK/SK, create scan tasks"| HuaweiCodeCheck
+    BackgroundJobs <-->|"SDF17: RESP, queues/locks/AK-SK cache"| Redis
+    BackgroundJobs <-->|"SDF18: SQL, tenants/projects/repos"| MySQL
+    BackgroundJobs <-->|"SDF19: HTTPS AK/SK, rule sync and result polling"| HuaweiCodeCheck
+    BackgroundJobs <-->|"SDF20: NoSQL/BSON, result writes"| MongoDB
+    BackgroundJobs <-->|"SDF21: HTTPS/SMTP, repo ops and notifications"| CloudPlatforms
+    CoreServices <-->|"SDF22: HTTPS, SARIF download and file ops"| CloudPlatforms
+    BackgroundJobs <-->|"SDF23: HTTPS Feign, export delivery"| SiblingServices
+    PortalAPIs <-->|"SDF24: HTTPS Feign, code metrics"| SiblingServices
+    InternalController <-->|"SDF25: HTTPS Feign, pipeline trigger"| SiblingServices
+    InternalController <-->|"SDF26: HTTPS, PR event processing"| CloudPlatforms
+    CoreServices <-->|"SDF27: HTTPS, config/discovery"| Nacos
+    CoreServices <-->|"SDF28: HTTP, executor registration"| SiblingServices
+
+    style CodecheckService fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+    style ClusterServices fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+    style ExternalServices fill:none,stroke:#e31a1c,stroke-width:3px,stroke-dasharray: 5 5
+
+    linkStyle default stroke:#666666,stroke-width:2px
