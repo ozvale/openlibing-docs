@@ -2,7 +2,7 @@
 
 - 变更目录：`spec/openlibing-web/task_design/2026-10-19-operation-log-page/`
 - 业务分支：`dev-chenning-20260923-log`（fork 仓 `weixin_45521051/openlibing-web`）
-- 基线：`upstream/master`，领先 27 个 commit，约 3770 行改动（24 文件）
+- 基线：`upstream/master`，领先 28 个 commit，约 3770 行改动（24 文件）
 - 日期：2026-10-19
 
 ## Why
@@ -45,7 +45,7 @@
 
 - **受影响代码**：
   - 新增：`src/components/DateRangePicker/`（DateRangePanel.vue、dateRange.ts、index.ts、README、DEVUI-LICENSE、`__tests__/dateRange.spec.ts`）、`src/views/Repos/operationLog.vue`、`src/views/Repos/components/JsonDiffViewer.vue`、`src/views/manageCenter/log/operationLogUnified.vue`、`src/components/CategorySearch/__tests__/datetime.spec.ts`
-  - 修改：`src/components/CategorySearch/CategorySearch.vue`、`CategorySearchEditor.vue`、`types.ts`；`src/views/Repos/components/ColumnFilter.vue`、`index.vue`；`src/views/authorityManagement/menu.vue`；`src/views/manageCenter/index.vue`；`src/router/manageRouter.ts`、`src/router/routes/modules/noMenu.ts`；`src/api/api.ts`、`src/api/url.ts`、`src/api/Repos/api.ts`、`src/api/Repos/url.ts`；`src/constants/permissions-meta.ts`
+  - 修改：`src/components/CategorySearch/CategorySearch.vue`、`CategorySearchEditor.vue`、`types.ts`；`src/views/Repos/components/ColumnFilter.vue`；`src/views/Repos/index.vue`；`src/views/authorityManagement/menu.vue`；`src/views/manageCenter/index.vue`；`src/router/manageRouter.ts`、`src/router/routes/modules/noMenu.ts`；`src/api/api.ts`、`src/api/url.ts`、`src/api/Repos/api.ts`、`src/api/Repos/url.ts`；`src/constants/permissions-meta.ts`
 - **受影响接口**（framework/repo 网关代理）：`POST /manage/operation-logs/list`、`GET /manage/operation-logs/modules`、`GET /manage/operation-logs/{id}`、`POST /repo/logging/list`、`POST /repo/logging/filter-meta`；菜单配置保存接口新增 `writeLog` 字段。
 - **风险**：
   - 相对快捷键（今天/最近 7 天等）以 key 字符串存储、查询时以当时时间重算，跨天打开页面区间会随时间漂移（预期语义，但需与用户预期一致）。
