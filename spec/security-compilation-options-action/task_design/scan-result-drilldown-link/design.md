@@ -5,7 +5,7 @@
 - **涉及仓库**：security-compilation-options-action、openlibing-cicd
 - **流程模式**：Full
 - **日期**：2026-09-29
-- **修订**：2026-10-19 输出通道收敛为仅 `ATOMGIT_OUTPUT`（移除 `ATOMGIT_STEP_SUMMARY` 通道；插件 commit `1bfc1bc`）
+- **修订**：2026-10-19 输出通道收敛为仅 `ATOMGIT_OUTPUT`（移除 `ATOMGIT_STEP_SUMMARY` 通道；插件 commit `1bfc1bc`）；同日按检视意见精简 `queryProjectsByUrl`（移除未消费的 `MAX(platform)` 聚合，cicd commit `eb36c2699`）
 
 ## 1. 方案设计
 
@@ -74,12 +74,12 @@ openlibing-cicd  BuildArtifactController#reportSecOptionScan
      - 未命中项目：`detailLink` 为空，`tip` = 提示文案「当前仓未录入openLiBing平台，无法生成跳转链接，请先联系SRE完成代码仓录入。」；
      - 查询/拼接异常：`logger.warn` 记录 gitUrl 与异常摘要，`detailLink` 为空、`tip` 为空（不输出提示，避免误报"未录入"）；
    - 返回 `DataResult.successData(vo)`（保持 msg 与现有 `successData` 行为一致）。
-3. **`resolveProject(gitUrl)`**：`RepoInfoMapper#queryProjectsByUrl` 查询（返回 projectId + platform，`ORDER BY project_id` 升序，取**第一行**作为唯一项目）；结果为空且 gitUrl 不以 `.git` 结尾时以 `gitUrl + ".git"` 重试一次；两次均为空返回空。
+3. **`resolveProject(gitUrl)`**：`RepoInfoMapper#queryProjectsByUrl` 查询（仅返回 projectId，`ORDER BY project_id` 升序，取**第一行**作为唯一项目）；结果为空且 gitUrl 不以 `.git` 结尾时以 `gitUrl + ".git"` 重试一次；两次均为空返回空。
 4. **链接拼接（单条）**：取第一行 `projectId` 生成唯一 1 条链接（不再查询项目名称，响应不含项目名称），url = `host + "/apps/securityOptions/package-detail?recordId=" + recordId + "&projectId=" + projectId`；recordId/projectId 均为纯数字，模板固定，不做 URL 编码、无拼接注入面。
 5. **平台地址**：注入 `PipelineService`，复用 `PipelineService#getOpenlibingHost()`（beta/gama/prod 环境映射已有实现），不新增平台地址配置与判定逻辑。
 6. **RepoInfoMapper 新增查询**（接口 + XML）：
-   - 方法：`List<RepoInfoEntity> queryProjectsByUrl(@Param("repoUrl") String repoUrl)`（复用既有 `repoInfoMap` resultMap，仅 projectId/platform 字段有效）
-   - SQL：`SELECT project_id, MAX(platform) AS platform FROM repo_info WHERE repo_url = #{repoUrl} AND project_id IS NOT NULL GROUP BY project_id ORDER BY project_id`（参数化查询，命中既有索引 `idx_repo_url`；不含 `assume_pr` 过滤，见 1.4-2；每 projectId 一行，**服务端取排序第一行作为唯一项目**）
+   - 方法：`List<RepoInfoEntity> queryProjectsByUrl(@Param("repoUrl") String repoUrl)`（复用既有 `repoInfoMap` resultMap，仅 projectId 字段有效）
+   - SQL：`SELECT project_id FROM repo_info WHERE repo_url = #{repoUrl} AND project_id IS NOT NULL GROUP BY project_id ORDER BY project_id`（参数化查询，命中既有索引 `idx_repo_url`；不含 `assume_pr` 过滤，见 1.4-2；每 projectId 一行，**服务端取排序第一行作为唯一项目**）
 
 ### 2.2 插件侧（security-compilation-options-action）
 
@@ -123,7 +123,7 @@ openlibing-cicd  BuildArtifactController#reportSecOptionScan
 | ----------------------------------------------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `business/controller/BuildArtifactController.java`                            | 修改 | `reportSecOptionScan` 返回类型改为 `DataResult<SecOptionScanReportVO>`                                                                                                     |
 | `business/service/impl/SecOptionScanServiceImpl.java`                         | 修改 | 注入 `PipelineService`；新增私有方法 `buildReportVO` / `resolveProject`（取查询第一个项目解析 projectId，单条链接拼接（recordId + projectId））；`reportScan` 组装 VO 返回 |
-| `business/mapper/RepoInfoMapper.java` + `resources/mapper/RepoInfoMapper.xml` | 修改 | 新增 `queryProjectsByUrl`（返回 projectId + platform，参数化 SQL）                                                                                                         |
+| `business/mapper/RepoInfoMapper.java` + `resources/mapper/RepoInfoMapper.xml` | 修改 | 新增 `queryProjectsByUrl`（返回 projectId，参数化 SQL）                                                                                                                    |
 | `business/vo/secoption/SecOptionScanReportVO.java`                            | 新增 | 响应 VO：`String recordId` + `String detailLink`（固定单条链接，多项目取查询第一个项目；未命中时为空）+ `String tip`（未录入提示，可空）                                   |
 
 ### 3.2 插件侧（Node.js，security-compilation-options-action）

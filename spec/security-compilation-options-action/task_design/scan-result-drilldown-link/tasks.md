@@ -2,12 +2,12 @@
 
 - **业务 Issue**：https://gitcode.com/openlibing/code-metrics-action/issues/25
 
-## 进度: 17/17 complete
+## 进度: 18/18 complete
 
 ## 服务端（openlibing-cicd）
 
 - [x] T1：新增 `vo/secoption/SecOptionScanReportVO`（`String recordId` + `String detailLink`（固定单条链接，多项目取查询第一个项目；未命中/异常时为空）+ `String tip`）
-- [x] T2：`RepoInfoMapper` 新增 `queryProjectsByUrl`（接口 + XML：`SELECT project_id, MAX(platform) AS platform FROM repo_info WHERE repo_url = #{repoUrl} AND project_id IS NOT NULL GROUP BY project_id ORDER BY project_id`；无 `assume_pr` 过滤，参数化 SQL，复用 `repoInfoMap` resultMap；**服务端取排序第一行作为唯一项目**）
+- [x] T2：`RepoInfoMapper` 新增 `queryProjectsByUrl`（接口 + XML：`SELECT project_id FROM repo_info WHERE repo_url = #{repoUrl} AND project_id IS NOT NULL GROUP BY project_id ORDER BY project_id`；无 `assume_pr` 过滤，参数化 SQL，复用 `repoInfoMap` resultMap；**服务端取排序第一行作为唯一项目**；原 `MAX(platform)` 聚合见 T18）
 - [x] T3：`SecOptionScanServiceImpl` 注入 `PipelineService`，新增 `buildReportVO(recordId, gitUrl)` / `resolveProject`（精确匹配 → 补 `.git` 重试；命中取查询**第一行** projectId 生成唯一 1 条链接（不再查询项目名称，响应不含项目名称）；未命中不返回链接、返回 tip 提示文案；查询/拼接异常兜底仅告警、不返回 tip）；链接拼接为 `recordId + projectId`（联调后移除 `codeHostingPlatformFlag`，commit `2f7ea9735`）
 - [x] T4：`reportScan` 组装 VO 返回（recordId 字符串化，`DataResult.successData`）
 - [x] T5：`BuildArtifactController#reportSecOptionScan` 返回类型改为 `DataResult<SecOptionScanReportVO>`
@@ -29,6 +29,7 @@
 - [x] T15：边界场景验证通过：同一 repoUrl 多项目（仅返回查询第一个项目 1 条链接）、未录入仓库（输出提示行、不输出链接）、服务端取数异常（仅返回 recordId 兜底，不输出误报提示）
 - [x] T16：兼容回归：存量插件 × 新服务端（老插件解析 `data?.recordId` 命中字符串 recordId，行为不变，代码级确认）
 - [x] T17：输出通道收敛（需求决策变更）：移除 `ATOMGIT_STEP_SUMMARY` 通道（写入块与相关注释），仅保留 `ATOMGIT_OUTPUT`；README 同步改为单通道说明（commit `1bfc1bc`）
+- [x] T18：响应检视意见精简查询（commit `eb36c2699`）：`queryProjectsByUrl` 移除未消费的 `MAX(platform)` 聚合列——链接仅用 `projectId`（`codeHostingPlatformFlag` 已移除，platform 无消费点），仅取 `project_id`；同步修正 `RepoInfoMapper` 方法注释
 
 ## 流程交付（Phase 4 / 5）
 
