@@ -3,7 +3,6 @@
 - 仓库: openlibing-sbom
 - 分支: `feat-remove-ort-dependency`（基于源仓 prod/master 最新）
 - 模式: Full
-- 设计文档: `D:\work\design\202610\remove-ort-dependency.md`
 
 ## 需求背景
 
@@ -11,7 +10,7 @@ openlibing-sbom 为 `definition_file` / `sbom_tracer_data` 两类任务引入了
 
 链路分析结论（ORT 引用 22 文件）：
 
-- analyzer 模块 26 文件全部属于两类链路（分析器/parser/handler/pkggen/vcs），可整模块删除；
+- analyzer 模块 27 文件（25 个 Java + pom.xml + build.gradle.kts）全部属于两类链路（分析器/parser/handler/pkggen/vcs），可整模块删除；
 - batch 的 `FillUpLicenseStep` 仅借用 ORT 的 3 个 SPDX 工具类（SpdxConstants/SpdxExpression/SpdxException），是唯一不随两类下线消失的引用；
 - API 入口 `/uploadSbomTraceData`（Controller 直调 TraceDataAnalyzer）是 batch 之外的第二个 tracer 入口，需一并下线。
 

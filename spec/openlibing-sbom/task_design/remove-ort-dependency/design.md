@@ -1,6 +1,6 @@
 # Design: remove-ort-dependency
 
-完整设计见 `D:\work\design\202610\remove-ort-dependency.md`（已用户确认），本文件为 spec 落盘版。
+本文件为 spec 落盘版，完整设计随本归档落盘。
 
 > **行为声明基准**：本需求主交付为 commit `934be424`；业务 PR #158 后续追加 `c9f9d4f4`（移除 `SPDX_3_0_1_JSON_SBOM` 类型支持、下线 fetchOpenEulerRepoMeta 定时任务）与 `a22ec3d5`（清理测试残留与 FileUtil 死代码）。本文档行为声明已同步至最终交付 head `a22ec3d5`，与主交付时点不一致处均以"最终行为"注明。
 
@@ -8,13 +8,13 @@
 
 | 层            | 动作                                                                                                                               |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| analyzer 模块 | 整体删除（26 文件），根 pom `<modules>` 移除，sbom-web pom 依赖移除                                                                |
+| analyzer 模块 | 整体删除（27 文件：25 个 Java + pom.xml + build.gradle.kts），根 pom `<modules>` 移除，sbom-web pom 依赖移除                       |
 | interface     | 删 `SbomContentAnalyzer`、`SbomService#persistSbomFromTraceData` 声明                                                              |
 | model         | `SbomContentType` 删 2 枚举值；删 ProcessData/ProcessIdentifier/PublishSbomConstants/BATCH_SBOM_CONTENT_TYPE_KEY/两个 INORDER 常量 |
 | utils         | `PublishSbomRequestValidator` 删内容解包校验段（~130 行），保留 `validateParam`                                                    |
 | sbom-web      | 删 `/uploadSbomTraceData` + `persistSbomFromTraceData` 实现 + TraceDataAnalyzer 注入 + 3 测试                                      |
 | batch         | 删 2 Analyze Step + Decider，job XML 直连；SelectWaitRawSbomStep 查询白名单；FillUpLicenseStep 换库                                |
-| pom           | 根 pom 删 3 个 ORT artifact + 加 java-spdx-library；batch pom 2 个 ORT → java-spdx-library                                         |
+| pom           | 根 pom 删 3 个 ORT artifact（java-spdx-library 沿用既有 2.0.3 声明）；batch pom 2 个 ORT → java-spdx-library                       |
 
 保留不动：`clients` 模块 `VcsServiceImpl`（SpdxReader/CollectStatisticsStep 使用）、`publishSbom` 主链路、`SbomSpecification` 枚举（存量 SPDX 3.0.1 文档查询仍在引用）。最终行为：`findBySpecAndFormat` 已随追加提交 `c9f9d4f4` 收敛为仅 SPDX 2.2 + JSON 分支（SPDX 3.0.1 文档上传/导出直接抛 `unsupported spec and format` 拒绝）。
 
@@ -66,7 +66,7 @@ public static Set<String> parseAndCollectLicenseIds(String spdxLicense)  // 失�
 
 ### 删除
 
-analyzer 模块 26 文件；batch：AnalyzeTraceDataStep/AnalyzeDefinitionFileStep/SkipAnalyzeSbomContentDecider；interface：SbomContentAnalyzer；model：ProcessData/ProcessIdentifier/PublishSbomConstants；sbom-web 测试：TraceDataAnalyzerTest/PythonPackageGeneratorTest/SkipAnalyzeSbomContentDeciderTest。
+analyzer 模块 27 文件（25 个 Java + pom.xml + build.gradle.kts）；batch：AnalyzeTraceDataStep/AnalyzeDefinitionFileStep/SkipAnalyzeSbomContentDecider；interface：SbomContentAnalyzer；model：ProcessData/ProcessIdentifier/PublishSbomConstants；sbom-web 测试：TraceDataAnalyzerTest/PythonPackageGeneratorTest/SkipAnalyzeSbomContentDeciderTest。
 
 ### 修改
 

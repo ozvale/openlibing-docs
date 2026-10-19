@@ -3,7 +3,7 @@
 - 仓库: openlibing-sbom
 - 特性分支: `feat-remove-ort-dependency`
 - 业务 Issue: https://gitcode.com/openlibing/openlibing-sbom/issues/112
-- 业务 PR: https://gitcode.com/openlibing/openlibing-sbom/pull/158（→ `release_20261019_iter1`）
+- 业务 PR: https://gitcode.com/openlibing/openlibing-sbom/merge_requests/158（→ `release_20261019_iter1`）
 - 交付 commit（业务分支 head `a22ec3d5`）：
   - `934be424` 主交付：ORT 依赖移除（64 文件，+313/−3347）
   - `c9f9d4f4` 追加：SPDX 3.0.1 类型支持移除 + fetchOpenEulerRepoMeta 定时任务下线（5 文件，+12/−70）
@@ -15,7 +15,7 @@
 
 移除 openlibing-sbom 对 org.ossreviewtoolkit（ORT）的完全依赖：
 
-- 下线 `definition_file` / `sbom_tracer_data` 两类任务支持，analyzer 模块整体删除（26 文件）
+- 下线 `definition_file` / `sbom_tracer_data` 两类任务支持，analyzer 模块整体删除（27 文件：25 个 Java + pom.xml + build.gradle.kts）
 - Batch 链路简化：删 2 个 Analyze Step + SkipAnalyzeSbomContentDecider，job XML 直连
 - API 下线：`POST /uploadSbomTraceData` 移除；`/publishSbomFile(WithCompress)` 两类 type 返回 400
 - FillUpLicenseStep 换用 `org.spdx:java-spdx-library`，新增 `SpdxLicenseExpressionUtil`/`SpdxLicenseParseException`
