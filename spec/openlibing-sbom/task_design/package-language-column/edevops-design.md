@@ -31,7 +31,7 @@
 openlibing-sbom
 ┌──────────────────────────┐
 │ SpdxReader                │ ← 导入时持久化 external_purl_ref（JSONB purl）
-│ (已有，不改动)           │    源码仓引用 → PACKAGE_MANAGER + comment=source_code_url
+│ (已有，不改动)           │    源码仓引用 → PACKAGE_MANAGER purl（type ∈ 四平台）
 │          │               │
 │          ▼               │
 │ CollectStatisticsStep     │
@@ -39,7 +39,7 @@ openlibing-sbom
 │ │ collectPackageLanguage│ │
 │ │  轨A: PackageLanguage │ │ ← 普通 purl: type 映射枚举
 │ │    .fromPurlType(type)│ │
-│ │  轨B: source_code_url │ │ ← 源码仓包: 构造 URL → VcsServiceImpl
+│ │  轨B: purl type∈四平台│ │ ← 源码仓包: 构造 URL → VcsServiceImpl
 │ │    → getRepoTopLanguage  │    .getRepoTopLanguage(url)
 │ │    → fromRepoLanguage │ │    三平台 languages API → 最高占比
 │ └──────────────────────┘ │
@@ -72,23 +72,23 @@ openlibing-sbom
 
 ### 1.4 关键技术决策
 
-| 决策点             | 选择                                                                                                                           | 原因                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| 语言数据源（轨 A） | `external_purl_ref`（category=PACKAGE_MANAGER）的 `purl->>'type'`                                                              | 确定性映射，与 sbom-tools `LanguageByName` 口径一致                            |
-| 语言数据源（轨 B） | 源码仓包调平台 languages API 取占比最高                                                                                        | 用户需求；comment="source_code_url" 是已落库的可靠判据                         |
-| 三平台返回差异归一 | GitCode 百分比 map / GitHub 字节 map / Gitee 包装数组，各实现解析后统一返回 `Map<String, Double>`，取单次响应内 value 最大 key | 单位（百分比/字节）不影响单次响应内的最大值比较；Gitee 取数组元素 `bytes` 字段 |
-| 平台范围           | GitCode / GitHub / Gitee 三大平台                                                                                              | 用户确认；`VcsApi` 接口统一抽象，`getApiByUrl` 已按域名匹配                    |
-| API 调用时机       | `CollectStatisticsStep` 同步逐包调用                                                                                           | 用户确认；与 language 落库同处一步，统计重跑可自动补语言                       |
-| 存储位置           | `package_statistics.language`（TEXT，存枚举 displayName）                                                                      | 复用 dependency_type 先例；查询/筛选均在 SQL 层完成                            |
-| C / C++ 归一       | 统一枚举 `C_CPP`，displayName `C/C++`                                                                                          | 用户需求；`fromRepoLanguage` 内归一                                            |
-| 轨 B 失败兜底      | API 失败/空数据 → `C_CPP`；返回语言但未收录 → `Others`                                                                         | 用户需求：平台调用失败语言默认 C/C++                                           |
-| 映射实现           | 枚举 `PackageLanguage`（displayName 字段）+ 静态 `fromPurlType` / `fromRepoLanguage`                                           | 避免反射（项目约束），静态映射可单测                                           |
-| 未知值             | 推导不出 → 显式存 `Others`（非 NULL）                                                                                          | SQL 过滤可直接等值匹配，前端可展示                                             |
-| 存量回填           | Java 循环逐包复用推导逻辑（非 SQL）                                                                                            | 轨 B 语言来自 REST API，SQL 无法推导；仅 source_code_url 包触达 API            |
-| 多选过滤           | 逗号字符串 + `string_to_array`（不绑 List）                                                                                    | 规避 Hibernate 6 + PG JDBC `malformed array literal` 历史坑                    |
-| 存量 NULL 兼容     | SQL 过滤用 `COALESCE(ps.language, 'Others') = ANY(...)`                                                                        | 回填前选 Others 也能命中存量行                                                 |
-| V3 汇总接口        | `sumVulCountByMultiFilter` 同步加 languages 过滤                                                                               | 共享 DTO，保证列表与汇总计数口径一致                                           |
-| DDL 方式           | Hibernate auto DDL                                                                                                             | 与项目既有字段新增方式一致                                                     |
+| 决策点             | 选择                                                                                                                           | 原因                                                                                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 语言数据源（轨 A） | `external_purl_ref`（category=PACKAGE_MANAGER）的 `purl->>'type'`                                                              | 确定性映射，与 sbom-tools `LanguageByName` 口径一致                                                                                                               |
+| 语言数据源（轨 B） | 源码仓包调平台 languages API 取占比最高                                                                                        | 用户需求；第一个 PACKAGE_MANAGER purl 的 type ∈ {gitcode,gitee,github,atomgit} 是已落库的可靠判据（实现期从 comment="source_code_url" 判定改为按 purl type 判定） |
+| 三平台返回差异归一 | GitCode 百分比 map / GitHub 字节 map / Gitee 包装数组，各实现解析后统一返回 `Map<String, Double>`，取单次响应内 value 最大 key | 单位（百分比/字节）不影响单次响应内的最大值比较；Gitee 取数组元素 `bytes` 字段                                                                                    |
+| 平台范围           | GitCode / GitHub / Gitee 三大平台                                                                                              | 用户确认；`VcsApi` 接口统一抽象，`getApiByUrl` 已按域名匹配                                                                                                       |
+| API 调用时机       | `CollectStatisticsStep` 同步逐包调用                                                                                           | 用户确认；与 language 落库同处一步，统计重跑可自动补语言                                                                                                          |
+| 存储位置           | `package_statistics.language`（TEXT，存枚举 displayName）                                                                      | 复用 dependency_type 先例；查询/筛选均在 SQL 层完成                                                                                                               |
+| C / C++ 归一       | 统一枚举 `C_CPP`，displayName `C/C++`                                                                                          | 用户需求；`fromRepoLanguage` 内归一                                                                                                                               |
+| 轨 B 失败兜底      | API 失败/空数据 → `C_CPP`；返回语言但未收录 → `Others`                                                                         | 用户需求：平台调用失败语言默认 C/C++                                                                                                                              |
+| 映射实现           | 枚举 `PackageLanguage`（displayName 字段）+ 静态 `fromPurlType` / `fromRepoLanguage`                                           | 避免反射（项目约束），静态映射可单测                                                                                                                              |
+| 未知值             | 推导不出 → 显式存 `Others`（非 NULL）                                                                                          | SQL 过滤可直接等值匹配，前端可展示                                                                                                                                |
+| 存量回填           | Java 循环逐包复用推导逻辑（非 SQL）                                                                                            | 轨 B 语言来自 REST API，SQL 无法推导；仅源码仓包（purl type ∈ 四平台）触达 API                                                                                    |
+| 多选过滤           | 逗号字符串 + `string_to_array`（不绑 List）                                                                                    | 规避 Hibernate 6 + PG JDBC `malformed array literal` 历史坑                                                                                                       |
+| 存量 NULL 兼容     | SQL 过滤用 `COALESCE(ps.language, 'Others') = ANY(...)`                                                                        | 回填前选 Others 也能命中存量行                                                                                                                                    |
+| V3 汇总接口        | `sumVulCountByMultiFilter` 同步加 languages 过滤                                                                               | 共享 DTO，保证列表与汇总计数口径一致                                                                                                                              |
+| DDL 方式           | Hibernate auto DDL                                                                                                             | 与项目既有字段新增方式一致                                                                                                                                        |
 
 ---
 
@@ -194,20 +194,20 @@ POST /sbom-api/querySbomPackagesMultiFilter  body: {"languages": ["Java","Python
 
 ### 2.5 异常处理
 
-| 场景                                                               | 处理                                                                                                        |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| 包无任何 externalPurlRefs                                          | `fromPurlType(null)` → Others                                                                               |
-| 无 PACKAGE_MANAGER purl                                            | → Others                                                                                                    |
-| source_code_url 包的 purl type 无对应域名（非 git 托管）           | 不走轨 B，按轨 A 映射（多为 Others）                                                                        |
-| 平台 languages API 调用失败（网络/限流/404）                       | `getRepoTopLanguage` 捕获返回 null → `fromRepoLanguage(null)` → C/C++，不阻断统计                           |
-| API 返回空 map（空仓库）                                           | 无最高占比 → C/C++（失败/空数据兜底）                                                                       |
-| API 返回语言未收录枚举                                             | `fromRepoLanguage` default → Others                                                                         |
-| 回填 pageNum 无效（null / <1）                                     | 抛 `IllegalArgumentException`，由 Controller 兜底返回错误                                                   |
-| languages 传空列表                                                 | joinLanguages 返回 null → SQL 短路，无过滤                                                                  |
-| publishSbom 已有任务 RUNNING 等执行中                              | 原子条件 UPDATE 影响 0 行 → 抛 `SbomRuntimeException`（"has sbom import job in running"），不覆盖执行中任务 |
-| publishSbom 并发时序窗口（读 meta 为 WAIT、UPDATE 前被调度器捞起） | 原子条件 UPDATE 状态不满足即 0 行，天然互斥，无需额外锁                                                     |
-| publishSbom product 不存在                                         | 抛 `SbomRuntimeException`（业务消息可透出）                                                                 |
-| publishSbom 非业务异常（DB 连接等）                                | Controller 仅记日志，对外固定文案 `publish sbom failed!`；仅 `SbomRuntimeException` 消息透出到 errorInfo    |
+| 场景                                                                                                 | 处理                                                                                                        |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 包无任何 externalPurlRefs                                                                            | `fromPurlType(null)` → Others                                                                               |
+| 无 PACKAGE_MANAGER purl                                                                              | → Others                                                                                                    |
+| 源码仓引用但 purl type ∉ {gitcode,gitee,github,atomgit}（非 git 托管，即便 comment=source_code_url） | 不走轨 B，按轨 A 映射（多为 Others）                                                                        |
+| 平台 languages API 调用失败（网络/限流/404）                                                         | `getRepoTopLanguage` 捕获返回 null → `fromRepoLanguage(null)` → C/C++，不阻断统计                           |
+| API 返回空 map（空仓库）                                                                             | 无最高占比 → C/C++（失败/空数据兜底）                                                                       |
+| API 返回语言未收录枚举                                                                               | `fromRepoLanguage` default → Others                                                                         |
+| 回填 pageNum 无效（null / <1）                                                                       | 抛 `IllegalArgumentException`，由 Controller 兜底返回错误                                                   |
+| languages 传空列表                                                                                   | joinLanguages 返回 null → SQL 短路，无过滤                                                                  |
+| publishSbom 已有任务 RUNNING 等执行中                                                                | 原子条件 UPDATE 影响 0 行 → 抛 `SbomRuntimeException`（"has sbom import job in running"），不覆盖执行中任务 |
+| publishSbom 并发时序窗口（读 meta 为 WAIT、UPDATE 前被调度器捞起）                                   | 原子条件 UPDATE 状态不满足即 0 行，天然互斥，无需额外锁                                                     |
+| publishSbom product 不存在                                                                           | 抛 `SbomRuntimeException`（业务消息可透出）                                                                 |
+| publishSbom 非业务异常（DB 连接等）                                                                  | Controller 仅记日志，对外固定文案 `publish sbom failed!`；仅 `SbomRuntimeException` 消息透出到 errorInfo    |
 
 ---
 
@@ -278,7 +278,6 @@ CREATE TABLE repo_language_cache (
     language TEXT,
     CONSTRAINT repo_url_uk UNIQUE (repo_url)
 );
-CREATE UNIQUE INDEX repo_url_uk ON repo_language_cache (repo_url);
 ```
 
 > 生产环境 `ddl-auto=none`，发布时需手动执行建表 SQL。
@@ -313,21 +312,21 @@ AND (:languages IS NULL OR :languages = ''
 
 ### 5.1 导入期预计算
 
-| 优化点        | 说明                                                                              |
-| ------------- | --------------------------------------------------------------------------------- |
-| 轨 A 纯内存   | 普通 purl 包仅 switch 映射，无 I/O                                                |
-| 轨 B 限流控制 | 仅 `comment="source_code_url"` 包调 REST；WebClient 已有 retry（backoff）与 token |
-| 失败兜底      | 单包 API 失败返回 C/C++，不重试风暴、不阻断整批统计                               |
-| 复杂度        | O(P) 内存映射 + O(S) 次 REST 调用（P=包数，S=源码包数）                           |
+| 优化点        | 说明                                                                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 轨 A 纯内存   | 普通 purl 包仅 switch 映射，无 I/O                                                                                                 |
+| 轨 B 限流控制 | 仅源码仓包（第一个 PACKAGE_MANAGER purl 的 type ∈ {gitcode,gitee,github,atomgit}）调 REST；WebClient 已有 retry（backoff）与 token |
+| 失败兜底      | 单包 API 失败返回 C/C++，不重试风暴、不阻断整批统计                                                                                |
+| 复杂度        | O(P) 内存映射 + O(S) 次 REST 调用（P=包数，S=源码包数）                                                                            |
 
 ### 5.2 查询与回填
 
-| 优化点                        | 说明                                                    |
-| ----------------------------- | ------------------------------------------------------- |
-| `IS NULL OR` 短路             | 不传 languages 时 PostgreSQL 短路，行为与变更前一致     |
-| `= ANY(string_to_array(...))` | 固定单参数，规避长 IN list 的解析开销（ai_memory 规则） |
-| 回填逐包更新                  | 仅运维触发、低频；仅 source_code_url 包触达 API         |
-| 回填幂等                      | 重复执行结果一致，可安全重试                            |
+| 优化点                        | 说明                                                       |
+| ----------------------------- | ---------------------------------------------------------- |
+| `IS NULL OR` 短路             | 不传 languages 时 PostgreSQL 短路，行为与变更前一致        |
+| `= ANY(string_to_array(...))` | 固定单参数，规避长 IN list 的解析开销（ai_memory 规则）    |
+| 回填逐包更新                  | 仅运维触发、低频；仅源码仓包（purl type ∈ 四平台）触达 API |
+| 回填幂等                      | 重复执行结果一致，可安全重试                               |
 
 ---
 
@@ -434,7 +433,7 @@ POST /sbom-api/refreshPackageLanguage?pageNum=1
 | 轨 B-未收录语言                      | getRepoLanguages 返回 {"Nix":100}                                                              | Others                                                      |
 | 轨 B-API 失败                        | WebClientException                                                                             | getRepoTopLanguage 返回 null → C/C++                        |
 | 轨 B-空仓库                          | getRepoLanguages 返回 {}                                                                       | C/C++（失败/空数据兜底）                                    |
-| 导入期-源码包                        | pkg 含 comment=source_code_url 的 PACKAGE_MANAGER purl                                         | 触达 getRepoTopLanguage                                     |
+| 导入期-源码包                        | pkg 第一个 PACKAGE_MANAGER purl 的 type ∈ {gitcode,gitee,github,atomgit}                       | 触达 getRepoTopLanguage                                     |
 | 导入期-普通包                        | pkg 含 maven purl                                                                              | statistics.language = Java，不触达 API                      |
 | 导入期-无 PACKAGE_MANAGER purl       | pkg 仅 SECURITY purl                                                                           | statistics.language = Others                                |
 | 过滤-单语言                          | languages=["Java"]                                                                             | 仅返回 Java 包                                              |
