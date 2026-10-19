@@ -73,8 +73,8 @@
 
 ## 3. 测试结果汇总表
 
-| 测试维度    | 用例总数 | 重点测试点描述                                                                                           | 通过数 | 不通过数 | 结论   |
-| ----------- | -------- | -------------------------------------------------------------------------------------------------------- | ------ | -------- | ------ |
+| 测试维度     | 用例总数 | 重点测试点描述                                                                                            | 通过数 | 不通过数 | 结论   |
+| ------------ | -------- | --------------------------------------------------------------------------------------------------------- | ------ | -------- | ------ |
 | **功能测试** | 17       | 代码仓管理/组织路径/sig-info 双域名化、域名白名单边界、代码检查与流水线平台识别、全链路回归、关联缺陷回归 | 17     | 0        | Passed |
 
 > 用例等级 P0 8 / P1 8 / P2 1；手工 17。
@@ -83,13 +83,13 @@
 
 ### 4.1 缺陷列表（beta 环境探索发现，已提交）
 
-| 缺陷 ID                                                        | 缺陷描述                                                                               | 严重程度 | 处理意见 |
-| -------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------- | -------- |
-| https://gitcode.com/openlibing/openlibing-coderepo/issues/218   | 全局配置按 SIG 组织录入时，atomgit 域名 SIG 配置文件路径提示链接非法、无法保存         | 一般     | 修复     |
-| https://gitcode.com/openlibing/openlibing-coderepo/issues/220   | 同一项目下 gitcode 与 atomgit 域名的同一代码仓未做重复校验                             | 一般     | 修复     |
-| https://gitcode.com/openlibing/openlibing-coderepo/issues/369   | 录入 atomgit 域名地址后，代码风格自动修复开关失效                                      | 一般     | 修复     |
-| https://gitcode.com/openlibing/openlibing-coderepo/issues/370   | 录入 atomgit 域名地址后，告警抑制自动检视开关失效                                      | 一般     | 修复     |
-| https://gitcode.com/openlibing/openlibing-coderepo/issues/371   | 录入 atomgit 域名地址后，上报的代码检查结果无法正确解析展示在当前项目下                | 一般     | 修复     |
+| 缺陷 ID                                                       | 缺陷描述                                                                       | 严重程度 | 处理意见 |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------ | -------- | -------- |
+| https://gitcode.com/openlibing/openlibing-coderepo/issues/218 | 全局配置按 SIG 组织录入时，atomgit 域名 SIG 配置文件路径提示链接非法、无法保存 | 一般     | 修复     |
+| https://gitcode.com/openlibing/openlibing-coderepo/issues/220 | 同一项目下 gitcode 与 atomgit 域名的同一代码仓未做重复校验                     | 一般     | 修复     |
+| https://gitcode.com/openlibing/openlibing-coderepo/issues/369 | 录入 atomgit 域名地址后，代码风格自动修复开关失效                              | 一般     | 修复     |
+| https://gitcode.com/openlibing/openlibing-coderepo/issues/370 | 录入 atomgit 域名地址后，告警抑制自动检视开关失效                              | 一般     | 修复     |
+| https://gitcode.com/openlibing/openlibing-coderepo/issues/371 | 录入 atomgit 域名地址后，上报的代码检查结果无法正确解析展示在当前项目下        | 一般     | 修复     |
 
 ### 4.2 风险说明
 
