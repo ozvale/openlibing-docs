@@ -14,12 +14,12 @@
 - [x] 删除 AOP：`MachineInterface{,Account}LogHandler.java`
 - [x] 删除测试：`MachineInterface{,Account}LogHandlerTest.java`、`MachineInterfaceServiceImplTest.java`
 
-### Task 2: 清理共享引用（4 个文件）
+### Task 2: 清理共享引用（3 个文件）
 
 - [x] `LogOperationAndModule.java`：移除机机接口常量段
 - [x] `LogDataCollectionName.java`：移除 `MACHINE_INTERFACE_LOG` 常量与 JSON 映射
 - [x] `GetLogsMapper.xml`：移除 `log_machine_interface` 表名分支
-- [x] `h2/schema.sql`：移除 `machine_interface` 表
+- [x] 保留 `h2/schema.sql` 中的 `machine_interface` 表（由另一位同事的服务负责删除）
 
 ### Task 3: 更新文档（1 个文件）
 

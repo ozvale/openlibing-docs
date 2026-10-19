@@ -163,7 +163,7 @@ public void setUserRoles(List<String> userRoles) {
 - 操作日志常量类（`LogOperationAndModule`）中该模块的常量段
 - 日志表名常量与日志查询映射（`LogDataCollectionName` 常量与 `MANAGEMENT_LOG` JSON 项）
 - 日志表名动态 SQL 分支（`GetLogsMapper.xml` 的 `<when>` 节点）
-- 测试库建表脚本（`h2/schema.sql`）
+- 测试库建表脚本（`h2/schema.sql`）；**例外**：若该表由其他服务/网关负责删除（其服务涉及查库），则 framework 侧保留表定义不做删除
 - 仓级 `AGENTS.md` 中该模块的能力描述
 - 数据库物理表保留、不做物理删除（历史数据留存，清理交 DBA）
 

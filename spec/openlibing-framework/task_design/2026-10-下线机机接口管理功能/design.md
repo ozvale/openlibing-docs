@@ -18,14 +18,13 @@
 | AOP | `MachineInterfaceLogHandler.java`、`MachineInterfaceAccountLogHandler.java`（2） |
 | 测试 | `MachineInterface{,Account}LogHandlerTest.java`、`MachineInterfaceServiceImplTest.java`（3） |
 
-## 编辑文件（5）
+## 编辑文件（4）
 
 | 文件 | 变更 |
 |------|------|
 | `common/constants/LogOperationAndModule.java` | 移除机机接口常量段（10 个常量） |
 | `common/log/LogDataCollectionName.java` | 移除 `MACHINE_INTERFACE_LOG` 常量与 `MANAGEMENT_LOG` 中「机机接口」映射 |
 | `resources/mapper/GetLogsMapper.xml` | 移除 `log_machine_interface` 表名分支 |
-| `resources/h2/schema.sql` | 移除 `machine_interface` 表定义 |
 | `AGENTS.md` | 移除机机接口模块描述 |
 
 ## 影响范围
@@ -33,6 +32,7 @@
 - 12 个 `/manage/machine-interface/**` 接口下线，前端入口与调用方需同步下线。
 - 共享日志基础设施：`LoggingServiceImpl`、`InternalServerImpl`、`BatchPersonalDataJob` 通过 `MANAGEMENT_LOG` 遍历日志表，移除「机机接口」映射后日志查询列表不再包含该模块。
 - 数据库表 `machine_interface`、`machine_interface_account`、`machine_interface_permission`、`log_machine_interface` 保留，不做物理删除。
+- `machine_interface` 表由另一位同事的服务负责删除（其服务涉及查库），framework 侧（含 h2 测试库 `schema.sql`）保留该表定义。
 
 ## 兼容性
 

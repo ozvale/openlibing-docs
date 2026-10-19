@@ -6,22 +6,22 @@
 - **业务 PR**: https://gitcode.com/openlibing/openlibing-framework/merge_requests/473
 - **目标分支**: release_20261019_iter1
 - **开发分支**: ZZT_202610_MachineInterface
-- **核心提交**: `2a50b7ca2`
+- **核心提交**: `2a50b7ca2`（模块下线）、`1e6407077`（保留 machine_interface 表定义）
 - **归档日期**: 2026-10-19
 
 ## 执行摘要
 
-下线 openlibing-framework 中的「机机接口管理」模块全部功能，包括 1 个 Controller（12 个端点）、Service 接口与实现、4 对 Mapper、Entity/DTO/Convertor、2 个 AOP 日志处理器、3 个单元测试，并清理共享日志基础设施（`LogOperationAndModule` 常量、`LogDataCollectionName` 常量与映射、`GetLogsMapper.xml` 表名分支、h2 测试库表）及 `AGENTS.md` 描述。
+下线 openlibing-framework 中的「机机接口管理」模块全部功能，包括 1 个 Controller（12 个端点）、Service 接口与实现、4 对 Mapper、Entity/DTO/Convertor、2 个 AOP 日志处理器、3 个单元测试，并清理共享日志基础设施（`LogOperationAndModule` 常量、`LogDataCollectionName` 常量与映射、`GetLogsMapper.xml` 表名分支）及 `AGENTS.md` 描述。
 
 ## 变更统计
 
 | 类别 | 数量 |
 |------|------|
 | 删除文件 | 29 |
-| 编辑文件 | 5 |
-| 提交数量 | 1 |
-| 删除代码行 | -4349 |
-| 新增代码行 | +2 |
+| 编辑文件 | 4 |
+| 提交数量 | 2 |
+| 删除代码行 | -4331 |
+| 新增代码行 | +1 |
 | 测试用例 | 2252 passed, 0 failures |
 
 ## 下线的 HTTP 接口（12 个）
@@ -41,6 +41,8 @@
 ### 数据库表保留
 
 下线仅移除代码，`machine_interface*`、`log_machine_interface` 物理表保留，历史数据不删除，避免误删存量数据。
+
+`machine_interface` 表由另一位同事的服务负责删除（其服务涉及查库），因此 framework 侧（含 h2 测试库 `schema.sql`）保留该表定义，不做删除。此为人工修正项，已同步修订设计文档与任务清单。
 
 ## 可复用经验
 
