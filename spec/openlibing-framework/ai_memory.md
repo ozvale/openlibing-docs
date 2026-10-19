@@ -153,3 +153,20 @@ public void setUserRoles(List<String> userRoles) {
 **注意**: `@Data` 生成的 getter/setter 不做防御性拷贝，有集合字段的 DTO 需手动编写 getter/setter。
 
 **来源**: 2026-09-10 PR#436 code review
+
+### 9. 下线业务模块时的共享基础设施清理清单
+
+**场景**: 下线一个业务模块，除业务代码外易遗留模块相关的共享配置
+
+**清单**:
+
+- 操作日志常量类（`LogOperationAndModule`）中该模块的常量段
+- 日志表名常量与日志查询映射（`LogDataCollectionName` 常量与 `MANAGEMENT_LOG` JSON 项）
+- 日志表名动态 SQL 分支（`GetLogsMapper.xml` 的 `<when>` 节点）
+- 测试库建表脚本（`h2/schema.sql`）
+- 仓级 `AGENTS.md` 中该模块的能力描述
+- 数据库物理表保留、不做物理删除（历史数据留存，清理交 DBA）
+
+**验证**: 删除后用 `rg "ClassName|table_name" src` 全量扫描确认无残留引用
+
+**来源**: 2026-10-下线机机接口管理功能
