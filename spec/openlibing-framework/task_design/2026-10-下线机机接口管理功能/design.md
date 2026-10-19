@@ -6,26 +6,26 @@
 
 ## 删除文件（29）
 
-| 类别 | 文件 |
-|------|------|
-| Controller | `MachineInterfaceController.java` |
-| Service | `MachineInterfaceService.java`、`impl/MachineInterfaceServiceImpl.java` |
-| Mapper 接口 | `MachineInterface{,Account,Permission,Log}Mapper.java`（4） |
-| Mapper XML | `MachineInterface{,Account,Permission,Log}Mapper.xml`（4） |
-| Entity | `entity/machine/*Entity.java`（4） |
-| DTO | `dto/machine/*DTO.java`（5） |
-| Convertor | `MachineInterface{,Account,Permission,Log}Convertor.java`（4） |
-| AOP | `MachineInterfaceLogHandler.java`、`MachineInterfaceAccountLogHandler.java`（2） |
-| 测试 | `MachineInterface{,Account}LogHandlerTest.java`、`MachineInterfaceServiceImplTest.java`（3） |
+| 类别        | 文件                                                                                         |
+| ----------- | -------------------------------------------------------------------------------------------- |
+| Controller  | `MachineInterfaceController.java`                                                            |
+| Service     | `MachineInterfaceService.java`、`impl/MachineInterfaceServiceImpl.java`                      |
+| Mapper 接口 | `MachineInterface{,Account,Permission,Log}Mapper.java`（4）                                  |
+| Mapper XML  | `MachineInterface{,Account,Permission,Log}Mapper.xml`（4）                                   |
+| Entity      | `entity/machine/*Entity.java`（4）                                                           |
+| DTO         | `dto/machine/*DTO.java`（5）                                                                 |
+| Convertor   | `MachineInterface{,Account,Permission,Log}Convertor.java`（4）                               |
+| AOP         | `MachineInterfaceLogHandler.java`、`MachineInterfaceAccountLogHandler.java`（2）             |
+| 测试        | `MachineInterface{,Account}LogHandlerTest.java`、`MachineInterfaceServiceImplTest.java`（3） |
 
 ## 编辑文件（4）
 
-| 文件 | 变更 |
-|------|------|
-| `common/constants/LogOperationAndModule.java` | 移除机机接口常量段（10 个常量） |
-| `common/log/LogDataCollectionName.java` | 移除 `MACHINE_INTERFACE_LOG` 常量与 `MANAGEMENT_LOG` 中「机机接口」映射 |
-| `resources/mapper/GetLogsMapper.xml` | 移除 `log_machine_interface` 表名分支 |
-| `AGENTS.md` | 移除机机接口模块描述 |
+| 文件                                          | 变更                                                                    |
+| --------------------------------------------- | ----------------------------------------------------------------------- |
+| `common/constants/LogOperationAndModule.java` | 移除机机接口常量段（10 个常量）                                         |
+| `common/log/LogDataCollectionName.java`       | 移除 `MACHINE_INTERFACE_LOG` 常量与 `MANAGEMENT_LOG` 中「机机接口」映射 |
+| `resources/mapper/GetLogsMapper.xml`          | 移除 `log_machine_interface` 表名分支                                   |
+| `AGENTS.md`                                   | 移除机机接口模块描述                                                    |
 
 ## 影响范围
 

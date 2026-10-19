@@ -13,20 +13,20 @@ openlibing-framework 的「机机接口管理」模块（`MachineInterfaceContro
 
 ## 下线范围（12 个接口）
 
-| # | 方法 | 路径 |
-|---|------|------|
-| 1 | POST | /manage/machine-interface/addMachineInterface |
-| 2 | POST | /manage/machine-interface/queryMachineInterfaceList |
-| 3 | POST | /manage/machine-interface/updateMachineInterface |
-| 4 | POST | /manage/machine-interface/batchDeleteMachineInterface |
-| 5 | POST | /manage/machine-interface/addMachineInterfaceAccount |
-| 6 | POST | /manage/machine-interface/queryMachineInterfaceAccountList |
-| 7 | POST | /manage/machine-interface/queryInterfaceListByAccount |
-| 8 | POST | /manage/machine-interface/updateMachineInterfaceAccount |
-| 9 | POST | /manage/machine-interface/batchDeleteMachineInterfaceAccount |
-| 10 | POST | /manage/machine-interface/updateAccountSecretKey |
-| 11 | POST | /manage/machine-interface/updateInterfacePermission |
-| 12 | POST | /manage/machine-interface/queryMachineInterfaceLog |
+| #   | 方法 | 路径                                                         |
+| --- | ---- | ------------------------------------------------------------ |
+| 1   | POST | /manage/machine-interface/addMachineInterface                |
+| 2   | POST | /manage/machine-interface/queryMachineInterfaceList          |
+| 3   | POST | /manage/machine-interface/updateMachineInterface             |
+| 4   | POST | /manage/machine-interface/batchDeleteMachineInterface        |
+| 5   | POST | /manage/machine-interface/addMachineInterfaceAccount         |
+| 6   | POST | /manage/machine-interface/queryMachineInterfaceAccountList   |
+| 7   | POST | /manage/machine-interface/queryInterfaceListByAccount        |
+| 8   | POST | /manage/machine-interface/updateMachineInterfaceAccount      |
+| 9   | POST | /manage/machine-interface/batchDeleteMachineInterfaceAccount |
+| 10  | POST | /manage/machine-interface/updateAccountSecretKey             |
+| 11  | POST | /manage/machine-interface/updateInterfacePermission          |
+| 12  | POST | /manage/machine-interface/queryMachineInterfaceLog           |
 
 ## 验收标准
 
