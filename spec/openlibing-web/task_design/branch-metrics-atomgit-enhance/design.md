@@ -4,36 +4,48 @@
 
 全部改动集中在 openlibing-web 前端，不涉及后端接口契约变更（仅消费后端已提供的新字段 `checkTime` / `pipelineName` / `staticAlertCount`）。按三个主题展开：分支管理展示增强、筛选 URL 联动、atomgit 域名全链路放行。
 
-## 1. 代码度量分组表头（branches.vue）
+## 1. 代码度量列说明文档（branches.vue）
 
 ### 结构
 
-使用 Element Plus 嵌套 `el-table-column` 实现一级分组表头「代码度量」，5 个度量列作为二级列：
+5 个度量指标列保持顶层平铺，不使用嵌套的一级分组表头；每个度量列头内嵌问号图标 + 说明 tooltip，扫描时效说明、「方案说明文档」链接与各指标公式说明（`col.tip`）统一收进列头：
 
 ```html
-<el-table-column v-if="visibleColumns.some((c) => c.metrics)" align="center">
+<el-table-column
+  v-for="col in visibleColumns.filter((c) => c.metrics)"
+  :key="col.prop"
+  :label="col.label"
+  sortable="custom"
+>
   <template #header>
-    代码度量
-    <el-icon><QuestionFilled /></el-icon>
-    <el-tooltip>…（最新扫描说明 + 说明文档链接）</el-tooltip>
+    <div style="display: inline-flex; align-items: center; gap: 4px">
+      <span>{{ col.label }}</span>
+      <el-tooltip effect="dark" trigger="hover" placement="top">
+        <template #content>
+          <div>
+            当前展示的数据为最新一次扫描结果，结果同步存在延迟，如果未展示最新结果，请稍后刷新页面。
+            <a
+              class="metrics-doc-link"
+              @click="goToNotice({ repoUrl: METRICS_DOC_URL })"
+            >
+              方案说明文档
+            </a>
+          </div>
+          <div v-if="col.tip">{{ col.tip }}</div>
+        </template>
+        <el-icon size="14" style="cursor: pointer"><QuestionFilled /></el-icon>
+      </el-tooltip>
+    </div>
   </template>
-  <!-- 5 个度量二级列 -->
 </el-table-column>
 ```
 
-- `v-if="visibleColumns.some((c) => c.metrics)"`：列设置里 5 个度量列全部隐藏时，分组表头一并隐藏，避免出现空表头
 - 说明文档链接定义 `METRICS_DOC_URL` 常量，指向 `code-metrics-scan-solution` 文档；跳转统一走 `goToNotice`（信任域白名单/中转页），不直接 `window.open`
-
-### 样式坑与对策
-
-| 问题                           | 原因                                                                        | 对策                                       |
-| ------------------------------ | --------------------------------------------------------------------------- | ------------------------------------------ |
-| 分组表头与二级表头之间无分割线 | `header-cell-style` 内联 `borderBottom: 1px solid #f0f0f0` 与背景色几乎同色 | 非叶子 th 用 `!important` 覆盖为 `#dbdbdb` |
-| 分组表头内容不居中             | 非 leaf th 的 `.cell` 为 inline-block、宽度收缩                             | 分组表头 `.cell` 改 flex 撑满后居中        |
+- 过程调整：初期实现为「代码度量」一级分组表头（嵌套 `el-table-column`，含分割线/居中样式对策），评审后拍平为顶层列，说明下放到各列头 tooltip（提交 `9f9adc09e`）
 
 ### UT 行覆盖率说明文档
 
-与代码度量组同款交互（问号图标 + tooltip 内「点击查看说明文档」链接），定义 `UT_COVERAGE_DOC_URL` 常量与 `goUtCoverageDoc` 处理器，minWidth 保持 120 不受影响。
+列头 tooltip 保留公式说明（`col.tip`），并按 `col.utCoverage` 标志追加「方案说明文档」链接：定义 `UT_COVERAGE_DOC_URL` 常量与 `goUtCoverageDoc` 处理器，minWidth 保持 120 不受影响。
 
 ## 2. 代码检查告警数列（branches.vue）
 
@@ -76,14 +88,13 @@ StaticAlarm 页初始化约定：URL 带 `query` 参数时走 `parseStaticAlarmS
 
 前提（业务约定）：atomgit.com 与 gitcode.com 互为镜像，同属 GitCode 平台。
 
-| 环节           | 文件                                                                                      | 改动                                                                                                                                       |
-| -------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| 域名常量       | `config.json`                                                                             | 新增 `ATOMGIT_BASE_URL: "https://atomgit.com/"`                                                                                            |
-| 平台识别       | `Repos/index.vue` `getPlatform`                                                           | `/gitcode\.com\|atomgit\.com/i` 统一识别为 `gitcode`                                                                                       |
-| 全局跳转白名单 | `utils/until.js` `whiteLinks`                                                             | 追加 `ATOMGIT_BASE_URL`                                                                                                                    |
-| 静态告警仓链接 | `staticAlarmRepoLink.ts`                                                                  | `ALLOWED_REPO_HOSTS` 加 `atomgit.com` / `www.atomgit.com`                                                                                  |
-| 全局配置同步源 | `GlobalConfigDialog.vue`                                                                  | `PLATFORM_ALLOWED_HOSTS.gitcode` 加 `atomgit.com` / `www.atomgit.com`，校验改为 `!PLATFORM_ALLOWED_HOSTS[platform].includes(url.hostname)` |
-| SCA 分析表     | `componentAnalysis/index.vue`、两个 `analysisTable.vue`、`openSourceCompliance/index.vue` | atomgit 平台选项与仓 URL 拼链映射                                                                                                          |
+| 环节           | 文件                            | 改动                                                                                                                                       |
+| -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 域名常量       | `config.json`                   | 新增 `ATOMGIT_BASE_URL: "https://atomgit.com/"`                                                                                            |
+| 平台识别       | `Repos/index.vue` `getPlatform` | `/gitcode\.com\|atomgit\.com/i` 统一识别为 `gitcode`                                                                                       |
+| 全局跳转白名单 | `utils/until.js` `whiteLinks`   | 追加 `ATOMGIT_BASE_URL`                                                                                                                    |
+| 静态告警仓链接 | `staticAlarmRepoLink.ts`        | `ALLOWED_REPO_HOSTS` 加 `atomgit.com` / `www.atomgit.com`                                                                                  |
+| 全局配置同步源 | `GlobalConfigDialog.vue`        | `PLATFORM_ALLOWED_HOSTS.gitcode` 加 `atomgit.com` / `www.atomgit.com`，校验改为 `!PLATFORM_ALLOWED_HOSTS[platform].includes(url.hostname)` |
 
 全局配置侧新增 `PLATFORM_ALLOWED_HOSTS` 常量表，替代原先散落的域名字符串判断，各平台域名收敛为一张表，后续加域名只改配置。
 
@@ -112,4 +123,3 @@ const pipelineDisplayName = computed(() => {
 ## 已知边界
 
 - 后端 openlibing-coderepo 的 `checkRepoUrl` / `addRepo` 与 SIG 同步域名白名单尚未放行 atomgit，前端放行不改变后端行为
-- SCA 分析表拼链依赖 atomgit 镜像语义（数据中无原始 repoUrl，按镜像域名拼链）

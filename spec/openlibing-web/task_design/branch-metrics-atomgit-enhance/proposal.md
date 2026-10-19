@@ -4,7 +4,7 @@
 
 仓库管理（Repos）页面的分支管理列表与代码度量详情在使用中发现以下改进点：
 
-1. 分支管理列表的 5 个代码度量指标列平铺展示，缺少归属分组，用户不清楚这些指标的含义与数据时效（数据为最新一次扫描结果）。
+1. 分支管理列表的 5 个代码度量指标列缺少含义与数据时效说明（数据为最新一次扫描结果），用户不清楚指标口径与结果新鲜度。
 2. UT 行覆盖率列同样缺少说明文档入口。
 3. 分支管理列表缺少「代码检查告警数」列，无法在分支维度直接看到静态检查告警规模，也不能从分支一键跳转到对应告警列表。
 4. 分支管理筛选条件（代码托管平台/代码仓/分支名称）无法通过 URL 传达与恢复，跨页面跳转和刷新后筛选丢失，难以分享特定筛选视图。
@@ -13,13 +13,13 @@
 
 ## 功能描述
 
-### 1. 代码度量分组表头与说明文档（branches.vue）
+### 1. 代码度量列说明文档（branches.vue）
 
-- 5 个代码度量指标列合并到一级分组表头「代码度量」下，仅当任一度量列可见时展示
-- 分组表头内容居中，一级与二级表头之间有可见分割线
-- 表头带问号图标，悬浮 tooltip 说明「当前展示的指标数据为最新一次扫描结果」，tooltip 内含高亮「点击查看详细说明文档」链接，跳转 code-metrics-scan-solution 说明文档（`METRICS_DOC_URL`）
+- 5 个代码度量指标列保持顶层平铺，各列头内嵌问号图标 + 说明 tooltip
+- tooltip 说明「当前展示的数据为最新一次扫描结果，结果同步存在延迟，如果未展示最新结果，请稍后刷新页面」，并含高亮「方案说明文档」链接，跳转 code-metrics-scan-solution 说明文档（`METRICS_DOC_URL`）
+- 各指标公式说明（`col.tip`）保留在列头 tooltip 内
 - 跳转使用页面统一跳转方法 `goToNotice`（信任域中转）
-- UT 行覆盖率表头同样增加问号图标 + tooltip 内「点击查看说明文档」链接（`UT_COVERAGE_DOC_URL`）
+- UT 行覆盖率列头 tooltip 保留公式说明，并增加「方案说明文档」链接（`UT_COVERAGE_DOC_URL`）
 
 ### 2. 代码检查告警数列（branches.vue）
 
@@ -44,7 +44,6 @@
 - 全局跳转白名单 `whiteLinks`（until.js）放行 atomgit
 - 静态告警仓链接白名单 `ALLOWED_REPO_HOSTS`（staticAlarmRepoLink.ts）放行 atomgit.com / www.atomgit.com
 - 全局配置弹窗同步源 URL 校验：gitcode 平台允许 atomgit.com / www.atomgit.com（`PLATFORM_ALLOWED_HOSTS`）
-- SCA 开源合规分析表：atomgit 平台选项与仓库 URL 拼链映射
 
 ### 5. 度量详情摘要区增强（MetricsDetailDialog.vue）
 
@@ -54,8 +53,7 @@
 
 ## 验收标准
 
-- [ ] 分支管理列表出现居中的「代码度量」分组表头，与二级表头之间有分割线
-- [ ] 问号 tooltip 显示最新扫描说明，说明文档链接高亮且跳转正确
+- [ ] 5 个度量指标列平铺展示，列头问号 tooltip 显示最新扫描说明，说明文档链接高亮且跳转正确
 - [ ] UT 行覆盖率表头问号 tooltip 内说明文档链接可跳转
 - [ ] 「代码检查告警数」列默认展示，位于分支名称后
 - [ ] 点击告警数跳转静态告警页且按当前分支过滤
@@ -71,33 +69,30 @@
 
 ## 影响范围
 
-| 文件                                                                         | 变更类型                      |
-| ---------------------------------------------------------------------------- | ----------------------------- |
-| `apps/web-openlibing/src/views/Repos/branches.vue`                           | 重构（表头/列/联动）          |
-| `apps/web-openlibing/src/views/Repos/index.vue`                              | 重构（tab/URL 联动/平台识别） |
-| `apps/web-openlibing/src/views/Repos/dialog/MetricsDetailDialog.vue`         | 增强（摘要区）                |
-| `apps/web-openlibing/src/views/Repos/dialog/GlobalConfigDialog.vue`          | 增强（同步源域名校验）        |
-| `apps/web-openlibing/src/assets/js/config.json`                              | 新增 ATOMGIT_BASE_URL         |
-| `apps/web-openlibing/src/utils/until.js`                                     | 跳转白名单放行 atomgit        |
-| `apps/web-openlibing/src/views/StaticAlarm/utils/staticAlarmRepoLink.ts`     | 仓链接白名单放行 atomgit      |
-| `apps/web-openlibing/src/views/sca/componentAnalysis/index.vue`              | atomgit 平台选项              |
-| `apps/web-openlibing/src/views/sca/personalScandTaskInfor/analysisTable.vue` | atomgit 仓 URL 拼链           |
-| `apps/web-openlibing/src/components/openSourceCompliance/analysisTable.vue`  | atomgit 仓 URL 拼链           |
-| `apps/web-openlibing/src/components/openSourceCompliance/index.vue`          | atomgit 平台选项              |
+| 文件                                                                     | 变更类型                                          |
+| ------------------------------------------------------------------------ | ------------------------------------------------- |
+| `apps/web-openlibing/src/views/Repos/branches.vue`                       | 重构（表头/列/联动）                              |
+| `apps/web-openlibing/src/views/Repos/index.vue`                          | 重构（tab/URL 联动/平台识别，移除列表页告警数列） |
+| `apps/web-openlibing/src/views/Repos/dialog/MetricsDetailDialog.vue`     | 增强（摘要区）                                    |
+| `apps/web-openlibing/src/views/Repos/dialog/GlobalConfigDialog.vue`      | 增强（同步源域名校验）                            |
+| `apps/web-openlibing/src/assets/js/config.json`                          | 新增 ATOMGIT_BASE_URL                             |
+| `apps/web-openlibing/src/utils/until.js`                                 | 跳转白名单放行 atomgit                            |
+| `apps/web-openlibing/src/views/StaticAlarm/utils/staticAlarmRepoLink.ts` | 仓链接白名单放行 atomgit                          |
 
 ## 相关提交（dev-chenning-20261019）
 
-| commit      | 说明                                                               |
-| ----------- | ------------------------------------------------------------------ |
-| `de1f11507` | feat(repos): metrics group header and branch filter URL sync       |
-| `bab313f27` | feat(repos): show static alert count in branch manage list         |
-| `d027cfbe6` | fix(repos): keep branch filters stable across detail navigation    |
-| `317d255a4` | feat(repos): add doc link to UT coverage and metrics headers       |
-| `d58ce2824` | fix(repos): carry branch in static alarm jump and sort alert count |
-| `1f6d6e8d4` | feat(sca): add atomgit platform option and repo URL mapping        |
-| `b23c0d357` | feat(repos): allow atomgit hosts in global config sync sources     |
-| `ec42de1a8` | docs(repos): 补充 UT 行覆盖率说明文档地址                          |
-| `8fa23007d` | feat(metrics): show scan time and pipeline name in detail dialog   |
+| commit      | 说明                                                                   |
+| ----------- | ---------------------------------------------------------------------- |
+| `de1f11507` | feat(repos): metrics group header and branch filter URL sync           |
+| `bab313f27` | feat(repos): show static alert count in branch manage list             |
+| `d027cfbe6` | fix(repos): keep branch filters stable across detail navigation        |
+| `317d255a4` | feat(repos): add doc link to UT coverage and metrics headers           |
+| `d58ce2824` | fix(repos): carry branch in static alarm jump and sort alert count     |
+| `b23c0d357` | feat(repos): allow atomgit hosts in global config sync sources         |
+| `ec42de1a8` | docs(repos): 补充 UT 行覆盖率说明文档地址                              |
+| `8fa23007d` | feat(metrics): show scan time and pipeline name in detail dialog       |
+| `9f9adc09e` | refactor(repos): remove static alert column and flatten metrics header |
+| `12eeb6d2e` | fix(repos): harden branch filter url restore with explicit marker      |
 
 ## 关联接口
 

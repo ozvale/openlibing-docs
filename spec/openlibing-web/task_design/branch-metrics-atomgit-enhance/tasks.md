@@ -1,13 +1,13 @@
 # 实现任务清单
 
-## 1. 代码度量分组表头与说明文档（branches.vue）
+## 1. 代码度量列说明文档（branches.vue）
 
-- [x] 1.1 5 个代码度量列包进一级分组表头「代码度量」，`v-if` 跟随列设置可见性
-- [x] 1.2 分组表头内容居中，一级/二级表头之间分割线可见（`#dbdbdb !important`）
-- [x] 1.3 表头问号图标 + tooltip：「当前展示的指标数据为最新一次扫描结果」+「点击查看详细说明文档」高亮链接
-- [x] 1.4 说明文档链接走统一跳转方法 `goToNotice`，地址 `METRICS_DOC_URL`（code-metrics-scan-solution）
-- [x] 1.5 UT 行覆盖率表头问号 + tooltip 内「点击查看说明文档」链接（`UT_COVERAGE_DOC_URL`）
-- [x] 1.6 补充 UT 行覆盖率说明文档地址
+- [x] 1.1 5 个度量指标列保持顶层平铺，列头内嵌问号图标 + 说明 tooltip
+- [x] 1.2 tooltip：「当前展示的数据为最新一次扫描结果…」+「方案说明文档」高亮链接；各指标公式说明（`col.tip`）保留
+- [x] 1.3 说明文档链接走统一跳转方法 `goToNotice`，地址 `METRICS_DOC_URL`（code-metrics-scan-solution）
+- [x] 1.4 UT 行覆盖率列头 tooltip 保留公式说明，并加「方案说明文档」链接（`UT_COVERAGE_DOC_URL`）
+- [x] 1.5 补充 UT 行覆盖率说明文档地址
+- [x] 1.6 过程调整：初期实现的一级分组表头（居中/分割线）评审后拍平为顶层列，说明下放各列头（`9f9adc09e`）
 
 ## 2. 代码检查告警数列（branches.vue）
 
@@ -33,7 +33,7 @@
 - [x] 4.3 `until.js` 全局跳转白名单 `whiteLinks` 放行 atomgit
 - [x] 4.4 `staticAlarmRepoLink.ts` `ALLOWED_REPO_HOSTS` 放行 atomgit.com / www.atomgit.com
 - [x] 4.5 `GlobalConfigDialog.vue` 同步源校验 `PLATFORM_ALLOWED_HOSTS.gitcode` 放行 atomgit 域名
-- [x] 4.6 SCA 组件分析 / 开源合规分析表 atomgit 平台选项与仓 URL 拼链
+- [ ] 4.6 SCA 组件分析 / 开源合规分析表 atomgit 平台选项与仓 URL 拼链（未落地：对应提交 `1f6d6e8d4` 未纳入业务 PR openlibing-web#825 最终变更集，不在本次交付范围）
 
 ## 5. 度量详情摘要区（MetricsDetailDialog.vue）
 
@@ -43,7 +43,7 @@
 
 ## 6. 验证方式
 
-- 人工验证：分组表头居中、分割线、tooltip 与说明文档链接跳转正常
+- 人工验证：度量列头 tooltip 与说明文档链接跳转正常
 - 人工验证：告警数列默认展示、跳转静态告警页带分支过滤、排序生效
 - 人工验证：URL 三参数进入自动切 tab 带筛选；改筛选 URL 同步；刷新后 tab 与筛选保持；详情返回筛选保留
 - 人工验证：atomgit 链接可录入、平台识别为 GitCode、静态告警页链接可跳转、全局配置同步源可保存
