@@ -6,11 +6,11 @@
 
 网关 `AuthFilter.getNewRequestParams`（`openlibing-gateway/.../filter/AuthFilter.java:658-697`）从 JWT claim 提取 4 个字段，通过 `params.put(key, singletonList(value))` **整体覆盖**客户端同名 query 参数：
 
-| 字段 | 含义 |
-|------|------|
-| `userId` | openlibing 平台用户 ID |
-| `userName` | 用户姓名 |
-| `accountId` | 三方账号 ID |
+| 字段              | 含义                              |
+| ----------------- | --------------------------------- |
+| `userId`          | openlibing 平台用户 ID            |
+| `userName`        | 用户姓名                          |
+| `accountId`       | 三方账号 ID                       |
 | `accountPlatform` | 三方平台（gitcode/gitee/ubmc 等） |
 
 **结论：下游服务收到的 `userId` query 参数不可伪造**。framework 各 Controller 亦以此约定直接 `@RequestParam userId` 信任使用（平台既有惯例）。
@@ -19,12 +19,12 @@
 
 权限关系数据位于 MySQL（由 openlibing-framework 维护 DDL），与网关同库：
 
-| 表 | 主键维度 | 用途 |
-|----|---------|------|
-| `user_role_info` | `user_id` | 平台用户角色（role、product_id、project_id、repo_id） |
-| `role_type_info` | role | 角色类型枚举：`system`/`product`/`project`/`repo`/`general` |
-| `project_info` | `project_id` | project → product 归属反查 |
-| `repo_info` | `repo_id` | repo → project 归属反查 |
+| 表               | 主键维度     | 用途                                                        |
+| ---------------- | ------------ | ----------------------------------------------------------- |
+| `user_role_info` | `user_id`    | 平台用户角色（role、product_id、project_id、repo_id）       |
+| `role_type_info` | role         | 角色类型枚举：`system`/`product`/`project`/`repo`/`general` |
+| `project_info`   | `project_id` | project → product 归属反查                                  |
+| `repo_info`      | `repo_id`    | repo → project 归属反查                                     |
 
 身份维度**仅以 `user_role_info`（user_id 维度）为准**，与 gateway `hasPermission` 语义一致；不引入 `project_user_role_info` / `repo_user_role_info`（三方账号维度）兜底，避免双数据源判定歧义。
 
@@ -61,16 +61,16 @@ userId 为空                                → 拒绝
 
 ### 3.1 组件清单（最终落地位置）
 
-| 组件 | 位置 | 说明 |
-|------|------|------|
-| `@ResourcePermission` + `@ResourcePermissions` | `infrastructure/aop/permission/` | 方法级注解，`@Repeatable` 支持同一接口校验多个资源标识 |
-| `ResourceTypeEnum` | `infrastructure/enums/` | PROJECT / REPO（仅两种） |
-| `ResourceIdEnum` | `infrastructure/enums/` | 资源 id 入参字段枚举：PROJECT_ID / REPO_ID，各自带字段名族（projectId/projectIds/projectIdList、repoId/repoIds/repoIdList） |
-| `ResourcePermissionAspect` | `infrastructure/aop/permission/` | `@Around` 切面：取 userId → 按字段名提取资源 id → 归一化展平 → 调校验服务 |
-| `ResourcePermissionService` | `domain/service/permission/` | 资源归属校验逻辑（REPO 反查 + 权限判定） |
-| `ResourcePermissionMapper` + XML | `domain/mapper/permission/` | 单 EXISTS 查询判定权限 + repo→project 反查 |
-| `PermissionDeniedException` | `infrastructure/exception/` | 越权异常（`BizException(NO_PERMISSION)`），携带 `detail` 审计字段 |
-| `GlobalExceptionHandler` 扩展 | 已有文件 | 新增 `PermissionDeniedException` handler → 403 |
+| 组件                                           | 位置                             | 说明                                                                                                                        |
+| ---------------------------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `@ResourcePermission` + `@ResourcePermissions` | `infrastructure/aop/permission/` | 方法级注解，`@Repeatable` 支持同一接口校验多个资源标识                                                                      |
+| `ResourceTypeEnum`                             | `infrastructure/enums/`          | PROJECT / REPO（仅两种）                                                                                                    |
+| `ResourceIdEnum`                               | `infrastructure/enums/`          | 资源 id 入参字段枚举：PROJECT_ID / REPO_ID，各自带字段名族（projectId/projectIds/projectIdList、repoId/repoIds/repoIdList） |
+| `ResourcePermissionAspect`                     | `infrastructure/aop/permission/` | `@Around` 切面：取 userId → 按字段名提取资源 id → 归一化展平 → 调校验服务                                                   |
+| `ResourcePermissionService`                    | `domain/service/permission/`     | 资源归属校验逻辑（REPO 反查 + 权限判定）                                                                                    |
+| `ResourcePermissionMapper` + XML               | `domain/mapper/permission/`      | 单 EXISTS 查询判定权限 + repo→project 反查                                                                                  |
+| `PermissionDeniedException`                    | `infrastructure/exception/`      | 越权异常（`BizException(NO_PERMISSION)`），携带 `detail` 审计字段                                                           |
+| `GlobalExceptionHandler` 扩展                  | 已有文件                         | 新增 `PermissionDeniedException` handler → 403                                                                              |
 
 ### 3.2 注解定义
 
@@ -105,10 +105,10 @@ public @interface ResourcePermission {
 
 仅支持两种资源类型，**统一收敛到 project 维度校验**：
 
-| 资源类型 | 反查逻辑 | 最终校验维度 |
-|---------|---------|-------------|
-| PROJECT | 无，projectId 直接使用 | project 级校验 |
-| REPO | repoId → `repo_info.project_id`（null 抛 403） | project+repo 级校验 |
+| 资源类型 | 反查逻辑                                       | 最终校验维度        |
+| -------- | ---------------------------------------------- | ------------------- |
+| PROJECT  | 无，projectId 直接使用                         | project 级校验      |
+| REPO     | repoId → `repo_info.project_id`（null 抛 403） | project+repo 级校验 |
 
 **判定入口**：`check(userId, type, resourceIds)` 逐 id 校验；权限判定下推为单条 EXISTS SQL（`hasResourceAccess`），语义见第 2 节。
 
@@ -152,25 +152,27 @@ public Result<?> batchSetBranchConfig(@RequestBody List<RepoBranchConfigReq> req
 
 覆盖携带资源标识的 5 个核心 Controller（共 29 个接口方法）：
 
-| Controller | 资源类型 | 加注解方法数 |
-|-----------|---------|------------|
-| `RepoController` | PROJECT / REPO | 8 |
-| `PipelineController` | PROJECT | 2（`queryPipelineInfo` 为 repoUrl 维度，遗留） |
-| `OpsGithubController` | REPO / PROJECT | 7 |
-| `OpsOverviewController` | PROJECT | 7 |
-| `ResourceOperationController` | PROJECT | 5 |
+| Controller                    | 资源类型       | 加注解方法数                                   |
+| ----------------------------- | -------------- | ---------------------------------------------- |
+| `RepoController`              | PROJECT / REPO | 8                                              |
+| `PipelineController`          | PROJECT        | 2（`queryPipelineInfo` 为 repoUrl 维度，遗留） |
+| `OpsGithubController`         | REPO / PROJECT | 7                                              |
+| `OpsOverviewController`       | PROJECT        | 7                                              |
+| `ResourceOperationController` | PROJECT        | 5                                              |
 
 其余 Controller（Report/NpuUsage/CodeCheck/Precision*/Project/QualityDashboard/TestCaseBoard 等）及 external 包接口在第二轮接入；无资源标识的接口（如健康检查）不加注解。
 
 ## 6. 基础设施盘点（可复用 vs 需新增）
 
 **可复用**：
+
 - ops 已有自定义注解 + AOP 先例：`@DataSource` + `DataSourceAspect`（`infrastructure/aop/`）、common 的 `@LogApi`
 - `spring-boot-starter-aop` 经 openlibing-common 传递引入，无需新增依赖
 - maven-compiler-plugin 已开启 `-parameters`，切面可按参数名提取资源 id
 - `ResponseCodeEnum.NO_PERMISSION(403)` 与 `BizException`、`GlobalExceptionHandler` 现成
 
 **需新增**：
+
 - 注解（含 Repeatable 容器）、资源类型枚举、资源 id 字段枚举、切面、校验服务、Mapper 接口 + XML、异常类（8 个新文件）+ 改 `GlobalExceptionHandler`
 - 5 个 Controller 加注解（29 个方法）
 - 权限表查询：ops 的 MySQL 与网关同库，直接查 `user_role_info` / `role_type_info` / `project_info` / `repo_info`

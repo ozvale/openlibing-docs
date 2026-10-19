@@ -25,12 +25,14 @@
 **2026-10-01 重新修复（区分流水线归属项目）**：
 
 根因：`OpsMainStatMapper.queryMainStat` 的 `unified_npu_stat` CTE 用全量 relation（`pj`，不区分 pipeline_type）做项目归属：
+
 - Nightly run 归属取 `pj.project_id`，流水线被多个项目共用时，同一 run 的 NPU 消耗被重复 SUM 到每个项目 → Nightly 消耗与整体消耗虚高；
 - PR run 归属取 repo 项目，但 WHERE 过滤用的是流水线归属项目（`pj.project_id`），两者不一致导致 PR run 归属错位/被误过滤 → PR 平均消耗错误。
 
 对照 `ops-resource-detail`（OpsResourceDetailMapper）：PR 分支按 `sdi_repo_info.project_id`（repo 归属项目）过滤、Nightly 分支按 `relation.project_id`（流水线归属项目）过滤，每个 run 归属明确。
 
 **修复**：`unified_npu_stat` 改为两个独立分支（UNION ALL），与 ops-resource-detail 同口径：
+
 - PR run：桥表 pr_id 非空 + relation pipeline_type='PR'，归属 `si.project_id`（repo 项目），按 `si.project_id` 过滤 projectIds；
 - Nightly run：relation pipeline_type='NIGHTLY'，归属 `rel.project_id`，按 `rel.project_id` 过滤 projectIds。
 
@@ -60,9 +62,13 @@ NPU 资源看板「使用率分析」的 KPI/趋势/热力图面板不展示所�
    ```ts
    /** 回显使用率分析所选时间跨度（小时粒度），便于面板展示当前分析范围 */
    export function formatUsageTimeSpan(filter: NpuUsageFilter | null): string {
-     const start = filter?.startTime ? dayjs(filter.startTime).format('YYYY-MM-DD HH:00') : '';
-     const end = filter?.endTime ? dayjs(filter.endTime).format('YYYY-MM-DD HH:00') : '';
-     return start && end ? `${start} ~ ${end}` : '';
+     const start = filter?.startTime
+       ? dayjs(filter.startTime).format("YYYY-MM-DD HH:00")
+       : "";
+     const end = filter?.endTime
+       ? dayjs(filter.endTime).format("YYYY-MM-DD HH:00")
+       : "";
+     return start && end ? `${start} ~ ${end}` : "";
    }
    ```
 2. `src/views/dashboard/npu-resource/usage-analysis/components/usage-kpi-panel.vue`：在「排队任务」「使用率」两张卡片标题旁加时间跨度回显。模板：`<span class="text-base font-semibold text-slate-800">排队任务</span>` 后追加 `<span class="ml-2 text-xs text-slate-400" v-if="timeSpan">{{ timeSpan }}</span>`；script 中 `import { formatUsageTimeSpan } from '../utils'` 并 `const timeSpan = computed(() => formatUsageTimeSpan(props.filter));`
@@ -83,14 +89,14 @@ eCDashboard main 的 `pr_duration_p90` 来自 `p90_stat`（COMPLETED run 的 dur
 
 ## 涉及文件
 
-| 文件 | 操作 |
-|------|------|
-| PipelineStatusEnum.java | 修改 |
-| RepoPrPipelineDetailResp.java | 修改 |
-| PrInfoResp.java | 修改 |
-| DmProjectQualityOverviewDayMapper.xml | 修改 |
-| OpsMainStatMapper.xml | 修改 |
-| OpsResourceDetailMapper.xml | 修改 |
+| 文件                                                                                 | 操作 |
+| ------------------------------------------------------------------------------------ | ---- |
+| PipelineStatusEnum.java                                                              | 修改 |
+| RepoPrPipelineDetailResp.java                                                        | 修改 |
+| PrInfoResp.java                                                                      | 修改 |
+| DmProjectQualityOverviewDayMapper.xml                                                | 修改 |
+| OpsMainStatMapper.xml                                                                | 修改 |
+| OpsResourceDetailMapper.xml                                                          | 修改 |
 | NightlyPipelineDashboardMapper.xml / NightlyPipelineDashboardSummaryServiceImpl.java | 修改 |
 
 ## 风险 & 缓解

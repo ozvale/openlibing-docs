@@ -6,19 +6,19 @@ mth@121800（qq_42589833）提交并指派给 nane 的 11 个 open 状态缺陷�
 
 ## 功能描述（按 issue）
 
-| # | 问题 | 修复方向 |
-|---|------|---------|
-| 144 | 构建任务未执行，看板显示执行成功 | PipelineStatusEnum 中 SKIPPED/IGNORED 的 result 置 false，未执行任务不再显示成功 |
-| 145 | 门禁E2E执行时长小数位与(不含重试)不一致 | access 系列时长改 2 位小数（timeNumberConvertTwo） |
-| 146 | 未拿到 gitcode 的排队时长 | 排查 gitcode PR run 关联与排队字段取值（数据链路） |
-| 149 | Nightly KPI/分位汇总接口 P95 间歇超 1s | nightly-dashboard-summary 查询优化（CTE 下推/缓存） |
-| 152 | gitcode 漏采，看板与 gitcode 数量不一致 | 排查 gitcode run/PR 关联桥表数据 |
-| 157 | nightly 使用率分析未展示时间跨度 | 响应回显时间跨度 |
-| 158 | PR 看板未采集 gitcode 构建/测试测试数据 | 排查 gitcode 用例数据链路 |
-| 161 | main 接口 productName 全为 null | ~~join 维表补齐~~ **已回退：issue 提错，非代码问题** |
-| 164 | codearts 流水线跳转错位 | ~~统一/修正跳转 URL 参数来源~~ **已回退：本批不做** |
+| #   | 问题                                           | 修复方向                                                                                                                                      |
+| --- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| 144 | 构建任务未执行，看板显示执行成功               | PipelineStatusEnum 中 SKIPPED/IGNORED 的 result 置 false，未执行任务不再显示成功                                                              |
+| 145 | 门禁E2E执行时长小数位与(不含重试)不一致        | access 系列时长改 2 位小数（timeNumberConvertTwo）                                                                                            |
+| 146 | 未拿到 gitcode 的排队时长                      | 排查 gitcode PR run 关联与排队字段取值（数据链路）                                                                                            |
+| 149 | Nightly KPI/分位汇总接口 P95 间歇超 1s         | nightly-dashboard-summary 查询优化（CTE 下推/缓存）                                                                                           |
+| 152 | gitcode 漏采，看板与 gitcode 数量不一致        | 排查 gitcode run/PR 关联桥表数据                                                                                                              |
+| 157 | nightly 使用率分析未展示时间跨度               | 响应回显时间跨度                                                                                                                              |
+| 158 | PR 看板未采集 gitcode 构建/测试测试数据        | 排查 gitcode 用例数据链路                                                                                                                     |
+| 161 | main 接口 productName 全为 null                | ~~join 维表补齐~~ **已回退：issue 提错，非代码问题**                                                                                          |
+| 164 | codearts 流水线跳转错位                        | ~~统一/修正跳转 URL 参数来源~~ **已回退：本批不做**                                                                                           |
 | 166 | NPU 平均消耗(卡时)错误，Nightly/整体资源值异常 | **已修复**：OpsMainStatMapper.unified_npu_stat 区分流水线归属项目（PR 按 repo 项目、Nightly 按 relation 项目，与 ops-resource-detail 同口径） |
-| 168 | PR执行时长[P90]与PR流水线数据不一致 | 对齐 P90 样本口径 |
+| 168 | PR执行时长[P90]与PR流水线数据不一致            | 对齐 P90 样本口径                                                                                                                             |
 
 ## 验收标准
 
