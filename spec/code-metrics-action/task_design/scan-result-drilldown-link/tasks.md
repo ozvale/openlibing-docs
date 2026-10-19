@@ -2,7 +2,7 @@
 
 - **业务 Issue**：https://gitcode.com/openlibing/code-metrics-action/issues/25
 
-## 进度: 20/20 complete
+## 进度: 21/21 complete
 
 ## 服务端（openlibing-coderepo）
 
@@ -19,11 +19,11 @@
 
 - [x] T9：`dist/uploaders/CoderepoUploader.js#report` 解析 `detailLink`（非空字符串时透传）/ `tip`（字符串），`upload` 成功后透传；`code !== 200` 判定保留
 - [x] T10：`dist/scanner.js` 上报成功后 `uploadInfo` 携带 `detailLink` / `tip`
-- [x] T11：`dist/index.js` 输出规则（双通道，文案定稿）：ATOMGIT_STEP_SUMMARY 追加 Markdown 超链接（detailLink 非空 → `- [代码度量指标扫描结果](链接)` 固定 1 行；tip 非空且无链接 → `- <提示文案>` 纯文本行，不硬编码）；ATOMGIT_OUTPUT 保留 key=value 概览行（链接行 `扫描结果url`=链接——key 末尾小写 `url` 触发平台渲染为可点击链接；提示行 `扫描结果`=提示文案；均空不输出）；两个通道各自判环境变量、失败各自 `core.warning`；每条内容 `core.info` 打印
+- [x] T11：`dist/index.js` 输出规则（文案定稿）：ATOMGIT_OUTPUT 保留 key=value 概览行（链接行 `扫描结果url`=链接——key 末尾小写 `url` 触发平台渲染为可点击链接；提示行 `扫描结果`=提示文案；均空不输出）；判环境变量、失败 `core.warning` 兜底；每条内容 `core.info` 打印（原 STEP_SUMMARY 通道见 T24）
 - [x] T12：`dist/index.js` 内联副本同步（scanner + uploader + 输出规则），保持 bundle 单文件分发
 - [x] T13：鉴权模式保持核实（不改动）：`ApigSigner`、`AKSK_API_PREFIX`、`useOidc`/`apigAppKey`/`apigAppSecret`/`obsAk`/`obsSk` 参数与分支、`action.yml` 四输入项（`apig-app-key`/`apig-app-secret`/`obs-ak`/`obs-sk`）、`getCredentials()` 与静态凭证分支全部保留；本次改造仅限输出链路
-- [x] T14：README 输出章节补充双通道链接（STEP_SUMMARY Markdown 超链接 + ATOMGIT_OUTPUT 概览行）与两类提示说明及示例
-- [x] T15：冒烟测试通过（基于真实 bundle 的 vm 沙箱 7 场景）：AK/SK 链接、分支提示、均空不输出、上报失败不输出、缺 STEP_SUMMARY、缺 OUTPUT、OIDC 全链路
+- [x] T14：README 输出章节补充链接（`ATOMGIT_OUTPUT` 链接行/提示行）与两类提示说明及示例
+- [x] T15：冒烟测试通过（基于真实 bundle 的 vm 沙箱 7 场景）：AK/SK 链接、分支提示、均空不输出、上报失败不输出、缺 OUTPUT、OIDC 全链路
 
 ## 前端（openlibing-web，前端侧协同）
 
@@ -31,10 +31,11 @@
 
 ## 联调验证
 
-- [x] T20：beta 环境端到端通过（用户确认）：真实流水线上报 → STEP_SUMMARY/OUTPUT 双通道链接 → 点击落地分支页三筛选 + 精确置顶 → 展示该分支最新指标数据（气泡口径提示由前端侧承载）
+- [x] T20：beta 环境端到端通过（用户确认）：真实流水线上报 → OUTPUT 链接输出 → 点击落地分支页三筛选 + 精确置顶 → 展示该分支最新指标数据（气泡口径提示由前端侧承载）
 - [x] T21：边界场景验证通过：多项目取查询第一个项目（其分支未登记时输出分支提示、不回退其他项目）、仓未录入 / 分支未登记（两类提示行、不输出链接）、异步导入窗口（展示最新已入库数据，导入后刷新可见）、AK/SK 模式 workflow 上报正常
 - [x] T22：兼容回归：存量插件版本 × 新服务端上报（老插件仅判 `code`/`msg`，不读取 data → 行为不变）；前端 × 新服务端（file-detail 传 pipelineRunId 按该次记录精确定位、不传按分支最新记录返回，两种调用均不报错）
-- [x] T23：`file-detail` 恢复 `pipelineRunId` 为**可选**入参（补充交付）：`FileMetricDetailQueryDTO` 新增 `pipelineRunId`（不设 `@NotBlank`）；`getFileMetricDetail` 经 `locateMetricsRecord` 分流（传则 `selectByPipelineRunId` 查该次历史记录、不传则 `selectLatestByGitAndBranch` 查最新）；`CodeMetricsServiceImplTest` 补 2 条用例（48/48）、pre-commit 全通过（openlibing-coderepo#234，分支 `restore-file-detail-pipeline-run-id` → `release_20261019_iter1`，commit `faa0351d`）
+- [x] T23：`file-detail` 恢复 `pipelineRunId` 为**可选**入参（补充交付）：`FileMetricDetailQueryDto` 新增 `pipelineRunId`（不设 `@NotBlank`）；`getFileMetricDetail` 经 `locateMetricsRecord` 分流（传则 `selectByPipelineRunId` 查该次历史记录、不传则 `selectLatestByGitAndBranch` 查最新）；`CodeMetricsServiceImplTest` 补 2 条用例（48/48）、pre-commit 全通过（openlibing-coderepo#234，分支 `restore-file-detail-pipeline-run-id` → `release_20261019_iter1`，commit `faa0351d`）
+- [x] T24：输出通道收敛（需求决策变更）：移除 `ATOMGIT_STEP_SUMMARY` 通道（`stepSummaryLine` 常量与写入 try/catch、相关注释），仅保留 `ATOMGIT_OUTPUT`；README 同步改为单通道说明（commit `692b071`）
 
 ## 流程交付（Phase 4 / 5）
 

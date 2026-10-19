@@ -18,7 +18,7 @@
    - 按上报的 `gitUrl` 在 `repo_info` 中解析关联项目（同一 repoUrl 可属于多个项目），取查询第一个项目生成详情页链接（仅含 recordId 与 projectId；不返回多链接、不带项目名称）；
    - 未解析到任何项目时不返回链接，返回提示信息（tip）——该 repoUrl 未录入 openLiBing 任一项目，无法生成有效跳转链接；
    - recordId 为雪花 ID，响应中按字符串返回，避免 JS 端精度丢失。
-2. **插件（security-compilation-options-action）**：上报成功后解析 `detailLink` / `tip`，双通道输出：ATOMGIT_STEP_SUMMARY 追加 Markdown 超链接（`- [安全编译选项扫描结果（<包名>）](实际链接)`，显示文本与链接解耦）；ATOMGIT_OUTPUT 按产物包输出 `扫描结果（<包名>）url=<链接>` 概览行（每包固定 1 行；key 末尾小写 `url` 触发平台渲染为可点击链接，大小写敏感）；提示非空且无链接时对应通道输出提示行（`- 安全编译选项扫描结果（<包名>）：<tip>` / `扫描结果（<包名>）=<tip>`，文案由服务端单点定义，插件不硬编码）；同步打印运行日志。
+2. **插件（security-compilation-options-action）**：上报成功后解析 `detailLink` / `tip`，单通道输出：ATOMGIT_OUTPUT 按产物包输出 `扫描结果（<包名>）url=<链接>` 概览行（每包固定 1 行；key 末尾小写 `url` 触发平台渲染为可点击链接，大小写敏感）；提示非空且无链接时输出提示行（`扫描结果（<包名>）=<tip>`，文案由服务端单点定义，插件不硬编码）；同步打印运行日志。（原 `ATOMGIT_STEP_SUMMARY` Markdown 超链接通道已移除，收敛为仅 `ATOMGIT_OUTPUT`。）
 3. **插件鉴权模式保持不变**：OIDC 与 AK/SK 双模式并存（部分测试仓不适合纳入 OIDC 认证凭据授权项目），`apig-app-key`/`apig-app-secret` 输入项与旧网关路径全部保留，本次仅改造输出链路。
 4. 上报失败时不输出链接（仅保留现有失败提示）。
 
@@ -32,18 +32,18 @@
 
 ## 3. 验收标准
 
-- [ ] 上报成功后，工作流运行摘要（ATOMGIT_STEP_SUMMARY）出现 Markdown 超链接、工作流概览（ATOMGIT_OUTPUT）出现对应链接行，点击可在 openLiBing 平台直接打开对应产物包详情页（显示文本≠实际链接；链接由 `recordId + projectId` 定位，打开沿用平台既有登录态），展示数据与本次上报的 recordId 一致
+- [ ] 上报成功后，工作流概览（ATOMGIT_OUTPUT）出现对应链接行，点击可在 openLiBing 平台直接打开对应产物包详情页（链接由 `recordId + projectId` 定位，打开沿用平台既有登录态），展示数据与本次上报的 recordId 一致
 - [ ] 同一 repoUrl 属于多个项目时，仅输出查询第一个项目对应的 1 条链接（不返回多链接；行为确定可预期）
 - [ ] 未纳管仓库（repoUrl 在 repo_info 中无匹配）时不输出链接，输出提示「当前仓未录入openLiBing平台，无法生成跳转链接，请先联系SRE完成代码仓录入。」
 - [ ] 多产物包扫描时，每个产物包各自输出对应链接/提示，不合并、不遗漏
 - [ ] 链接固定为 `recordId + projectId` 两类参数（不含项目名称、平台授权参数等其他字段），复制/分享后可直接打开
-- [ ] 上报失败时不输出任何链接；无 ATOMGIT_STEP_SUMMARY / ATOMGIT_OUTPUT 环境变量时跳过对应通道（互不影响）
+- [ ] 上报失败时不输出任何链接；无 `ATOMGIT_OUTPUT` 环境变量时跳过输出（不影响上报结果）
 - [ ] 插件鉴权模式保持现状（OIDC 与 AK/SK 双模式并存、`apig-app-key`/`apig-app-secret` 输入项保留），两模式下链接输出行为一致
 - [ ] 插件 `core.setOutput` 数值输出与现有 ATOMGIT_OUTPUT 开启率输出保持不变
 - [ ] 链接构建/解析异常不影响上报主流程（仅记录告警；异常时不输出误报"未录入"提示）
 
 ## 4. 影响范围
 
-- `openlibing/security-compilation-options-action`：`dist/index.js`（输出规则改造：STEP_SUMMARY Markdown 超链接 + ATOMGIT_OUTPUT 链接行/提示行双通道，每包固定 1 行）、`dist/scanner.js`（uploadInfo 携带 detailLink/tip）、`dist/uploaders/CicdUploader.js`（响应解析扩展；AK/SK 逻辑保留不动）、`action.yml`（不改）、README（输出章节双通道链接与未录入提示说明）
+- `openlibing/security-compilation-options-action`：`dist/index.js`（输出规则改造：`ATOMGIT_OUTPUT` 链接行/提示行单通道，每包固定 1 行）、`dist/scanner.js`（uploadInfo 携带 detailLink/tip）、`dist/uploaders/CicdUploader.js`（响应解析扩展；AK/SK 逻辑保留不动）、`action.yml`（不改）、README（输出章节链接与未录入提示说明）
 - `openlibing/openlibing-cicd`：`BuildArtifactController#reportSecOptionScan` 响应类型、`SecOptionScanServiceImpl#reportScan` 链接构建（取查询第一个项目，`recordId + projectId` 拼接）、`RepoInfoMapper`（新增 `queryProjectsByUrl`：按 repo_url 解析关联项目，`GROUP BY project_id ORDER BY project_id` 取第一行）、新增响应 VO
 - 无数据库表结构变更、无新增依赖
