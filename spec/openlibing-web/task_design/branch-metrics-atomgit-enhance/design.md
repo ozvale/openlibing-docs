@@ -76,14 +76,14 @@ StaticAlarm 页初始化约定：URL 带 `query` 参数时走 `parseStaticAlarmS
 
 前提（业务约定）：atomgit.com 与 gitcode.com 互为镜像，同属 GitCode 平台。
 
-| 环节 | 文件 | 改动 |
-| -------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- |
-| 域名常量 | `config.json` | 新增 `ATOMGIT_BASE_URL: "https://atomgit.com/"` |
-| 平台识别 | `Repos/index.vue` `getPlatform` | `/gitcode\.com                                                                                                                             | atomgit\.com/i`统一识别为`gitcode` |
-| 全局跳转白名单 | `utils/until.js` `whiteLinks` | 追加 `ATOMGIT_BASE_URL` |
-| 静态告警仓链接 | `staticAlarmRepoLink.ts` | `ALLOWED_REPO_HOSTS` 加 `atomgit.com` / `www.atomgit.com` |
-| 全局配置同步源 | `GlobalConfigDialog.vue` | `PLATFORM_ALLOWED_HOSTS.gitcode` 加 `atomgit.com` / `www.atomgit.com`，校验改为 `!PLATFORM_ALLOWED_HOSTS[platform].includes(url.hostname)` |
-| SCA 分析表 | `componentAnalysis/index.vue`、两个 `analysisTable.vue`、`openSourceCompliance/index.vue` | atomgit 平台选项与仓 URL 拼链映射 |
+| 环节           | 文件                                                                                      | 改动                                                                                                                                       |
+| -------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 域名常量       | `config.json`                                                                             | 新增 `ATOMGIT_BASE_URL: "https://atomgit.com/"`                                                                                            |
+| 平台识别       | `Repos/index.vue` `getPlatform`                                                           | `/gitcode\.com\|atomgit\.com/i` 统一识别为 `gitcode`                                                                                       |
+| 全局跳转白名单 | `utils/until.js` `whiteLinks`                                                             | 追加 `ATOMGIT_BASE_URL`                                                                                                                    |
+| 静态告警仓链接 | `staticAlarmRepoLink.ts`                                                                  | `ALLOWED_REPO_HOSTS` 加 `atomgit.com` / `www.atomgit.com`                                                                                  |
+| 全局配置同步源 | `GlobalConfigDialog.vue`                                                                  | `PLATFORM_ALLOWED_HOSTS.gitcode` 加 `atomgit.com` / `www.atomgit.com`，校验改为 `!PLATFORM_ALLOWED_HOSTS[platform].includes(url.hostname)` |
+| SCA 分析表     | `componentAnalysis/index.vue`、两个 `analysisTable.vue`、`openSourceCompliance/index.vue` | atomgit 平台选项与仓 URL 拼链映射                                                                                                          |
 
 全局配置侧新增 `PLATFORM_ALLOWED_HOSTS` 常量表，替代原先散落的域名字符串判断，各平台域名收敛为一张表，后续加域名只改配置。
 
