@@ -34,7 +34,7 @@
 
 ## 验证结论
 
-- SbomServiceImplTest 89 用例全绿（含 8 个新增：filters 透传/非法 key/空参、原始透传、不去重、空制品边界）
+- SbomServiceImplTest 89 用例全绿（既有 82 + 新增 7：getProductNamesMultiFilter 3 个、getPackageDependencyTypes 4 个）
 - pre-commit 全部通过（Spotless/CheckStyle/SpotBugs/PMD/secrets）
 - gamma 实测：两新接口验证通过
 
