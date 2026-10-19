@@ -15,7 +15,7 @@
 
 ## What Changes
 
-- **API 层**（`src/api/url.ts`、`src/api/api.ts`）：新增 9 个权限组接口封装，对齐 2026-09-23 后端动词式路径重命名——`query-groups` / `create-group` / `update-group` / `delete-group` / `bind-resource` / `batch-bind-resources` / `unbind-resource` / `query-binding` / `query-bindings-by-group` / `batch-query-bindings`。
+- **API 层**（`src/api/url.ts`、`src/api/api.ts`）：新增 10 个权限组接口封装，对齐 2026-09-23 后端动词式路径重命名——`query-groups` / `create-group` / `update-group` / `delete-group` / `bind-resource` / `batch-bind-resources` / `unbind-resource` / `query-binding` / `query-bindings-by-group` / `batch-query-bindings`。
 - **权限元数据**（`src/constants/permissions-meta.ts`）：新增 `perm_group_operate` 操作码（权限组管理），含介绍与授权指引（项目管理员角色 / 服务单）。
 - **权限组管理弹窗**（`src/views/Project/components/ManagePermGroupDialog.vue`，新文件）：组列表（组名/说明/成员数/绑定资源数/操作）、创建（支持从已有组复制成员并回显复制结果）、编辑、删除（默认组禁删、有绑定先解绑、二次确认）、绑定资源列表（服务端分页 + 资源类型筛选 + 名称搜索）；全程 `perm_group_operate` 权限控制（`NoPermissionPopover` + disabled）。
 - **成员管理页**（`src/views/Project/projectUserManage.vue`）：新增「管理权限组」入口按钮（权限控制）；筛选区新增「权限组」多选下拉（`permGroupIds` 加入成员查询）；成员表格新增「权限组」列（默认组兜底展示 + 说明 tooltip）；添加/修改成员按需透传 `permGroupId`（默认组不传，保留同步/审计联动）。

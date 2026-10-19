@@ -4,7 +4,7 @@
 
 ## 1. API 层
 
-- [x] 1.1 `api/url.ts` 新增 9 个 `/perm-group/*` 端点常量（`PERM_GROUP_LIST`/`PERM_GROUP_CREATE`/`PERM_GROUP_UPDATE`/`PERM_GROUP_DELETE`/`PERM_BINDING`/`PERM_BINDING_BATCH`/`PERM_UNBIND`/`PERM_BINDING_QUERY`/`PERM_BINDING_BY_GROUP`/`PERM_BINDING_BATCH_QUERY`），对齐 2026-09-23 动词式路径重命名。
+- [x] 1.1 `api/url.ts` 新增 10 个 `/perm-group/*` 端点常量（`PERM_GROUP_LIST`/`PERM_GROUP_CREATE`/`PERM_GROUP_UPDATE`/`PERM_GROUP_DELETE`/`PERM_BINDING`/`PERM_BINDING_BATCH`/`PERM_UNBIND`/`PERM_BINDING_QUERY`/`PERM_BINDING_BY_GROUP`/`PERM_BINDING_BATCH_QUERY`），对齐 2026-09-23 动词式路径重命名。
 - [x] 1.2 `api/api.ts` 按端点封装 `getPermGroups`/`createPermGroup`/`updatePermGroup`/`deletePermGroup`/`bindPermResource`/`batchBindPermResource`/`unbindPermResource`/`getPermBinding`/`getPermBindingsByGroup`/`batchQueryPermBindings`。
 
 ## 2. 权限元数据

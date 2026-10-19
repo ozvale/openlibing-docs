@@ -5,8 +5,8 @@
 改动按"API 封装 → 权限元数据 → 页面/组件"三层落位，全部位于 `apps/web-openlibing/src/`：
 
 ```text
-api/url.ts                          # 9 个 /perm-group/* 端点常量
-api/api.ts                          # 9 个 RequestFunc 封装
+api/url.ts                          # 10 个 /perm-group/* 端点常量
+api/api.ts                          # 10 个 RequestFunc 封装
 constants/permissions-meta.ts       # perm_group_operate 操作码元数据
 views/Project/projectUserManage.vue # 成员管理页（入口按钮/筛选/列/添加修改透传）
 views/Project/components/ManagePermGroupDialog.vue  # 权限组管理弹窗（新增）
