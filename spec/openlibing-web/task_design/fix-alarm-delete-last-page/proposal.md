@@ -17,7 +17,9 @@
 
 ## 变更范围
 
-- `apps/web-openlibing/src/views/StaticAlarm/index.vue`（+7，`fetchList` 数据层）
+- `apps/web-openlibing/src/views/StaticAlarm/index.vue`（+12，`fetchList` 数据层页码回退判断）
+- `apps/web-openlibing/src/views/StaticAlarm/utils/staticAlarmPagination.ts`（新增，`shouldFallbackPageOnEmptyList` 空列表页码回退判断）
+- `apps/web-openlibing/src/views/StaticAlarm/utils/__tests__/staticAlarmPagination.spec.ts`（新增，5 个场景单元测试）
 
 ## 优先级
 
@@ -25,5 +27,5 @@
 
 ## 关联 PR
 
-- 业务 PR：待创建（分支 `fix-alarm-delete-last-page`，commit `0e8d2aaf`）
-- spec 归档 PR：[openlibing/openlibing-docs!1132](https://gitcode.com/openlibing/openlibing-docs/merge_requests/1132)
+- 业务 PR：[openlibing/openlibing-web#829](https://gitcode.com/openlibing/openlibing-web/merge_requests/829)（分支 `fix-alarm-delete-last-page`，已合入 `release_20261019`）
+- spec 归档 PR：[openlibing/openlibing-docs#1154](https://gitcode.com/openlibing/openlibing-docs/merge_requests/1154)

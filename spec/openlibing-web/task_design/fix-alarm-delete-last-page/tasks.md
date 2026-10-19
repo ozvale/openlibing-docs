@@ -13,16 +13,17 @@
 
 ## Phase 3: 编码实现
 
-- [x] `fetchList()` 成功分支：`normalizeListResponse` 后，若当前页为空且 `pageNo > 1`，回退 `pageNo = totalPages`，`syncRouteQuery()` 同步路由，`await fetchList()` 重新拉取（await 保证外层 loading 时序正确）
-- [x] 无死循环保障：`total=0` 时回退到第 1 页后不再递归；回退页码每次至少减 1
-- [x] 提交代码到本地分支 `fix-alarm-delete-last-page`（commit `0e8d2aaf`）
+- [x] `fetchList()` 成功分支：`normalizeListResponse` 后，若当前页为空且 `pageNo > totalPages`（`shouldFallbackPageOnEmptyList` 工具函数判断），回退 `pageNo = totalPages`，`syncRouteQuery()` 同步路由，`await fetchList()` 重新拉取（await 保证外层 loading 时序正确）
+- [x] 无死循环保障：仅当页码超出总页数时才回退；回退到末页后若列表仍为空（`pageNo = totalPages`）不满足回退条件，不会以相同参数重复拉取
+- [x] 新增 `utils/staticAlarmPagination.ts` 工具函数与 `utils/__tests__/staticAlarmPagination.spec.ts` 单元测试（覆盖删空末页需回退、回退后末页仍为空不重拉、首页空列表不回退、非末页空列表不回退、总页数收缩到第 1 页需回退 5 个场景）
+- [x] 提交代码到本地分支 `fix-alarm-delete-last-page`（最终合入 head `7de51017`）
 - [x] Prettier / ESLint 校验通过
 
 ## Phase 4: PR 提交
 
 - [x] 推送分支到 fork 仓
 - [x] 创建业务 PR 到主仓并关联 Issue #358，补打 `ai-assisted` 标签
-- [x] 更新 proposal.md 关联 PR 链接（[docs 归档 PR !1132](https://gitcode.com/openlibing/openlibing-docs/merge_requests/1132)）
+- [x] 更新 proposal.md 关联 PR 链接（spec 归档 PR：[openlibing/openlibing-docs#1154](https://gitcode.com/openlibing/openlibing-docs/merge_requests/1154)，替代原 fork 跨仓 PR !1132）
 
 ## Phase 5: 归档
 
