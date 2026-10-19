@@ -5,6 +5,7 @@
 - **涉及仓库**：code-metrics-action、openlibing-coderepo、openlibing-web（前端侧协同，不随本需求提 PR）
 - **流程模式**：Full
 - **日期**：2026-10-09
+- **修订**：2026-10-19 输出通道收敛为仅 `ATOMGIT_OUTPUT`（移除 `ATOMGIT_STEP_SUMMARY` 通道；插件 commit `692b071`）
 
 ## 1. 方案设计
 
@@ -27,7 +28,7 @@
 
 - 服务端在上报受理成功后返回**固定 1 条**详情链接（多项目时取查询第一个项目；不返回多链接、不带项目名称、不携带指标维度）：落地分支管理页外层并自动按分支管理页既有筛选条件（`platforms`/`repoUrlLike`/`branchNameLike`）筛选（不打开指标弹窗，精确命中行置顶）；分支登记校验下沉服务端，分支未登记 / 仓未录入时返回对应提示（tip）
 - 前端链接落地**永远展示最新数据**：链接不携带 pipelineRunId，只按代码仓 + 分支取当前分支最新指标数据；`file-detail` 接口的 `pipelineRunId` 保持**可选**能力（传则精确查该次历史记录，不传取该分支最新成功记录），链接口径与接口能力解耦；刷新/回退/重新筛选后视图语义稳定；指标说明气泡声明数据口径（最新成功检测结果，非历史运行数据）
-- 插件把链接 / 提示以 Markdown 超链接（显示文本≠实际链接）输出到工作流运行摘要（ATOMGIT_STEP_SUMMARY），并保留 ATOMGIT_OUTPUT 概览行与运行日志（链接行 key 末尾小写 `url` 触发平台渲染为可点击链接）；链接固定 1 条（不随项目数、指标数膨胀）
+- 插件把链接 / 提示作为 `ATOMGIT_OUTPUT` 概览行输出（链接行 key 末尾小写 `url`，固定 1 行），并同步打印运行日志（链接打印实际地址）；链接固定 1 条（不随项目数、指标数膨胀）
 - 保留插件既有 AK/SK 模式（与 OIDC 并存，部分测试仓不适合纳入 OIDC 凭据授权项目），本次不改变插件鉴权与上报路径
 - 不改变上报接口路径、入参、message 语义、扫描逻辑与现有指标输出
 
@@ -50,8 +51,7 @@ openlibing-coderepo  CodeMetricsController#reportMetrics → publishToMq
   DataResult<CodeMetricsReportVO> { code, msg:"上报已受理，正在异步导入", data:{ detailLink, tip } }
       ▼
 插件 report() 解析 → scanner.uploadInfo → index.js
-  ATOMGIT_STEP_SUMMARY 追加 Markdown 超链接：- [代码度量指标扫描结果](实际链接)（显示文本≠实际链接）
-  ATOMGIT_OUTPUT 同步追加 扫描结果url=链接 概览行（key 末尾小写 url → 平台渲染可点击；机器消费）+ core.info 打印
+  ATOMGIT_OUTPUT 追加 扫描结果url=链接 概览行（key 末尾小写 url → 平台渲染可点击；机器消费）+ core.info 打印
       ▼
 openlibing-web  用户点击链接（前端侧协同能力）
   /apps/repos?projectId=&platforms=&repoUrlLike=&branchNameLike=
@@ -78,7 +78,7 @@ openlibing-web  用户点击链接（前端侧协同能力）
 11. **构建异常不阻断上报**：构建逻辑独立兜底捕获，异常时仅告警并返回空 `detailLink` + 空 `tip`（不误报"未录入"）。
 12. **链接参数与分支管理页筛选条件一致（不发明新参数）**：链接落地复用分支管理页既有筛选参数 `platforms` / `repoUrlLike` / `branchNameLike`（`QueryProjectBranchDTO` 既有字段，不新增参数、不新开接口），URL 形如 `/apps/repos?projectId=<项目ID>&platforms=<平台>&repoUrlLike=<owner/repo>&branchNameLike=<分支>`；为弥合 LIKE 模糊筛选与"精确定位"的语义差，分支列表排序首位增加"精确命中优先"（repo_url 精确片段 + branch_name 精确的行排最前），链接落地首屏第一位即目标分支；废弃原 `repoId` + `branchNameExact` 直达方案（不新增 `QueryRepoDTO` 字段）。
 13. **保留 AK/SK 模式（本次不移除）**：OIDC 与 AK/SK 双模式并存，AK/SK 的旧网关路径与静态凭证输入项（`apig-app-key`/`apig-app-secret`/`obs-ak`/`obs-sk`）全部保留（部分测试仓不适合纳入 OIDC 认证凭据授权项目）；本次仅做输出链路改造，不触碰鉴权与上报路径。
-14. **链接以 Markdown 超链接双通道输出：显示文本≠实际链接**：插件把链接渲染为 Markdown 超链接写入 `ATOMGIT_STEP_SUMMARY`（官方文档确证该通道渲染 Markdown、展示于工作流运行详情页；插件生态已有 `[下载](url)` 先例），显示文本为「代码度量指标扫描结果」、实际链接为服务端返回的完整 URL（固定单条，多项目取查询第一个项目）；同时保留 `ATOMGIT_OUTPUT` 的 key=value 概览行（链接行 key `扫描结果url`——末尾小写 `url` 触发平台渲染可点击；供 `steps.<id>.outputs.<name>` 机器消费、兼容既有消费方）。链接不携带平台授权参数（联调后定稿，commit `ed41c4a4`）。
+14. **链接仅以 `ATOMGIT_OUTPUT` 单通道输出**：插件输出 `key=value` 概览行（链接行 key `扫描结果url`——末尾小写 `url` 触发平台渲染可点击；供 `steps.<id>.outputs.<name>` 机器消费、兼容既有消费方）；原 `ATOMGIT_STEP_SUMMARY`（Markdown 超链接，显示文本≠实际链接）通道已移除，收敛为单通道，避免同一链接在运行摘要与任务结果两处分别呈现、展示形态不可由插件统一控制。链接不携带平台授权参数（联调后定稿，commit `ed41c4a4`）。
 15. **前端为协同方（不随本需求提业务 PR）**："无 metricType 链接落地"能力由前端侧承载（链接落地契约见 2.3 节），本需求仅服务端与插件提 PR；beta 端到端已验证点击落地效果（三筛选自动应用 + 精确命中置顶）。
 
 ## 2. 实现逻辑设计
@@ -118,15 +118,8 @@ openlibing-web  用户点击链接（前端侧协同能力）
 1. **`dist/uploaders/CoderepoUploader.js#report`**：业务成功后新增 `detailLink` / `tip` 解析（`resData?.data?.detailLink` 为非空字符串时透传，否则为空；`tip` 按字符串透传），返回 `{ success, recordId, detailLink, tip }`；原有兼容分支与 `code !== 200` 判定保留。
 2. **`CoderepoUploader#upload`**：上报成功返回 `{ success: true, recordId, obsUrl, detailLink, tip }`（失败路径不变，仍返回 obsUrl 保底提示）。
 3. **`dist/scanner.js`**：上报成功后 `result.uploadInfo = { success: true, obsUrl, detailLink, tip }`。
-4. **`dist/index.js`** 入口：在现有 5 项指标概览输出之后**双通道追加**链接/提示行：
-   - **ATOMGIT_STEP_SUMMARY（主展示通道）**：追加 Markdown 超链接（`- [显示文本](实际链接)`），显示文本与链接解耦（显示文本 ≠ href）：
-
-| 场景                                       | Markdown 行                        | 说明                               |
-| ------------------------------------------ | ---------------------------------- | ---------------------------------- |
-| detailLink 非空                            | `- [代码度量指标扫描结果](<链接>)` | 固定 1 行，不随项目数、指标数增加  |
-| 无链接且 tip 非空（仓未录入 / 分支未登记） | `- <提示文案>`（纯文本行，无链接） | 单行提示，插件不硬编码、不区分类型 |
-
-- **ATOMGIT_OUTPUT（兼容通道，机器消费）**：保留 key=value 纯值行（供 `steps.<id>.outputs.<name>` 取值、兼容既有消费方），链接行 key 末尾为小写 `url`（平台据此将值渲染为可点击链接、大小写敏感；提示行 key 不带 `url` 后缀，避免提示文本被渲染成无效链接）：
+4. **`dist/index.js`** 入口：在现有 5 项指标概览输出之后**单通道追加**链接/提示行：
+   - **ATOMGIT_OUTPUT**：输出 key=value 纯值行（供 `steps.<id>.outputs.<name>` 取值、兼容既有消费方），链接行 key 末尾为小写 `url`（平台据此将值渲染为可点击链接、大小写敏感；提示行 key 不带 `url` 后缀，避免提示文本被渲染成无效链接）：
 
 | 场景                          | 输出键        | 值                                  |
 | ----------------------------- | ------------- | ----------------------------------- |
@@ -134,11 +127,11 @@ openlibing-web  用户点击链接（前端侧协同能力）
 | 无链接且 tip 非空             | `扫描结果`    | 提示文案                            |
 | 无链接且 tip 为空（异常场景） | —             | 不输出，仅 `core.info` 记录便于排查 |
 
-- `detailLink` 非空即输出链接行、tip 非空即输出提示行（二者互斥，服务端保证）；链接/提示均 `core.info` 打印；两个通道各自检查环境变量（`ATOMGIT_STEP_SUMMARY` / `ATOMGIT_OUTPUT`），缺失时跳过对应通道；写入失败沿用现有 `core.warning` 兜底。
+- `detailLink` 非空即输出链接行、tip 非空即输出提示行（二者互斥，服务端保证）；链接/提示均 `core.info` 打印；检查 `ATOMGIT_OUTPUT` 环境变量，缺失时跳过输出；写入失败沿用现有 `core.warning` 兜底。
 
 5. **鉴权模式保持不变（AK/SK 保留）**：OIDC 与 AK/SK 双模式并存，本次不触及 `CoderepoUploader` 的鉴权分支、`ApigSigner`、旧网关路径、`action.yml` 输入项（`apig-app-key`/`apig-app-secret`/`obs-ak`/`obs-sk`）与凭证透传逻辑；输出链路改造与鉴权模式正交（两种模式下均正常输出链接/提示）。
 6. **bundle 双写**：`dist/index.js` 为 ncc 打包产物，内联了 `scanner.js` / `CoderepoUploader.js` 副本；改动需同步内联副本，或按仓内既有构建方式（`npm run build`）重新打包，保持分发物单文件。
-7. **README**：输出章节补充双通道链接说明（ATOMGIT_STEP_SUMMARY Markdown 超链接 + ATOMGIT_OUTPUT 概览行）与两类提示说明及示例。
+7. **README**：输出章节补充链接说明（`ATOMGIT_OUTPUT` 链接行/提示行）与两类提示说明及示例。
 
 ### 2.3 前端（openlibing-web，前端侧协同，不随本需求提 PR）
 
@@ -174,7 +167,7 @@ openlibing-web  用户点击链接（前端侧协同能力）
 | 异步导入尚未完成时点击链接                                | 分支页展示最新已入库数据（导入完成后刷新可见，数据链路既有行为）；页面提示文案由前端侧更新（提示稍等同步完成后刷新）                            |
 | branchName 含 `/` 等特殊字符                              | 服务端 URL 编码后拼接（`repoUrlLike` / `branchNameLike` 同）；前端 router 解析 query 自动还原                                                   |
 | 相近分支名（main 与 main-2）                              | 精确命中优先排序保证 `main` 行排在 `main-2` 之前，链接落地首屏第一位即目标分支                                                                  |
-| 无 ATOMGIT_STEP_SUMMARY / ATOMGIT_OUTPUT 环境变量         | 跳过对应通道输出（两个通道各自判空，互不影响）                                                                                                  |
+| 无 `ATOMGIT_OUTPUT` 环境变量                              | 跳过输出（仅 `core.info` 打印实际链接），不影响上报受理结果                                                                                     |
 
 ## 3. 类设计
 
@@ -196,13 +189,13 @@ openlibing-web  用户点击链接（前端侧协同能力）
 
 ### 3.2 插件侧（Node.js，code-metrics-action）
 
-| 文件                                 | 操作 | 说明                                                                                                                                                                                        |
-| ------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dist/uploaders/CoderepoUploader.js` | 修改 | `report` 解析 detailLink/tip；`upload` 成功透传；鉴权分支、`ApigSigner`、旧网关路径等 AK/SK 逻辑全部保留不动                                                                                |
-| `dist/scanner.js`                    | 修改 | `uploadInfo` 携带 detailLink/tip；凭证参数透传逻辑保留不动                                                                                                                                  |
-| `dist/index.js`                      | 修改 | 输出改双通道：ATOMGIT_STEP_SUMMARY 追加 Markdown 超链接（显示文本≠实际链接）+ ATOMGIT_OUTPUT 保留 key=value 概览行（detailLink 非空 1 行链接 / tip 提示行）；`core.info` 打印；同步内联副本 |
-| `action.yml`                         | 不改 | `apig-app-key` / `apig-app-secret` / `obs-ak` / `obs-sk` 输入项保留（AK/SK 模式保留）                                                                                                       |
-| `README.md`                          | 修改 | 输出章节补充双通道链接与两类提示说明及示例                                                                                                                                                  |
+| 文件                                 | 操作 | 说明                                                                                                                          |
+| ------------------------------------ | ---- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `dist/uploaders/CoderepoUploader.js` | 修改 | `report` 解析 detailLink/tip；`upload` 成功透传；鉴权分支、`ApigSigner`、旧网关路径等 AK/SK 逻辑全部保留不动                  |
+| `dist/scanner.js`                    | 修改 | `uploadInfo` 携带 detailLink/tip；凭证参数透传逻辑保留不动                                                                    |
+| `dist/index.js`                      | 修改 | 输出改单通道：`ATOMGIT_OUTPUT` 保留 key=value 概览行（detailLink 非空 1 行链接 / tip 提示行）；`core.info` 打印；同步内联副本 |
+| `action.yml`                         | 不改 | `apig-app-key` / `apig-app-secret` / `obs-ak` / `obs-sk` 输入项保留（AK/SK 模式保留）                                         |
+| `README.md`                          | 修改 | 输出章节补充链接（单通道）与两类提示说明及示例                                                                                |
 
 ### 3.3 前端（openlibing-web，前端侧协同，不随本需求提 PR）
 
@@ -263,7 +256,7 @@ openlibing-web  用户点击链接（前端侧协同能力）
 - 链接构建与 MQ 投递串行（投递成功后执行），构建异常兜底，不影响响应时延量级与投递结果。
 - 分支列表排序增强：`projectBranchOrderBy` 前置两段 CASE WHEN（`repoUrlLike` / `branchNameLike` 非空时参与排序，复用既有查询参数，不新增过滤条件），分页 LIMIT 下排序开销可控；`countProjectBranch` 无排序不受影响。
 - `file-detail` 取数两条路径均为索引等值 + `LIMIT 1`：未传 pipelineRunId 走新增 `selectLatestByGitAndBranch`（(git_url, branch_name, status) 等值 + 排序），传 pipelineRunId 走既有 `selectByPipelineRunId`（(git_url, branch_name, pipeline_run_id) 等值），性能量级不变。
-- 插件侧新增开销：字符串处理 + 每通道一次 `appendFileSync`（STEP_SUMMARY / OUTPUT），可忽略；输出行数固定为 1（链接行或提示行）。
+- 插件侧新增开销：字符串处理 + 1 次 `appendFileSync`（`ATOMGIT_OUTPUT`），可忽略；输出行数固定为 1（链接行或提示行）。
 - 前端：无新增请求（落地仅复用既有分支查询接口的既有筛选参数与既有分支列表/弹窗组件）。
 
 ## 6. API接口设计
@@ -326,6 +319,6 @@ openlibing-web  用户点击链接（前端侧协同能力）
 ## 跨仓影响
 
 - **openlibing-coderepo**：上报响应结构变化（出参新增 detailLink/tip）+ 分支列表排序增强（精确命中置顶，既有筛选参数复用）+ `file-detail` 的 `pipelineRunId` 可选化（传则精确命中该次记录、不传按分支最新记录返回）；平台域名复用既有配置 `openlibing.domain`（不新增配置项、无 yaml 变更）；`UtCoverageServiceImpl` 归一化方法委托重构（行为不变）。
-- **code-metrics-action**：输出规则改造（双通道：ATOMGIT_STEP_SUMMARY Markdown 超链接 + ATOMGIT_OUTPUT 概览行；固定 1 行链接 / 提示行）与响应解析扩展，分发物（dist）更新；鉴权模式不变（AK/SK 保留）。
+- **code-metrics-action**：输出规则改造（单通道 `ATOMGIT_OUTPUT`：固定 1 行链接 / 提示行）与响应解析扩展，分发物（dist）更新；鉴权模式不变（AK/SK 保留）。
 - **openlibing-web（前端侧协同，不随本需求提 PR）**：链接落地契约（三筛选参数透传 + 分支页自动应用 + 指标说明气泡口径 + 异步导入窗口提示文案）已与前端侧对齐；前端代码交付由前端团队负责。
 - 无数据库表结构变更、无新增接口、无新增依赖。

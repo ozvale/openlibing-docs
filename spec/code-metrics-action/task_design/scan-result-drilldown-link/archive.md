@@ -16,18 +16,19 @@
 代码度量扫描插件上报后，工作流概览只输出 5 项指标数值，用户无法直接进入 openLiBing 平台查看该仓库/分支的指标明细。本需求补齐「链接生成与输出」环节：
 
 - 服务端（openlibing-coderepo）：上报响应由 `DataResult<String>` 扩展为 `message + detailLink + tip`；按 gitUrl 解析关联项目取第一个（既有排序：录入时间倒序），校验第一行项目分支登记（`repo_branch` 精确 + `has_branch='1'`），已登记即生成固定 1 条链接（复用分支管理页筛选参数 projectId/platforms/repoUrlLike/branchNameLike，不含 metricType、repoId、pipelineRunId）；仓未录入 / 分支未登记返回对应 tip；异常仅告警、降级不阻断上报受理。配套改造：`file-detail` 的 `pipelineRunId` 改为**可选**入参（传则按指定记录精确返回、不传按分支最新成功记录返回）、分支列表排序增加「精确命中置顶」、`RepoUrlUtil.normalize` 归一化下沉。
-- 插件（code-metrics-action）：上报成功后双通道输出——ATOMGIT_STEP_SUMMARY Markdown 超链接（显示文本≠实际链接）+ ATOMGIT_OUTPUT 链接行（key 末尾小写 `url` 触发平台渲染可点击）；两类提示行；链接固定 1 条（不随项目数、指标数变化）。
+- 插件（code-metrics-action）：上报成功后仅以 `ATOMGIT_OUTPUT` 单通道输出链接行（key 末尾小写 `url` 触发平台渲染可点击）；两类提示行；链接固定 1 条（不随项目数、指标数变化）。原 `ATOMGIT_STEP_SUMMARY` Markdown 超链接通道已移除。
 - 链接落地（前端侧协同）：无 metricType 链接落地分支管理页并自动应用三筛选条件（精确命中行置顶），页面恒展示当前分支最新指标数据；异步导入窗口的页面提示文案由前端侧更新。
 - 鉴权模式（OIDC / AK-SK 双模式）、扫描逻辑、上报接口路径与入参、message 语义保持不变。
 
 ## 交付历程
 
-### code-metrics-action（分支 scan-result-drilldown-link，PR #32 → master，head `8a1b6fa`）
+### code-metrics-action（分支 scan-result-drilldown-link，PR #32 → master，head `692b071`）
 
 - commit `3728b5f`：feat 上报响应解析 detailLink/tip，双通道输出链接
 - commit `0360bc4`：补充输出逻辑测试
 - commit `0cb86eb`：修改日志输出
 - commit `8a1b6fa`：chore 文案定稿（代码度量指标扫描结果 / 扫描结果url）
+- commit `692b071`：chore 输出通道收敛——移除 `ATOMGIT_STEP_SUMMARY` 通道（`stepSummaryLine` 常量与写入 try/catch、相关注释），仅保留 `ATOMGIT_OUTPUT` 单通道；README 同步改为单通道说明
 
 ### openlibing-coderepo（分支 scan-result-drilldown-link，PR #215 → release_20261019_iter1，head `ed41c4a4`）
 
@@ -41,14 +42,16 @@
 
 ## 用户自测反馈
 
-- beta 环境端到端通过（用户确认）：流水线真实上报 → 双通道链接输出 → 点击落地分支页并自动应用三筛选条件（精确命中行置顶），展示最新指标数据
+- beta 环境端到端通过（用户确认）：流水线真实上报 → 链接输出（`ATOMGIT_OUTPUT` 单通道） → 点击落地分支页并自动应用三筛选条件（精确命中行置顶），展示最新指标数据
 - 反馈：链接落地为「最新数据」口径，异步导入进行中点击链接可能短时看到上一轮数据 → 与前端侧确认，由前端侧更新页面提示文案（提示稍等同步完成后刷新），后端与插件不做额外改动
+- 反馈：运行时同一链接经双通道重复呈现、平台面板顺序不受插件控制 → 需求侧决策收敛为仅 `ATOMGIT_OUTPUT` 单通道（commit `692b071`，T24）
 - 链接固定单条输出（不随项目数、指标数变化）；上报失败不输出链接
 
 ## 最终验证
 
 - 单测：`CodeMetricsServiceImplTest` 48/48（含 7 个 buildReportVO 用例 + 2 个 `getFileMetricDetail` 入参分流用例）、`CodeMetricsControllerTest` 5/5、`CodeMetricsImportConsumerTest` 5/5
-- 冒烟：基于真实 bundle 的 vm 沙箱 7 场景（AK/SK 链接、分支提示、均空不输出、上报失败不输出、缺 STEP_SUMMARY、缺 OUTPUT、OIDC 全链路）全部通过
+- 冒烟：基于真实 bundle 的 vm 沙箱 7 场景（AK/SK 链接、分支提示、均空不输出、上报失败不输出、缺 OUTPUT、OIDC 全链路）全部通过
+- 平台端到端（输出通道收敛后）：`ATOMGIT_OUTPUT` 链接输出单通道生效，同一链接不再重复呈现
 - 边界四态：命中 + 已登记（单条链接）/ 分支未登记（分支 tip，不回退其他项目）/ 仓未录入（仓 tip）/ 异常（空链接空提示）
 - 排序：精确命中置顶（相近分支名 main 与 main-2 场景验证）
 - 兼容：老插件 × 新服务端（仅判 code/msg、不读取 data）；旧前端 × 新服务端（file-detail 的 `pipelineRunId` 为可选入参：携带则按该次记录（git_url, branch_name, pipeline_run_id）精确返回、不携带按分支最新成功记录返回，两种调用均不报错）
@@ -60,6 +63,7 @@
 3. 前端侧协同定性：落地契约与前端侧对齐（三筛选自动应用 + 精确置顶 + 气泡口径 + 异步导入窗口提示文案），前端代码交付由前端团队负责，不随本需求提业务 PR
 4. 测试网关还原（已闭环）：联调期插件分支 `coderepoUrl` 曾指向 APIC 测试网关（beta 联调用）；联调完成后已还原为主干原值 `https://apig.openlibing.com:443`（commit `ea73f9e`）
 5. `file-detail` 入参由「撤除」改为「可选化」（补充交付，PR #234 / commit `faa0351d`）：PR #215 曾按「链接不携带 pipelineRunId」将 `pipelineRunId` 入参撤除、统一改为按分支最新记录返回；后续评估认为链接口径收敛不应连带砍掉接口层的历史记录下钻能力（其他调用方仍需按 `pipelineRunId` 精确定位该次记录），遂恢复为**可选**入参：传则精确查该次历史记录、不传则取该分支最新成功记录。链接侧口径不变（仍不携带 `pipelineRunId`）
+6. 输出通道由「双通道」收敛为「单通道」（需求决策变更，commit `692b071` / T24）：设计初版上报成功后同时写入 `ATOMGIT_STEP_SUMMARY`（Markdown 超链接）与 `ATOMGIT_OUTPUT`（概览行），运行时同一链接在任务结果面板出现两次；且实测确认平台任务结果面板条目顺序非确定性、对外部 action 输出不判型（`type`/`desc` 恒为 null），插件侧无法控制链接的位置与形态。故移除 `ATOMGIT_STEP_SUMMARY` 通道，仅保留 `ATOMGIT_OUTPUT`，避免重复呈现
 
 ## 可复用经验
 
@@ -69,7 +73,9 @@
 - 服务端单点定义：链接模板、平台地址（`openlibing.domain` 既有配置）与两类 tip 文案均由服务端单点定义，插件不做 URL 拼接与文案硬编码
 - URL 归一化下沉单一来源：`RepoUrlUtil.normalize` 统一实现（UtCoverage 委托复用），消除第二份归一化逻辑
 - 异步导入窗口的提示文案：页面按「最新数据」口径展示时，需提示用户"稍等同步完成后刷新"，由承载页面的前端侧更新文案
+- 输出通道收敛（单通道）：同一信息**避免多通道重复写入**（本次曾同时写 `ATOMGIT_STEP_SUMMARY` + `ATOMGIT_OUTPUT`，导致同一链接在任务结果面板重复呈现）；单通道仍保留「独立判环境变量 + try/catch + `core.warning` 降级」兜底范式
+- 平台面板渲染不受插件控制：GitCode 任务结果面板条目顺序非确定性（同 commit 多次运行顺序不同）、对外部 action 输出不判型（`type`/`desc` 恒为 null，链接在面板为纯文本）。**插件侧无法通过调整 key 前缀、写入顺序或输出通道来控制条目位置与形态**，设计时不应把「面板位置/顺序」当作可承诺行为
 
 ## 归档日期
 
-2026-10-15（补充交付 `file-detail` 可选 `pipelineRunId` 后于 2026-10-16 同步更新本文档）
+2026-10-15（补充交付 `file-detail` 可选 `pipelineRunId` 后于 2026-10-16 同步更新本文档；输出通道收敛为仅 `ATOMGIT_OUTPUT` 后于 2026-10-19 再次同步更新）
