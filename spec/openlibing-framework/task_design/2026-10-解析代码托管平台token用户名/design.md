@@ -28,13 +28,13 @@ Content-Type: application/json
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `business/dto/space/TokenParseDTO.java` | 新增 | 入参：platform、token（均 `@NotBlank`） |
-| `business/controller/ProjectController.java` | 修改 | 新增 `POST /project/parse-token-login` |
-| `business/service/ProjectService.java` | 修改 | 新增 `getLoginByToken(TokenParseDTO)` 声明 |
-| `business/service/impl/ProjectServiceImpl.java` | 修改 | 实现平台路由与解析逻辑 |
-| `src/test/.../ProjectServiceImplTest.java` | 修改 | 补充各平台成功/失败用例 |
+| 文件                                            | 操作 | 说明                                                           |
+| ----------------------------------------------- | ---- | -------------------------------------------------------------- |
+| `business/dto/space/ProjectTokenParseDTO.java`  | 新增 | 入参：platform（`@NotBlank`+`@Pattern`）、token（`@NotBlank`） |
+| `business/controller/ProjectController.java`    | 修改 | 新增 `POST /project/parse-token-login`                         |
+| `business/service/ProjectService.java`          | 修改 | 新增 `getLoginByToken(ProjectTokenParseDTO)` 声明              |
+| `business/service/impl/ProjectServiceImpl.java` | 修改 | 实现平台路由与解析逻辑                                         |
+| `src/test/.../ProjectServiceImplTest.java`      | 修改 | 补充各平台成功/失败用例                                        |
 
 ## 风险 & 缓解
 
