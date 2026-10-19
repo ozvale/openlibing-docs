@@ -6,7 +6,7 @@
 - **需求名称**: notice增加版本级导出功能
 - **核心目标**:
   为 notice 文档版本级导出（当前筛选条件下全部制品的全量声明文档）提供 2 个纯新增只读查询接口：接口 1 queryProductNamesMultiFilter 按与页面 queryProductListMultiFilter 完全相同的筛选条件（filters 白名单 + 动态键）返回全量制品名（不分页、COLLATE "C" 升序、忽略 sortField/sortDir/pageNum/pageSize、productType 空 400、未知 filter key 500、横向鉴权 403）；接口 2 queryPackageDependencyTypes 按制品名返回全部软件包 (name, version, dependencyType)，归并 key=name+version+downloadurl（有地址取地址、无地址取 purl），相同 key 多依赖关系按 0 直接依赖 > 2 直接&间接依赖 > 1 间接依赖 优先级取一条，NULL 归一化 -1，空态宽松语义 200+空数组；2026.10.13 评审定案制品名称查询接口走 feign 调用，由 sca 侧编排导出；不改任何既有接口行为。
-- **开发责任人**: xxx
+- **开发责任人**: 陈明旭
 - **测试责任人**: 赵威
 
 ---

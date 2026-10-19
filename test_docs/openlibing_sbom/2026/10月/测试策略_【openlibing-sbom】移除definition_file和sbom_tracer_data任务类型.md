@@ -6,7 +6,7 @@
 - **需求名称**: 【openlibing-sbom】移除definition_file和sbom_tracer_data任务类型
 - **核心目标**:
   移除 openlibing-sbom 中 definition_file 与 sbom_tracer_data 两类任务类型的解析支持，实现全仓 ossreviewtoolkit（ORT）依赖清零：analyzer 整模块删除、SbomContentType 删 2 枚举值、/uploadSbomTraceData 接口移除（404）、batch 删 2 个 Analyze Step + Decider（job XML 直连）、RawSbom 查询 SQL 加 value_type 白名单（存量两类 WAIT 记录不被调度）；两类 type 发布请求由"建任务"变为 400 + allowed types 提示。同时 FillUpLicenseStep 的 license 解析由 ORT spdx-utils 替换为 SPDX 官方 java-spdx-library（两处 try-catch 与 fallback 逻辑保持不变，非规范 license 解析失败不阻断 job）；保留 SPDX 2.2/3.0.1 发布主链路行为与改前一致。
-- **开发责任人**: xxx
+- **开发责任人**: 陈明旭
 - **测试责任人**: 赵威
 
 ---

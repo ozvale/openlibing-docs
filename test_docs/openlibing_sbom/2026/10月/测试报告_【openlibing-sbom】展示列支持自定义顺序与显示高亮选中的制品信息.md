@@ -4,10 +4,11 @@
 
 - **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/356
 - **需求名称**: 【openlibing-sbom】展示列支持自定义顺序与显示高亮选中的制品信息
-- **开发责任人**: xxx
+- **开发责任人**: 宁欣龙
 - **测试责任人**: 赵威
 - **最终结论**: 通过
 - **测试维度**:
+
 - [x] **功能自检测试**
 - [ ] **体验测试**
 - [ ] **集成测试**
