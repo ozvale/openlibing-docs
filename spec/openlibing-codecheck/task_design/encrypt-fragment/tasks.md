@@ -1,22 +1,22 @@
-# Tasks: fragment 代码片段加密存储及日志泄露防护
+# Tasks: fragment 代码片段编码存储及日志泄露防护
 
 ## 实现步骤
 
 - [x] 1. 新增 FragmentCryptoUtil 工具类
-  - encryptFragments(DefectVo) / encryptFragments(List<DefectVo>)
-  - decryptFragments(DefectVo) / decryptFragments(List<DefectVo>)
+  - encryptFragments(DefectVo) / encryptFragments(List<DefectVo>)（实际为 Base64 编码）
+  - decryptFragments(DefectVo) / decryptFragments(List<DefectVo>)（实际为 Base64 解码）
   - decryptFragmentsInMaps(List<Map>) 用于 Map 类型聚合结果
   - tryDecryptLineContent() 返回 Optional<String>，采用两阶段验证
-  - 加密失败使用占位提示词，解密失败兼容历史数据
+  - 编码失败使用占位提示词，解码失败兼容历史数据
 
-- [x] 2. 入库加密 - task_result_details / task_inc_result_details（3 个 Operation 类）
-  - FullDetailsOperation.saveInfo() 入库前深拷贝+加密
-  - IncDetailsOperation.insertList() 入库前深拷贝+加密
-  - DatarecoveryOperation.insertList() 入库前深拷贝+加密
+- [x] 2. 入库编码 - task_result_details / task_inc_result_details（3 个 Operation 类）
+  - FullDetailsOperation.saveInfo() 入库前深拷贝+编码
+  - IncDetailsOperation.insertList() 入库前深拷贝+编码
+  - DatarecoveryOperation.insertList() 入库前深拷贝+编码
 
-- [x] 3. 查询解密 - task_result_details / task_inc_result_details（2 个 Operation 类，11 个方法）
-  - FullDetailsOperation: 7 个查询方法返回前解密
-  - IncDetailsOperation: 4 个查询方法返回前解密
+- [x] 3. 查询解码 - task_result_details / task_inc_result_details（2 个 Operation 类，11 个方法）
+  - FullDetailsOperation: 7 个查询方法返回前解码
+  - IncDetailsOperation: 4 个查询方法返回前解码
 
 - [x] 4. 修复日志泄露
   - DatarecoveryDelegateImpl: successDefects/failDefects 改为打印 size
@@ -26,12 +26,12 @@
   - CodeCheckIssueFragment.lineContent
   - 5 个规则类的 rightExample/errorExample
 
-- [x] 6. 入库加密 - full_shield_detail / inc_shield_detail（ProblemShieldOperation）
-  - saveInfo() 入库前深拷贝+加密
-  - saveShieldDetail() 入库前深拷贝+加密
-  - getAddFullShieldDetails() 入库前深拷贝+加密
+- [x] 6. 入库编码 - full_shield_detail / inc_shield_detail（ProblemShieldOperation）
+  - saveInfo() 入库前深拷贝+编码
+  - saveShieldDetail() 入库前深拷贝+编码
+  - getAddFullShieldDetails() 入库前深拷贝+编码
 
-- [x] 7. 查询解密 - full_shield_detail / inc_shield_detail
+- [x] 7. 查询解码 - full_shield_detail / inc_shield_detail
   - ProblemShieldOperation: getShieldDetailById(), getShieldDetailByUserId(), getInReviewAndUpdateStatu(), fullShieldDetail(), incShieldDetail()
   - ShieldDetailOperation: shieldDetail()（Map 类型，使用 decryptFragmentsInMaps）
 
