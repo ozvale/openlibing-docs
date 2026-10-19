@@ -8,12 +8,10 @@
 
 | 字段       | 值                                                          |
 | ---------- | ----------------------------------------------------------- |
-| 源码位置   | `d:\code\openlibing-new\openlibing-codecheck`               |
 | Git 仓库   | `https://gitcode.com/openlibing/openlibing-codecheck.git`   |
 | Git 分支   | `master`                                                    |
 | Git Commit | `b107ad01`（提交时间 `2026-10-09 16:39:31 +0800`）          |
 | 分析模型   | `DeepSeek-V4-Flash 正式版`                                  |
-| 机器名     | `DESKTOP-MO1I5FG`                                           |
 | 分析开始   | `2026-10-10 10:04 (+08:00)`                                 |
 | 分析完成   | `2026-10-10 10:35 (+08:00)`                                 |
 | 输出位置   | `openlibing-docs/architecture_desgin/openlibing-codecheck/` |
@@ -24,24 +22,24 @@
 
 openlibing-codecheck 是 openLiBing 研发工作流平台中的**代码检查微服务**。它编排华为云 CodeCheck 静态扫描（每日全量扫描 + PR 增量门禁检查）、接收 CICD 服务推送的静态告警 SARIF 结果并解析入库、管理规则集与问题屏蔽、向 CI 门户提供看板/汇总查询与 Excel 导出。服务为 Spring Boot 3.4.4（Java 21）单 K8s 工作负载（端口 8091，非 root 容器 + RASP agent），存在三类信任面：**集群内服务间端点**（`/internal/**`、`/ci-portal/webhook/**`、`/machine-api/**`）、**经 ci-portal 后端代理的门户端点**（`/ci-portal/**`）、**经华为云 APIG 网关转发的机机端点**（`/apig/v1/**`）。
 
-本次分析识别 **18 个分析单元 / 25 个模型元素**，枚举 **58 个 STRIDE-A 威胁**，整合为 **20 个安全发现**。系统**无 Tier 1（无前置条件直接可利用）发现**：所有外部可达面均被上游边界（APIG 网关、ci-portal 后端代理、集群网络）拦挡。但风险**高度集中在鉴权与授权层**——应用几乎无代码内统一鉴权，且多处授权决策消费客户端下发的身份信息（`userId`），一旦集群内任一 Pod 被攻破或网关策略配置不当，即可实现身份冒充、越权触发扫描任务、SSRF、数据越权读取等。
+本次分析识别 **20 个分析单元 / 25 个模型元素**，枚举 **58 条 STRIDE-A 威胁记录**，整合为 **19 个安全发现**。系统**无 Tier 1（无前置条件直接可利用）发现**：所有外部可达面均被上游边界（APIG 网关、ci-portal 后端代理、集群网络）拦挡。但风险**高度集中在鉴权与授权层**——应用几乎无代码内统一鉴权，且多处授权决策消费客户端下发的身份信息（`userId`），一旦集群内任一 Pod 被攻破或网关策略配置不当，即可实现身份冒充、越权触发扫描任务、SSRF、数据越权读取等。
 
 **已核实的正向安全控制**：webhook 查询入口有字段/集合白名单（`WebhookInputValidator`）、多个门户写端点调用 `AuthUtils.checkPermission`、生产环境 Redis/RabbitMQ/MongoDB 使用 TLS、容器非 root 运行并带 RASP agent、启动参数含 `-Dfastjson.parser.safeMode=true`、`CommandArgSanitizer` 白名单覆盖命令执行面、Redisson 锁与 XXL-Job 白名单就位、`LogSanitizer` 与 log4j2 配置防 CRLF 注入。
 
-> **威胁计数说明**：本分析识别 58 个威胁（其中 0 个可直接利用、45 个条件性风险、13 个纵深防御项）。该数字反映 STRIDE-A 的全面覆盖，不代表系统整体不安全。
+> **威胁计数说明**：本分析枚举 58 条威胁记录（56 条具体威胁 + 2 条 N/A），其中 0 个可直接利用、53 个条件性风险、3 个纵深防御项。该数字反映 STRIDE-A 的全面覆盖，不代表系统整体不安全。
 
 ### 1.1 风险评级：**Elevated（偏高）**
 
-风险定为"偏高"而非"严重"的原因：无 Tier 1 直接可利用发现，所有利用路径至少需要一个前置条件（集群内网络访问 T2 / 前置失陷或管理访问 T3）。但存在 1 个 Critical 与 12 个 Important 发现，一旦可达（如被攻破的兄弟 Pod、集群内恶意 actor、或 APIG 网关策略失配），可对扫描结果、缺陷数据、任务工作流形成完整读写能力——包括通过客户端下发的 `userId` 冒充任意平台用户（FIND-04）、触发任意扫描与解析（FIND-02/FIND-13）、服务端拉取任意 URL（FIND-05）。整体安全水位取决于**本仓库之外的边界控制**（网关鉴权、网络分段、Nacos ACL），无法仅从源码验证。
+风险定为"偏高"而非"严重"的原因：无 Tier 1 直接可利用发现，所有利用路径至少需要一个前置条件（集群内网络访问 T2 / 前置失陷或管理访问 T3）。但存在 1 个 Critical 与 10 个 Important 发现，一旦可达（如被攻破的兄弟 Pod、集群内恶意 actor、或 APIG 网关策略失配），可对扫描结果、缺陷数据、任务工作流形成完整读写能力——包括通过客户端下发的 `userId` 冒充任意平台用户（FIND-04）、触发任意扫描与解析（FIND-02/FIND-13）、服务端拉取任意 URL（FIND-05）。整体安全水位取决于**本仓库之外的边界控制**（网关鉴权、网络分段、Nacos ACL），无法仅从源码验证。
 
 ### 1.2 按 Tier 分布
 
 | Tier     | 说明                                | 威胁数 | 发现数 | 优先级   |
 | -------- | ----------------------------------- | ------ | ------ | -------- |
 | Tier 1   | 直接可利用（无前置条件）            | 0      | 0      | 严重风险 |
-| Tier 2   | 条件性风险（单一前置条件）          | 45     | 15     | 偏高风险 |
-| Tier 3   | 纵深防御（多前置条件/基础设施访问） | 13     | 5      | 中等风险 |
-| **合计** |                                     | **58** | **20** |          |
+| Tier 2   | 条件性风险（单一前置条件）          | 53     | 15     | 偏高风险 |
+| Tier 3   | 纵深防御（多前置条件/基础设施访问） | 3      | 4      | 中等风险 |
+| **合计** |                                     | **56** | **19** |          |
 
 ---
 
@@ -88,7 +86,7 @@ openlibing-codecheck 承担代码质量检查业务：
 | ------------- | ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `External`    | Internet/网关边界 | 互联网侧外部实体       | CiPortalBackend、HuaweiApigGateway、CodePlatforms、HuaweiCodeCheck、HuaweiOBS、XxlJobAdmin、EmailServer、Operator/EndUser |
 | `K8sCluster`  | 集群边界          | 集群内中间件           | MongoDB、Redis、RabbitMQ、MySQL、NacosConfigCenter                                                                        |
-| `Application` | 进程边界          | 应用进程（单 K8s Pod） | 全部 18 个分析单元（进程）                                                                                                |
+| `Application` | 进程边界          | 应用进程（单 K8s Pod） | 全部 20 个分析单元（进程）                                                                                                |
 
 ---
 
@@ -182,7 +180,7 @@ flowchart LR
 
 ### 3.2 元素清单（25 个模型元素）
 
-#### 进程（18 个分析单元，锚定真实类）
+#### 进程（20 个分析单元，锚定真实类）
 
 | ID                        | 类型 | 锚点类/文件                                                                                                                      | 职责                                                                                                                                    | 边界        |
 | ------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
@@ -217,7 +215,7 @@ flowchart LR
 | MySQL             | SQL 数据存储      | `DataSourceConfig.java`                                                 | 配置中心业务库（菜单/角色/权限等）     | K8sCluster |
 | NacosConfigCenter | 配置中心          | `application-prod.yaml` 等                                              | 全部敏感配置与 `security.part1` 密钥   | K8sCluster |
 
-#### 外部实体（7）
+#### 外部实体（7 个外部服务 + 1 个外部角色）
 
 | ID                | 类型     | 锚点（集成点）                              | 说明                                            |
 | ----------------- | -------- | ------------------------------------------- | ----------------------------------------------- |
@@ -313,71 +311,71 @@ flowchart LR
 
 #### 4.2.1 ApiGatewayEntry（锚点：`HwApigController.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                                      | 前置条件             | Tier | 状态 |
-| --- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
-| T01 | S    | APIG 网关 AppCode/凭据泄露或被旁路后可冒用机机调用方身份触发任务                                                                                                                                                                                                                          | `Authenticated User` | T2   | Open |
-| T02 | I    | 4 个 APIG 端点 `logger.info("...params={}", params)` 全量打印请求体（[HwApigController.java:72/94/113/135](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java)），上游若在 params 中携带 token 即入日志 | `Internal Network`   | T2   | Open |
-| T03 | A    | 客户端可控 `prUrl/repoUrl` 仅非空校验（[HwApigController.java:96/137](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java)），可触发任意仓库扫描，消耗 CodeCheck 配额                                    | `Authenticated User` | T2   | Open |
-| T04 | D    | 网关后无代码级速率限制，机机端点可被高频调用消耗计算资源                                                                                                                                                                                                                                  | `Authenticated User` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                                                  | 前置条件             | Tier | 状态 |
+| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
+| T01 | S    | APIG 网关 AppCode/凭据泄露或被旁路后可冒用机机调用方身份触发任务                                                                                                                                                                      | `Authenticated User` | T2   | Open |
+| T02 | I    | 4 个 APIG 端点 `logger.info("...params={}", params)` 全量打印请求体（[HwApigController.java:72/94/113/135](src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java)），上游若在 params 中携带 token 即入日志 | `Internal Network`   | T2   | Open |
+| T03 | A    | 客户端可控 `prUrl/repoUrl` 仅非空校验（[HwApigController.java:96/137](src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java)），可触发任意仓库扫描，消耗 CodeCheck 配额                                    | `Authenticated User` | T2   | Open |
+| T04 | D    | 网关后无代码级速率限制，机机端点可被高频调用消耗计算资源                                                                                                                                                                              | `Authenticated User` | T2   | Open |
 
 #### 4.2.2 WebhookController（锚点：`WebhookController.java` + `WebhookInputValidator.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                                 | 前置条件           | Tier | 状态                        |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | ---- | --------------------------- |
-| T05 | I    | `/ci-portal/webhook/codecheck/v1/find/by/mongoDB` 暴露白名单内 17 个集合的任意查询读取（任务、结果、屏蔽、告警等），无身份校验                                                                                                                                                       | `Internal Network` | T2   | Open                        |
-| T06 | E    | NoSQL 注入/跨集合访问（$ne/$regex/$where 等）已由 `WebhookInputValidator` 表名/字段名/值类型白名单缓解（[WebhookInputValidator.java:37-141](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/security/WebhookInputValidator.java)） | `Internal Network` | T2   | ✅ 已缓解（代码内既有控制） |
-| T07 | A    | 无身份校验的查询滥用（批量枚举、数据爬取、撞库查询）                                                                                                                                                                                                                                 | `Internal Network` | T2   | Open                        |
+| ID  | 类别 | 威胁                                                                                                                                                                                                                             | 前置条件           | Tier | 状态                        |
+| --- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | --------------------------- |
+| T05 | I    | `/ci-portal/webhook/codecheck/v1/find/by/mongoDB` 暴露白名单内 17 个集合的任意查询读取（任务、结果、屏蔽、告警等），无身份校验                                                                                                   | `Internal Network` | T2   | Open                        |
+| T06 | E    | NoSQL 注入/跨集合访问（$ne/$regex/$where 等）已由 `WebhookInputValidator` 表名/字段名/值类型白名单缓解（[WebhookInputValidator.java:37-141](src/main/java/com/openlibing/codecheck/common/security/WebhookInputValidator.java)） | `Internal Network` | T2   | ✅ 已缓解（代码内既有控制） |
+| T07 | A    | 无身份校验的查询滥用（批量枚举、数据爬取、撞库查询）                                                                                                                                                                             | `Internal Network` | T2   | Open                        |
 
 #### 4.2.3 InternalTaskControllers（锚点：`InternalController.java` / `InternalCodeFullController.java` / `InternalCodeIncController.java` / `SuppressionScanController.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                                                                                                                                                                                                | 前置条件           | Tier | 状态 |
-| --- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
-| T08 | E    | 集群内任意 Pod 可无鉴权触发任务：`GET /internal/full/invoke/task`（[InternalController.java:84](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/InternalController.java)）、`POST /ci-portal/webhook/codecheck/full/task`、`POST /ci-portal/webhook/codecheck/v1/task`，全部无代码内鉴权（服务间信任）                                                                               | `Internal Network` | T2   | Open |
-| T09 | A    | 伪造 `prUrl/repoUrl` 触发任意仓库扫描（配额消耗、数据污染），仅非空校验（[InternalCodeFullController.java:51](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/InternalCodeFullController.java)、[InternalCodeIncController.java:65](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/InternalCodeIncController.java)） | `Internal Network` | T2   | Open |
-| T10 | I    | 内部任务控制器整包入参打日志（[InternalCodeFullController.java:49](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/InternalCodeFullController.java)、[InternalCodeIncController.java:63](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/InternalCodeIncController.java)）                                            | `Internal Network` | T2   | Open |
-| T11 | D    | 高频触发任务（无速率限制）导致 MQ/MongoDB/CodeCheck 资源耗尽                                                                                                                                                                                                                                                                                                                                                                                        | `Internal Network` | T2   | Open |
-| T12 | I    | `SuppressionScanController` 异常信息回显给调用方（[SuppressionScanController.java:43](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/SuppressionScanController.java)）                                                                                                                                                                                                              | `Internal Network` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                                                                                        | 前置条件           | Tier | 状态 |
+| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
+| T08 | E    | 集群内任意 Pod 可无鉴权触发任务：`GET /internal/full/invoke/task`（[InternalController.java:84](src/main/java/com/openlibing/codecheck/business/controller/InternalController.java)）、`POST /ci-portal/webhook/codecheck/full/task`、`POST /ci-portal/webhook/codecheck/v1/task`，全部无代码内鉴权（服务间信任）                           | `Internal Network` | T2   | Open |
+| T09 | A    | 伪造 `prUrl/repoUrl` 触发任意仓库扫描（配额消耗、数据污染），仅非空校验（[InternalCodeFullController.java:51](src/main/java/com/openlibing/codecheck/business/controller/InternalCodeFullController.java)、[InternalCodeIncController.java:65](src/main/java/com/openlibing/codecheck/business/controller/InternalCodeIncController.java)） | `Internal Network` | T2   | Open |
+| T10 | I    | 内部任务控制器整包入参打日志（[InternalCodeFullController.java:49](src/main/java/com/openlibing/codecheck/business/controller/InternalCodeFullController.java)、[InternalCodeIncController.java:63](src/main/java/com/openlibing/codecheck/business/controller/InternalCodeIncController.java)）                                            | `Internal Network` | T2   | Open |
+| T11 | D    | 高频触发任务（无速率限制）导致 MQ/MongoDB/CodeCheck 资源耗尽                                                                                                                                                                                                                                                                                | `Internal Network` | T2   | Open |
+| T12 | I    | `SuppressionScanController` 异常信息回显给调用方（[SuppressionScanController.java:43](src/main/java/com/openlibing/codecheck/business/controller/SuppressionScanController.java)）                                                                                                                                                          | `Internal Network` | T2   | Open |
 
 #### 4.2.4 MachineApiControllers（锚点：`MachineApiCheckboardController.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                          | 前置条件           | Tier | 状态 |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
-| T13 | E    | `/machine-api/v1/**` 无鉴权机机端点可查询全量扫描结果/记录（[MachineApiCheckboardController.java:49/69](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/MachineApiCheckboardController.java)） | `Internal Network` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                      | 前置条件           | Tier | 状态 |
+| --- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
+| T13 | E    | `/machine-api/v1/**` 无鉴权机机端点可查询全量扫描结果/记录（[MachineApiCheckboardController.java:49/69](src/main/java/com/openlibing/codecheck/business/controller/MachineApiCheckboardController.java)） | `Internal Network` | T2   | Open |
 
 #### 4.2.5 PortalTaskControllers（锚点：`FulltaskController.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                                  | 前置条件             | Tier | 状态 |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
-| T14 | E    | `userId` 来自客户端 `@RequestParam`（[FulltaskController.java:38/70/84](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/FulltaskController.java)），`checkPermission` 以该 userId 校验 → 伪造他人身份越权执行/删除任务 | `Authenticated User` | T2   | Open |
-| T15 | A    | `perform/task` 与 `termination/task` 权限校验完全依赖客户端 userId，可冒用管理员操作                                                                                                                                                                                                  | `Authenticated User` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                                              | 前置条件             | Tier | 状态 |
+| --- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
+| T14 | E    | `userId` 来自客户端 `@RequestParam`（[FulltaskController.java:38/70/84](src/main/java/com/openlibing/codecheck/business/controller/FulltaskController.java)），`checkPermission` 以该 userId 校验 → 伪造他人身份越权执行/删除任务 | `Authenticated User` | T2   | Open |
+| T15 | A    | `perform/task` 与 `termination/task` 权限校验完全依赖客户端 userId，可冒用管理员操作                                                                                                                                              | `Authenticated User` | T2   | Open |
 
 #### 4.2.6 PortalRuleControllers（锚点：`RuleController.java` / `RuleSetListController.java` / `IgnoretreeController.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                | 前置条件             | Tier | 状态 |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
-| T16 | E    | 规则/规则集/忽略树写操作 `checkPermission` 均基于客户端 userId（[RuleController.java:45](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/RuleController.java) 等），userId 可伪造 → 规则集越权增删改 | `Authenticated User` | T2   | Open |
-| T17 | I    | `IgnoretreeController` `currentPath` 客户端可控（[IgnoretreeController.java:39](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/IgnoretreeController.java)），可探测路径/目录结构信息                | `Authenticated User` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                            | 前置条件             | Tier | 状态 |
+| --- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
+| T16 | E    | 规则/规则集/忽略树写操作 `checkPermission` 均基于客户端 userId（[RuleController.java:45](src/main/java/com/openlibing/codecheck/business/controller/RuleController.java) 等），userId 可伪造 → 规则集越权增删改 | `Authenticated User` | T2   | Open |
+| T17 | I    | `IgnoretreeController` `currentPath` 客户端可控（[IgnoretreeController.java:39](src/main/java/com/openlibing/codecheck/business/controller/IgnoretreeController.java)），可探测路径/目录结构信息                | `Authenticated User` | T2   | Open |
 
 #### 4.2.7 PortalShieldControllers（锚点：`ProblemshieldController.java` / `SensitiveController.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | 前置条件             | Tier | 状态 |
-| --- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
-| T18 | E    | 问题屏蔽/敏感词全部操作（增删改查/审核/转审/撤销）的 `userId/userName` 均来自客户端（[ProblemshieldController.java:43-178](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/ProblemshieldController.java)、[SensitiveController.java:43-218](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/SensitiveController.java)），无服务端身份注入 → 越权审核/撤销/篡改屏蔽记录 | `Authenticated User` | T2   | Open |
-| T19 | A    | `AuthUtils.authByShieldFoss` 审核人判定基于客户端 `userId/userType`（[AuthUtils.java:242-295](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java)），可伪造审核人身份                                                                                                                                                                                                                                                  | `Authenticated User` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                                                                                                                                         | 前置条件             | Tier | 状态 |
+| --- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
+| T18 | E    | 问题屏蔽/敏感词全部操作（增删改查/审核/转审/撤销）的 `userId/userName` 均来自客户端（[ProblemshieldController.java:43-178](src/main/java/com/openlibing/codecheck/business/controller/ProblemshieldController.java)、[SensitiveController.java:43-218](src/main/java/com/openlibing/codecheck/business/controller/SensitiveController.java)），无服务端身份注入 → 越权审核/撤销/篡改屏蔽记录 | `Authenticated User` | T2   | Open |
+| T19 | A    | `AuthUtils.authByShieldFoss` 审核人判定基于客户端 `userId/userType`（[AuthUtils.java:242-295](src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java)），可伪造审核人身份                                                                                                                                                                                              | `Authenticated User` | T2   | Open |
 
 #### 4.2.8 PortalQueryControllers（锚点：`CheckboardController.java` / `WorkbenchController.java` / `SelectionController.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                                  | 前置条件             | Tier | 状态 |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
-| T20 | I    | 看板/工作台/下拉查询端点无代码内鉴权（[CheckboardController.java:46-251](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/CheckboardController.java)），经 ci-portal 可达即可越权读取跨项目数据                         | `Authenticated User` | T2   | Open |
-| T21 | A    | `getTaskFileContents` 按客户端 `repoUrl+path` 拉取代码平台文件（[CheckboardDelegateImpl.java:706-732](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/impl/CheckboardDelegateImpl.java)）→ 服务端请求伪造（SSRF 面）/任意文件读取 | `Authenticated User` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                                              | 前置条件             | Tier | 状态 |
+| --- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
+| T20 | I    | 看板/工作台/下拉查询端点无代码内鉴权（[CheckboardController.java:46-251](src/main/java/com/openlibing/codecheck/business/controller/CheckboardController.java)），经 ci-portal 可达即可越权读取跨项目数据                         | `Authenticated User` | T2   | Open |
+| T21 | A    | `getTaskFileContents` 按客户端 `repoUrl+path` 拉取代码平台文件（[CheckboardDelegateImpl.java:706-732](src/main/java/com/openlibing/codecheck/business/impl/CheckboardDelegateImpl.java)）→ 服务端请求伪造（SSRF 面）/任意文件读取 | `Authenticated User` | T2   | Open |
 
 #### 4.2.9 FileDownLoadController（锚点：`FileDownLoadController.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                     | 前置条件             | Tier | 状态 |
-| --- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
-| T22 | E    | `download/log` 与多数导出端点无 `checkPermission`（[FileDownLoadController.java:184-193](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/FileDownLoadController.java)）→ 越权导出敏感数据 | `Authenticated User` | T2   | Open |
-| T23 | T    | `tableName` 直接拼接导出文件名（[FileDownLoadController.java:109](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/FileDownLoadController.java)）→ 文件名注入/路径遍历                     | `Authenticated User` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                 | 前置条件             | Tier | 状态 |
+| --- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
+| T22 | E    | `download/log` 与多数导出端点无 `checkPermission`（[FileDownLoadController.java:184-193](src/main/java/com/openlibing/codecheck/business/controller/FileDownLoadController.java)）→ 越权导出敏感数据 | `Authenticated User` | T2   | Open |
+| T23 | T    | `tableName` 直接拼接导出文件名（[FileDownLoadController.java:109](src/main/java/com/openlibing/codecheck/business/controller/FileDownLoadController.java)）→ 文件名注入/路径遍历                     | `Authenticated User` | T2   | Open |
 
 #### 4.2.10 HealthCheckController（锚点：`HealthCheckController.java`）
 
@@ -388,27 +386,27 @@ flowchart LR
 
 #### 4.2.11 StaticAlarmReceiveService（锚点：`StaticAlarmReceiveController.java` / `SarifParseServiceImpl.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                                                                       | 前置条件           | Tier | 状态 |
-| --- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
-| T26 | I    | **SSRF**：`URI.create(obsUrl).toURL().openStream()` 服务端直接拉取客户端/上游提供的 URL（[SarifParseServiceImpl.java:159-161](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java)），无协议/域名白名单 → 可拉取任意内网地址 | `Internal Network` | T2   | Open |
-| T27 | D    | 无界下载/解析：`obsUrls` 数量、单文件大小、SARIF runs/results 深度均无上限（[SarifParseServiceImpl.java:100-123](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java)）→ 内存/带宽耗尽                                       | `Internal Network` | T2   | Open |
-| T28 | T    | SARIF 无签名/HMAC 完整性校验 → 篡改结果注入伪造告警（[SarifParseServiceImpl.java:159](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java)）                                                                                 | `Internal Network` | T2   | Open |
-| T29 | S    | `/codescan/v1/result/receive` 无鉴权（[StaticAlarmReceiveController.java:37-40](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/alarm/StaticAlarmReceiveController.java)）→ 集群内可伪造扫描结果提交                                                        | `Internal Network` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                   | 前置条件           | Tier | 状态 |
+| --- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
+| T26 | I    | **SSRF**：`URI.create(obsUrl).toURL().openStream()` 服务端直接拉取客户端/上游提供的 URL（[SarifParseServiceImpl.java:159-161](src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java)），无协议/域名白名单 → 可拉取任意内网地址 | `Internal Network` | T2   | Open |
+| T27 | D    | 无界下载/解析：`obsUrls` 数量、单文件大小、SARIF runs/results 深度均无上限（[SarifParseServiceImpl.java:100-123](src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java)）→ 内存/带宽耗尽                                       | `Internal Network` | T2   | Open |
+| T28 | T    | SARIF 无签名/HMAC 完整性校验 → 篡改结果注入伪造告警（[SarifParseServiceImpl.java:159](src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java)）                                                                                 | `Internal Network` | T2   | Open |
+| T29 | S    | `/codescan/v1/result/receive` 无鉴权（[StaticAlarmReceiveController.java:37-40](src/main/java/com/openlibing/codecheck/business/controller/alarm/StaticAlarmReceiveController.java)）→ 集群内可伪造扫描结果提交                                                        | `Internal Network` | T2   | Open |
 
 #### 4.2.12 AuthUtils（锚点：`AuthUtils.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                                                 | 前置条件             | Tier | 状态 |
-| --- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- | ---- |
-| T30 | E    | **核心授权缺陷**：`checkPermission(url, projectId, userId)` 决策消费客户端传入的 `userId`（[AuthUtils.java:349-389](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java)），无服务端会话/令牌绑定 → 任意身份冒充        | `Authenticated User` | T2   | Open |
-| T31 | E    | `checkPermission` 依赖 url→菜单映射；未配置菜单的 URL 直接跳过循环返回 false（[AuthUtils.java:351-355](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java)），且 `general_config` 菜单直接放行——菜单配置缺漏时校验失效 | `Authenticated User` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                                                             | 前置条件             | Tier | 状态 |
+| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- | ---- | ---- |
+| T30 | E    | **核心授权缺陷**：`checkPermission(url, projectId, userId)` 决策消费客户端传入的 `userId`（[AuthUtils.java:349-389](src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java)），无服务端会话/令牌绑定 → 任意身份冒充        | `Authenticated User` | T2   | Open |
+| T31 | E    | `checkPermission` 依赖 url→菜单映射；未配置菜单的 URL 直接跳过循环返回 false（[AuthUtils.java:351-355](src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java)），且 `general_config` 菜单直接放行——菜单配置缺漏时校验失效 | `Authenticated User` | T2   | Open |
 
 #### 4.2.13 SecurityHelper（锚点：`SecurityHelper.java` / `FragmentCryptoUtil.java` / `TokenUtil.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                               | 前置条件               | Tier | 状态 |
-| --- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ---- | ---- |
-| T32 | I    | 单一静态密钥 `security.part1` 集中存储于配置中心（[SecurityHelper.java:25](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/security/SecurityHelper.java)），41 处解密调用点共用 → 配置中心被攻破即全部凭据失效，轮换需重启 | `Host/OS Access`       | T3   | Open |
-| T33 | T    | `FragmentCryptoUtil` 对含密钥代码片段仅 **Base64 编码**（可逆伪加密，[FragmentCryptoUtil.java:115](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/security/FragmentCryptoUtil.java)）                                     | `Local Process Access` | T2   | Open |
-| T34 | T    | `TokenUtil` 以 **MD5(uuid+number)** 生成门禁 token（[TokenUtil.java:50-53](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/common/TokenUtil.java)）→ 弱哈希/可预测                                                         | `Local Process Access` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                                           | 前置条件               | Tier | 状态 |
+| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- | ---- | ---- |
+| T32 | I    | 单一静态密钥 `security.part1` 集中存储于配置中心（[SecurityHelper.java:25](src/main/java/com/openlibing/codecheck/common/utils/security/SecurityHelper.java)），41 处解密调用点共用 → 配置中心被攻破即全部凭据失效，轮换需重启 | `Host/OS Access`       | T3   | Open |
+| T33 | T    | `FragmentCryptoUtil` 对含密钥代码片段仅 **Base64 编码**（可逆伪加密，[FragmentCryptoUtil.java:115](src/main/java/com/openlibing/codecheck/common/utils/security/FragmentCryptoUtil.java)）                                     | `Local Process Access` | T2   | Open |
+| T34 | T    | `TokenUtil` 以 **MD5(uuid+number)** 生成门禁 token（[TokenUtil.java:50-53](src/main/java/com/openlibing/codecheck/common/utils/common/TokenUtil.java)）→ 弱哈希/可预测                                                         | `Local Process Access` | T2   | Open |
 
 #### 4.2.14 CodeCheckEventPipeline（锚点：`CodeCheckEventProducer.java` / `CodeCheckEventConsumer.java` / `CodeCheckEventRabbitConfig.java`）
 
@@ -420,79 +418,79 @@ flowchart LR
 
 #### 4.2.15 XxlJobHandler（锚点：`XxlJobHandler.java` / `XxlJobConfig.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                             | 前置条件           | Tier | 状态                        |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | ---- | --------------------------- |
-| T38 | S    | XXL-Job `accessToken` 未解密直接使用（[XxlJobConfig.java:27-28](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/config/XxlJobConfig.java)），强度/轮换不可从源码验证                           | `Internal Network` | T2   | Open                        |
-| T39 | T    | `jobParam` 白名单（`CommandArgSanitizer`）已覆盖（[XxlJobHandler.java:97-103](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/job/XxlJobHandler.java)），超时值限幅 231-232 → 命令注入面已缓解 | `Internal Network` | T2   | ✅ 已缓解（代码内既有控制） |
+| ID  | 类别 | 威胁                                                                                                                                                                                         | 前置条件           | Tier | 状态                        |
+| --- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | --------------------------- |
+| T38 | S    | XXL-Job `accessToken` 未解密直接使用（[XxlJobConfig.java:27-28](src/main/java/com/openlibing/codecheck/common/config/XxlJobConfig.java)），强度/轮换不可从源码验证                           | `Internal Network` | T2   | Open                        |
+| T39 | T    | `jobParam` 白名单（`CommandArgSanitizer`）已覆盖（[XxlJobHandler.java:97-103](src/main/java/com/openlibing/codecheck/common/job/XxlJobHandler.java)），超时值限幅 231-232 → 命令注入面已缓解 | `Internal Network` | T2   | ✅ 已缓解（代码内既有控制） |
 
 #### 4.2.16 CodePlatformClients（锚点：`GitCodeHelper.java` / `GiteeHelper.java` / `GithubPlate.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                         | 前置条件               | Tier | 状态 |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- | ---- | ---- |
-| T40 | I    | Gitee 将明文 `access_token` 拼入 URL 查询串（`?access_token=`，[GiteeHelper.java:71/147](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/codeplate/GiteeHelper.java)）→ 被代理/访问日志/浏览器历史记录收集 | `Local Process Access` | T2   | Open |
-| T41 | I    | 平台 token 解密后明文放入请求体（[ExternalcheckDelegateImpl.java:145-147](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/impl/ExternalcheckDelegateImpl.java)），错误路径存在进日志风险                 | `Local Process Access` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                     | 前置条件               | Tier | 状态 |
+| --- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ---- | ---- |
+| T40 | I    | Gitee 将明文 `access_token` 拼入 URL 查询串（`?access_token=`，[GiteeHelper.java:71/147](src/main/java/com/openlibing/codecheck/common/codeplate/GiteeHelper.java)）→ 被代理/访问日志/浏览器历史记录收集 | `Local Process Access` | T2   | Open |
+| T41 | I    | 平台 token 解密后明文放入请求体（[ExternalcheckDelegateImpl.java:145-147](src/main/java/com/openlibing/codecheck/business/impl/ExternalcheckDelegateImpl.java)），错误路径存在进日志风险                 | `Local Process Access` | T2   | Open |
 
 #### 4.2.17 HuaweiCloudClients（锚点：`RestCodeCheckUtil.java` / `HttpUtil.java` / `HttpRequestUtil.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                                                                                                                                              | 前置条件               | Tier | 状态 |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ---- | ---- |
-| T42 | I    | 错误日志打印整个 `Request` 对象（含解密后 AK/SK/accessToken，[RestCodeCheckUtil.java:168/210/844](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/codecheck/RestCodeCheckUtil.java)）→ 凭据泄露                                                                                                                                           | `Local Process Access` | T2   | Open |
-| T43 | T    | Feign 客户端 name 含 https 前缀（[OpenlibingFrameworkClient.java:24](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/operation/common/OpenlibingFrameworkClient.java)），无 mTLS，依赖服务端 TLS 配置                                                                                                                                         | `Internal Network`     | T2   | Open |
-| T44 | T    | RestTemplate（[RestTemplateConfig.java:28](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/config/RestTemplateConfig.java)）与 OkHttp（[HttpRequestUtil.java:45-50](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/http/HttpRequestUtil.java)）使用默认 TrustManager，未自定义证书校验 | `Internal Network`     | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                                                                                                      | 前置条件               | Tier | 状态 |
+| --- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ---- | ---- |
+| T42 | I    | 错误日志打印整个 `Request` 对象（含解密后 AK/SK/accessToken，[RestCodeCheckUtil.java:168/210/844](src/main/java/com/openlibing/codecheck/common/utils/codecheck/RestCodeCheckUtil.java)）→ 凭据泄露                                                                                       | `Local Process Access` | T2   | Open |
+| T43 | T    | Feign 客户端 name 含 https 前缀（[OpenlibingFrameworkClient.java:24](src/main/java/com/openlibing/codecheck/business/operation/common/OpenlibingFrameworkClient.java)），无 mTLS，依赖服务端 TLS 配置                                                                                     | `Internal Network`     | T2   | Open |
+| T44 | T    | RestTemplate（[RestTemplateConfig.java:28](src/main/java/com/openlibing/codecheck/common/config/RestTemplateConfig.java)）与 OkHttp（[HttpRequestUtil.java:45-50](src/main/java/com/openlibing/codecheck/common/utils/http/HttpRequestUtil.java)）使用默认 TrustManager，未自定义证书校验 | `Internal Network`     | T2   | Open |
 
 #### 4.2.18 ObsBucketService（锚点：`ObsBucketServiceImpl.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                     | 前置条件               | Tier | 状态 |
-| --- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ---- | ---- |
-| T45 | T    | OBS 上传对象 key 无白名单/路径约束（[ObsBucketServiceImpl.java:164-165](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/service/impl/ObsBucketServiceImpl.java)）→ 越权覆盖/越界对象 | `Local Process Access` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                 | 前置条件               | Tier | 状态 |
+| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- | ---- | ---- |
+| T45 | T    | OBS 上传对象 key 无白名单/路径约束（[ObsBucketServiceImpl.java:164-165](src/main/java/com/openlibing/codecheck/business/service/impl/ObsBucketServiceImpl.java)）→ 越权覆盖/越界对象 | `Local Process Access` | T2   | Open |
 
 #### 4.2.19 EmailUtil（锚点：`EmailUtil.java`）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                  | 前置条件           | Tier | 状态 |
-| --- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
-| T46 | T    | SMTP 未强制 STARTTLS（[EmailUtil.java:84](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/email/EmailUtil.java)），依赖邮件服务器策略 → 明文凭据/内容传输风险 | `Internal Network` | T2   | Open |
-| T47 | —    | SMTP 密码不打日志，存储来源为 DB/配置（N/A，已核实）                                                                                                                                                                  | —                  | —    | N/A  |
+| ID  | 类别 | 威胁                                                                                                                                                              | 前置条件           | Tier | 状态 |
+| --- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
+| T46 | T    | SMTP 未强制 STARTTLS（[EmailUtil.java:84](src/main/java/com/openlibing/codecheck/common/utils/email/EmailUtil.java)），依赖邮件服务器策略 → 明文凭据/内容传输风险 | `Internal Network` | T2   | Open |
+| T47 | —    | SMTP 密码不打日志，存储来源为 DB/配置（N/A，已核实）                                                                                                              | —                  | —    | N/A  |
 
 #### 4.2.20 LogSanitizer（锚点：`LogSanitizer.java` + log4j2 配置）
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                              | 前置条件               | Tier | 状态                        |
-| --- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ---- | --------------------------- |
-| T48 | T    | 日志 CRLF 注入已由 `LogSanitizer`（[LogSanitizer.java:18-22](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/util/LogSanitizer.java)）+ log4j2 `%msg` 转义缓解                  | `Local Process Access` | T2   | ✅ 已缓解（代码内既有控制） |
-| T49 | I    | 脱敏覆盖不全：部分 logger 直打业务对象/`jobParam`（[XxlJobHandler.java:128/215](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/job/XxlJobHandler.java)），异常消息可能含连接串 | `Local Process Access` | T2   | Open                        |
+| ID  | 类别 | 威胁                                                                                                                                                                          | 前置条件               | Tier | 状态                        |
+| --- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ---- | --------------------------- |
+| T48 | T    | 日志 CRLF 注入已由 `LogSanitizer`（[LogSanitizer.java:18-22](src/main/java/com/openlibing/codecheck/common/util/LogSanitizer.java)）+ log4j2 `%msg` 转义缓解                  | `Local Process Access` | T2   | ✅ 已缓解（代码内既有控制） |
+| T49 | I    | 脱敏覆盖不全：部分 logger 直打业务对象/`jobParam`（[XxlJobHandler.java:128/215](src/main/java/com/openlibing/codecheck/common/job/XxlJobHandler.java)），异常消息可能含连接串 | `Local Process Access` | T2   | Open                        |
 
 #### 4.2.21 数据存储
 
 **MongoDB（锚点：`MongoConfig.java`）**
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                               | 前置条件           | Tier | 状态                        |
-| --- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | --------------------------- |
-| T50 | I    | TLS 已启用但 `invalidHostNameAllowed(true)` 关闭主机名校验（[MongoConfig.java:69](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/config/mongo/MongoConfig.java)）→ 中间人攻击面 | `Internal Network` | T2   | Open                        |
-| T51 | T    | MongoDB 传输 TLS 已启用（核实为控制而非缺陷）                                                                                                                                                                                      | `Internal Network` | T2   | ✅ 已缓解（代码内既有控制） |
+| ID  | 类别 | 威胁                                                                                                                                                                           | 前置条件           | Tier | 状态                        |
+| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | ---- | --------------------------- |
+| T50 | I    | TLS 已启用但 `invalidHostNameAllowed(true)` 关闭主机名校验（[MongoConfig.java:69](src/main/java/com/openlibing/codecheck/common/config/mongo/MongoConfig.java)）→ 中间人攻击面 | `Internal Network` | T2   | Open                        |
+| T51 | T    | MongoDB 传输 TLS 已启用（核实为控制而非缺陷）                                                                                                                                  | `Internal Network` | T2   | ✅ 已缓解（代码内既有控制） |
 
 **Redis（锚点：`RedisConfig.java`）**
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                           | 前置条件           | Tier | 状态                        |
-| --- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | --------------------------- |
-| T52 | I    | Redis 强制 TLS（`useSsl()` + `rediss://`，[RedisConfig.java:69/102](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/config/redis/RedisConfig.java)）→ 已缓解 | `Internal Network` | T2   | ✅ 已缓解（代码内既有控制） |
+| ID  | 类别 | 威胁                                                                                                                                                       | 前置条件           | Tier | 状态                        |
+| --- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | --------------------------- |
+| T52 | I    | Redis 强制 TLS（`useSsl()` + `rediss://`，[RedisConfig.java:69/102](src/main/java/com/openlibing/codecheck/common/config/redis/RedisConfig.java)）→ 已缓解 | `Internal Network` | T2   | ✅ 已缓解（代码内既有控制） |
 
 **RabbitMQ（锚点：`RabbitConnectionFactoryConfig.java`）**
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                                                              | 前置条件           | Tier | 状态 |
-| --- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
-| T53 | I    | TLS 仅 `prod` profile 启用（[RabbitConnectionFactoryConfig.java:58-60](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/config/rabbitmq/RabbitConnectionFactoryConfig.java)），beta/gama/icsl 明文传输凭据与消息 | `Internal Network` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                                                          | 前置条件           | Tier | 状态 |
+| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
+| T53 | I    | TLS 仅 `prod` profile 启用（[RabbitConnectionFactoryConfig.java:58-60](src/main/java/com/openlibing/codecheck/common/config/rabbitmq/RabbitConnectionFactoryConfig.java)），beta/gama/icsl 明文传输凭据与消息 | `Internal Network` | T2   | Open |
 
 **NacosConfigCenter（锚点：`application-prod.yaml`）**
 
-| ID  | 类别 | 威胁                                                                                                                                                                     | 前置条件           | Tier | 状态 |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | ---- | ---- |
-| T54 | I    | 加密密钥 `security.part1` 与全部密文配置同组存储于配置中心 → 配置中心单点失效                                                                                            | `Host/OS Access`   | T3   | Open |
-| T55 | T    | icsl profile 走明文 HTTP Apollo（[application-icsl.yaml:2](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/resources/application-icsl.yaml)），凭据明文传输 | `Internal Network` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                 | 前置条件           | Tier | 状态 |
+| --- | ---- | -------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
+| T54 | I    | 加密密钥 `security.part1` 与全部密文配置同组存储于配置中心 → 配置中心单点失效                                        | `Host/OS Access`   | T3   | Open |
+| T55 | T    | icsl profile 走明文 HTTP Apollo（[application-icsl.yaml:2](src/main/resources/application-icsl.yaml)），凭据明文传输 | `Internal Network` | T2   | Open |
 
 **MySQL（锚点：`DataSourceConfig.java`）**
 
-| ID  | 类别 | 威胁                                                                                                                                                                                                                            | 前置条件           | Tier | 状态 |
-| --- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
-| T56 | I    | JDBC URL 的 TLS 完全依赖配置项（`useSSL/requireSSL`），代码未强制（[DataSourceConfig.java:73](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/config/DataSourceConfig.java)） | `Internal Network` | T2   | Open |
+| ID  | 类别 | 威胁                                                                                                                                                                        | 前置条件           | Tier | 状态 |
+| --- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---- | ---- |
+| T56 | I    | JDBC URL 的 TLS 完全依赖配置项（`useSSL/requireSSL`），代码未强制（[DataSourceConfig.java:73](src/main/java/com/openlibing/codecheck/common/config/DataSourceConfig.java)） | `Internal Network` | T2   | Open |
 
 #### 4.2.22 外部实体
 
@@ -529,7 +527,7 @@ flowchart LR
 | 修复工作量   | Medium                                                                                                   |
 | 相关威胁     | [T01](#421-apigatewayentry)、[T04](#421-apigatewayentry)、[T58](#4222-外部实体)                          |
 
-**描述**：`HwApigController` 的 4 个 `/apig/v1/**` 端点（[HwApigController.java:69-140](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java)）在代码内**不执行任何身份校验**，类注释明确"由 APIG 网关鉴权"。若网关策略配置不当、AppCode 泄露、或网关被旁路（如集群内直连），任何调用方即可触发全量/增量扫描任务。所有 `/apig/v1/**` 端点的安全完全系于网关这一单一外部屏障。
+**描述**：`HwApigController` 的 4 个 `/apig/v1/**` 端点（[HwApigController.java:69-140](src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java)）在代码内**不执行任何身份校验**，类注释明确"由 APIG 网关鉴权"。若网关策略配置不当、AppCode 泄露、或网关被旁路（如集群内直连），任何调用方即可触发全量/增量扫描任务。所有 `/apig/v1/**` 端点的安全完全系于网关这一单一外部屏障。
 
 **证据**：`HwApigController` 类注释（:26-31）声明网关鉴权；4 个端点方法体无 `checkPermission`/token 校验调用；入参仅 `@NotBlank` 类非空校验（:96/137）。
 
@@ -550,7 +548,7 @@ flowchart LR
 | 修复工作量   | Medium                                                                                                                                                                                                                                                                                                                                                                                            |
 | 相关威胁     | [T08](#423-internaltaskcontrollers锚点internalcontrollerjava--internalcodefullcontrollerjava--internalcodeinccontrollerjava--suppressionscancontrollerjava)、[T11](#423-internaltaskcontrollers锚点internalcontrollerjava--internalcodefullcontrollerjava--internalcodeinccontrollerjava--suppressionscancontrollerjava)、[T13](#424-machineapicontrollers锚点machineapicheckboardcontrollerjava) |
 
-**描述**：`/internal/**`、`/ci-portal/webhook/codecheck/full/**`、`/ci-portal/webhook/codecheck/v1/task`、`/machine-api/v1/**` 全部依赖"服务间信任"，无任何代码内鉴权。集群内任一被攻破 Pod 或恶意工作负载可直接触发全量/增量扫描（如 `GET /internal/full/invoke/task`，[InternalController.java:84](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/InternalController.java)），并高频调用造成资源耗尽。
+**描述**：`/internal/**`、`/ci-portal/webhook/codecheck/full/**`、`/ci-portal/webhook/codecheck/v1/task`、`/machine-api/v1/**` 全部依赖"服务间信任"，无任何代码内鉴权。集群内任一被攻破 Pod 或恶意工作负载可直接触发全量/增量扫描（如 `GET /internal/full/invoke/task`，[InternalController.java:84](src/main/java/com/openlibing/codecheck/business/controller/InternalController.java)），并高频调用造成资源耗尽。
 
 **证据**：上述控制器方法无鉴权调用；`MachineApiCheckboardController` 无 `@Valid` 且方法体无权限校验（:49/69）；服务间信任仅靠"注释约定"。
 
@@ -573,7 +571,7 @@ flowchart LR
 
 **描述**：`CheckboardController`（看板）、`WorkbenchController`（工作台）、`SelectionController`（下拉）、`WebhookController`（find/by/mongoDB）、`FileDownLoadController` 多数导出端点均无代码内鉴权。经 ci-portal 代理登录后，任意用户可查询跨项目看板/汇总数据、枚举白名单集合内 17 个 MongoDB 集合（任务/结果/屏蔽/告警）、导出下载日志。
 
-**证据**：`CheckboardController` 15 个端点仅 3 个带 `@Valid`，无 `checkPermission`；`WebhookDelegateImpl` 白名单仅限制表/字段，不限制查询者身份（[WebhookInputValidator.java:37-141](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/security/WebhookInputValidator.java)）；`FileDownLoadController.download/log` 无鉴权（:184-193）。
+**证据**：`CheckboardController` 15 个端点仅 3 个带 `@Valid`，无 `checkPermission`；`WebhookDelegateImpl` 白名单仅限制表/字段，不限制查询者身份（[WebhookInputValidator.java:37-141](src/main/java/com/openlibing/codecheck/common/security/WebhookInputValidator.java)）；`FileDownLoadController.download/log` 无鉴权（:184-193）。
 
 **修复**：为查询/导出端点统一接入 `AuthUtils.checkPermission`（以服务端会话身份而非客户端 userId）；webhook 通用查询收敛为最小权限接口或迁移到服务端专用查询。
 
@@ -592,9 +590,9 @@ flowchart LR
 | 修复工作量   | High                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 相关威胁     | [T14](#425-portaltaskcontrollers锚点fulltaskcontrollerjava)、[T15](#425-portaltaskcontrollers锚点fulltaskcontrollerjava)、[T16](#426-portalrulecontrollers锚点rulecontrollerjava--rulesetlistcontrollerjava--ignoretreecontrollerjava)、[T18](#427-portalshieldcontrollers锚点problemshieldcontrollerjava--sensitivecontrollerjava)、[T19](#427-portalshieldcontrollers锚点problemshieldcontrollerjava--sensitivecontrollerjava)、[T30](#4212-authutils锚点authutilsjava)、[T31](#4212-authutils锚点authutilsjava)、[T57](#4222-外部实体) |
 
-**描述**：全站授权决策基于客户端经 `@RequestParam` 下发的 `userId`（[AuthUtils.java:349-389](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java)），服务端无会话/令牌绑定。攻击者可提交他人 `userId` 使 `checkPermission`/`authByShieldFoss`/`judgeRepoPermission` 按目标身份判定，实现越权执行/删除任务、增删改规则集、审核/撤销屏蔽记录、冒充审核人。问题屏蔽（`ProblemshieldController`）甚至完全不调用 `checkPermission`。
+**描述**：全站授权决策基于客户端经 `@RequestParam` 下发的 `userId`（[AuthUtils.java:349-389](src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java)），服务端无会话/令牌绑定。攻击者可提交他人 `userId` 使 `checkPermission`/`authByShieldFoss`/`judgeRepoPermission` 按目标身份判定，实现越权执行/删除任务、增删改规则集、审核/撤销屏蔽记录、冒充审核人。问题屏蔽（`ProblemshieldController`）甚至完全不调用 `checkPermission`。
 
-**证据**：`FulltaskController` userId 来自客户端（:38/70/84）；`RuleController` 全部写操作 userId 来自 `@RequestParam`；`SensitiveController` userId/userName 均客户端可控（:43-218）；`ProblemshieldController` delegate 无 `checkPermission` 调用；`authByShieldFoss` 以客户端 userId/userType 判定审核人（[AuthUtils.java:242-295](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java)）。
+**证据**：`FulltaskController` userId 来自客户端（:38/70/84）；`RuleController` 全部写操作 userId 来自 `@RequestParam`；`SensitiveController` userId/userName 均客户端可控（:43-218）；`ProblemshieldController` delegate 无 `checkPermission` 调用；`authByShieldFoss` 以客户端 userId/userType 判定审核人（[AuthUtils.java:242-295](src/main/java/com/openlibing/codecheck/common/utils/codecheck/AuthUtils.java)）。
 
 **修复**：引入服务端会话/令牌（JWT/Session）作为唯一身份源，禁止信任客户端 `userId`；在网关或统一过滤器注入服务端身份，全站授权改读该身份；`ProblemshieldController` 补齐 `checkPermission`。
 
@@ -613,7 +611,7 @@ flowchart LR
 | 修复工作量   | Medium                                                                                                                                                                                                              |
 | 相关威胁     | [T26](#4211-statalarmreceiveservice锚点statalarmreceivecontrollerjava--sarifparseserviceimpljava)、[T21](#428-portalquerycontrollers锚点checkboardcontrollerjava--workbenchcontrollerjava--selectioncontrollerjava) |
 
-**描述**：`SarifParseServiceImpl.downloadAndParse` 对上游/调用方提供的 `obsUrl` 直接 `URI.create(obsUrl).toURL().openStream()`（[SarifParseServiceImpl.java:159-161](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java)），无协议/域名/IP 白名单。攻击者可提交 `http://169.254.169.254/...`、集群内服务地址或任意内网 URL，使服务端代为拉取，造成内网探测、元数据窃取、集群内服务攻击。`CheckboardController.getTaskFileContents` 按客户端 `repoUrl+path` 拉取代码平台文件（[CheckboardDelegateImpl.java:706-732](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/impl/CheckboardDelegateImpl.java)）构成同类 SSRF 面。
+**描述**：`SarifParseServiceImpl.downloadAndParse` 对上游/调用方提供的 `obsUrl` 直接 `URI.create(obsUrl).toURL().openStream()`（[SarifParseServiceImpl.java:159-161](src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java)），无协议/域名/IP 白名单。攻击者可提交 `http://169.254.169.254/...`、集群内服务地址或任意内网 URL，使服务端代为拉取，造成内网探测、元数据窃取、集群内服务攻击。`CheckboardController.getTaskFileContents` 按客户端 `repoUrl+path` 拉取代码平台文件（[CheckboardDelegateImpl.java:706-732](src/main/java/com/openlibing/codecheck/business/impl/CheckboardDelegateImpl.java)）构成同类 SSRF 面。
 
 **证据**：`downloadAndParse` 无任何 URL 校验；`obsUrls` 来自 `StaticAlarmReceiveDTO` 客户端入参；`getTaskFileContents` 的 repoUrl/path 直接拼接为平台 API 请求。
 
@@ -634,7 +632,7 @@ flowchart LR
 | 修复工作量   | Medium                                                                                                                                                                                               |
 | 相关威胁     | [T28](#4211-statalarmreceiveservice锚点statalarmreceivecontrollerjava--sarifparseserviceimpljava)、[T29](#4211-statalarmreceiveservice锚点statalarmreceivecontrollerjava--sarifparseserviceimpljava) |
 
-**描述**：`/codescan/v1/result/receive`（[StaticAlarmReceiveController.java:37-40](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/alarm/StaticAlarmReceiveController.java)）无鉴权，且 SARIF 文件无签名/HMAC 完整性校验。集群内任何调用方可伪造扫描结果提交，或篡改 OBS 上 SARIF 内容（对象 key 无防护），注入虚假/恶意告警污染门禁判定与缺陷数据，影响发布决策。
+**描述**：`/codescan/v1/result/receive`（[StaticAlarmReceiveController.java:37-40](src/main/java/com/openlibing/codecheck/business/controller/alarm/StaticAlarmReceiveController.java)）无鉴权，且 SARIF 文件无签名/HMAC 完整性校验。集群内任何调用方可伪造扫描结果提交，或篡改 OBS 上 SARIF 内容（对象 key 无防护），注入虚假/恶意告警污染门禁判定与缺陷数据，影响发布决策。
 
 **证据**：`receive` 方法仅 `@Valid` 结构校验；`SarifParseServiceImpl` 下载后直接解析入库，无来源签名验证；`StaticAlarmReceiveDTO` 含客户端可控 obsUrl。
 
@@ -655,7 +653,7 @@ flowchart LR
 | 修复工作量   | Low                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 相关威胁     | [T02](#421-apigatewayentry)、[T10](#423-internaltaskcontrollers锚点internalcontrollerjava--internalcodefullcontrollerjava--internalcodeinccontrollerjava--suppressionscancontrollerjava)、[T40](#4216-codeplatformclients锚点gitcodehelperjava--giteehelperjava--githubplatejava)、[T41](#4216-codeplatformclients锚点gitcodehelperjava--giteehelperjava--githubplatejava)、[T42](#4217-huaweicloudclients锚点restcodecheckutiljava--httputiljava--httprequestutiljava)、[T49](#4220-logsanitizer锚点logsanitizerjava--log4j2-配置) |
 
-**描述**：多处日志路径输出敏感信息：① 机机/APIG 控制器整包打印请求 `params={}`（[HwApigController.java:72/94/113/135](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java) 等）；② `RestCodeCheckUtil` 错误日志打印整个 `Request` 对象（含解密后 AK/SK/accessToken，:168/210/844）；③ Gitee 将明文 `access_token` 拼入 URL（[GiteeHelper.java:71/147](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/codeplate/GiteeHelper.java)）可能进入代理/访问日志；④ 部分 logger 直打业务对象与 `jobParam`。
+**描述**：多处日志路径输出敏感信息：① 机机/APIG 控制器整包打印请求 `params={}`（[HwApigController.java:72/94/113/135](src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java) 等）；② `RestCodeCheckUtil` 错误日志打印整个 `Request` 对象（含解密后 AK/SK/accessToken，:168/210/844）；③ Gitee 将明文 `access_token` 拼入 URL（[GiteeHelper.java:71/147](src/main/java/com/openlibing/codecheck/common/codeplate/GiteeHelper.java)）可能进入代理/访问日志；④ 部分 logger 直打业务对象与 `jobParam`。
 
 **证据**：见各锚点行号；`LogSanitizer` 仅覆盖 CRLF 注入，不做凭据脱敏；仓库无统一 `MessageMaskUtils` 类。
 
@@ -676,7 +674,7 @@ flowchart LR
 | 修复工作量   | Low                                                                                         |
 | 相关威胁     | [T50](#4221-数据存储)                                                                       |
 
-**描述**：`MongoConfig` 在启用 TLS 的同时设置 `invalidHostNameAllowed(true)`（[MongoConfig.java:69](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/config/mongo/MongoConfig.java)），代码注释自认"不推荐用于生产环境"。攻击者若能在集群内实施中间人（DNS 欺骗/ARP/恶意代理），可截获并篡改业务库全部数据。
+**描述**：`MongoConfig` 在启用 TLS 的同时设置 `invalidHostNameAllowed(true)`（[MongoConfig.java:69](src/main/java/com/openlibing/codecheck/common/config/mongo/MongoConfig.java)），代码注释自认"不推荐用于生产环境"。攻击者若能在集群内实施中间人（DNS 欺骗/ARP/恶意代理），可截获并篡改业务库全部数据。
 
 **证据**：`builder.invalidHostNameAllowed(true)` 显式关闭主机名与证书 CN/SAN 校验。
 
@@ -697,7 +695,7 @@ flowchart LR
 | 修复工作量   | Medium                                                                                                                                                                                                                           |
 | 相关威胁     | [T27](#4211-statalarmreceiveservice锚点statalarmreceivecontrollerjava--sarifparseserviceimpljava)、[T37](#4214-codecheckeventpipeline锚点codecheckeventproducerjava--codecheckeventconsumerjava--codecheckeventrabbitconfigjava) |
 
-**描述**：`parseAllUrls` 对 `obsUrls` 列表全量循环下载解析（[SarifParseServiceImpl.java:100-123](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java)），URL 数量、单文件大小、SARIF runs/results 深度均无上限。提交超大文件或大量 URL 可耗尽内存/带宽/CPU；MQ 消费者并发 5 无任务级资源上限放大该风险。
+**描述**：`parseAllUrls` 对 `obsUrls` 列表全量循环下载解析（[SarifParseServiceImpl.java:100-123](src/main/java/com/openlibing/codecheck/business/service/impl/alarm/SarifParseServiceImpl.java)），URL 数量、单文件大小、SARIF runs/results 深度均无上限。提交超大文件或大量 URL 可耗尽内存/带宽/CPU；MQ 消费者并发 5 无任务级资源上限放大该风险。
 
 **证据**：`obsUrls` 无数量限制；`openStream()` 全量读入 `ObjectMapper`；无 zip 炸弹/解压防护。
 
@@ -718,9 +716,9 @@ flowchart LR
 | 修复工作量   | Medium                                                                                                                                                                                                                                                       |
 | 相关威胁     | [T35](#4214-codecheckeventpipeline锚点codecheckeventproducerjava--codecheckeventconsumerjava--codecheckeventrabbitconfigjava)、[T36](#4214-codecheckeventpipeline锚点codecheckeventproducerjava--codecheckeventconsumerjava--codecheckeventrabbitconfigjava) |
 
-**描述**：扫描事件消息（`CodeCheckEventProducer` 仅传 taskId，[CodeCheckEventProducer.java:47-74](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/impl/CodeCheckEventProducer.java)）无签名、无加密、无消息认证。集群内具备 RabbitMQ 访问权限（或凭据泄露）者可注入/篡改/重放事件，伪造扫描执行或干扰门禁。
+**描述**：扫描事件消息（`CodeCheckEventProducer` 仅传 taskId，[CodeCheckEventProducer.java:47-74](src/main/java/com/openlibing/codecheck/business/impl/CodeCheckEventProducer.java)）无签名、无加密、无消息认证。集群内具备 RabbitMQ 访问权限（或凭据泄露）者可注入/篡改/重放事件，伪造扫描执行或干扰门禁。
 
-**证据**：消息体为明文 JSON；队列配置仅 durable+TTL+死信，无消息级完整性机制（[CodeCheckEventRabbitConfig.java:76-127](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/config/rabbitmq/CodeCheckEventRabbitConfig.java)）。
+**证据**：消息体为明文 JSON；队列配置仅 durable+TTL+死信，无消息级完整性机制（[CodeCheckEventRabbitConfig.java:76-127](src/main/java/com/openlibing/codecheck/common/config/rabbitmq/CodeCheckEventRabbitConfig.java)）。
 
 **修复**：消息体附加生产者 HMAC/签名；消费端校验消息来源与 taskId 归属；RabbitMQ 启用 VHost 隔离 + 独立凭据 + 网络 ACL。
 
@@ -739,7 +737,7 @@ flowchart LR
 | 修复工作量   | Medium                                                                                                       |
 | 相关威胁     | [T46](#4219-emailutil锚点emailutiljava)、[T53](#4221-数据存储)、[T55](#4221-数据存储)、[T56](#4221-数据存储) |
 
-**描述**：RabbitMQ TLS 仅 `prod` profile 启用（[RabbitConnectionFactoryConfig.java:58-60](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/config/rabbitmq/RabbitConnectionFactoryConfig.java)），beta/gama/icsl 明文传输凭据与消息；MySQL JDBC URL TLS 依赖配置项；icsl profile 走明文 HTTP Apollo（[application-icsl.yaml:2](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/resources/application-icsl.yaml)）；SMTP 未强制 STARTTLS。
+**描述**：RabbitMQ TLS 仅 `prod` profile 启用（[RabbitConnectionFactoryConfig.java:58-60](src/main/java/com/openlibing/codecheck/common/config/rabbitmq/RabbitConnectionFactoryConfig.java)），beta/gama/icsl 明文传输凭据与消息；MySQL JDBC URL TLS 依赖配置项；icsl profile 走明文 HTTP Apollo（[application-icsl.yaml:2](src/main/resources/application-icsl.yaml)）；SMTP 未强制 STARTTLS。
 
 **证据**：`if ("prod".equals(env))` 条件启用 SSL；`DataSourceConfig` 无 TLS 代码强制；`EmailUtil` 未设置 TLS 属性。
 
@@ -760,7 +758,7 @@ flowchart LR
 | 修复工作量   | Medium                                                                                                                                                                             |
 | 相关威胁     | [T33](#4213-securityhelper锚点securityhelperjava--fragmentcryptoutiljava--tokenutiljava)、[T34](#4213-securityhelper锚点securityhelperjava--fragmentcryptoutiljava--tokenutiljava) |
 
-**描述**：`FragmentCryptoUtil` 对含密钥/敏感代码片段仅做 **Base64 编码**（[FragmentCryptoUtil.java:115](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/security/FragmentCryptoUtil.java)），可逆无保密性；`TokenUtil` 以 **MD5(uuid+number)** 生成门禁 token（[TokenUtil.java:50-53](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/common/TokenUtil.java)），弱哈希且输入部分可预测，存在门禁 token 预测/碰撞风险。
+**描述**：`FragmentCryptoUtil` 对含密钥/敏感代码片段仅做 **Base64 编码**（[FragmentCryptoUtil.java:115](src/main/java/com/openlibing/codecheck/common/utils/security/FragmentCryptoUtil.java)），可逆无保密性；`TokenUtil` 以 **MD5(uuid+number)** 生成门禁 token（[TokenUtil.java:50-53](src/main/java/com/openlibing/codecheck/common/utils/common/TokenUtil.java)），弱哈希且输入部分可预测，存在门禁 token 预测/碰撞风险。
 
 **证据**：`Base64.getEncoder().encodeToString` 调用；`MessageDigest.getInstance("MD5")` 调用。
 
@@ -781,7 +779,7 @@ flowchart LR
 | 修复工作量   | Medium                                                                                                                                                                                   |
 | 相关威胁     | [T03](#421-apigatewayentry)、[T09](#423-internaltaskcontrollers锚点internalcontrollerjava--internalcodefullcontrollerjava--internalcodeinccontrollerjava--suppressionscancontrollerjava) |
 
-**描述**：APIG 与内部任务入口对 `prUrl/repoUrl` 仅做非空校验（[HwApigController.java:96/137](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java)），解析出仓库名/PR 号后直接调代码平台 API 并同步调华为云 CodeCheck（[ExternalcheckDelegateImpl.java:139-155](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/impl/ExternalcheckDelegateImpl.java)）。攻击者可提交任意仓库 URL 触发扫描，消耗华为云配额并造成扫描资源滥用。
+**描述**：APIG 与内部任务入口对 `prUrl/repoUrl` 仅做非空校验（[HwApigController.java:96/137](src/main/java/com/openlibing/codecheck/business/controller/HwApigController.java)），解析出仓库名/PR 号后直接调代码平台 API 并同步调华为云 CodeCheck（[ExternalcheckDelegateImpl.java:139-155](src/main/java/com/openlibing/codecheck/business/impl/ExternalcheckDelegateImpl.java)）。攻击者可提交任意仓库 URL 触发扫描，消耗华为云配额并造成扫描资源滥用。
 
 **证据**：`InternalCodeIncDelegateImpl` 对 prUrl 解析后无仓库属主/归属校验；仅 Redis `PROJECT_LIMIT_*` 计数限流兜底。
 
@@ -802,7 +800,7 @@ flowchart LR
 | 修复工作量   | Low                                                                                 |
 | 相关威胁     | [T38](#4215-xxljobhandler锚点xxljobhandlerjava--xxljobconfigjava)                   |
 
-**描述**：`XxlJobConfig` 将 `xxl.job.admin.accessToken` 直接以明文读取使用（[XxlJobConfig.java:27-28](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/config/XxlJobConfig.java)），强度/是否为空/轮换策略均不可从源码验证。若 token 弱或为空，攻击者可向 XXL-Job Admin 冒充执行器或向执行器下发恶意任务。
+**描述**：`XxlJobConfig` 将 `xxl.job.admin.accessToken` 直接以明文读取使用（[XxlJobConfig.java:27-28](src/main/java/com/openlibing/codecheck/common/config/XxlJobConfig.java)），强度/是否为空/轮换策略均不可从源码验证。若 token 弱或为空，攻击者可向 XXL-Job Admin 冒充执行器或向执行器下发恶意任务。
 
 **证据**：`@Value("${xxl.job.admin.accessToken}")` 明文注入，未走 `SecurityHelper.decrypt`。
 
@@ -823,7 +821,7 @@ flowchart LR
 | 修复工作量   | Low                                                                                                                                                                                                                                                                                                                                         |
 | 相关威胁     | [T12](#423-internaltaskcontrollers锚点internalcontrollerjava--internalcodefullcontrollerjava--internalcodeinccontrollerjava--suppressionscancontrollerjava)、[T17](#426-portalrulecontrollers锚点rulecontrollerjava--rulesetlistcontrollerjava--ignoretreecontrollerjava)、[T23](#429-filedownloadcontroller锚点filedownloadcontrollerjava) |
 
-**描述**：`SuppressionScanController` 将异常消息直接回显给调用方（[SuppressionScanController.java:43](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/SuppressionScanController.java)）；`FileDownLoadController` 以 `tableName` 直接拼接导出文件名（[FileDownLoadController.java:109](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/controller/FileDownLoadController.java)），存在文件名注入/路径遍历；`IgnoretreeController` `currentPath` 客户端可控（:39）。
+**描述**：`SuppressionScanController` 将异常消息直接回显给调用方（[SuppressionScanController.java:43](src/main/java/com/openlibing/codecheck/business/controller/SuppressionScanController.java)）；`FileDownLoadController` 以 `tableName` 直接拼接导出文件名（[FileDownLoadController.java:109](src/main/java/com/openlibing/codecheck/business/controller/FileDownLoadController.java)），存在文件名注入/路径遍历；`IgnoretreeController` `currentPath` 客户端可控（:39）。
 
 **证据**：异常处理 `e.getMessage()` 拼入响应体；文件名拼接未过滤 `../`、路径分隔符等。
 
@@ -846,7 +844,7 @@ flowchart LR
 | 修复工作量   | High                                                                                                            |
 | 相关威胁     | [T32](#4213-securityhelper锚点securityhelperjava--fragmentcryptoutiljava--tokenutiljava)、[T54](#4221-数据存储) |
 
-**描述**：全部凭据（Mongo/MySQL/Redis/RabbitMQ/AK-SK/平台 token/邮箱密码）使用单一静态密钥 `security.part1` 加密（[SecurityHelper.java:25](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/security/SecurityHelper.java)，41 处解密调用点），且密钥与密文同组存储于配置中心（Nacos）。配置中心被攻破即全部凭据失效；密钥轮换需全量重新加密并重启。
+**描述**：全部凭据（Mongo/MySQL/Redis/RabbitMQ/AK-SK/平台 token/邮箱密码）使用单一静态密钥 `security.part1` 加密（[SecurityHelper.java:25](src/main/java/com/openlibing/codecheck/common/utils/security/SecurityHelper.java)，41 处解密调用点），且密钥与密文同组存储于配置中心（Nacos）。配置中心被攻破即全部凭据失效；密钥轮换需全量重新加密并重启。
 
 **证据**：`SecurityHelper.decrypt` 41 处调用点共用同一 key；`security.part1` 与业务密文同 namespace。
 
@@ -867,7 +865,7 @@ flowchart LR
 | 修复工作量   | Medium                                                                                                                                                                                   |
 | 相关威胁     | [T43](#4217-huaweicloudclients锚点restcodecheckutiljava--httputiljava--httprequestutiljava)、[T44](#4217-huaweicloudclients锚点restcodecheckutiljava--httputiljava--httprequestutiljava) |
 
-**描述**：`RestTemplateConfig` 使用默认 TrustManager（[RestTemplateConfig.java:28](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/config/RestTemplateConfig.java)）、OkHttp（[HttpRequestUtil.java:45-50](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/common/utils/http/HttpRequestUtil.java)）未自定义证书校验、Feign 服务间调用无 mTLS——依赖系统默认 CA 与服务端 TLS 配置，无法防范集群内中间人。
+**描述**：`RestTemplateConfig` 使用默认 TrustManager（[RestTemplateConfig.java:28](src/main/java/com/openlibing/codecheck/common/config/RestTemplateConfig.java)）、OkHttp（[HttpRequestUtil.java:45-50](src/main/java/com/openlibing/codecheck/common/utils/http/HttpRequestUtil.java)）未自定义证书校验、Feign 服务间调用无 mTLS——依赖系统默认 CA 与服务端 TLS 配置，无法防范集群内中间人。
 
 **证据**：无自定义 TrustManager/HostnameVerifier 代码；Feign name 含 https 前缀但无证书双向校验配置。
 
@@ -888,7 +886,7 @@ flowchart LR
 | 修复工作量   | Low                                                                                         |
 | 相关威胁     | [T45](#4218-obsbucketservice锚点obsbucketserviceimpljava)                                   |
 
-**描述**：`ObsBucketServiceImpl` 上传对象 key 无白名单/路径约束（[ObsBucketServiceImpl.java:164-165](file:///d:/code/openlibing-new/openlibing-codecheck/src/main/java/com/openlibing/codecheck/business/service/impl/ObsBucketServiceImpl.java)），调用方可控 key 时可越权覆盖其他任务/仓库的扫描结果对象（纵深防御项，需先失陷某内部组件）。
+**描述**：`ObsBucketServiceImpl` 上传对象 key 无白名单/路径约束（[ObsBucketServiceImpl.java:164-165](src/main/java/com/openlibing/codecheck/business/service/impl/ObsBucketServiceImpl.java)），调用方可控 key 时可越权覆盖其他任务/仓库的扫描结果对象（纵深防御项，需先失陷某内部组件）。
 
 **证据**：上传路径由参数拼接，无 bucket 内前缀/对象名校验。
 
@@ -909,7 +907,7 @@ flowchart LR
 | 修复工作量   | Medium                                                                                           |
 | 相关威胁     | [T25](#4210-healthcheckcontroller锚点healthcheckcontrollerjava)                                  |
 
-**描述**：Dockerfile 将多个 keystore/pfx 凭据文件打入镜像（[Dockerfile:38-46](file:///d:/code/openlibing-new/openlibing-codecheck/Dockerfile)），镜像被拉取/泄露即凭据泄露；容器无 `HEALTHCHECK` 指令（仅暴露 `/health-check` 端点，依赖外部轮询），且无显式内存/CPU 限制（仅 JVM MaxRAMPercentage 75%）。
+**描述**：Dockerfile 将多个 keystore/pfx 凭据文件打入镜像（[Dockerfile:38-46](Dockerfile)），镜像被拉取/泄露即凭据泄露；容器无 `HEALTHCHECK` 指令（仅暴露 `/health-check` 端点，依赖外部轮询），且无显式内存/CPU 限制（仅 JVM MaxRAMPercentage 75%）。
 
 **证据**：Dockerfile COPY 凭据文件；无 HEALTHCHECK 指令；无 cgroup limits 声明。
 
