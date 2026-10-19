@@ -89,7 +89,7 @@ openlibing-cicd  BuildArtifactController#reportSecOptionScan
    - 扫描循环内收集每个产物包的链接与提示：`target.packageName` → `result.uploadInfo.detailLink / tip`；
    - **ATOMGIT_OUTPUT 通道**：追加 `key=value` 概览行（`扫描结果（<包名>）url`=`<实际链接>`，固定 1 行；key 末尾小写 `url` 触发平台渲染为可点击链接，大小写敏感），供 `steps.<id>.outputs.<name>` 机器消费（详见 item 4 表）；
    - 对每条链接 `core.info` 打印（打印实际链接），便于运行日志直接查看；
-   - 单通道独立判环境变量与兜底：未设置 `ATOMGIT_OUTPUT` 或写入失败仅 `core.warning` 告警降级，不影响上报结果。
+   - 单通道独立判环境变量与兜底：未设置 `ATOMGIT_OUTPUT` 时静默跳过写入（仅 `core.info` 逐条打印实际链接，不告警）；写入失败才 `core.warning` 告警降级，均不影响上报结果。
 4. **输出规则（单通道）**：
    - **ATOMGIT_OUTPUT**：输出 key=value 纯值行（供 `steps.<id>.outputs.<name>` 取值、兼容既有消费方），链接行 key 末尾为小写 `url`（平台据此将值渲染为可点击链接、大小写敏感；提示行 key 不带 `url` 后缀，避免提示文本被渲染成无效链接）：
 

@@ -4,8 +4,8 @@
 
 - FE 需求：【openLiBing】插件结果输出增加openLiBing平台扫描结果链接
 - 业务 Issue：openlibing/code-metrics-action#25
-- 业务 PR：openlibing/security-compilation-options-action#27（分支 `scan-result-drilldown-link`，待合入 master）
-- 业务 PR：openlibing/openlibing-cicd#598（分支 `scan-result-drilldown-link`，待合入 release_20261019_iter1）
+- 业务 PR：openlibing/security-compilation-options-action#27（分支 `scan-result-drilldown-link`，已合入 master）
+- 业务 PR：openlibing/openlibing-cicd#598（分支 `scan-result-drilldown-link`，已合入 release_20261019_iter1）
 - docs PR：本归档 PR（openlibing/openlibing-docs）
 - 同 FE 姊妹文档：[spec/code-metrics-action/task_design/scan-result-drilldown-link/](../../../code-metrics-action/task_design/scan-result-drilldown-link/)（代码度量扫描插件侧，随本 docs PR 一并归档）
 
@@ -19,7 +19,7 @@ sec-option-scan 插件上报扫描结果后，工作流概览仅输出 14 项编
 
 ## 交付历程
 
-### security-compilation-options-action（分支 scan-result-drilldown-link，PR #27 → master，head `1bfc1bc`）
+### security-compilation-options-action（分支 scan-result-drilldown-link，PR #27 → master，head `8843c6f`）
 
 - commit `31e8aa1`：feat 上报响应解析 detailLink/tip，STEP_SUMMARY 与 OUTPUT 双通道输出链接
 - commit `6756858`：补充输出逻辑测试
@@ -30,16 +30,19 @@ sec-option-scan 插件上报扫描结果后，工作流概览仅输出 14 项编
 - commit `fae1025`：chore 移除验证探针与多余 outputs 声明
 - commit `1d1e93a`：chore 文案定稿（安全编译选项扫描结果（<包名>）/ 扫描结果（<包名>）url）
 - commit `1bfc1bc`：chore 移除 `ATOMGIT_STEP_SUMMARY` 通道（写入块与相关注释），仅保留 `ATOMGIT_OUTPUT`；README 同步为单通道说明
+- commit `3ef12e3`：docs(readme) 输出说明调整
+- commit `8843c6f`：docs(readme) 恢复概览输出章节被删除的既有使用说明
 
-### openlibing-cicd（分支 scan-result-drilldown-link，PR #598 → release_20261019_iter1，head `2f7ea9735`）
+### openlibing-cicd（分支 scan-result-drilldown-link，PR #598 → release_20261019_iter1，head `eb36c2699`）
 
 - commit `757bb1506`：feat 上报响应返回 detailLink/tip（响应 VO + 项目查询 + 链接构建 + 单测）
 - commit `2f7ea9735`：feat 链接移除 codeHostingPlatformFlag（联调后定稿）
+- commit `eb36c2699`：refactor 精简 `queryProjectsByUrl`（移除未消费的 `MAX(platform)` 聚合列，仅取 `project_id`），同步修正 `RepoInfoMapper` 方法注释
 
 ## 用户自测反馈
 
 - beta 环境端到端通过（用户确认）：流水线真实上报 → `ATOMGIT_OUTPUT` 链接输出 → 点击打开产物包详情页，数据与本次上报一致
-- 多产物包构建逐包输出、包名与链接一一对应；缺失 `ATOMGIT_OUTPUT` 环境变量时跳过输出并 `core.warning` 告警降级，不影响上报结果
+- 多产物包构建逐包输出、包名与链接一一对应；缺失 `ATOMGIT_OUTPUT` 环境变量时静默跳过输出（仅 `core.info` 逐条打印实际链接，不告警），写入失败才 `core.warning` 告警降级，均不影响上报结果
 - 反馈：运行详情页中同一链接存在双通道重复呈现，展示位置与形态不可由插件统一控制 → 需求侧决策收敛为仅 `ATOMGIT_OUTPUT` 单通道（commit `1bfc1bc`，T17）
 - AK/SK 与 OIDC 双鉴权下输出行为一致；既有 14 项开启率输出格式与内容不变
 

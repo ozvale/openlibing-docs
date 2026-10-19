@@ -4,9 +4,9 @@
 
 - FE 需求：【openLiBing】插件结果输出增加openLiBing平台扫描结果链接
 - 业务 Issue：openlibing/code-metrics-action#25
-- 业务 PR：openlibing/code-metrics-action#32（分支 `scan-result-drilldown-link`，待合入 master）
-- 业务 PR：openlibing/openlibing-coderepo#215（分支 `scan-result-drilldown-link`，待合入 release_20261019_iter1）
-- 业务 PR（补充交付）：openlibing/openlibing-coderepo#234（分支 `restore-file-detail-pipeline-run-id`，待合入 release_20261019_iter1）
+- 业务 PR：openlibing/code-metrics-action#32（分支 `scan-result-drilldown-link`，已合入 master）
+- 业务 PR：openlibing/openlibing-coderepo#215（分支 `scan-result-drilldown-link`，已合入 release_20261019_iter1）
+- 业务 PR（补充交付）：openlibing/openlibing-coderepo#234（分支 `restore-file-detail-pipeline-run-id`，已合入 release_20261019_iter1）
 - 前端协同：openlibing-web 链接落地能力由前端侧协同（不随本需求提业务 PR；beta 端到端已验证落地效果）
 - docs PR：本归档 PR（openlibing/openlibing-docs）
 - 同 FE 姊妹文档：[spec/security-compilation-options-action/task_design/scan-result-drilldown-link/](../../../security-compilation-options-action/task_design/scan-result-drilldown-link/)（安全编译选项扫描插件侧，随本 docs PR 一并归档）
@@ -22,13 +22,14 @@
 
 ## 交付历程
 
-### code-metrics-action（分支 scan-result-drilldown-link，PR #32 → master，head `692b071`）
+### code-metrics-action（分支 scan-result-drilldown-link，PR #32 → master，head `86eb196`）
 
 - commit `3728b5f`：feat 上报响应解析 detailLink/tip，双通道输出链接
 - commit `0360bc4`：补充输出逻辑测试
 - commit `0cb86eb`：修改日志输出
 - commit `8a1b6fa`：chore 文案定稿（代码度量指标扫描结果 / 扫描结果url）
 - commit `692b071`：chore 输出通道收敛——移除 `ATOMGIT_STEP_SUMMARY` 通道（`stepSummaryLine` 常量与写入 try/catch、相关注释），仅保留 `ATOMGIT_OUTPUT` 单通道；README 同步改为单通道说明
+- commit `987f188` / `9f33389` / `86eb196`：docs(readme) 输出说明调整
 
 ### openlibing-coderepo（分支 scan-result-drilldown-link，PR #215 → release_20261019_iter1，head `ed41c4a4`）
 
