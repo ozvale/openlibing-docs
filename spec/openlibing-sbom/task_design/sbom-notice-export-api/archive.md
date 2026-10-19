@@ -20,8 +20,8 @@
 - 提交：`77d3a34f`（5 接口初版）+ `828dc564`（v3 原始数据透传口径）
 - 分支：feat-sbom-notice-export-api（基于 master 401b3d44 + release_20261013 合入 cf1af919）
 - 测试环境：已合入源仓 sbom-dev（140dfafd），gamma 部署实测通过
-- 设计文档（完整版）：D:\work\design\202610\sbom-notice-export-api.md
-- 联调契约与验证用例：D:\work\design\202610\sbom-internal-api-contract.md
+- 联调契约与验证用例：同目录 [api-contract.md](./api-contract.md)
+- 七方面完整版设计文档为本地工作产物未归档，其全部关键决策已沉淀于本目录 [design.md](./design.md) 与本文件
 
 ## 关键决策与演进
 

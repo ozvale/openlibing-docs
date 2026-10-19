@@ -1,6 +1,6 @@
 # Design: sbom-notice-export-api
 
-> 详细设计（七方面完整版）：`D:\work\design\202610\sbom-notice-export-api.md`；本文为归档摘要 + 实现决策记录。
+> 七方面完整版设计文档为本地工作产物（未归档），其全部关键决策已沉淀于本文与 archive.md；接口契约见同目录 [api-contract.md](./api-contract.md)。本文为归档摘要 + 实现决策记录。
 
 ## 方案概述
 
@@ -29,12 +29,12 @@ openlibing-sbom 新增 `InternalController`（`/internal-api`，feign 机机接�
 
 | 文件                                                             | 动作                                                                         |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `model/.../vo/sbom/PackageDependencyTypeVo.java`                 | 新增：name/version/downloadKey/dependencyType                                |
+| `model/.../vo/sbom/PackageDependencyTypeVo.java`                 | 新增：name/version/downloadLocation/purl/dependencyType（原始透传，v3 口径） |
 | `model/.../request/sbom/QueryPackageDependencyTypesRequest.java` | 新增：productName                                                            |
 | `dao/ProductRepository.java`                                     | 新增 `getProductNamesMultiFilter(...)`                                       |
 | `dao/PackageRepository.java`                                     | 新增 `findPackageDependencyTypesByProductName(...)`                          |
 | `interface/.../SbomService.java`                                 | 新增 2 方法声明                                                              |
-| `sbom-web/.../SbomServiceImpl.java`                              | 实现 2 方法 + `resolveDownloadKey` / `pickDependencyTypeByPriority` 私有方法 |
+| `sbom-web/.../SbomServiceImpl.java`                              | 实现 2 方法（接口 2 为逐行透传构造，经 Number 转换适配 PG bigint 投影）      |
 | `sbom-web/.../controller/InternalController.java`                | 新增：5 端点                                                                 |
 | `sbom-web/.../SbomServiceImplTest.java`                          | 新增用例                                                                     |
 
@@ -45,7 +45,7 @@ openlibing-sbom 新增 `InternalController`（`/internal-api`，feign 机机接�
 ## 性能
 
 - 接口 1：单 productType 制品数百级，全量 `List<String>` KB 级；SQL 与页面查询同构；
-- 接口 2：单制品软件包典型数百（样例 833），4 字段轻量 VO，万行 ~1MB 内；`LinkedHashMap` 单次遍历归并 O(n)。
+- 接口 2：单制品软件包典型数百（样例 833），5 字段轻量 VO，万行 ~1MB 内；服务层逐行透传构造（单次遍历，O(n)），无归并逻辑。
 
 ## 安全
 
@@ -55,4 +55,4 @@ openlibing-sbom 新增 `InternalController`（`/internal-api`，feign 机机接�
 
 ## 跨仓影响
 
-openlibing-sca：Feign client 定义（服务注册名 + `/internal-api`）、全量导出编排、页面按钮——sca 团队负责，联调契约见 `D:\work\design\202610\sbom-internal-api-contract.md`。
+openlibing-sca：Feign client 定义（服务注册名 + `/internal-api`）、全量导出编排、页面按钮——sca 团队负责，联调契约见同目录 [api-contract.md](./api-contract.md)。
