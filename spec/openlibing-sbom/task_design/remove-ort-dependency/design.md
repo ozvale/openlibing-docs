@@ -2,6 +2,8 @@
 
 完整设计见 `D:\work\design\202610\remove-ort-dependency.md`（已用户确认），本文件为 spec 落盘版。
 
+> **行为声明基准**：本需求主交付为 commit `934be424`；业务 PR #158 后续追加 `c9f9d4f4`（移除 `SPDX_3_0_1_JSON_SBOM` 类型支持、下线 fetchOpenEulerRepoMeta 定时任务）与 `a22ec3d5`（清理测试残留与 FileUtil 死代码）。本文档行为声明已同步至最终交付 head `a22ec3d5`，与主交付时点不一致处均以"最终行为"注明。
+
 ## 1. 方案设计
 
 | 层            | 动作                                                                                                                               |
@@ -14,7 +16,7 @@
 | batch         | 删 2 Analyze Step + Decider，job XML 直连；SelectWaitRawSbomStep 查询白名单；FillUpLicenseStep 换库                                |
 | pom           | 根 pom 删 3 个 ORT artifact + 加 java-spdx-library；batch pom 2 个 ORT → java-spdx-library                                         |
 
-保留不动：`clients` 模块 `VcsServiceImpl`（SpdxReader/CollectStatisticsStep 使用）、`publishSbom` 主链路、`SbomSpecification/findBySpecAndFormat`。
+保留不动：`clients` 模块 `VcsServiceImpl`（SpdxReader/CollectStatisticsStep 使用）、`publishSbom` 主链路、`SbomSpecification` 枚举（存量 SPDX 3.0.1 文档查询仍在引用）。最终行为：`findBySpecAndFormat` 已随追加提交 `c9f9d4f4` 收敛为仅 SPDX 2.2 + JSON 分支（SPDX 3.0.1 文档上传/导出直接抛 `unsupported spec and format` 拒绝）。
 
 ## 2. 实现逻辑设计
 
@@ -80,10 +82,11 @@ SbomContentType（删 2 值）、BatchContextConstants（删 1 常量）、Batch
 
 ## 6. API 接口设计
 
-| 接口                                  | 变化                                                                                                                   |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `POST /uploadSbomTraceData`           | 移除（404）                                                                                                            |
-| `POST /publishSbomFile(WithCompress)` | 两类 type 从"建任务"变 400 + `Invalid sbomContentType: ..., allowed types: [spdx_2.2_json_sbom, spdx_3.0.1_json_sbom]` |
+| 接口                                  | 变化                                                                                                                                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST /uploadSbomTraceData`           | 移除（404）                                                                                                                                                                                            |
+| `POST /publishSbomFile(WithCompress)` | 最终行为：`definition_file`/`sbom_tracer_data`/`spdx_3.0.1_json_sbom` 三类 type 均 400 + `Invalid sbomContentType: ..., allowed types: [spdx_2.2_json_sbom]`（SPDX 3.0.1 type 随 `c9f9d4f4` 一并拒绝） |
+| `GET /fetchOpenEulerRepoMeta`         | 保留手动触发；对应 quartz 定时任务随 `c9f9d4f4` 下线                                                                                                                                                   |
 
 无新增接口，springdoc 文档自动更新。
 
