@@ -142,7 +142,7 @@ WHERE module_id IN (
 ]
 ```
 
-**前端渲染**：组件为树形下拉（TreeSelect），树数据即上述返回值；节点显示`menuName`，目录可展开也可整枝选中，叶子直接选中。交互示意（浏览器直接打开）：`docs/plans/2026-09-11-operation-log-module-treeselect.html`。生产实现用现网已有的 Element Plus `el-tree-select`，`check-strictly`，`value=identification`，`label=menuName`。
+**前端渲染**：组件为树形下拉（TreeSelect），树数据即上述返回值；节点显示`menuName`，目录可展开也可整枝选中，叶子直接选中。生产实现用现网已有的 Element Plus `el-tree-select`，`check-strictly`，`value=identification`，`label=menuName`。
 
 **选中行为**：用户选中任意节点后，前端把该节点的 `identification` 作为`moduleId` 提交查询，清空下拉则不过滤模块；新 `OperationLogServiceImpl` 按`moduleId` 反查菜单表定位节点，展开其子树全部 `identification`，执行`module_id IN (...)` 等值查询。选中“流水线操作”目录即查其全部子菜单标识，
 选中叶子 `update-pipeline-config` 即精确等值查询。
@@ -159,7 +159,7 @@ WHERE module_id IN (
 moduleId / logResult / userName / resourceName / ip
 ```
 
-时间窗比较 `operation_end_time`。CICD 现网 URL `POST /logging/pipelineLog/list` 保留，请求体在旧标量字段之外增加上述集合；旧 `operationModule/operation/operationTargetName/userName/logResult` 仍可作为**入参**提交，由 Service 转成 `module_id/resource_name` 过滤。**出参**与代码仓相同，使用 `LogProjectVO`（统一表 18 列 + `menuName`），不再返回 `operationTargetName` / `operationTargetJson` / `operationModule` / `operation` / `operationDate`。代码仓用 `POST /logging/list`。
+时间窗比较 `operation_end_time`。CICD 现网 URL `POST /logging/pipelineLog/list` 保留，请求体在旧标量字段之外增加上述集合；旧 `operationModule/operation/operationTargetName/userName/logResult` 仍可作为**入参**提交，由 Service 转成 `module_id/resource_name` 过滤。**出参**与代码仓相同，使用 `LogProjectVO`（统一表 18 列 + `menuName`，其中不返回 `old_data` / `new_data` / `params` 大字段，仅返回 `exMessage` 与 `hasDetail`，大字段由详情接口另行返回），不再返回 `operationTargetName` / `operationTargetJson` / `operationModule` / `operation` / `operationDate`。代码仓用 `POST /logging/list`。
 
 **列头筛选** 对齐代码仓 `/project-repo/query-repo-filter-meta`：一次 POST 返回所点名列的候选项和预览计数，不再按列各查一个 DISTINCT 接口。
 
@@ -896,7 +896,7 @@ GET  /logging/targetNames      （兼容旧页，新页不用）
 旧 operationTargetName 查询值       → resource_name 过滤
 ```
 
-出参对齐代码仓 `LogProjectVO`：`moduleId` / `menuName` / `resourceId` / `resourceName` / `operationStartTime` / `operationEndTime` / `ip` 等统一表列；返回前掩码 `old_data` / `new_data`。不再把 `resource_name` 别名成 `operationTargetName`，也不再把 `module_id` 拆成 `operationModule` + `operation`。
+出参对齐代码仓 `LogProjectVO`：`moduleId` / `menuName` / `resourceId` / `resourceName` / `operationStartTime` / `operationEndTime` / `ip` 等统一表列；列表不返回 `old_data` / `new_data` / `params` 大字段，仅返回 `exMessage` 与 `hasDetail`，大字段由详情接口另行返回。不再把 `resource_name` 别名成 `operationTargetName`，也不再把 `module_id` 拆成 `operationModule` + `operation`。
 
 `filter-meta` 的请求体与列表相同的过滤条件，加 `filterMetaDimensions`；出参 `data.filterMeta`，`moduleId` 项为 `{value, count, menuName}`，其它维度项为 `{value, count}`。CICD 不再从 `log_pipeline` 读取历史；如需回看旧流水线日志，使用平台旧查询入口。
 
@@ -1069,34 +1069,34 @@ ORDER BY operation_end_time DESC, id DESC
 
 ## 3.4 各业务仓
 
-| 类别                                                                                                    | 修改内容                                                                                                                                                                                 |
-| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PipelineConfig/WhiteList/Shortcut/ImageLogHandler`                                                     | 删除 `registerLogHandler` 和 `recordLogs` 重写；改为 `matches/before/after`。**删除 `PipelineSyncLogHandler`**：同步流水线按 §2.2.6 任务直写                                             |
-| Controller                                                                                              | **不加**日志注解                                                                                                                                                                         |
-| CICD 异步投递剥头                                                                                       | `AsyncOperationLogSkipFilter` 对 `/syncPipelineInfo`、`/syncAllPipelineInfos` 去掉 `X-Operation-Log`                                                                                     |
-| CICD `AsyncOperationLogIdentity` / `SyncTaskResult`                                                     | 请求线程采集不可变身份；有界汇总任务失败，与 coderepo 同口径，不要求 common 升级                                                                                                         |
-| CICD `PipelineServiceImpl` / `XxlJobHandler`                                                            | 人工同步传递身份、单条资源及实际结果；独有锁值配合原子释放，释放后写日志；定时同步按实际结果更新同一条日志                                                                               |
-| CICD `OperationLogDirectWriter`                                                                         | 人工任务透传入湖 host；系统任务保留原调用方式及 begin/finish 生命周期                                                                                                                    |
-| coderepo 异步投递剥头                                                                                   | 同名 Filter 对 `/sync-repo`、`/sync-repo-branch` 去掉 `X-Operation-Log`；`RepoLogHandler` / `RepoBranchLogHandler` 不得 `matches` 对应 DTO                                               |
-| coderepo `AsyncOperationLogIdentity`                                                                    | 在投递线程采集不可变的用户、账号、IP 和 host；后台不读取请求，不保留认证凭据；显式区分人工与系统任务                                                                                     |
-| coderepo `SyncTaskResult`                                                                               | 汇总同步失败项数量与首个固定原因，防止内部捕获异常后外层误报成功；不保存无界异常列表                                                                                                     |
-| coderepo `RepoServiceImpl` / `SyncUserServiceImpl`                                                      | 页面任务的部分失败、锁竞争和被替代进入最终结果；成员子任务失败向上返回，已启动子任务收尾后才返回；释放业务锁后写日志                                                                     |
-| coderepo `SyncRepoOperationLogWriter` / `SyncRepoBranchOperationLogWriter` / `OperationLogDirectWriter` | 接收已固定的身份及起止时间，人工任务同时向关系库与入湖传递来源；保留原有系统任务调用兼容                                                                                                 |
-| `PipelineLogHandler`                                                                                    | 删除重复的公共组装和异步保存方法                                                                                                                                                         |
-| `PipelineEventTriggerServiceImpl`                                                                       | 删除直写 Mapper；任务入口记下开始时间，结束后调 framework 并在本地入湖                                                                                                                   |
-| CICD/coderepo/vulnerability `FrameworkLogClient`                                                        | 保留任务/查询能力，primary=false；绑定专用超时，公共写入接口唯一注入                                                                                                                     |
-| CICD/coderepo 投递失败观察器                                                                            | 基于剥头前可信请求补记失败；成功投递不额外记HTTP行，使用请求级防重                                                                                                                       |
-| Workspace `WorkspaceProjectLogHandler`                                                                  | 改为 `matches/before/after`；删除本仓 `MicroservicesLogDTO` 和 `FrameworkClient#addMicroservicesLog`；走 common Recorder；`@LogApi` 仍打在 Service 上但空转，切面拦 Controller           |
-| metric `DashboardCommonLogHandler`                                                                      | 改为 `matches/before/after`；删除本仓 `MicroservicesLogReq`、`FrameworkFeignClient#addLog` 和 `DashboardLoggerAspect` 写入路径；走 common Recorder；`@LogApi` 仍打在 Controller 上但空转 |
-| ops `DashboardCommonLogHandler`                                                                         | 改为 `matches/before/after`；删除本仓 `MicroservicesLogReq`、`FrameworkFeignClient#addLog` 和 `DashboardLoggerAspect` 写入路径；走 common Recorder；`@LogApi` 仍打在 Controller 上但空转 |
-| design-api 三个 Handler                                                                                 | 改为 `matches/before/after`；删除本仓 `MicroservicesLogReq` 和 `saveLog` Feign 直写；走 common Recorder；`@LogApi` 仍打在 Service 上但空转，切面拦 Controller                            |
-| CICD `LoggingServiceImpl` / `LogPipelineMapper`                                                         | 固定查统一表；列表出参 `LogProjectVO`；筛 `resourceName/ip`；新增 `POST /logging/filter-meta`                                                                                            |
-| coderepo `LoggingController`                                                                            | `POST /logging/list`、`POST /logging/filter-meta`                                                                                                                                        |
-| CICD / coderepo `LoggingServiceImpl`                                                                    | `projectId` 必填、项目成员校验、枚举校验、分页和 filter-meta                                                                                                                             |
-| `LogListQueryDTO` / `LogFilterMetaQueryDTO`                                                             | 均含必填 `projectId`；列表与 filter-meta 共用过滤字段                                                                                                                                    |
-| `LogProjectVO`                                                                                          | CICD 与代码仓项目维列表共用出参形状，含 `operationStartTime` / `operationEndTime` / `resourceName` / `ip`；返回前掩码 `old_data` / `new_data`；不含 `operationTargetName`                |
-| coderepo `OperationLogMapper`                                                                           | `selectProjectLogsPage`、`selectFilterMetaGroupBy`，均带 `project_id =`                                                                                                                  |
-| 四个 `*LogHandler`                                                                                      | 成功和失败均写入 `projectId`                                                                                                                                                             |
+| 类别                                                                                                    | 修改内容                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PipelineConfig/WhiteList/Shortcut/ImageLogHandler`                                                     | 删除 `registerLogHandler` 和 `recordLogs` 重写；改为 `matches/before/after`。**删除 `PipelineSyncLogHandler`**：同步流水线按 §2.2.6 任务直写                                                              |
+| Controller                                                                                              | **不加**日志注解                                                                                                                                                                                          |
+| CICD 异步投递剥头                                                                                       | `AsyncOperationLogSkipFilter` 对 `/syncPipelineInfo`、`/syncAllPipelineInfos` 去掉 `X-Operation-Log`                                                                                                      |
+| CICD `AsyncOperationLogIdentity` / `SyncTaskResult`                                                     | 请求线程采集不可变身份；有界汇总任务失败，与 coderepo 同口径，不要求 common 升级                                                                                                                          |
+| CICD `PipelineServiceImpl` / `XxlJobHandler`                                                            | 人工同步传递身份、单条资源及实际结果；独有锁值配合原子释放，释放后写日志；定时同步按实际结果更新同一条日志                                                                                                |
+| CICD `OperationLogDirectWriter`                                                                         | 人工任务透传入湖 host；系统任务保留原调用方式及 begin/finish 生命周期                                                                                                                                     |
+| coderepo 异步投递剥头                                                                                   | 同名 Filter 对 `/sync-repo`、`/sync-repo-branch` 去掉 `X-Operation-Log`；`RepoLogHandler` / `RepoBranchLogHandler` 不得 `matches` 对应 DTO                                                                |
+| coderepo `AsyncOperationLogIdentity`                                                                    | 在投递线程采集不可变的用户、账号、IP 和 host；后台不读取请求，不保留认证凭据；显式区分人工与系统任务                                                                                                      |
+| coderepo `SyncTaskResult`                                                                               | 汇总同步失败项数量与首个固定原因，防止内部捕获异常后外层误报成功；不保存无界异常列表                                                                                                                      |
+| coderepo `RepoServiceImpl` / `SyncUserServiceImpl`                                                      | 页面任务的部分失败、锁竞争和被替代进入最终结果；成员子任务失败向上返回，已启动子任务收尾后才返回；释放业务锁后写日志                                                                                      |
+| coderepo `SyncRepoOperationLogWriter` / `SyncRepoBranchOperationLogWriter` / `OperationLogDirectWriter` | 接收已固定的身份及起止时间，人工任务同时向关系库与入湖传递来源；保留原有系统任务调用兼容                                                                                                                  |
+| `PipelineLogHandler`                                                                                    | 删除重复的公共组装和异步保存方法                                                                                                                                                                          |
+| `PipelineEventTriggerServiceImpl`                                                                       | 删除直写 Mapper；任务入口记下开始时间，结束后调 framework 并在本地入湖                                                                                                                                    |
+| CICD/coderepo/vulnerability `FrameworkLogClient`                                                        | 保留任务/查询能力，primary=false；绑定专用超时，公共写入接口唯一注入                                                                                                                                      |
+| CICD/coderepo 投递失败观察器                                                                            | 基于剥头前可信请求补记失败；成功投递不额外记HTTP行，使用请求级防重                                                                                                                                        |
+| Workspace `WorkspaceProjectLogHandler`                                                                  | 改为 `matches/before/after`；删除本仓 `MicroservicesLogDTO` 和 `FrameworkClient#addMicroservicesLog`；走 common Recorder；`@LogApi` 仍打在 Service 上但空转，切面拦 Controller                            |
+| metric `DashboardCommonLogHandler`                                                                      | 改为 `matches/before/after`；删除本仓 `MicroservicesLogReq`、`FrameworkFeignClient#addLog` 和 `DashboardLoggerAspect` 写入路径；走 common Recorder；`@LogApi` 仍打在 Controller 上但空转                  |
+| ops `DashboardCommonLogHandler`                                                                         | 改为 `matches/before/after`；删除本仓 `MicroservicesLogReq`、`FrameworkFeignClient#addLog` 和 `DashboardLoggerAspect` 写入路径；走 common Recorder；`@LogApi` 仍打在 Controller 上但空转                  |
+| design-api 三个 Handler                                                                                 | 改为 `matches/before/after`；删除本仓 `MicroservicesLogReq` 和 `saveLog` Feign 直写；走 common Recorder；`@LogApi` 仍打在 Service 上但空转，切面拦 Controller                                             |
+| CICD `LoggingServiceImpl` / `LogPipelineMapper`                                                         | 固定查统一表；列表出参 `LogProjectVO`；筛 `resourceName/ip`；新增 `POST /logging/filter-meta`                                                                                                             |
+| coderepo `LoggingController`                                                                            | `POST /logging/list`、`POST /logging/filter-meta`                                                                                                                                                         |
+| CICD / coderepo `LoggingServiceImpl`                                                                    | `projectId` 必填、项目成员校验、枚举校验、分页和 filter-meta                                                                                                                                              |
+| `LogListQueryDTO` / `LogFilterMetaQueryDTO`                                                             | 均含必填 `projectId`；列表与 filter-meta 共用过滤字段                                                                                                                                                     |
+| `LogProjectVO`                                                                                          | CICD 与代码仓项目维列表共用出参形状，含 `operationStartTime` / `operationEndTime` / `resourceName` / `ip`；不返回 `old_data` / `new_data` / `params` 大字段（由详情接口返回）；不含 `operationTargetName` |
+| coderepo `OperationLogMapper`                                                                           | `selectProjectLogsPage`、`selectFilterMetaGroupBy`，均带 `project_id =`                                                                                                                                   |
+| 四个 `*LogHandler`                                                                                      | 成功和失败均写入 `projectId`                                                                                                                                                                              |
 
 各仓切换时：
 
@@ -1810,7 +1810,7 @@ POST /logging/filter-meta
 | `startTime` / `endTime`                                       | 选填；都空则兜底近 30 天。比较列是 `operation_end_time`       |
 | `pageNum` / `pageSize`                                        | 分页；`pageSize` 上限 100                                     |
 
-`moduleId` 集合内每个值必须能映射到framework `write-modules` 返回的本仓可写模块集合；有非法值则整批返回参数不合法。`logResult` 只能是「成功」或「失败」。未传 `projectId` 不查库。
+`moduleId` 集合内每个值必须能映射到framework `write-modules` 返回的本仓可写模块集合；有非法值则整批返回参数不合法。`logResult` 只能是「成功」「失败」或「进行中」——进行中行来自 repo/cicd 异步同步与定时任务的开工插入（见 §2.2.6），列表按所选值过滤，不传则三态混合返回。未传 `projectId` 不查库。
 `project_id` 为空的行不会出现在结果中。
 
 #### 列头筛选
@@ -1834,7 +1834,7 @@ POST /logging/filter-meta
 }
 ```
 
-维度白名单：`moduleId` / `userName` / `resourceName` / `ip` / `logResult`。未传或空数组返回空 `filterMeta` 且不查库。非法维度丢弃。计算某一维时不把该维已选值放进 WHERE。`logResult` 固定并集「成功」「失败」。缺少 `projectId` 返回参数不合法。
+维度白名单：`moduleId` / `userName` / `resourceName` / `ip` / `logResult`。未传或空数组返回空 `filterMeta` 且不查库。非法维度丢弃。计算某一维时不把该维已选值放进 WHERE。`logResult` 固定并集「成功」「失败」「进行中」。缺少 `projectId` 返回参数不合法。
 
 CICD 的 `POST /logging/filter-meta` 与上表同一契约，仅 `projectId` 为字符串、列表 URL 仍是 `/logging/pipelineLog/list`。CICD 列表出参同样是 `LogProjectVO`，与代码仓 `/logging/list` 对齐。
 
@@ -2057,4 +2057,4 @@ common在既有 `OperationLogBusinessException` 契约上增加统一参数异�
 - R11/R12查询范围与已选值：§1.4.3、§5.1；平台SQL大字段投影仍待优化。
 - R13配套版本：§2.8；R14端到端可靠性：§2.9、§5.4。
 
-证据见[首轮审查记录](../../openlibing-framework/docs/reviews/operation-log-architecture-review-2026-10-12.md)和[两轮整改记录](../../openlibing-framework/docs/reviews/operation-log-architecture-hardening-2026-10-12.md)。首轮发现不表示仍未修复；当前代码完成情况与环境验收分开判断。
+证据见[首轮审查记录](reviews/operation-log-architecture-review-2026-10-12.md)和[两轮整改记录](reviews/operation-log-architecture-hardening-2026-10-12.md)（均随本文档归档于本目录 `reviews/` 下）。首轮发现不表示仍未修复；当前代码完成情况与环境验收分开判断。
