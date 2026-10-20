@@ -104,11 +104,21 @@ String signature = Base64.getEncoder().encodeToString(signer.sign());
       {
         "repoUrl": "https://gitee.com/org/repo-c.git",
         "tokenMeta": {
-          "status": "unsupported",
+          "status": "unsupported", // Gitee 不提供元信息，但令牌已配置 → 照常下发密文
           "expiration": null,
           "scopes": null
         },
-        "iv": null,
+        "iv": "rB2l+m7KpQx1sV0a", // Base64(12 字节 GCM IV)
+        "cipherToken": "hT9xQ2mZ0p..." // 有密文：调用方必须解密并自行处理平台 401/404
+      },
+      {
+        "repoUrl": "https://gitcode.com/org/repo-d.git",
+        "tokenMeta": {
+          "status": "invalid",
+          "expiration": "2026-09-01T00:00:00Z",
+          "scopes": null
+        },
+        "iv": null, // 无密文：invalid / unknown / not_found / unavailable 仅返回元数据
         "cipherToken": null
       }
     ]
