@@ -8,7 +8,7 @@
 - 业务 Issue（操作日志接入）：<https://gitcode.com/openlibing/openlibing-cicd/issues/451>
 - 业务 PR（framework #482）：<https://gitcode.com/openlibing/openlibing-framework/merge_requests/482>
 - 权限组整体方案 spec：`task_design/resource-permission-scheme`（本变更为其上线后修复增强）
-- docs PR（本 spec 归档）：https://gitcode.com/openlibing/openlibing-docs/merge_requests/1183 
+- docs PR（本 spec 归档）：https://gitcode.com/openlibing/openlibing-docs/merge_requests/1183
 
 ## 交付历程
 
