@@ -48,10 +48,10 @@
 
 证据：common 的 `OperationLogRecorder` 构造器按 `OperationLogWriteClient` 注入；公共 `OperationLogWriteFeignClient` 实现该接口。CICD、coderepo、vulnerability 的本仓 `FrameworkLogClient` 也继承该接口，且启动类同时扫描本仓包和公共 Feign 包。两组 `@FeignClient` 均未关闭默认 `primary=true`，Recorder 没有限定注入目标。
 
-- [公共 Recorder](D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogRecorder.java:99)
-- [CICD 客户端](D:/code/openlibing-cicd/src/main/java/com/openlibing/cicd/business/feign/FrameworkLogClient.java:23)、[CICD 扫描入口](D:/code/openlibing-cicd/src/main/java/com/openlibing/cicd/OpenlibingCicdApplication.java:23)
-- [coderepo 客户端](D:/code/openlibing-coderepo/src/main/java/com/openlibing/coderepo/business/feign/FrameworkLogClient.java:23)
-- [vulnerability 客户端](D:/code/openlibing-vulnerability/src/main/java/com/openlibing/business/fegin/FrameworkLogClient.java:24)
+- 公共 Recorder（D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogRecorder.java:99）
+- CICD 客户端（D:/code/openlibing-cicd/src/main/java/com/openlibing/cicd/business/feign/FrameworkLogClient.java:23）、CICD 扫描入口（D:/code/openlibing-cicd/src/main/java/com/openlibing/cicd/OpenlibingCicdApplication.java:23）
+- coderepo 客户端（D:/code/openlibing-coderepo/src/main/java/com/openlibing/coderepo/business/feign/FrameworkLogClient.java:23）
+- vulnerability 客户端（D:/code/openlibing-vulnerability/src/main/java/com/openlibing/business/fegin/FrameworkLogClient.java:24）
 
 影响：按当前声明装配两个 primary 候选会触发 `NoUniqueBeanDefinitionException`，应作为发布前启动检查的阻断项。单独 new Recorder 或 Mockito 单测不会发现这个问题。本地最小 Spring BeanFactory 复现已确认该候选冲突机制；未宣称已启动三个完整业务应用。
 
@@ -59,7 +59,7 @@
 
 ### R02 / P1：普通业务失败参数没有统一脱敏
 
-证据：[Recorder.serializeParams](D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogRecorder.java:395) 只排除基础设施对象和特定参数名，然后直接 `JSON.toJSONString(copy)`。`truncateParams` 只截长度。参数校验异常有独立敏感键处理，不能覆盖正常进入 Controller 后返回业务失败或抛异常的路径。framework 写入端也未提供统一脱敏兜底。
+证据：Recorder.serializeParams（D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogRecorder.java:395） 只排除基础设施对象和特定参数名，然后直接 `JSON.toJSONString(copy)`。`truncateParams` 只截长度。参数校验异常有独立敏感键处理，不能覆盖正常进入 Controller 后返回业务失败或抛异常的路径。framework 写入端也未提供统一脱敏兜底。
 
 本地合成参数复现：`password=SYNTHETIC_AUDIT_SECRET` 在序列化结果中仍可检出。未使用任何真实凭据。项目查询时再掩码不能撤销已入库、已输出到 MANAGE_LOG 的数据。
 
@@ -67,9 +67,9 @@
 
 ### R03 / P1：通用参数导致 Handler 同时命中，资源维度丢失
 
-证据：[FeedBackLogHandler](D:/code/openlibing-framework/src/main/java/com/openlibing/framework/common/aop/FeedBackLogHandler.java:41) 和 [InformationBulletinBoardLogHandler](D:/code/openlibing-framework/src/main/java/com/openlibing/framework/common/aop/InformationBulletinBoardLogHandler.java:43) 都接受任意非空 `id`；Wiki/公告等还有通用 `ids` 列表匹配。它们没有结合 Controller 类型收窄。
+证据：FeedBackLogHandler（D:/code/openlibing-framework/src/main/java/com/openlibing/framework/common/aop/FeedBackLogHandler.java:41） 和 InformationBulletinBoardLogHandler（D:/code/openlibing-framework/src/main/java/com/openlibing/framework/common/aop/InformationBulletinBoardLogHandler.java:43） 都接受任意非空 `id`；Wiki/公告等还有通用 `ids` 列表匹配。它们没有结合 Controller 类型收窄。
 
-[OperationLogAspect.selectHandler](D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogAspect.java:126) 在多命中时返回 null。比如 [删除公告接口](D:/code/openlibing-framework/src/main/java/com/openlibing/framework/business/controller/ManageController.java:130) 的 `id` 会同时满足公告与反馈 Handler。结果可能只有公共字段，缺少资源和快照，操作日志页面无法按资源追溯。
+OperationLogAspect.selectHandler（D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogAspect.java:126） 在多命中时返回 null。比如 删除公告接口（D:/code/openlibing-framework/src/main/java/com/openlibing/framework/business/controller/ManageController.java:130） 的 `id` 会同时满足公告与反馈 Handler。结果可能只有公共字段，缺少资源和快照，操作日志页面无法按资源追溯。
 
 本地以同一 `OperationLogContext(params={id:123})` 调用这两个真实 Handler，均返回 true。
 
@@ -77,7 +77,7 @@
 
 ### R04 / P1 性能风险：所有已放行路由都付出菜单读取和重建成本
 
-证据：[Marker.filter](D:/code/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/OperationLogMarkerFilter.java:47) 同步调用菜单匹配；[matchOperationLogMenu](D:/code/openlibing-gateway/src/main/java/com/openlibing/gateway/common/utils/UserAuthHelper.java:140) 每次创建三个 Map 并遍历全量菜单；[缓存读取](D:/code/openlibing-gateway/src/main/java/com/openlibing/gateway/common/utils/UserAuthHelper.java:412) 命中仍执行 Redis EXISTS、GET 和整份 JSON 解析，未命中同步查库。
+证据：Marker.filter（D:/code/openlibing-gateway/src/main/java/com/openlibing/gateway/business/filter/OperationLogMarkerFilter.java:47） 同步调用菜单匹配；matchOperationLogMenu（D:/code/openlibing-gateway/src/main/java/com/openlibing/gateway/common/utils/UserAuthHelper.java:140） 每次创建三个 Map 并遍历全量菜单；缓存读取（D:/code/openlibing-gateway/src/main/java/com/openlibing/gateway/common/utils/UserAuthHelper.java:412） 命中仍执行 Redis EXISTS、GET 和整份 JSON 解析，未命中同步查库。
 
 影响不只限于 write_log=1 的写请求：最终不写日志的查询请求也先经历该路径。GlobalFilter 没有将这部分阻塞工作显式隔离。Redis/数据库变慢时，catch 异常只能避免异常转成业务错误，不能消除等待时间；并发缓存失效还可能同时回源。
 
@@ -85,9 +85,9 @@
 
 ### R05 / P1 性能与完整性风险：请求线程和单条日志体积没有预算
 
-证据：[Aspect.toResultMap](D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogAspect.java:156) 对整个返回对象序列化再解析；[Recorder.writeAssembled](D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogRecorder.java:149) 在投递前调用 after。失败参数也是完整序列化后才截断；old_data/new_data/ex_message 没有公共大小上限，最终写 TEXT。
+证据：Aspect.toResultMap（D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogAspect.java:156） 对整个返回对象序列化再解析；Recorder.writeAssembled（D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogRecorder.java:149） 在投递前调用 after。失败参数也是完整序列化后才截断；old_data/new_data/ex_message 没有公共大小上限，最终写 TEXT。
 
-具体快照放大：[AI loadApplications](D:/code/openlibing-ai/src/main/java/com/openlibing/ai/common/aop/AiToolManageLogHandler.java:291) 逐 ID 查询，before 和成功后的 after 均可能调用；N 项批量操作可额外产生约 2N 次查询。framework Wiki 会把批量实体整体序列化，发布模板 Handler 会装载关联集合。按主键查询并不等于查询次数和返回数据量有界。
+具体快照放大：AI loadApplications（D:/code/openlibing-ai/src/main/java/com/openlibing/ai/common/aop/AiToolManageLogHandler.java:291） 逐 ID 查询，before 和成功后的 after 均可能调用；N 项批量操作可额外产生约 2N 次查询。framework Wiki 会把批量实体整体序列化，发布模板 Handler 会装载关联集合。按主键查询并不等于查询次数和返回数据量有界。
 
 本地合成 100000 字符参数被完整序列化为 100050 字符后，才进入后续截断。这里只证明处理顺序，不将这次运行当成性能基准。
 
@@ -97,7 +97,7 @@
 
 ### R06 / P2 性能风险：默认队列策略容易造成可见性长尾
 
-证据：[ExecutorConfig](D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogExecutorConfig.java:38)：core=2、max=8、queue=1000，关闭等待 10 秒。
+证据：ExecutorConfig（D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogExecutorConfig.java:38）：core=2、max=8、queue=1000，关闭等待 10 秒。
 
 本地使用相同 ThreadPoolExecutor 参数和受闩锁阻塞的任务复现：1002 个未完成任务时 pool=2、queue=1000；第 1003 个才扩容到 3。max=8 不是常态工作线程数。
 
@@ -107,7 +107,7 @@
 
 ### R07 / P1 故障隔离风险：任务直写未绑定公共超时配置
 
-证据：R01 三个本仓 FrameworkLogClient 未声明 `configuration=OperationLogFeignConfig.class`，contextId 也不是 `operationLogWriteClient`。CICD/coderepo 的 [DirectWriter](D:/code/openlibing-cicd/src/main/java/com/openlibing/cicd/common/operationlog/OperationLogDirectWriter.java:27) 注入本仓客户端，同步执行 begin/finish/write。
+证据：R01 三个本仓 FrameworkLogClient 未声明 `configuration=OperationLogFeignConfig.class`，contextId 也不是 `operationLogWriteClient`。CICD/coderepo 的 DirectWriter（D:/code/openlibing-cicd/src/main/java/com/openlibing/cicd/common/operationlog/OperationLogDirectWriter.java:27） 注入本仓客户端，同步执行 begin/finish/write。
 
 因此公共客户端的 1 秒连接/3 秒读取默认值，以及针对 operationLogWriteClient 的属性，不能直接证明这些调用获得同样的超时保护。外部配置中心可能另有配置，本次未读取，不能断言部署中为无限超时。
 
@@ -115,7 +115,7 @@
 
 ### R08 / P1 性能风险：清理实际没有分批
 
-证据：[batchDeleteOperationLogs](D:/code/openlibing-framework/src/main/java/com/openlibing/framework/common/job/BatchPersonalDataJob.java:271) 一次 SELECT 所有过期 id 到内存，一条 DELETE 删除全部过期行，再把全部 id 拼成一个日志字符串。与方案 §7“分批删除”不一致。
+证据：batchDeleteOperationLogs（D:/code/openlibing-framework/src/main/java/com/openlibing/framework/common/job/BatchPersonalDataJob.java:271） 一次 SELECT 所有过期 id 到内存，一条 DELETE 删除全部过期行，再把全部 id 拼成一个日志字符串。与方案 §7“分批删除”不一致。
 
 统一表聚合多个仓一年数据，过期积压时会同时放大堆内存、删除事务、索引维护和数据库 I/O；新增写入 Semaphore 不限制此路径。即使当前新表没有一年数据，这也是确定存在的生命周期缺陷。
 
@@ -123,7 +123,7 @@
 
 ### R09 / P2：菜单写入开关缓存失效依赖无关鉴权请求
 
-证据：[framework.deleteAllUserPermission](D:/code/openlibing-framework/src/main/java/com/openlibing/framework/common/utils/OpenlibingRedis.java:99) 删除 menuUrls，却不删除 operationLogMenus。后者只在 [gateway.getMenus 回源](D:/code/openlibing-gateway/src/main/java/com/openlibing/gateway/common/utils/UserAuthHelper.java:387) 时被间接删除；getMenus 是普通用户权限判断路径的一部分。
+证据：framework.deleteAllUserPermission（D:/code/openlibing-framework/src/main/java/com/openlibing/framework/common/utils/OpenlibingRedis.java:99） 删除 menuUrls，却不删除 operationLogMenus。后者只在 gateway.getMenus 回源（D:/code/openlibing-gateway/src/main/java/com/openlibing/gateway/common/utils/UserAuthHelper.java:387） 时被间接删除；getMenus 是普通用户权限判断路径的一部分。
 
 公开/免登录/机机等路径虽然会经过独立 Marker，却不保证执行该权限查询；只运行这些路径时，修改 write_log 后仍可能使用旧的 operationLogMenus，直到其它请求触发失效或 24 小时 TTL 到期。
 
@@ -131,7 +131,7 @@
 
 ### R10 / P2：异步投递入口在真正投递前失败会漏记
 
-证据：[AsyncOperationLogSkipFilter](D:/code/openlibing-coderepo/src/main/java/com/openlibing/coderepo/common/operationlog/AsyncOperationLogSkipFilter.java:41) 在绑定参数前隐藏日志头；公共异常观察器仅在存在日志头时记录。CICD 有同样机制。
+证据：AsyncOperationLogSkipFilter（D:/code/openlibing-coderepo/src/main/java/com/openlibing/coderepo/common/operationlog/AsyncOperationLogSkipFilter.java:41） 在绑定参数前隐藏日志头；公共异常观察器仅在存在日志头时记录。CICD 有同样机制。
 
 因此同步仓库/流水线接口若请求体不可读、缺少参数，或业务校验/线程池投递失败，可能既不走 HTTP 日志，也根本没有任务执行。虽然避免了“请稍后”假完成行，却留下失败记录空档。与方案“启用日志的标准参数失败均写一条”的总体规则存在边界冲突。
 
@@ -139,16 +139,16 @@
 
 ### R11 / P2 性能风险：查询会反向争用写入数据库资源
 
-- [CICD getPipelineLogList](D:/code/openlibing-cicd/src/main/java/com/openlibing/cicd/business/service/impl/LoggingServiceImpl.java:77) 没调用默认 30 天的 applyDefaultTimeRange；filter-meta 调用了。列表不传时间时可覆盖全部保留数据。
+- CICD getPipelineLogList（D:/code/openlibing-cicd/src/main/java/com/openlibing/cicd/business/service/impl/LoggingServiceImpl.java:77） 没调用默认 30 天的 applyDefaultTimeRange；filter-meta 调用了。列表不传时间时可覆盖全部保留数据。
 - 同类 filter-meta 在逐维 buildFilter 时反复 listAllowed；一次选择 5 个维度可触发 5 次 framework 远程白名单查询，framework 每次读取菜单和 URL 集合，再执行各维度 GROUP BY。应在一次请求内复用白名单，不需要新增跨请求缓存。
-- [平台列表 SQL](D:/code/openlibing-framework/src/main/resources/mapper/OperationLogMapper.xml:119) 读取所有列，包含 old_data/new_data；最终列表仅需 hasDetail，也把大 TEXT 拉进了 JVM。每页另有 COUNT。
+- 平台列表 SQL（D:/code/openlibing-framework/src/main/resources/mapper/OperationLogMapper.xml:119） 读取所有列，包含 old_data/new_data；最终列表仅需 hasDetail，也把大 TEXT 拉进了 JVM。每页另有 COUNT。
 - 六个二级索引会增加 INSERT/UPDATE/DELETE 成本；多 module_id 的 IN、跨模块时间排序、OR 账号条件、列头 GROUP BY 不能仅凭“有索引”保证无排序或低扫描量。当前没有执行计划证据。
 
 建议：列表/列头统一时间边界；白名单每请求查一次；平台列表不取详情正文；对叶子、多模块、项目、资源、账号 OR、列头、深分页分别 EXPLAIN ANALYZE，再决定索引与分页方案。压测必须把查询和清理与持续写入同时运行。
 
 ### R12 / P2：列头超 1000 项时已选值仍会被丢弃
 
-证据：[CICD toFilterMetaItems](D:/code/openlibing-cicd/src/main/java/com/openlibing/cicd/business/service/impl/LoggingServiceImpl.java:411) 与 [coderepo 同名方法](D:/code/openlibing-coderepo/src/main/java/com/openlibing/coderepo/business/service/impl/LoggingServiceImpl.java:327)：先放入 SQL 返回的前 1000 个值，再追加未出现的已选值，最后 subList(0,1000)。追加项正好被裁掉。
+证据：CICD toFilterMetaItems（D:/code/openlibing-cicd/src/main/java/com/openlibing/cicd/business/service/impl/LoggingServiceImpl.java:411） 与 coderepo 同名方法（D:/code/openlibing-coderepo/src/main/java/com/openlibing/coderepo/business/service/impl/LoggingServiceImpl.java:327）：先放入 SQL 返回的前 1000 个值，再追加未出现的已选值，最后 subList(0,1000)。追加项正好被裁掉。
 
 SQL LIMIT 外的已选值还被直接赋 count=0，并不能代表真实计数。与方案“已选值即使计数靠后也保留”的契约不符。
 
@@ -158,15 +158,15 @@ SQL LIMIT 外的已选值还被直接赋 count=0，并不能代表真实计数�
 
 方案 §2.8 已要求成批发布，但没有覆盖当前实际的长期混合版本窗口：旧 DTO 使用 tableFlag 等字段，新 framework 要求 id/moduleId/起止时间；common 的旧切面已空转，新链路又依赖网关标记。任一环节未配套，都可能出现操作成功但两边表均未获得预期记录。
 
-本地前端具体证据：主站 [menu.vue](D:/code/openlibing-web/apps/web-openlibing/src/views/authorityManagement/menu.vue:809) 编辑菜单时显式重建 URL 对象，没有保留 writeLog；[后端 menuUrl](D:/code/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/MenuServiceImpl.java:573) 将缺失 writeLog 写成 0。若这组版本组合上线，编辑其它菜单字段也会关闭该 URL 的日志。
+本地前端具体证据：主站 menu.vue（D:/code/openlibing-web/apps/web-openlibing/src/views/authorityManagement/menu.vue:809） 编辑菜单时显式重建 URL 对象，没有保留 writeLog；后端 menuUrl（D:/code/openlibing-framework/src/main/java/com/openlibing/framework/business/service/impl/MenuServiceImpl.java:573） 将缺失 writeLog 写成 0。若这组版本组合上线，编辑其它菜单字段也会关闭该 URL 的日志。
 
-本地 [CICD 日志页面](D:/code/openlibing-cicd-web/src/views/pipeline/PipelineLog/index.vue:506) 仍读取 operationTargetName，而后端已返回 resourceName。当前本地版本不能完成新查询契约验收；未确认线上前端情况。
+本地 CICD 日志页面（D:/code/openlibing-cicd-web/src/views/pipeline/PipelineLog/index.vue:506） 仍读取 operationTargetName，而后端已返回 resourceName。当前本地版本不能完成新查询契约验收；未确认线上前端情况。
 
 建议：做实例级发布清单，记录制品版本/摘要、common 版本、网关打标能力、DDL 版本和前端版本。混合期间冻结旧页面菜单编辑或实现明确的更新兼容策略；新增 URL 默认 0 与旧 URL 更新时字段省略应区别设计。不要只用一个 SNAPSHOT 名称代表各实例代码一致。
 
 ### R14 / P2：指标不足以证明“没有丢日志”和端到端成功
 
-证据：[OperationLogMetrics](D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogMetrics.java:13) 在没有 MeterRegistry 时空转；[Recorder.saveLog](D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogRecorder.java:259) 的耗时从任务开始执行才计时，包含重试/退避/湖侧日志输出，不是独立的 framework SQL P99。
+证据：OperationLogMetrics（D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogMetrics.java:13） 在没有 MeterRegistry 时空转；Recorder.saveLog（D:/code/openlibing-common/src/main/java/com/openlibing/common/aspect/operationlog/OperationLogRecorder.java:259） 的耗时从任务开始执行才计时，包含重试/退避/湖侧日志输出，不是独立的 framework SQL P99。
 
 framework 返回成功后先加 succeeded，再执行 lakeWriter；湖侧抛异常会加 failed，导致一条记录同时进入成功和失败计数。MANAGE_LOG 输出成功也不证明下游数据湖已收录。任务 DirectWriter、Handler 补数失败、网关打标失败没有统一纳入这组写入指标。
 

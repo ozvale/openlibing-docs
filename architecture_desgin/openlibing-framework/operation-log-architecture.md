@@ -941,7 +941,7 @@ ORDER BY operation_end_time DESC, id DESC
 
 未传时间范围时后端兜底近 30 天。CICD 列表与 filter-meta 同样使用近 30 天兜底。`pageSize` 上限 100。
 
-当前用户必须是该 `projectId` 的项目成员，对齐 cicd `isProjectMember`。非成员无权限。返回前对 `old_data` / `new_data` 掩码。查询服务不打印日志明细。
+当前用户必须是该 `projectId` 的项目成员，对齐 cicd `isProjectMember`。非成员无权限。列表不返回 `old_data` / `new_data` / `params` 大字段，由详情接口另行返回。查询服务不打印日志明细。
 
 ## 2.7 历史数据处理
 
@@ -1140,7 +1140,7 @@ ORDER BY operation_end_time DESC, id DESC
 | CICD 现有流水线日志页 | 列表仍走 `POST /logging/pipelineLog/list`，出参 `LogProjectVO`（`resourceName`，不再用 `operationTargetName`）；请求可带旧标量或新集合（含 `resourceName/ip`）；列头改 `POST /logging/filter-meta`；旧 `GET /users`、`GET /targetNames` 仅兼容 |
 | coderepo 新页面列表   | `POST /logging/list`，必带当前 `projectId`；筛 `moduleId/logResult/userName/resourceName/ip`；展示操作开始时间、操作结束时间                                                                                                                   |
 | CICD / 代码仓列头     | `POST /logging/filter-meta`，对齐 `/project-repo/query-repo-filter-meta`；`filterMetaDimensions` 点名列，`moduleId` 返回 `{value, count, menuName}`，其它维度返回 `{value, count}`                                                             |
-| 操作结果              | `logResult` 由 filter-meta 返回「成功」「失败」及 count，前端不再写死                                                                                                                                                                          |
+| 操作结果              | `logResult` 由 filter-meta 返回「成功」「失败」「进行中」及 count，前端不再写死                                                                                                                                                                |
 
 ## 3.7 新增模块时开发者要做什么
 
@@ -1882,7 +1882,7 @@ CICD 的 `POST /logging/filter-meta` 与上表同一契约，仅 `projectId` 为
 Recorder入队前由OperationLogPayloadSanitizer统一递归脱敏，数据库请求和入湖复用同一结果；预算见§5.3。字段名/文本模式不能识别任意自由文本中的所有敏感内容，任务直写仍需调用方保护。
 
 成功和失败场景都必须测试脱敏，尤其是失败日志会保留请求参数。
-代码仓项目维查询返回前对 `old_data` / `new_data` 再做一次掩码；查询服务不打印日志明细。
+代码仓项目维列表不返回 `old_data` / `new_data` / `params` 大字段，由详情接口另行返回；查询服务不打印日志明细。
 
 ## 硬编码
 
