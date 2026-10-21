@@ -20,11 +20,11 @@ DevEnv 容器内 `git clone/push` 慢且不稳。现方案在 `/etc/hosts` 受�
 
 923957 节点上三个 DoH 源 + 系统 DNS **都只返回同一个 IP**：
 
-| 域名 | 解析到的 IP | 个数 |
-|---|---|---|
-| github.com | 20.205.243.166 | 1 |
-| api.github.com | 20.205.243.168 | 1 |
-| codeload.github.com | 20.205.243.165 | 1 |
+| 域名                | 解析到的 IP    | 个数 |
+| ------------------- | -------------- | ---- |
+| github.com          | 20.205.243.166 | 1    |
+| api.github.com      | 20.205.243.168 | 1    |
+| codeload.github.com | 20.205.243.165 | 1    |
 
 **pinning 的价值是"多 IP 择优"，但这里没有多 IP 可选——pin 不 pin 都走同一个 IP。** A/B 验证：摘掉受管块后系统 DNS 解析回来仍是同一 IP。
 
@@ -37,6 +37,7 @@ DevEnv 容器内 `git clone/push` 慢且不稳。现方案在 `/etc/hosts` 受�
 把 `get_ips` 的数据源从 **DoH（地理收口→1 IP）** 换成 **`api.github.com/meta`（GitHub 官方全量 edge CIDR）**，让 pinning 有真材实料可择优。
 
 `https://api.github.com/meta`（公开、无需认证）返回 JSON，其中：
+
 - `git` 数组：服务 `github.com` 等 git-over-HTTPS 操作的全部 edge CIDR。
 - `api` 数组：服务 `api.github.com` 的 edge CIDR。
 
@@ -52,11 +53,11 @@ DevEnv 容器内 `git clone/push` 慢且不稳。现方案在 `/etc/hosts` 受�
 
 ### 4.1 拓扑与角色
 
-| 角色 | 位置 | 网络 | 职责 |
-|---|---|---|---|
+| 角色      | 位置                           | 网络                                       | 职责                                                                                                              |
+| --------- | ------------------------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
 | transport | 1 台管理面节点（FastAPI 服务） | 管理面：到不了共享存储后端，到物理机走 SSH | curl meta + pick 重选、每 1h 健康检查当前最优 IP；IP 变→SSH 一台物理机写共享存储；创建容器事件→SSH 该机执行 1→2→3 |
-| 共享存储 | 跨物理机一份 | 存储面：100 台物理机挂载，transport 不挂 | 存最优 IP（per-host 一行 `host ip`），worker 读、transport 经物理机代写 |
-| worker | 每台物理机常驻 | 存储面：本地 docker | 每 1h 读共享存储最优 IP→探活（git `info/refs`，非 REST）→200 写进容器、非200 删受管块回退 DNS（§5.5） |
+| 共享存储  | 跨物理机一份                   | 存储面：100 台物理机挂载，transport 不挂   | 存最优 IP（per-host 一行 `host ip`），worker 读、transport 经物理机代写                                           |
+| worker    | 每台物理机常驻                 | 存储面：本地 docker                        | 每 1h 读共享存储最优 IP→探活（git `info/refs`，非 REST）→200 写进容器、非200 删受管块回退 DNS（§5.5）             |
 
 - 全实验室共用一个 NAT 出口；物理机访问 `api.github.com` 也抽风。
 - 凭据：transport 的 FastAPI 服务**内存**持有各物理机 IP/用户/密码（不落盘文件），SSH 进物理机。服务加固不在本需求内。
@@ -97,6 +98,7 @@ worker（每台物理机，由 transport 在创建容器时拉起后常驻）
 ```
 
 要点：
+
 - **transport 内存是 唯一可信源**（最优 IP），共享存储只是「分发给 worker」的通道；通道任何异常，transport 仍能用内存 IP 直写新容器 hosts。
 - **worker 读不到就不动**，绝不把容器 hosts 改坏。
 - transport 写共享存储失败**不阻断创建容器**——步骤 1 直接用内存 IP 写新容器 hosts。
@@ -105,23 +107,25 @@ worker（每台物理机，由 transport 在创建容器时拉起后常驻）
 
 ### 4.3 文件布局
 
-| 文件 | 位置 | 角色 |
-|---|---|---|
-| 共享存储最优 IP 文件 | 共享存储（跨机一份） | per-host 一行 `host ip`，worker 读、transport 经物理机代写 |
-| worker 脚本 | 各物理机本地（transport 拉起） | 只读共享存储 + `docker exec` 刷容器 hosts 的 循环 |
-| transport 服务 | transport 节点 | FastAPI：每 1h 健康检查 + 每 12h 重选 + 创建容器编排（SSH 各物理机） |
+| 文件                 | 位置                           | 角色                                                                 |
+| -------------------- | ------------------------------ | -------------------------------------------------------------------- |
+| 共享存储最优 IP 文件 | 共享存储（跨机一份）           | per-host 一行 `host ip`，worker 读、transport 经物理机代写           |
+| worker 脚本          | 各物理机本地（transport 拉起） | 只读共享存储 + `docker exec` 刷容器 hosts 的 循环                    |
+| transport 服务       | transport 节点                 | FastAPI：每 1h 健康检查 + 每 12h 重选 + 创建容器编排（SSH 各物理机） |
 
 ---
 
 ## 5. 逻辑契约
 
 约定：全部脚本 `set -uo pipefail`（**不**用 `-e`，单步失败由调用方决定），日志走 stderr。受管块标记不变：
+
 ```
 # >>> github-accel (managed) >>>
 <IP> <host>
 # updated <UTC>
 # <<< github-accel (managed) <<<
 ```
+
 > 每个 TARGET 占一行 `<IP> <host>`，多 host 时在标记内纵向堆叠；`# updated` 是整块一个时间戳（取最近一次写入）。
 
 ### 5.1 transport：`get_ips <hostname>` → stdout 逐行 IPv4（meta 数据源）
@@ -180,6 +184,7 @@ worker（每台物理机，由 transport 在创建容器时拉起后常驻）
 ### 5.4 transport：创建容器编排（1→2→3）
 
 SSH 目标物理机后，按序：
+
 ```
 1. 创建容器；内存最优 IP 非空 -> docker exec 新容器 cat 原地写 /etc/hosts 受管块（用 transport 内存 IP；
      /etc/hosts 是 bind-mount，不 mv/sed -i，必须 cat 原地写；空串 -> 不改 hosts，走默认 DNS）
@@ -187,6 +192,7 @@ SSH 目标物理机后，按序：
      空串 / 相同 -> 不写（见 §5.6，不阻断后续）
 3. 检查 worker 进程在否（pgrep），不在则拉起 worker 循环
 ```
+
 > 顺序 1→2→3：先让新容器能用(1)、再同步共享存储(2)、常驻维护可稍后(3)。步骤 1 用 transport 内存 IP 直写，**不依赖步骤 2 写共享存储成功**——共享存储异常时新容器仍可用；空串时不改 hosts，新容器走默认 DNS 不劣于现状。
 
 ### 5.5 worker：探活刷容器 hosts（每物理机常驻 循环）
@@ -208,12 +214,12 @@ SSH 目标物理机后，按序：
 
 核心原则：**transport 内存持最优 IP（唯一可信源），共享存储只是分发给 worker 的通道**；通道异常 transport 仍能直写新容器 hosts；worker 读不到就不动。
 
-| 异常 | 影响面 | 处理 |
-|---|---|---|
-| 共享存储掉挂载 | transport 写不了、worker 读不了 | transport 用内存 IP 直写新容器 hosts（步骤 1 不依赖共享存储）；worker 不动容器 hosts；告警；挂载恢复后自动续上 |
-| 读不了 IP 文件（不存在/权限） | worker 读不到新 IP | worker 保持容器现有 hosts（上次写的，大概率仍有效）；告警；下周期重试 |
-| 写不了 IP 文件（权限/满/只读） | 分发给 worker 中断 | transport 用内存 IP 写新容器（可用）；worker 读旧 IP、探活仍 200 则继续 pin、坏则回退 DNS；告警 |
-| transport 链路异常（挂了/写不动共享存储） | worker 读到旧 IP（可能已失效） | worker 每 1h 探旧 IP：200 继续 pin、非200 删受管块回退 DNS（幂等停在 DNS）；transport 恢复推新 IP 后下周期自动重新 pin |
+| 异常                                      | 影响面                          | 处理                                                                                                                   |
+| ----------------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 共享存储掉挂载                            | transport 写不了、worker 读不了 | transport 用内存 IP 直写新容器 hosts（步骤 1 不依赖共享存储）；worker 不动容器 hosts；告警；挂载恢复后自动续上         |
+| 读不了 IP 文件（不存在/权限）             | worker 读不到新 IP              | worker 保持容器现有 hosts（上次写的，大概率仍有效）；告警；下周期重试                                                  |
+| 写不了 IP 文件（权限/满/只读）            | 分发给 worker 中断              | transport 用内存 IP 写新容器（可用）；worker 读旧 IP、探活仍 200 则继续 pin、坏则回退 DNS；告警                        |
+| transport 链路异常（挂了/写不动共享存储） | worker 读到旧 IP（可能已失效）  | worker 每 1h 探旧 IP：200 继续 pin、非200 删受管块回退 DNS（幂等停在 DNS）；transport 恢复推新 IP 后下周期自动重新 pin |
 
 > transport 写共享存储失败不阻断创建容器；worker 拉起失败也不阻断（新容器 hosts 已由步骤 1 写好，只是缺自愈）。所有异常记日志/告警，人工介入。
 
@@ -262,17 +268,17 @@ transport 在创建容器编排步骤 3 检查 worker 进程：
 
 ## 8. 风险与回滚
 
-| 风险 | 缓解 |
-|---|---|
-| meta 走 api.github.com，全段抽风取不到 | get_ips 自动退 DoH + getent 兜底，不劣于现状 |
-| CIDR 展开算错代表 IP | 先实看 meta `git` 数组 CIDR 位数；/32 直用、其余取 2 个代表，见 §5.1 |
-| 并行 pick 起约 3×候选数个 curl（每 IP 探 3 次） | 仅 transport 跑，受 -m5 上限、墙钟 ≈5s，与候选数无关 |
-| 无认证 meta 限流每小时 60 次 × 共用 NAT 一份 | meta 驱动点收敛到 transport 单点，稳态 ~1 次/12h，远在每小时 60 次 内；冷启动也只 1 次 |
-| worker 探测被限流 | worker 只探 git host 的 `info/refs`（git 协议，非 REST），不受每小时 60 次；api.github.com 已移出 TARGETS（其根 `/` 是 REST、算每小时 60 次，100 worker×1h 会超限），见 §1/§5.2 |
-| 共享存储掉挂载 / 读写失败 | transport 用内存 IP 直写新容器 hosts 不阻断；worker 不动容器 hosts 保持现状；告警人工介入，见 §5.6 |
-| transport 单点（定时任务/编排） | transport 内存是 唯一可信源，挂了 worker 每 1h 探共享存储旧 IP：好继续 pin、坏删受管块回退 DNS（停在 DNS）；transport 恢复推新 IP 后下周期自动重新 pin（§5.5） |
-| 凭据存 transport FastAPI 内存 | 不落盘文件；服务加固不在本需求内（已知边界，见 §9） |
-| worker 进程崩了不自重启 | transport 创建容器编排步骤 2 会补拉；常驻期间崩需人工/上层 pgrep 重拉 |
+| 风险                                            | 缓解                                                                                                                                                                            |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| meta 走 api.github.com，全段抽风取不到          | get_ips 自动退 DoH + getent 兜底，不劣于现状                                                                                                                                    |
+| CIDR 展开算错代表 IP                            | 先实看 meta `git` 数组 CIDR 位数；/32 直用、其余取 2 个代表，见 §5.1                                                                                                            |
+| 并行 pick 起约 3×候选数个 curl（每 IP 探 3 次） | 仅 transport 跑，受 -m5 上限、墙钟 ≈5s，与候选数无关                                                                                                                            |
+| 无认证 meta 限流每小时 60 次 × 共用 NAT 一份    | meta 驱动点收敛到 transport 单点，稳态 ~1 次/12h，远在每小时 60 次 内；冷启动也只 1 次                                                                                          |
+| worker 探测被限流                               | worker 只探 git host 的 `info/refs`（git 协议，非 REST），不受每小时 60 次；api.github.com 已移出 TARGETS（其根 `/` 是 REST、算每小时 60 次，100 worker×1h 会超限），见 §1/§5.2 |
+| 共享存储掉挂载 / 读写失败                       | transport 用内存 IP 直写新容器 hosts 不阻断；worker 不动容器 hosts 保持现状；告警人工介入，见 §5.6                                                                              |
+| transport 单点（定时任务/编排）                 | transport 内存是 唯一可信源，挂了 worker 每 1h 探共享存储旧 IP：好继续 pin、坏删受管块回退 DNS（停在 DNS）；transport 恢复推新 IP 后下周期自动重新 pin（§5.5）                  |
+| 凭据存 transport FastAPI 内存                   | 不落盘文件；服务加固不在本需求内（已知边界，见 §9）                                                                                                                             |
+| worker 进程崩了不自重启                         | transport 创建容器编排步骤 2 会补拉；常驻期间崩需人工/上层 pgrep 重拉                                                                                                           |
 
 **回滚**：停 transport 服务 + 各物理机停 worker；受管块残留可手动清（或容器重启由 Docker 重置 hosts）。旧 DoH 方案不受影响。
 
@@ -289,28 +295,31 @@ transport 在创建容器编排步骤 3 检查 worker 进程：
 ## 附录 A：关键实测数据（923957，2026-08-17/18）
 
 ### A.1 meta 候选探测（根路径 `/`，并行 -m5）
-| IP | http | total | 备注 |
-|---|---|---|---|
-| 20.27.177.113 | 200 | 0.33s | 最快 |
-| 20.200.245.247 | 200 | 0.59s | |
-| 20.205.243.166 | 200 | 0.74s | 旧 pin（常抽风 000）|
-| 20.29.134.23 | 200 | 1.12s | |
-| 4.237.22.38 | 200 | 1.35s | |
-| 20.233.83.145 | 200 | 1.40s | |
-| … | … | … | 共约 20 个能 200 |
+
+| IP             | http | total | 备注                 |
+| -------------- | ---- | ----- | -------------------- |
+| 20.27.177.113  | 200  | 0.33s | 最快                 |
+| 20.200.245.247 | 200  | 0.59s |                      |
+| 20.205.243.166 | 200  | 0.74s | 旧 pin（常抽风 000） |
+| 20.29.134.23   | 200  | 1.12s |                      |
+| 4.237.22.38    | 200  | 1.35s |                      |
+| 20.233.83.145  | 200  | 1.40s |                      |
+| …              | …    | …     | 共约 20 个能 200     |
 
 ### A.2 候选稳定性（`info/refs`，10 次/IP）
-| IP | 成功率 | avg | min–max |
-|---|---|---|---|
-| 20.27.177.113 | 10/10 | 0.453s | 0.43–0.48 |
-| 20.200.245.247 | 10/10 | 0.683s | 0.62–0.92 |
-| 20.29.134.23 | 10/10 | 1.07s | — |
-| 20.207.73.82 | 10/10 | 1.28s | — |
-| 4.237.22.38 | 10/10 | 1.40s | — |
-| 20.233.83.145 | 10/10 | 1.45s | — |
-| 20.205.243.166（旧）| 7/10 | — | 抽风坐实 |
+
+| IP                   | 成功率 | avg    | min–max   |
+| -------------------- | ------ | ------ | --------- |
+| 20.27.177.113        | 10/10  | 0.453s | 0.43–0.48 |
+| 20.200.245.247       | 10/10  | 0.683s | 0.62–0.92 |
+| 20.29.134.23         | 10/10  | 1.07s  | —         |
+| 20.207.73.82         | 10/10  | 1.28s  | —         |
+| 4.237.22.38          | 10/10  | 1.40s  | —         |
+| 20.233.83.145        | 10/10  | 1.45s  | —         |
+| 20.205.243.166（旧） | 7/10   | —      | 抽风坐实  |
 
 ### A.3 端到端 clone（临时 pin `20.27.177.113`）
+
 - `git clone --depth 1 git/git` → **4.78s / 59.2MB / 12.38 MB/s** ✓
 
 ## 附录 C：物理机 79.1.2.128 实测（2026-08-25）
@@ -318,27 +327,30 @@ transport 在创建容器编排步骤 3 检查 worker 进程：
 > 首段（§5.1–5.3 + 内存/凭据接口）落地后的真实环境验证。环境：openEuler 22.03 SP1 / aarch64 / root，glusterfs 挂在 `/data/gluster`（可写），多 DevEnv 容器在跑。
 
 ### C.1 get_ips（meta 数据源）
+
 - `curl https://api.github.com/meta` 出口通，`git` 数组 46 个 CIDR → 展开 48 个候选 IPv4（/32 原样、其余取网络+1/广播-1 两代表、去重）。
 
 ### C.2 pick（并发 3 次取中位选优）
+
 - 48 候选：**20 个 200、28 个 000 黑洞段、0 个非200非零**。
 - top8（200，按中位耗时升序）：
 
-  | IP | 中位 |
-  |---|---|
-  | 20.27.177.113 | 0.436s |
-  | 20.200.245.247 | 0.644s |
-  | 20.205.243.166 | 0.840s |
-  | 20.29.134.23 | 1.004s |
-  | 20.207.73.82 | 1.203s |
-  | 4.237.22.38 | 1.369s |
-  | 20.233.83.145 | 1.398s |
+  | IP              | 中位   |
+  | --------------- | ------ |
+  | 20.27.177.113   | 0.436s |
+  | 20.200.245.247  | 0.644s |
+  | 20.205.243.166  | 0.840s |
+  | 20.29.134.23    | 1.004s |
+  | 20.207.73.82    | 1.203s |
+  | 4.237.22.38     | 1.369s |
+  | 20.233.83.145   | 1.398s |
   | 172.182.252.133 | 1.452s |
 
 - 000 黑洞段为旧 edge（192.30.252/185.199.108/140.82.112/143.55.64）——印证 §2.1 抽风根因。
 - 最优 `20.27.177.113`，与附录 A（923957 节点）一致，跨节点可复现。
 
 ### C.3 共享存储写（`_write_shared_storage`）
+
 - 路径：`/data/gluster/share/docker_config/github_accel_ips`（per-host 一行 `host ip`）。
 - `mkdir -p` + `cat >` 原地写（bind-mount 安全）+ `stdin.channel.shutdown_write()` 发 EOF → exit 0；读回正确：
   ```
@@ -348,6 +360,7 @@ transport 在创建容器编排步骤 3 检查 worker 进程：
   （上为历史实测输出；按 §5.1 决策 codeload 走 DNS，新版 `_write_shared_storage` 只写 `github.com` 行，`PIN_HOSTS` 不含 codeload。）
 
 ### C.4 容器 /etc/hosts bind-mount 约束（§5.4/worker 前置）
+
 - `cat >` 原地写受管块 OK（marker + pin IP 正确写入、读回正确）。
 - `sed -i` → `cannot rename ... Device or resource busy`（失败，符合预期）。
 - `mv` → `Device or resource busy`（失败，符合预期）。
@@ -355,11 +368,13 @@ transport 在创建容器编排步骤 3 检查 worker 进程：
 - 注：本项用临时 marker `# BEGIN/END github_accel managed` 验证 bind-mount 行为，**最终受管块标记以附录 B 的 `# >>> github-accel (managed) >>>` … `# <<<` 为准**。
 
 ### C.5 DevEnv 容器默认 DNS vs pin 对比（根因 + 收益）
+
 - 运行中的 DevEnv 容器默认 DNS：`github.com → 20.205.243.166`、`codeload.github.com → 20.205.243.165`。
 - `info/refs` 探测：默认 DNS 200 @ **0.903s**；pin `20.27.177.113` 200 @ **0.423s** → **pin 比默认 DNS 快约 2.1×**。
 - 该时刻 DNS 恰好解析到可用 IP（未抽风到 000 段）；抽风时段 DNS 会解析到 000 黑洞段（C.2 实测 28 个 IP 全 000），pin 能稳定选到 0.42s 的好 IP。加速价值实证成立。
 
 ### C.6 验证项对应 §7
+
 - §7.1 定时任务 get_ips+pick+写共享存储 → C.1/C.2/C.3 通过。
 - §7.2 缓存暖启动（清文件→全量重选写回）→ C.3 已证写回链路；全量重选同 C.2。
 - §7.4 创建容器编排受管块写入 → C.4 证 bind-mount 写法可行。
@@ -372,6 +387,7 @@ worker 脚本 `service/docker_config/scripts/github_accel_worker.sh`（bash，`s
 **前置（补 C.4 真实容器缺口）**：在运行中 devenv 容器 `devenv_977680_…` 内：`cat > /etc/hosts` OK；`sed -i` → `cannot rename ... Device or resource busy`。与 C.4 临时容器结论一致，证实真实 devenv 容器同样只能 `cat >` 原地写。
 
 **写块机制全分支通过**（复刻 worker 真实 awk+cat 逻辑，在 devenv 容器上测）：
+
 - 写入受管块 → refreshed，格式符合附录 B（`# >>>` + `<ip> <host>` 纵向堆叠 + `# updated` + `# <<<`）。
 - 幂等：同块再写 → `same, skip`（省 exec）。
 - 替换：IP 变 → refreshed，旧块整段替换为新块。
@@ -387,6 +403,7 @@ worker 脚本 `service/docker_config/scripts/github_accel_worker.sh`（bash，`s
 **未触发**：实测时段出口呈分半稳定（新段全 200、旧段全 000），共享存储里的 `20.27.177.113` 此刻属 000 段故未触发 200→写块端到端；但探活取码（200/301/000 均见过）与写块逻辑（C.7 写块机制全分支）已分别验证，拼接路径正确性由两段独立保证。worker 宿主探活代表全机成立。
 
 **已决策**：
+
 1. ~~worker 探活改用容器内 curl~~ —— 经发现 1 验证不必要，宿主探活 = 容器探活，维持 §5.5 宿主 curl 设计。
 2. 间歇性是时间维度（两端都抽风）属网络出口硬限制，方案层不改；接受块/DNS 空窗，靠 worker 每 1h 探活 + transport 每 1h 健康检查在可达窗口自愈对齐。
 3. 已加固 curl `-m` 超时边界假阳性（发现 1 根因）：transport `pick._probe_once`（`github_accel.py`）与 worker 判活（`github_accel_worker.sh`）均加 `time_total ≥ PROBE_TIMEOUT` 条件——边界超时时拘留的 `200` 视为 `000`，不进 alive / 不被 pick 选入。依据 C.8 证实可达成功均秒级 0–1s、无「慢但能成」中间态，故 ≥ 超时阈值的 200 必为假阳性。awk 浮点比较四边界场景验证通过（`5.000`/`5.001`→置 `000`，`4.999`/`0.436`→保持 `200`）；`py_compile` + `bash -n` 通过。端到端实测（新版部署到 79.1.2.128 共享存储后）：`PROBE_TIMEOUT=1 --once` 轮 codeload `total=1.000191 ≥ 1` → 拘留的 `200` 被改 `000`（不进 alive），github.com `total=0.999874 < 1` 保持 `200`（真可达，进块写 8 容器）；恢复轮 `PROBE_TIMEOUT=5 --once` github.com `total=5.001314 ≥ 5` → 边界 `200` 被改 `000`（坏 IP 不写入容器 hosts），codeload `301` 非 `200` 不进 alive → alive 空 → 删块，8 容器回退 DNS，final 块计数 `0`。两轮均命中假阳性过滤、状态干净。
@@ -399,11 +416,11 @@ worker 脚本 `service/docker_config/scripts/github_accel_worker.sh`（bash，`s
 
 **clone 成功率三组对比**（每态 5 次，`timeout 30s`）：
 
-| 模式 | 成功率 | 说明 |
-|---|---|---|
+| 模式                                       | 成功率    | 说明                   |
+| ------------------------------------------ | --------- | ---------------------- |
 | pin 好段（此刻可达 IP 20.205.243.166/165） | 4/5 = 80% | pin 对 IP 显著优于 DNS |
-| DNS 默认（多 IP 轮转 20.205.243.166 段） | 2/5 = 40% | 轮到坏 IP 即失败 |
-| pin 坏段（20.27.177.113，此刻路径差） | 1/5 = 20% | pin 错 IP 反而更糟 |
+| DNS 默认（多 IP 轮转 20.205.243.166 段）   | 2/5 = 40% | 轮到坏 IP 即失败       |
+| pin 坏段（20.27.177.113，此刻路径差）      | 1/5 = 20% | pin 错 IP 反而更糟     |
 
 → 印证方案核心：pick 选对 IP 时 pin > DNS（80% vs 40%）；选错 < DNS（20%）→ worker 探活 000 删块回退 DNS 是必要安全网（避免停在坏段）。
 
@@ -414,6 +431,7 @@ worker 脚本 `service/docker_config/scripts/github_accel_worker.sh`（bash，`s
 **codeload 不参与 clone 的实证**（2026-08-30，§5.1 codeload 走 DNS 决策依据）：devenv 容器内 `GIT_CURL_VERBOSE=1 git clone --depth 1 https://github.com/vllm-project/vllm-ascend.git`，pin 块 `20.27.177.113 github.com` 在位。verbose 显示 clone **全程仅连 `github.com (20.27.177.113)`**：`GET /.../info/refs?service=git-upload-pack`（HTTP/2 200）+ `POST /.../git-upload-pack`（200），`:authority: github.com` / `Host: github.com`，**无 codeload、无重定向、无其他 host**。pin clone `rc=0 dur=3s`（HEAD `e6a133f` 拉到）；对照剥块走 DNS 连 3 次 `rc=0 ~3.9–4.2s`（此刻 DNS 恰好解析到好 IP）。→ `git clone/fetch/push` 只走 github.com，codeload.github.com 仅服务归档/zipball 下载，pin github.com 即覆盖全部 git 工作流，codeload 走 DNS 不影响任何 git 操作。
 
 **结论**：
+
 1. clone/push 失败是间歇可达窗口问题，非 timeout 长度——worker `PROBE_TIMEOUT=5s` 合理（探测黑洞 5s 足够，放大无收益）。
 2. 靠 worker 每 1h 探活 000 删块回退 DNS + transport 每 1h 健康检查重选在可达窗口自愈对齐，不靠放大 timeout。
 
