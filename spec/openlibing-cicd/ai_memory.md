@@ -31,3 +31,10 @@
 - Jackson 2→3：core/databind 包名 `com.fasterxml.jackson` → `tools.jackson`，annotation 包保留原名；`JsonDeserializer` → `ValueDeserializer`；`JsonProcessingException` → `JacksonException`（unchecked）；yaml 配 `spring.jackson.use-jackson2-defaults: true` 保持 Jackson 2 序列化默认行为。
 - mybatis-plus 3.5.17 的 `AbstractWrapper.in()` 在构建期即解析 Lambda 列名，纯 Mockito 单测需 `TableInfoHelper.initTableInfo(...)` 初始化实体元数据，否则报 "can not find lambda cache"。
 - spring-rabbit 4.1.1 移除 `RetryInterceptorBuilder.maxAttempts(int)`，改用 `maxRetries(int)`，总尝试 = 1 + maxRetries（`maxAttempts(3)` 等价 `maxRetries(2)`）。
+
+## 权限组（framework 实现，issue 挂 cicd）
+
+- 成员数类统计必须与用户可见页面同源同口径（权限组列表 vs 成员管理页 query-project-user）：独立口径必然漂移；正确做法是复用列表页口径（PROJECT 角色行数 + join user_basic_info 排除孤儿行 + 默认组并入 project_user_role_info 外部账号），distinct 去重也无法对齐（漏外部账号且口径不同）。
+- 操作级菜单拆分（operation_log v2 操作名区分）配置顺序：先为新菜单配置角色授权，再清理旧菜单下重复 URL 记录；顺序颠倒会直接导致所有相关接口全员 403。
+- 操作日志定长列（resource_name/ex_message）拼接列表值时统一模式：200 字符上限 + 超限回退条数摘要（`共N个资源，明细已省略`），避免超列长写入失败。
+- 资源展示名随请求由前端传递（id 本就前端传入），后端不做跨库反查资源主表——分库分表规划下不可依赖 framework 直查 pipeline_info。
