@@ -1,0 +1,185 @@
+# 测试策略 — issue_256_【1019】【蓝区】【运营看板】资源池明细展示总卡时 总使用(占用)卡时 总利用卡时
+
+> **模板版本**: v3.5
+> **对应规则**: AGENTS.md「规则 01 — 需求驱动的测试策略与设计」+「月度版本工作模式」
+> **使用说明**: 由 `python src/utils/version_tracker.py new-issue` 自动生成到
+> `assets/testcase_pro/IPD管理控制与测试仿真/05_202610/20261019/issue_256_【1019】【蓝区】【运营看板】资源池明细展示总卡时 总使用(占用)卡时 总利用卡时/测试过程数据/`；
+> 过程文档目录承载四件套归档（测试策略 / 测试设计 / case_list.md / 测试报告.md），
+> 另含 需求串讲 / 测试反串讲 / 版本历史；用例本体为 issue 目录内逐用例 `.md`，
+> 执行结果见同目录 `测试报告.md` 与版本目录 `执行记录跟踪表.xlsx`
+
+---
+
+> 团队：IPD管理控制与测试仿真 | 月度：202610 | 版本发布日期：20261019 | issue 编号：256 | issue 标题：【1019】【蓝区】【运营看板】资源池明细展示总卡时 总使用(占用)卡时 总利用卡时
+> 文档状态：已执行完毕（v1.5 定稿 14 条；2026-10-17 首轮执行发现产品计算缺陷 #278/#276 已修复关闭；2026-10-20~21 生产环境全量重执行 14/14 通过，测试结论「允许发布」，见 测试报告.md） | 创建日期：2026-10-13 | 负责人：AI 测试驱动（待测试人员确认）
+
+---
+
+## 1. 测试策略
+
+> 业务输入**唯一来源**为 gitcode issue 内的开发设计文档，AI/测试人员必须实际读取链接，禁止超出文档范围发散。
+
+### 1.1 Issue 信息
+
+| 字段 | 内容 |
+|------|------|
+| Issue编号 | 256 |
+| Issue标题 | 【1019】【蓝区】【运营看板】资源池明细展示总卡时 总使用(占用)卡时 总利用卡时 |
+| 关联需求 | https://gitcode.com/openlibing/openlibing-ops/issues/256 |
+| 所属团队 | IPD管理控制与测试仿真 |
+| 所属微服务 | openlibing-ops |
+| 所属模块 | resource_operations_dashboard（资源运营看板 · 资源总览-资源池明细 + 使用率分析-资源池使用率详情 · 池级卡时汇总/机器排序/机器类型） |
+| 负责人 | AI 测试驱动（待测试人员确认） |
+| 创建日期 | 2026-10-13 |
+
+### 1.2 需求摘要
+
+> 依据 issue 设计文档（2026-10-13 更新版：需求覆盖**两个页面**）+ 代码走查（后端 openlibing-ops 基线 `release_20261019`（be5e0cbd，2026-10-13 本地对象走查）：**本 issue 后端无实现 PR**；前端 openlibing-ops-web 基线 `release_20260923`（2026-10-13 fetch）：**前端无相关分支，前后端均未启动**；两类目共用组件 `pool-detail-drawer.vue` / `pool-detail-row.vue`，均归一化 `POST /gateway/openlibing-ops/common/detail`）+ Doris 真值数据探查（2026-10-13，internal.openlibing 库，2026-09 自然月 + 5m 表末段窗口基线）提炼。
+
+需求覆盖两个页面，每页面 3 个功能点（共 6 个功能点）：
+
+| FP | 页面 | 内容 | 实现现状（代码走查 / Doris 探查） |
+|----|------|------|----------------------------------|
+| FP1a | 资源总览页-资源池明细 | 汇总每个资源池的「总卡时」「总使用(占用)卡时」「总利用卡时」 | 类目 `ops-resource-pool-detail`（`ResourceOperationService.queryPoolDetailList`）：池级 SQL 已按 (pool,location) 算 SUM(assign)/SUM(used)/SUM(actual_total_npu_hour)（effective 兜底），但 **Resp 无任何卡时字段**（仅 allocRate/usageRate）；前端 `NpuPoolItem` 无卡时字段，池行仅显示两率值 |
+| FP1b | 使用率分析页-资源池使用率详情 | 同上 3 卡时汇总 | 类目 `ops-npu-pool-usage-detail`（`NpuUsageService.queryPoolUsageDetail`）：池级仅 allocRate（内存累计分子分母），**无卡时字段**；机器骨架取静态维表，分配卡时取 **5m slot 表**（dm_rd_efc_server_assign_resource_5m），**无利用卡时数据源**（SQL 仅 assign）——「总利用卡时」需补 used 数据源（遗留确认项） |
+| FP2a | 资源总览页-资源池明细 | 机器列表「总卡时」「总使用(占用)卡时」「总利用卡时」「使用率(占用)」「利用率」增加排序 | 机器级 SQL（queryPoolMachines）**无 ORDER BY**、无排序入参；前端 machineColumns **无 sortable**；池级排序白名单已有（alloc_rate/usage_rate/total_npu_hours/server_ip/resource_pool_name，SQL ORDER BY） |
+| FP2b | 使用率分析页-资源池使用率详情 | 同上 5 指标排序 | 机器级 SQL `ORDER BY m.server_ip` 固定序、无排序入参；机器级现有指标仅 4（ip/totalNpuHours/assignNpuHours/allocRate），**缺 usedNpuHours/usageRate 两指标**——5 指标中利用侧 2 项需先补字段；池级排序白名单仅 2（alloc_rate/resource_pool_name，**Java 内存排序**） |
+| FP3a | 资源总览页-资源池明细 | 机器列表增加机器类型字段 | 数据源 `sdi_rd_efc_server_machine_hidevlab.device_model`（varchar(1024) 非空，5 种 Atlas 机型）——**issue 原文表名 hidelab、字段名 devices_model 均为笔误**；机器级 SQL 已查该表，Resp/前端无机型字段 |
+| FP3b | 使用率分析页-资源池使用率详情 | 同上机器类型 | 同 FP3a 数据源；该类目机器行同样来自静态维表（(pool,ip) 去重，卡数取 actual_npu_num），加列即可 |
+
+**用例范围（依用户调整后设计脑图定稿，2026-10-14，脑图只读未改）**：设计脑图收敛为 **14 条用例**，仅覆盖 **FP1 池级卡时汇总**（资源总览 6 条：总卡时/总使用(占用)卡时/总利用卡时各「字段存在性 + 计算一致性」；使用率分析 4 条：总卡时/总使用(占用)卡时各 2 条）与 **FP3 机器类型**（两页面各 2 条：字段存在性 + 值对拍）。**FP2 机器列表 5 指标排序脑图未包含**（遗留登记：评审确认是否补充排序用例）；**使用率分析类目脑图无「总利用卡时」用例**（缺项登记，非遗漏——该类目无 used 数据源且 showUsage=false，见 §1.7 风险表）；API/DFX/安全三个维度脑图均未设计，本 issue 不生成对应用例（v1.2 阶段曾设计 8 API + 1 DFX + 4 安全共 13 条，随脑图重构全量移除）。
+
+**两类目关键差异（测试设计核心依据）**：
+
+| 维度 | ops-resource-pool-detail（资源总览页） | ops-npu-pool-usage-detail（使用率分析页） |
+|------|------------------------------------------|--------------------------------------------|
+| 时间窗口 | ≤30 天（DateUtil.validateDateRange） | ≤72 小时（validateTimeRange，5m slot：windowHours=slotCount/12） |
+| 总卡时口径 | 宽表兜底 SUM(actual_total_npu_hour)（effective） | 静态 Σ(actual_npu_num)×windowHours |
+| 占用卡时源 | dm_rd_efc_server_resource_hour（小时宽表） | dm_rd_efc_server_assign_resource_5m（5m 表） |
+| 利用卡时源 | dm_rd_efc_server_resource_hour.used_npu_hours | **无（需开发补数据源）** |
+| 池级排序 | SQL ORDER BY 白名单（5 字段） | Java 内存排序白名单（2 字段） |
+| 机器级现有指标 | ip/total/assign/used/allocRate/usageRate（6） | ip/total/assign/allocRate（4，缺 used/usageRate） |
+| 前端 showUsage | true（利用列显示） | **false（利用列有意隐藏）** |
+| 数据时效 | 小时宽表最新 2026-10-07（滞后 6 天） | **5m 表最新 2026-09-23 07:55（滞后 20 天，断档）** |
+
+术语映射（issue 需求术语 ↔ 现有代码/前端列名，测试断言锚点）：
+
+| 需求术语 | 后端字段 | 前端列名（现状 machineColumns） | 总览类目口径 | 使用率类目口径 |
+|----------|----------|-------------------------------|--------------|----------------|
+| 总卡时 | totalNpuHours | 总卡时 | SUM(actual_total_npu_hour) 宽表兜底 | Σ(actual_npu_num)×窗口小时数 静态 |
+| 总使用(占用)卡时 | assignNpuHours | 使用(占用)卡时 | SUM(assign_npu_hours)（小时宽表） | SUM(assign_npu_hours)（5m 表） |
+| 总利用卡时 | usedNpuHours | 利用卡时 | SUM(used_npu_hours) | 需补源 |
+| 使用率(占用) | allocRate | 使用率(占用) | assign÷effective，null→0、>100 封顶 100 | min(assign,total)÷total×100 封顶 100 |
+| 利用率 | usageRate | 利用率 | used÷total，无封顶 | 需补源（showUsage=false 该列隐藏） |
+| 机器类型 | （新增，源 device_model） | （新增列） | sdi_rd_efc_server_machine_hidevlab.device_model | 同左 |
+
+接口清单：
+
+- `POST /gateway/openlibing-ops/common/detail`（category=`ops-resource-pool-detail`；FP1a 池级新增 3 卡时、FP3a 机器机型、FP2a 机器排序（若后端实现）；入参 projectId/resourcePoolId + startTime/endTime（≤30 天）+ sortField/sortRule；池总数 ≤50 不分页）
+- `POST /gateway/openlibing-ops/common/detail`（category=`ops-npu-pool-usage-detail`；FP1b/FP2b/FP3b；入参同上但时间窗口 ≤72 小时；池级排序 Java 内存 comparator）
+- 关联既有接口（不在本 issue 改造范围，仅回归参照）：`/resource-operation/summary|trend|heatmap|run-analysis|project-alloc-trend`（TC-ISSUE109-001~013 覆盖）、ops-project-resource-efficiency / ops-pipeline-resource-efficiency（TC-ISSUE211-020~060 覆盖，20261015）
+
+页面：beta 入口同 TC-ISSUE109-014——`https://beta.openlibing.com/apps/nRDashboard?projectId=<id>`（容器页 iframe 嵌入 `/dashboard/npu-resource`，需 `npu_resource` 权限）。**页面一「资源总览」**：KPI 卡「查看资源池明细 →」（npu-resource-view，showUsage=true，category=ops-resource-pool-detail）。**页面二「使用率分析」**（usage-analysis-view）：KPI 面板池卡片点击 openPoolDetailDrawer 按池打开（usage-kpi-panel，showUsage=**false**，category=ops-npu-pool-usage-detail，resourcePoolId 精筛单池）。两抽屉共用 pool-detail-drawer（80% 宽）+ pool-detail-row（池行折叠头：池名+位置徽章（华为云/实验室）+项目 chips+率值 → FP1 新增 3 卡时；展开机器表：机器 IP/总卡时/使用(占用)卡时/利用卡时/使用率(占用)蓝条/利用率绿条 → FP2 排序 + FP3 机型列；默认第一池展开）。
+
+### 1.3 测试目标
+
+> 说明：以下为 issue 需求全量测试目标；**当前用例集（v1.2，依设计脑图）仅覆盖目标 1/3 的 UI 部分**，目标 2（FP2 排序）与目标 5（性能/安全基线）脑图未设计、目标 4 部分覆盖，详见 §1.4 测试范围与 §1.7 风险表遗留登记。
+
+1. 两页面池级卡时汇总透出正确（FP1a/b）：资源池明细/资源池使用率详情每池展示「总卡时/总使用(占用)卡时/总利用卡时」；接口值与 Doris 真值对拍一致（两类目分别按各自口径：宽表兜底 vs 静态卡数×窗口；小时表 vs 5m 表；跨位置池 (poolId,location) 拆行；无数据池 0 兜底；roundDecimal 保留位）
+2. 两页面机器列表排序正确（FP2a/b）：5 指标列升/降序排序结果正确、点击切换、多池展开互不影响、0/NULL 值序位稳定；排序字段白名单扩展（两类目各自机制：SQL 白名单 / Java comparator）与非法值拒绝
+3. 两页面机器类型透出正确（FP3a/b）：机器列表每行展示 device_model 机型（5 种 Atlas 机型全覆盖）；接口值与静态维表对拍一致；混合机型池（3 机型）展示正确
+4. 边界与数据陷阱防护：零占用池（vllm）、有占用无利用池、机器级利用分母 0、5m 表断档窗口（使用率类目无数据池仍展示）、池名尾随空格（vLLM-ascend）、跨位置池拆行、30 天/72 小时窗口边界、resourcePoolId 精筛
+5. 性能与安全基线：两类目接口（池级聚合透出 + 机型字段 + 排序）响应时间阈值（30 天大窗口 / 72h 5m 聚合分别设定）；认证/横向越权（跨项目 projectId 两类目数据隔离）/传输/敏感信息防护
+6. 回归防护：两类目池级既有排序白名单（5 字段/2 字段）不回归；两抽屉入口（总览 KPI / 使用分析池卡片）行为与数据一致
+
+### 1.4 测试范围
+
+| 测试类型 | 是否覆盖 | 说明 |
+|----------|----------|------|
+| UI功能测试 | 是 | **14 条**（01_系统测试/资源运营/资源运营看板/，TC-ISSUE256-001~014，P0×7/P1×7，全 auto_ui）：**资源总览页 8 条**——机器类型字段存在性+值对拍（5 机型/混合机型池/长文本截断）、池级 3 卡时各「字段存在性+计算一致性」（池级=机器级总和、零占用池 0 值、大数值格式、±0.01 容差）；**使用率分析页 6 条**——机器类型字段+值、总卡时/总使用(占用)卡时各字段+计算（静态口径 Σ(actual_npu_num)×窗口小时数，不做跨页面相等断言）；**使用率分析类目无「总利用卡时」用例**（脑图未含，缺项登记）。2026-10-20~21 生产环境全量执行 14/14 通过（§1.9） |
+| API接口测试 | 否 | 设计脑图未含 API 用例，本 issue 不生成（v1.2 阶段曾设计 8 条 Doris 对拍用例，随脑图重构移除；两类目接口数据正确性改由 UI 计算一致性用例间接覆盖，如需接口级对拍走用例新增流程并登记版本历史） |
+| DFX测试 | 否 | 设计脑图未含 DFX 用例，本 issue 不生成（v1.2 阶段曾设计 1 条，随脑图重构移除） |
+| 安全测试 | 否 | 设计脑图未含安全用例，本 issue 不生成（v1.2 阶段曾设计 4 条，随脑图重构移除；两类目 detail 接口为纯只读扩展，安全防护参照 TC-ISSUE109 安全系列既有覆盖） |
+
+### 1.5 测试策略
+
+- 手工测试：两页面池行卡时汇总视觉走查、机器类型长文本视觉基线（截图比对）、抽屉滚动与多池展开交互走查、列宽/兼容性等易用性检查（reuse 易用性库）
+- 自动化测试：
+  - **UI（auto_ui，全部 14 条）**：Playwright + 既有 LoginPage/菜单导航基座 + TC-ISSUE109 系列页面路径（/apps/nRDashboard 容器页 iframe）；页面对象规划 `src/pages/ipd_management/ui/resource_operations/resource_operations_dashboard/`；脚本位置 `src/automation/ipd-management/ui/resource_operations/resource_operations_dashboard/beta/`
+  - **API/DFX/安全（auto_api/auto_perf/auto_sec）**：设计脑图未含，本 issue 不生成用例与脚本（Doris 真值对拍模式、SecurityChecker 双身份模型、性能阈值框架见 v1.2 策略与 #210/#211 既有脚本，后续如补充用例直接在脚本层复用）
+
+### 1.6 复用检查（强制）
+
+> 设计用例前必须检索：特性树 `assets/testcase_pro/IPD管理控制与测试仿真/{01~04 类型目录}/` 与
+> `01_系统测试/通用功能/易用性/` 易用性通用库；可覆盖的测试点**直接复用**，标注 reuse。
+
+| 检索范围 | 可复用用例 | 复用结论 |
+|----------|-----------|----------|
+| 特性树 02_API（资源运营/资源运营看板，TC-ISSUE109-001~013） | 覆盖 /resource-operation/ 5 接口；**ops-resource-pool-detail 与 ops-npu-pool-usage-detail 两类目均无任何用例**（本 issue 首建） | **不 reuse**：断言对象为 5 个 controller 接口，与本 issue 两类目无交集；其「时间参数决策表/边界值」模式作为新用例设计模板；**遗留登记（沿袭 #211）**：TC-ISSUE109-010/011 与 001 按 7 天上限设计，ops PR #204 已放宽 30 天，口径过时（不修改，Rule 02） |
+| 特性树 01_系统 UI（资源运营/资源运营看板，4 条手工） | TC-ISSUE109-014 页面渲染/015 时间选择器/016 无权限拦截/017 热力图交互 | **不 reuse**：均不覆盖资源池明细/使用率详情抽屉池行卡时、机器排序、机型；TC-ISSUE109-016 无权限拦截作为本 issue UI 权限基线参照（入口同源，不另建重复用例） |
+| 特性树 04_安全（资源运营/资源运营看板，3 条） | 匿名与伪造 token 认证（5 接口）/低权限纵向越权（5 接口）/敏感信息防护 | **不 reuse**：覆盖对象为 /resource-operation/* 5 接口，本 issue 新断言对象为两类目 detail；认证/横向越权/敏感信息断言模式直接参照复用设计 |
+| 版本树 issue_211 用例（20261015） | 项目效率表格新列/列设置/排序白名单扩展/下钻统计卡（TC-ISSUE211-020~060） | **不 reuse**：断言对象为 ops-project-resource-efficiency / ops-pipeline-resource-efficiency 类目与项目效率表格；但 **FP2 排序白名单扩展用例（TC-ISSUE211-034）设计模式直接参照**（同 DetailReq sortField/sortRule 机制）；Doris 对拍脚本模式在 Stage 3 脚本层直接复用 |
+| 版本树 issue_210 用例（20261015） | 工程能力运营看板资源环境 NPU 三层级卡、池列表与资源池下钻 IP 列表（TC-ISSUE210-032；2026-10-13 v2.0 重建后旧 012/013 已并入该用例） | **不 reuse**：断言对象为工程能力看板页面与接口；其池列表/IP 下钻三层级验证的断言分层模式（池级汇总 → 机器级明细）作为本 issue 设计参照 |
+| 易用性通用库 | _052 列表-列宽合理性验证、_053 列表-列宽调整及拖动验证、_100 分页/翻页无数据状态验证、_112/_113 兼容性（分辨率/窗口）（前缀 openlibing_ops_usability_202609_） | **reuse×5（手工）**：列宽/无数据/兼容性通用检查点由易用性库覆盖，业务用例不另起内容重复的易用性新用例；排序交互无对应易用性通用用例，需新建业务排序用例 |
+
+### 1.7 风险与约束
+
+| 风险与约束 | 影响 | 缓解措施 |
+|------------|------|----------|
+| 【实现未启动】后端无 PR、前端无分支（2026-10-13 走查）；两类目字段名/排序实现均未定稿 | 全部用例在 beta 无对象；字段名假设错误导致脚本返工 | 用例按需求口径设计、标 blocked 待部署；API 用例字段断言采用「语义断言 + 字段名映射表」隔离（字段名定稿后只改映射）；UI 用例内置环境可用性前置检查 |
+| 【需求笔误·表名/字段名】issue 原文「sdi_rd_efc_server_machine_hidelab.devices_model」，Doris 真实为 `sdi_rd_efc_server_machine_hidevlab.device_model`（2026-10-13 schema 探查确认） | FP3 数据源理解错误导致断言对象错位 | 用例按真实表名/字段名设计并标注「issue 笔误待确认」；串讲提请需求方确认开发实际取数路径 |
+| 【口径待确认·池级总卡时】FP1a 总览类目「总卡时」沿用现有 SQL effective 口径 SUM(actual_total_npu_hour)（与机器级 totalNpuHours 同源）；若开发改用 SUM(total_npu_hours) 原值口径，与使用率分母解耦（参与开源A3 池两口径差 69%：322290.97 vs 190146.97） | FP1a 对拍断言口径 | 用例按 effective 口径断言（与现网使用率分母自洽）并标注「口径待确认」；对拍用例同时按两口径计算输出差异清单，串讲提请需求方定稿 |
+| 【数据源缺失·使用率类目利用侧】FP1b/FP2b 需求含「总利用卡时」「利用率」，但 ops-npu-pool-usage-detail 现有 SQL 仅取 assign（5m 表），**无 used 数据源**；且前端该入口 showUsage=false 有意隐藏利用列 | FP1b「总利用卡时」无实现对象；FP2b 5 指标排序退化为 3 指标；用例断言对象不确定 | 用例按「需求明示 5 指标」设计并标注「利用侧数据源待开发确认」：开发补源则全量断言，不补则该页面断言 3 指标 + 登记需求差异；串讲提请定稿 |
+| 【设计待确认·排序实现层级】FP2 机器列表排序：前端本地排序 vs 后端排序（总览类目参照 SQL 白名单 / 使用率类目参照 Java comparator） | API 用例对象完全不同 | 用例按**两层设计**：UI 用例断言排序交互结果（两种实现均适用）；API 用例以后端排序假设设计排序参数用例并标注「实现层级待确认」，串讲定稿后裁剪 |
+| 【设计待确认·排序字段边界】「机器 IP」列是否可排序未说明（总览池级白名单已有 server_ip 锚点）；使用率类目 showUsage=false 下隐藏列的排序状态处理未明确 | FP2 断言完整性 | 5 指标列按需求明示断言；IP 列排序与隐藏列排序行为作为评审拍板项，评审结论回填用例后再执行 |
+| 【设计待确认·机型展示位置】机器类型列插入位置（机器 IP 后 or 末尾）、池级是否展示机型分布、机型列是否参与排序/筛选均未明确 | FP3 断言精确性 | 用例按「机器列表新增列」断言（位置按实现兜底断言存在性+值），其余扩展项登记评审遗留清单 |
+| 【数据陷阱·零值边界】零占用池（vllm：assign 0→使用率 0%）；有占用无利用池（MindCluster&MindEdge&MindSDK-CICD-PR：assign 87.22/used 0）；机器级利用分母 0（参与开源A3 池 28 台 total_hours=0→利用率兜底 0）；池名尾随空格（「vLLM-ascend 」） | FP1/FP2 断言误报或漏测 | 零占用/有占用无利用池单列边界用例；机器级 0 分母样本纳入对拍与排序用例；池名断言 trim |
+| 【数据时效·两类目不同步】小时宽表最新 2026-10-07（滞后 6 天）；**5m 表最新 2026-09-23 07:55（滞后 20 天，断档）** | 统计窗口选择（使用率类目对拍窗口受限） | 总览类目窗口取 2026-09 自然月；使用率类目对拍窗口取 2026-09-20~09-23（5m 表末段 72h 窗口）；用例标注数据断档风险，执行前复核 5m 表 ETL 恢复情况 |
+| 【iframe/权限风险】npu_resource 权限未开通时 UI 用例 block；容器页 iframe 加载失败 | UI 用例稳定性 | UI 用例前置环境可用性检查（frame 就绪轮询 + 重试）；环境阻塞时标 blocked 并反馈 beta 环境负责人 |
+
+### 1.8 依赖与前置条件
+
+- beta 环境账号（.env TEST_ENV_USERNAME，需开通 `npu_resource` 权限）；**本 issue 后端实现合并部署 beta + 前端改造合并部署**（全部用例执行前置）
+- Doris 只读访问（真值对拍，复用 #210/#211 直连模式）：dm_rd_efc_server_resource_hour / dm_rd_efc_server_assign_resource_5m / sdi_rd_efc_server_machine_hidevlab / dwi_rd_efc_project_resource_pool_relation
+- 数据样本（2026-10-13 探查基线）：
+  - **总览类目池级卡时**（2026-09 自然月，卡时=effective 口径）：参与开源A3（2093598287303610368，cloud，28 机）322290.97/121801.95/52848.81 → 使用率(占用) 37.79%/利用率 27.80%；SGLang（14 机）175752.91/93788.76/47588.96 → 53.36%/35.93%；vLLM-ascend（16 机）123715.87/38816.27/26847.70 → 31.38%/36.01%；昇腾统一资源池-CICD-Nightly（lab，14 机）92011.87/2965.82/391.61 → 3.22%/3.37%
+  - 边界池（总览类目）：vllm（1 机，cloud）占用 0 → 0%/0%；MindCluster&MindEdge&MindSDK-CICD-PR（1 机，cloud）占用 87.22/利用 0（有占用无利用）
+  - **使用率类目池级**（2026-09-20~09-23 72h 窗口，5m 表）：参与开源A3 448 卡 → 总卡时 448×72=32256/分配 12537.83 → 分配率 38.85%；SGLang 224 卡 → 16128/8185.98 → 50.79%；无分配数据池 2088188680057982976（lab，1 机 8 卡）→ 0 边界
+  - 机型分布（5 种，共 123 机器行，无跨池 IP）：Atlas 800I A3推理服务器 37 台/4 池、Atlas 800T A2训练服务器 29 台/4 池、Atlas 800T A3训练服务器 24 台/3 池、Atlas 800I A2推理服务器 22 台/5 池、Atlas 800 推理服务器/Atlas 300I Duo 推理卡 11 台/3 池
+  - 混合机型池：2070332511935135744（cloud，3 机型）、vLLM-ascend（2 机型）、SGLang（2 机型）、CICD-Nightly lab（3 机型）；单一机型池：参与开源A3（28 台全 A3 推理）
+  - 机器级样本（参与开源A3 池，2026-09）：192.168.0.125 占用 6101.11/利用 0、192.168.0.181 占用 2917.05、192.168.0.172 占用 2013.27、192.168.0.119/0.141/0.146/0.207/0.204 占用 0（同池机器卡时差异大，排序断言数据源）；该池全部机器 total_hours=0（利用分母边界）
+- API 测试框架：`api_client` fixture（SessionManager Bearer token）；裸 context.request 直调会 401
+- 本需求无新增写接口（纯只读扩展），无配置回滚需求；安全用例无写入副作用
+
+### 1.9 生产适配与执行登记（2026-10-20~21）
+
+> 用户要求以生产环境执行收尾（TEST_ENV=prod，www.openlibing.com，仅跳过写操作；本组 14 条均为只读 UI 断言，可安全执行）。beta 环境期间故障（502）不具备执行条件，改生产执行。
+
+**执行时间线**：
+
+| 轮次 | 时间 | 环境 | 结果 |
+|------|------|------|------|
+| 首轮执行 | 2026-10-17 | 测试人员执行 | TC-012/014 发现产品计算错误：登记缺陷 #278（使用率分析-资源池明细总卡时计算错误）、#276（使用(占用)卡时、使用(占用)率计算错误）；两缺陷 2026-10-19 修复截图关闭 |
+| 生产全量重执行 | 2026-10-20~21 | prod（www.openlibing.com） | **14/14 通过**（001/003/004/005/007/008/009 @10-20 18:0x；006 @18:36 容差修复后；011 @18:18；012/013 @18:44；014 @10-21 11:38；002/010 @10-21 11:43~11:45 对拍探针） |
+
+**生产适配项（脚本层，用例断言意图不变）**：
+
+1. **池名全称化**：beta 短名（参与开源A3 / SGLang / vLLM-ascend / vllm）置换为生产全称：参与开源统一资源池-华北-910C / SGLang资源池-贵阳-A3 / vLLM资源池-贵阳-A3 / Ascend统一资源池-乌兰察布 / Pytorch资源池-华北-910C / 昇腾统一资源池-CICD-Nightly / 参与开源统一资源池-贵阳-310P
+2. **基线窗口**：生产有效口径为 2026-09-20~09-23（总览页当前自然月窗口 + 使用率页 72h 末段窗口的地面真值稳定段）
+3. **单机池退化断言置换**：生产无单机池（最小池 8 机），beta vllm（1 台 5749.22）单机池退化断言置换为零分配池 昇腾统一资源池-CICD-Nightly（分配 0 但每台机器静态卡时非 0，总卡时与分配解耦的边界意图不变）
+4. **取整累积容差标定**：机器级卡时展示保留 2 位小数，Σ机器与池行展示值舍入累积超脑图原始 ±0.01（TC-006 首轮 10754.86 vs 10754.88、TC-014 同类）；容差动态标定为 `0.01 + 0.005×(机器数+1)`（显示精度问题，非产品错误）
+5. **iframe 就绪判定兜底**：旧关键词「项目效率」仅存在于资源总览页，连续执行停靠使用率分析页时永不匹配致 TC-012/013/014 超时；改为双页签标签（「资源总览」+「使用率分析」）兜底
+6. **页签切换修复**：switch_tab 旧 XPath 命中 .el-tabs__nav 包裹层，点击包裹层中心落在中间页签致切回资源总览静默失败（探针停靠使用率页后入口 15s 轮询 0 命中）；改为强制 `.el-tabs__item` 页签项定位 + 激活页签文本验证
+7. **生产 DOM 适配**：每池独立卡片、全部池机器表预渲染仅展开池可见（其他池 `display:none`），必须作用域限制+可见性过滤；池头按 `div.cursor-pointer:has(.dr-pool-caret)` caret 定位适配折叠池（折叠池无 pool 修饰类）；单展开约束+每池独立「关抽屉→重开→展开」会话避免跨池混读；使用率页入口为「使用率」KPI 基卡片内每池独立 cursor-pointer 迷你卡（单池精筛抽屉）
+8. **002/010 无 Doris 凭证补验**：本地未配置 Doris 原生凭证（DORIS_FE_HOST / DORIS_PASSWORD），正式用例按设计跳过；经 Doris MCP 预导出真值（113 行 server_ip→device_model 映射，落盘 `assets/reports/doris_truth_issue256_002_010.json`）由对拍探针 `test_zz_prod_machine_type_verify.py` 按正式用例断言逻辑补验通过（单一机型池 参与开源统一资源池-华北-910C 12 台；混合机型池 Ascend统一资源池-乌兰察布 8 行 / SGLang资源池-贵阳-A3 14 行 / 昇腾统一资源池-CICD-Nightly 15 行；两页面 12 个共同 IP 机型值一致）
+
+**生产执行基线值（2026-09-20~09-23 窗口，UI 展示值）**：
+
+| 用例 | 指标 | 生产池行值 |
+|------|------|-----------|
+| TC-003 | 总览页总卡时 | 参与开源统一资源池-华北-910C 18432.0 / SGLang资源池-贵阳-A3 21504.0 / vLLM资源池-贵阳-A3 13824.0 / 昇腾统一资源池-CICD-Nightly 13824.0 / 参与开源统一资源池-贵阳-310P 3840.0 |
+| TC-005 | 总览页总使用(占用)卡时 | 参与开源统一资源池-华北-910C 10754.86 / SGLang资源池-贵阳-A3 12766.15 / vLLM资源池-贵阳-A3 5254.29 / 昇腾统一资源池-CICD-Nightly 0.0 / 参与开源统一资源池-贵阳-310P 1084.2 |
+| TC-007 | 总览页总利用卡时 | Ascend统一资源池-乌兰察布 902.29 / SGLang资源池-贵阳-A3 6009.64 / 参与开源统一资源池-华北-910C 0.0 / Pytorch资源池-华北-910C 0.0 / 昇腾统一资源池-CICD-Nightly 0.0 |
+| TC-011 | 使用率页总卡时（静态口径） | 参与开源统一资源池-华北-910C 13824.0 / SGLang资源池-贵阳-A3 16128.0 / 昇腾统一资源池-CICD-Nightly 10368.0 |
+| TC-013 | 使用率页总使用(占用)卡时 | 参与开源统一资源池-华北-910C 7264.55 / SGLang资源池-贵阳-A3 8313.35 / 昇腾统一资源池-CICD-Nightly 0.0 |
+| TC-014 | 使用率页占用卡时计算一致性 | 参与开源统一资源池-华北-910C 池行 7264.55 = Σ机器 7264.55；SGLang资源池-贵阳-A3 8313.35 ≈ Σ机器 8313.34；昇腾统一资源池-CICD-Nightly 0.0 = 0.0 |
