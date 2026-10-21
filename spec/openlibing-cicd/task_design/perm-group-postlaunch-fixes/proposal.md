@@ -37,7 +37,7 @@ framework 仓（feat/perm-scheme-v2 分支，PR #482）：
 | `SpaceUserLogHandler.java`                 | 修改      | 添加成员日志补账号清单、失败明细、超长防护          |
 | `BatchBindResourceDTO.java`                | 修改      | resourceIds 改为 resources 对象列表                 |
 | `PermGroupResourceBindingServiceImpl.java` | 修改      | 批量绑定遍历 resources、落库展示名、空白 id 校验    |
-| 对应测试类 × 3                             | 修改/新增 | 累计新增约 10 个用例                                |
+| 对应测试类 × 3                             | 修改/新增 | 累计新增约 27 个用例                                |
 | `menu_url_info` 配置                       | 环境配置  | 6 个操作级菜单 + URL 挂载 + 角色授权（BETA 已完成） |
 
 ## 关联 Issue
