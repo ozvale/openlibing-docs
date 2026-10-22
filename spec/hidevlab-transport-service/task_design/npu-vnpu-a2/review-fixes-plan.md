@@ -1,5 +1,7 @@
 # A2 vNPU Review Fixes Implementation Plan
 
+> 前一轮评审记录。固定 K/能力验证配置方案已被用户明确的创建流程替代；当前实施与验收见 allocation-flow-plan.md 和 design.md。
+
 > Execution: implement task by task in this session; one new commit per delivery, per workspace rules.
 
 **Goal:** 修复 PR #186 评审缺口，仅开放 A2 非双芯 AVI 硬切分。

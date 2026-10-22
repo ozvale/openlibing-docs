@@ -173,23 +173,21 @@ POST /docker/restart
 1. **调用方不指定卡号，也不指定 vNPU ID**；由宿主机选择父芯片并分配。
 2. 一个 vNPU 只允许一个容器使用；同一父芯片的整卡与子 vNPU 互斥。
 3. `npu_num=N` 不会把 N 个实例合并成一张大卡；`N>1` 表示 N 个独立设备。
-4. 首次使用某父芯片时，宿主机按模板**完整切分 K 个实例**，只绑定 N 个，其余保留为空闲。
-5. `N <= K`，且 N 个实例必须来自**同一父芯片**；不会跨父芯片拼凑。
+4. 没有足量同模板空闲实例时，宿主机选择父芯片按模板**创建至实际资源耗尽**，只绑定 N 个，其余保留为空闲。
+5. N 不能超过实际可用份数，且 N 个实例必须来自**同一父芯片**；不会跨父芯片拼凑。
 
-### 3.3 模板由管理面下发，K 由宿主机实时计算
+### 3.3 模板由管理面下发，份数由实际创建结果决定
 
 `vnpu_template` **必须由管理面在每次 create/restart 请求中下发**，transport 不内置模板白名单、也不假设默认模板。
 
-宿主机收到模板后，在目标父芯片上执行 `npu-smi info -t template-info -i <device>`，解析
-`Name / AICORE / Memory / AICPU / VPC / PNGD / VENC / VDEC / JPEGD / JPEGE`，按以下规则决定“如何完整切分”：
+宿主机先在实际实例中查找对应 template 的空闲实例，足量则复用，无需完整切满或固定份数。需要新切分时查询目标设备 `npu-smi info -t template-info -i <device>`：
 
 1. 模板必须出现在该设备上报的模板清单中，否则 `INVALID_TEMPLATE`；
-2. `_m` / `_nm` 模板返回 `TEMPLATE_CANNOT_FULLY_TILE`；
-3. A2 AVI 清单同时包含半卡与四分之一卡模板，芯片总量按“最大模板资源 × 2”推断；
-   清单只有单一规格时无法证明完整切分，返回 `TEMPLATE_CANNOT_FULLY_TILE`；
-4. `K = 总 AICORE / 模板 AICORE`，并要求 `总 Memory / 模板 Memory` 得到相同 K；
-5. AICPU/VPC/DVPP 等资源按同一总量校验 `模板资源 × K ≤ 总量`；
-6. 切分后回读真实拓扑，实例数与模板必须与 K 一致。
+2. `_m` / `_nm` 与其他模板一样，以设备清单为准；
+3. 不使用最大模板推算总量，不要求宿主机模板 plan 或多实例验证开关；
+4. 使用同一模板反复创建并回读实例 ID、模板和状态，直到驱动明确报告资源不足且实例集合不变，或父芯片的 16 个合法实例 ID 全部使用；
+5. 普通失败、假成功、查询失败或异常拓扑不能当作切满；回滚本事务已记录的新建实例，未知残留隔离；
+6. 账本保存实际份数和每个实例的模板；Free Memory 包含系统开销，不用其除以模板内存推算份数。
 
 官方 A2 常见模板（**仅作示例，不是代码白名单**）：
 
@@ -204,25 +202,22 @@ POST /docker/restart
 
 补充：
 
-- 管理面只需下发模板名；**不需要**下发 K，也不需要预选卡号。
+- 管理面只需下发模板名；**不需要**下发份数上限或预选卡号。上表仅为参考，运行时以实际创建结果为准。
 - 新模板只要驱动 `template-info` 能正确上报资源即可被使用，无需 transport 发版；
   但生产启用前仍需完成一次整组上机验证。
 - 驱动输出缺少 AICORE/Memory 字段时返回 `NPU_QUERY_FAILED`，不会按“可切分”猜测。
 
 ### 3.4 校验规则（创建前即失败，不改拓扑）
 
-| 请求                                                | 结果                             |
-| --------------------------------------------------- | -------------------------------- |
-| `npu_mode` 非 `phy` / `vnpu`                        | `INVALID_REQUEST`                |
-| `npu_num` 非非负整数                                | `INVALID_REQUEST`                |
-| `vnpu` 未传 `vnpu_template`                         | `INVALID_TEMPLATE`               |
-| `phy` 传了 `vnpu_template`                          | `INVALID_TEMPLATE`               |
-| `vnpu` + `npu_dual_chips=true`                      | `INVALID_REQUEST`                |
-| 模板含 `_m` / `_nm`                                 | `TEMPLATE_CANNOT_FULLY_TILE`     |
-| 模板不在目标设备 `template-info` 清单中             | `INVALID_TEMPLATE`               |
-| 设备模板资源不足以推算完整切分（单一规格/资源超配） | `TEMPLATE_CANNOT_FULLY_TILE`     |
-| `npu_num > K`（K 按目标设备实时计算）               | `INSUFFICIENT_NPU`               |
-| `npu_num > 1` 且宿主机未完成多 vNPU 验收            | `WORKLOAD_MULTI_VNPU_UNVERIFIED` |
+| 请求                                       | 结果               |
+| ------------------------------------------ | ------------------ |
+| `npu_mode` 非 `phy` / `vnpu`               | `INVALID_REQUEST`  |
+| `npu_num` 非非负整数                       | `INVALID_REQUEST`  |
+| `vnpu` 未传 `vnpu_template`                | `INVALID_TEMPLATE` |
+| `phy` 传了 `vnpu_template`                 | `INVALID_TEMPLATE` |
+| `vnpu` + `npu_dual_chips=true`             | `INVALID_REQUEST`  |
+| 模板不在目标设备 `template-info` 清单中    | `INVALID_TEMPLATE` |
+| 同父芯片实际可用的匹配实例数少于 `npu_num` | `INSUFFICIENT_NPU` |
 
 > `npu_num=0` 时不做任何 NPU 分配（`npu_mode`/模板仍会被格式校验）。
 
@@ -234,7 +229,7 @@ POST /docker/restart
 
 vNPU 请求：
 
-1. 优先复用**同模板、已有完整分区、空闲实例足够**的父芯片；
+1. 优先复用**template 匹配、空闲实例足够**的父芯片；支持接管未登记分区和复用混合父卡上的匹配实例，不要求已切满；
 2. 其次选择未切分的空闲父芯片，锁内完整切分；
 3. 最后允许合并**整组全空闲**的异模板分区后重切；
 4. 仍有任一实例被容器引用（含 stopped/created）或账本预留时，不合并、不换模板。
@@ -242,7 +237,7 @@ vNPU 请求：
 物理整卡请求：
 
 1. 先遍历机器，把**整组 vNPU 全空闲且无任何容器引用**的切分父芯片逐个合并回物理整卡；
-   单个父芯片合并失败会告警并隔离该芯片，不阻断本次申请；
+   未登记的空闲分区同样处理；候选回收失败时阻断本次创建；
 2. 再按正常流程分配未切分的空闲整卡；
 3. 多卡请求统一排序加锁、整体复查，不交付部分数量。
 
@@ -325,24 +320,23 @@ NPU_ERROR: <CODE>: <detail>
 DEPLOY_FAILED: <container_name> (<CODE 或原因>)
 ```
 
-| 错误码                                       | 含义                                                | 黄区建议动作                                  |
-| -------------------------------------------- | --------------------------------------------------- | --------------------------------------------- |
-| `NPU_LOCK_TIMEOUT`                           | 容器/父芯片锁超时                                   | 稍后重试；持续失败检查同机并发任务            |
-| `NPU_QUERY_FAILED`                           | `npu-smi` / Docker 查询失败                         | 不重试创建；检查驱动、Docker daemon、权限     |
-| `NPU_BUSY`                                   | 父芯片被引用/预留/外部占用                          | 换机器或稍后重试；不要强制删除容器            |
-| `NPU_MODE_INVALID`                           | `vnpu-mode` 不是容器模式                            | 宿主机初始化：`npu-smi set -t vnpu-mode -d 0` |
-| `INVALID_REQUEST`                            | 字段/组合非法                                       | 修正请求，不要重试                            |
-| `INVALID_TEMPLATE`                           | 模板未知/不在目标设备清单/与模式冲突                | 修正模板                                      |
-| `TEMPLATE_CANNOT_FULLY_TILE`                 | 模板不能完整铺满（含 `_m/_nm`、单一规格、资源超配） | 换模板；不要重复重试                          |
-| `INSUFFICIENT_NPU`                           | 无满足条件的父芯片/整卡                             | 换机器或等待资源释放                          |
-| `TOPOLOGY_INCOMPLETE`                        | 切分/合并后拓扑不符                                 | 停止自动重试，转人工检查                      |
-| `RECOVERY_REQUIRED`                          | 归属/generation/拓扑冲突，需人工处理                | 页面提示“需重建/联系运维”，不要盲目 restart   |
-| `WORKLOAD_MULTI_VNPU_UNVERIFIED`             | 多 vNPU 场景未验收                                  | 改为 `npu_num=1` 或先完成上机验收             |
-| `NPU_SPEC_CONFLICT`                          | 同名容器规格不同                                    | 走显式删除/重建流程，不要直接重试创建         |
-| `NPU_BINDING_MISSING`                        | 容器设备映射与预期不符                              | 转人工检查，不要复用该容器                    |
-| `NPU_LIB_MISSING`                            | 宿主机未部署 `lib_npu.sh`                           | 补发脚本后再试                                |
-| `NPU_STATE_ERROR`                            | 锁/账本目录不可用                                   | 检查宿主机权限与磁盘                          |
-| `LEDGER_READ_FAILED` / `LEDGER_WRITE_FAILED` | 账本损坏/写入失败                                   | 转人工检查 `/var/lib/hidevlab-npu`            |
+| 错误码                                            | 含义                                                    | 黄区建议动作                                  |
+| ------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------- |
+| `NPU_LOCK_TIMEOUT`                                | 容器/父芯片锁超时                                       | 稍后重试；持续失败检查同机并发任务            |
+| `NPU_QUERY_FAILED`                                | `npu-smi` / Docker 查询失败                             | 不重试创建；检查驱动、Docker daemon、权限     |
+| `NPU_BUSY`                                        | 父芯片被引用/预留/外部占用                              | 换机器或稍后重试；不要强制删除容器            |
+| `NPU_MODE_INVALID`                                | `vnpu-mode` 不是容器模式                                | 宿主机初始化：`npu-smi set -t vnpu-mode -d 0` |
+| `INVALID_REQUEST`                                 | 字段/组合非法                                           | 修正请求，不要重试                            |
+| `INVALID_TEMPLATE`                                | 模板未知/不在目标设备清单/与模式冲突                    | 修正模板                                      |
+| `INSUFFICIENT_NPU`                                | 无满足条件的父芯片/整卡                                 | 换机器或等待资源释放                          |
+| `TOPOLOGY_INCOMPLETE`                             | 切分/合并后拓扑不符                                     | 停止自动重试，转人工检查                      |
+| `RECOVERY_REQUIRED`                               | 归属/generation/拓扑冲突，需人工处理                    | 页面提示“需重建/联系运维”，不要盲目 restart   |
+| `NPU_SPEC_CONFLICT`                               | 同名容器规格不同                                        | 走显式删除/重建流程，不要直接重试创建         |
+| `NPU_BINDING_MISSING`                             | 容器设备映射与预期不符                                  | 转人工检查，不要复用该容器                    |
+| `NPU_BINDING_CONFLICT` / `NPU_BINDING_INCOMPLETE` | 成功日志中的当前容器绑定模式、数量或父子编号冲突/不完整 | 返回失败，检查宿主机最终设备映射              |
+| `NPU_LIB_MISSING`                                 | 宿主机未部署 `lib_npu.sh`                               | 补发脚本后再试                                |
+| `NPU_STATE_ERROR`                                 | 锁/账本目录不可用                                       | 检查宿主机权限与磁盘                          |
+| `LEDGER_READ_FAILED` / `LEDGER_WRITE_FAILED`      | 账本损坏/写入失败                                       | 转人工检查 `/var/lib/hidevlab-npu`            |
 
 > 错误码只保证出现在 `msg` 文本中；当前 transport 未新增结构化错误字段。
 
@@ -386,8 +380,8 @@ transport 创建的 NPU 容器会写入：
 - 原生 Docker + 业务镜像对 vNPU 的枚举、算子执行与显存边界；
 - 重启恢复开关对编号、模板、销毁记录的真实效果；
 - 同路径实例重建后，容器 cgroup 设备号是否仍可正常使用（必要时进入容器重建流程）；
-- 多 vNPU 同容器工作负载的通信与资源语义（未通过前 `npu_num>1` 会被拒绝）；
-- `_m`/`_nm` 混合模板方案不在本版支持范围。
+- 多 vNPU 同容器工作负载的通信与资源语义；
+- 设备支持的 `_m`/`_nm` 单模板重复创建至资源耗尽；本版不规划新的混合切分组合。
 
 ---
 
@@ -407,5 +401,6 @@ transport 创建的 NPU 容器会写入：
 
 - vNPU 仅支持 A2 非双芯；不支持组合明确失败，不降级为整卡。
 - 创建和重启均核对已存 mode/count/template；不一致返回 NPU_SPEC_CONFLICT。
-- A2 受管节点部署前需配置经核对的物理映射与已验证 template/K/资源；配置缺失或不符时不变更设备。
+- A2 节点自动查询 phyid-remap 并与 info -m 核对物理映射；可选显式映射文件，不要求 template/K/资源验证配置。
+- 创建/restart 的成功回调必须包含当前容器实际绑定 ID；标记缺失、模式/数量/父子编号冲突时失败，不能静默回调空数组。restartPullOnly 不启动容器，保持空绑定。
 - 双芯保留现有整卡路径，仅提供后续建议；调度池须与 AVI 分离。

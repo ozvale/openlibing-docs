@@ -3,7 +3,7 @@
 ## 方案概述
 
 在宿主机脚本层新增 `script/lib_npu.sh`，以“**静态 AVI 硬切分 + 原生 Docker 显式设备映射**”为核心：
-按调用方 `count + template` 选择父芯片 → 完整切分 K 个同规格 vNPU → 分配预留 → `docker run` 绑定 →
+先按实际 template 复用足量空闲实例；没有时按调用方 `count + template` 选择父芯片 → 使用同模板创建至资源耗尽 → 分配预留 → `docker run` 绑定 →
 inspect 确认后提交账本。合并与重切只发生在后续 start/restart 请求事务内（惰性回收）。
 
 不改删除脚本、不改 transport API、不引入常驻 Agent。
@@ -13,14 +13,14 @@ inspect 确认后提交账本。合并与重切只发生在后续 start/restart 
 | 决策       | 选择                                                                                                                 | 原因                                    |
 | ---------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
 | 切分方式   | `npu-smi set -t create-vnpu` 逐个创建，每次回读                                                                      | 官方 A2 不支持批量；一次成功 ≠ 完整切分 |
-| 完整性判据 | 实例数 = 模板表 K、模板名一致、ID 在 `[phy*16+100, phy*16+115]`                                                      | 不要求 Free Memory=0                    |
+| 完整性判据 | 实际创建至驱动明确报告资源不足，或 16 个合法实例 ID 全部用尽；逐次回读、模板一致、记录实际份数                       | 不推导固定 K，不要求 Free Memory=0      |
 | 合并定义   | 确认全空闲后逐个 `destroy-vnpu`，最终实例数为 0                                                                      | 无 `merge-vnpu`，也不是显存拼接         |
 | 锁粒度     | 容器锁 → 兼容全局锁 → 父芯片锁（数值升序），持锁至 Docker 结果与账本确认                                             | 解决合并/获取竞争；迁移期兼容旧整卡路径 |
 | 锁文件     | `/var/lock/hidevlab-npu/`，root 目录，解锁只关 FD 不删文件                                                           | 避免 inode 替换失去互斥                 |
 | 账本       | `/var/lib/hidevlab-npu/chips/<device>-<chip>.json`，临时文件 + fsync + 原子 rename                                   | 抗进程崩溃；`generation` 防 ID 复用错配 |
 | 占用判定   | `docker ps -aq` + 结构化 `docker inspect`（Devices/Binds/Privileged/Runtime/DeviceRequests）                         | 停止容器仍持有设备；无法确认时保守拒绝  |
 | 回收时机   | start/restart 请求内：复用 → 空闲整卡切分 → 全空闲异模板分区合并重切；整卡请求先遍历并回收全空闲切分父卡，再分配整卡 | 用户要求不接删除钩子                    |
-| 多 vNPU    | 同父芯片 `N <= K`；`N>1` 需 `HIDEVLAB_NPU_MULTI_VNPU_VERIFIED=1`，否则 `WORKLOAD_MULTI_VNPU_UNVERIFIED`              | 工作负载能力未经上机验收                |
+| 多 vNPU    | 同父芯片空闲的匹配实例数满足 N，只绑定请求数量；无额外多实例验证开关                                                 | 分配与工作负载兼容性分别验收            |
 | 旧路径     | A5 / 950DT / `npu_dual_chips` 保持原逻辑；A2 物理整卡改走 lib_npu 以识别切分父卡                                     | 控制回归面                              |
 | 主机配置   | 只校验 `vnpu-mode=Container`；恢复开关只查询并告警，不按请求修改                                                     | 避免影响其他芯片的恢复配置              |
 
@@ -46,17 +46,19 @@ inspect 确认后提交账本。合并与重切只发生在后续 start/restart 
 - 同名 vNPU 容器在创建和重启入口均比较请求 mode/count/template；不一致返回 NPU_SPEC_CONFLICT。
 - vnpu 仅支持 A2 非双芯；A5/950DT/其他代际禁止降级为整卡。双芯只补充文档建议，不改原物理整卡算法。
 
-## 已验证能力与完整切分准入
+## 实际拓扑与完整切分
 
-配置 `/etc/software-market/npu-capabilities.json`（宿主机环境可通过 HIDEVLAB_NPU_CAPABILITIES 指定）：按 device_id/chip_id/phy_id/chip_name 记录真实身份、资源预算与模板 plan，plan 含 k/verified/evidence。未验证或缺失配置拒绝分配；禁止由模板最大资源乘二推断 K。配置由管理员维护，禁止组/其他用户写。
+以用户 2026-10-22 明确的流程为准，替代此前固定 K/已验证能力配置方案。
 
-- 通过 info -m 核实设备/芯片与芯片 Name，并用已核对配置取得物理编号；不把 Logic ID 当作 phy_id，不通过 info-l 猜测缺失映射。
-- 模板必须出现在指定设备 template-info 中，资源字段完整；_m/_nm 仍明确拒绝。
-- K 仅来自完整切分上机验证记录，核对实际 info-vnpu 总资源、AICore 覆盖与 AICPU/DVPP 组合，不要求 Free Memory=0。
+- 枚举物理字符设备后使用 phyid-remap 查询设备/芯片/物理编号，与 info -m 核对；不把 Logic ID 当作 phy_id。不支持查询时可选用管理员核对的映射文件 `/etc/software-market/npu-capabilities.json`（HIDEVLAB_NPU_CAPABILITIES 可指定路径）。不再需要模板 plans、资源预算、K、verified 或 evidence。
+- VNPU 优先搜索实际实例的 template 和可用数量；不要求原拓扑完整切满。锁内接管未登记拓扑，按实例保存模板和已有容器引用，允许复用混合父卡的匹配空闲实例，不改变其他实例。
+- 新切分先校验目标设备 template-info，再使用同一 template 逐个创建并回读。明确资源不足且实例集合未改变、芯片健康时才正常结束；最多 16 个合法实例 ID。_m/_nm 也以设备清单为准，不按后缀拒绝。
+- 内存 Free 含系统占用，不据此除以模板内存决定份数。未知错误、假成功、拓扑查询失败不能当作切满；回滚限于本事务明确创建的实例，不明结果隔离。
+- PHY 请求先回收全机符合空闲条件的分区，包括未登记的分区。容器（含停止态）、驱动、宿主机占用、预留、异常状态仍阻止销毁；前置回收失败不静默进入创建。
 - 芯片真实型号必须为 A2，且同一设备仅有一个计算芯片（排除 MCU）。不支持的代际及双芯请求明确拒绝。
-- 配置与实际资源或身份不一致时，在任何创建/销毁前失败。升级驱动/固件及修改模板后重新验收。
+- 创建/restart 成功前读取当前容器实际映射；transport 按容器名过滤绑定标记并核对模式、数量和父子 ID，缺失/冲突时失败。纯镜像恢复 restartPullOnly 不启动容器，回调为空绑定。
 
-操作说明与默认不启用的示意配置见业务仓 docs/npu-a2-avi-operations.md；模拟 evidence 不作为硬件验收证明。
+操作说明与可选映射文件格式见业务仓 docs/npu-a2-avi-operations.md；真实耗尽提示、驱动/CANN/镜像兼容性仍须上机验收。
 
 ## 锁与临界区
 
@@ -97,6 +99,7 @@ npu_lock_container (sha256(container_name))
   "instances": [
     {
       "vnpu_id": 100,
+      "template": "vir05_1c_16g",
       "state": "BOUND",
       "container_id": "abc",
       "request_id": "req-example"
@@ -107,7 +110,7 @@ npu_lock_container (sha256(container_name))
 ```
 
 状态机：`PHYSICAL_READY → SPLITTING → SPLIT_READY → MERGING → PHYSICAL_READY`，异常分支 `RECOVERY_REQUIRED`；
-实例：`FREE → RESERVED → BOUND`，异常分支 `RECONCILE_REQUIRED`。
+实例：`FREE → RESERVED → BOUND`；接管时驱动在用但无法确认 Docker 归属的实例记为 `EXTERNAL`，不可分配/销毁。
 
 ## 涉及文件
 
@@ -141,7 +144,7 @@ npu_lock_container (sha256(container_name))
 
 - 官方表格按表头解析；总数/记录数一致，状态/容器字段完整；未知格式不返回空池。
 - Docker 逐对象 inspect 校验退出码与身份，禁止接受部分快照。
-- 合并/回滚检查驱动、Docker、账本和宿主机使用；未知实例不销毁，回滚限定 transaction.created_ids。
+- 合并/回滚检查驱动、Docker、账本和宿主机使用；合并可接管真实空闲拓扑，回滚限定 transaction.created_ids。
 - 复用与整卡两方向均检查父子引用、broad access、芯片健康和预留；切分/重切及绑定确认足额数量。
 - 完整恢复父芯片的所有账本实例（包括 FREE 兄弟），核对 generation/模板/归属及 Docker 绑定，再允许 start。
 - Docker run 或确认结果未知时保留预留并标记 RECOVERY_REQUIRED。
