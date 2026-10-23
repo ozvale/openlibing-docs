@@ -103,7 +103,7 @@ module.exports = { displayTestResults /* + 辅助函数供测试 */ };
 | 函数                                                          | 职责                                                                                   |
 | ------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | `escapeMarkdownTable(text)`                                   | Markdown 单元格特殊字符转义                                                            |
-| `stripCellLineBreaks(row)`                                    | 行级换行剥离（防御性）                                                                 |
+| `stripCellLineBreaks(row)`                                    | 行级换行剥离（防御性）；内部函数，仅被 `generateMarkdownTable` 调用，**不导出**        |
 | `redactSensitive(text)`                                       | 路径/IP/凭证片段脱敏                                                                   |
 | `validateJsonFilePath(p)`                                     | JSON 路径安全校验（白名单+符号链接+realpath）                                          |
 | `validateSummaryFilePath(p)`                                  | 摘要文件路径安全校验                                                                   |
@@ -194,6 +194,8 @@ async function displayTestResults(
 module.exports = {
   displayTestResults, // 适配后的主函数（index.js 调用）
   // 以下供单元测试复用
+  // 注意：内部函数 stripCellLineBreaks（仅被 generateMarkdownTable 调用）不在导出清单内，
+  // 与原作者 test-result-display/index.js 的导出边界一致
   escapeMarkdownTable,
   redactSensitive,
   sanitizeState,
@@ -217,6 +219,8 @@ module.exports = {
   LINE_BREAK_RE,
 };
 ```
+
+> **导出边界**：`stripCellLineBreaks` 在原 `test-result-display/index.js` 中同样只作为内部函数被 `generateMarkdownTable` 调用（原作者插件的 `module.exports` 也未导出它）。因此本节导出 1 个主函数 + 13 个辅助函数 + 8 个常量，其行级换行剥离行为通过 `generateMarkdownTable` 的用例间接覆盖；实现文件 `pytest-orch/test-result-display.js` 的实际 `module.exports` 与此清单一致。
 
 ## 3. index.js 改动
 
@@ -292,6 +296,8 @@ try {
 
 仅需修改 `core.startGroup` / `core.endGroup` 内的步骤编号文本与注释，逻辑不变。
 
+> 当前源码在 Step 11 与 Step 12 之间还存在 Step 11.5（archive log 按用例状态归类），由后续独立变更（OBS 可选化 + 日志归类）引入，不属于本次合并范围；其新增输出见 §6.3。
+
 ## 4. action.yml 改动
 
 ### 4.1 新增输入
@@ -317,29 +323,36 @@ last-json:
 ```
 output.json (不受信)
   → confineOutputPath (白名单+realpath+存在性)  [Step 11]
-  → testCaseFile (可信路径)
-  → displayTestResults(testCaseFile, lastJsonInput)
-    → validateJsonFilePath (白名单+符号链接+realpath+扩展名+fd 绑定读取)  [test-result-display.js]
+  → testCaseFile / envLogFile（可信路径）
+  → displayTestResults(testCaseFile, lastJsonInput, envLogFile, obsConfigured)
+       ├─ testcaseFilePath → parseJsonFileInput → 逐条 parseTestResults
+       └─ lastJsonInput（流水线 YAML 外部入参，未经过 confineOutputPath）
+              → parseJsonFileInput → 逐条 parseTestResults
+    → parseTestResults → validateJsonFilePath
+         （拒绝 ".."、仅 .json、cwd realpath + /tmp 白名单、lstat 拒绝符号链接、
+           realpath 后二次白名单校验、fd 绑定读取）  [test-result-display.js]
 ```
 
-两层校验叠加，无 TOCTOU 窗口（test-result-display.js 使用 fd 绑定读取）。
+`testcase-file` 有两层校验（`confineOutputPath` + `validateJsonFilePath`）；`last-json` 只依赖 `validateJsonFilePath` 这一层，因此该校验对 last-json 是唯一路径防线，不得省略。两个入参均逐条校验、fd 绑定读取，无 TOCTOU 窗口。
 
 ### 5.2 保持的安全机制
 
-| 机制                              | 来源                                           | 保留情况 |
-| --------------------------------- | ---------------------------------------------- | -------- |
-| 路径白名单（cwd realpath + /tmp） | validateJsonFilePath                           | 完整保留 |
-| 符号链接拒绝                      | validateJsonFilePath / validateSummaryFilePath | 完整保留 |
-| realpath 二次校验                 | validateJsonFilePath                           | 完整保留 |
-| fd 绑定读取（TOCTOU 关闭）        | parseTestResults                               | 完整保留 |
-| 输入大小上限 3MB                  | MAX_INPUT_BYTES                                | 完整保留 |
-| 摘要大小上限 256KB                | MAX_SUMMARY_BYTES + capSummarySize             | 完整保留 |
-| OBS URL 白名单                    | validateResultUrl                              | 完整保留 |
-| 签名参数剥离                      | stripSensitiveQueryParams                      | 完整保留 |
-| 敏感片段脱敏                      | redactSensitive                                | 完整保留 |
-| Markdown 注入防御                 | escapeMarkdownTable + stripCellLineBreaks      | 完整保留 |
-| 状态枚举归一化                    | sanitizeState                                  | 完整保留 |
-| sourceTask 字符白名单             | sanitizeSourceTask                             | 完整保留 |
+| 机制                              | 来源                                           | 保留情况                                        |
+| --------------------------------- | ---------------------------------------------- | ----------------------------------------------- |
+| 路径白名单（cwd realpath + /tmp） | validateJsonFilePath                           | 完整保留（testcase-file 与 last-json 逐条生效） |
+| 符号链接拒绝                      | validateJsonFilePath / validateSummaryFilePath | 完整保留（testcase-file 与 last-json 逐条生效） |
+| realpath 二次校验                 | validateJsonFilePath                           | 完整保留（testcase-file 与 last-json 逐条生效） |
+| fd 绑定读取（TOCTOU 关闭）        | parseTestResults                               | 完整保留                                        |
+| 输入大小上限 3MB                  | MAX_INPUT_BYTES                                | 完整保留                                        |
+| 摘要大小上限 256KB                | MAX_SUMMARY_BYTES + capSummarySize             | 完整保留                                        |
+| OBS URL 白名单                    | validateResultUrl                              | 完整保留                                        |
+| 签名参数剥离                      | stripSensitiveQueryParams                      | 完整保留                                        |
+| 敏感片段脱敏                      | redactSensitive                                | 完整保留                                        |
+| Markdown 注入防御                 | escapeMarkdownTable + stripCellLineBreaks      | 完整保留                                        |
+| 状态枚举归一化                    | sanitizeState                                  | 完整保留                                        |
+| sourceTask 字符白名单             | sanitizeSourceTask                             | 完整保留                                        |
+
+> 上表「完整保留」不能只靠函数存在性证明：搬迁后须复用原插件 `test-result-display/test/findings.test.js`（58 项，`node + assert`，`core-stub` 重定向 `@actions/core`）做行为对照，require 改为 `../test-result-display.js` 后全部通过，见 tasks.md 4.4 与 proposal AC-13。
 
 ### 5.3 新增风险点
 
@@ -353,20 +366,44 @@ output.json (不受信)
 
 ### 6.1 文件变更清单
 
-| 文件                                 | 变更类型 | 说明                                              |
-| ------------------------------------ | -------- | ------------------------------------------------- |
-| `pytest-orch/test-result-display.js` | 新建     | 展示逻辑模块                                      |
-| `pytest-orch/index.js`               | 修改     | 新增 require + 变量提升 + 新 Step 12 + 步骤重编号 |
-| `pytest-orch/action.yml`             | 修改     | 新增 1 输入（last-json）                          |
+| 文件                                 | 变更类型 | 说明                                                           |
+| ------------------------------------ | -------- | -------------------------------------------------------------- |
+| `pytest-orch/test-result-display.js` | 新建     | 展示逻辑模块                                                   |
+| `pytest-orch/index.js`               | 修改     | 新增 require + 变量提升 + 新 Step 12 + 步骤重编号              |
+| `pytest-orch/action.yml`             | 修改     | 新增 1 输入（last-json）；后续独立变更另新增 4 个输出，见 §6.3 |
 
 ### 6.2 不受影响
 
 - `pytest-orch/validators.js`：不变
 - `pytest-orch/dist/index.js`：构建产物，由 ncc 重新打包生成（实现阶段需 `npm run build` 或等价命令）
 - `test-result-display/`：整个插件不变
-- 流水线 YAML：消费方可以选择移除 test-result-display 步骤（非本次强制范围）
+- 流水线 YAML：消费方可以选择移除 test-result-display 步骤（非本次强制范围）；但该步骤原有的 3 个统计输出不再由 pytest-orch 提供，移除前必须先改写引用（见 §6.3 破坏性变更）。
 
 ### 6.3 向后兼容
 
-- pytest-orch 原有 5 个输出（pipeline-id/job-run-id/testcase-obs-url/testcase-file/env-log-file）不变，不新增任何输出。
+**保持兼容**：
+
+- pytest-orch 原有 5 个输出（pipeline-id/job-run-id/testcase-obs-url/testcase-file/env-log-file）语义与格式不变。
 - 新增 1 个输入（last-json）为可选，不设置时行为与原 test-result-display 仅传 json-file 一致。
+
+**当前源码实际输出（9 个，以 `pytest-orch/action.yml` 的 `outputs` 段与 `index.js` 的 `core.setOutput` 为准）**：
+
+| 输出                                                  | 来源                  | 说明                                                       |
+| ----------------------------------------------------- | --------------------- | ---------------------------------------------------------- |
+| `pipeline-id` / `job-run-id`                          | Step 15               | 原有输出，不变                                             |
+| `testcase-obs-url` / `testcase-file` / `env-log-file` | Step 11               | 原有输出；`obsConfigured=false` 时 `testcase-obs-url` 置空 |
+| `case-logs`                                           | Step 11               | 通过校验的 ArchiveLogDir 路径，缺失/被拒时为空串           |
+| `case-env-log`                                        | Step 11.5（日志归类） | 全部 `*_log.zip` 的归集目录，无文件时为空串                |
+| `case-logs-fail`                                      | Step 11.5（日志归类） | 非通过用例的 `*.html` 报告目录，无失败用例时为空串         |
+| `case-env-log-fail`                                   | Step 11.5（日志归类） | 非通过用例的 `*_log.zip` 目录，无失败用例时为空串          |
+
+> 后 4 个输出与本次合并无关，由后续独立变更（OBS 可选化 + 日志归类）引入；此处按源码实际状态记录，避免「不新增任何输出」的表述与实现冲突。
+
+**破坏性变更（相对被合并的 test-result-display 插件）**：
+
+- `total-cases` / `passed-cases` / `not-passed-cases` 不再提供：§2.2 适配点 2 已把原 3 行 `core.setOutput` 改为 `core.info` 日志，统计量仅写步骤日志，不作为插件输出；`pytest-orch` 的 `action.yml` outputs 与 `index.js` 均无这 3 项。
+- 失败模式：若流水线用 `${{ steps.<display-step>.outputs.not-passed-cases }}` 或 `total-cases` 做门禁/条件判断，直接移除 test-result-display 步骤后引用会静默变成空字符串，比较式（`!= '0'`、`> 0` 等）随之恒真或恒假，可能导致「失败用例仍判定通过」或「流程永远卡住」。
+- 迁移指引：
+  1. 移除步骤前，全量检索流水线 YAML / 脚本 / 模板中对 `total-cases`、`passed-cases`、`not-passed-cases` 的引用。
+  2. 改写引用：改为消费 `${{ steps.<pytest-orch-step>.outputs.testcase-file }}` 指向的 JSON，用 `jq`/脚本自行统计，或在 pytest-orch 步骤内由下游脚本读取同一文件计算。
+  3. 确认无残留引用后，再移除 test-result-display 步骤。

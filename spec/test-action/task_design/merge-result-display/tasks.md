@@ -36,7 +36,8 @@
   - 新增分支 A：`generateMarkdownTable(combinedResults, showRetryColumn, obsConfigured)` 第 3 入参透传 `obsConfigured` 作为 `showDownloadLink`
   - 新增分支 B：`envLogFile` 非空时在表格 title 前插入 `[环境日志](<path>)` 链接，写入前 `replace(/[\n\r]/g, "")` + `replace(/>/g, "&gt;")` 防注入；拼到 `markdownTable` 前
   - 其余逻辑原样保留（parseJsonFileInput / parseTestResults / isRetry 标记 / passedOnly / countStatistics / 写 $ATOMGIT_STEP_SUMMARY；last-json 解析用入参 `lastJsonInput`，原 `if (lastJsonInput && lastJsonInput.trim())` 判断不变）
-- [ ] 1.5 在文件末尾添加 `module.exports`，导出 `displayTestResults` + 全部辅助函数 + 全部常量（供单元测试）
+  - 安全校验不得省略：`testcaseFilePath` 与 `lastJsonInput` 解析出的每个路径均经 `parseTestResults` → `validateJsonFilePath`（拒绝 `..`、仅 `.json`、cwd realpath + `/tmp` 白名单、`lstat` 拒绝符号链接、realpath 后二次校验），并以 fd 绑定读取；校验失败仅 `core.warning` 并跳过该条目（对应 proposal AC-12）
+- [ ] 1.5 在文件末尾添加 `module.exports`，与 design.md §2.3 一致：导出 `displayTestResults` + 13 个辅助函数 + 8 个常量（供单元测试）；内部函数 `stripCellLineBreaks` 仅被 `generateMarkdownTable` 调用，原插件也未导出，故不纳入导出清单
 - [ ] 1.6 文件顶部 `require("@actions/core")`、`require("fs")`、`require("path")`
 
 ### Task 2: 修改 index.js
@@ -71,21 +72,28 @@
   - `displayTestResults("", "", "", false)` 不抛异常（parseJsonFileInput 返回空数组，stats 为 {0,0,0}，无 env 日志链接，省略"用例结果"列）
   - `displayTestResults(testcaseFilePath, lastJsonInput, envLogFile, true)` 在 testcase-file/envLogFile 有效时正确写 summary、插入环境日志链接并保留"用例结果"列
   - 新 Step 12 异常不影响后续 Step 13/14/15
+- [ ] 4.4 迁移行为对照（复用原插件测试，不引入框架）：
+  - 复制 `test-result-display/test/findings.test.js` 与 `test-result-display/test/core-stub.js` 到 `pytest-orch/test/`
+  - 把两处 `require("../index.js")` 改为 `require("../test-result-display.js")`（L30 顶部解构、L631 `SENSITIVE_PATTERNS`）
+  - 运行 `node test/findings.test.js`，要求 58 项全部 `ok`、退出码 0
+  - 对新增导出补充等值断言：`countStatistics`、`parseJsonFileInput`、`stripSensitiveQueryParams`、`KNOWN_TEST_STATES`、`LINE_BREAK_RE`
 
 ## 验证方式
 
-| 验证项                | 方式                                                                                                                         |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| 文件存在              | `ls pytest-orch/test-result-display.js`                                                                                      |
-| 语法正确              | `node -e "require('./pytest-orch/test-result-display')"`                                                                     |
-| 主函数可调用          | `node -e "const m=require('./pytest-orch/test-result-display'); console.log(typeof m.displayTestResults)"` 应输出 `function` |
-| index.js require 正确 | `node -c pytest-orch/index.js`（语法检查）                                                                                   |
-| action.yml 格式       | YAML 解析通过                                                                                                                |
-| dist 产物更新         | `dist/index.js` 包含 `displayTestResults` 调用                                                                               |
+| 验证项                | 方式                                                                                                                                                           |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 文件存在              | `ls pytest-orch/test-result-display.js`                                                                                                                        |
+| 语法正确              | `node -e "require('./pytest-orch/test-result-display')"`                                                                                                       |
+| 主函数可调用          | `node -e "const m=require('./pytest-orch/test-result-display'); console.log(typeof m.displayTestResults)"` 应输出 `function`                                   |
+| 路径校验生效          | `node -e "require('./pytest-orch/test-result-display').parseTestResults('/etc/passwd','x')"` 抛出白名单/扩展名拒绝；指向 cwd/`/tmp` 之外的软链抛出符号链接拒绝 |
+| 迁移行为对照          | `node pytest-orch/test/findings.test.js` 输出 58 passed, 0 failed、退出码 0（同一组恶意/边界输入下新旧实现结果一致）                                           |
+| index.js require 正确 | `node -c pytest-orch/index.js`（语法检查）                                                                                                                     |
+| action.yml 格式       | YAML 解析通过                                                                                                                                                  |
+| dist 产物更新         | `dist/index.js` 包含 `displayTestResults` 调用                                                                                                                 |
 
 ## 不在本次范围
 
-- 不编写单元测试文件（pytest-orch 目录当前无测试框架配置）
+- 不引入测试框架（jest/mocha 等）；复用原插件 `node + assert` 用例做迁移行为对照（见 4.4）
 - 不删除 `test-result-display` 插件
 - 不修改 `pytest-orch/validators.js`
 - 不修改流水线 YAML 消费方
