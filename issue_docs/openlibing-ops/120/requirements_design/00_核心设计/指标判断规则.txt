@@ -1,0 +1,116 @@
+一、开源许可证
+1、判定规则里的检查内容、判定条件里面的5种情形的后4种、需要和全部扫描数据表格里面的条件描述的4条一一对应， 现在是同一个事情不同的表述，容易有歧义。
+2、何时不算分NA 这个整体删除掉 不展示
+3、判定条件的表格 现在是两列：情形、规则-->情形、得分
+
+二、版权合规
+1、删除备注的全部内容 不展示
+
+
+三、危险工作流
+1、何时不算分NA 这个删除掉 不展示
+2、判定规则里面的检查内容：改为如下：检查 .gitcode/workflows 下 CI 配置文件中的两类危险写法：① 不可信代码（是否默认安全）,存在显式配置 "allow-unsafe-pr-checkout: true"；② 不可信上下文变量（外部可控变量），详见下表。
+3、判定条件表改为:
+情形                                  规则
+①不可信代码（是否默认安全）              存在显式配置 "allow-unsafe-pr-checkout: true"
+②不可信上下文变量（外部可控变量）            1）atomgit.event.issue.title
+									    2）atomgit.event.pull_request.title
+										3）atomgit.event.pull_request.body
+										4）atomgit.event.comment.body
+										5）atomgit.event.commits[].message
+										6）atomgit.head_ref
+主要是为了和下面的描述统一，同时列出违规的配置。
+
+四、令牌权限
+1、何时不算分NA 这个 整体删除掉不展示
+
+五、二进制制品
+1、检查内容整体修改为：检查仓库中是否直接提交了二进制可执行产物（检查文件头部若干字节,识别是否为二进制文件）
+2、判定条件里的规则修改为：判断仓库内所有文件是否为二进制文件,命中即扣分
+3、何时不算分NA 这个 整体删除掉不展示
+4、备注整体删除 不展示
+
+六、代码评审
+已手动修改
+
+七、分支保护
+1、何时不算分NA 这个删除掉 不展示
+2、备注全部删除掉  不展示
+
+八、Webhook安全
+1、何时不算分NA 这个删除掉 不展示
+
+九、CI测试
+1、不满足指标的数据  未满足：PR #xx已合入但未匹配到流水线执行记录改为  PR #xx已合入但未未执行CI测试   与上下其他的描述对应
+2、判断规则：检查内容整体修改为：检查最近30次已合入PR中，每个PR是否有CI流水线测试任务执行记录。
+3、判断规则：判断条件表格改为：
+情形                          规则
+测试任务		                 PR关联到流水线测试任务执行记录
+PR口径						 最近30次已合入PR，提出机器人创建的PR
+
+十、软件包发布
+1、判断规则的检查内容：删除”满足任意一即算“
+2、判定条件表：规则去掉"（包名口径比对）"：	workflow 中使用制品上传插件（obs-upload / upload-artifact），或仓库命中 openEuler 打包工程清单
+3、何时不算分NA 这个删除掉 不展示
+
+十一、安全策略
+1、summary中 联系链接 也放在第一个
+2、判断规则的 判定条件表中，各个情形体现一下分数
+3、何时不算分NA 整体删除掉 不展示
+
+十二、已知漏洞
+1、何时不算分NA 整体删除掉 不展示
+
+十三、项目维护
+已手动修改
+
+建议项指标：
+
+十四、依赖锁定
+1、判定规则的检查内容修改为：项目在构建和发布过程中使用的所有依赖应固定到具体的哈希值而非可变版本标签，确保构建的可重复性和依赖的安全性。
+（1）Docker 镜像固定：Dockerfile 中的 FROM 指令应使用镜像的摘要哈希（@sha256:...）而非可变标签。如需使用 FROM ubuntu:22.04 这样的可读标签，应同时注释说明对应的哈希值，并在 CI 中验证一致性。
+（2）构建流水线固定：工作流中的 uses 指令应固定到完整的 commit SHA（@<40位SHA>），而非版本标签（如 @v3）。
+（3）包管理器固定：对于 npm 应使用 package-lock.json、Python 使用 requirements.txt 固定具体版本、Go 使用 go.sum 等 lock 文件固定整个依赖树。
+（4）例外说明：Go 模块的完整语义化版本被视为已固定，因为 Go 工具链会在首次下载时验证内容哈希。Shell 脚本中的基础工具（如 apt-get install）如果无法通过哈希固定，应在 CI 中通过版本锁定和缓存机制降低风险。
+2、判定条件的表格，删除最后一行，口径问题条目
+3、删除所有备注内容 不展示
+
+十五、发布签名
+1、不满足指标的数据中 去除 “仅源码包” ,修改筛选逻辑，直接丢弃这种版本，不进入我们的评估范围
+2、判断规则的检查内容：是否包含数字签名文件或SLSA溯源证明 修改为：是否包含数字签名文件或sha256文件
+
+十六、模糊测试
+1、当前的全部扫描数据里面的 评分项列表的列 台阶 改为评分项，评分项列表名称改为评分列表
+2、判定规则的检查内容，去掉“，检测到的工具数量不影响评分。”
+3、计分方式：删除掉：“。各档相互独立，不存在低档阻断。”
+4、何时不算分NA 和备注 两块都整体删除 ，不展示
+
+十七、静态安全测试
+1、判定规则的检查内容整体修改为：检查pre-commit配置(根目录或pre-commit目录）或workflow文件中，是否使用了任一静态分析(SAST)工具,不区分语言
+2、何时不算分（NA）：去掉本指标不参评后面的（）中的内容，这里面的内容不适合面向用户展示。
+
+十八、贡献者多样性
+已手动修改
+
+2026-10-20 16:06:27.971 INFO  -  -> [12/146] repo_id=401243 https://gitcode.com/cann/astile-python.git [branch=(NA)]
+2026-10-20 16:06:27.971 INFO  -  ->   NA (no_default_branch): sdi_repo_branch_info has no default_branch for this repo
+2026-10-20 16:06:28.052 INFO  -  ->   inserted 7 rows | COPYRIGHT=NA, DANGEROUS_WF=NA, TOKEN_PERM=NA, BRANCH_PROTECTION=NA, PACKAGING=NA, SAST=NA, SECURITY_POLICY=NA
+2026-10-20 16:06:28.052 INFO  -  -> Progress: 12/146 | OK: 12 FAIL: 0 NA: 2
+
+2026-10-20 16:29:19.630 INFO  -  -> [80/146] repo_id=402113 https://gitcode.com/openeuler/kernel.git [branch=OLK-6.6]
+2026-10-20 16:29:19.663 INFO  -  ->   Error checking out OLK-6.6: fatal: not a git repository (or any parent up to mount point /)
+2026-10-20 16:29:19.663 INFO  -  -> Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+2026-10-20 16:29:19.663 INFO  -  ->   NA (checkout_failed): git checkout OLK-6.6 failed in /openlibing/git/gitcode/openeuler/kernel
+2026-10-20 16:29:19.746 INFO  -  ->   inserted 7 rows | COPYRIGHT=NA, DANGEROUS_WF=NA, TOKEN_PERM=NA, BRANCH_PROTECTION=NA, PACKAGING=NA, SAST=NA, SECURITY_POLICY=NA
+2026-10-20 16:29:19.746 INFO  -  -> Progress: 80/146 | OK: 80 FAIL: 0 NA: 3
+
+
+2026-10-20 16:06:27.971 INFO  -  -> Progress: 11/146 | OK: 11 FAIL: 0 NA: 1
+2026-10-20 16:06:27.971 INFO  -  ->
+2026-10-20 16:06:27.971 INFO  -  -> [12/146] repo_id=401243 https://gitcode.com/cann/astile-python.git [branch=(NA)]
+2026-10-20 16:06:27.971 INFO  -  ->   NA (no_default_branch): sdi_repo_branch_info has no default_branch for this repo
+2026-10-20 16:06:28.052 INFO  -  ->   inserted 7 rows | COPYRIGHT=NA, DANGEROUS_WF=NA, TOKEN_PERM=NA, BRANCH_PROTECTION=NA, PACKAGING=NA,
+
+
+https://gitcode.com/Ascend/msmodelslim/blob/master/msmodelslim/pytorch/llm_sparsequant/atomic_power_outlier.cpython-310-x86_64-linux-gnu.so
+https://gitcode.com/Ascend/msmodelslim/blob/master/msmodelslim/pytorch/llm_sparsequant/atomic_power_outlier.cpython-310-x86_64-linux-gnu.so
