@@ -1,0 +1,18 @@
+-- =====================================================================
+-- 补丁：SAST 指标规则改版（2026-09-30）明细配置更新
+-- 背景：SAST 判定从「仓库根存在 .pre-commit-config.yaml 即 10 分」改为
+--       「pre-commit 配置（根目录或 pre-commit/ 目录，合并扫描）或 workflow 文件中
+--        使用任一 SAST 工具即 10 分，有配置文件但 0 命中 0 分，两类文件均无记 NA(no_config_file)」。
+--       工具清单（不区分语言）：clang-tidy/bandit/eslint/gosec/clippy/spotbugs/gitleaks/luacheck。
+--       conf 与 openlibing-ops classpath security/detail-conf/SAST.json 结构完全一致（兜底降级行为一致）。
+-- 用法：在 Doris 中执行本文件一次即可（UNIQUE KEY(metric_code) 后写覆盖）。
+--       执行后最多 5 分钟（conf 缓存 TTL）自动生效，无需发版重启。
+-- 注意：需先重跑 security_file_scan.py 使 dwi_sec_wf_file_detail 中 SAST 的 detail_json
+--       切换为新结构（has_precommit/precommit_paths/wf_file_count/tool_count/hit_tools/tools/hits），
+--       新 conf 对旧结构数据不兼容（旧字段 hooks/precommit_path 不再展示）。
+-- 生成：ai-assisted 2026-09-30
+-- =====================================================================
+INSERT INTO dm_rd_efc_security_metric_detail_conf (metric_code, conf_json, enabled, updated_by, updated_at)
+VALUES ('SAST',
+'{"summary":[{"key":"toolCnt","hidden":true,"value":"$tool_count"},{"key":"hitJoined","hidden":true,"value":"#join:$hit_tools:、"},{"label":"检测结果","value":"#bool:$s.toolCnt:检出 SAST 工具:未检出","level":"#bool:$s.toolCnt:success:error"},{"label":"命中工具","value":"#ifnull:$s.hitJoined:—"},{"label":"命中工具数","value":"#tpl:{s.toolCnt} / 8"},{"label":"pre-commit 配置","value":"#bool:$has_precommit:检出:未检出"},{"label":"workflow 文件数","value":"$wf_file_count"}],"failNote":"#tpl:评分：二元判定 → pre-commit / workflow 中共命中 {s.toolCnt} 个 SAST 工具 → score = {score}（任一命中即 10 分，多命中不加分）","failEmptyText":"#tpl:全部满足：共命中 {s.toolCnt} 个 SAST 工具：{s.hitJoined}","dataNote":"二元判定：pre-commit 配置（.pre-commit-config.yaml 或 pre-commit/.pre-commit-config.yaml）或 workflow 文件（.gitcode/workflows、.gitcode/workflow）中使用任一 SAST 工具即 10 分，有配置文件但均未使用即 0 分；两类文件都不存在记 NA（no_config_file）。工具清单（不区分语言）：clang-tidy、bandit、eslint、gosec、clippy、spotbugs、gitleaks、luacheck。pre-commit 按 hook id 匹配（兼容 id: xxx 与 id:xxx 写法），workflow 按单词边界匹配。","failItems":[{"when":"tool_count=0","title":"未检出任何 SAST 工具","fields":[{"label":"pre-commit 配置","value":"#join:$precommit_paths:、"},{"label":"workflow 文件数","value":"#tpl:{wf_file_count}"},{"label":"命中工具数","value":"#tpl:{tool_count} / 8","level":"error"},{"label":"判定","value":"pre-commit 与 workflow 中均未使用 SAST 工具","level":"error"}],"reason":"未满足：pre-commit 配置与 workflow 文件中均未检出 SAST 工具","searchText":"sast 未检出 pre-commit workflow 静态分析"}],"groups":[{"key":"tools","label":"SAST 工具检测明细（8 项）","columns":[{"label":"工具","key":"tool","type":"text"},{"label":"语言","key":"lang","type":"text"},{"label":"pre-commit","key":"pc","type":"text"},{"label":"workflow","key":"wf","type":"text"},{"label":"判定","key":"hit","type":"text"}],"rowsFrom":"$tools","cellOf":{"tool":{"text":"$tool"},"lang":{"text":"$lang"},"pc":{"text":"#bool:$precommit:命中:—","level":"#bool:$precommit:success:"},"wf":{"text":"#bool:$workflow:命中:—","level":"#bool:$workflow:success:"},"hit":{"text":"#bool:$hit:使用:未使用","level":"#bool:$hit:success:error"}},"searchText":"#tpl:{tool} {lang}"},{"key":"hits","label":"命中证据","columns":[{"label":"工具","key":"tool","type":"text"},{"label":"语言","key":"lang","type":"text"},{"label":"来源","key":"source","type":"text"},{"label":"文件","key":"path","type":"text"},{"label":"证据","key":"evidence","type":"text"}],"rowsFrom":"$hits","cellOf":{"tool":{"text":"$tool"},"lang":{"text":"$lang"},"source":{"text":"#map:$source:pre-commit:pre-commit 配置,workflow:workflow 文件,*:—"},"path":{"text":"$path"},"evidence":{"text":"$evidence"}},"searchText":"#tpl:{tool} {source} {path} {evidence}"}]}',
+1, 'ai-assisted', NOW());
