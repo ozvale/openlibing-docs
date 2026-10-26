@@ -5,33 +5,37 @@
 无权限气泡（`NoPermissionPopover.vue`）做两处展示层优化：
 
 1. **申请指引链接跳转**：项目级「项目管理->成员管理」点击跳转权限申请页 `/apps/noPermissionApply?showApply=true`（复用现有申请弹窗机制）；仓库级「代码仓管理->成员管理」点击跳转代码仓管理页并自动打开对应仓库成员管理；未传 `repoId` 时仓库级降级为纯文本。
-2. **角色组过滤**：只过滤掉 `system`（平台）、`product`（组织）两级角色组，保留 `project`（项目）、`repo`（仓库）、`general`（通用）。
+2. **平台/组织级别申请指引调整**：角色归属**不隐藏任何级别**（平台/组织/项目/仓库/通用全部展示）；平台（system）、组织（product）暂不开放角色申请，申请指引**整行替换**为说明「说明：暂不开放角色申请，详情请联系人工客服进行咨询」（不带「申请指引：」标签）；通用（general）保持「申请指引：联系人工客服进行咨询」。
 
-空态展示条件由「后端 `rolesByLevel` 为空」调整为「过滤后为空」，文案不变。
+空态保持原逻辑与文案：后端 `rolesByLevel` 为空时显示「暂无角色配置信息，请联系项目管理员或通过服务单咨询。」
 
 ## 2. 实现逻辑设计
 
-### 2.1 新增纯函数模块 `src/utils/noPermissionGuide.ts`
+### 2.1 纯函数模块 `src/utils/noPermissionGuide.ts`
 
-为可单测，将过滤与指引构建抽为纯函数：
+为可单测，将申请指引构建抽为纯函数，返回判别联合 `ApplyGuide = ApplyGuideGuide | ApplyGuideNotice`：
 
-- `APPLICABLE_LEVELS: string[]` = `['project', 'repo', 'general']`
-- `filterApplicableRoleGroups(groups: any[]): any[]`：按 `level` 过滤，仅保留 `APPLICABLE_LEVELS` 中的级别。
-- `buildApplyGuide(level, ctx): { prefix: string; linkText: string; link: { path; query } | null }`：
-  - `project` → `prefix: '联系项目管理员添加角色，'`，`linkText: '项目管理->成员管理'`，`link: { path: '/apps/noPermissionApply', query: { showApply: 'true' } }`
-  - `repo` → `prefix: '联系项目管理员添加仓库角色，'`，`linkText: '代码仓管理->成员管理'`；`ctx.repoId` 非空时 `link: { path: '/apps/repos', query: { projectId, repoId, showRepoUserManage: '1' } }`，否则 `link: null`（降级纯文本）
-  - `general` 及其他未知级别 → `prefix: '联系人工客服进行咨询'`，`linkText: ''`，`link: null`
+- `buildApplyGuide(level, ctx)`：
+  - `system` / `product` → `{ type: 'notice', label: '说明：', text: '暂不开放角色申请，详情请联系人工客服进行咨询' }`（整行替换申请指引；`label` 与「申请指引：」标签同款深色加粗样式）
+  - `project` → `{ type: 'guide', prefix: '联系项目管理员添加角色，', linkText: '项目管理->成员管理', link: { name: 'noPermissionApply', query: { showApply: 'true' } } }`
+  - `repo` → `{ type: 'guide', prefix: '联系项目管理员添加仓库角色，', linkText: '代码仓管理->成员管理' }`；`ctx.repoId` 非空时 `link: { name: 'repos', query: { projectId, repoId, showRepoUserManage: '1' } }`，否则 `link: null`（降级纯文本）
+  - `general` 及其他未知级别 → `{ type: 'guide', prefix: '联系人工客服进行咨询', linkText: '', link: null }`
 
 ### 2.2 `NoPermissionPopover.vue`
 
-- `rolesByGroup` / `sortedRoleGroups` 基于 `filterApplicableRoleGroups(opMeta.rolesByLevel)` 计算（排序仍按 `LEVEL_DISPLAY_ORDER`）。
-- 申请指引行渲染：`prefix` 文本 +（`link` 存在时）可点击 `el-link`，点击 `router.push(link)`。
-- 空态 `v-if` 条件改为 `!sortedRoleGroups.length`，文案不变。
+- `rolesByGroup` / `sortedRoleGroups` 直接基于后端 `rolesByLevel`（不做任何级别过滤），排序仍按 `LEVEL_DISPLAY_ORDER`。
+- 申请指引行按结果类型分两支渲染：
+  - `notice` 型（平台/组织）：`label`（「说明：」）+ `text`，均复用与指引型相同的标签/正文样式（`no-perm-apply-guide-label` / `no-perm-apply-guide-text`）。
+  - `guide` 型（项目/仓库/通用）：`prefix` 文本 +（`link` 存在时）可点击 `el-link`，点击 `router.push(link)`。
+- 空态 `v-if="!opMeta?.rolesByLevel?.length"`，文案不变。
 - 引入 `useRouter`。
 
 ### 2.3 `Repos/index.vue`
 
-- 项目首次加载（`!oldValue?.projectId`）且 `route.query.showRepoUserManage === '1'`、`route.query.repoId` 存在时，调用新增 `autoOpenRepoUserManage(repoId)`：`queryRepo` 按 repoId 查单条仓库 → 命中后 `activeTab='repo'` + `handleShowUserManage(repo)` 自动打开仓库成员管理；随后 `router.replace` 清理 `showRepoUserManage` 参数（保留其余 query），避免重复自动打开。
+- 自动打开仓库成员管理有两条触发路径，共用 `showRepoUserManageHandled` 防重入标志：
+  1. **route.query watcher**（`route.query.showRepoUserManage`）：覆盖同路由点击场景——用户已在代码仓管理页时点击气泡链接，`router.push` 到同名路由仅 query 变化，`projectInfo` watcher 不触发，需该 watcher 自动打开；query 参数被清理（`val !== '1'`）时复位标志。
+  2. **projectInfo watcher 兜底**（项目首次加载 `!oldValue?.projectId` 且 query 带 `showRepoUserManage` + `repoId`）：覆盖刷新场景——挂载时项目尚未加载，route watcher 先行返回，项目加载后由该 watcher 触发。
+- `autoOpenRepoUserManage(repoId)`：`queryRepo` 按 repoId 查单条仓库 → 命中后 `activeTab='repo'` + `handleShowUserManage(repo)` 自动打开仓库成员管理；随后 `router.replace` 清理 `showRepoUserManage` 参数（保留其余 query），避免重复自动打开。
 - 项目切换时的 URL 清理列表（`restQuery` 解构）补充 `showRepoUserManage`。
 
 ## 3. 类设计
