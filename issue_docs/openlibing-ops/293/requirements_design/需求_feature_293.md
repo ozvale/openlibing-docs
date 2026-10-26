@@ -8,7 +8,7 @@
 | 关联 Issue | https://gitcode.com/openlibing/openlibing-ops/issues/293                                            |
 | 关联页面   | https://www.openlibing.com/ops/dashboard/engineering-capability                                     |
 | 后端仓库   | openlibing-ops                                                                                      |
-| 前端仓库   | openlibing-ops-web（本次无功能性改动，指标提示由指标字典下发）                                      |
+| 前端仓库   | openlibing-ops-web（新增运行记录“仅成功运行”开关；指标提示由指标字典下发）                          |
 | 指标字典   | openlibing-metric                                                                                   |
 | ETL        | DolphinScheduler（仓库外，产出 `dwi_repo_pipeline_quality_day`、`dm_project_quality_overview_day`） |
 
@@ -33,6 +33,8 @@
 - 下层下钻同步：
   - 仓库级 PR 明细中的构建/测试排队 P90
   - 环境资源明细中的 PR/Nightly NPU 消耗、NPU 平均消耗、卡片汇总
+  - 运行记录弹窗新增“仅成功运行”可选筛选，默认全量
+- Excel 导出表头对成功口径列标注“成功运行”
 - 例外备案和 committer 审核一体化：
   - 过滤失败流水线
   - 查看截至统计日的最近 10 次成功 PR 流水线运行
@@ -258,13 +260,14 @@ COUNT(DISTINCT CASE WHEN t.status = 'COMPLETED' AND t.npu_second > 0
 
 #### 5.3.4 运行记录列表
 
-`OpsResourceRunMapper.queryResourceRuns` 保留全量运行记录，不做状态过滤：
+`OpsResourceRunMapper.queryResourceRuns` 默认保留全量运行记录，并提供 `onlySuccess` 可选筛选：
 
-- 该列表用于问题定位，需要看到失败运行；
+- 默认 `onlySuccess=false`，展示全量运行，便于定位失败运行；
+- 前端运行记录弹窗增加“仅成功运行”开关，开启后只展示 `status='COMPLETED'` 的运行；
 - 每行展示单次真实 NPU 消耗，并已有 `status` 列；
-- 运行记录是明细事实，不参与 KPI 聚合，不与成功口径 KPI 直接求和。
+- 运行记录是明细事实，默认不与成功口径 KPI 直接求和；开启筛选后可与 NPU KPI 对账。
 
-如后续要求运行记录也严格对账，可在该接口增加 `onlySuccess` 参数，默认关闭。
+`onlySuccess` 同时作用于列表和 count SQL，保证分页总数一致。
 
 ### 5.4 例外备案 ETL 改造
 
@@ -506,18 +509,19 @@ WHERE ...
 
 ## 7. 影响面
 
-| 层           | 文件/对象                                                | 变更                                                                                                     |
-| ------------ | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 主表 SQL     | `OpsMainStatMapper.xml`                                  | `pr_run_sample` 增加成功过滤；`unified_npu_stat` 两个分支增加成功过滤                                    |
-| 仓库下钻 SQL | `OpsRepoDetailMapper.xml`                                | `pr_run_sample` 增加成功过滤；`uses_proper_codecheck` 改为直读 ETL 字段；`codecheck_detail` 优先判断达标 |
-| 仓库响应注释 | `OpsRepoDetailResp.java`、`OpsRepoDetailDetailResp.java` | 更新 `usesProperCodecheck` 口径说明                                                                      |
-| 资源下钻 SQL | `OpsResourceDetailMapper.xml`                            | PR/Nightly 列表、汇总、旧查询改为 NPU 条件聚合                                                           |
-| 主表响应     | `OpsOverviewMainResp.java`                               | 无结构变化，数值口径变化；建议更新字段注释                                                               |
-| 资源响应     | `OpsResourceSummaryResp`、`OpsResourceDetailDetailResp`  | 无结构变化，数值口径变化                                                                                 |
-| ETL          | `dwi_repo_pipeline_quality_day`                          | 重写例外备案 flag 判定                                                                                   |
-| ETL          | `dm_project_quality_overview_day`                        | 项目级达标率按新 flag 聚合                                                                               |
-| 指标字典     | `openlibing-metric`                                      | 更新相关指标定义与统计范围                                                                               |
-| 前端         | `openlibing-ops-web`                                     | 无代码改动；指标提示随字典变化                                                                           |
+| 层           | 文件/对象                                                                   | 变更                                                                                                     |
+| ------------ | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 主表 SQL     | `OpsMainStatMapper.xml`                                                     | `pr_run_sample` 增加成功过滤；`unified_npu_stat` 两个分支增加成功过滤                                    |
+| 仓库下钻 SQL | `OpsRepoDetailMapper.xml`                                                   | `pr_run_sample` 增加成功过滤；`uses_proper_codecheck` 改为直读 ETL 字段；`codecheck_detail` 优先判断达标 |
+| 仓库响应注释 | `OpsRepoDetailResp.java`、`OpsRepoDetailDetailResp.java`                    | 更新 `usesProperCodecheck` 口径说明                                                                      |
+| 资源下钻 SQL | `OpsResourceDetailMapper.xml`                                               | PR/Nightly 列表、汇总、旧查询改为 NPU 条件聚合                                                           |
+| 主表响应     | `OpsOverviewMainResp.java`                                                  | 数值口径变化；字段注释更新；Excel 表头标注“成功运行”                                                     |
+| 资源响应     | `OpsResourceSummaryResp`、`OpsResourceDetailDetailResp`                     | 无结构变化，数值口径变化                                                                                 |
+| 运行记录接口 | `OpsResourceRunReq`、`OpsResourceRunsDetailReq`、`OpsResourceRunMapper.xml` | 新增 `onlySuccess` 可选筛选，列表与 count 同步                                                           |
+| ETL          | `dwi_repo_pipeline_quality_day`                                             | 重写例外备案 flag 判定                                                                                   |
+| ETL          | `dm_project_quality_overview_day`                                           | 项目级达标率按新 flag 聚合                                                                               |
+| 指标字典     | `openlibing-metric`                                                         | 更新相关指标定义与统计范围                                                                               |
+| 前端         | `openlibing-ops-web`                                                        | 运行记录弹窗新增“仅成功运行”开关；指标提示随字典变化                                                     |
 
 接口契约不变：
 
@@ -603,5 +607,5 @@ mvn test
 4. 最近 10 次中只要有一次运行同时满足“新版检查存在且旧版检查不存在”即达标；某次运行同时存在新旧检查只影响该次运行，不影响其他仅新版运行达标。
 5. 仓库级 `has_old_codecheck` / `has_new_codecheck` / job 明细取最近一次成功运行，仅用于明细展示；达标判定以独立的 `uses_proper_codecheck` 为准。
 6. 项目级例外备案分母为“有成功运行、flag 非空的仓库数”；如现网定义不同，需产品确认后再冻结。
-7. 运行记录列表保留全量，不做成功过滤；如要求严格对账，再增加状态筛选。
+7. 运行记录列表默认展示全量，可通过“仅成功运行”开关切换为成功口径；切换后列表与 count 同步过滤。
 8. 历史数据默认不回刷；如需回刷，建议至少覆盖最近 7 天并重新核对主表快照。
