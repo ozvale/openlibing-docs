@@ -2,31 +2,31 @@
 
 ## 1. 基本信息
 
-| 项目       | 内容                                                                                                                 |
-| ---------- | -------------------------------------------------------------------------------------------------------------------- |
-| 需求文档   | [需求_feature_293.md](./需求_feature_293.md)                                                                         |
-| 关联 Issue | https://gitcode.com/openlibing/openlibing-ops/issues/293                                                             |
-| 开发分支   | `feature_293`                                                                                                        |
-| 后端仓库   | openlibing-ops                                                                                                       |
-| 指标字典   | openlibing-metric                                                                                                    |
-| ETL        | DolphinScheduler（仓库外）                                                                                           |
-| 目标       | 排队 P90、NPU 消耗/平均/使用率统一为成功运行口径；例外备案改为最近 10 次成功运行中任一次单次达标；主表与下钻保持一致 |
+| 项目       | 内容                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------------------- |
+| 需求文档   | [需求_feature_293.md](./需求_feature_293.md)                                                            |
+| 关联 Issue | https://gitcode.com/openlibing/openlibing-ops/issues/293                                                |
+| 开发分支   | `feature_293_new`                                                                                       |
+| 后端仓库   | openlibing-ops                                                                                          |
+| 指标字典   | openlibing-metric                                                                                       |
+| ETL        | DolphinScheduler（仓库外）                                                                              |
+| 目标       | 【本期仅例外备案】最近 10 次成功运行中任一次单次达标；GitCode/GitHub 双平台；项目级分母保持全部运营仓库 |
 
 ## 2. 任务总览
 
-| 编号 | 任务                      | 仓库/模块                    | 主要文件                                             | 依赖   | 验收要点                                     |
-| ---- | ------------------------- | ---------------------------- | ---------------------------------------------------- | ------ | -------------------------------------------- |
-| T0   | 口径冻结与基线采集        | 数据/产品                    | —                                                    | 无     | 确认例外备案分母、回刷范围；保存改造前基线   |
-| T1   | 主表 PR 排队 P90 成功口径 | openlibing-ops / 主表        | `OpsMainStatMapper.xml`                              | T0     | 构建/测试排队 P90 仅取成功运行               |
-| T2   | 主表 NPU 成功口径         | openlibing-ops / 主表        | `OpsMainStatMapper.xml`                              | T0     | NPU 消耗、平均、使用率均为成功口径；CPU 不变 |
-| T3   | 仓库级 PR 下钻对齐        | openlibing-ops / 下钻        | `OpsRepoDetailMapper.xml`、`OpsRepoDetail*Resp.java` | T1、T5 | 排队 P90 成功口径；例外备案直读 ETL 结果     |
-| T4   | 环境资源下钻对齐          | openlibing-ops / 下钻        | `OpsResourceDetailMapper.xml`                        | T2     | NPU 与主表可对账；CPU、行集不变              |
-| T4b  | 运行记录接口与 Excel 标注 | openlibing-ops               | `OpsResourceRun*`、`OpsOverviewMainResp.java`        | T4     | 接口支持 onlySuccess；Excel 表头标注成功口径 |
-| T5   | ETL 仓库级例外备案重写    | DolphinScheduler             | `dwi_repo_pipeline_quality_day`                      | T0     | 最近 10 次成功运行中任一次单次达标           |
-| T6   | ETL 项目级例外备案率      | DolphinScheduler             | `dm_project_quality_overview_day`                    | T5     | 项目率与仓库级达标结果一致                   |
-| T7   | 指标字典与文案            | openlibing-metric / 指标平台 | 指标定义数据                                         | T0     | 指标含义、统计范围与新口径一致               |
-| T8   | 回归验证与发布            | Doris / 页面                 | —                                                    | T1-T7  | 数据、接口、页面、性能全部通过               |
-| T9   | 历史数据回刷（可选）      | DolphinScheduler             | 相关 ETL 任务                                        | T6、T8 | 回刷范围确认并完成对账                       |
+| 编号 | 任务                              | 仓库/模块                    | 主要文件                                             | 依赖   | 验收要点                                     |
+| ---- | --------------------------------- | ---------------------------- | ---------------------------------------------------- | ------ | -------------------------------------------- |
+| T0   | 口径冻结与基线采集                | 数据/产品                    | —                                                    | 无     | 确认例外备案分母、回刷范围；保存改造前基线   |
+| T1   | 【暂缓】主表 PR 排队 P90 成功口径 | openlibing-ops / 主表        | `OpsMainStatMapper.xml`                              | —      | 本期不实施                                   |
+| T2   | 【暂缓】主表 NPU 成功口径         | openlibing-ops / 主表        | `OpsMainStatMapper.xml`                              | —      | 本期不实施                                   |
+| T3   | 仓库级例外备案消费对齐            | openlibing-ops / 下钻        | `OpsRepoDetailMapper.xml`、`OpsRepoDetail*Resp.java` | T5     | `uses_proper_codecheck` 直读 ETL；明细优先级 |
+| T4   | 【暂缓】环境资源下钻对齐          | openlibing-ops / 下钻        | `OpsResourceDetailMapper.xml`                        | —      | 本期不实施                                   |
+| T4b  | 【暂缓】运行记录与 Excel 标注     | openlibing-ops               | `OpsResourceRun*`、`OpsOverviewMainResp.java`        | —      | 本期不实施                                   |
+| T5   | ETL 仓库级例外备案重写            | DolphinScheduler             | `dwi_repo_pipeline_quality_day`                      | T0     | 最近 10 次成功运行中任一次单次达标           |
+| T6   | ETL 项目级例外备案率              | DolphinScheduler             | `dm_project_quality_overview_day`                    | T5     | 项目率与仓库级达标结果一致                   |
+| T7   | 指标字典与文案                    | openlibing-metric / 指标平台 | 指标定义数据                                         | T0     | 指标含义、统计范围与新口径一致               |
+| T8   | 回归验证与发布                    | Doris / 页面                 | —                                                    | T1-T7  | 数据、接口、页面、性能全部通过               |
+| T9   | 历史数据回刷（可选）              | DolphinScheduler             | 相关 ETL 任务                                        | T6、T8 | 回刷范围确认并完成对账                       |
 
 ## 3. 详细任务
 
@@ -93,7 +93,7 @@
 
 ---
 
-### T3 仓库级 PR 下钻对齐
+### T3 仓库级例外备案消费对齐
 
 **文件**：
 
@@ -103,18 +103,16 @@
 
 **步骤**：
 
-1. `pr_run_sample` 增加 `u.status = 'COMPLETED'`，使构建/测试排队 P90 与主表一致。
-2. `uses_proper_codecheck` 改为直读 ETL 字段，不再由 `has_old_codecheck` / `has_new_codecheck` 推导。
-3. `codecheck_detail` 优先判断 `uses_proper_codecheck = 1`，达标时返回 `NULL`。
-4. 更新 `usesProperCodecheck`、`hasOldCodecheck`、`hasNewCodecheck` 注释：
-   - `usesProperCodecheck`：最近 10 次成功运行中任一次单次达标；
-   - `hasOldCodecheck` / `hasNewCodecheck`：最近一次成功运行，仅用于明细展示。
+1. `uses_proper_codecheck` 改为直读 ETL 字段，不再由 `has_old_codecheck` / `has_new_codecheck` 推导。
+2. `codecheck_detail` 优先判断 `uses_proper_codecheck = 1`，达标时返回 `NULL`。
+3. 更新 `usesProperCodecheck` 注释：最近 10 次成功运行中任一次单次达标，由 ETL 直接计算。
+4. 本期不修改 `pr_run_sample` 的排队状态过滤。
 
 **验收**：
 
-- 仓库级排队 P90 与主表使用同一状态口径；
 - 达标仓库不展示旧版 codecheck 告警；
-- 不达标仓库的明细文案来自最近一次成功运行。
+- 不达标仓库的明细文案来自最近一次成功运行；
+- 主表例外备案率与仓库级 `usesProperCodecheck` 来自同一 ETL 字段。
 
 ---
 
@@ -171,14 +169,25 @@
 
 **步骤**：
 
-1. 每个仓库取截至 `D-1 23:59:59` 的最近 10 次成功 PR run，按 run 去重。
-2. 按单次运行计算：
-   - `run_has_new_codecheck`：job 名命中 `pre-commit` / `lintrunner`；
-   - `run_has_old_codecheck`：job 名含 `codecheck` 且不含 `pre-commit` / `lintrunner`。
-3. 仓库级 `uses_proper_codecheck`：最近 10 次中任一次满足 `new=1 且 old=0`。
-4. 仓库级 `has_old_codecheck` / `has_new_codecheck`、job 明细：取最近一次成功运行。
-5. 无成功运行时，上述字段写 `NULL`。
-6. 复用现有字段，无 DDL 变更。
+1. 统计日改为 `D-1`，截止到 `D-1 23:59:59`。
+2. GitCode：
+   - 用 `dwr_rd_efc_pipeline_run_fact.pipeline_status='COMPLETED'` 过滤成功运行；
+   - 以桥表 `pr_id IS NOT NULL` 识别 PR，删除 `pipeline_name LIKE 'pr-pipeline%'`；
+   - `dwi_rd_efc_pipeline_info` 改 LEFT JOIN；
+   - 按仓库取最近 10 次成功 run。
+3. GitHub：
+   - 以 `sdi_rd_efc_workflow_run_raw_github.conclusion='success'` 过滤成功运行；
+   - 限定 `event in ('pull_request','pull_request_target')`；
+   - 按仓库取最近 10 次成功 workflow run。
+4. 按单次运行计算：
+   - GitCode：`run_has_new` 命中 `pre-commit` / `lintrunner`；`run_has_old` 含 `codecheck` 且不含前两者；
+   - GitHub：workflow 名为 `Pre-Commit Check` 或 job 名命中 `pre-commit` / `lintrunner`；`run_has_old=0`。
+5. 仓库级 `uses_proper_codecheck`：最近 10 次中任一次满足 `new=1 且 old=0`。
+6. 仓库级 `has_old_codecheck` / `has_new_codecheck`、job 明细：取最近一次成功运行。
+7. 无成功运行时，flag 写 `NULL`，`uses_proper_codecheck` 写 `0`。
+8. 复用现有字段，无 DDL 变更。
+
+**参考 SQL**：`openlibing-ops/docs/issue/293/例外备案每日汇聚_优化.sql`
 
 **验收场景**：
 
@@ -187,7 +196,8 @@
 - 每次运行都新旧并存，判定不达标；
 - 全部只有旧版或无检查任务，判定不达标；
 - 成功运行不足 10 次；
-- 从未有成功运行。
+- 从未有成功运行 → `uses_proper=0`，仍计入项目分母；
+- GitHub 无旧版检查，最近 10 次成功 workflow 运行任一命中 pre-commit 即达标。
 
 ---
 
@@ -198,15 +208,16 @@
 **步骤**：
 
 1. 按项目统计 `uses_proper_codecheck = 1` 的仓库数。
-2. 分母使用有成功运行、flag 非空的仓库数。
-3. 更新 ETL 注释与口径说明。
+2. 分母保持 `COUNT(*)`，即全部运营仓库；无成功运行的仓库按 0 计入。
+3. `stat_date` 改为 D-1。
 4. 与改造前项目率对比，记录差异并确认。
 
 **验收**：
 
-- 项目率 = 达标仓库数 / 参与统计仓库数；
+- 项目率 = 达标仓库数 / 全部运营仓库数；
 - 仓库级明细与项目级率来自同一 `uses_proper_codecheck`；
-- 无成功运行的仓库不进入分母。
+- 无成功运行仓库不会被排除在分母外；
+- 参考 SQL：`openlibing-ops/docs/issue/293/仓库配置指标汇总_优化.sql`。
 
 ---
 
@@ -217,13 +228,10 @@
 **步骤**：
 
 1. 更新“例外备案和 committer 审核一体化率”：
-   - 最近 10 次成功 PR 运行中，任一次仅新版检查即达标。
-2. 更新“NPU 消耗(卡时)”“NPU 平均消耗(卡时)”：
-   - 统计范围改为成功运行；
-   - 平均分母为有 NPU 消耗的成功运行数。
-3. 更新“PR 资源排队时长”“PR 构建/测试资源排队时长 P90”：
-   - 统计范围改为成功运行。
-4. 发布指标字典并确认页面提示已刷新。
+   - 最近 10 次成功 PR 运行中，任一次仅新版检查即达标；
+   - GitHub 无旧版 codecheck。
+2. NPU、排队 P90 等指标文案本期暂缓，不在 `feature_293_new` 更新。
+3. 发布指标字典并确认页面提示已刷新。
 
 **验收**：
 
@@ -281,57 +289,51 @@ mvn test
 
 ```text
 T0
-├── T1 ── T3（排队部分）
-├── T2 ── T4 ── T4b
 ├── T5 ── T3（例外备案消费）
 │         └── T6
-└── T7
+└── T7（例外备案文案）
 
-T1-T7 ── T8 ── T9（可选）
+T3 + T5 + T6 + T7 ── T8 ── T9（可选）
+
+【本期暂缓】T1、T2、T4、T4b
 ```
 
 建议顺序：
 
 1. T0 口径冻结与基线；
-2. T1、T2 后端主表；
-3. T5、T6 ETL；
-4. T3、T4 下钻对齐；
-5. T4b 运行记录筛选与 Excel 标注；
-6. T7 指标字典；
-7. T8 回归与发布；
-8. T9 按需回刷。
+2. T5、T6 ETL；
+3. T3 仓库级消费对齐；
+4. T7 例外备案指标文案；
+5. T8 回归与发布；
+6. T9 按需回刷。
 
 ## 5. 验收清单
 
-- [ ] 排队 P90 仅统计成功运行。
-- [ ] NPU 消耗总量、平均、使用率仅统计成功运行。
-- [ ] CPU 指标、PR 执行时长、NPU 总量未变化。
-- [ ] 主表与仓库级排队口径一致。
-- [ ] 主表 NPU 与环境资源明细可对账。
-- [ ] 运行记录默认全量；接口支持 `onlySuccess` 可选筛选（前端不接入）。
-- [ ] Excel 成功口径列已标注“成功运行”。
+- [ ] GitCode 最近 10 次成功 PR run 中任一次仅新版检查即达标。
+- [ ] GitHub 最近 10 次成功 PR workflow run 中任一次命中 pre-commit/lintrunner 即达标。
+- [ ] 失败/取消运行不参与判定。
 - [ ] 仓库级例外备案直读 ETL `uses_proper_codecheck`。
-- [ ] 例外备案按“单次运行达标”判定，最近 10 次任一次即可。
 - [ ] 达标仓库不展示旧版 codecheck 告警。
-- [ ] 指标字典文案已更新。
-- [ ] 基线对比、页面验证、性能验证、质量门禁全部通过。
+- [ ] 项目级分母保持全部运营仓库；无成功运行按 0 计入。
+- [ ] DWI/DM 的 stat_date 均为 D-1。
+- [ ] 指标字典例外备案文案已更新。
+- [ ] 基线对比、页面验证、质量门禁全部通过。
 - [ ] 发布说明已同步看板使用方。
+- [ ] 排队 P90、NPU、Excel 标注等本期暂缓项未混入本分支。
 
 ## 6. 提交与 PR 拆分建议
 
-| PR   | 范围                | 建议提交信息                                                       |
-| ---- | ------------------- | ------------------------------------------------------------------ |
-| PR-1 | 需求文档 + 任务分解 | `docs(issue-293): add requirement design and task breakdown`       |
-| PR-2 | T1-T4、T4b 后端     | `fix(ops-dashboard): scope pipeline metrics to successful runs`    |
-| PR-3 | T5-T6 ETL           | 由数据侧按 ETL 任务管理流程提交                                    |
-| PR-4 | T7 指标字典         | `chore(metrics): update engineering capability metric definitions` |
-| PR-5 | T8 验证记录（可选） | `docs(issue-293): add verification record`                         |
+| PR   | 范围                | 建议提交信息                                                |
+| ---- | ------------------- | ----------------------------------------------------------- |
+| PR-1 | 需求文档 + 任务分解 | `docs(issue-293): refine exception review design`           |
+| PR-2 | T3 后端消费         | `feat(exception-review): read ETL result in repo detail`    |
+| PR-3 | T5-T6 ETL           | 由数据侧按 ETL 任务管理流程提交                             |
+| PR-4 | T7 例外备案文案     | `chore(metrics): update exception review definition`        |
+| PR-5 | T8 验证记录（可选） | `docs(issue-293): add exception review verification record` |
 
-后端 PR 建议拆分为三个提交：
+后端本期只包含一个提交：
 
-1. `fix(ops-overview): scope queue and npu metrics to successful runs`
-2. `fix(ops-detail): align drilldown with successful-run metrics`
-3. `feat(ops-resource): add optional successful-run filter for run records`
+1. `feat(exception-review): read ETL result in repo detail`
 
 ## 7. 风险与回滚
 
