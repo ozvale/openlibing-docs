@@ -24,6 +24,7 @@
 - 删除类接口统一使用 **POST**（`/xxx/delete`），id 通过 `@RequestParam("id")` 传入，不要擅自改成 `RequestMethod.DELETE`。
 - 操作者（机机身份）从请求头 `X-Openlibing-User` 获取，请求头名必须常量化。
 - 本仓代码中**未使用** `@CrossOrigin`，不要新增跨域注解。
+- `@EnableFeignClients` 采用**显式客户端列表**（`Application.java:33`），新增 `@FeignClient` 接口后**必须**同步加入 `clients` 列表；否则不会注册为 Bean，注入点会在启动时抛 `NoSuchBeanDefinitionException`。
 - 需要某种功能时优先复用既有实现；新增前先搜索 `src/main/java/` 中是否已有同类工具类、Service 方法或 Mapper 查询。
 
 ## 技术栈规范
