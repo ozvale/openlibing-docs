@@ -40,5 +40,5 @@
 
 | 仓 | 文件 |
 |----|------|
-| openlibing-ops（后端） | `ChartCommonEnum`、`OpsNpuChartSeries`、`NpuUsageMapper`(+xml)、`NpuUsageService`、新增 `OpsNpuUsageCardTrendChartService` |
+| openlibing-ops（后端） | `ChartCommonEnum`、`OpsNpuChartSeries`、`NpuUsageMapper`(+xml)、`NpuUsageService`、`OpsNpuSlotTaskResp`（新增 `applyNpuNum` 字段）、新增 `OpsNpuUsageCardTrendChartService` |
 | openlibing-ops-web（前端） | `usage-analysis-view.vue`、`utils.ts`、`constants.ts`、新增 `usage-card-trend-chart.vue` |

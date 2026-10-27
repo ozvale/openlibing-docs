@@ -1,6 +1,6 @@
 # 卡数趋势 — 前端接口文档
 
-> 后端 commit：`b1b48add`（等待卡数口径修正）/ `672c960c`（新增接口），openlibing-ops 分支 `usage_analyse_1030`
+> 后端 commit：`713f8938`（申请卡数）/ `b1b48add`（等待卡数口径修正）/ `672c960c`（新增接口），openlibing-ops 分支 `usage_analyse_1030`
 > 关联 Issue：[#300](https://gitcode.com/openlibing/openlibing-ops/issues/300)（父需求 [#208](https://gitcode.com/openlibing/openlibing-ops/issues/208) 第三点「使用率页面」）
 
 ## 1. 接口
@@ -87,3 +87,39 @@
 - 等待卡数是**队列需求**，语义上可以大于总卡数（实测 3140~6426 vs 总卡数 1316），这不是数据错误；界面上建议加一句说明
 - 等待卡数取**平台任务事实表**口径（按 `platform + job_id` 取 job 级常量，事实表不做时间过滤），因此**同一切片的取值不随查询窗口变化**：实测 72h 与 20min 窗口下 00:00~00:20 五个切片逐个相同（3140 / 3306 / 3335 / 3369 / 3430）。原先「窗口越短、等待卡数偏低」的偏差已消除
 - 接口耗时参考：本地实测 457~1008ms，与同页其它曲线同量级。若你在 Doris 控制台里量到「4 秒」，那是控制台固定开销（`SELECT 1` 同样是 4 秒），与接口无关
+
+## 6. 关联改动：任务明细下钻新增「申请卡数」
+
+同一需求（#300）的「点击下钻时，job 任务增加使用卡数的数据展示」对应**切片任务明细接口新增响应字段 `applyNpuNum`**，后端 commit `713f8938`，**前端需要适配**。
+
+| 项 | 值 |
+|------|------|
+| 路径 | `POST /common/detail`（网关前缀 `/gateway/openlibing-ops`） |
+| category | `ops-npu-slot-queue-detail`（排队 tab）/ `ops-npu-slot-running-detail`（运行 tab） |
+| 用途 | 点击卡数趋势 / 趋势分析 / 热力图后打开的任务明细抽屉 |
+
+### 请求
+
+在原有 `category` / `startTime` / `endTime` 基础上，按点击来源传（均为可选）：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `slotTime` | string | 5 分钟切片 `yyyy-MM-dd HH:mm`，趋势点 / 热力图格子点击时传 |
+| `serverIp` | string | 机器 IP，热力图机器行点击时传 |
+| `projectId` | number | 项目 ID，为空统计全部 |
+| `resourcePoolIds` | number[] | 资源池多选，为空统计全部 |
+| `platform` / `pipelineId` | string | 每日分层抽屉下钻时传，为空统计全部 |
+
+### 响应
+
+`data.records[]` 为**按资源池分组**的 `OpsNpuSlotTaskGroupResp`（含 `resourcePoolId` / `resourcePoolName` / `records[]`），分组内每个任务记录**新增字段**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `applyNpuNum` | number \| null | **任务实际申请卡数**。任务事实表 NPU 总量 ÷ 运行时长四舍五入、下限 1；codearts 历史整点记账数据（NPU 总量为 3600 整数倍）直接 ÷ 3600；取不到时为空 |
+
+### 前端适配要点
+
+1. 任务明细表新增「申请卡数」列，直接取 `applyNpuNum`。
+2. `applyNpuNum` 可能为 `null`（该任务在平台事实表无数据），展示用 `--` 占位，不要按 0 处理。
+3. 与卡数趋势的「等待卡数」**同源同口径**（都是 job 级申请卡数换算），同一切片 / 同一任务两处取值应一致。
