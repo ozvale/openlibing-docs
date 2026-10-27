@@ -2,7 +2,7 @@
 
 本文档保存 `openlibing-simulation` 代码仓可长期复用的 AI 开发规则，来源为仓库内 `AGENTS.md` 与历史需求 `archive.md`。
 
-**基线**：本文件与代码基线 `master@4f22896` 对齐。规则与代码不一致时，以代码和仓库内 `AGENTS.md` 为准，并回头修正本文件。
+**基线**：本文件与代码基线 `master@a1a68ac` 对齐。规则与代码不一致时，以代码和仓库内 `AGENTS.md` 为准，并回头修正本文件。
 
 ## 仓库定位
 
@@ -33,17 +33,17 @@
 | 组件              | 版本                            | 说明                                       |
 | ----------------- | ------------------------------- | ------------------------------------------ |
 | Java              | 21                              | 必选                                       |
-| Spring Boot       | 3.4.5                           | Web（SERVLET）                             |
-| MyBatis           | 3.5.19（starter 3.0.4）         | ORM 框架                                   |
+| Spring Boot       | 4.1.1                           | Web（SERVLET）                             |
+| MyBatis           | 3.5.19（starter 4.1.0）         | ORM 框架                                   |
 | MyBatis-Plus      | 由 `openlibing-common` 传递     | 分页、BlockAttack、字段自动填充            |
 | Liquibase         | -                               | 数据库迁移                                 |
 | JSch              | `com.github.mwiede:jsch` 2.28.5 | SSH / SCP；enforcer 禁止低于 2.28.5        |
 | PageHelper        | 6.1.0                           | 分页                                       |
 | fastjson2         | 2.0.56                          | 统一 JSON 库，已在 pom 中排除 fastjson 1.x |
 | EasyExcel         | 4.0.3                           | Excel 导入导出                             |
-| springdoc-openapi | 2.8.10                          | `/swagger-ui.html`                         |
+| springdoc-openapi | 3.1.1                           | `/swagger-ui.html`                         |
 | 华为云 OBS SDK    | esdk-obs-java-bundle 3.24.12    | 对象存储                                   |
-| openlibing-common | 1.0.21.0                        | 内部基础 SDK                               |
+| openlibing-common | 1.0.21.2                        | 内部基础 SDK                               |
 | JaCoCo            | 0.8.11                          | 行覆盖率门限 20%                           |
 
 ### 响应封装
