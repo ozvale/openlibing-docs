@@ -1,7 +1,7 @@
 # 卡数趋势 — 前端接口文档
 
 > 后端 commit：`b1b48add`（等待卡数口径修正）/ `672c960c`（新增接口），openlibing-ops 分支 `usage_analyse_1030`
-> 关联 Issue：[#208](https://gitcode.com/openlibing/openlibing-ops/issues/208)
+> 关联 Issue：[#300](https://gitcode.com/openlibing/openlibing-ops/issues/300)（父需求 [#208](https://gitcode.com/openlibing/openlibing-ops/issues/208) 第三点「使用率页面」）
 
 ## 1. 接口
 

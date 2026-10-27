@@ -2,7 +2,7 @@
 
 ## 需求背景
 
-业务 Issue：https://gitcode.com/openlibing/openlibing-ops/issues/208（第三点「使用率页面」）
+业务 Issue：https://gitcode.com/openlibing/openlibing-ops/issues/300（父需求 [#208](https://gitcode.com/openlibing/openlibing-ops/issues/208) 第三点「使用率页面」）
 
 > 使用率页面：1、增加曲线图：总卡数和使用卡数、等待卡数的曲线图，下钻和使用卡时趋势图保持一致。
 
