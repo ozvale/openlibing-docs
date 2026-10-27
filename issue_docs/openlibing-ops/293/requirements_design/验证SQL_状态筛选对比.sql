@@ -9,6 +9,8 @@
 -- 2. 在 openlibing 库下执行；表名与 Mapper 中保持一致。
 -- 3. 示例项目：300036；示例时间：2026-10-01 ~ 2026-10-23。
 -- 4. PERCENTILE / COUNT(DISTINCT CASE ...) 的计算方式与 OpsMainStatMapper 保持一致。
+-- 5. GitHub run 的 PR 关联统一经桥表 sdi_rd_efc_pipeline_run_pr_relation_codearts
+--    判定（git_type='github' 且 pr_id 非空），不再使用 dim_ecod_github_show_pr_config。
 -- ============================================================
 
 
@@ -48,12 +50,10 @@ pr_run_sample AS (
           u.platform != 'github'
           OR EXISTS (
               SELECT 1
-              FROM dim_ecod_github_show_pr_config gc
-              INNER JOIN dwi_rd_efc_pr_workflow_run pw
-                  ON pw.repo_url = gc.repo_url
-                 AND pw.workflow_name = gc.workflow_name
-              WHERE pw.workflow_run_id = u.pipeline_run_id
-                AND gc.project_id = sd.project_id
+              FROM sdi_rd_efc_pipeline_run_pr_relation_codearts gr
+              WHERE gr.pipeline_run_id = u.pipeline_run_id
+                AND gr.git_type = 'github'
+                AND gr.pr_id IS NOT NULL
           )
       )
 )
@@ -102,12 +102,10 @@ pr_run_sample AS (
           u.platform != 'github'
           OR EXISTS (
               SELECT 1
-              FROM dim_ecod_github_show_pr_config gc
-              INNER JOIN dwi_rd_efc_pr_workflow_run pw
-                  ON pw.repo_url = gc.repo_url
-                 AND pw.workflow_name = gc.workflow_name
-              WHERE pw.workflow_run_id = u.pipeline_run_id
-                AND gc.project_id = sd.project_id
+              FROM sdi_rd_efc_pipeline_run_pr_relation_codearts gr
+              WHERE gr.pipeline_run_id = u.pipeline_run_id
+                AND gr.git_type = 'github'
+                AND gr.pr_id IS NOT NULL
           )
       )
 ),
@@ -194,12 +192,10 @@ pr_run AS (
           u.platform != 'github'
           OR EXISTS (
               SELECT 1
-              FROM dim_ecod_github_show_pr_config gc
-              INNER JOIN dwi_rd_efc_pr_workflow_run pw
-                  ON pw.repo_url = gc.repo_url
-                 AND pw.workflow_name = gc.workflow_name
-              WHERE pw.workflow_run_id = u.pipeline_run_id
-                AND gc.project_id = si.project_id
+              FROM sdi_rd_efc_pipeline_run_pr_relation_codearts gr
+              WHERE gr.pipeline_run_id = u.pipeline_run_id
+                AND gr.git_type = 'github'
+                AND gr.pr_id IS NOT NULL
           )
       )
 ),
@@ -308,12 +304,10 @@ repo_sample AS (
           u.platform != 'github'
           OR EXISTS (
               SELECT 1
-              FROM dim_ecod_github_show_pr_config gc
-              INNER JOIN dwi_rd_efc_pr_workflow_run pw
-                  ON pw.repo_url = gc.repo_url
-                 AND pw.workflow_name = gc.workflow_name
-              WHERE pw.workflow_run_id = u.pipeline_run_id
-                AND gc.project_id = sd.project_id
+              FROM sdi_rd_efc_pipeline_run_pr_relation_codearts gr
+              WHERE gr.pipeline_run_id = u.pipeline_run_id
+                AND gr.git_type = 'github'
+                AND gr.pr_id IS NOT NULL
           )
       )
 ),

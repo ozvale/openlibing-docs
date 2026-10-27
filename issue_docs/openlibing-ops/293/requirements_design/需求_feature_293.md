@@ -18,8 +18,8 @@
 
 1. 【暂缓】主表与下层下钻明细同时修改，必须使用同一套成功口径。
 2. 【暂缓】NPU **消耗总量**也改为成功口径，不只是平均消耗。
-3. 成功运行定义：GitCode 使用 `pipeline_status='COMPLETED'`，GitHub 使用 `conclusion='success'`。
-4. 【本期实施】例外备案：最近 10 次成功运行中，任意一次单次运行满足 `new=1 且 old=0` 即达标；仓库级 `has_old` / `has_new` 取最近一次成功运行，仅用于明细展示。
+3. 成功运行定义：GitCode 使用 `pipeline_status='COMPLETED'`，GitHub 使用 `status='COMPLETED'`。
+4. 【本期实施】例外备案：每仓最新合入 10 个 PR 的成功流水线中，任意一次单次运行满足 `new=1 且 old=0` 即达标；仓库级 `has_old` / `has_new` 取最近一次成功运行，仅用于明细展示。
 
 ## 3. 范围
 
@@ -39,8 +39,8 @@
 - Excel 导出表头对成功口径列标注“成功运行”
 - 例外备案和 committer 审核一体化：
   - 过滤失败流水线
-  - 查看截至统计日的最近 10 次成功 PR 流水线运行
-  - **单次运行**满足 `has_new_codecheck = 1` 且 `has_old_codecheck = 0` 即视为该次运行达标；最近 10 次中任意一次达标，则仓库达标
+  - 查看样本范围内的成功 PR 流水线运行（最新合入 10 个 PR 的成功流水线）
+  - **单次运行**满足 `has_new_codecheck = 1` 且 `has_old_codecheck = 0` 即视为该次运行达标；样本中任意一次达标，则仓库达标
 - 指标字典文案同步。
 
 ### 3.2 范围外
@@ -60,10 +60,9 @@
 1. `dwi_rd_efc_pr_info_sum` 关联桥表 `sdi_rd_efc_pipeline_run_pr_relation_codearts`，且 `pr_id IS NOT NULL`；
 2. 关联 `dwr_rd_efc_pipeline_run_unified`，按 `pipeline_run_id` 去重；
 3. 流水线归属项目通过 `sdi_repo_info` 解析，仅统计 `sdi_rd_efc_repo_operate_conf.is_operate = 1` 的运营仓；
-4. GitHub run 仅保留 `dim_ecod_github_show_pr_config` 配置范围内的 workflow；
-5. 时间按 run 统一表 `start_time` 过滤；
-6. **新增：`status = 'COMPLETED'`**；
-7. 时长/排队样本要求 `end_time IS NOT NULL`。
+4. 时间按 run 统一表 `start_time` 过滤；
+5. **新增：`status = 'COMPLETED'`**；
+6. 时长/排队样本要求 `end_time IS NOT NULL`。
 
 ### 4.2 指标口径对照
 
@@ -79,24 +78,26 @@
 | `nightlyNpuUsage/Avg/Rate` | 全部状态             | 成功运行                               | 同上                                                 |
 | `overallNpuUsage/Avg/Rate` | 全部状态             | 成功运行                               | PR + Nightly 成功口径之和                            |
 | CPU 系列                   | 全部状态             | 不变                                   | 避免扩大改动范围                                     |
-| `exceptionReviewRate`      | ETL 最新一条运行 job | 最近 10 次成功运行中任一次仅含新版检查 | 详见 5.4                                             |
+| `exceptionReviewRate`      | ETL 最新一条运行 job | 样本中任一次仅含新版检查             | 详见 5.4                                             |
 
 ### 4.3 例外备案判定样本
 
-- 统计日：`stat_date = D-1`，取数截止到 `D-1 23:59:59`（即 `start_time/created_at < D 00:00:00`）。
+- 统计日：`stat_date` 使用 `CURRENT_DATE()`，不额外限定 D-1。
 - 成功运行按平台定义：
   - GitCode：`dwr_rd_efc_pipeline_run_fact.pipeline_status = 'COMPLETED'`；
-  - GitHub：`sdi_rd_efc_workflow_run_raw_github.conclusion = 'success'`。
-- 每个仓库取截至截止时间的最近 10 次成功 PR 运行：
-  - GitCode：桥表 `pr_id` 非空，按仓库取最近 10 次成功 pipeline run；
-  - GitHub：`event in ('pull_request', 'pull_request_target')`，按仓库取最近 10 次成功 workflow run。
-- 对最近 10 次运行**逐次**判定：
+  - GitHub：`dwi_rd_efc_workflow_run_raw_github.status = 'COMPLETED'`。
+- 采样单位：按“已合入 PR”取样（不额外限定统计日截止时间）
+  - PR 范围：先从有成功运行的运行集合（`pr_run`）中筛 `dwi_rd_efc_pr_info_sum.state = 'merged'`，按 `merged_at` 倒序取每仓最新 10 个 PR（保证每个样本 PR 都贡献运行）；
+  - 运行范围：这 10 个 PR 经桥表关联的成功流水线
+    - GitCode：`pr_id` 非空 + `pipeline_name LIKE 'pr-pipeline%'` + `pipeline_info` 未删除 + `pipeline_status='COMPLETED'`；
+    - GitHub：`pr_id` 非空（`pipeline_run_id=workflow_run_id`、`pipeline_name=workflow_name`、`git_type='github'`）+ `event in ('pull_request','pull_request_target')` + `status='COMPLETED'`。
+- 对样本内运行**逐次**判定：
   - GitCode：job 名命中 `pre-commit` / `lintrunner` → `run_has_new_codecheck=1`；job 名含 `codecheck` 且不含 `pre-commit` / `lintrunner` → `run_has_old_codecheck=1`；
-  - GitHub：workflow 名为 `Pre-Commit Check`，或 job 名命中 `pre-commit` / `lintrunner` → `run_has_new_codecheck=1`；GitHub 无旧版 codecheck，`run_has_old_codecheck=0`；
+  - GitHub：job 名命中 `pre-commit` / `lintrunner` → `run_has_new_codecheck=1`；GitHub 无旧版 codecheck，`run_has_old_codecheck=0`；
   - 单次运行达标条件：`run_has_new_codecheck=1` 且 `run_has_old_codecheck=0`。
-- 仓库级达标：最近 10 次中**任意一次运行**满足上述条件，即 `uses_proper_codecheck = 1`。
+- 仓库级达标：样本中**任意一次运行**满足上述条件，即 `uses_proper_codecheck = 1`。
 - 仓库级 `has_old_codecheck`、`has_new_codecheck` 及 job 明细：取最近一次成功运行的判定结果，用于明细展示。
-- 成功运行不足 10 次时，按实际条数计算；一条成功运行都没有时：
+- 已合入 PR 不足 10 个或 PR 无成功运行时，按实际条数计算；一条样本都没有时：
   - `has_old_codecheck` / `has_new_codecheck` / job 明细置 `NULL`；
   - `uses_proper_codecheck` 写 `0`，仍计入项目级分母（与现网 `pipeline_agg` 的 `COUNT(*)` 口径一致）。
 
@@ -104,10 +105,10 @@
 
 - 新版检查：
   - GitCode：`job_name` 命中 `pre-commit` 或 `lintrunner`；
-  - GitHub：`workflow_name = 'Pre-Commit Check'`，或 `job_name` 命中 `pre-commit` / `lintrunner`。
+  - GitHub：`job_name` 命中 `pre-commit` / `lintrunner`。
 - 旧版检查：仅 GitCode 适用，`job_name` 含 `codecheck`，且不含 `pre-commit` / `lintrunner`；GitHub `has_old_codecheck` 恒 0。
-- job 判定不额外过滤 `job_status` / `conclusion`，只要求所属流水线/ workflow 运行成功；该次运行中存在对应任务即计入。
-- 注意：`run_has_old_codecheck` 是“单次运行内”的字段，不再表示“最近 10 次中是否出现过旧版检查”。某次运行同时存在新旧检查时，该次运行不达标，但不影响其他仅含新版检查的运行达标。
+- job 判定不额外过滤 `job_status`，只要求所属流水线/ workflow 运行成功；该次运行中存在对应任务即计入。
+- 注意：`run_has_old_codecheck` 是“单次运行内”的字段，不再表示“样本中是否出现过旧版检查”。某次运行同时存在新旧检查时，该次运行不达标，但不影响其他仅含新版检查的运行达标。
 
 ## 5. 详细设计
 
@@ -296,93 +297,71 @@ COUNT(DISTINCT CASE WHEN t.status = 'COMPLETED' AND t.npu_second > 0
 **现状 SQL 问题（附件）**
 
 1. GitCode `latest_pr_run` 只取每个仓库最新一次运行，未过滤 `dwr_rd_efc_pipeline_run_fact.pipeline_status`，失败运行参与判定。
-2. GitCode `has_new_codecheck` 使用 `MIN` 跨 pipeline 聚合，要求所有 pipeline 都有新版；与“最近 10 次中任一次单次运行达标”冲突。
-3. GitCode 用 `LOWER(r.pipeline_name) LIKE 'pr-pipeline%'` 识别 PR，与主表/后端的桥表 `pr_id` + relation 口径不一致。
-4. `dwi_rd_efc_pipeline_info` 使用 INNER JOIN，与注释“保留不在该表中的 pipeline”不一致；不在表中的 pipeline 会被丢弃。
-5. GitHub `github_pr_workflow_latest` 只取每个 workflow 最新一次运行，未过滤 `conclusion`，没有最近 10 次概念。
-6. `all_keys` 使用 `CURRENT_DATE()`，没有按 D-1 统计。
-7. `INSERT` 使用 `COALESCE(uses_proper_codecheck, 0)`，项目级 `COUNT(*)` 统计全部运营仓库；无成功运行仓库按不达标 0 计。原文档“NULL 不参与分母”与现网 SQL 不一致，需修正。
+2. GitCode `has_new_codecheck` 使用 `MIN` 跨 pipeline 聚合，要求所有 pipeline 都有新版；与“样本中任一次单次运行达标”冲突。
+3. GitHub `github_pr_workflow_latest` 只取每个 workflow 最新一次运行，未过滤 `status`，也没有按 PR 采样的概念。
+4. GitHub 未关联桥表 `sdi_rd_efc_pipeline_run_pr_relation_codearts`，非 PR 触发的运行也会进入样本。
+5. `INSERT` 使用 `COALESCE(uses_proper_codecheck, 0)`，项目级 `COUNT(*)` 统计全部运营仓库；无成功运行仓库按不达标 0 计。原文档“NULL 不参与分母”与现网 SQL 不一致，需修正。
 
 **目标口径**
 
 - GitCode 成功：`dwr_rd_efc_pipeline_run_fact.pipeline_status = 'COMPLETED'`。
-- GitHub 成功：`sdi_rd_efc_workflow_run_raw_github.conclusion = 'success'`。
-- 每个仓库取截至 `D-1 23:59:59` 的最近 10 次成功 PR 运行。
-- 单次运行达标：GitCode `new=1 且 old=0`；GitHub `old=0`，命中 pre-commit/lintrunner 或 workflow 名为 `Pre-Commit Check`。
-- 仓库 `uses_proper_codecheck`：最近 10 次中任一次单次达标。
+- GitHub 成功：`dwi_rd_efc_workflow_run_raw_github.status = 'COMPLETED'`。
+- 采样单位：每仓最新合入且**有成功运行**的 10 个 PR（按 `merged_at` 倒序），取其成功流水线。
+- GitCode / GitHub 统一经桥表 `sdi_rd_efc_pipeline_run_pr_relation_codearts` 确认 PR 关联（`pr_id` 非空）；
+  GitHub 桥表映射：`pipeline_run_id=workflow_run_id`、`pipeline_name=workflow_name`、`git_type='github'`。
+- 单次运行达标：GitCode `new=1 且 old=0`；GitHub `old=0`，job 名命中 pre-commit/lintrunner。
+- 仓库 `uses_proper_codecheck`：样本中任一次单次达标。
 - 仓库 `has_old/new`、job 明细取最近一次成功运行；无成功运行时 flag NULL、`uses_proper=0`，仍计入分母。
 
-**GitCode 改造要点**
+**采样与判定改造要点**
 
 ```sql
--- 1) 替换 latest_pr_run：最近 10 次成功 PR run
-gitcode_recent_run AS (
-    SELECT ..., p.pipeline_run_id,
-           ROW_NUMBER() OVER (
-               PARTITION BY rp.repo_id
-               ORDER BY p.pipeline_start_time DESC, p.pipeline_run_id DESC
-           ) AS rn
-    FROM sdi_repo_info rp
-    JOIN dwi_rd_efc_pr_info_sum pr ON rp.repo_url = pr.repo_url
-    JOIN sdi_rd_efc_pipeline_run_pr_relation_codearts r
-        ON pr.repo_url = r.git_url AND pr.number = r.pr_id
-    JOIN dwr_rd_efc_pipeline_run_fact p
-        ON p.pipeline_id = r.pipeline_id AND p.pipeline_run_id = r.pipeline_run_id
-    LEFT JOIN dwi_rd_efc_pipeline_info pi ON pi.pipeline_id = p.pipeline_id
-    CROSS JOIN params ps
-    WHERE rp.platform = 'gitcode'
-      AND r.pr_id IS NOT NULL
-      AND p.pipeline_status = 'COMPLETED'
-      AND p.pipeline_start_time < DATE_ADD(ps.stat_date, INTERVAL 1 DAY)
-      AND COALESCE(pi.is_deleted, 0) != 1
+-- 1) 已合入 PR（两平台统一）
+merged_pr AS (
+    SELECT rb.project_id, rb.repo_id, rb.repo_name, rb.repo_url,
+           CAST(pr.number AS VARCHAR) AS pr_id, pr.merged_at
+    FROM dwi_rd_efc_pr_info_sum pr
+    JOIN sdi_repo_info rb ON rb.repo_url = pr.repo_url
+    WHERE pr.state = 'merged'
+      AND pr.merged_at IS NOT NULL
+      AND rb.platform IN ('gitcode', 'github')
+),
+-- 2) 每仓最新合入的 10 个 PR
+merged_recent_pr AS (
+    SELECT * FROM (
+        SELECT merged_pr.*,
+               ROW_NUMBER() OVER (
+                   PARTITION BY project_id, repo_id
+                   ORDER BY merged_at DESC, pr_id DESC
+               ) AS pr_rn
+        FROM merged_pr
+    ) t
+    WHERE pr_rn <= 10
+),
+-- 3) 这 10 个 PR 的成功流水线（GitCode / GitHub 各自基表 + 桥表 pr_id）
+recent_run AS (
+    SELECT r.*, p.pr_rn
+    FROM pr_run r
+    JOIN merged_recent_pr p
+      ON p.project_id = r.project_id
+     AND p.repo_id = r.repo_id
+     AND p.pr_id = r.pr_id
 )
--- 外层 WHERE rn <= 10
-
--- 2) job 明细按 run 聚合（dwr_rd_efc_pipeline_run_job_fact）
--- 3) 仓库聚合：
+-- 4) run 级判定 job 名 → 仓库聚合：
 --    uses_proper = MAX(CASE WHEN run_has_new=1 AND run_has_old=0 THEN 1 ELSE 0 END)
 --    has_old/new、old/new jobs 取 rn=1 的最近成功运行
 ```
 
-- 删除 `LOWER(r.pipeline_name) LIKE 'pr-pipeline%'`，以桥表 `pr_id` 为准。
-- `pipeline_info` 改 LEFT JOIN，保留不在表中的 pipeline。
-- `pipeline_codecheck` 分组键改为 `project_id, repo_id, pipeline_id, pipeline_run_id, rn`。
-- 不再使用跨 pipeline 的 `MIN(has_new)`。
-
-**GitHub 改造要点**
-
-```sql
--- 1) 替换 github_pr_workflow_latest：最近 10 次成功 PR workflow run
-github_recent_run AS (
-    SELECT w.repo_url, w.run_id AS workflow_run_id, w.name AS workflow_name,
-           ROW_NUMBER() OVER (
-               PARTITION BY w.repo_url
-               ORDER BY w.created_at DESC, w.run_id DESC
-           ) AS rn
-    FROM sdi_rd_efc_workflow_run_raw_github w
-    JOIN github_repo_base rb ON rb.repo_url = w.repo_url
-    CROSS JOIN params ps
-    WHERE w.event IN ('pull_request', 'pull_request_target')
-      AND w.conclusion = 'success'
-      AND w.created_at < DATE_ADD(ps.stat_date, INTERVAL 1 DAY)
-)
--- 外层 WHERE rn <= 10
-
--- 2) 每次运行检查 workflow 名或 job 名
--- 3) 仓库聚合：
---    uses_proper = MAX(run_has_new)
---    has_old = 0
---    has_new/new jobs 取 rn=1 的最近成功运行
-```
-
-- 不再只取每个 workflow 最新 run，也不再只按最新 run 判存在性。
-- GitHub 无旧版 codecheck，`has_old_codecheck` 恒 0。
-- 无成功 PR workflow 运行时，flag NULL、`uses_proper=0`。
+- 采样单位统一为“已合入 PR”，按 `merged_at` 倒序取最新 10 个，避免 GitHub 单 PR 的多个 workflow 占满样本。
+- GitCode 运行仍需桥表 `pr_id` + `pipeline_name LIKE 'pr-pipeline%'` + `pipeline_info` 未删除 + `pipeline_status='COMPLETED'`。
+- GitHub 运行需桥表 `pr_id`（`pipeline_run_id=workflow_run_id`、`pipeline_name=workflow_name`、`git_type='github'`）+ PR 事件 + `status='COMPLETED'`。
+- GitHub 无旧版 codecheck，`has_old_codecheck` 恒 0；旧版判定仅 GitCode 生效。
+- PR 范围取自“有成功运行的 PR”，因此每个样本 PR 至少贡献一条运行；仓库无任何样本时 flag NULL、`uses_proper=0`。
 
 **合并与写入**
 
 - `codecheck_result_all` = GitCode 结果 UNION ALL GitHub 结果。
-- `all_keys` 的 `stat_date` 改为 D-1（`DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)` 或调度参数）。
+- 插入主键取自 `auto_fix_result`（其由 `repo_base LEFT JOIN` 产生，已覆盖全部运营仓库），`stat_date` 使用 `CURRENT_DATE()`；无需额外 UNION 维度键。
 - 插入保持 `COALESCE(cc.uses_proper_codecheck, 0)`，无成功运行仓库按 0 计入项目分母。
 
 通用伪 SQL（概念参考，实际 ETL 按上述平台表拆分）：
@@ -392,6 +371,7 @@ WITH pr_run AS (
     SELECT DISTINCT
         sd.project_id,
         sd.repo_id,
+        r.pr_id,
         u.pipeline_run_id,
         u.start_time
     FROM sdi_rd_efc_pipeline_run_pr_relation_codearts r
@@ -401,25 +381,58 @@ WITH pr_run AS (
     INNER JOIN sdi_repo_info sd
         ON sd.repo_url = r.git_url
     WHERE r.pr_id IS NOT NULL
+      AND LOWER(r.pipeline_name) LIKE 'pr-pipeline%'
       AND u.status = 'COMPLETED'
       AND sd.repo_id IN (
           SELECT repo_id FROM sdi_rd_efc_repo_operate_conf WHERE is_operate = 1
       )
-      AND u.start_time < DATE_ADD(#{statDate}, INTERVAL 1 DAY)
+),
+merged_pr AS (
+    -- 有成功运行且已合入的 PR（DISTINCT 收敛同一 PR 的多次运行）
+    SELECT DISTINCT r.project_id, r.repo_id, p.number AS pr_id, p.merged_at
+    FROM pr_run r
+    INNER JOIN sdi_repo_info sd
+        ON sd.project_id = r.project_id
+       AND sd.repo_id = r.repo_id
+    INNER JOIN dwi_rd_efc_pr_info_sum p
+        ON p.repo_url = sd.repo_url
+       AND p.number = r.pr_id
+    WHERE p.state = 'merged'
+      AND p.merged_at IS NOT NULL
+),
+merged_recent_pr AS (
+    -- 每仓最新合入的 10 个 PR
+    SELECT repo_id, pr_id, pr_rn
+    FROM (
+        SELECT repo_id, pr_id,
+               ROW_NUMBER() OVER (
+                   PARTITION BY project_id, repo_id
+                   ORDER BY merged_at DESC, pr_id DESC
+               ) AS pr_rn
+        FROM merged_pr
+    ) t
+    WHERE pr_rn <= 10
 ),
 recent_run AS (
-    SELECT repo_id, pipeline_run_id, rn
+    -- 这 10 个 PR 对应的成功流水线；同一 run 关联多个 PR 时先按 run 去重，
+    -- 再编仓库内序号（rn=1 为最近一次，仅用于展示）
+    SELECT repo_id, pipeline_run_id, pr_rn,
+           ROW_NUMBER() OVER (
+               PARTITION BY repo_id
+               ORDER BY start_time DESC, pipeline_run_id DESC
+           ) AS rn
     FROM (
-        SELECT
-            repo_id,
-            pipeline_run_id,
-            ROW_NUMBER() OVER (
-                PARTITION BY repo_id
-                ORDER BY start_time DESC, pipeline_run_id DESC
-            ) AS rn
-        FROM pr_run
+        SELECT r.repo_id, r.pipeline_run_id, r.start_time, p.pr_rn,
+               ROW_NUMBER() OVER (
+                   PARTITION BY r.repo_id, r.pipeline_run_id
+                   ORDER BY p.pr_rn, r.pr_id
+               ) AS dup_rn
+        FROM pr_run r
+        INNER JOIN merged_recent_pr p
+            ON p.repo_id = r.repo_id
+           AND p.pr_id = r.pr_id
     ) t
-    WHERE rn <= 10
+    WHERE dup_rn = 1
 ),
 run_flag AS (
     SELECT
@@ -478,14 +491,15 @@ LEFT JOIN repo_compliance comp ON comp.repo_id = repo.repo_id
 
 实现要求：
 
-1. 成功运行按平台判定：GitCode 取 `pipeline_status='COMPLETED'`；GitHub 取 `conclusion='success'`；失败、取消、忽略、运行中均不参与。
-2. 每个仓库取截至 `D-1 23:59:59` 的最近 10 次成功 PR 运行：GitCode 以桥表 `pr_id IS NOT NULL` 为准，GitHub 限定 `event in ('pull_request','pull_request_target')`；同一 run 关联多个 PR 时按 `pipeline_run_id` 去重。
+1. 成功运行按平台判定：GitCode 取 `pipeline_status='COMPLETED'`；GitHub 取 `status='COMPLETED'`；失败、取消、忽略、运行中均不参与。
+2. 采样单位：两平台统一从有成功运行的运行集合 `pr_run` 中提取 PR，筛 `dwi_rd_efc_pr_info_sum.state='merged'`，按 `merged_at` 倒序取每仓最新 10 个 PR；再取这 10 个 PR 关联的成功流水线：GitCode 额外保留 `pipeline_name LIKE 'pr-pipeline%'`，GitHub 额外限定 `event in ('pull_request','pull_request_target')`。
 3. **按单次运行计算** `run_has_new_codecheck`、`run_has_old_codecheck`；GitCode 单次运行同时存在新旧检查时该次不达标；GitHub 无旧版检查，`run_has_old_codecheck=0`。
-4. 仓库级 `uses_proper_codecheck`：最近 10 次中任意一次运行满足 `run_has_new_codecheck = 1 AND run_has_old_codecheck = 0`，即为 1；否则为 0。
+4. 仓库级 `uses_proper_codecheck`：样本中任意一次运行满足 `run_has_new_codecheck = 1 AND run_has_old_codecheck = 0`，即为 1；否则为 0。
 5. 仓库级 `has_old_codecheck`、`has_new_codecheck`、`old_codecheck_jobs`、`new_codecheck_jobs`：取最近一次成功运行（`rn = 1`）的结果，用于明细展示。
-6. 成功运行不足 10 次时按实际条数计算；一条成功运行都没有时，上述字段全部写 `NULL`，`uses_proper_codecheck` 写 `0`，仍计入项目级分母。
-7. 需要将 `uses_proper_codecheck` 作为独立字段写入 `dwi_repo_pipeline_quality_day`，不能再由仓库级 `has_old_codecheck` / `has_new_codecheck` 简单推导。
-8. GitCode 删除 `pipeline_name LIKE 'pr-pipeline%'` 过滤，`dwi_rd_efc_pipeline_info` 改 LEFT JOIN；GitHub 不再按 workflow 只取最新一次运行。
+6. 同一 run 关联多个 PR 时（GitCode 桥表存在该情况），先按 `run_id` 去重再计算 `rn`，避免样本重复与序号错乱。
+7. 已合入 PR 不足 10 个或 PR 无成功运行时按实际条数计算；一条样本都没有时，上述字段全部写 `NULL`，`uses_proper_codecheck` 写 `0`，仍计入项目级分母。
+8. 需要将 `uses_proper_codecheck` 作为独立字段写入 `dwi_repo_pipeline_quality_day`，不能再由仓库级 `has_old_codecheck` / `has_new_codecheck` 简单推导。
+9. GitCode 保留 `pipeline_name LIKE 'pr-pipeline%'` 过滤，`dwi_rd_efc_pipeline_info` 保持现有 `JOIN` + `is_deleted` 过滤；GitHub 不再按 workflow 只取最新一次运行。
 
 复用 `dwi_repo_pipeline_quality_day` 现有字段，无 DDL 变更。
 
@@ -509,7 +523,7 @@ exception_review_rate =
 
 #### 5.4.3 后端消费调整
 
-由于 `uses_proper_codecheck` 变为“最近 10 次中任意一次单次运行达标”，不能再由仓库级
+由于 `uses_proper_codecheck` 变为“样本中任意一次单次运行达标”，不能再由仓库级
 `has_old_codecheck` / `has_new_codecheck` 简单推导，需要调整仓库级明细 SQL：
 
 文件：`openlibing-ops/src/main/resources/mapper/OpsRepoDetailMapper.xml`
@@ -536,7 +550,7 @@ END AS codecheck_detail
 ```
 
 3. 同步更新响应字段注释：
-   - `usesProperCodecheck`：“最近 10 次成功 PR 运行中任意一次仅配置新版检查即为 1”；
+   - `usesProperCodecheck`：“最新合入 10 个 PR 的成功流水线中，任意一次仅配置新版检查即为 1”；
    - `hasOldCodecheck` / `hasNewCodecheck`：“最近一次成功 PR 运行的检查任务情况，仅用于明细展示”。
 
 这样仓库级明细与项目级率使用同一个 `uses_proper_codecheck`，避免两套推导逻辑不一致。
@@ -547,7 +561,7 @@ END AS codecheck_detail
 
 | 指标                            | 修改点                                                                                                   |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 例外备案和committer审核一体化率 | 删除“仅统计最新一次运行”，改为“最近 10 次成功 PR 运行中，任意一次同时满足新版检查存在且旧版不存在即达标” |
+| 例外备案和committer审核一体化率 | 删除“仅统计最新一次运行”，改为“样本中任意一次同时满足新版检查存在且旧版不存在即达标” |
 | NPU消耗(卡时)                   | 统计范围改为成功运行                                                                                     |
 | NPU平均消耗(卡时)               | 分子分母均改为成功运行；说明分母为有 NPU 消耗的成功运行数                                                |
 | PR资源排队时长                  | 统计范围改为成功运行                                                                                     |
@@ -605,14 +619,14 @@ WHERE ...
 - 项目级 `exception_review_rate` = 达标仓库数 / 全部运营仓库数，与 `pipeline_agg` 的 `COUNT(*)` 一致。
 - 仓库级 `usesProperCodecheck` 必须直读 ETL 的达标结果；`codecheckDetail` 必须先判断 `usesProperCodecheck`，达标时不得再展示旧版告警。
 - 重点验证场景：
-  1. 最新一次运行失败，但最近 10 次成功运行中存在一次仅新版检查，应判定达标；
-  2. 最近 10 次中一次为旧版检查、另一次为仅新版检查，应判定达标（按单次运行取并集）；
-  3. 最近 10 次中每次运行都同时存在旧版和新版检查，应判定不达标；
-  4. 最近 10 次全部只有旧版检查或均无检查任务，应判定不达标；
-  5. 成功运行不足 10 次，按实际条数判定；
+  1. 最新一次运行失败，但样本内存在一次仅新版检查，应判定达标；
+  2. 样本中一次为旧版检查、另一次为仅新版检查，应判定达标（按单次运行取并集）；
+  3. 样本中每次运行都同时存在旧版和新版检查，应判定不达标；
+  4. 样本全部只有旧版检查或均无检查任务，应判定不达标；
+  5. 已合入 PR 不足 10 个或 PR 无成功运行时，按实际条数判定；
   6. 仓库从未有成功运行，flag 为 NULL、`uses_proper=0`，仍计入项目级分母；
   7. 仓库已达标但最近一次运行仍含旧版任务时，`codecheckDetail` 应为空，不展示旧版告警；
-  8. GitHub 仓库无旧版 codecheck，最近 10 次成功 workflow 运行中任一命中 pre-commit/lintrunner 即达标。
+  8. GitHub 仓库无旧版 codecheck，10 个已合入 PR 的成功流水线中任一命中 pre-commit/lintrunner 即达标。
 
 ## 7. 影响面
 
@@ -709,9 +723,9 @@ mvn test
 ## 11. 假设与待确认
 
 1. 成功运行仅指 `COMPLETED`，`IGNORED`、`CANCELED`、`RUNNING`、`INIT` 均不算成功。
-2. 例外备案按 `stat_date = D-1` 取数，截止到 `D-1 23:59:59`。
-3. 每个仓库统一查看截至截止时间的最近 10 次成功 PR 运行，不再区分“当天窗口”和“兜底窗口”。
-4. 最近 10 次中只要有一次运行同时满足“新版检查存在且旧版检查不存在”即达标；某次运行同时存在新旧检查只影响该次运行，不影响其他仅新版运行达标。
+2. 例外备案 `stat_date` 使用 `CURRENT_DATE()`，不额外限定 D-1。
+3. 采样单位：每仓最新合入的 10 个 PR（`state='merged'`，按 `merged_at` 倒序），取其成功流水线，不再区分“当天窗口”和“兜底窗口”。
+4. 样本中只要有一次运行同时满足“新版检查存在且旧版检查不存在”即达标；某次运行同时存在新旧检查只影响该次运行，不影响其他仅新版运行达标。
 5. 仓库级 `has_old_codecheck` / `has_new_codecheck` / job 明细取最近一次成功运行，仅用于明细展示；达标判定以独立的 `uses_proper_codecheck` 为准。
 6. 项目级例外备案分母为“有成功运行、flag 非空的仓库数”；如现网定义不同，需产品确认后再冻结。
 7. 运行记录列表默认展示全量；接口提供 `onlySuccess` 可选筛选，前端本次不接入。

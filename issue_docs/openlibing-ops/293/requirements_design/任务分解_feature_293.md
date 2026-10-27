@@ -10,7 +10,7 @@
 | 后端仓库   | openlibing-ops                                                                                          |
 | 指标字典   | openlibing-metric                                                                                       |
 | ETL        | DolphinScheduler（仓库外）                                                                              |
-| 目标       | 【本期仅例外备案】最近 10 次成功运行中任一次单次达标；GitCode/GitHub 双平台；项目级分母保持全部运营仓库 |
+| 目标       | 【本期仅例外备案】每仓最新合入 10 个 PR 的成功流水线中任一次单次达标；GitCode/GitHub 双平台；项目级分母保持全部运营仓库 |
 
 ## 2. 任务总览
 
@@ -22,7 +22,7 @@
 | T3   | 仓库级例外备案消费对齐            | openlibing-ops / 下钻        | `OpsRepoDetailMapper.xml`、`OpsRepoDetail*Resp.java` | T5     | `uses_proper_codecheck` 直读 ETL；明细优先级 |
 | T4   | 【暂缓】环境资源下钻对齐          | openlibing-ops / 下钻        | `OpsResourceDetailMapper.xml`                        | —      | 本期不实施                                   |
 | T4b  | 【暂缓】运行记录与 Excel 标注     | openlibing-ops               | `OpsResourceRun*`、`OpsOverviewMainResp.java`        | —      | 本期不实施                                   |
-| T5   | ETL 仓库级例外备案重写            | DolphinScheduler             | `dwi_repo_pipeline_quality_day`                      | T0     | 最近 10 次成功运行中任一次单次达标           |
+| T5   | ETL 仓库级例外备案重写            | DolphinScheduler             | `dwi_repo_pipeline_quality_day`                      | T0     | 最新合入 10 个 PR 的成功流水线中任一次达标 |
 | T6   | ETL 项目级例外备案率              | DolphinScheduler             | `dm_project_quality_overview_day`                    | T5     | 项目率与仓库级达标结果一致                   |
 | T7   | 指标字典与文案                    | openlibing-metric / 指标平台 | 指标定义数据                                         | T0     | 指标含义、统计范围与新口径一致               |
 | T8   | 回归验证与发布                    | Doris / 页面                 | —                                                    | T1-T7  | 数据、接口、页面、性能全部通过               |
@@ -105,7 +105,7 @@
 
 1. `uses_proper_codecheck` 改为直读 ETL 字段，不再由 `has_old_codecheck` / `has_new_codecheck` 推导。
 2. `codecheck_detail` 优先判断 `uses_proper_codecheck = 1`，达标时返回 `NULL`。
-3. 更新 `usesProperCodecheck` 注释：最近 10 次成功运行中任一次单次达标，由 ETL 直接计算。
+3. 更新 `usesProperCodecheck` 注释：样本中任一次单次达标，由 ETL 直接计算。
 4. 本期不修改 `pr_run_sample` 的排队状态过滤。
 
 **验收**：
@@ -169,23 +169,26 @@
 
 **步骤**：
 
-1. 统计日改为 `D-1`，截止到 `D-1 23:59:59`。
-2. GitCode：
+1. `stat_date` 使用 `CURRENT_DATE()`，不额外限定 D-1。
+2. PR 范围（两平台统一）：从有成功运行的运行集合 `pr_run` 中提取 PR，筛 `state='merged'`，按 `merged_at` 倒序每仓保留最新 10 个（`merged_recent_pr`）。
+3. GitCode：
    - 用 `dwr_rd_efc_pipeline_run_fact.pipeline_status='COMPLETED'` 过滤成功运行；
-   - 以桥表 `pr_id IS NOT NULL` 识别 PR，删除 `pipeline_name LIKE 'pr-pipeline%'`；
-   - `dwi_rd_efc_pipeline_info` 改 LEFT JOIN；
-   - 按仓库取最近 10 次成功 run。
-3. GitHub：
-   - 以 `sdi_rd_efc_workflow_run_raw_github.conclusion='success'` 过滤成功运行；
+   - 以桥表 `pr_id IS NOT NULL` 识别 PR，保留 `pipeline_name LIKE 'pr-pipeline%'` 限定 PR 流水线；
+   - `dwi_rd_efc_pipeline_info` 保持现有 `JOIN` + `pi.is_deleted != 1`，不扩大表范围；
+   - 只保留 `merged_recent_pr` 中 10 个已合入 PR 的运行。
+4. GitHub：
+   - 以 `dwi_rd_efc_workflow_run_raw_github.status='COMPLETED'` 过滤成功运行；
    - 限定 `event in ('pull_request','pull_request_target')`；
-   - 按仓库取最近 10 次成功 workflow run。
-4. 按单次运行计算：
+   - INNER JOIN `sdi_rd_efc_pipeline_run_pr_relation_codearts`，`pr_id IS NOT NULL` 确认 PR 关联（`pipeline_run_id=workflow_run_id`、`pipeline_name=workflow_name`、`git_type='github'`）；
+   - 只保留 `merged_recent_pr` 中 10 个已合入 PR 的成功运行。
+5. 样本去重：同一 run 关联多个 PR 时（GitCode 桥表存在该情况），先按 `run_id` 去重再编 `rn`。
+6. 按单次运行计算：
    - GitCode：`run_has_new` 命中 `pre-commit` / `lintrunner`；`run_has_old` 含 `codecheck` 且不含前两者；
-   - GitHub：workflow 名为 `Pre-Commit Check` 或 job 名命中 `pre-commit` / `lintrunner`；`run_has_old=0`。
-5. 仓库级 `uses_proper_codecheck`：最近 10 次中任一次满足 `new=1 且 old=0`。
-6. 仓库级 `has_old_codecheck` / `has_new_codecheck`、job 明细：取最近一次成功运行。
-7. 无成功运行时，flag 写 `NULL`，`uses_proper_codecheck` 写 `0`。
-8. 复用现有字段，无 DDL 变更。
+   - GitHub：job 名命中 `pre-commit` / `lintrunner`；`run_has_old=0`。
+7. 仓库级 `uses_proper_codecheck`：样本中任一次满足 `new=1 且 old=0`。
+8. 仓库级 `has_old_codecheck` / `has_new_codecheck`、job 明细：取最近一次成功运行。
+9. 无成功运行时，flag 写 `NULL`，`uses_proper_codecheck` 写 `0`。
+10. 复用现有字段，无 DDL 变更。
 
 **参考 SQL**：`openlibing-ops/docs/issue/293/例外备案每日汇聚_优化.sql`
 
@@ -195,9 +198,9 @@
 - 一次旧版运行 + 一次仅新版运行，判定达标；
 - 每次运行都新旧并存，判定不达标；
 - 全部只有旧版或无检查任务，判定不达标；
-- 成功运行不足 10 次；
+- 已合入 PR 不足 10 个或 PR 无成功运行时按实际条数；
 - 从未有成功运行 → `uses_proper=0`，仍计入项目分母；
-- GitHub 无旧版检查，最近 10 次成功 workflow 运行任一命中 pre-commit 即达标。
+- GitHub 无旧版检查，10 个已合入 PR 的成功流水线中任一命中 pre-commit/lintrunner 即达标。
 
 ---
 
@@ -209,7 +212,7 @@
 
 1. 按项目统计 `uses_proper_codecheck = 1` 的仓库数。
 2. 分母保持 `COUNT(*)`，即全部运营仓库；无成功运行的仓库按 0 计入。
-3. `stat_date` 改为 D-1。
+3. `stat_date` 使用 `CURRENT_DATE()`。
 4. 与改造前项目率对比，记录差异并确认。
 
 **验收**：
@@ -217,7 +220,7 @@
 - 项目率 = 达标仓库数 / 全部运营仓库数；
 - 仓库级明细与项目级率来自同一 `uses_proper_codecheck`；
 - 无成功运行仓库不会被排除在分母外；
-- 参考 SQL：`openlibing-ops/docs/issue/293/仓库配置指标汇总_优化.sql`。
+- 项目级 SQL 无需修改，复用现网 `仓库配置指标汇总.sql`（分母 `COUNT(*)`、快照 `CURRENT_DATE()`）。
 
 ---
 
@@ -228,7 +231,7 @@
 **步骤**：
 
 1. 更新“例外备案和 committer 审核一体化率”：
-   - 最近 10 次成功 PR 运行中，任一次仅新版检查即达标；
+   - 样本中任一次仅新版检查即达标；
    - GitHub 无旧版 codecheck。
 2. NPU、排队 P90 等指标文案本期暂缓，不在 `feature_293_new` 更新。
 3. 发布指标字典并确认页面提示已刷新。
@@ -309,13 +312,13 @@ T3 + T5 + T6 + T7 ── T8 ── T9（可选）
 
 ## 5. 验收清单
 
-- [ ] GitCode 最近 10 次成功 PR run 中任一次仅新版检查即达标。
-- [ ] GitHub 最近 10 次成功 PR workflow run 中任一次命中 pre-commit/lintrunner 即达标。
+- [ ] 每仓最新合入 10 个 PR 的成功流水线中，任一次仅新版检查即达标。
+- [ ] GitHub 10 个已合入 PR 的成功流水线中任一命中 pre-commit/lintrunner 即达标。
 - [ ] 失败/取消运行不参与判定。
 - [ ] 仓库级例外备案直读 ETL `uses_proper_codecheck`。
 - [ ] 达标仓库不展示旧版 codecheck 告警。
 - [ ] 项目级分母保持全部运营仓库；无成功运行按 0 计入。
-- [ ] DWI/DM 的 stat_date 均为 D-1。
+- [ ] DWI/DM 的 `stat_date` 均为 `CURRENT_DATE()`。
 - [ ] 指标字典例外备案文案已更新。
 - [ ] 基线对比、页面验证、质量门禁全部通过。
 - [ ] 发布说明已同步看板使用方。

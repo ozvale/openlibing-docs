@@ -1,22 +1,49 @@
 -- ============================================================
--- #293 例外备案和 committer 审核一体化 — 仓库流水线质量日聚合（优化版）
--- 写入表: dwi_repo_pipeline_quality_day
+-- #293 例外备案和 committer 审核一体化 — 仓库级质量日快照（DWI）
 --
--- 本次只调整指标5（例外备案），指标4（代码风格自动修复）保持原逻辑。
+-- 用途：每日为每个仓库写入一行快照，供下游使用
+--   1) 项目级聚合：仓库配置指标汇总.sql → dm_project_quality_overview_day
+--   2) 仓库明细下钻：后端直读 uses_proper_codecheck
+-- 目标表：dwi_repo_pipeline_quality_day
+-- 主键：project_id + repo_id + stat_date（UNIQUE KEY，同一天重复执行按主键覆盖）
+-- 数据范围：sdi_repo_info 中 platform ∈ (gitcode, github) 的全部仓库；
+--           无流水线/无扫描数据的仓库也写一行，保证项目级分母完整
 --
--- 核心变化：
--- 1. 统计日改为 D-1，截止到 D-1 23:59:59。
--- 2. GitCode 取最近 10 次成功 PR run（pipeline_status='COMPLETED'）。
--- 3. GitHub 取最近 10 次成功 PR workflow run（conclusion='success'）。
--- 4. 按单次运行判定 new=1 & old=0，最近 10 次中任意一次满足即仓库达标。
--- 5. 无成功运行时 has_old/new 置 NULL，uses_proper_codecheck=0（仍计入项目分母）。
--- 6. GitCode 不再用 pipeline_name LIKE 'pr-pipeline%' 识别 PR，改用桥表 pr_id。
+-- 指标范围：
+--   · 指标4 代码风格自动修复（保持现网逻辑）
+--       - GitCode：is_auto_format=1，或存在 action_type='0' 且 is_enable='true' 的触发配置
+--       - GitHub：取最新扫描日的 dwi_repo_quality_scan_day.has_pre_commit_ci_autofix
+--   · 指标5 例外备案和 committer 审核一体化（本期重写，口径见下）
+--
+-- 指标5 口径（GitCode / GitHub 统一按“已合入 PR”采样）：
+--   1) 样本 PR：从“有成功运行的 PR”中筛已合入 PR
+--      （dwi_rd_efc_pr_info_sum.state='merged' 且 merged_at 非空），
+--      按 merged_at 倒序取每仓最新 10 个；不足 10 个按实际数量。
+--   2) 样本运行（仅成功运行）：
+--      - GitCode：pipeline_status='COMPLETED'，桥表 pr_id 非空，
+--        LOWER(pipeline_name) LIKE 'pr-pipeline%'，pipeline 在信息表且未删除；
+--      - GitHub：status='COMPLETED'，event ∈ (pull_request, pull_request_target)，
+--        桥表映射 pipeline_run_id=workflow_run_id、pipeline_name=workflow_name、git_type='github'。
+--   3) 去重：同一 run 关联多个 PR（GitCode 桥表存在该情况）时按 run_id 只保留一行；
+--      再按仓库内运行时间倒序编 rn（rn=1 为最近一次，仅用于展示）。
+--   4) 单次运行判定（只匹配 job 名，不看 job_status）：
+--      - 新版：命中 pre-commit 或 lintrunner；
+--      - 旧版：命中 codecheck 且不含前两者（仅 GitCode 适用，GitHub 恒为 0）；
+--      - 单次达标：新版=1 且 旧版=0。
+--   5) 仓库级结果：
+--      - uses_proper_codecheck：样本运行中任意一次达标即为 1，否则为 0；
+--      - has_old_codecheck / has_new_codecheck / job 明细：取 rn=1 的最近一次运行，仅用于展示。
+--   6) 无任何样本运行时：has_* 与 job 明细写 NULL，uses_proper_codecheck 写 0，
+--      仍计入项目级分母。
+--
+-- 输出字段：
+--   has_auto_fix / auto_fix_pipeline_ids / pre_commit_ci_autofix_reason → 指标4
+--   has_old_codecheck / has_new_codecheck / uses_proper_codecheck /
+--   old_codecheck_jobs / new_codecheck_jobs → 指标5
+--   stat_date = CURRENT_DATE()（不回溯 D-1），create_time = now()
 -- ============================================================
 
-WITH params AS (
-    SELECT DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY) AS stat_date
-),
-     repo_base AS (
+WITH repo_base AS (
          -- 仓库维度的全量基表, 覆盖 gitcode(流水线/开关判定) + github(pre-commit.ci 扫描判定)
          SELECT project_id, repo_id, repo_name, is_auto_format, platform
          FROM sdi_repo_info
@@ -80,16 +107,23 @@ WITH params AS (
      ),
 
 -- ============================================================
--- 指标5: GitCode — 最近 10 次成功 PR run
+-- 指标5: 例外备案 — PR 运行样本（GitCode / GitHub 归一）
+-- 统一结构: platform + repo + pipeline + run + 状态 + 时间
 -- ============================================================
-     gitcode_run_base AS (
+     gitcode_pr_run AS (
+         -- GitCode: 桥表 pr_id 确认 PR 关联，流水线名限定 pr-pipeline%
          SELECT DISTINCT
+             'gitcode' AS platform,
+             rp.project_id,
              rp.repo_id,
              rp.repo_name,
-             rp.project_id,
-             r.pipeline_id,
-             p.pipeline_run_id,
-             p.pipeline_start_time
+             rp.repo_url,
+             CAST(r.pipeline_id AS VARCHAR) AS pipeline_id,
+             r.pipeline_name,
+             CAST(p.pipeline_run_id AS VARCHAR) AS run_id,
+             p.pipeline_status AS run_status,
+             p.pipeline_start_time AS run_time,
+             CAST(r.pr_id AS VARCHAR) AS pr_id
          FROM sdi_repo_info rp
                   JOIN dwi_rd_efc_pr_info_sum pr
                        ON rp.repo_url = pr.repo_url
@@ -99,190 +133,192 @@ WITH params AS (
                   JOIN dwr_rd_efc_pipeline_run_fact p
                        ON p.pipeline_id = r.pipeline_id
                            AND p.pipeline_run_id = r.pipeline_run_id
-                  LEFT JOIN dwi_rd_efc_pipeline_info pi
-                            ON pi.pipeline_id = p.pipeline_id
-                  CROSS JOIN params ps
+                  JOIN dwi_rd_efc_pipeline_info pi
+                       ON pi.pipeline_id = p.pipeline_id
          WHERE rp.platform = 'gitcode'
            AND r.pr_id IS NOT NULL
+           AND LOWER(r.pipeline_name) LIKE 'pr-pipeline%'
            AND p.pipeline_status = 'COMPLETED'
-           AND p.pipeline_start_time < DATE_ADD(ps.stat_date, INTERVAL 1 DAY)
-           AND COALESCE(pi.is_deleted, 0) != 1
+           AND pi.is_deleted != 1
      ),
-     gitcode_recent_run AS (
-         SELECT repo_id, repo_name, project_id, pipeline_id, pipeline_run_id, rn
-         FROM (
-                  SELECT
-                      repo_id,
-                      repo_name,
-                      project_id,
-                      pipeline_id,
-                      pipeline_run_id,
-                      ROW_NUMBER() OVER (
-                          PARTITION BY repo_id
-                          ORDER BY pipeline_start_time DESC, pipeline_run_id DESC
-                          ) AS rn
-                  FROM gitcode_run_base
-              ) t
-         WHERE rn <= 10
+     github_pr_run AS (
+         -- GitHub: 同样经桥表确认 PR 关联
+         -- 映射关系: pipeline_id=workflow_id, pipeline_run_id=workflow_run_id, pipeline_name=workflow_name
+         SELECT DISTINCT
+             'github' AS platform,
+             rb.project_id,
+             rb.repo_id,
+             rb.repo_name,
+             rb.repo_url,
+             CAST(w.workflow_id AS VARCHAR) AS pipeline_id,
+             w.workflow_name AS pipeline_name,
+             CAST(w.workflow_run_id AS VARCHAR) AS run_id,
+             w.status AS run_status,
+             w.created_at AS run_time,
+             CAST(r.pr_id AS VARCHAR) AS pr_id
+         FROM sdi_repo_info rb
+                  JOIN dwi_rd_efc_workflow_run_raw_github w
+                       ON rb.repo_url = w.repo_url
+                  JOIN sdi_rd_efc_pipeline_run_pr_relation_codearts r
+                       ON r.pipeline_run_id = CAST(w.workflow_run_id AS VARCHAR)
+                           AND r.git_url = w.repo_url
+                           AND r.git_type = 'github'
+                           AND r.pipeline_name = w.workflow_name
+         WHERE rb.platform = 'github'
+           AND r.pr_id IS NOT NULL
+           AND w.event IN ('pull_request', 'pull_request_target')
+           AND w.status = 'COMPLETED'
      ),
-     gitcode_run_job AS (
-         SELECT
-             lr.repo_id,
-             lr.repo_name,
-             lr.project_id,
-             lr.pipeline_id,
-             lr.pipeline_run_id,
-             lr.rn,
-             j.job_name,
-             CASE
-                 WHEN LOWER(j.job_name) LIKE '%codecheck%'
-                     AND LOWER(j.job_name) NOT LIKE '%pre-commit%'
-                     AND LOWER(j.job_name) NOT LIKE '%lintrunner%'
-                     THEN 1 ELSE 0
-                 END AS is_old_codecheck,
-             CASE
-                 WHEN LOWER(j.job_name) LIKE '%pre-commit%'
-                     OR LOWER(j.job_name) LIKE '%lintrunner%'
-                     THEN 1 ELSE 0
-                 END AS is_new_codecheck
-         FROM gitcode_recent_run lr
-                  LEFT JOIN dwr_rd_efc_pipeline_run_job_fact j
-                            ON j.pipeline_run_id = lr.pipeline_run_id
-     ),
-     gitcode_run_flag AS (
-         SELECT
-             repo_id,
-             repo_name,
-             project_id,
-             pipeline_id,
-             pipeline_run_id,
-             rn,
-             MAX(is_old_codecheck) AS run_has_old_codecheck,
-             MAX(is_new_codecheck) AS run_has_new_codecheck,
-             GROUP_CONCAT(CASE WHEN is_old_codecheck = 1 THEN job_name ELSE NULL END) AS old_codecheck_jobs,
-             GROUP_CONCAT(CASE WHEN is_new_codecheck = 1 THEN job_name ELSE NULL END) AS new_codecheck_jobs
-         FROM gitcode_run_job
-         GROUP BY repo_id, repo_name, project_id, pipeline_id, pipeline_run_id, rn
-     ),
-     gitcode_repo_result AS (
-         SELECT
-             project_id,
-             repo_id,
-             repo_name,
-             -- 最近一次成功运行的 flag 和 job 明细，仅用于展示
-             MAX(CASE WHEN rn = 1 THEN run_has_old_codecheck END) AS has_old_codecheck,
-             MAX(CASE WHEN rn = 1 THEN run_has_new_codecheck END) AS has_new_codecheck,
-             MAX(CASE WHEN rn = 1 THEN old_codecheck_jobs END) AS old_codecheck_jobs,
-             MAX(CASE WHEN rn = 1 THEN new_codecheck_jobs END) AS new_codecheck_jobs,
-             -- 最近 10 次中任意一次运行满足 new=1 且 old=0 即达标
-             MAX(CASE WHEN run_has_new_codecheck = 1 AND run_has_old_codecheck = 0
-                      THEN 1 ELSE 0 END) AS uses_proper_codecheck
-         FROM gitcode_run_flag
-         GROUP BY project_id, repo_id, repo_name
+     pr_run AS (
+         SELECT * FROM gitcode_pr_run
+         UNION ALL
+         SELECT * FROM github_pr_run
      ),
 
--- ============================================================
--- 指标5: GitHub — 最近 10 次成功 PR workflow run
--- ============================================================
-     github_repo_base AS (
-         SELECT project_id, repo_id, repo_name, repo_url
-         FROM sdi_repo_info
-         WHERE platform = 'github'
-     ),
-     github_recent_run_base AS (
+-- 采样：两平台统一按“最新 10 个已合入 PR”取样
+-- 1) 从有成功运行的 PR 中筛出已合入 PR（DISTINCT 收敛同一 PR 的多次运行）
+     merged_pr AS (
          SELECT DISTINCT
-             w.repo_url,
-             w.run_id AS workflow_run_id,
-             w.name AS workflow_name,
-             w.created_at
-         FROM sdi_rd_efc_workflow_run_raw_github w
-                  JOIN github_repo_base rb ON rb.repo_url = w.repo_url
-                  CROSS JOIN params ps
-         WHERE w.event IN ('pull_request', 'pull_request_target')
-           AND w.conclusion = 'success'
-           AND w.created_at < DATE_ADD(ps.stat_date, INTERVAL 1 DAY)
+             r.project_id,
+             r.repo_id,
+             r.repo_name,
+             r.repo_url,
+             r.pr_id,
+             pr.merged_at
+         FROM pr_run r
+                  JOIN sdi_repo_info rb
+                       ON rb.project_id = r.project_id
+                           AND rb.repo_id = r.repo_id
+                  JOIN dwi_rd_efc_pr_info_sum pr
+                       ON pr.repo_url = rb.repo_url
+                           AND CAST(pr.number AS VARCHAR) = r.pr_id
+         WHERE pr.state = 'merged'
+           AND pr.merged_at IS NOT NULL
      ),
-     github_recent_run AS (
-         SELECT repo_url, workflow_run_id, workflow_name, created_at, rn
+-- 2) 每个仓库取最新合入的 10 个 PR
+     merged_recent_pr AS (
+         SELECT *
          FROM (
                   SELECT
-                      repo_url,
-                      workflow_run_id,
-                      workflow_name,
-                      created_at,
+                      merged_pr.*,
                       ROW_NUMBER() OVER (
-                          PARTITION BY repo_url
-                          ORDER BY created_at DESC, workflow_run_id DESC
-                          ) AS rn
-                  FROM github_recent_run_base
+                          PARTITION BY project_id, repo_id
+                          ORDER BY merged_at DESC, pr_id DESC
+                          ) AS pr_rn
+                  FROM merged_pr
               ) t
-         WHERE rn <= 10
+         WHERE pr_rn <= 10
      ),
-     github_run_hit AS (
+-- 3) 取这 10 个 PR 对应的成功流水线，并补仓库内运行序号（rn=1 为最近一次，仅用于展示）
+     recent_run AS (
          SELECT
-             r.repo_url,
-             r.workflow_run_id,
+             platform, project_id, repo_id, repo_name, repo_url, pipeline_id, pipeline_name,
+             run_id, run_status, run_time, pr_id, pr_rn,
+             ROW_NUMBER() OVER (
+                 PARTITION BY platform, repo_id
+                 ORDER BY run_time DESC, run_id DESC
+                 ) AS rn
+         FROM (
+                  -- 同一 run 可能关联多个 PR（GitCode 桥表存在该情况），先按 run 去重
+                  SELECT
+                      r.*,
+                      p.pr_rn,
+                      ROW_NUMBER() OVER (
+                          PARTITION BY r.platform, r.repo_id, r.run_id
+                          ORDER BY p.pr_rn, r.pr_id
+                          ) AS dup_rn
+                  FROM pr_run r
+                           JOIN merged_recent_pr p
+                                ON p.project_id = r.project_id
+                                    AND p.repo_id = r.repo_id
+                                    AND p.pr_id = r.pr_id
+              ) t
+         WHERE dup_rn = 1
+     ),
+     run_job AS (
+         -- 两平台 job 明细统一为 (platform, repo_id, run_id, job_name)
+         -- 只保留参与判定的 job：GitCode 的新旧 codecheck、GitHub 的 pre-commit/lintrunner
+         SELECT
+             'gitcode' AS platform,
+             r.repo_id,
+             r.run_id,
+             j.job_name
+         FROM recent_run r
+                  JOIN dwr_rd_efc_pipeline_run_job_fact j
+                       ON j.pipeline_run_id = r.run_id
+         WHERE r.platform = 'gitcode'
+           AND (LOWER(j.job_name) LIKE '%codecheck%'
+             OR LOWER(j.job_name) LIKE '%pre-commit%'
+             OR LOWER(j.job_name) LIKE '%lintrunner%')
+         UNION ALL
+         SELECT
+             'github' AS platform,
+             r.repo_id,
+             r.run_id,
+             j.job_name
+         FROM recent_run r
+                  JOIN dwi_rd_efc_workflow_run_job_github j
+                       ON CAST(j.workflow_run_id AS VARCHAR) = r.run_id
+                           AND j.repo_url = r.repo_url
+         WHERE r.platform = 'github'
+           AND (LOWER(j.job_name) LIKE '%pre-commit%'
+             OR LOWER(j.job_name) LIKE '%lintrunner%')
+     ),
+     run_flag AS (
+         -- run 级判定：GitHub 无旧版 codecheck，old 仅 GitCode 适用
+         SELECT
+             r.platform,
+             r.project_id,
+             r.repo_id,
+             r.repo_name,
+             r.run_id,
              r.rn,
              MAX(CASE
-                     WHEN r.workflow_name = 'Pre-Commit Check'
-                         OR LOWER(j.job_name) LIKE '%pre-commit%'
+                     WHEN r.platform = 'gitcode'
+                         AND LOWER(j.job_name) LIKE '%codecheck%'
+                         AND LOWER(j.job_name) NOT LIKE '%pre-commit%'
+                         AND LOWER(j.job_name) NOT LIKE '%lintrunner%'
+                         THEN 1 ELSE 0
+                 END) AS run_has_old_codecheck,
+             MAX(CASE
+                     WHEN LOWER(j.job_name) LIKE '%pre-commit%'
                          OR LOWER(j.job_name) LIKE '%lintrunner%'
                          THEN 1 ELSE 0
                  END) AS run_has_new_codecheck,
-             GROUP_CONCAT(DISTINCT CASE
-                                      WHEN r.workflow_name = 'Pre-Commit Check'
-                                          THEN r.workflow_name
-                                      WHEN LOWER(j.job_name) LIKE '%pre-commit%'
-                                          OR LOWER(j.job_name) LIKE '%lintrunner%'
-                                          THEN j.job_name
-                                      ELSE NULL
+             GROUP_CONCAT(CASE
+                              WHEN r.platform = 'gitcode'
+                                  AND LOWER(j.job_name) LIKE '%codecheck%'
+                                  AND LOWER(j.job_name) NOT LIKE '%pre-commit%'
+                                  AND LOWER(j.job_name) NOT LIKE '%lintrunner%'
+                                  THEN j.job_name ELSE NULL
+                 END) AS old_codecheck_jobs,
+             GROUP_CONCAT(CASE
+                              WHEN LOWER(j.job_name) LIKE '%pre-commit%'
+                                  OR LOWER(j.job_name) LIKE '%lintrunner%'
+                                  THEN j.job_name ELSE NULL
                  END) AS new_codecheck_jobs
-         FROM github_recent_run r
-                  LEFT JOIN sdi_rd_efc_workflow_run_job_github j
-                            ON j.workflow_run_id = r.workflow_run_id
-                                AND j.repo_url = r.repo_url
-         GROUP BY r.repo_url, r.workflow_run_id, r.rn
+         FROM recent_run r
+                  LEFT JOIN run_job j
+                            ON j.platform = r.platform
+                                AND j.repo_id = r.repo_id
+                                AND j.run_id = r.run_id
+         GROUP BY r.platform, r.project_id, r.repo_id, r.repo_name, r.run_id, r.rn
      ),
-     github_repo_with_runs AS (
-         SELECT DISTINCT rb.project_id, rb.repo_id, rb.repo_name, rb.repo_url
-         FROM github_repo_base rb
-                  JOIN github_recent_run r ON r.repo_url = rb.repo_url
-     ),
-     github_repo_result AS (
-         SELECT
-             g.project_id,
-             g.repo_id,
-             g.repo_name,
-             0 AS has_old_codecheck,
-             MAX(CASE WHEN h.rn = 1 THEN h.run_has_new_codecheck END) AS has_new_codecheck,
-             MAX(CASE WHEN h.run_has_new_codecheck = 1 THEN 1 ELSE 0 END) AS uses_proper_codecheck,
-             NULL AS old_codecheck_jobs,
-             MAX(CASE WHEN h.rn = 1 THEN h.new_codecheck_jobs END) AS new_codecheck_jobs
-         FROM github_repo_with_runs g
-                  LEFT JOIN github_run_hit h ON h.repo_url = g.repo_url
-         GROUP BY g.project_id, g.repo_id, g.repo_name
-     ),
-
--- gitcode + github codecheck 结果合并
      codecheck_result_all AS (
-         SELECT project_id, repo_id, repo_name, has_old_codecheck, has_new_codecheck,
-                uses_proper_codecheck, old_codecheck_jobs, new_codecheck_jobs
-         FROM gitcode_repo_result
-         UNION ALL
-         SELECT project_id, repo_id, repo_name, has_old_codecheck, has_new_codecheck,
-                uses_proper_codecheck, old_codecheck_jobs, new_codecheck_jobs
-         FROM github_repo_result
-     ),
-
--- 汇总所有维度键
-     all_keys AS (
-         SELECT af.project_id, af.repo_id, af.repo_name, ps.stat_date
-         FROM auto_fix_result af
-                  CROSS JOIN params ps
-         UNION
-         SELECT cc.project_id, cc.repo_id, cc.repo_name, ps.stat_date
-         FROM codecheck_result_all cc
-                  CROSS JOIN params ps
+         SELECT
+             project_id,
+             repo_id,
+             repo_name,
+             -- 最近一次成功运行的 flag / job 明细，仅用于展示
+             MAX(CASE WHEN rn = 1 THEN run_has_old_codecheck END) AS has_old_codecheck,
+             MAX(CASE WHEN rn = 1 THEN run_has_new_codecheck END) AS has_new_codecheck,
+             -- 样本中任意一次运行满足 new=1 且 old=0 即达标
+             MAX(CASE WHEN run_has_new_codecheck = 1 AND run_has_old_codecheck = 0
+                      THEN 1 ELSE 0 END) AS uses_proper_codecheck,
+             MAX(CASE WHEN rn = 1 THEN old_codecheck_jobs END) AS old_codecheck_jobs,
+             MAX(CASE WHEN rn = 1 THEN new_codecheck_jobs END) AS new_codecheck_jobs
+         FROM run_flag
+         GROUP BY project_id, repo_id, repo_name
      )
 
 INSERT INTO dwi_repo_pipeline_quality_day (
@@ -301,10 +337,10 @@ INSERT INTO dwi_repo_pipeline_quality_day (
     create_time
 )
 SELECT
-    k.project_id,
-    k.repo_id,
-    k.stat_date,
-    k.repo_name,
+    af.project_id,
+    af.repo_id,
+    CURRENT_DATE() AS stat_date,
+    af.repo_name,
     af.has_auto_fix,
     af.auto_fix_pipeline_ids,
     af.pre_commit_ci_autofix_reason,
@@ -315,10 +351,7 @@ SELECT
     cc.old_codecheck_jobs,
     cc.new_codecheck_jobs,
     now() AS create_time
-FROM all_keys k
-         LEFT JOIN auto_fix_result af
-                   ON k.project_id = af.project_id
-                       AND k.repo_id = af.repo_id
+FROM auto_fix_result af
          LEFT JOIN codecheck_result_all cc
-                   ON k.project_id = cc.project_id
-                       AND k.repo_id = cc.repo_id;
+                   ON af.project_id = cc.project_id
+                       AND af.repo_id = cc.repo_id;
