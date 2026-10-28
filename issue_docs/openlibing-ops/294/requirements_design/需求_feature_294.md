@@ -2,22 +2,22 @@
 
 ## 1. 基础信息
 
-| 项目 | 内容 |
-|---|---|
-| 需求名称 | 【蓝区】【运营看板】PR流水线数据支持明细查看 |
-| 关联 Issue | https://gitcode.com/openlibing/openlibing-ops/issues/294 |
-| 关联页面 | https://www.openlibing.com/ops/dashboard/engineering-capability |
-| 后端仓库 | openlibing-ops |
-| 前端仓库 | openlibing-ops-web（本期不改动） |
-| 开发分支 | `feature_293_new` |
+| 项目       | 内容                                                            |
+| ---------- | --------------------------------------------------------------- |
+| 需求名称   | 【蓝区】【运营看板】PR流水线数据支持明细查看                    |
+| 关联 Issue | https://gitcode.com/openlibing/openlibing-ops/issues/294        |
+| 关联页面   | https://www.openlibing.com/ops/dashboard/engineering-capability |
+| 后端仓库   | openlibing-ops                                                  |
+| 前端仓库   | openlibing-ops-web（本期不改动）                                |
+| 开发分支   | `feature_293_new`                                               |
 
 ## 2. 需求目标
 
 工程能力看板“项目详情-PR流水线”的三个指标统一下钻到**同一种明细**：
 
-| 入口指标 | 明细类型 |
-|---|---|
-| PR执行时长(min)[P90] | **流水线执行明细**（18 列） |
+| 入口指标                     | 明细类型                    |
+| ---------------------------- | --------------------------- |
+| PR执行时长(min)[P90]         | **流水线执行明细**（18 列） |
 | PR构建资源排队时长(min)[P90] | **流水线执行明细**（18 列） |
 | PR测试资源排队时长(min)[P90] | **流水线执行明细**（18 列） |
 
@@ -47,10 +47,10 @@
 
 ### 3.1 两个现有 Mapper 的口径差异（需确认）
 
-| 位置 | pipeline_type='PR' | GitHub 配置匹配 |
-|---|---|---|
-| `OpsMainStatMapper.xml`（主表） | 不加 | `gc.project_id = sd.project_id` |
-| `OpsRepoDetailMapper.xml`（仓库明细） | 加 | `cfg.openlibing_project_id = projectId` 且 `cfg.repo_url = pr.repo_url` |
+| 位置                                  | pipeline_type='PR' | GitHub 配置匹配                                                         |
+| ------------------------------------- | ------------------ | ----------------------------------------------------------------------- |
+| `OpsMainStatMapper.xml`（主表）       | 不加               | `gc.project_id = sd.project_id`                                         |
+| `OpsRepoDetailMapper.xml`（仓库明细） | 加                 | `cfg.openlibing_project_id = projectId` 且 `cfg.repo_url = pr.repo_url` |
 
 本期 #294 明细**以主表为准**（用户确认）。仓库级 P90 与明细可能出现样本条数差异，需产品确认是否将两者收敛到同一口径。
 
@@ -60,26 +60,26 @@
 
 样本：与主表 `p90_stat` 一致时传 `pipelineStatus=true`（`status='COMPLETED'` 且 `end_time` 非空）；从 pr-access 执行次数进入时，样本与页面状态筛选一致。
 
-| # | 列 | 字段 / 计算 |
-|---|---|---|
-| 1 | 流水线执行编号 | `run_number`（主展示）+ `pipeline_run_id`（跳转参数） |
-| 2 | 流水线名称 | `pipeline_name` |
-| 3 | 流水线平台 | `platform`，取值 `gitcode` / `github` / `codearts`（与 Nightly 明细一致，展示文案由前端映射） |
-| 4 | 流水线启动时间 | `start_time` |
-| 5 | 流水线结束时间 | `end_time`（运行中为 NULL，展示 `-`） |
-| 6 | 流水线状态 | `status` |
-| 7 | 流水线执行时长(min) | `ROUND(duration_ms / 60000, 1)` |
-| 8 | 构建任务平均时长(min) | `AVG(job_duration) WHERE job_type='BUILD'` |
-| 9 | 构建任务最长时长(min) | `MAX(job_duration) WHERE job_type='BUILD'` |
-| 10 | 构建任务排队平均时长(min) | `AVG(job_pending_duration) WHERE job_type='BUILD'` |
-| 11 | 构建任务最长排队时长(min) | `MAX(job_pending_duration) WHERE job_type='BUILD'` |
-| 12 | 测试任务平均时长(min) | `AVG(job_duration) WHERE job_type='DT'` |
-| 13 | 测试任务最长时长(min) | `MAX(job_duration) WHERE job_type='DT'` |
-| 14 | 测试任务排队平均时长(min) | `AVG(job_pending_duration) WHERE job_type='DT'` |
-| 15 | 测试任务最长排队时长(min) | `MAX(job_pending_duration) WHERE job_type='DT'` |
-| 16 | NPU资源数据(卡时) | `ROUND(npu_second / 3600, 2)`（测试入口固定展示总卡时） |
-| 17 | 代码检查任务平均时长(min) | `AVG(job_duration) WHERE job_type='CHECK'` |
-| 18 | 代码检查任务最长时长(min) | `MAX(job_duration) WHERE job_type='CHECK'` |
+| #   | 列                        | 字段 / 计算                                                                                   |
+| --- | ------------------------- | --------------------------------------------------------------------------------------------- |
+| 1   | 流水线执行编号            | `run_number`（主展示）+ `pipeline_run_id`（跳转参数）                                         |
+| 2   | 流水线名称                | `pipeline_name`                                                                               |
+| 3   | 流水线平台                | `platform`，取值 `gitcode` / `github` / `codearts`（与 Nightly 明细一致，展示文案由前端映射） |
+| 4   | 流水线启动时间            | `start_time`                                                                                  |
+| 5   | 流水线结束时间            | `end_time`（运行中为 NULL，展示 `-`）                                                         |
+| 6   | 流水线状态                | `status`                                                                                      |
+| 7   | 流水线执行时长(min)       | `ROUND(duration_ms / 60000, 1)`                                                               |
+| 8   | 构建任务平均时长(min)     | `AVG(job_duration) WHERE job_type='BUILD'`                                                    |
+| 9   | 构建任务最长时长(min)     | `MAX(job_duration) WHERE job_type='BUILD'`                                                    |
+| 10  | 构建任务排队平均时长(min) | `AVG(job_pending_duration) WHERE job_type='BUILD'`                                            |
+| 11  | 构建任务最长排队时长(min) | `MAX(job_pending_duration) WHERE job_type='BUILD'`                                            |
+| 12  | 测试任务平均时长(min)     | `AVG(job_duration) WHERE job_type='DT'`                                                       |
+| 13  | 测试任务最长时长(min)     | `MAX(job_duration) WHERE job_type='DT'`                                                       |
+| 14  | 测试任务排队平均时长(min) | `AVG(job_pending_duration) WHERE job_type='DT'`                                               |
+| 15  | 测试任务最长排队时长(min) | `MAX(job_pending_duration) WHERE job_type='DT'`                                               |
+| 16  | NPU资源数据(卡时)         | `ROUND(npu_second / 3600, 2)`（测试入口固定展示总卡时）                                       |
+| 17  | 代码检查任务平均时长(min) | `AVG(job_duration) WHERE job_type='CHECK'`                                                    |
+| 18  | 代码检查任务最长时长(min) | `MAX(job_duration) WHERE job_type='CHECK'`                                                    |
 
 交互与排序：
 
@@ -100,22 +100,22 @@
 
 样本：所属运行 `end_time` 非空（不限运行状态）。
 
-| # | 列 | 字段 / 计算 |
-|---|---|---|
-| 1 | 任务执行编号 | `job_id`（支持跳转，URL 追加 `/job/{jobId}` 或 `jobRunId`） |
-| 2 | 任务名称 | `job_name` |
-| 3 | 流水线名称 | `unified.pipeline_name` |
-| 4 | 流水线平台 | `unified.platform`，取值 `gitcode` / `github` / `codearts` |
-| 5 | 任务类型 | `job_type`（BUILD=构建，DT=测试，CHECK=代码检查，OTHER=其他） |
-| 6 | 任务状态 | `job_status` |
-| 7 | 调度时间 | `job_run_start_time`（任务被调度、开始执行的时刻；排队时长 = 调度时间 − 入队时间） |
-| 8 | 任务入队时间 | `job_start_time`（排队起点） |
-| 9 | 任务结束时间 | `job_end_time`（未结束展示 `-`） |
-| 10 | 任务时长(min) | `ROUND(job_duration / 60, 1)`（job 表时长为秒） |
-| 11 | 排队时长(min) | `ROUND(job_pending_duration / 60, 1)`（job 表时长为秒） |
-| 12 | NPU(卡时) | `ROUND(npu_second / 3600, 2)`（任务级 npu_second，单位秒） |
-| 13 | 流水线执行编号 | `unified.run_number`（便于定位） |
-| 14 | 流水线ID | `unified.pipeline_id`（跳转必需参数，可不展示） |
+| #   | 列             | 字段 / 计算                                                                        |
+| --- | -------------- | ---------------------------------------------------------------------------------- |
+| 1   | 任务执行编号   | `job_id`（支持跳转，URL 追加 `/job/{jobId}` 或 `jobRunId`）                        |
+| 2   | 任务名称       | `job_name`                                                                         |
+| 3   | 流水线名称     | `unified.pipeline_name`                                                            |
+| 4   | 流水线平台     | `unified.platform`，取值 `gitcode` / `github` / `codearts`                         |
+| 5   | 任务类型       | `job_type`（BUILD=构建，DT=测试，CHECK=代码检查，OTHER=其他）                      |
+| 6   | 任务状态       | `job_status`                                                                       |
+| 7   | 调度时间       | `job_run_start_time`（任务被调度、开始执行的时刻；排队时长 = 调度时间 − 入队时间） |
+| 8   | 任务入队时间   | `job_start_time`（排队起点）                                                       |
+| 9   | 任务结束时间   | `job_end_time`（未结束展示 `-`）                                                   |
+| 10  | 任务时长(min)  | `ROUND(job_duration / 60, 1)`（job 表时长为秒）                                    |
+| 11  | 排队时长(min)  | `ROUND(job_pending_duration / 60, 1)`（job 表时长为秒）                            |
+| 12  | NPU(卡时)      | `ROUND(npu_second / 3600, 2)`（任务级 npu_second，单位秒）                         |
+| 13  | 流水线执行编号 | `unified.run_number`（便于定位）                                                   |
+| 14  | 流水线ID       | `unified.pipeline_id`（跳转必需参数，可不展示）                                    |
 
 pr-access 任务下钻仅展示 6 列：**任务名称(2)、任务时长(10)、任务状态(6)、排队时长(11)、调度时间(7)、NPU(12)**，其余列由接口返回、前端按需渲染。
 
@@ -139,16 +139,16 @@ category = ops-pr-pipeline-run-detail
 
 请求：
 
-| 参数 | 必填 | 说明 |
-|---|---|---|
-| projectId | 是 | openlibing 项目 ID |
-| repoId | 否 | 单仓过滤 |
-| startDate / endDate | 是 | 按运行 start_time 过滤 |
-| pipelineStatus | 否 | 空=COMPLETED+FAILED，`true`=COMPLETED，`false`=FAILED |
-| visibility | 否 | 开源类型，与页面筛选透传一致 |
-| repoIdList | 否 | 多仓筛选，与页面筛选透传一致 |
-| page / pageSize | 是 | 分页 |
-| sortField / sortRule | 否 | 默认 start_time desc |
+| 参数                 | 必填 | 说明                                                  |
+| -------------------- | ---- | ----------------------------------------------------- |
+| projectId            | 是   | openlibing 项目 ID                                    |
+| repoId               | 否   | 单仓过滤                                              |
+| startDate / endDate  | 是   | 按运行 start_time 过滤                                |
+| pipelineStatus       | 否   | 空=COMPLETED+FAILED，`true`=COMPLETED，`false`=FAILED |
+| visibility           | 否   | 开源类型，与页面筛选透传一致                          |
+| repoIdList           | 否   | 多仓筛选，与页面筛选透传一致                          |
+| page / pageSize      | 是   | 分页                                                  |
+| sortField / sortRule | 否   | 默认 start_time desc                                  |
 
 统一过滤 `end_time IS NOT NULL`；`CANCELED/IGNORED/RUNNING/INIT` 不返回。该参数需与 pr-access 页面筛选一致，保证“执行次数 = 明细 total”。
 
@@ -162,17 +162,17 @@ category = ops-pr-pipeline-job-detail
 
 请求：
 
-| 参数 | 必填 | 说明 |
-|---|---|---|
-| projectId | 是 | openlibing 项目 ID |
-| pipelineRunId | 是 | 流水线运行ID：任务明细仅用于流水线执行明细行下钻 |
-| jobType | 否 | `BUILD` / `DT`；为空表示该次运行的全部任务类型 |
-| repoId | 否 | 单仓过滤 |
-| visibility | 否 | 开源类型，与页面筛选透传一致 |
-| repoIdList | 否 | 多仓筛选，与页面筛选透传一致 |
-| startDate / endDate | 是 | 按所属运行 start_time 过滤 |
-| page / pageSize | 是 | 分页 |
-| sortField / sortRule | 否 | 默认 `job_run_start_time asc`（空调度时间排最后） |
+| 参数                 | 必填 | 说明                                              |
+| -------------------- | ---- | ------------------------------------------------- |
+| projectId            | 是   | openlibing 项目 ID                                |
+| pipelineRunId        | 是   | 流水线运行ID：任务明细仅用于流水线执行明细行下钻  |
+| jobType              | 否   | `BUILD` / `DT`；为空表示该次运行的全部任务类型    |
+| repoId               | 否   | 单仓过滤                                          |
+| visibility           | 否   | 开源类型，与页面筛选透传一致                      |
+| repoIdList           | 否   | 多仓筛选，与页面筛选透传一致                      |
+| startDate / endDate  | 是   | 按所属运行 start_time 过滤                        |
+| page / pageSize      | 是   | 分页                                              |
+| sortField / sortRule | 否   | 默认 `job_run_start_time asc`（空调度时间排最后） |
 
 `pipelineRunId` 为空时直接返回参数校验错误（避免退化为全量任务查询）。
 
@@ -334,9 +334,9 @@ LIMIT #{req.pageSize} OFFSET #{offset}
 
 ### 8.2.1 聚合层级（已确认）
 
-| 场景 | 聚合方式 | 说明 |
-|---|---|---|
-| 流水线执行明细的“构建任务平均/最长时长” | 该 run 内所有 BUILD 任务的 `AVG/MAX(job_duration)` | 单次运行内部的任务均值 |
+| 场景                                                                             | 聚合方式                                                                                 | 说明                      |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------- |
+| 流水线执行明细的“构建任务平均/最长时长”                                          | 该 run 内所有 BUILD 任务的 `AVG/MAX(job_duration)`                                       | 单次运行内部的任务均值    |
 | PR门禁看板 / 趋势图 / 工程能力主表与仓库明细的“编译/测试/代码检查时长、排队时长” | **run 级**：先按 run 取该类型任务的 `MAX(时长/排队)`，**再跨 run** 计算 `AVG/PERCENTILE` | 2026-10 三处统一为 run 级 |
 
 说明：run 级反映“一次门禁中最长任务/排队”，是考核口径；job 行级会被大量零排队任务稀释（ops-nn 抽样：编译 P90 job 行级 418.0s vs run 级 816.5s，平均 136.8s vs 449.5s）。明细行内的“平均”仍是 run 内多任务均值，与看板跨 run 平均语义不同，不矛盾。
@@ -360,10 +360,10 @@ LIMIT #{req.pageSize} OFFSET #{offset}
 
 ### 10.2 目标口径
 
-| 指标组 | 时间口径 |
-|---|---|
+| 指标组                                              | 时间口径                                                    |
+| --------------------------------------------------- | ----------------------------------------------------------- |
 | PR 个数（总数、开启中、已关闭、已合入、强制合入数） | PR 创建时间（DM `data_time`），**状态筛选逻辑保持现网不变** |
-| 其余全部指标 | 流水线开始时间 `u.start_time` |
+| 其余全部指标                                        | 流水线开始时间 `u.start_time`                               |
 
 ### 10.3 改造方案
 
@@ -386,12 +386,12 @@ LIMIT #{req.pageSize} OFFSET #{offset}
 
 **改造**：新增 `OpsRepoPrChartMapper`，按（仓库, 天）聚合，与表格使用同一数据源：
 
-| 图表指标 | 数据源 | 时间口径 |
-|---|---|---|
+| 图表指标                           | 数据源                                                                       | 时间口径                |
+| ---------------------------------- | ---------------------------------------------------------------------------- | ----------------------- |
 | PR总数、PR闭环、流水线启动、PR合入 | PR 维度 DM（`dm_rd_efc_pr_sum_pipeline_statistics_day`，与表格 PR 个数同源） | `data_time` = PR 创建日 |
-| 门禁时长（accessAvgTime） | 实时运行统一表 | `DATE(u.start_time)` |
-| 编译/测试/代码检查时长 | 实时 job 统一表，先按 run 取 MAX 再跨 run 平均（与表格 run 级同口径） | `DATE(u.start_time)` |
-| 构建/测试最大并发 | `dwi_repo_pipeline_concurrent_statistics`（未停更，保持原样） | `data_time` |
+| 门禁时长（accessAvgTime）          | 实时运行统一表                                                               | `DATE(u.start_time)`    |
+| 编译/测试/代码检查时长             | 实时 job 统一表，先按 run 取 MAX 再跨 run 平均（与表格 run 级同口径）        | `DATE(u.start_time)`    |
+| 构建/测试最大并发                  | `dwi_repo_pipeline_concurrent_statistics`（未停更，保持原样）                | `data_time`             |
 
 过滤条件（项目、运营仓、开源类型/可见性、仓库、状态）与表格完全一致；因此图表按天累加的 PR 总数 = 表格窗口 PR 个数（实测 ops-nn：1417）。
 
@@ -413,33 +413,33 @@ LIMIT #{req.pageSize} OFFSET #{offset}
 
 PR门禁看板与工程能力运营看板存在**固有口径差异**，同名指标不可直接对比：
 
-| 维度 | PR门禁看板（本页） | 工程能力主表 | 工程能力仓库明细 |
-|---|---|---|---|
-| 样本 | 桥表 `pr_id` 非空 + 运营仓 + GitHub 展示配置 | 同左 | **额外加 `pipeline_type='PR'`**，GitHub 配置按 `projectId+repo_url` 匹配 |
-| 状态 | 默认 `COMPLETED+FAILED`（可选三档） | P90 仅 `COMPLETED`；排队含全部状态 | 仅 `COMPLETED` |
-| 任务时长（构建/测试） | run 级 | **run 级（2026-10 三处统一）** | **run 级（2026-10 三处统一）** |
-| 资源 | 运行表 `SUM(cpu/npu/memory_second)` | CPU 取 `dwi_project_resource_indicator_day`；NPU 取运行表（桥表+`pipeline_type='PR'`，无 GitHub 配置过滤、全状态） | — |
+| 维度                  | PR门禁看板（本页）                           | 工程能力主表                                                                                                       | 工程能力仓库明细                                                         |
+| --------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| 样本                  | 桥表 `pr_id` 非空 + 运营仓 + GitHub 展示配置 | 同左                                                                                                               | **额外加 `pipeline_type='PR'`**，GitHub 配置按 `projectId+repo_url` 匹配 |
+| 状态                  | 默认 `COMPLETED+FAILED`（可选三档）          | P90 仅 `COMPLETED`；排队含全部状态                                                                                 | 仅 `COMPLETED`                                                           |
+| 任务时长（构建/测试） | run 级                                       | **run 级（2026-10 三处统一）**                                                                                     | **run 级（2026-10 三处统一）**                                           |
+| 资源                  | 运行表 `SUM(cpu/npu/memory_second)`          | CPU 取 `dwi_project_resource_indicator_day`；NPU 取运行表（桥表+`pipeline_type='PR'`，无 GitHub 配置过滤、全状态） | —                                                                        |
 
 **任务/排队口径统一记录（2026-10）**：PR门禁看板、工程能力主表（`OpsMainStatMapper.queue_stat`）、仓库明细（`OpsRepoDetailMapper.queue_p90`）三处统一为 **run 级**——每个 run 取该类型任务的最大时长/排队，再跨 run 求 P90；`resourceQueueTime = buildQueueP90 + dtQueueP90` 保持恒等。
 
 run 级 vs job 行级量级参考（2026-09-20~10-23，仅说明差异，最终口径为 run 级）：
 
-| 项目 | 指标 | run 级（最终） | job 行级（曾评估） |
-|---|---|---|---|
-| 300080 | 构建排队 P90 | **5.43 min** | 2.52 min |
-| 300080 | 测试排队 P90 | **5.67 min** | 3.18 min |
-| 300080 | 资源排队（合计） | **11.10 min** | 5.70 min |
-| 300033 | 构建排队 P90 | **0.03 min** | 0.02 min |
+| 项目   | 指标             | run 级（最终） | job 行级（曾评估） |
+| ------ | ---------------- | -------------- | ------------------ |
+| 300080 | 构建排队 P90     | **5.43 min**   | 2.52 min           |
+| 300080 | 测试排队 P90     | **5.67 min**   | 3.18 min           |
+| 300080 | 资源排队（合计） | **11.10 min**  | 5.70 min           |
+| 300033 | 构建排队 P90     | **0.03 min**   | 0.02 min           |
 
 其余实测差异（2026-09-20~10-23）：
 
-| 指标 | PR门禁看板 | 工程能力 | 差异 |
-|---|---|---|---|
-| PR执行时长 P90（ops-nn） | 1267.2s | 仓库明细 1524.0s | +20% |
-| PR 样本 run 数（project 300127） | 6,696 | 主表 NPU 口径 45,491 | 6.8 倍 |
-| NPU 卡时（300127） | 33,057.75 | 70,533.92 | 2.1 倍 |
-| CPU 核时（300127） | 571,126.4 | 1,289,246.67（indicator） | 2.3 倍 |
-| CPU 核时（300033） | 37.92 | 0（indicator 无数据） | 数据源缺失 |
+| 指标                             | PR门禁看板 | 工程能力                  | 差异       |
+| -------------------------------- | ---------- | ------------------------- | ---------- |
+| PR执行时长 P90（ops-nn）         | 1267.2s    | 仓库明细 1524.0s          | +20%       |
+| PR 样本 run 数（project 300127） | 6,696      | 主表 NPU 口径 45,491      | 6.8 倍     |
+| NPU 卡时（300127）               | 33,057.75  | 70,533.92                 | 2.1 倍     |
+| CPU 核时（300127）               | 571,126.4  | 1,289,246.67（indicator） | 2.3 倍     |
+| CPU 核时（300033）               | 37.92      | 0（indicator 无数据）     | 数据源缺失 |
 
 结论：本期已统一**任务/排队指标**为 run 级；PR门禁看板内部（表格/图表/明细/抽屉/导出）一致。剩余跨看板差异集中在样本过滤（`pipeline_type`、GitHub 配置）、状态口径与资源数据源，需产品确认后再统一。
 
@@ -447,17 +447,17 @@ run 级 vs job 行级量级参考（2026-09-20~10-23，仅说明差异，最终�
 
 “执行次数 = 下钻 total”是本需求的硬约束，落地时按以下规则保证：
 
-| 规则 | 要求 |
-|---|---|
-| R1 共享样本 | `pr_run_sample` 抽成 Mapper 内共享 `<sql id="prRunSample">` 片段，执行次数 / 明细 total / 明细列表三处引用同一片段，禁止各自复制改写 |
-| R2 共享过滤 | 状态映射与 `end_time IS NOT NULL` 抽成 `<sql id="prRunStatusFilter">`，页面聚合与明细查询共同引用 |
-| R3 状态映射 | 空 = `status IN ('COMPLETED','FAILED')`；`true` = `COMPLETED`；`false` = `FAILED`；其余状态一律排除。请求参数大小写/首尾空格在 Service 统一归一后再进入 SQL |
-| R4 时间窗 | 统一按 `u.start_time`，边界为 `[startDate 00:00:00, endDate 23:59:59]`，由服务端一次性转换，前端只传 `yyyy-MM-dd` |
-| R5 筛选透传 | 下钻请求必须透传 `projectId`、`repoId`、`visibility`、`repoIdList`、`startDate`、`endDate`、`pipelineStatus`，与页面同名同义 |
-| R6 total 口径 | 分页 total 与列表共用同一 WHERE 片段，total 在分页外层统计，不得单独再写一套条件 |
-| R7 验收断言 | 任一仓库、任一状态档位下，`runCount` 必须等于明细 total；差异即视为缺陷 |
-| R8 PR 数量沿用现网 | PR 个数查询块（DM 主表 + 现网三档 `pipeline_status` 映射 + `data_time` 时间窗）整体保留原样，改造时不改写其过滤条件与计数表达式 |
-| R9 图表与表格同源 | 趋势图 PR 类指标与表格 PR 个数同源（PR 维度 DM）；运行/任务类指标与表格同源（实时运行表 + job 统一表，run 级聚合）；过滤条件（项目/运营仓/可见性/仓库/状态）必须一致 |
+| 规则               | 要求                                                                                                                                                                 |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1 共享样本        | `pr_run_sample` 抽成 Mapper 内共享 `<sql id="prRunSample">` 片段，执行次数 / 明细 total / 明细列表三处引用同一片段，禁止各自复制改写                                 |
+| R2 共享过滤        | 状态映射与 `end_time IS NOT NULL` 抽成 `<sql id="prRunStatusFilter">`，页面聚合与明细查询共同引用                                                                    |
+| R3 状态映射        | 空 = `status IN ('COMPLETED','FAILED')`；`true` = `COMPLETED`；`false` = `FAILED`；其余状态一律排除。请求参数大小写/首尾空格在 Service 统一归一后再进入 SQL          |
+| R4 时间窗          | 统一按 `u.start_time`，边界为 `[startDate 00:00:00, endDate 23:59:59]`，由服务端一次性转换，前端只传 `yyyy-MM-dd`                                                    |
+| R5 筛选透传        | 下钻请求必须透传 `projectId`、`repoId`、`visibility`、`repoIdList`、`startDate`、`endDate`、`pipelineStatus`，与页面同名同义                                         |
+| R6 total 口径      | 分页 total 与列表共用同一 WHERE 片段，total 在分页外层统计，不得单独再写一套条件                                                                                     |
+| R7 验收断言        | 任一仓库、任一状态档位下，`runCount` 必须等于明细 total；差异即视为缺陷                                                                                              |
+| R8 PR 数量沿用现网 | PR 个数查询块（DM 主表 + 现网三档 `pipeline_status` 映射 + `data_time` 时间窗）整体保留原样，改造时不改写其过滤条件与计数表达式                                      |
+| R9 图表与表格同源  | 趋势图 PR 类指标与表格 PR 个数同源（PR 维度 DM）；运行/任务类指标与表格同源（实时运行表 + job 统一表，run 级聚合）；过滤条件（项目/运营仓/可见性/仓库/状态）必须一致 |
 
 ## 11. 验收要点
 
@@ -478,3 +478,37 @@ run 级 vs job 行级量级参考（2026-09-20~10-23，仅说明差异，最终�
 15. 页面/图表/工程能力主表与仓库明细的编译、测试、代码检查时长与排队时长均为 **run 级**（先 MAX 后分位/平均），三处口径一致
 16. 趋势图有最新数据（不再停在 2026-09-23）；图表各仓 PR 总数之和 = 表格同窗口 PR 个数；状态切换时图表与表格同步变化
 17. 工程能力 `resourceQueueTime = buildQueueP90 + dtQueueP90` 恒等
+
+## 12. 归档记录
+
+### 12.1 2026-10-28 GitHub 仓 Nightly 版本可用度改按结束时间归属
+
+**背景**：工程效率运营看板的 Nightly 版本可用度，CodeArts/GitCode 走 DM 表 `dm_rd_efc_build_dim_nightly_pipeline_day.pipeline_run_endtime`；GitHub 仓 fact/DM 无数据，查询时直接对 `sdi_rd_efc_workflow_run_raw_github` 现算。原实现按 `created_at`（run 创建时间）归属当天并过滤时间窗，跨午夜的运行会与 CodeArts 侧口径错位。
+
+**变更**：GitHub 分支统一改用 `updated_at`（run 结束时间，运行明细中已映射为 `pipeline_run_endtime`，见 `DwrRdEfcBuildFactNightlyTestCasePipelineRunMapper.xml`），日期归属与时间窗过滤同时切换。
+
+| 文件                                          | statement / 片段                                       | 影响页面                    |
+| --------------------------------------------- | ------------------------------------------------------ | --------------------------- |
+| `OpsMainStatMapper.xml`                       | `queryMainStat` → `pipeline_version_avail` GitHub 分支 | 看板主表「版本可用度」      |
+| `OpsNightlyDetailMapper.xml`                  | `queryNightlyDetail`                                   | Project 详情 Nightly 明细   |
+| `OpsNightlyDetailMapper.xml`                  | `queryNightlyDetailList`                               | `/common/detail` 归一化列表 |
+| `OpsNightlyDetailMapper.xml`                  | `queryNightlySummary`                                  | Nightly 明细顶部 KPI        |
+| `DmRdEfcBuildDimNightlyPipelineDayMapper.xml` | `queryGithubVersionAvailableRateCount`                 | 可用度弹窗分页总数          |
+| `DmRdEfcBuildDimNightlyPipelineDayMapper.xml` | `queryGithubVersionAvailableRate`                      | 可用度弹窗逐日明细          |
+
+**改动点**：
+
+- `DATE(wf.created_at)` → `DATE(wf.updated_at)`
+- `GROUP BY wf.repo_url, wf.workflow_id, DATE(wf.created_at)` → `DATE(wf.updated_at)`
+- 时间窗 `wf.created_at >= #{req.startTime} AND wf.created_at <= #{req.endTime}` → `wf.updated_at`（避免「按创建时间筛、按结束时间归天」的新错位）
+
+**影响**：
+
+- 跨午夜运行的日期归属改为**结束日**，与 CodeArts/GitCode 的 `pipeline_run_endtime` 一致；
+- 窗口首尾边界数值会变化：创建在窗口内但结束在窗口外的 run 不再计入，反之新计入；
+- 统计规则不变：仅统计工作日（`dim_holiday` + `WEEKDAY < 5`）；`conclusion` 非空且非 `skipped` 才计为「有执行的天」；当日至少一次 `conclusion = 'success'` 记为可用；`total_days` 仍是「有执行的天数」而非窗口内全部工作日。
+
+**验证**：
+
+- 3 个 mapper XML 均通过格式校验；仓库内无单测断言这 6 段 SQL 文本；
+- 建议回归：取一个存在跨午夜运行的 GitHub nightly workflow，核对「看板主表 / 明细列 / 卡片 KPI / 弹窗逐日明细」四处数值与逐日归属一致。

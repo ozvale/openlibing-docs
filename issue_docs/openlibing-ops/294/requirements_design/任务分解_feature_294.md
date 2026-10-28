@@ -2,27 +2,28 @@
 
 ## 1. 基础信息
 
-| 项目 | 内容 |
-|---|---|
-| Issue | https://gitcode.com/openlibing/openlibing-ops/issues/294 |
-| 后端仓库 | openlibing-ops |
-| 前端仓库 | openlibing-ops-web（本期不改动） |
-| 开发分支 | `feature_293_new` |
-| 目标 | 三个入口对应两种明细：流水线执行明细、任务明细（构建/测试） |
+| 项目     | 内容                                                        |
+| -------- | ----------------------------------------------------------- |
+| Issue    | https://gitcode.com/openlibing/openlibing-ops/issues/294    |
+| 后端仓库 | openlibing-ops                                              |
+| 前端仓库 | openlibing-ops-web（本期不改动）                            |
+| 开发分支 | `feature_293_new`                                           |
+| 目标     | 三个入口对应两种明细：流水线执行明细、任务明细（构建/测试） |
 
 ## 2. 任务总览
 
-| 编号 | 任务 | 主要文件 | 依赖 | 验收要点 |
-|---|---|---|---|---|
-| T1 | 新增两个 detail category 与请求/响应模型 | `DetailCommonEnum`、`DetailReq`、`OpsPrPipelineRunDetailReq/Resp`、`OpsPrPipelineJobDetailReq/Resp` | — | category 路由可解析，参数校验生效 |
-| T2 | 流水线执行明细 Mapper | `OpsPrPipelineRunDetailMapper.xml` + 接口 | T1 | 18 列齐全，任务聚合来自 job_unified |
-| T3 | 任务明细 Mapper | `OpsPrPipelineJobDetailMapper.xml` + 接口 | T1 | 仅由流水线明细下钻进入（`pipelineRunId` 必填），返回该 run 任务；`jobType` 可选过滤 |
-| T4 | Service 层：排序白名单、参数校验、单位换算 | `OpsPrPipelineRunDetailDetailService`、`OpsPrPipelineJobDetailDetailService` | T2、T3 | 排序白名单与状态校验生效；不拼装 URL |
-| T5 | 单测与 XML 注册校验 | `src/test/...` | T2-T4 | XML statement 可解析，Service 委派正确 |
-| T6 | 数据对账与文档 | Doris、`docs/issue/294` | T2-T5 | 抽查仓库样本与主表 P90 一致 |
-| T7 | pr-access 执行次数与时间口径改造 | `DmRdEfcRepoSumPipelineStatisticsDayMapper.xml`、`RepoPrPipelineDetailResp` | T1 | 执行次数=下钻 total；仅 PR 个数按创建时间 |
-| T8 | 明细扩展：状态筛选 + NPU + CHECK | `OpsPrPipelineRunDetailReq/Resp/Mapper` | T2 | 状态筛选生效，新增 3 列与数据一致 |
-| T9 | 趋势图与表格同源 | `OpsRepoPrChartMapper`、`RepoHandle`、`RepoChartResp` | T7 | 图表不再依赖已停更 DM，PR 总数与表格一致 |
+| 编号 | 任务                                                                           | 主要文件                                                                                             | 依赖   | 验收要点                                                                                       |
+| ---- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------- |
+| T1   | 新增两个 detail category 与请求/响应模型                                       | `DetailCommonEnum`、`DetailReq`、`OpsPrPipelineRunDetailReq/Resp`、`OpsPrPipelineJobDetailReq/Resp`  | —      | category 路由可解析，参数校验生效                                                              |
+| T2   | 流水线执行明细 Mapper                                                          | `OpsPrPipelineRunDetailMapper.xml` + 接口                                                            | T1     | 18 列齐全，任务聚合来自 job_unified                                                            |
+| T3   | 任务明细 Mapper                                                                | `OpsPrPipelineJobDetailMapper.xml` + 接口                                                            | T1     | 仅由流水线明细下钻进入（`pipelineRunId` 必填），返回该 run 任务；`jobType` 可选过滤            |
+| T4   | Service 层：排序白名单、参数校验、单位换算                                     | `OpsPrPipelineRunDetailDetailService`、`OpsPrPipelineJobDetailDetailService`                         | T2、T3 | 排序白名单与状态校验生效；不拼装 URL                                                           |
+| T5   | 单测与 XML 注册校验                                                            | `src/test/...`                                                                                       | T2-T4  | XML statement 可解析，Service 委派正确                                                         |
+| T6   | 数据对账与文档                                                                 | Doris、`docs/issue/294`                                                                              | T2-T5  | 抽查仓库样本与主表 P90 一致                                                                    |
+| T7   | pr-access 执行次数与时间口径改造                                               | `DmRdEfcRepoSumPipelineStatisticsDayMapper.xml`、`RepoPrPipelineDetailResp`                          | T1     | 执行次数=下钻 total；仅 PR 个数按创建时间                                                      |
+| T8   | 明细扩展：状态筛选 + NPU + CHECK                                               | `OpsPrPipelineRunDetailReq/Resp/Mapper`                                                              | T2     | 状态筛选生效，新增 3 列与数据一致                                                              |
+| T9   | 趋势图与表格同源                                                               | `OpsRepoPrChartMapper`、`RepoHandle`、`RepoChartResp`                                                | T7     | 图表不再依赖已停更 DM，PR 总数与表格一致                                                       |
+| T10  | Nightly GitHub 仓版本可用度改按结束时间归属（详见《需求_feature_294.md》12.1） | `OpsMainStatMapper.xml`、`OpsNightlyDetailMapper.xml`、`DmRdEfcBuildDimNightlyPipelineDayMapper.xml` | —      | 跨午夜运行归到结束日，与 CodeArts 的 `pipeline_run_endtime` 一致；工作日/当日 success 规则不变 |
 
 ## 3. T1 接口与模型
 
@@ -112,16 +113,16 @@
 
 **已执行对账（2026-10-27，Doris）**：
 
-| 校验项 | 结果 |
-|---|---|
-| 样本：project 300033 / repo 401224（ops-nn）/ 2026-09-20~10-23 | 运行样本 3259 条（COMPLETED 2396、FAILED 863） |
-| `repo-pr-pipeline` 改造后 `runCount`（同窗口同仓库） | 3259，与明细 total 一致 |
-| PR 个数（ALL_PIPELINE_STATUS） | 1417，与改造前一致 |
-| 任务聚合（run 级，最终口径） | build 平均 449.45s（7.5min）/ P90 816.5s（13.6min）、DT 平均 run 级 |
-| 任务聚合（job 行级，仅作对比） | build 平均 136.81s / P90 418.0s；已被 run 级替代 |
-| 趋势图 PR 天数累加 | 34 天合计 1417，与表格 PR 个数一致 |
-| 趋势图运行指标抽样（10-23） | 门禁 329.1s、编译/测试/代码检查按 run 级（先 MAX 后平均） |
-| 任务下钻（`pipelineRunId`） | 返回该 run 全部任务，`调度时间 = job_run_start_time`，`时长 = job_duration/60` |
+| 校验项                                                         | 结果                                                                           |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 样本：project 300033 / repo 401224（ops-nn）/ 2026-09-20~10-23 | 运行样本 3259 条（COMPLETED 2396、FAILED 863）                                 |
+| `repo-pr-pipeline` 改造后 `runCount`（同窗口同仓库）           | 3259，与明细 total 一致                                                        |
+| PR 个数（ALL_PIPELINE_STATUS）                                 | 1417，与改造前一致                                                             |
+| 任务聚合（run 级，最终口径）                                   | build 平均 449.45s（7.5min）/ P90 816.5s（13.6min）、DT 平均 run 级            |
+| 任务聚合（job 行级，仅作对比）                                 | build 平均 136.81s / P90 418.0s；已被 run 级替代                               |
+| 趋势图 PR 天数累加                                             | 34 天合计 1417，与表格 PR 个数一致                                             |
+| 趋势图运行指标抽样（10-23）                                    | 门禁 329.1s、编译/测试/代码检查按 run 级（先 MAX 后平均）                      |
+| 任务下钻（`pipelineRunId`）                                    | 返回该 run 全部任务，`调度时间 = job_run_start_time`，`时长 = job_duration/60` |
 
 ## 9. 验收清单
 
@@ -182,9 +183,9 @@
 
 ## 12. 风险与待确认
 
-| 编号 | 风险 | 处理建议 |
-|---|---|---|
-| R1 | `retry_count` 全为 0、无重试耗时数据 | 不提供“不含重试”列，只保留一列流水线执行时长 |
-| R2 | `dwr_rd_efc_pipeline_run_fact` 中时长与最长时长两列恒等 | 明细不使用 fact，统一按 job 表聚合 |
-| R3 | GitHub 运行通常无 BUILD/DT 任务 | 8-15 列展示 `-`，属正常 |
-| R4 | 编号跳转与下钻交互由前端实现 | 本期后端只返回跳转所需字段与数据，不拼装 URL |
+| 编号 | 风险                                                    | 处理建议                                     |
+| ---- | ------------------------------------------------------- | -------------------------------------------- |
+| R1   | `retry_count` 全为 0、无重试耗时数据                    | 不提供“不含重试”列，只保留一列流水线执行时长 |
+| R2   | `dwr_rd_efc_pipeline_run_fact` 中时长与最长时长两列恒等 | 明细不使用 fact，统一按 job 表聚合           |
+| R3   | GitHub 运行通常无 BUILD/DT 任务                         | 8-15 列展示 `-`，属正常                      |
+| R4   | 编号跳转与下钻交互由前端实现                            | 本期后端只返回跳转所需字段与数据，不拼装 URL |
