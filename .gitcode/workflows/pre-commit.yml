@@ -21,10 +21,10 @@ stages:
     jobs:
       pr-label-running:
         name: pr-label-running
-        runs-on: ["ubuntu-latest", "x64", "small"]
+        runs-on: ["self-hosted", "region=cn"]
         steps:
           - name: pr-label-running
-            uses: ozvale/pr-label-action@main
+            uses: openlibing/pr-label-action@v1.0.0
             with:
               token: ${{ secrets.ROBOT_TOKEN }}
               add_labels: ci-pipeline-running
@@ -42,6 +42,7 @@ stages:
             with:
               token: ${{ secrets.ROBOT_TOKEN }}
               ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.event.pull_request.head.sha }} # 使用预合并后的 commit SHA 进行检出，确保 CI 检查的是 PR 与目标分支合并后的最终代码状态
+              allow-unsafe-pr-checkout: true  ## pull_request_target 下检出预合并分支（含 PR 代码）默认被安全策略拦截，显式声明允许检出，确保 pre-commit 校验 PR 与目标分支合并后的代码
 
           - name: setup-node
             uses: setup-node
@@ -62,7 +63,7 @@ stages:
               cache: true
 
           - name: pre-commit
-            uses: openlibing-pre-commit-action
+            uses: openlibing/pre-commit-action@v1.0.1
             with:
               extra_args: ${{ inputs.extra_args }}
               gc_token: ${{ secrets.ROBOT_TOKEN }}
@@ -71,10 +72,10 @@ post:
   jobs:
     label-pr:
       name: pr-label-complete
-      runs-on: ["ubuntu-latest", "x64", "slim"]
+      runs-on: ["self-hosted", "region=cn"]
       steps:
         - name: set pr label complete
-          uses: ozvale/pr-label-action@main
+          uses: openlibing/pr-label-action@v1.0.0
           with:
             token: ${{ secrets.ROBOT_TOKEN }}
             add_labels: ${{ pipeline.upstream_status == 'COMPLETED' && 'ci-pipeline-passed' || 'ci-pipeline-failed' }}

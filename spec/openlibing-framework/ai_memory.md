@@ -14,11 +14,11 @@
 
 ## 常见 AI 错误与规避
 
-| 错误模式 | 规避规则 | 来源需求 |
-| --- | --- | --- |
+| 错误模式                | 规避规则                                                                 | 来源需求                  |
+| ----------------------- | ------------------------------------------------------------------------ | ------------------------- |
 | 提交前未执行 pre-commit | AI 开发前必须执行 `pre-commit run --all-files`，确保所有检查通过后再提交 | 2026-7-后端下线技术委员会 |
-| Spotless 格式化冲突 | 本地与 CI 环境 Spotless 版本不一致时，可恢复到目标分支版本避免冲突 | 2026-7-后端下线技术委员会 |
-| 大型代码删除遗漏 | 删除模块后，grep 扫描确认无调用方再删除关联文件，避免遗漏 | 2026-7-后端下线技术委员会 |
+| Spotless 格式化冲突     | 本地与 CI 环境 Spotless 版本不一致时，可恢复到目标分支版本避免冲突       | 2026-7-后端下线技术委员会 |
+| 大型代码删除遗漏        | 删除模块后，grep 扫描确认无调用方再删除关联文件，避免遗漏                | 2026-7-后端下线技术委员会 |
 
 ## 最佳实践
 
@@ -29,6 +29,7 @@
 **方案**: 合并为单个 hook，使用 `-T 1C` 启用并行编译
 
 **配置**:
+
 ```yaml
 - repo: local
   hooks:
@@ -50,6 +51,7 @@
 **方案**: 按依赖顺序分阶段提交，每阶段编译验证
 
 **阶段**:
+
 1. Controller 删除
 2. Service 接口和实现删除
 3. Mapper 接口和 XML 删除
@@ -69,6 +71,7 @@
 **方案**: grep 扫描确认无调用方再删除
 
 **步骤**:
+
 ```bash
 # 扫描方法调用
 grep -r "methodName" src/main/java/ --include="*.java"
@@ -89,6 +92,7 @@ grep -r "methodName" src/main/java/com/openlibing/framework/business/controller/
 **方案**: 恢复到目标分支版本，避免格式化冲突
 
 **步骤**:
+
 ```bash
 git checkout upstream/target-branch -- path/to/file.java
 git commit --no-verify -m "revert: restore file to target branch version"
@@ -102,9 +106,50 @@ git push origin branch-name
 **场景**: 下线模块相关角色，评估对现有系统的影响
 
 **评估维度**:
+
 - 后端代码引用（守卫代码、权限检查）
 - 前端硬编码（角色过滤、权限判断）
 - 数据库记录（user_role_info 表）
 - 用户权限（拥有该角色的用户）
 
 **结论**: 模块专属角色在模块下线后失去管理入口和功能意义，可安全删除
+
+### 6. 并发重复插入治理
+
+**场景**: 双实例部署下 Check-then-Insert 模式存在并发竞态
+
+**方案**: 优先在数据库层加唯一约束兜底，应用层捕获 `DuplicateKeyException` 返回友好提示。不要仅依赖应用层排他锁或 `SELECT FOR UPDATE`。
+
+**关键点**:
+
+- 数据库唯一约束是根本兜底，不依赖网络/锁服务
+- 兼容存量重复数据（新增约束不检查已有数据）
+- 异常信息脱敏：使用 `LOG.warn("msg")` 而非 `LOG.error("msg", e)` 避免泄露数据库结构
+
+**来源**: 2026-09-10 duplicate-key-protection
+
+### 7. Maven Liquibase changelog 命名约定
+
+**规则**: 唯一约束的 changelog 文件按 `{table_name}.xml` 命名，放在对应版本的 `vX.Y.Z/` 目录下。主 `db.changelog.xml` 通过 `<include>` 引用。
+
+**来源**: 2026-09-10 duplicate-key-protection
+
+### 8. 防御性拷贝处理集合字段
+
+**场景**: SpotBugs 检测到 DTO/VO 集合字段 `EI_EXPOSE_REP` / `EI_EXPOSE_REP2` 漏洞
+
+**方案**: getter 和 setter 中使用 `new ArrayList<>(field)` 做防御性拷贝，禁止直接返回或赋值内部引用。
+
+```java
+public List<String> getUserRoles() {
+    return userRoles == null ? null : new ArrayList<>(userRoles);
+}
+
+public void setUserRoles(List<String> userRoles) {
+    this.userRoles = userRoles == null ? null : new ArrayList<>(userRoles);
+}
+```
+
+**注意**: `@Data` 生成的 getter/setter 不做防御性拷贝，有集合字段的 DTO 需手动编写 getter/setter。
+
+**来源**: 2026-09-10 PR#436 code review
