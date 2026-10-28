@@ -5,7 +5,7 @@
 无权限提示气泡（`NoPermissionPopover.vue`）是平台各操作按钮的无权限引导入口。当前存在两个体验问题：
 
 1. 申请指引仅为纯文本描述（如「联系项目管理员添加角色，项目管理->成员管理」），用户无法一键到达申请路径，需要手动进入对应页面。
-2. 气泡会展示平台（system）、组织（product）级别的角色组，这类角色与普通用户的日常权限申请无关，属于信息噪音。
+2. 气泡会展示平台（system）、组织（product）级别的角色组，这类角色与普通用户的日常权限申请无关，且这两级暂不开放角色申请，展示「申请指引」会误导用户；原方案为直接过滤这两个级别，评审后调整为保留展示、将申请指引整行替换为说明文案（见第 2 节「与原需求的差异与决策依据」）。
 
 ## 功能描述
 
@@ -25,6 +25,8 @@
 - **平台（system）、组织（product）**：暂不开放角色申请，申请指引**整行替换**为「说明：」标签 + 说明正文「暂不开放角色申请，详情请联系人工客服进行咨询」；其中「说明：」标签与「申请指引：」标签同款深色加粗样式，正文与指引正文同款样式（无链接）。
 - **通用（general）**：保持「申请指引：联系人工客服进行咨询」。
 - 项目（project）、仓库（repo）：按第 1 节链接跳转。
+
+> **与原需求（业务 Issue #373「角色组过滤」方案）的差异与决策依据**：Issue 原方案为「气泡仅展示 project/repo/general 角色组，system/product 不展示；空态条件改为过滤后为空」。实现阶段评审确认调整为「不隐藏任何级别，仅将 system/product 的申请指引整行替换为说明文案」，空态保持「后端 `rolesByLevel` 为空」原逻辑。决策依据：平台/组织角色组仍是用户可见的权限归属信息，直接隐藏会让已有这些角色的用户误以为配置缺失；同时这两级暂不开放角色申请，用「说明：」文案替代申请指引即可消除误导。Issue #373 验收标准已同步更新。
 
 ### 3. 空态
 
@@ -49,5 +51,5 @@
 
 - `apps/web-openlibing/src/components/NoPermissionPopover.vue`
 - `apps/web-openlibing/src/views/Repos/index.vue`
-- `apps/web-openlibing/src/utils/noPermissionGuide.ts`（新增，承载过滤与指引构建纯函数）
+- `apps/web-openlibing/src/utils/noPermissionGuide.ts`（新增，承载申请指引构建纯函数：guide / notice 判别联合）
 - `apps/web-openlibing/src/utils/__tests__/noPermissionGuide.spec.ts`（新增单测）
