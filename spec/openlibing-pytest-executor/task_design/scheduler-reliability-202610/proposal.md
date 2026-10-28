@@ -16,20 +16,28 @@
 
 ### 子需求 1：testkit 安装切换
 
-- 默认 `pip install pytest-testkit`，来源复用 `Config.python_mirror_repo`，包版本取最新；
-- 保留 whl 兜底：原 `--pytest_testkit_path` 改名为 `--pytest_testkit_whl_path`（强制改参数名，断绝旧调用点误传），传入时优先按 whl 安装；不传走 pip；
+- 默认 `pip install pytest-testkit`，来源复用 `Config.python_mirror_repo`；
+- **版本约束**：`pytest-testkit` 采用**浮动升级**（`pip install --upgrade`），不固定版本号。理由：testkit 与 executor 同仓同节奏发布，固定版本会在 testkit 发版后导致目标机装到旧版、采集行为与本地不一致；浮动升级保证目标机始终拿到最新兼容版本。
+  - 代价：目标机安装的版本随镜像源变化，**问题复现需先记录 `pip show pytest-testkit` 的实际版本**（已写入验证清单）。
+  - 缓解：镜像源复用 `Config.python_mirror_repo`（公司内网源），不使用公网 PyPI，避免同名包被替换。
+- 保留 whl 兜底：原 `--pytest_testkit_path` 改名为 `--pytest_testkit_whl_path`，传入时优先按 whl 安装；不传走 pip；
 - `pyproject.toml` 的 `dependencies` 补齐 `pytest-testkit`。
 
 ### 子需求 2：上传接口重试
 
 - `ApiHandler.upload_data_to_openlibing` 接入 `api_handler.py` 已有的 `_retry_request`（指数退避 1→2→4s，最多 3 次），5xx 与网络异常触发重试，4xx 不重试；
 - 失败语义沿用：retry 全部失败时仍按现状抛异常 / 返回 `[]`；
+- **幂等性决策**：openlibing 上传是写操作（报告与元数据落库），对非幂等 POST 做自动重试时存在「请求已被服务端处理但响应丢失」（连接中断、网关 502/504、服务端提交成功后才 5xx）的典型场景，重试会产生重复写入。
+  - 本期采取**不引入幂等键**的方案，理由：上传接口当前不提供服务端去重能力，新增幂等键需服务端配套改造，超出本期范围。
+  - 补偿方式：重复写入落在同一 `pipelineId` / `pipelineRunId` / `jobId` 维度，由服务端按任务维度覆盖或由下游统计侧按任务去重消化；日志中标注 `retry N/M` 便于排查重复记录。
+  - **遗留风险**：若服务端未按任务维度去重，重试可能产生重复的 report / 元数据记录，导致下游统计与用例通过率被重复计算。已登记为残留风险，需在后续迭代评估服务端幂等键方案。
 - 不为重试参数新增 Config 暴露（与 K8s API 行为对齐，保持模块级常量）。
 
 ### 子需求 3：用例名文件化
 
 - runner / remote / local 三种执行模式下，pytest 命令行不再直接出现用例 ID，改为 `python -m pytest @<cases_file>`，每行一个 nodeid；
-- `cases_file` 落在当前执行 cwd（runner 模式落在 `/home/<name>`、remote 模式落在 `self.test_dir`、local 模式 scp 上传到 `/home/<name>`），文件名本期实现用 `.cases_<suffix>.txt`，无命名规则限制；
+- `cases_file` 落在当前执行 cwd（runner 模式落在 `/home/<name>`、remote 模式落在 `self.test_dir`、local 模式 scp 上传到 `/home/<name>`），文件名本期实现用 `.cases_<suffix>.txt`；
+- **命名约束**：`<suffix>` 取自 `generate_random_string()`（大小写字母 + 数字，长度 8），**不来自用例名、task_id 等外部可控字段**，因此不含路径分隔符与 `..`，写入路径不会逃逸出 `self.test_dir` / `/home/<name>`；随机串保证同一目标机上并发执行两个任务时文件名互不冲突，避免后者覆盖前者的 cases 文件导致按错误用例集合执行；
 - 进程 cmdline 不再含具体用例名，运维 `pgrep -f <case_name>` 不再命中 pytest 调度进程；
 - 行为无开关：直接改为文件执行方式（与子需求 1 的 whl 兜底开关不同）。
 
@@ -62,6 +70,7 @@
 - 调度主流程：
   - 正常模式：`Config.lease_health_ttl_seconds = 600`（默认），心跳线程每 200s 上报一次（health_ttl/3），任务结束正常释放环境
   - 调试模式：通过主入口隐藏参数 `--debug_keep_env` 打开，`Config.lease_health_ttl_seconds = -1`，**不启动**心跳线程，**不释放**环境（`release_env` / `release_all` 内部跳过），便于人工登入目标机排查
+    - **`-1` 是本地抑制心跳的哨兵值，不允许原样透传到 K8s 申请 payload**：调度服务若按「TTL 已过期」立即判死，会把刚申请的调试环境立刻回收；若按参数校验失败返回 4xx，则环境申请直接失败——两种结果都会让 `--debug_keep_env` 失效，且现象只在调试模式下出现，极易被误判为调度服务问题。申请 payload 中的 `health_ttl` 需过滤该哨兵值（发送默认值 600 或不发送该字段）。
 - 不做：
   - 心跳不延长 TTL，仅重置判死起点
   - 调度服务的"降级接入"——即使没心跳线程，调度端也接受心跳请求（不报错）
@@ -70,20 +79,24 @@
 ## 验收标准
 
 - [ ] **AC-1 testkit 安装切换**
-  - [ ] `pytest-executor` 默认通过 `pip install pytest-testkit`（最新版本，来源复用 `python_mirror_repo`）安装到目标机；
-  - [ ] 保留 whl 兜底：`--pytest_testkit_path` 改名为 `--pytest_testkit_whl_path`，老参数仍被 argparse 接收（兼容），传值时仅打 deprecation 警告并强制走 pip install；新参数传入时才真正按 whl 安装；
+  - [ ] `pytest-executor` 默认通过 `pip install --upgrade pytest-testkit`（浮动升级，来源复用 `python_mirror_repo`）安装到目标机；
+  - [ ] 保留 whl 兜底：`--pytest_testkit_path` 改名为 `--pytest_testkit_whl_path`，**老参数仍被 argparse 接收（兼容语义，唯一契约）**，传值时仅打 deprecation 警告并**强制走 pip install**（不按 whl 安装）；只有新参数 `--pytest_testkit_whl_path` 传入时才真正按 whl 安装；
   - [ ] `pyproject.toml` 的 `dependencies` 补齐 `pytest-testkit`；`requirements.txt` 已有无需改；
-  - [ ] 远端 `/home/<name>` 不再残留 testkit whl 文件（除非显式走 whl 分支）。
+  - [ ] 远端 `/home/<name>` 不再残留 testkit whl 文件（除非显式走 whl 分支）；
+  - [ ] 记录目标机实际安装版本（`pip show pytest-testkit`），便于问题复现。
 - [ ] **AC-2 上传接口重试**
   - [ ] `ApiHandler.upload_data_to_openlibing` 接入 `_retry_request`（指数退避 1→2→4s，最多 3 次）；
   - [ ] **上传重试范围**：重试仅作用于 openlibing 报告上传链路；
   - [ ] 重试全部失败时沿用现有失败语义；
-  - [ ] 新增单测覆盖：5xx→重试、4xx→不重试、网络异常→重试（仅针对 openlibing 上传）。
+  - [ ] 新增单测覆盖：5xx→重试、4xx→不重试、网络异常→重试（仅针对 openlibing 上传）；
+  - [ ] **幂等性**：确认上传接口在 `pipelineId` / `pipelineRunId` / `jobId` 维度按任务去重（或覆盖），重试不产生重复的 report / 元数据记录；若服务端无此能力，需在实现中标注「重复写入由下游按任务维度消化」的说明，并在日志中标注 `retry N/M` 便于排查。
 - [ ] **AC-3 用例名文件化**
   - [ ] runner / remote / local 三种执行模式下，pytest 命令行不再直接出现用例 ID；
   - [ ] `cases_file` 落在当前执行 cwd；
   - [ ] 进程 cmdline 不再含具体用例名；
-  - [ ] 新增单测：cases_file 内容与原 case_list 一致、含特殊字符用例名不抛异常。
+  - [ ] 新增单测：cases_file 内容与原 case_list 一致、含特殊字符用例名不抛异常；
+  - [ ] **执行后清理**：`cases_file` 在执行结束后被删除（含 pytest 非 0 返回、SSH 中断、异常退出等分支），目标机 `/home/<name>` 与本地 `self.test_dir` 不残留 cases 文件；
+  - [ ] **路径安全**：cases_file 名的 `<suffix>` 不含路径分隔符与 `..`，写入路径不逃逸出 `self.test_dir` / `/home/<name>`；同一目标机并发执行两个任务时文件名不冲突。
 - [ ] **AC-4 `_validate_execution_results` 兜底**
   - [ ] local 模式 SSH 失败（local_results_xml 缺失）时 `_validate_execution_results` 返回 False、JOB 失败；
   - [ ] remote 模式 xml 缺失时同样返回 False；
@@ -91,6 +104,8 @@
   - [ ] 单测覆盖：4 个核心场景 + 4 个回归场景；
 - [ ] **AC-5 心跳保活**
   - [ ] `--debug_keep_env`（SUPPRESS 隐藏）打开时 `lease_health_ttl_seconds=-1`，不启动心跳线程，调度结束时 `release_env` / `release_all` 跳过；
+  - [ ] **调试模式哨兵值过滤**：K8s 申请 payload 中的 `health_ttl` 不透传 `-1`（发送默认值 600 或不发送该字段），调试环境不会被立即判死回收、也不会因参数校验失败导致申请失败；
+  - [ ] **调试模式告警**：`debug_keep_env` 打开时，在调度启动处与每次跳过释放处打 WARNING 日志，便于巡检发现遗忘的开关；
   - [ ] 正常模式 ttl=600 时心跳线程每 200s 触发一次，INFO 日志含 `Heartbeat sending env_id=...`；
   - [ ] 收到 404/409/400 时线程立即停止（`stop_reason=http_xxx`），ERROR 日志；
   - [ ] 5xx / 网络异常仅 WARNING，不重试当前次，等下次自然 tick；
@@ -103,20 +118,20 @@
 
 ## 影响范围
 
-| 文件                                                       | 操作   | 说明                                                                                                              |
-| ---------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------- |
-| `pytest-executor/main.py`                                  | 修改   | `--pytest_testkit_path` 改名为 `--pytest_testkit_whl_path`；新增 `--debug_keep_env` 隐藏参数                      |
-| `pytest-executor/src/scheduler/scheduler_config.py`        | 修改   | `pytest_testkit_path` 保留兼容读取（deprecated）；新增 `lease_health_ttl_seconds` / `debug_keep_env`              |
-| `pytest-executor/src/executor/pytest_executor.py`          | 修改   | 三处执行入口走 pip install / `pytest @cases_file`                                                                 |
-| `pytest-executor/src/api/api_handler.py`                   | 修改   | `upload_data_to_openlibing` 接入 `_retry_request`；新增 `send_heartbeat_k8s` 静态方法 + `LeaseHeartbeatClient` 类 |
-| `pytest-executor/src/api/obs_client.py`                    | 不修改 | 保持现有上传行为，不纳入本期重试范围                                                                              |
-| `pytest-executor/src/scheduler/env_manager.py`             | 修改   | K8s 申请时透传 `health_ttl` 字段（payload 顶层）；`release_env` / `release_all` 增加调试模式跳过                  |
-| `pytest-executor/src/run_scheduler.py`                     | 修改   | `_allocate_environments_and_execute` 内启动/停止心跳线程；`_validate_execution_results` 增 16 行兜底              |
-| `pytest-executor/pyproject.toml`                           | 修改   | `dependencies` 补 `pytest-testkit`                                                                                |
-| `pytest-executor/tests/test_api_handler_retry.py`          | 新增   | openlibing 上传重试单测                                                                                           |
-| `pytest-executor/tests/test_write_cases_file.py`           | 新增   | cases_file 落盘单测                                                                                               |
-| `pytest-executor/tests/test_validate_execution_results.py` | 新增   | xml 缺失兜底单测                                                                                                  |
-| `pytest-executor/tests/test_lease_heartbeat.py`            | 新增   | 心跳保活单测                                                                                                      |
+| 文件                                                       | 操作   | 说明                                                                                                                         |
+| ---------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `pytest-executor/main.py`                                  | 修改   | `--pytest_testkit_path` 改名为 `--pytest_testkit_whl_path`；新增 `--debug_keep_env` 隐藏参数                                 |
+| `pytest-executor/src/scheduler/scheduler_config.py`        | 修改   | `pytest_testkit_path` 保留兼容读取（deprecated）；新增 `lease_health_ttl_seconds` / `debug_keep_env`                         |
+| `pytest-executor/src/executor/pytest_executor.py`          | 修改   | 三处执行入口走 pip install / `pytest @cases_file`                                                                            |
+| `pytest-executor/src/api/api_handler.py`                   | 修改   | `upload_data_to_openlibing` 接入 `_retry_request`；新增 `send_heartbeat_k8s` 静态方法 + `LeaseHeartbeatClient` 类            |
+| `pytest-executor/src/api/obs_client.py`                    | 不修改 | 保持现有上传行为，不纳入本期重试范围                                                                                         |
+| `pytest-executor/src/scheduler/env_manager.py`             | 修改   | K8s 申请时透传 `health_ttl` 字段（payload 顶层，调试模式哨兵值 `-1` 需过滤）；`release_env` / `release_all` 增加调试模式跳过 |
+| `pytest-executor/src/run_scheduler.py`                     | 修改   | `_allocate_environments_and_execute` 内启动/停止心跳线程；`_validate_execution_results` 增 16 行兜底                         |
+| `pytest-executor/pyproject.toml`                           | 修改   | `dependencies` 补 `pytest-testkit`                                                                                           |
+| `pytest-executor/tests/test_api_handler_retry.py`          | 新增   | openlibing 上传重试单测                                                                                                      |
+| `pytest-executor/tests/test_write_cases_file.py`           | 新增   | cases_file 落盘单测                                                                                                          |
+| `pytest-executor/tests/test_validate_execution_results.py` | 新增   | xml 缺失兜底单测                                                                                                             |
+| `pytest-executor/tests/test_lease_heartbeat.py`            | 新增   | 心跳保活单测                                                                                                                 |
 
 ## 关联
 

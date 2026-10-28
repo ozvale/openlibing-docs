@@ -16,7 +16,7 @@
 - **archivePath 用字符集 + 深度校验而非路径归一化**：OBS 是扁平键值存储，不存在本地文件系统那种 `..` 目录回溯语义，`Paths.get(...).normalize()` + `startsWith()` 的本地路径防护写法在此不适用。正确做法是把每个路径段约束成安全的单段名，从根本上排除 `..`、空段、超长段。
 - **文件名黑名单而非白名单**：业务上传类型较多（xml/json/txt/log/html/zip/tar.gz 等），白名单会误杀；黑名单聚焦可执行、脚本、网页脚本三类高危扩展名。
 - **不做文件内容嗅探**：仅按扩展名判断，简化实现；相应地在风险表中登记「`a.exe.gz` 这类双扩展名绕过」为已知残留风险。
-- **单文件大小业务级校验值为 16MB**：与 Spring multipart 容器级 `max-file-size` 对齐，避免出现「业务允许但容器拒绝」的错位。容器级 `max-request-size`（整请求总量）不在本次改动范围，由用户在 Nacos 配置中心自行调整。
+- **单文件大小业务级校验值为 16MB**：容器级 `max-file-size` 必须**严格大于**该值（建议 24MB），使业务级校验先于容器层触发、`FILE_SIZE_EXCEED_LIMIT` 可达；取相等值会让容器先拒绝请求，业务错误码形同虚设。容器级 `max-request-size`（整请求总量）不在本次改动范围，由用户在 Nacos 配置中心自行调整。
 - **白名单默认值硬编码 + 配置中心可覆盖**：配置中心未配置或不可用时回退到内置默认集合，保证功能可用性；配置中心可用时支持动态生效，新增业务标签无需改代码发版。
 - **校验失败的粒度**：路径参数非法（label / archivePath）属于请求级错误，整个请求拒绝并返回错误码；单个文件类型非法或超限属于文件级错误，仅该文件计入失败清单，不中断整批上传。
 
@@ -38,11 +38,15 @@
 
 ### 配置键
 
-| 配置键                       | 类型           | 默认值                                                                                       | 说明                |
-| ---------------------------- | -------------- | -------------------------------------------------------------------------------------------- | ------------------- |
-| `sync.upload.allowed-labels` | 逗号分隔字符串 | `precision,performance,simulation,presmoke,testcase-metadata,workflow-acceptance,test_label` | 允许的 label 白名单 |
+| 配置键                       | 类型           | 默认值                                                                     | 说明                                                                                   |
+| ---------------------------- | -------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `sync.upload.allowed-labels` | 逗号分隔字符串 | `precision,performance,simulation,presmoke,workflow-acceptance,test_label` | 允许的 label 白名单（保留前缀 `testcase-metadata` 不入白名单，仅由流水线归档路径使用） |
 
-配置中心（Nacos）中的位置：随 `sync-service` dataId 下发，格式与 `RateLimitConfig` 一致，通过 `ConfigurableEnvironment.getProperty` 读取，读取不到时回退硬编码默认值。
+配置中心（Nacos）中的位置：随 `application` / `framework` dataId（group `OPENLIBING`，Properties 格式）下发，与 `@NacosConfigListener` 监听的 dataId 保持一致，通过 `ConfigurableEnvironment.getProperty` 读取，读取不到时回退硬编码默认值。
+
+> **dataId 一致性**：配置下发位置与 `@NacosConfigListener` 的 dataId 必须同为 `application` / `framework`。若配置放在 `sync-service` 而监听的是 `application`，则配置变更不会触发热重载，白名单只在服务启动时生效。
+>
+> **保留前缀约束**：`testcase-metadata` 是流水线归档路径的固定前缀，不得加入白名单，否则 `label=testcase-metadata` + 任意 `archivePath` 可重建他人流水线的归档前缀。配置中心下发前需校验不含该前缀。
 
 ### Nacos 动态刷新
 
@@ -64,8 +68,8 @@ public class UploadSecurityConfig {
     return allowedLabels;
   }
 
-  /** Nacos 配置变更时重载白名单 */
-  @NacosConfigListener(dataId = "sync-service", group = "OPENLIBING")
+  /** Nacos 配置变更时重载白名单（dataId 需与配置下发位置一致） */
+  @NacosConfigListener(dataId = "application", group = "OPENLIBING")
   public void onChange(String config) {
     reload();
   }
@@ -74,7 +78,7 @@ public class UploadSecurityConfig {
     String raw = environment.getProperty("sync.upload.allowed-labels", String.class, null);
     Set<String> labels = parse(raw);
     this.allowedLabels = labels.isEmpty() ? SyncConstant.DEFAULT_ALLOWED_LABELS : labels;
-    log.info("Reloaded allowed upload labels: {}", this.allowedLabels);
+    log.info("Reloaded upload allowed labels: {}", this.allowedLabels);
   }
 }
 ```
@@ -84,6 +88,7 @@ public class UploadSecurityConfig {
 - 使用 `volatile` 保证配置变更后其他线程可见
 - 配置为空或解析后为空集时回退默认白名单，**不允许因配置失误导致所有 label 被拒**
 - 保留 `DEFAULT_ALLOWED_LABELS` 硬编码常量作为兜底，避免配置中心故障导致上传功能完全不可用
+- 监听 dataId 与配置下发 dataId 必须一致（均为 `application` / `framework`），否则热重载不生效
 
 ## 校验规则设计
 
@@ -94,6 +99,10 @@ public class UploadSecurityConfig {
 | label 为空 / 仅斜杠 | 通过，走既有流水线归档路径 |
 | label 在白名单内    | 通过                       |
 | label 不在白名单内  | 拒绝，`INVALID_LABEL`      |
+
+**保留前缀约束**：`testcase-metadata` 是流水线归档路径的固定前缀（`testcase-metadata/{pipelineId}/{pipelineRunId}/{jobId}/`），插件侧按该前缀扫描并解析 XML，因此**不在白名单内**。若它被加入白名单，攻击者可用 `label=testcase-metadata` + 任意合法 `archivePath` 重建他人流水线的归档前缀，与「label 为空」时服务自动落到该前缀的行为等价，从而绕过主防线。
+
+因此白名单的完整性依赖两点：默认白名单不含该前缀，且配置中心下发时同样校验不含该前缀。
 
 **兼容性说明**：既有 `TestCaseDataServiceImplTest` 中使用的 `performance`、`nightly`、`simulation` 三个 label 中，`nightly` **不在**业务白名单内，改造后该值会被拒绝。需要评估 `nightly` 是否为真实在用的 label：
 
@@ -154,15 +163,19 @@ String extension = dot > 0 ? filename.substring(dot).toLowerCase() : "";
 
 **主防线说明**：扩展名黑名单是**次要兜底**，本接口真正的安全主防线是 **label 白名单 + archivePath 分段校验**——二者共同保证攻击者无法构造出落入他人 `testcase-metadata/{pipelineId}/{runId}/{jobId}/` 前缀的 objectKey，从而阻断「向他人流水线注入恶意 XML」这一实质危害。
 
+该结论的前提是 **`testcase-metadata` 不在 label 白名单内**：一旦它被加入白名单，`label=testcase-metadata` + 任意合法 `archivePath` 即可重建他人流水线的归档前缀，主防线随即失效。详见上文「保留前缀约束」。
+
 **判断依据**：基于**净化后**的文件名（`safeFilename`）判断，与既有 `TestCaseDataServiceImpl` 的文件名净化逻辑保持一致。净化规则 `[^A-Za-z0-9._-] → _` 保留了点号，因此 `a.exe.xml` 的扩展名为 `.xml`，可被放行（已知残留风险，见风险表）。
 
 ### 单文件大小校验
 
-| 项               | 值         | 说明                                                      |
-| ---------------- | ---------- | --------------------------------------------------------- |
-| 业务级单文件上限 | 16MB       | `SyncConstant.MAX_UPLOAD_FILE_SIZE`                       |
-| 容器级单文件上限 | 16MB       | `spring.servlet.multipart.max-file-size`（Nacos 可调）    |
-| 容器级整请求上限 | Nacos 可调 | `spring.servlet.multipart.max-request-size`（本次不涉及） |
+| 项               | 值         | 说明                                                              |
+| ---------------- | ---------- | ----------------------------------------------------------------- |
+| 业务级单文件上限 | 16MB       | `SyncConstant.MAX_UPLOAD_FILE_SIZE`                               |
+| 容器级单文件上限 | > 16MB     | `spring.servlet.multipart.max-file-size`（Nacos 可调），建议 24MB |
+| 容器级整请求上限 | Nacos 可调 | `spring.servlet.multipart.max-request-size`（本次不涉及）         |
+
+**必须留出级差**：容器级 `max-file-size` 若与业务级上限相等（都是 16MB），容器会先于业务层拒绝超限请求，`FILE_SIZE_EXCEED_LIMIT` 在真实链路上永远不会被返回，等于该错误码与整段业务级校验失效。容器级上限必须**严格大于**业务级上限，才能让业务层先判定、返回可区分的错误码，并让文件级语义（仅该文件进失败清单、其余文件正常上传）真正生效。
 
 ## 关键实现
 
@@ -203,6 +216,8 @@ try {
     tempFile = null;  // 移交所有权给 uploadInfoList，由 buildUploadResult 清理
 } catch (IOException e) {
     logger.error("Failed to convert multipart file: {}", LogSanitizer.sanitize(filename), e);
+    // 转换失败的文件必须进入失败清单，否则该文件在结果中完全不可见（静默丢失）
+    rejectedFileNames.add(filename);
 } finally {
     if (tempFile != null && tempFile.exists() && !tempFile.delete()) {
         logger.warn("delete temp file:{} fail.", LogSanitizer.sanitize(tempFile.getAbsolutePath()));
@@ -211,6 +226,8 @@ try {
 ```
 
 `tempFile = null` 的所有权移交是关键：入队成功后置空，避免 finally 分支提前删除掉还要上传的文件。
+
+**失败文件必须可见**：`catch` 分支除记录日志外，还需把文件加入失败清单（携带失败原因）。否则 `transferTo` 失败的文件既不在 `success` 也不在 `failure`，调用方无法感知该文件丢失，且 `failure` 为空会让人误判为「全部上传成功」。
 
 ### 同名文件统计错乱修复
 
@@ -292,6 +309,8 @@ OBS: performance/20260612/143025/metadata.xml
 
 文件级错误不进 `failure` 列表会丢失可观测性；文件级错误直接拒绝整个请求则会让一个坏文件阻断整批 100 个文件的上传，因此采用文件级粒度。
 
+**可达性前提**：`FILE_SIZE_EXCEED_LIMIT`（40015）只有在容器级 `max-file-size` **严格大于**业务级上限时才可达——否则容器会先拒绝请求，业务层根本收不到超限文件，该错误码形同虚设。同理 `FILE_TYPE_NOT_ALLOWED`（40014）当前也不作为整批错误码返回，仅作为文件级失败原因的标识。
+
 ## 测试设计
 
 ### UploadSecurityValidatorTest
@@ -301,6 +320,7 @@ OBS: performance/20260612/143025/metadata.xml
 | label 为空               | `""`                                                                             | 通过                                             |
 | label 在白名单           | `performance`                                                                    | 通过                                             |
 | label 不在白名单         | `nightly`                                                                        | 拒绝（`nightly` 为测试遗留值，非真实在用 label） |
+| label 为保留前缀         | `testcase-metadata`                                                              | 拒绝（保留前缀，不得入白名单）                   |
 | archivePath 合法单层     | `20260612`                                                                       | 通过                                             |
 | archivePath 合法多层     | `team-x/2026-Q2/sprint-3`                                                        | 通过                                             |
 | archivePath 含 ..        | `../other`                                                                       | 拒绝                                             |
@@ -315,12 +335,12 @@ OBS: performance/20260612/143025/metadata.xml
 
 ### TestCaseDataServiceImplTest 补充
 
-| 用例                               | 验证点                          |
-| ---------------------------------- | ------------------------------- |
-| 单文件超限                         | 该文件进 failure 列表，其余成功 |
-| 危险类型文件                       | 该文件进 failure 列表           |
-| 同名文件（`a/b.xml` 与 `a_b.xml`） | 返回结果中两条独立条目          |
-| transferTo 异常                    | 临时文件被清理                  |
+| 用例                               | 验证点                                      |
+| ---------------------------------- | ------------------------------------------- |
+| 单文件超限                         | 该文件进 failure 列表，其余成功             |
+| 危险类型文件                       | 该文件进 failure 列表                       |
+| 同名文件（`a/b.xml` 与 `a_b.xml`） | 返回结果中两条独立条目                      |
+| transferTo 异常                    | 临时文件被清理，且该文件出现在 failure 列表 |
 
 ### 既有测试兼容性
 
@@ -332,18 +352,20 @@ OBS: performance/20260612/143025/metadata.xml
 
 ## 风险 & 缓解
 
-| 风险                                 | 影响                                          | 缓解                                                                                                                                                                                |
-| ------------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 白名单遗漏真实在用 label             | 上传功能被误拒                                | 已核查各调用方实际使用的 label 值均覆盖（`precision` / `performance` / `simulation` / `presmoke` / `testcase-metadata` / `workflow-acceptance` / `test_label`）；配置中心可动态补充 |
-| 配置中心配置错误导致全部 label 被拒  | 上传功能不可用                                | 配置为空或解析为空集时回退硬编码默认白名单                                                                                                                                          |
-| 黑名单遗漏新型危险扩展名             | 危险文件仍可上传                              | 黑名单已收敛为「服务端可执行」一类，风险场景需桶被误配置才成立；接受残余风险                                                                                                        |
-| 双扩展名绕过（`a.exe.gz`）           | 危险文件伪装成普通类型                        | 本期不做内容嗅探，已在风险表登记为已知残留风险；如需收敛可在后续迭代补充 magic number 校验                                                                                          |
-| 容器级 `max-request-size` 未同步调整 | 批量上传（多文件总和超限）仍被框架层拒绝      | 本次不涉及，由用户在 Nacos 自行调整；文档已提示                                                                                                                                     |
-| 校验提前拒绝改变既有调用方行为       | 既有调用方若使用了白名单外的 label 会收到 400 | 已核查调用方 label 取值均在白名单内；提供明确错误码便于定位                                                                                                                         |
-| Nacos 监听 dataId 选择               | 白名单不生效                                  | 沿用 `RateLimitConfig` 的 dataId（`sync-service` / group `OPENLIBING`），与该仓既有配置读取路径一致                                                                                 |
+| 风险                                      | 影响                                                            | 缓解                                                                                                                                                          |
+| ----------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 白名单遗漏真实在用 label                  | 上传功能被误拒                                                  | 已核查各调用方实际使用的 label 值均覆盖（`precision` / `performance` / `simulation` / `presmoke` / `workflow-acceptance` / `test_label`）；配置中心可动态补充 |
+| 保留前缀 `testcase-metadata` 被加入白名单 | 可用 `label` + `archivePath` 重建他人流水线归档前缀，主防线失效 | 默认白名单不含该前缀；配置中心下发前校验不含该前缀；label 为空时服务自动落到该前缀，无需显式指定                                                              |
+| 配置中心配置错误导致全部 label 被拒       | 上传功能不可用                                                  | 配置为空或解析为空集时回退硬编码默认白名单                                                                                                                    |
+| 黑名单遗漏新型危险扩展名                  | 危险文件仍可上传                                                | 黑名单已收敛为「服务端可执行」一类，风险场景需桶被误配置才成立；接受残余风险                                                                                  |
+| 双扩展名绕过（`a.exe.gz`）                | 危险文件伪装成普通类型                                          | 本期不做内容嗅探，已在风险表登记为已知残留风险；如需收敛可在后续迭代补充 magic number 校验                                                                    |
+| 容器级 `max-file-size` 未大于业务上限     | 容器先于业务层拒绝超限请求，`FILE_SIZE_EXCEED_LIMIT` 不可达     | 容器级上限必须严格大于业务级上限（建议 24MB vs 16MB），已在配置项设计与 tasks.md Task 8 中明确                                                                |
+| 容器级 `max-request-size` 未同步调整      | 批量上传（多文件总和超限）仍被框架层拒绝                        | 本次不涉及，由用户在 Nacos 自行调整；文档已提示                                                                                                               |
+| 校验提前拒绝改变既有调用方行为            | 既有调用方若使用了白名单外的 label 会收到 400                   | 已核查调用方 label 取值均在白名单内；提供明确错误码便于定位                                                                                                   |
+| Nacos 监听 dataId 与配置下发位置不一致    | 白名单热重载不生效，仅启动时读取一次                            | 监听 dataId 与配置下发 dataId 统一为 `application` / `framework`（group `OPENLIBING`），与 `RateLimitConfig` 读取路径一致                                     |
 
 ## 跨仓影响
 
 - **openlibing-sync**：本次唯一改动的代码仓，接口签名与响应结构均不变，向后兼容。
-- **openlibing-pytest-executor**：`upload_to_openlibing.py` 的 `--label` 取值需落在白名单内。现有脚本文档中出现的 `performance`、`simulation` 均在白名单内；`--label` 的 help 文本中提及的 `precision` 也在白名单内。**若业务侧新增 label 标签，需同步在配置中心补充白名单。**
+- **openlibing-pytest-executor**：`upload_to_openlibing.py` 的 `--label` 取值需落在白名单内。现有脚本文档中出现的 `performance`、`simulation` 均在白名单内；`--label` 的 help 文本中提及的 `precision` 也在白名单内。**若业务侧新增 label 标签，需同步在配置中心补充白名单**（但不得加入保留前缀 `testcase-metadata`）。
 - **其他调用方**：`upload_to_openlibing.py` 之外的直接 HTTP 调用方（如 IDE 插件、workflow 验收脚本）需确认其 label 取值合法性。`workflow-acceptance`、`test_label` 已在白名单内，覆盖这两类场景。

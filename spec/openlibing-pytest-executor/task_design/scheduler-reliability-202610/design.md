@@ -16,6 +16,15 @@
 
 **原因**：用户希望"老脚本没同步修改时不要阻塞调度，而是安静地切到 pip install pytest-testkit"；同时 `pytest_testkit_whl_path` 是面向 testkit 包开发/测试场景的内部参数，正式使用一律走 pypi 拉取，不应在 `--help` 中作为正式选项出现。
 
+**老参数的唯一语义**（功能描述与 AC-1 必须一致）：
+
+| 参数                          | 行为                                                                 |
+| ----------------------------- | -------------------------------------------------------------------- |
+| `--pytest_testkit_whl_path`   | 按 whl 安装（内部开发/测试场景）                                     |
+| `--pytest_testkit_path`（旧） | **仅打 deprecation 警告，强制走 pip install**，不按 whl 安装、不报错 |
+
+老参数**不做 argparse 报错**——报错会阻断存量调度脚本，与"不要阻塞调度"的决策冲突。代价是旧调用方显式锁定的 whl 版本会被降级为镜像源中的版本，因此版本复现需以目标机实际安装版本为准（见「实现要点」的记录要求）。
+
 **实现要点**：
 
 - `Config` 内部仍保留 `pytest_testkit_path` 字段（避免连片重命名），由 `main.py` 把新参数值写进去；
@@ -24,9 +33,16 @@
 
 ### 2. testkit 默认走 pip，来源复用现有 mirror
 
-**决策**：default 走 `pip install pytest-testkit`，pip 源 / 超时 / 重试沿用 `Config.python_mirror_repo` / `pip_timeout_seconds` / `pip_retries`。
+**决策**：default 走 `pip install --upgrade pytest-testkit`，pip 源 / 超时 / 重试沿用 `Config.python_mirror_repo` / `pip_timeout_seconds` / `pip_retries`。
 
 **原因**：避免在 `pytest_executor.py` 内部重新定义 pip 源；与 `requirements.txt` 安装链路统一。
+
+**版本策略**：采用**浮动升级**而非固定版本约束。理由：testkit 与 executor 同仓同节奏发布，固定版本会在 testkit 发版后导致目标机装到旧版、采集行为与本地不一致；浮动升级保证目标机始终拿到最新兼容版本。
+
+代价与缓解：
+
+- 目标机安装版本随镜像源变化 → **问题复现前先记录 `pip show pytest-testkit` 的实际版本**；
+- 镜像源复用 `Config.python_mirror_repo`（公司内网源），不使用公网 PyPI，避免同名包被替换。
 
 **代码骨架**：
 
@@ -35,8 +51,8 @@ if self.pytest_testkit_whl_path:
     # whl 兜底：直接 install 本地 whl
     install_cmd = f"python3 -m pip install --force-reinstall --no-cache-dir {whl} {pip_args} -q"
 else:
-    # 默认：远程 pip 装最新
-    install_cmd = f"python3 -m pip install --no-cache-dir pytest-testkit {pip_args} -q"
+    # 默认：远程 pip 装最新（浮动升级）
+    install_cmd = f"python3 -m pip install --upgrade --no-cache-dir pytest-testkit {pip_args} -q"
 ```
 
 ### 3. 重试参数与 K8s API 完全对齐（仅 openlibing 上传）
@@ -48,6 +64,12 @@ else:
 **实施**：
 
 - `ApiHandler.upload_data_to_openlibing`：把 `requests.post(...)` 拆成"open files" + "lambda 调用 _retry_request"，文件句柄在 retry 之间保持打开（`requests` 内部 `read()` 后游标到底，retry 需 `f.seek(0)` 重置或每次重新打开）。
+
+**幂等性决策**：openlibing 上传是写操作（报告与元数据落库），对非幂等 POST 做自动重试时存在「请求已被服务端处理但响应丢失」的典型场景（连接被中断、网关 502/504、服务端提交成功后才 5xx），此时客户端判定失败并重试，服务端会收到同一份报告的第二、第三次写入。
+
+- 本期**不引入幂等键**：上传接口当前不提供服务端去重能力，新增幂等键需服务端配套改造，超出本期范围。
+- 补偿方式：重复写入落在同一 `pipelineId` / `pipelineRunId` / `jobId` 维度，由服务端按任务维度覆盖、或由下游统计侧按任务去重消化；日志中标注 `retry N/M` 便于排查重复记录。
+- **残留风险**：若服务端未按任务维度去重，重试可能产生重复的 report / 元数据记录，导致下游统计与用例通过率被重复计算。已登记在风险表，需在后续迭代评估服务端幂等键方案。
 
 ### 4. 用例名文件化
 
@@ -68,7 +90,12 @@ else:
 - remote 模式：cases_file 落在 `self.test_dir`，`subprocess.Popen(cwd=self.test_dir, cmd=[sys.executable, "-m", "pytest", "@<file>", ...])`。
 - local 模式：本地写 `cases_file` → scp 上传到 `/home/<name>/.cases_<suffix>.txt` → 远端 pytest cmdline 引用。
 
-**清理**：执行完（无论成功失败）`os.remove(cases_file)`，避免 `/home` 长期堆积。
+**命名约束**：`<suffix>` 取自 `generate_random_string()`（大小写字母 + 数字，长度 8），**不来自用例名、task_id 等外部可控字段**。
+
+- **路径安全**：随机串不含路径分隔符与 `..`，写入路径不会逃逸出 `self.test_dir` / `/home/<name>`；
+- **并发唯一**：同一目标机上并发执行两个任务时随机串不同，文件名不冲突，后执行者不会覆盖前者的 cases 文件（否则 pytest 会按错误的用例集合执行，静默少跑 / 错跑用例）。
+
+**清理**：执行完（无论成功失败）`os.remove(cases_file)`，避免 `/home` 长期堆积。清理需覆盖 pytest 非 0 返回、SSH 中断、异常退出等分支——这些路径与需求背景中的"临时文件泄漏"属同类问题，缺一个分支就会在目标机 `/home/<name>` 持续残留 cases 文件。
 
 ### 5. 失败语义保持
 
@@ -116,16 +143,20 @@ graph TD
 
 ## 风险 & 缓解
 
-| 风险                                                | 影响 | 缓解措施                                                                                               |
-| --------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------ |
-| retry 期间 openlibing 上传重复写                    | 中   | openlibing 上传按 pipelineId/pipelineRunId/jobId 幂等；日志清晰标注"retry N/M"                         |
-| 远端 `pytest @file` 不可用（pytest < 7）            | 高   | 启动时 `pytest --version` 自检，失败则报错                                                             |
-| `pip install pytest-testkit` 网络不可达             | 中   | whl 兜底（`--pytest_testkit_whl_path`）                                                                |
-| cases_file 在 `/home` 残留                          | 低   | 收尾 `os.remove`；异常路径用 try/finally 兜底                                                          |
-| 老脚本传 `--pytest_testkit_path` 直接被 argparse 拒 | 低   | 本次同步通知调度机启动脚本方改参数名                                                                   |
-| 终态（404/409）时主流程不感知                       | 中   | 停线程 + ERROR 日志，调用方（`SchedulerRunner`）后续在 future 收集阶段检查心跳 client 是否仍有对应记录 |
-| 心跳线程与主流程 race                               | 低   | 用 `threading.Event` 同步 + daemon=True 主流程退出时线程自动结束                                       |
-| 调试模式忘关导致环境长期占用                        | 高   | `--debug_keep_env` 在 `argparse` 中标记 `SUPPRESS`，不在 `--help` 暴露；调度机启动脚本方需手动添加     |
+| 风险                                               | 影响 | 缓解措施                                                                                                                                                                                                                  |
+| -------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| retry 期间 openlibing 上传重复写                   | 中   | 重复写入落在同一 pipelineId/pipelineRunId/jobId 维度，由服务端按任务维度覆盖或下游按任务去重消化；日志清晰标注"retry N/M"。**残留风险**：服务端若未按任务维度去重，重复写入会重复计算下游统计，需后续迭代评估服务端幂等键 |
+| 远端 `pytest @file` 不可用（pytest < 7）           | 高   | 启动时 `pytest --version` 自检，失败则报错                                                                                                                                                                                |
+| `pip install pytest-testkit` 网络不可达            | 中   | whl 兜底（`--pytest_testkit_whl_path`）                                                                                                                                                                                   |
+| testkit 版本浮动，目标机版本不可复现               | 中   | 镜像源复用公司内网 `python_mirror_repo`；问题复现前先记录 `pip show pytest-testkit` 的实际版本                                                                                                                            |
+| cases_file 在 `/home` 残留                         | 低   | 收尾 `os.remove`；异常路径用 try/finally 兜底；清理覆盖 pytest 非 0 返回 / SSH 中断 / 异常退出分支                                                                                                                        |
+| cases_file 名冲突或路径逃逸                        | 中   | `<suffix>` 取自 `generate_random_string()`（字母数字随机串），不含外部可控字段与路径分隔符，天然避免路径逃逸与并发覆盖                                                                                                    |
+| 老脚本传 `--pytest_testkit_path` 被降级为 pip 安装 | 中   | 老参数仅打 deprecation 警告不报错，不阻断调度；显式锁定的 whl 版本会降级为镜像源版本，需按实际安装版本复现                                                                                                                |
+| 终态（404/409）时主流程不感知                      | 中   | 停线程 + ERROR 日志，调用方（`SchedulerRunner`）后续在 future 收集阶段检查心跳 client 是否仍有对应记录                                                                                                                    |
+| 心跳线程与主流程 race                              | 低   | 用 `threading.Event` 同步 + daemon=True 主流程退出时线程自动结束                                                                                                                                                          |
+| `ttl_seconds` 配成 0/1/2 时 `interval=0` 忙循环    | 中   | `interval <= 0` 一律 WARNING 并 `start()` 直接 return；同时对 `ttl_seconds` 做下限校验（不小于 3）                                                                                                                        |
+| 调试模式 `health_ttl=-1` 透传到 K8s 申请 payload   | 高   | 申请 payload 过滤哨兵值（发默认值 600 或不发送），避免环境被立即判死回收或因参数校验失败导致申请失败                                                                                                                      |
+| 调试模式忘关导致环境长期占用                       | 高   | `--debug_keep_env` 在 `argparse` 中标记 `SUPPRESS`，不在 `--help` 暴露；调度机启动脚本方需手动添加；**另在启动处与每次跳过释放处打 WARNING 日志**，便于巡检发现被遗忘的开关                                               |
 
 ## 跨仓影响
 
@@ -177,7 +208,8 @@ for env_case_info in env_block_list:
 - `threading.Thread(daemon=True, name="hb-{env_id}")`
 - 主循环 `while not self._stop_event.is_set(): self._send_one_with_log(); self._stop_event.wait(self.interval)`
 - `interval = ttl_seconds // 3`，ttl=600 → 200s
-- 调试模式 `ttl_seconds=-1` → `interval=-1` → `start()` 直接 return
+- **`interval <= 0` 一律打 WARNING 并 `start()` 直接 return**：这覆盖了调试模式 `ttl_seconds=-1`（`interval=-1`），也覆盖 `ttl_seconds` 配成 0 / 1 / 2 的边界（`interval` 分别算出 0 / 0 / 0）。若只在 `interval < 0` 时拦截，`ttl=1` 或 `ttl=2` 会算出 `interval=0`，主循环的 `Event.wait(0)` 立即返回，线程变成**无间隔忙循环**，持续打心跳请求直到任务结束。
+- 对 `ttl_seconds` 同时做下限校验（正常模式下不允许小于 3），避免配置笔误退化成忙循环。
 
 **状态码处理**：
 
@@ -194,6 +226,8 @@ for env_case_info in env_block_list:
 - `Config.lease_health_ttl_seconds = -1` → `LeaseHeartbeatClient.start()` 不创建线程
 - `Config.debug_keep_env = True` → `EnvironmentManager.release_env` / `release_all` 内部跳过
 - 主流程 `_allocate_environments_and_execute` finally 块调 `stop()` 幂等
+- **哨兵值不得原样透传**：`lease_health_ttl_seconds = -1` 仅用于本地抑制心跳线程。K8s 申请 payload 中的 `health_ttl` 需过滤该哨兵值（发送默认值 600 或不发送该字段）——原样透传 `-1` 会让调度服务按「TTL 已过期」立即判死回收刚申请的调试环境，或因参数校验失败返回 4xx 导致申请直接失败，两种结果都会让 `--debug_keep_env` 失效。
+- **调试模式必须打 WARNING 日志**：仅靠 `argparse.SUPPRESS` 隐藏开关不够——参数不出现在 `--help` 中，但仍可能被写进调度机启动脚本。`debug_keep_env` 打开时需在调度启动处与每次跳过释放处打 WARNING，便于巡检发现被遗忘的开关（否则环境会长期占用且无明显痕迹）。
 
 **与 K8s API retry 策略的本质区别**：
 

@@ -35,7 +35,12 @@
 - [x] `pytest pytest-executor/tests/test_write_cases_file.py` 4 passed
 - [x] argparse 老参数 `--pytest_testkit_path` 仍可接收，传值时打 deprecation 警告
 - [x] 远端 `python -m pytest --version` 加载 `pytest_testkit-1.0.2` (从 PyPI 拉取)
-- [x] cases_file 路径 `/home/<name>/.cases_<suffix>.txt` 在执行后被清理
+- [x] 记录目标机实际安装版本（`pip show pytest-testkit`），便于问题复现
+- [ ] cases_file 路径 `/home/<name>/.cases_<suffix>.txt` 在执行后被清理
+  - [ ] 覆盖 pytest 非 0 返回分支
+  - [ ] 覆盖 SSH 中断 / 异常退出分支
+  - [ ] 覆盖 local 模式远端 `rm -f` 清理（`cleanup_step`）
+- [ ] cases_file 命名安全性自测：`<suffix>` 不含路径分隔符与 `..`，写入路径不逃逸出 `self.test_dir` / `/home/<name>`；并发两任务文件名不冲突
 
 ### 需求 4
 
@@ -48,3 +53,6 @@
 - [ ] 调度机自测：--debug_keep_env 不释放环境
 - [ ] 调度机自测：正常模式心跳线程启动 + INFO 日志可见
 - [ ] 调度机自测：调度服务 404/409 模拟时线程停止
+- [ ] 调度机自测：`debug_keep_env` 打开时启动处与跳过释放处出现 WARNING 日志
+- [ ] 调度机自测：调试模式下 K8s 申请 payload 的 `health_ttl` 未透传 `-1`（发默认值 600 或不发送）
+- [ ] 边界自测：`ttl_seconds=0` / `1` / `2` 时 `interval <= 0`，不启动心跳线程且无忙循环（打 WARNING）

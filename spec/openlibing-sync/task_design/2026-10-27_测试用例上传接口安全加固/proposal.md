@@ -25,15 +25,18 @@
 
 **白名单取值**（硬编码常量，配置中心可覆盖）：
 
-| label                 | 业务含义       |
-| --------------------- | -------------- |
-| `precision`           | 精准测试       |
-| `performance`         | 性能测试       |
-| `simulation`          | 仿真测试       |
-| `presmoke`            | 预冒烟         |
-| `testcase-metadata`   | 测试用例元数据 |
-| `workflow-acceptance` | 工作流验收     |
-| `test_label`          | 接口调试使用   |
+| label                 | 业务含义     |
+| --------------------- | ------------ |
+| `precision`           | 精准测试     |
+| `performance`         | 性能测试     |
+| `simulation`          | 仿真测试     |
+| `presmoke`            | 预冒烟       |
+| `workflow-acceptance` | 工作流验收   |
+| `test_label`          | 接口调试使用 |
+
+**保留前缀**：`testcase-metadata` 是流水线归档路径的固定前缀（`testcase-metadata/{pipelineId}/{pipelineRunId}/{jobId}/`），插件侧按该前缀扫描并解析 XML，因此**不纳入 label 白名单**。label 为空时服务自动落到该前缀，无需通过 label 显式指定。
+
+> 若配置中心误将 `testcase-metadata` 加入白名单，攻击者可用 `label=testcase-metadata` + 任意 `archivePath` 重建他人流水线的归档前缀。配置中心下发前需校验不含保留前缀。
 
 **关键行为**：
 
@@ -84,8 +87,8 @@
 
 **关键行为**：
 
-- 基于**净化后**的文件名判断扩展名，避免攻击者用 `a.exe.xml` 形式绕过
-- 不做文件内容嗅探（magic number 校验），仅按扩展名黑名单判断
+- 基于**净化后**的文件名判断扩展名，保证判定对象与实际落盘的文件名一致
+- 不做文件内容嗅探（magic number 校验），仅按扩展名黑名单判断；双扩展名绕过（如 `a.exe.gz`）为已登记的残留风险，见 design.md 风险表
 - 命中黑名单时该文件计入失败清单，不中断整批上传
 
 ### 功能点 4：单文件大小业务级校验
@@ -93,23 +96,24 @@
 **目标**：在业务层提供可返回明确错误码的单文件大小限制。
 
 - 业务级单文件上限：**16MB**
-- 与 Spring multipart 容器级 `max-file-size` 对齐，避免出现「业务允许但容器拒绝」的错位
+- 容器级 `max-file-size` 必须**严格大于**业务级上限（建议 24MB），使业务级校验先于容器层触发、`FILE_SIZE_EXCEED_LIMIT` 在真实链路上可达；否则容器会先拒绝请求，业务错误码永远不会被返回
 - 容器级 `max-request-size`（整请求总量）的调整由用户在 Nacos 配置中心自行完成，不在本次代码改动范围内
 - 超限文件计入失败清单，不中断整批上传
 
 ### 功能点 5：临时文件泄漏修复
 
-**目标**：确保任何路径下创建的临时文件都被清理。
+**目标**：确保任何路径下创建的临时文件都被清理，且转换失败的文件在结果中可见。
 
 - 将 `File.createTempFile` 与 `multipartFile.transferTo` 包裹在 try-finally 中
 - finally 分支删除临时文件；已加入 `uploadInfoList` 的文件由既有的 `buildUploadResult` 清理逻辑兜底（避免重复删除）
+- `transferTo` 抛 `IOException` 时，除记录日志外，还需把该文件加入失败清单（携带失败原因），保证失败文件不出现在成功列表、也不被静默丢弃
 
 ### 功能点 6：同名文件统计错乱修复
 
 **目标**：净化后重名的文件不会互相覆盖统计条目。
 
-- `fileNameToObjectKeyMap` 的 key 改用**净化后的文件名**（`safeFilename`）而非原始文件名
-- 净化后仍然重名时（极端场景），以 objectKey 作为补充区分依据，确保每个文件都有独立的上传结果记录
+- 废弃 `Map<String, String> fileNameToObjectKeyMap`，改为 `List<UploadEntry>`：每条独立持有 `displayName`（原始文件名）与 `objectKey`
+- `buildUploadResult` 改为遍历列表逐条判定，不再依赖 map 的 key 唯一性；`a/b.xml` 与 `a_b.xml` 各自产生独立条目
 
 ## 验收标准
 
@@ -122,7 +126,8 @@
 - [ ] archivePath 段长度超过 128 字符时返回 `INVALID_ARCHIVE_PATH`
 - [ ] archivePath 含空段（`a//b`）时返回 `INVALID_ARCHIVE_PATH`
 - [ ] 合法 archivePath（如 `team-x/2026-Q2/sprint-3`）正常通过并按原结构归档
-- [ ] 上传 `.exe` / `.sh` / `.jsp` 等危险类型文件时，该文件出现在失败清单
+- [ ] 上传黑名单扩展名文件（`.jsp` / `.jspx` / `.php` / `.phtml` / `.exe` / `.dll` / `.so`）时，该文件出现在失败清单
+- [ ] 上传 `.sh` / `.bat` / `.cmd` / `.ps1` 文件时正常上传成功（按设计放行）
 - [ ] 上传 `.xml` / `.json` / `.txt` / `.zip` / `.tar.gz` 等常用类型文件时正常上传成功
 - [ ] 单文件超过 16MB 时，该文件出现在失败清单
 - [ ] `transferTo` 抛异常时不残留临时文件
