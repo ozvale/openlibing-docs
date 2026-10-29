@@ -81,4 +81,3 @@ HEAD `21f6c01`）。
 
 > 说明：本地终端 `mvn` 不在 PATH（PowerShell profile 加载失败），构建与单测以 CI 流水线结果为准；
 > 本地仅能做 IDE 诊断与代码走查。
-
