@@ -1,0 +1,130 @@
+# 测试策略 — issue_259_【黄蓝协同】GitCode 与 AtomGit 双域名兼容
+
+> **模板版本**: v3.10
+> **对应规则**: AGENTS.md「规则 01 — 需求驱动的测试策略与设计」+「月度版本工作模式」
+> **使用说明**: 由 `python src/utils/version_tracker.py new-issue` 自动生成到
+> `assets/testcase_pro/软件实现&持续集成工具链团队/05_202610/20261029/issue_259_【黄蓝协同】GitCode 与 AtomGit 双域名兼容/测试过程数据/`；
+> 过程文档目录承载（测试策略 / 测试设计脑图 / 需求串讲 / 测试反串讲 / 需求开发自验证 / 测试报告.md），
+> case_list.md（issue 级清单）位于 issue 目录根（v3.10 上移）；
+> 用例本体为 issue 目录内逐用例 `.md`，
+> 执行结果见同目录 `测试报告.md` 与本 issue 目录 `执行记录跟踪表.xlsx`（需求级）
+
+---
+
+> 团队：软件实现&持续集成工具链团队 | 月度：202610 | 版本发布日期：20261029 | issue 编号：259 | issue 标题：【黄蓝协同】GitCode 与 AtomGit 双域名兼容
+> 文档状态：已定稿（2026-10-26 测试审核通过） | 创建日期：2026-10-26 | 负责人：[待填写]
+
+---
+
+## 1. 测试策略
+
+> 业务输入**唯一来源**为 gitcode issue 内的开发设计文档，AI/测试人员必须实际读取链接，禁止超出文档范围发散。
+
+### 1.1 Issue 信息
+
+| 字段 | 内容 |
+|------|------|
+| Issue编号 | 259 |
+| Issue标题 | 【黄蓝协同】GitCode 与 AtomGit 双域名兼容 |
+| 关联需求 | https://gitcode.com/openlibing/openlibing-coderepo/issues/259 |
+| 所属团队 | 软件实现&持续集成工具链团队 |
+| 所属微服务 | openlibing-coderepo（黄区侧 PrSync 链路 handler：PrSyncEventHandler / PrSyncPushEventHandler） |
+| 所属模块 | 黄蓝协同 PrSync 链路（跨区代码同步，黄区消费侧适配） |
+| 负责人 | [待填写] |
+| 创建日期 | 2026-10-26 |
+
+### 1.2 需求摘要
+
+> 从 gitcode issue 描述提炼 + 黄区适配要点用户表述确认，**禁止超出范围**。
+
+**业务目标**：`atomgit.com` 与 `gitcode.com` 同属 GitCode 平台双域名。蓝区（openlibing 代码仓服务）已适配——无论哪个域名录入，仓库平台标识统一归一为 **gitcode**，业务逻辑均按 gitcode 处理。黄区 PrSync 链路（接收蓝区 MQS 消息自动触发 PR 同步）此前按 payload repoUrl **URL 全串精确匹配**反查已录入仓库与 access token，跨域名录入时匹配失配导致同步事件被丢弃。本次黄区对齐蓝区口径：接收到的消息无论域名是 `gitcode.com` 还是 `atomgit.com`，均按平台坐标归一后匹配，确保跨域名场景同步事件正常触发。
+
+**核心功能点**（issue 需求内容，对应分支 `fix/dev` commit `fe09f7b5`）：
+
+1. **`PrSyncEventHandler`（PR 同步事件）**：token 反查前按平台坐标（`RepoCoordinateResolver`）将 payload repoUrl 归一为录入域名，跨域名场景不再失配；
+2. **`PrSyncPushEventHandler`（push 同步事件）**：注册仓库反查与 repoUrl 处理保持坐标兜底口径（对齐 `PushEventHandler`）；
+3. **跨域名单测**：补充 atomgit.com 录入 + gitcode.com payload 回传（及反向）单元测试（开发侧已通过 45 个 handler 用例）。
+
+**业务规则 / 边界**：
+
+- **消息域名恒定 gitcode**（开发确认）：发送到黄区的消息 repoUrl 域名只会是 `gitcode.com`（不是双域名都会出现）；
+- **平台标识一致性**（用户表述）：无论 `atomgit.com` 还是 `gitcode.com` 域名录入，平台标识均为 `gitcode`，与蓝区一致；
+- **映射创建匹配**（用户表述）：黄区代码仓映射创建过程输入不同域名（atomgit.com / gitcode.com）须能匹配到对应平台（gitcode）；
+- **消息匹配兜底**（用户表述）：收到 `gitcode.com` 消息后，须能匹配到录入为 `gitcode` 的仓库、也能匹配到录入为 `atomgit` 的仓库（坐标归一后无跨域名失配），不丢事件；
+- **坐标反查未命中兜底**（issue 原文）：反查不到已录入仓库时保持 payload 原样，由 token 侧按原有行为报错，**不静默改写**；
+- 同仓老 handler（`MergeRequestEventHandler` / `PushEventHandler`）已通过 `RepoCoordinateResolver` 坐标反查修复同类问题，PrSync 系列对齐即可，不改蓝区消费协议。
+
+**不涉及（禁止发散）**：不改蓝区（openlibing 代码仓服务）录入与平台标识逻辑（已适配）；不改 MQS 消息协议与字段；不改黄区消费端流水线触发逻辑；不新增平台支持（仅 gitcode/gitee/github 既有平台）。
+
+### 1.3 测试目标
+
+| 验收标准（issue 原文） | 对应用例 |
+|------|------|
+| AC1 同一仓库 atomgit.com 录入 + gitcode.com payload 回传时，PR / push 同步事件均正常触发（消息域名恒定 gitcode，开发确认） | TC-ISSUE259-001、TC-ISSUE259-003（跨域名） |
+| AC1（同域名基线）gitcode.com 录入 + gitcode.com payload 回传，PR / push 同步事件正常触发 | TC-ISSUE259-002、TC-ISSUE259-004 |
+| AC2 坐标反查未命中时保持原有报错行为，不静默改写 | TC-ISSUE259-005 |
+| AC3 跨域名单测覆盖两个方向（开发侧 UT） | 开发自验证覆盖（见 1.7），测试侧以真实链路端到端验证 |
+| （平台一致性/映射创建）黄区代码仓映射创建输入不同域名均匹配对应平台 gitcode；收到 gitcode 消息能匹配 gitcode/atomgit 录入仓库 | TC-ISSUE259-006 |
+| （平台边界补充）非 gitcode 平台（如 github）相同组织/代码仓请求不命中 gitcode 代码仓 | TC-ISSUE259-007 |
+| （主动触发补充）黄区主动触发代码同步 / PR 同步可成功 | TC-ISSUE259-008、TC-ISSUE259-009 |
+
+### 1.4 测试范围
+
+| 测试类型 | 是否覆盖 | 说明 |
+|----------|----------|------|
+| UI功能测试 | 否 | 黄区为加密区，无页面可探索；改动为后端 handler 逻辑，无 UI 变化 |
+| API接口测试 | 是 | 核心覆盖。通过**真实平台操作触发**（在双域名测试仓库上创建 PR / push 代码）→ 蓝区 webhook → MQ → 黄区 handler，**两端联合观测**：蓝区侧 MQS 消息发送成功 + yellow_region_pipeline / gitee_pr_info 预插记录；黄区侧消费反馈（SC-START 标签 / 流水线触发），黄区侧观测由开发配合回传 |
+| DFX测试 | 否 | 验收标准无性能/可靠性指标；同步链路为消息驱动，无阈值变化 |
+| 安全测试 | 否 | 不改认证/越权/传输逻辑；坐标归一属匹配逻辑修复。token 反查失败保持原报错行为属功能异常场景（TC-ISSUE259-005），不单列安全维度 |
+
+**安全 6 维度覆盖声明**（AGENTS.md 规则 04 强制；本 issue 均豁免，原因如下）：
+
+| 维度 | 覆盖状态 | 说明 |
+|------|----------|------|
+| 认证校验 auth_check | 豁免 | 不改鉴权逻辑；handler 沿用既有 access_token 校验 |
+| 横向越权 horizontal_check | 豁免 | 不改跨用户资源访问控制 |
+| 纵向越权 vertical_check | 豁免 | 不改角色/权限模型 |
+| 传输安全 transport_check | 豁免 | 不改 HTTPS/Cookie/MQS 传输配置 |
+| CSRF csrf_check | 豁免 | 非浏览器会话接口（MQ 消费链路） |
+| 敏感信息防护 sensitive_data_check | 豁免 | 不改消息体字段与日志策略；坐标归一输入为仓库 URL |
+
+### 1.5 测试策略
+
+- 手工测试（主链路，真实平台操作触发 + 两端联合观测）：
+  - 跨域名 PR 同步：以 atomgit.com 域名录入仓库 → gitcode.com 域名同仓库创建 PR（消息域名恒定 gitcode）→ 观测黄区 PR 同步事件正常触发（蓝区 MQS 发送成功 + 预插记录；黄区消费反馈回传）；
+  - 同域名基线：以 gitcode.com 域名录入仓库 → gitcode.com 域名同仓库创建 PR / push → 同步事件正常触发（对照基线）；
+  - 跨域名 push 同步：以 atomgit.com 域名录入仓库 push 代码 → push 同步事件正常触发（req_type=push，不带 token）；
+  - 坐标反查未命中：未录入仓库的 payload → 保持原有报错行为（token 侧报错），不静默改写、不产生同步事件；
+  - 映射创建匹配：黄区代码仓映射创建输入 atomgit.com / gitcode.com 域名均匹配对应平台 gitcode，收到 gitcode 消息能匹配 gitcode/atomgit 录入仓库；
+  - 平台边界（负向）：非 gitcode 平台（如 github）相同组织/代码仓的请求/消息不命中 gitcode 代码仓（坐标匹配含平台维度，不跨平台误命中）；
+  - 主动触发：黄区主动触发代码同步（push）/ PR 同步均能成功执行（与蓝区消息被动触发互为对照）。
+- 自动化测试：本需求为黄区加密链路，自动化脚本需依赖开发提供的黄区侧验证途径（如可投递模拟 payload 的测试通道或 MQS 消息日志查询接口）。若开发提供可调用通道，补 `auto_api` 用例（脚本位置 `src/automation/software-cicd/api/development_management/code_repository_management/beta/`，目录不随版本树移动）；未提供前用例以手工为主，脚本位置登记「待开发提供验证通道」。
+
+### 1.6 复用检查（强制）
+
+> 设计用例前必须检索：特性树 `assets/testcase_pro/软件实现&持续集成工具链团队/{01~04 类型目录}/` 与
+> `01_系统测试/通用功能/易用性/` 易用性通用库；可覆盖的测试点**直接复用**，标注 reuse。
+
+| 检索范围 | 可复用用例 | 复用结论 |
+|----------|-----------|----------|
+| 特性树（本团队 01~04） | issue_204：TC-ISSUE204-009（流水线 webhook 回调平台识别 atomgit 为 gitcode）、TC-ISSUE204-012（gitcode 域名全链路无回退）、TC-ISSUE204-015（同项目 atomgit/gitcode 重复录入校验）；issue_207：黄蓝协同 token 获取链路用例 | 蓝区录入/平台识别行为已由 issue 204 覆盖，本 issue 聚焦**黄区 PrSync 跨域名匹配**（无存量用例），需新建；蓝区平台标识一致性作为本 issue 前置断言，可参考 issue 204 口径 |
+| 易用性通用库 | 无 | 纯后端链路需求，无 UI 易用性涉及 |
+
+### 1.7 风险与约束
+
+| 风险 | 影响 | 缓解措施 |
+|------|------|----------|
+| 修复代码（fix/dev fe09f7b5）未合入并部署到 beta | 全部用例无法执行 | 已确认需开发配合部署；未部署前用例设计先行，执行阶段标记 block 并登记原因 |
+| 黄区为加密区，页面/日志不可直接访问 | 黄区侧消费反馈无法自行观测 | 两端联合观测：蓝区侧自行观测（MQS 发送/预插记录），黄区侧由开发配合提供验证途径（日志/消费结果回传），执行前向开发确认 |
+| 跨域名触发依赖真实平台操作 | PR/push 事件触发时机与链路可达性不确定 | 已确认存在双域名测试仓库；真实操作由测试人员执行，蓝区侧可观测性先行验证 |
+| MQS 消息体/预插记录核对依赖 DB 访问权限 | 蓝区侧断言受限 | 向开发确认 beta 环境 DB/日志查询途径；无法核对的以黄区消费反馈为准 |
+| AC3 单测（开发侧）与测试用例边界 | 避免重复设计 | AC3 由开发自验证覆盖（45 个 handler 用例），本需求用例聚焦真实链路端到端行为 |
+| **调研项（串讲登记）**：所有传入 url 或代码仓平台的请求，平台类型如何处理 | 平台判定链路存在未知异常分支（如非 gitcode 平台、异常 URL 形态），可能导致误匹配或异常 | 执行阶段逐一排查全部传入 url / 代码仓平台请求的平台类型处理链路（含 github/gitee 平台、异常 URL），确认坐标归一与平台判定无异常分支；对应用例：TC-ISSUE259-005（未命中）、TC-ISSUE259-007（跨平台不误命中），排查结论回填测试报告 |
+
+### 1.8 依赖与前置条件
+
+- 测试环境：beta.openlibing.com 可达（已验证 GET 200），具备代码仓管理操作权限的测试账号
+- 修复部署：开发配合将 fix/dev（fe09f7b5）合入并部署到测试环境（当前未部署）
+- 测试数据：同一代码仓在 `atomgit.com` 与 `gitcode.com` 双域名的可用测试仓库（已确认存在）
+- 观测途径：蓝区侧 MQS 消息/预插记录查询方式；黄区侧消费反馈回传途径（开发提供）
+- 开发侧：跨域名单测通过（45 个 handler 用例，已实现）
