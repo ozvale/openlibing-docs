@@ -119,5 +119,5 @@
 ## 6. 补充说明
 
 1. 本测试策略对应 issue https://gitcode.com/openlibing/openlibing-coderepo/issues/208，涉及 openlibing-coderepo / openlibing-codecheck 两服务。
-2. 本次测试范围仅覆盖功能点 B（下线 Nacos `${majun.project.name}`）；A 方案与 framework 更名编排不在本团队范围。
+2. 本次测试范围仅覆盖功能点 B（下线 Nacos `${majun.project.name}`）；A 方案与 framework 更名编排不在本团队范围。本需求为配合 framework 项目更名主需求的**适配改造**，主要功能由主需求统一测试覆盖，本策略仅覆盖本团队两服务（openlibing-coderepo / openlibing-codecheck）的适配回归。
 3. 数据来源：issue 目录 `测试过程数据/测试策略.md`；执行结果与遗留项见同目录《openLiBing支持项目更名 测试报告》。
