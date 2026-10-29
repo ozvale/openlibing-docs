@@ -21,15 +21,16 @@
 本项目存在两种 deleteBy 风格，AI 新增删除方法时必须按以下规则选择：
 
 **风格一：Spring Data 派生方法**（方法名即查询，无需 `@Query`）
+
 - 必须加 `@Modifying(flushAutomatically = true)` + `@Transactional(propagation = Propagation.REQUIRES_NEW)`
 - 适用场景：简单的按字段删除，Spring Data 能自动派生 SQL
 - 项目示例：`RepoMetaRepository.deleteByProductType()`、`FileRepository.deleteBySbomId()`、`ExternalPurlRefRepository.deleteByPkgIdAndCategory()`
 
 **风格二：自定义 `@Query` 原生 SQL**
+
 - 必须加 `@Modifying` + `@Transactional` + `@Query(value="...", nativeQuery=true)`
 - 适用场景：派生方法无法表达的复杂删除条件，或需要精确控制 SQL
 - 项目示例：`VulnerabilityLifecycleRepository.deleteByProductType()`、`ProductConfigValueRepository.deleteByProductConfigIdAndValue()`
-
 
 ## 远程 API 调用规则
 
@@ -65,9 +66,9 @@ for (Item item : items) {
 当两个或以上 Service 存在相同逻辑（如 purl 转换、字符串解析），必须提取到 `utils` 模块的公共工具类作为静态方法，各 Service 委托调用。禁止各 Service 各自实现一份。
 
 当前已有工具类：
+
 - `PurlUtil`：purl 解析、转换、规范化、版本匹配
 - `SignatureUtil`：签名相关
-
 
 ## 测试规则
 
@@ -83,6 +84,7 @@ for (Item item : items) {
 
 **G.CMT.01**：`public` 或 `protected` 修饰的元素（类、方法、字段）应添加 Javadoc 注释，说明其用途、参数含义、返回值语义及异常情况。
 示例如下：
+
 ```java
     /**
      * 根据产品名，包id，验证登记，漏洞编号查询漏洞信息
@@ -97,7 +99,6 @@ for (Item item : items) {
     PageVo<ShowVulnerabilityVo> queryVulnerability(String productName, String packageId, String severity,
                                                    String vulId, Pageable pageable);
 ```
-
 
 ### 代码格式规范
 
@@ -114,3 +115,63 @@ Boolean 字段必须使用 `is` 或 `has` 前缀：
 ### 代码清理规范
 
 **G.OTH.03**：不用的代码行和 `import` 语句应直接删除，保持代码整洁，避免无用代码堆积。
+
+## 传递依赖与缓存预计算
+
+### 传递依赖闭包预计算优于在线递归 CTE
+
+SBOM 中包与依赖关系规模大、层级深时，递归 CTE 性能不可控（递归深度大、中间结果集膨胀、执行计划不稳定）。**预计算物化缓存**把成本前置到 SBOM 导入时一次性付出，在线查询降为单表主键查询。参考实现：`pkg-vul-transitive-query` 任务的 `DependencyCacheService` + `PackageDependencyCache` 表。
+
+### PostgreSQL `uuid[]` 数组列 + `= ANY(uuid[])` 替代长 `IN (...)`
+
+当 Repository 方法按 ID 集合过滤，且集合规模可能较大（数百到数千）时：
+
+- entity 字段用 PostgreSQL 原生 `uuid[]` 数组列存储集合
+- Repository 查询用 `= ANY(:packageIds)` 替代 JPA 默认的 `IN (?, ?, ...)`
+- 原因：长 `IN` list 会导致 SQL 解析与计划生成开销显著；`= ANY(uuid[])` 参数固定为单个数组，可被 planner 更稳定地优化
+
+项目示例：`ExternalVulRefRepository.findByPackageIdsInAndSeverityAndVulId`。
+
+### 图遍历用 projection 查询避免 N+1
+
+BFS/DFS 遍历关系表时，循环内查询关系数据必须用 projection DTO（如 `PackageIdAndSpdxId`）只 select 必要字段：
+
+- 避免加载大 TEXT 字段（如 `sbom_element_relationship` 的描述字段）
+- 避免 N+1 查询（projection 让 JPA 一次性拉取需要的列）
+- 配合 `visited` Set 防止重复访问
+
+### 图遍历排除反向边让其退化为 DAG
+
+当关系表中同时存在正向（`DEPENDS_ON`）与反向（`RUNTIME_DEPENDENCY_OF`）关系时，BFS/DFS **必须明确只遍历一种方向**，避免形成环导致死循环。排除反向边让图退化为 DAG，遍历可终止。
+
+### 缓存预计算的多触发入口模式
+
+缓存预计算服务提供 3 个触发入口，覆盖不同场景：
+
+1. **同步入口**：hook 在主流程末尾（如 `SpdxReader.readSbomFile` 末尾调 `precomputeForSbom`），让小数据量立即可查
+2. **异步 step**：spring-batch step 作为兜底，大数据量或同步失败时补算
+3. **REST API**：用于存量数据清洗 / 失败重试
+
+去重锁防止重复计算：进程内 `ConcurrentHashMap<业务主键, status>`，已在处理时立即返回 `already_in_progress`。
+
+### 进程内去重锁的适用边界
+
+- 单实例部署：`ConcurrentHashMap` 即可
+- 多实例部署：进程内锁失效，但若底层操作幂等（如 `upsert` / `INSERT IGNORE`），重复触发只会重复计算不会数据损坏，可接受
+- 需要严格去重时再引入 Redis 或 DB 行锁，避免过度设计
+
+## WebClient 远程调用规则
+
+### URI 模板变量禁止手动 URL 编码
+
+WebClient 的 URI 模板（`uri("/path/{var}", value)`）会自动对变量值做 URI 编码，手动预编码会产生双重编码（如 `%2F` 被再次编码为 `%252F`）导致远端 404。`/` 属于 path 合法保留字符，直接透传即可，无需任何转换。
+
+## 并发与状态机规则
+
+### check-then-save 必须升级为原子条件 UPDATE
+
+先查状态再覆盖写库存在时序窗口：判断与写入之间任务可能被调度器改变状态。必须用 `UPDATE ... WHERE 状态满足` 原子条件更新，更新返回 0 行即并发冲突（抛业务异常），比"先查后存 + 内存锁"可靠且无锁开销。项目示例：`RawSbomRepository.updateRawSbomIfStatusAllowed`（publishSbom 覆盖 WAIT 任务）。
+
+### Controller 错误消息分级透出
+
+自定义业务异常（如 `SbomRuntimeException`，参数校验 / 任务冲突等面向调用方的消息）可透出到响应 errorInfo；未预期异常（DB 连接、NPE 等）仅记日志，对外返回固定文案（如 `publish sbom failed!`），避免 SQL / 连接串等内部细节泄露。

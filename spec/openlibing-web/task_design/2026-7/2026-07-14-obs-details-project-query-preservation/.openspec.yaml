@@ -1,0 +1,7 @@
+schema: spec-driven
+created: 2026-07-14
+source-commit: 981231addbae747c1f12b8f80c95fe60f48e1576
+source-branch: feature-obs-wt
+source-files:
+  - apps/web-openlibing/src/views/Content.vue
+  - apps/web-openlibing/src/views/Publish/obs/obsArtifactRepository.vue
