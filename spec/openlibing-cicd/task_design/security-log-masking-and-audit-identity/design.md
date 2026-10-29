@@ -25,15 +25,28 @@
 
 改后：以正则整段替换，保留字段名、统一掩码值。
 
+以下为**最终形态**（`eb480a292` 之后，与当前代码一致）；`[^"]*` 为改前形态，仅用于说明修正原因。
+
 ```java
-SENSITIVE_FIELDS_PATTERN = "\"((?:accessToken|access_token|token|password|secret|privateKey|private_key))\"\\s*:\\s*\"[^\"]*\"";
-// Pattern.CASE_INSENSITIVE，替换为 "$1":"******"
+// 明文 JSON 敏感字段（含请求头形态字段名）
+SENSITIVE_FIELDS_PATTERN = "\"((?:accessToken|access_token|token|password|secret|privateKey|private_key"
+    + "|x-gitee-token|x-gitee-password|x-gitcode-token|private-token|authorization))\""
+    + "\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"";     // CASE_INSENSITIVE，替换为 "$1":"******"
+
+// 内嵌 JSON（消息体被二次序列化，引号转义为 \"）敏感字段，保留原转义形态
+ESCAPED_SENSITIVE_FIELDS_PATTERN = "\\\\\"(<同上字段名组>)\\\\\"\\s*:\\s*\\\\\"(?:"
+    + ESCAPED_VALUE_BACKSLASH + "|" + ESCAPED_VALUE_QUOTE + "|[^\"\\\\])*\\\\\"";
+    // 替换为 \\"$1\\":\\"******\\"
+
+// URL 查询参数中的凭证
+URL_TOKEN_PATTERN = "([?&](?:access_token|private_token|accessToken)=)[^&\\s\"'<>\\\\]+";
+    // CASE_INSENSITIVE，替换为 $1******
 ```
 
-- `maskSensitiveFields(String messageJson)`：空/空白输入原样返回，其余按上述正则整段替换。
+- `maskSensitiveFields(String messageJson)`：空/空白输入原样返回；否则依次执行上述三条正则替换（明文 JSON → 内嵌转义 JSON → URL 查询参数）。
 - 两轮修正：
   - `b533ce475`：收敛 URL 中 token 的取值域，避免把非凭证内容一起吞掉。
-  - `eb480a292`：敏感值内含转义反斜杠/引号时，旧的 `[^"]*` 会提前截断、只脱敏半截，改为整段脱敏。
+  - `eb480a292`：敏感值内含转义反斜杠/引号时，旧的 `[^"]*` 会提前截断、只脱敏半截；改为 `(?:[^"\\]|\\.)*` 显式匹配转义对，并新增内嵌转义 JSON 专用正则，值结束符只认单个反斜杠加引号。
 
 ### 2.2 日志用序列化入口（`toSafeLogJson`）
 
@@ -79,11 +92,11 @@ SENSITIVE_FIELDS_PATTERN = "\"((?:accessToken|access_token|token|password|secret
 
 ## 3. 类设计
 
-| 类型                                                                | 职责变化                                             | 关键成员                                                                                       |
-| ------------------------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `com.openlibing.cicd.common.utils.MessageMaskUtils`                 | 日志脱敏工具：字段脱敏 + 日志安全序列化              | `SENSITIVE_FIELDS_PATTERN`（静态正则）、`maskSensitiveFields(String)`、`toSafeLogJson(Object)` |
-| `com.openlibing.cicd.common.operationlog.AsyncOperationLogIdentity` | 审计身份采集，`capture()` 增加 `userId` 声明覆盖逻辑 | `capture()`（约 56-78 行）；引用 `UserInfoConstants.FIELD_USER_ID`                             |
-| `logback-spring.xml`（配置文件，非类）                              | 三处日志 pattern 的转义正则扩展                      | `CONSOLE_LOG_PATTERN`、`FILE_LOG_PATTERN`、`MANAGE_LOG_FILE`                                   |
+| 类型                                                                | 职责变化                                                                        | 关键成员                                                                                                                                                |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `com.openlibing.cicd.common.utils.MessageMaskUtils`                 | 日志脱敏工具：字段脱敏 + 内嵌转义 JSON 脱敏 + URL 查询参数脱敏 + 日志安全序列化 | `SENSITIVE_FIELDS_PATTERN`、`ESCAPED_SENSITIVE_FIELDS_PATTERN`、`URL_TOKEN_PATTERN`（静态正则）、`maskSensitiveFields(String)`、`toSafeLogJson(Object)` |
+| `com.openlibing.cicd.common.operationlog.AsyncOperationLogIdentity` | 审计身份采集，`capture()` 增加 `userId` 声明覆盖逻辑                            | `capture()`（约 56-78 行）；引用 `UserInfoConstants.FIELD_USER_ID`                                                                                      |
+| `logback-spring.xml`（配置文件，非类）                              | 三处日志 pattern 的转义正则扩展                                                 | `CONSOLE_LOG_PATTERN`、`FILE_LOG_PATTERN`、`MANAGE_LOG_FILE`                                                                                            |
 
 无新增类、无接口/抽象层调整。
 
@@ -103,7 +116,8 @@ SENSITIVE_FIELDS_PATTERN = "\"((?:accessToken|access_token|token|password|secret
 
 ### 防护边界
 
-- **覆盖范围**：JSON 形态的敏感字段（`accessToken`、`access_token`、`token`、`password`、`secret`、`privateKey`、`private_key`）与 URL 中的令牌；日志用序列化剔除 `accessToken`、`configJson`、`tableData`；日志文本中的 C0 控制字符与 `\u0085` / `\u2028` / `\u2029`。
+- **覆盖范围**：JSON 形态的敏感字段（`accessToken`、`access_token`、`token`、`password`、`secret`、`privateKey`、`private_key`，以及请求头形态 `x-gitee-token`、`x-gitee-password`、`x-gitcode-token`、`private-token`、`authorization`）、内嵌转义 JSON 的同名字段、URL 查询参数 `access_token` / `private_token` / `accessToken`；日志用序列化剔除 `accessToken`、`configJson`、`tableData`；日志文本中的 C0 控制字符与 `\u0085` / `\u2028` / `\u2029`。
+- **生效位置**：`WebHookEventConsumer` 等事件日志出口统一走 `MessageMaskUtils.maskSensitiveFields` / `toSafeLogJson`；未接入这两个入口的日志出口不在覆盖范围（见残留风险）。
 - **身份可信边界**：审计 `userId` 以验签令牌声明为可信来源，请求参数仅在声明缺失或验签失败时作为回退来源。
 
 ### 失败语义

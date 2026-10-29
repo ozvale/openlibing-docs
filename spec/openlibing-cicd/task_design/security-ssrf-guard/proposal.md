@@ -12,8 +12,8 @@
 
 - 非点分 IPv4 形态（`http://0x7f000001/x`、`http://0177.0.0.1/x`、`http://2130706433/x`）不匹配前缀；
 - IPv6 及其内嵌 IPv4 形态（IPv4 映射 `::ffff:0:0/96`、NAT64 `64:ff9b::/96`、6to4 `2002::/16`）完全不覆盖；
-- 域名解析出多条 A/AAAA 记录时可轮询绕过，且校验阶段与建连阶段各解析一次，存在 DNS rebinding 窗口；
-- 302 跳转可把请求带到未校验的地址；
+- 域名解析出多条 A/AAAA 记录时可轮询绕过，且校验阶段与建连阶段各解析一次，存在 DNS rebinding 窗口（已由 `SafeDns` 在解析结果上逐个校验并直接用于建连闭环）；
+- 302 跳转可把请求带到未校验的地址（探测与下载客户端均已 `followRedirects(false)`，不再跟随）；
 - 下载响应体无上限，大响应可耗尽内存；
 - 日志中直接打印完整 OBS 签名 URL，存在凭证泄露风险。
 
@@ -34,10 +34,12 @@
 - [x] `isHostAllowed` 按 label 边界做后缀匹配，`gitcode.com` 命中 `api.gitcode.com`、不命中 `evilgitcode.com`；拒绝 URL userinfo 与非默认端口
 - [x] sec-option 探测使用禁用重定向的 OkHttp 客户端，并通过 `SafeDns` 消除 DNS rebinding
 - [x] 未命中允许探测来源时不写 `false`，`package_download_accessible` 落 NULL 表示「未检测」
-- [x] 日志/结果/构建产物下载增加协议白名单、IP 字面量校验、10MB 响应体上限与 URL 长度上限
+- [x] 日志/结果/构建产物下载增加协议白名单、`SafeDns`（INTERNAL 档）解析结果校验、IP 字面量校验、不跟随重定向、10MB 响应体上限与 URL 长度上限
 - [x] `HttpRequestUtil` 新增 `sendRequestSafely`，`doSend` 统一 `IOException` 与 `IllegalArgumentException` 的返回契约
 - [x] 下载与请求日志中的 URL 经 `SafeRequestUtils.maskUrl` 脱敏，仅保留 host:port
 - [x] 补充 `SafeRequestUtilsTest`、`SecOptionScanServiceImplTest`、`SafeDnsTest`、`HttpRequestUtilTest`、`PipelineEventConsumerImplTest`、`PipelineStartEventHandlerTest`
+
+**收口状态**：以上为代码层实现完成，`!631` 与 `!639` 当前均为 open，合入并完成 beta 验收前不视为收口。
 
 ## 影响范围
 

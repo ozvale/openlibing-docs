@@ -28,7 +28,7 @@
 
 **已知取舍**：
 
-- `createRepoWebhook` 请求体保留 `access_token`：GitCode 注册 webhook 接口要求该字段，且请求体不进入访问日志 / Referer，不构成查询串泄露。
+- `createRepoWebhook` 请求体保留 `access_token`：GitCode 注册 webhook 接口要求该字段，且请求体不进入访问日志 / Referer，不构成查询串泄露；但该字段属 form/urlencoded body 渠道，本次未做脱敏，若请求体被调用方打印或链路追踪采集仍会明文出现。
 - `PipelineServiceImpl` 第 7061/7091 行附近 PR 管理模块的 `access_token=` 拼接不在本次范围，后续单独整改。
 
 ## 2. 实现逻辑设计
@@ -119,7 +119,7 @@ hutool `HttpResponse` 改为 try-with-resources 关闭（`acaa12f08`），与令
 
 - 令牌通过请求头传输，不再进入 URL，因此不会落入访问日志、代理日志、Referer、浏览器历史与异常堆栈中的 URL。
 - 调用前仍保留 `SafeRequestUtils.isSafeProtocol(url)`，SSRF 协议校验边界不变。
-- 请求体中的 `access_token` 属第三方接口契约要求，不进入 URL 与日志。
+- 请求体中的 `access_token` 属第三方接口契约要求，不进入 URL 与 HTTP 访问日志；但 form/urlencoded 请求体渠道本次未做脱敏，属已知残留风险。
 
 **失败语义**：
 
@@ -129,7 +129,8 @@ hutool `HttpResponse` 改为 try-with-resources 关闭（`acaa12f08`），与令
 **残留风险与已知取舍**：
 
 - `PipelineServiceImpl` 第 7061/7091 行附近 PR 管理模块仍存在 `access_token=` 的 URL 拼接，本次未处理，需后续整改。
-- 若第三方接口对某些路径不识别 `PRIVATE-TOKEN` 头，需回归验证；仓内 `GiteeIssueClient`、`RepoServiceImpl#getGiteeOrgMembers` 已证明该头部可用。
+- 请求头可用性依据：`GiteeIssueClient`（Gitee）、`GitCodeIssueClient`（GitCode）、`RepoServiceImpl#getGiteeOrgMembers` 在本次改动前已统一使用 `PRIVATE-TOKEN` 头，说明两个通道均接受该头；因此不按通道拆分鉴权方式。
+- **beta 真实接口回归未执行**：现有单测只证明请求构造符合预期（URL 不含令牌、header 键值正确），不证明服务端鉴权通过；GitCode 分支查询/PR 标题、Gitee webhook 增删查需在 beta 环境逐一实测。
 - 令牌仍存在于进程内存与请求头，属不可避免的最小暴露面。
 
 **验证覆盖**：

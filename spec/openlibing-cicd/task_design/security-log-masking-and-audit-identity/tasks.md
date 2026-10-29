@@ -16,8 +16,10 @@
 
 - 文件：`src/main/java/com/openlibing/cicd/common/utils/MessageMaskUtils.java`
 - 改动：
-  - 新增 `SENSITIVE_FIELDS_PATTERN`：`"\"((?:accessToken|access_token|token|password|secret|privateKey|private_key))\"\\s*:\\s*\"[^\"]*\""`，`Pattern.CASE_INSENSITIVE`，替换为 `"$1":"******"`。
-  - 新增 `maskSensitiveFields(String messageJson)`：空/空白原样返回，其余按上述正则整段替换。
+  - 新增 `SENSITIVE_FIELDS_PATTERN`：`"\"((?:accessToken|access_token|token|password|secret|privateKey|private_key|x-gitee-token|x-gitee-password|x-gitcode-token|private-token|authorization))\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\""`，`Pattern.CASE_INSENSITIVE`，替换为 `"$1":"******"`（最终形态，已能跨过转义引号）。
+  - 新增 `ESCAPED_SENSITIVE_FIELDS_PATTERN`：匹配内嵌 JSON 被二次转义后的 `\\"password\\":\\"value\\"` 形态，替换时保留原转义层级。
+  - 新增 `URL_TOKEN_PATTERN`：`([?&](?:access_token|private_token|accessToken)=)[^&\\s\"'<>\\\\]+`，替换为 `$1******`。
+  - 新增 `maskSensitiveFields(String messageJson)`：空/空白原样返回，其余依次执行上述三条正则替换。
   - 新增 `toSafeLogJson(Object)`：序列化为日志用 JSON，剔除 `accessToken`、`configJson`、`tableData`；序列化失败返回 `<unavailable>`，不向调用方抛异常。
   - 移除消息头中携带的验签凭证：`ApigWebhookController`、`WebHookEventController`、`WebHookEventConsumer` 及对应两个测试类。
 - commit：`4c8afa7ec` fix(webhook): 脱敏事件日志中的令牌并移除消息头携带的验签凭证

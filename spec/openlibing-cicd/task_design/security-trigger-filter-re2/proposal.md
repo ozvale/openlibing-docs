@@ -28,6 +28,8 @@
 - [x] `TriggerFilterEvaluatorTest` 覆盖 INCLUDE/EXCLUDE/混合、空配置、非法 pattern 降级、null 规则元素跳过，并以 `(a+)+$` + 1000 字符输入在 2 秒内完成验证线性时间
 - [x] `PipelineServiceImplTest` 新增 `batchUpdatePipelineConfig_InvalidTriggerFilter_RejectedWithoutUpdate`，断言未发生任何 DB 查询
 - [x] BETA 环境 `trigger_filters` 存量数据完成 RE2 兼容性扫描，确认无风险
+- [ ] 生产环境 `trigger_filters` 存量数据未扫描：上线前必须按同一标准确认为零风险，否则存量不兼容规则会静默不命中
+- [ ] 运行期编译失败告警未实现：当前仅 `warn` 日志，无规则/流水线标识计数与监控
 
 ## 影响范围
 

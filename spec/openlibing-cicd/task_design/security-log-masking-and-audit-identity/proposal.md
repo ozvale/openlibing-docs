@@ -16,10 +16,10 @@
 
 ## 验收标准
 
-- [x] `MessageMaskUtils.SENSITIVE_FIELDS_PATTERN` 以 `Pattern.CASE_INSENSITIVE` 匹配 `accessToken|access_token|token|password|secret|privateKey|private_key` 字段，并整段替换为 `"$1":"******"`
+- [x] `MessageMaskUtils.SENSITIVE_FIELDS_PATTERN` 以 `Pattern.CASE_INSENSITIVE` 匹配 `accessToken|access_token|token|password|secret|privateKey|private_key|x-gitee-token|x-gitee-password|x-gitcode-token|private-token|authorization` 字段，并整段替换为 `"$1":"******"`；`ESCAPED_SENSITIVE_FIELDS_PATTERN` 覆盖内嵌转义 JSON 形态
 - [x] `maskSensitiveFields` 对空/空白输入原样返回，其余输入按正则整段替换
 - [x] `toSafeLogJson` 剔除 `accessToken`、`configJson`、`tableData`，序列化失败返回 `<unavailable>` 且不向调用方抛异常
-- [x] URL 中的令牌取值域已收敛，非凭证内容不再被误伤
+- [x] URL 中的令牌取值域已收敛：`URL_TOKEN_PATTERN` 仅匹配 `access_token` / `private_token` / `accessToken` 三个查询参数名，非凭证内容不再被误伤
 - [x] 敏感值包含转义反斜杠/引号时整段脱敏，不再出现只脱敏半截的情况
 - [x] 消息头不再携带验签凭证
 - [x] `MessageMaskUtilsTest` 共 21 条用例全通过，覆盖 JSON 字段脱敏、非敏感字段保留、value 非字符串不误伤、转义值与引号边界、`toSafeLogJson` 剔除大字段与序列化失败兜底

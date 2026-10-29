@@ -66,7 +66,7 @@
 
 ### 2.5 新增 saveInvitationLog（857-885 行）
 
-- `invitation.getInstant("expires_at")` 为 null 时 `log.warn` 并跳过落库，避免用默认时间写入造成审计误判。
+- `invitation.getInstant("expires_at")` 为 null 时 `log.warn` 并跳过落库，避免用默认时间写入造成审计误判。**已知取舍**：外部已接受的邀请因此没有审计记录，形成可抵赖盲点；改进方向是「缺失时仍落库、`expires_at` 置 NULL 并标记未知」，见 §7 待办。
 - `description` 为 null 转空串，之后仍按 100 字符截断。
 
 ## 3. 类设计
@@ -102,7 +102,7 @@
 **防护边界**：
 
 - 定时任务入口收敛：`refreshWebhookHandler` 从代码与调度两端下线，具备调度权限者无法再通过该入口触发批量 webhook 刷新/迁移。
-- 日志脱敏边界：邀请接受链路的所有日志只输出 sourceType / sourceName / inviterUsername / inviteUrl，不含任何 token。
+- 日志脱敏边界：**本次改造涉及的日志语句**只输出 sourceType / sourceName / inviterUsername / inviteUrl，不含任何 token；该结论不覆盖 `acceptProjectInvitation`（约 887 行）以 `?invitation_token=` 查询串外呼 GitCode 的第三方调用（见残留风险）。
 
 **中间态澄清**：
 
@@ -113,12 +113,19 @@
 - 单条邀请接受抛 `JSONException`：failCount++ 后继续，不向上抛出。
 - 接受结果非 `"200"`：failCount++ 并打 error，不计入 acceptedBySource。
 - 落库异常：`DataAccessException` 与 `RuntimeException` 分别捕获，不中断整批。
-- `expires_at` 缺失：跳过落库并 warn，不写入默认时间。
+- `expires_at` 缺失：跳过落库并 warn，不写入默认时间；代价是该邀请无审计记录（可抵赖盲点），改进见待办。
 - handler 级行为变化：jobParam 为空由静默返回改为 warn 后返回。
 
 **残留风险与已知取舍**：
 
 - `acceptProjectInvitation`（887 行起）仍以 `?invitation_token=` 查询串调用 GitCode 第三方接口，本次未覆盖，待后续单独整改。
+- `expires_at` 为 null 时整条跳过落库，外部已接受的邀请因此缺少审计记录，形成可抵赖盲点。
 - 本轮仅删除测试类，未为邀请任务新逻辑补充 mock 用例（依赖 mapper 与外部 GitCode 调用），新增的异常隔离与统计分支暂无自动化覆盖。
-- 调度中心若保留 `refreshWebhookHandler` 任务会持续失败，需运维删除；Nacos 配置项 `openlibing.cicd.webhook.refresh-rules` 失效，需清理。
+- 调度中心若保留 `refreshWebhookHandler` 任务会持续失败，需在发布前删除；Nacos 配置项 `openlibing.cicd.webhook.refresh-rules` 在发布后清理（顺序见 proposal「发布前置清单」）。
 - 第三方接口若调整返回码文案，`"200".equals(resultMsg)` 的判定会导致全部计入失败，属既有接口契约依赖。
+
+**待办（未完成项）**：
+
+- `saveInvitationLog` 改为 `expires_at` 缺失时仍落库（置 NULL 并标记未知），补齐审计记录。
+- 补充 3 个 mock 单测：非 `"200"` → failCount++ 且不计入 acceptedBySource；单条 `JSONException` 不中断整批；落库异常不影响后续邀请。
+- `acceptProjectInvitation` 的 `?invitation_token=` 查询串迁移到请求头，与 `security-token-header-migration` 同口径。

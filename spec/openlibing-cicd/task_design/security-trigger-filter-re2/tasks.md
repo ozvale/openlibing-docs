@@ -1,6 +1,6 @@
 # security-trigger-filter-re2 — 实现任务
 
-## 进度: 10/10 complete
+## 进度: 10/12 complete（生产存量扫描与运行期告警为未完成项）
 
 - [x] Task 1 — 引入 re2j 依赖
 - [x] Task 2 — 新增 `TriggerFilterValidator` 统一校验器
@@ -12,6 +12,8 @@
 - [x] Task 8 — 扩充 `TriggerFilterEvaluatorTest`
 - [x] Task 9 — `PipelineServiceImplTest` 新增批量更新拒绝用例
 - [x] Task 10 — BETA 环境存量规则 RE2 兼容性扫描
+- [ ] Task 11 — 生产环境存量规则 RE2 兼容性扫描（上线门禁，未完成）
+- [ ] Task 12 — 运行期编译失败规则的计数/告警（未完成）
 
 ## 详细任务
 
@@ -79,4 +81,16 @@
 
 - 文件：无代码改动
 - 改动：对 BETA 环境 `trigger_filters` 存量数据做 RE2 兼容性扫描，确认无超过 200 字符或含 RE2 不支持语法的规则。
-- 验证方式：扫描结果确认为零风险；生产环境按同一标准另行确认。
+- 验证方式：扫描结果确认为零风险。
+
+### Task 11 — 生产环境存量规则 RE2 兼容性扫描（未完成）
+
+- 文件：无代码改动
+- 改动：按 BETA 同一标准扫描生产 `trigger_filters`，输出不兼容规则清单（规则 ID、所属流水线、失败原因），并逐个改写或确认下线。
+- 验证方式（待执行）：生产扫描结果零风险后才可放行上线；存在不兼容规则时不得合入。
+
+### Task 12 — 运行期编译失败规则的计数/告警（未完成）
+
+- 文件：`src/main/java/com/openlibing/cicd/business/listener/TriggerFilterEvaluator.java`
+- 改动（未完成）：`compile` 失败时除 `warn` 外输出规则内容与流水线标识，并计入可监控计数，避免存量不兼容规则导致流水线静默不触发。
+- 验证方式（待执行）：构造 RE2 不支持语法规则，确认告警可检索、计数可观测。

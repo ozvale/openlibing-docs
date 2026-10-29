@@ -18,7 +18,7 @@
 - `BranchServiceImpl#getRepoBranch` 改为通过 `PRIVATE-TOKEN` 请求头传令牌，URL 与表单参数不再带 `access_token`。
 - `PipelineServiceImpl#queryPrTitle` 同样改为请求头传令牌，HTTP 超时与失败返回语义保持不变。
 - `RepoServiceImpl` 的 `getRepoWebhookList`、`createRepoWebhook`、`deleteRepoWebhook` 改为构造 headerMap 携带 `PRIVATE-TOKEN` 后调用 `HttpRequestUtil.sendRequest`。
-- `createRepoWebhook` 的**请求体**中 `access_token` 按 GitCode 注册 webhook 接口要求保留（不在 URL 上，不构成查询串泄露）。
+- `createRepoWebhook` 的**请求体**中 `access_token` 按 GitCode 注册 webhook 接口要求保留（不在 URL 上，不构成查询串泄露）；该字段属 form/urlencoded body 渠道，本次未做脱敏，为已知残留风险。
 - 补充单元测试，断言令牌只出现在请求头、不出现在 URL 与表单参数中。
 - 收敛 hutool `HttpResponse` 的资源释放方式为 try-with-resources。
 
@@ -33,6 +33,7 @@
 - [x] `PipelineServiceImplTest` 全量 225 个用例通过（原 223 + 新增 2）
 - [x] pre-commit 12 个钩子全部通过
 - [x] 无新增配置项、无 pom 变更、无对外 HTTP 接口出入参变化
+- [ ] beta 环境真实接口回归未执行：GitCode 分支查询/PR 标题、Gitee webhook 增删查需实测服务端接受 `PRIVATE-TOKEN` 头；当前仅有请求构造层单测（ArgumentCaptor 断言头部），不能证明服务端鉴权通过
 
 ## 影响范围
 
@@ -49,6 +50,7 @@
 
 - `PipelineServiceImpl` 第 7061/7091 行附近 PR 管理模块的 `access_token=` 拼接，不在本次范围。
 - `createRepoWebhook` 请求体中的 `access_token` 字段按第三方接口要求保留。
+- 请求体（form/urlencoded）渠道的令牌脱敏不在本次范围：本次只消除查询串渠道，与 #242 记录的消息体渠道问题同源，需后续单独处置。
 
 ## 关联 Issue
 

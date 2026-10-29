@@ -1,6 +1,6 @@
 # security-ssrf-guard — 实现任务
 
-## 进度: 17/17 complete
+## 进度: 17/18 complete（Task 18 为未完成的待办）
 
 - [x] Task 1 — `SafeRequestUtils` 以 CIDR 表替换字符串前缀黑名单
 - [x] Task 2 — 重写 `isInternalAddress(String)` 为全记录遍历
@@ -19,6 +19,7 @@
 - [x] Task 15 — `PipelineEventConsumer` 新增下载客户端与下载方法
 - [x] Task 16 — 三处下载调用改造、fastjson2 解析与 URL 脱敏
 - [x] Task 17 — PR 639 补测四组测试类
+- [ ] Task 18 — 待办：`artifact-probe.allowed-host-suffixes` 改为空默认值并降级 `Optional.empty()`
 
 ## 详细任务
 
@@ -56,7 +57,7 @@
 
 - 文件：`src/main/java/com/openlibing/cicd/business/service/impl/SecOptionScanServiceImpl.java`
 - 改动：新增 `@Value("${artifact-probe.allowed-host-suffixes}") private List<String> allowedHostSuffixes;`，Nacos 逗号分隔，仓内不提供 yml 默认值
-- 验证：配置缺失时应用启动失败（`@Value` 注入失败）；配置存在时列表正确注入
+- 验证：配置存在时列表正确注入；**当前实现无空默认值，配置缺失会导致应用启动失败**，因此属发布前置（合入前必须在 Nacos 配好），不是可接受的验证结果。改进项见 Task 18
 
 ### Task 7 — sec-option 新增 `DEFAULT_PROBE_CLIENT` 与内嵌 `SafeDns`
 
@@ -79,7 +80,7 @@
 ### Task 10 — PR 631 补测
 
 - 文件：`src/test/java/com/openlibing/cicd/common/utils/SafeRequestUtilsTest.java`（+126 行）、`src/test/java/com/openlibing/cicd/business/service/impl/SecOptionScanServiceImplTest.java`（+156 行）
-- 改动：`SafeRequestUtilsTest` 覆盖内网/保留网段参数化、公网地址、非点分 IPv4（`http://0x7f000001/x` 与 `http://0177.0.0.1/x` 返回 false，`http://2130706433/x` 返回 true）、IPv6 zoneId 归一化（`http://[fe80::1%25eth0]/x`）、`isHostAllowed` 后缀边界与空白名单；`SecOptionScanServiceImplTest` 覆盖探测判定矩阵、`SafeDns` 内外网行为
+- 改动：`SafeRequestUtilsTest` 覆盖内网/保留网段参数化、公网地址、非点分 IPv4（`http://0x7f000001/x` 与 `http://0177.0.0.1/x` 的 `isInternalAddress` 返回 false，`http://2130706433/x` 返回 **true**——`true` 表示判定为内网并拒绝，属 fail-closed；三者实际拦截口径见 design §7.4）、IPv6 zoneId 归一化（`http://[fe80::1%25eth0]/x`）、`isHostAllowed` 后缀边界与空白名单；`SecOptionScanServiceImplTest` 覆盖探测判定矩阵、`SafeDns` 内外网行为
 - 验证：两个测试类全部用例通过
 
 ### Task 11 — 新增公共 `SafeDns`
@@ -123,3 +124,9 @@
 - 文件：`src/test/java/com/openlibing/cicd/common/utils/SafeDnsTest.java`（新增约 190 行）、`src/test/java/com/openlibing/cicd/common/utils/HttpRequestUtilTest.java`（+56 行）、`src/test/java/com/openlibing/cicd/business/service/impl/PipelineEventConsumerImplTest.java`（+160 行）、`src/test/java/com/openlibing/cicd/business/listener/PipelineStartEventHandlerTest.java`（+33 行）
 - 改动：`SafeDnsTest` 覆盖字面量主机、内网/保留网段、IPv4 映射/NAT64/6to4 内嵌、`METADATA_ONLY` 放行 RFC1918
 - 验证：四个测试类全部用例通过
+
+### Task 18 — 待办：探测白名单配置降级
+
+- 文件：`src/main/java/com/openlibing/cicd/business/service/impl/SecOptionScanServiceImpl.java`
+- 改动（未完成）：`@Value("${artifact-probe.allowed-host-suffixes}")` 改为 `@Value("${artifact-probe.allowed-host-suffixes:}")`，空列表时 `checkDownloadAccessible` 直接返回 `Optional.empty()`，经 `saveScanRecord(..., accessible.orElse(null))` 落 NULL，避免配置漏配导致应用启动失败。
+- 验证方式（待执行）：删除 Nacos 配置项后应用可正常启动，扫描记录 `package_download_accessible` 为 NULL。
