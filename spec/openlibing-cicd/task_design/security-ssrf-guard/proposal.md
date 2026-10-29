@@ -39,7 +39,7 @@
 - [x] 下载与请求日志中的 URL 经 `SafeRequestUtils.maskUrl` 脱敏，仅保留 host:port
 - [x] 补充 `SafeRequestUtilsTest`、`SecOptionScanServiceImplTest`、`SafeDnsTest`、`HttpRequestUtilTest`、`PipelineEventConsumerImplTest`、`PipelineStartEventHandlerTest`
 
-**收口状态**：以上为代码层实现完成，`!631` 与 `!639` 当前均为 open，合入并完成 beta 验收前不视为收口。
+**收口状态**：`!631`（2026-10-29 16:00）与 `!639`（2026-10-29 19:00）均已合入 `release_20261029_iter2`，关联 issue #328、#489 已随之关闭；代码层改动已全部合入，beta 验收完成前不视为最终收口。
 
 ## 影响范围
 
@@ -60,14 +60,14 @@
 
 ## 关联 Issue
 
-- openlibing-cicd#328（sec-option 探测链路 SSRF，状态 open）：https://gitcode.com/openlibing/openlibing-cicd/issues/328
-- openlibing-cicd#489（日志下载链路与通用请求入口 SSRF 加固）：https://gitcode.com/openlibing/openlibing-cicd/issues/489
+- openlibing-cicd#328（sec-option 探测链路 SSRF，已关闭，随 `!631` 合入）：https://gitcode.com/openlibing/openlibing-cicd/issues/328
+- openlibing-cicd#489（日志下载链路与通用请求入口 SSRF 加固，已关闭，随 `!639` 合入）：https://gitcode.com/openlibing/openlibing-cicd/issues/489
 
 ## 关联 PR 与提交
 
 **!631 —— SafeRequestUtils 网段漏检与探测白名单**
 
-- 标题：《【安全】【漏洞挖掘】SafeRequestUtils SSRF 网段漏检 - 0929-012》，状态 open
+- 标题：《【安全】【漏洞挖掘】SafeRequestUtils SSRF 网段漏检 - 0929-012》，状态已合入（2026-10-29 16:00）
 - 分支：`fix_ssrf_probe_allowlist`，base：`upstream/release_20261029_iter2`
 - diff 规模：4 文件，704 insertions / 102 deletions，无 pom/yml 改动
 - 提交：
@@ -75,10 +75,10 @@
   - `e562c9489` merge: sync release_20261029_iter2 into fix_ssrf_probe_allowlist
   - `c596cdf41` address SSRF review findings
 
-**!639 —— 日志下载链路与通用请求入口加固（堆叠于 !631 之上）**
+**!639 —— 日志下载链路与通用请求入口加固（原堆叠于 !631 之上，合入前已改基）**
 
-- 标题：《fix(ssrf): 日志下载链路增加 SSRF 防护与响应体上限》，状态 open
-- 分支：`fix/security-vuln-489-ssrf-guard`，base：!631 的分支
+- 标题：《fix(ssrf): 日志下载链路增加 SSRF 防护与响应体上限》，状态已合入（2026-10-29 19:00）
+- 分支：`fix/security-vuln-489-ssrf-guard`，base：`upstream/release_20261029_iter2`
 - 提交：
   - `4daed16a7` 日志下载链路增加 SSRF 防护与响应体上限
   - `59d36f71e` 补齐下载链路协议白名单与保留网段拦截

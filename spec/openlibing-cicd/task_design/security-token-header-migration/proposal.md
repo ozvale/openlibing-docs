@@ -59,7 +59,7 @@
 
 ## 关联 PR 与提交
 
-- PR：!634 — 《【安全】出站调用 access_token 拼接 URL 查询串整改（webhook/分支/PR标题 5 处）》，状态 open
+- PR：!634 — 《【安全】出站调用 access_token 拼接 URL 查询串整改（webhook/分支/PR标题 5 处）》，状态已合入（2026-10-29 18:11）
 - 分支：`fix/security-vuln-335-361-token-header`，base `release_20261029_iter2`
 - 提交：
   - `b75129d8d` `fix(cicd): pass access_token via PRIVATE-TOKEN header instead of URL query`（生产改动）
