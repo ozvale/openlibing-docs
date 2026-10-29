@@ -103,7 +103,7 @@ private static final CidrBlock NAT64_WELL_KNOWN_PREFIX = ...;   // 64:ff9b::/96
 
 改后：
 
-- 新增配置 `@Value("${artifact-probe.allowed-host-suffixes}") private List<String> allowedHostSuffixes;`（本 PR 唯一新增配置项）；
+- 新增配置 `@Value("${artifact-probe.allowed-host-suffixes:}") private List<String> allowedHostSuffixes;`（本 PR 唯一新增配置项，空默认值见 §7.5）；
 - 新增 `DEFAULT_PROBE_CLIENT`：OkHttp，connect 5s / read 10s、不跟随 HTTP 与 SSL 重定向、`dns(new SafeDns(Dns.SYSTEM))`；保留可替换字段 `probeClient` 供单测指向本地服务；
 - 新增 `static final class SafeDns implements Dns`：`lookup` 结果任一 `isInternalAddress` 即抛 `UnknownHostException("Internal address rejected: " + hostname)`；
 - `checkDownloadAccessible` 返回 `Optional<Boolean>`，判定顺序：
@@ -194,9 +194,9 @@ HEAD（405/401 降级 GET）                -> status >= 200 && status < 400
 
 新增配置项：
 
-| 配置项                                 | 类型           | 来源            | 约束                                                                                                                      |
-| -------------------------------------- | -------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `artifact-probe.allowed-host-suffixes` | `List<String>` | Nacos，逗号分隔 | **必填**，仓内无 yml 默认值且 `@Value` 未设空默认值；缺失会导致注入失败（应用启动失败）→ 属发布前置，见 §7.3 与 §7.5 待办 |
+| 配置项                                 | 类型           | 来源            | 约束                                                                                                                                    |
+| -------------------------------------- | -------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `artifact-probe.allowed-host-suffixes` | `List<String>` | Nacos，逗号分隔 | 建议在 Nacos 配置；`@Value` 已设空默认值，缺失时注入为空集合，降级为「跳过探测、`package_download_accessible` 落 NULL」，不影响应用启动 |
 
 ## 5. 性能设计
 
@@ -249,7 +249,7 @@ HEAD（405/401 降级 GET）                -> status >= 200 && status < 400
 - **`MAX_DOWNLOAD_BYTES = 10MB`**：用例数量多的测试结果 JSON 可能超限，日志特征 `Response body too large`。
 - **`MAX_URL_LENGTH = 2048`**：带长签名的 OBS 预签名 URL 可能被丢弃，日志特征 `Discard abnormal url, length: N`。
 - **`sendRequestSafely` 采用 `METADATA_ONLY`**：允许 RFC1918，但拒绝 `127.0.0.1` / `localhost` / `169.254.x.x` / `100.64/10`；若流水线 webhook 地址为回环或链路本地地址，会返回 `ApiResponse(500, "")`，表现为流水线静默不触发，日志特征 `Request rejected by SSRF policy`。
-- **新增必填配置 `artifact-probe.allowed-host-suffixes`**：缺失会导致 `@Value` 注入失败（应用启动失败），部署前必须在 Nacos 配置。
+- **新增配置 `artifact-probe.allowed-host-suffixes`**：`@Value` 已设空默认值，缺失时注入为空集合，`isHostAllowed` 对 null/empty 直接返回 false，表现为「跳过探测、`package_download_accessible` 落 NULL」，不会导致应用启动失败；生产仍需在 Nacos 配置，否则探测功能不生效。
 - **`package_download_accessible` 出现 NULL 语义**：前端需按「未检测」处理而非「不可下载」。
 
 ### 7.4 非点分 IPv4 形态的实际拦截口径
@@ -266,4 +266,4 @@ HEAD（405/401 降级 GET）                -> status >= 200 && status < 400
 
 ### 7.5 待办（未完成项）
 
-- `artifact-probe.allowed-host-suffixes` 建议改为 `@Value("${artifact-probe.allowed-host-suffixes:}")` 空默认值，缺失时降级为「跳过探测并落 NULL」，避免配置漏配导致应用启动失败；当前实现仍为必填，合入前必须在 Nacos 配好。
+- 无。`artifact-probe.allowed-host-suffixes` 的空默认值加固已完成：改为 `${artifact-probe.allowed-host-suffixes:}`，缺失时降级为「跳过探测并落 NULL」，不再导致应用启动失败。该配置行由 PR `!631`（`fix_ssrf_probe_allowlist`）引入，因该分支位于其他开发者 fork，本次修复在 PR `!639` 分支 `fix/security-vuln-489-ssrf-guard` 中提交。
