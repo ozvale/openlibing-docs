@@ -70,11 +70,11 @@
 
 只保留 **3 张新表**：
 
-| 表 | 作用 | 数据量 |
-|---|---|---|
-| `dm_rd_efc_nightly_pipeline_alias` | 逻辑流水线下所有实际流水线的映射和有效时间区间 | 很少，只维护发生过切换的逻辑流水线 |
-| `dm_rd_efc_nightly_pipeline_logical_run` | 逻辑运行事实表，保证分位数、明细准确 | 与 Nightly 运行数同量级 |
-| `dm_rd_efc_nightly_pipeline_logical_day` | 逻辑日汇总宽表，含运行、用例、资源指标 | 逻辑流水线数 × 天数 |
+| 表                                       | 作用                                           | 数据量                             |
+| ---------------------------------------- | ---------------------------------------------- | ---------------------------------- |
+| `dm_rd_efc_nightly_pipeline_alias`       | 逻辑流水线下所有实际流水线的映射和有效时间区间 | 很少，只维护发生过切换的逻辑流水线 |
+| `dm_rd_efc_nightly_pipeline_logical_run` | 逻辑运行事实表，保证分位数、明细准确           | 与 Nightly 运行数同量级            |
+| `dm_rd_efc_nightly_pipeline_logical_day` | 逻辑日汇总宽表，含运行、用例、资源指标         | 逻辑流水线数 × 天数                |
 
 不再建：
 
@@ -121,10 +121,10 @@ PROPERTIES ("replication_allocation" = "tag.location.default: 2");
 
 逻辑流水线 `X`：
 
-| project_id | pipeline_project | platform | logical_pipeline_id | pipeline_id | valid_from | valid_to |
-|---|---|---|---|---|---|---|
-| 1 | 华为云项目ID或 repo_url | codearts | B（新 ID） | A（旧 ID） | 1970-01-01 | 2026-10-01 10:00:00 |
-| 1 | 华为云项目ID或 repo_url | codearts | B（新 ID） | B（新 ID） | 2026-10-01 10:00:00 | 9999-12-31 |
+| project_id | pipeline_project        | platform | logical_pipeline_id | pipeline_id | valid_from          | valid_to            |
+| ---------- | ----------------------- | -------- | ------------------- | ----------- | ------------------- | ------------------- |
+| 1          | 华为云项目ID或 repo_url | codearts | B（新 ID）          | A（旧 ID）  | 1970-01-01          | 2026-10-01 10:00:00 |
+| 1          | 华为云项目ID或 repo_url | codearts | B（新 ID）          | B（新 ID）  | 2026-10-01 10:00:00 | 9999-12-31          |
 
 规则：
 
@@ -138,11 +138,11 @@ PROPERTIES ("replication_allocation" = "tag.location.default: 2");
 
 逻辑流水线 `X`：A → B → C
 
-| pipeline_project | logical_pipeline_id | pipeline_id | valid_from | valid_to |
-|---|---|---|---|---|
-| 华为云项目ID或 repo_url | C | A | 1970-01-01 | 2026-08-01 10:00:00 |
-| 华为云项目ID或 repo_url | C | B | 2026-08-01 10:00:00 | 2026-10-01 10:00:00 |
-| 华为云项目ID或 repo_url | C | C | 2026-10-01 10:00:00 | 9999-12-31 |
+| pipeline_project        | logical_pipeline_id | pipeline_id | valid_from          | valid_to            |
+| ----------------------- | ------------------- | ----------- | ------------------- | ------------------- |
+| 华为云项目ID或 repo_url | C                   | A           | 1970-01-01          | 2026-08-01 10:00:00 |
+| 华为云项目ID或 repo_url | C                   | B           | 2026-08-01 10:00:00 | 2026-10-01 10:00:00 |
+| 华为云项目ID或 repo_url | C                   | C           | 2026-10-01 10:00:00 | 9999-12-31          |
 
 这样不需要递归解析，也不会出现多次改名不适配。
 
@@ -670,12 +670,12 @@ nightly_stats AS (
 
 **`NightlyPipelineDashboardMapper.xml`**
 
-| 原数据源 | 新数据源 |
-|---|---|
-| `dm_rd_efc_project_pipeline_relation` | `dm_rd_efc_project_pipeline_relation`（`NIGHTLY`，旧 ID 为 OTHER，不需要额外排除） |
-| `dwr_rd_efc_build_fact_nightly_test_case_pipeline_run` | `dm_rd_efc_nightly_pipeline_logical_run` |
-| `dm_rd_efc_build_dim_nightly_pipeline_day` | `dm_rd_efc_nightly_pipeline_logical_day` |
-| `dm_rd_efc_build_dim_test_case_nightly_pipeline_day` | `dm_rd_efc_nightly_pipeline_logical_day`（用例字段） |
+| 原数据源                                               | 新数据源                                                                           |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `dm_rd_efc_project_pipeline_relation`                  | `dm_rd_efc_project_pipeline_relation`（`NIGHTLY`，旧 ID 为 OTHER，不需要额外排除） |
+| `dwr_rd_efc_build_fact_nightly_test_case_pipeline_run` | `dm_rd_efc_nightly_pipeline_logical_run`                                           |
+| `dm_rd_efc_build_dim_nightly_pipeline_day`             | `dm_rd_efc_nightly_pipeline_logical_day`                                           |
+| `dm_rd_efc_build_dim_test_case_nightly_pipeline_day`   | `dm_rd_efc_nightly_pipeline_logical_day`（用例字段）                               |
 
 改造点：
 
@@ -820,31 +820,31 @@ nightly_stats AS (
 
 ### 10.1 当前 Mapper 复杂度
 
-| Mapper | 当前行数 | join 数 | CTE 数 |
-|---|---:|---:|---:|
-| `NightlyPipelineDashboardMapper.xml` | 653 | 11 | 5 |
-| `DwrRdEfcBuildFactNightlyTestCasePipelineRunMapper.xml` | 438 | 7 | 0 |
-| `OpsNightlyDetailMapper.xml` | 385 | 21 | 9 |
-| `OpsResourceDetailMapper.xml` | 607 | 24 | 15 |
-| `OpsMainStatMapper.xml` | 578 | 34 | 16 |
-| `DwiProjectStatisticsMapper.xml` | 294 | 13 | 5 |
-| `DmRdEfcBuildDimNightlyPipelineDayMapper.xml` | 144 | 5 | 0 |
-| `DmRdEfcBuildDimTestCaseNightlyPipelineDayMapper.xml` | 61 | 1 | 0 |
+| Mapper                                                  | 当前行数 | join 数 | CTE 数 |
+| ------------------------------------------------------- | -------: | ------: | -----: |
+| `NightlyPipelineDashboardMapper.xml`                    |      653 |      11 |      5 |
+| `DwrRdEfcBuildFactNightlyTestCasePipelineRunMapper.xml` |      438 |       7 |      0 |
+| `OpsNightlyDetailMapper.xml`                            |      385 |      21 |      9 |
+| `OpsResourceDetailMapper.xml`                           |      607 |      24 |     15 |
+| `OpsMainStatMapper.xml`                                 |      578 |      34 |     16 |
+| `DwiProjectStatisticsMapper.xml`                        |      294 |      13 |      5 |
+| `DmRdEfcBuildDimNightlyPipelineDayMapper.xml`           |      144 |       5 |      0 |
+| `DmRdEfcBuildDimTestCaseNightlyPipelineDayMapper.xml`   |       61 |       1 |      0 |
 
 ### 10.2 实际实现结果（2026-10-28）
 
-| 文件 | 改造后行数 | 增减 |
-|---|---:|---:|
-| `NightlyPipelineDashboardMapper.xml` | 664 | +5 |
-| `DwrRdEfcBuildFactNightlyTestCasePipelineRunMapper.xml` | 444 | +6 |
-| `OpsNightlyDetailMapper.xml` | 240 | -145 |
-| `OpsResourceDetailMapper.xml` | 558 | -49 |
-| `OpsMainStatMapper.xml` | 578 | 0 |
-| `DwiProjectStatisticsMapper.xml` | 299 | +5 |
-| `DmRdEfcBuildDimNightlyPipelineDayMapper.xml` | 149 | +5 |
-| `DmRdEfcBuildDimTestCaseNightlyPipelineDayMapper.xml` | 65 | +4 |
-| `DwiVersionPipelineInfoMapper.xml` | 445 | -48 |
-| `OpsResourceRunMapper.xml` | 79 | +20 |
+| 文件                                                    | 改造后行数 | 增减 |
+| ------------------------------------------------------- | ---------: | ---: |
+| `NightlyPipelineDashboardMapper.xml`                    |        664 |   +5 |
+| `DwrRdEfcBuildFactNightlyTestCasePipelineRunMapper.xml` |        444 |   +6 |
+| `OpsNightlyDetailMapper.xml`                            |        240 | -145 |
+| `OpsResourceDetailMapper.xml`                           |        558 |  -49 |
+| `OpsMainStatMapper.xml`                                 |        578 |    0 |
+| `DwiProjectStatisticsMapper.xml`                        |        299 |   +5 |
+| `DmRdEfcBuildDimNightlyPipelineDayMapper.xml`           |        149 |   +5 |
+| `DmRdEfcBuildDimTestCaseNightlyPipelineDayMapper.xml`   |         65 |   +4 |
+| `DwiVersionPipelineInfoMapper.xml`                      |        445 |  -48 |
+| `OpsResourceRunMapper.xml`                              |         79 |  +20 |
 
 实际结论：
 
@@ -900,16 +900,16 @@ nightly_stats AS (
 
 ### 12.1 仍然存在的风险
 
-| 风险 | 说明 | 处理 |
-|---|---|---|
-| alias 手动维护错误 | 区间或逻辑名称写错会导致数据多算、漏算或展示名称错误 | 上线前用区间校验 SQL 和名称核对；后续自动化 |
-| pipeline_id 可能对应多个 openlibing 项目 | 一个 `pipeline_project` 可能对应多个 `project_id`，按 `pipeline_id` 单独关联 alias 会放大运行数 | ETL 先从 relation 取 `(project_id, pipeline_project, platform, pipeline_id)`，再按这四列关联 alias |
-| pipeline_id 跨平台重复 | 事实表本身没有 platform，通过 relation 按 `pipeline_id` 取平台 | 已改为 relation 绑定平台；relation 中不存在的流水线需人工确认 |
-| 旧流水线历史依赖事实表保留 | 事实表只重新写入当前 `NIGHTLY` 判定命中的运行，不清理历史；旧流水线改名为 `old_` 后历史行必须继续保留 | 依赖事实表保留历史；上线前确认任务没有 `TRUNCATE`/删除历史，否则逻辑运行表无法回溯旧数据 |
-| 全量刷新成本 | 逻辑运行表数据量大，每小时全量可能较重 | 先按现网全量模式跑，观察任务耗时；后续可优化 |
-| 图表流水线列表来源变化 | 从 `sdi_version_pipeline_base_info` 改为 relation | 上线前对比两个集合 |
-| 运行数与资源运行数不一致 | 两个来源不同 | 接口验收时明确口径 |
-| 时间边界 | 切换时间点按半开区间归新流水线 | 与业务确认 |
+| 风险                                     | 说明                                                                                                  | 处理                                                                                               |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| alias 手动维护错误                       | 区间或逻辑名称写错会导致数据多算、漏算或展示名称错误                                                  | 上线前用区间校验 SQL 和名称核对；后续自动化                                                        |
+| pipeline_id 可能对应多个 openlibing 项目 | 一个 `pipeline_project` 可能对应多个 `project_id`，按 `pipeline_id` 单独关联 alias 会放大运行数       | ETL 先从 relation 取 `(project_id, pipeline_project, platform, pipeline_id)`，再按这四列关联 alias |
+| pipeline_id 跨平台重复                   | 事实表本身没有 platform，通过 relation 按 `pipeline_id` 取平台                                        | 已改为 relation 绑定平台；relation 中不存在的流水线需人工确认                                      |
+| 旧流水线历史依赖事实表保留               | 事实表只重新写入当前 `NIGHTLY` 判定命中的运行，不清理历史；旧流水线改名为 `old_` 后历史行必须继续保留 | 依赖事实表保留历史；上线前确认任务没有 `TRUNCATE`/删除历史，否则逻辑运行表无法回溯旧数据           |
+| 全量刷新成本                             | 逻辑运行表数据量大，每小时全量可能较重                                                                | 先按现网全量模式跑，观察任务耗时；后续可优化                                                       |
+| 图表流水线列表来源变化                   | 从 `sdi_version_pipeline_base_info` 改为 relation                                                     | 上线前对比两个集合                                                                                 |
+| 运行数与资源运行数不一致                 | 两个来源不同                                                                                          | 接口验收时明确口径                                                                                 |
+| 时间边界                                 | 切换时间点按半开区间归新流水线                                                                        | 与业务确认                                                                                         |
 
 ### 12.2 已解决/已确认
 
@@ -947,10 +947,10 @@ nightly_stats AS (
 
 ## 14. 已确认问题
 
-| 问题 | 结论 |
-|---|---|
-| 逻辑运行表是否保留 730 天 | 不保留，表不做分区、不自动清理；现在数据少，先不删 |
-| alias 区间由谁维护 | 当前由开发维护，后续再自动化 |
-| 工程能力项目级预聚合几点跑 | 不需要固定错峰时间，它只跑昨天的数据，现网约凌晨 3~4 点执行 |
-| 切换时间点按半开区间归新流水线 | 可以接受 |
-| 逻辑运行表每小时全量刷新是否可接受 | 先上线任务，跑太慢再优化；现有任务都是全量跑，耗时可控 |
+| 问题                               | 结论                                                        |
+| ---------------------------------- | ----------------------------------------------------------- |
+| 逻辑运行表是否保留 730 天          | 不保留，表不做分区、不自动清理；现在数据少，先不删          |
+| alias 区间由谁维护                 | 当前由开发维护，后续再自动化                                |
+| 工程能力项目级预聚合几点跑         | 不需要固定错峰时间，它只跑昨天的数据，现网约凌晨 3~4 点执行 |
+| 切换时间点按半开区间归新流水线     | 可以接受                                                    |
+| 逻辑运行表每小时全量刷新是否可接受 | 先上线任务，跑太慢再优化；现有任务都是全量跑，耗时可控      |
