@@ -17,7 +17,7 @@
 
 整改过程中又新增两个扫描批次：**issue #155**（流水线权限组匿名访问 401 打断页面，后端已整改、前端需静默降级适配）与 **issue #157**（OSS 扫描 8 个 HIGH 传递依赖漏洞）。
 
-完整分类去重分析、逐 issue 点位与修复进度见 [security-issues-analysis.md](../../../issue_docs/openlibing-cicd-web/security-issues-analysis.md)。
+完整分类去重分析、逐 issue 点位与修复进度见 [security-issues-analysis.md](../../../../issue_docs/openlibing-cicd-web/security-issues-analysis.md)（该文档待另行归档入库，合入前链接暂不可达）。
 
 ## 需求描述
 
@@ -29,7 +29,7 @@
 2. **出站 URL 白名单**（批次 2）：下载/`href` 直出统一接入 `safeUrlOrBlank`（仅 http/https）、`rel=noopener` 补齐、跳转目标域白名单 + referrer origin 校验
 3. **Nginx 加固**（批次 3）：三环境移除 `cookie_suid` 会话凭证、限流键改 `$binary_remote_addr` + 阈值灰度、死配置/惰性配置清理、安全响应头加固
 4. **权限接线**（批次 4）：`pipeline_retry` 触点补门禁、未注册操作码 fail-closed、镜像删除/同步 handler 权限复核
-5. **信息泄露清扫**（批次 5）：ApiClient console 脱敏 + 错误弹窗通用化、SENINFO 公网地址硬编码 47 处处置（删除 33 处 + 1 处统一管理）、遥测/majun 死配置文件整体删除
+5. **信息泄露清扫**（批次 5）：ApiClient console 脱敏 + 错误弹窗通用化、SENINFO 公网地址硬编码 47 处全量去向处置（代码删除 33 处 + 迁 `external-links.ts` 统一管理 1 处 + 合理形态保留 3 处 + 工具链功能性引用待申报豁免 7 处 + 暂缓另行安排 2 处 + #135 公网 DNS 用户决策豁免 1 处）、遥测/majun 死配置文件整体删除
 6. **防重入锁**（批次 6）：流水线执行/镜像构建/镜像同步/停止与单条同步 4 处补锁
 7. **收尾**（批次 7）：403 引导路由补齐、触发过滤正则输入侧防御、sessionStorage 归属校验与登出清理
 8. **依赖漏洞**（批次 8）：`pnpm.overrides` 强制升级 dompurify / follow-redirects / markdown-it / toml 共 8 个 HIGH 漏洞
@@ -51,7 +51,8 @@
 - [x] 累计闭环 42+ 个 issue 编号（含重复组合并闭环），每批次 `pnpm build` 通过
 - [x] 出站跳转攻击面（#106/#149）以域白名单闭环，非法目标统一兜底跳本站首页，401/403 登录链路行为不变
 - [x] nginx 三环境配置一致性核对通过（cookie_suid / 限流键 / 死配置三点位 ×3 文件对齐）
-- [x] 权限加固无「修完误拦正常用户」回归：#125 未登录放行设计、#117 上线前测试环境比对 14 个操作码授权
+- [x] 权限加固方案已交付：#125 未登录放行设计消除误伤面、#117 fail-closed 统一口径
+- [ ] 上线验证项待执行：#117 测试环境比对接口返回覆盖的 14 个操作码授权，确认无未注册码业务被误拦后方可放量
 - [x] 匿名（未登录）访问流水线权限组页面不跳登录、无报错气泡，登录用户行为不变（PR #195 已合入）
 - [x] 依赖升级后 `pnpm build` 通过，markdown-it 8→14 大版本跳跃以 Markdown 预览页人工回归兜底
 - [x] 各批次远端 Git Hooks Checking PASSED，Prettier unchanged

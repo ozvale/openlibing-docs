@@ -2,14 +2,14 @@
 
 ## 关联
 
-- 分类去重分析（权威进度源）：[security-issues-analysis.md](../../../issue_docs/openlibing-cicd-web/security-issues-analysis.md)
+- 分类去重分析（权威进度源）：[security-issues-analysis.md](../../../../issue_docs/openlibing-cicd-web/security-issues-analysis.md)（该文档待另行归档入库，合入前链接暂不可达）
 - 业务 Issue：#100~#154（47 个原始扫描 issue）+ #155（匿名 401）+ #157（OSS 依赖漏洞），逐 issue 索引见分析文档第 6 节
 - 修复 PR：#154~#160、#162、#164~#169、#174、#193（已关闭）、#195（已合入），完整清单与状态见分析文档 1.1 节
 - 关键 PR 直链：
   - [PR #195](https://gitcode.com/openlibing/openlibing-cicd-web/merge_requests/195)（匿名 401 降级，2026-10-29 合入 `release_20261029_iter2`）
   - [PR #174](https://gitcode.com/openlibing/openlibing-cicd-web/merge_requests/174)（依赖漏洞）
   - [PR #165](https://gitcode.com/openlibing/openlibing-cicd-web/merge_requests/165) / [#169](https://gitcode.com/openlibing/openlibing-cicd-web/merge_requests/169)（组合 PR）
-- docs PR：待创建（本分支 `spec-openlibing-cicd-web-security-remediation-202610`）
+- docs PR：[#1220](https://gitcode.com/openlibing/openlibing-docs/merge_requests/1220)（`spec-openlibing-cicd-web-security-remediation-202610`）
 
 ## 交付历程
 
@@ -35,7 +35,7 @@
 
 - 各批次 `pnpm build` 通过（14~90s 不等）；Prettier unchanged；分支远端 Git Hooks Checking PASSED
 - nginx 三环境一致性核对：8 关键点 ×3 文件全对齐；CSP 移除后残留核验为 0
-- 全仓静态扫描：SENINFO 6 项引用模式零残留；HTML 字符串渲染类 XSS 面活代码清零
+- 全仓静态扫描：视图层 SENINFO 引用 6 项模式零残留（保留点位仅 `external-links.ts` 1 处集中管理 + 工具链功能性引用 7 处待申报豁免）；HTML 字符串渲染类 XSS 面活代码清零
 - `pnpm type-check` 失败为存量 vue-tsc 1.8.27 与 TS 5.9.3 工具链不兼容（stash 对照验证基线同样失败，与整改无关）
 - 待上线观察：限流阈值 50 的 503 率；#117 上线前测试环境比对 14 个操作码授权
 
