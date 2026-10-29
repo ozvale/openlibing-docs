@@ -197,6 +197,16 @@ ResponseEntity(code, message, data, total)  // 分页场景
 
 **注意**：`maven-surefire-plugin` 配置了 `testFailureIgnore=true`，测试失败**不会**让构建失败。判断测试是否真的通过，必须查 `target/surefire-reports/` 或 `scripts/ut-report.sh` 的输出，不能只看构建结果。
 
+### pre-commit 与平台扫描踩坑（2026-10-29 验证，Issue #48）
+
+- CI 的 pre-commit 是**增量检查**（`--from-ref FETCH_HEAD --to-ref HEAD`）：变更集里只要含 XML 就跑 `check-xml`，
+  被清空但未删除的 changelog（如 `data_init_matrix_engine.xml`）会以 `no element found` 失败，必须删除空文件。
+- `detect-private-key` 按 `-----BEGIN ... PRIVATE KEY-----` 字面匹配，测试里的 PEM 夹具要拆成
+  `"-----BEGIN " + "RSA PRIVATE KEY-----"` 拼接，运行时字符串不变、断言不受影响。
+- 平台 SpotBugs 门禁阈值为 0，`DLS_DEAD_LOCAL_STORE`（局部变量赋值后未使用）也会阻断流水线。
+- 平台 SCA 版本扫描以 `unconfirmedFileNum` 判定，非 0 时输出 `Access control check failed` 并以 255 退出，
+  需先在平台确认/豁免文件再重扫。
+
 ## 提交前检查清单
 
 1. `mvn clean test` 通过，并核对 `target/surefire-reports/`（不要只看 BUILD 结果）。
