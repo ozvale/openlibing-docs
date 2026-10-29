@@ -1,6 +1,6 @@
 # fix-vuln-dependency-tree — 实现任务
 
-## 进度: 0/5 complete
+## 进度: 5/5 complete
 
 ## 前置
 
@@ -10,11 +10,11 @@
 
 ## 实现任务
 
-- [ ] Task 1: `shared/index.js` 重构 `buildVulnDependencyTree`（反图 BFS + 同根合并 + severity 取最高 + 孤列）
-- [ ] Task 2: `shared/index.js` 新增 `findPythonDepFiles` 并在 scan() 中插入 Summary/日志提示
-- [ ] Task 3: `dependencyTreeToText` 兼容孤列节点；`oss-version-scan-action/README.md` + `oss-pr-scan-action/README.md` 补语言能力说明
-- [ ] Task 4: 补单测（多根 pnpm 样例 / 同根合并 / Python 孤列 / severity 最高级别 / 依赖环）/ `npm test` 两套全绿
-- [ ] Task 5: `npm run build` 重建两插件 dist；docs 分支 tasks.md 勾选
+- [x] Task 1: `shared/index.js` 重构 `buildVulnDependencyTree`（反图 BFS + 同根合并 + severity 取最高 + 孤列）
+- [x] Task 2: `shared/index.js` 新增 `findPythonDepFiles` 并在 scan() 中插入 Summary/日志提示
+- [x] Task 3: `dependencyTreeToText` 兼容孤列节点；`oss-version-scan-action/README.md` + `oss-pr-scan-action/README.md` 补语言能力说明
+- [x] Task 4: 补单测（多根 pnpm 样例 / 同根合并 / Python 孤列 / severity 最高级别 / 依赖环）/ `npm test` 两套全绿
+- [x] Task 5: `npm run build` 重建两插件 dist；docs 分支 tasks.md 勾选
 
 ## 验证方式
 
