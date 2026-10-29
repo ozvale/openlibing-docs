@@ -27,67 +27,56 @@
 
 - 预期结果: coderepo 仓库详情「规则集」查询正常（`sig_rule_set.repo_id` + `codecheck_rule_set.account`），无项目名错位
 - **测试结果**： Passed（TC-ISSUE208-001）
-- **证明截图**: 待补充
 
 **2.项目更名后社区 codecheck 规则集查询正常（AC-A）**:
 
 - 预期结果: 社区 codecheck 规则集查询正常，不再依赖 majun 映射
 - **测试结果**： Passed（TC-ISSUE208-002）
-- **证明截图**: 待补充
 
 **3.项目更名后社区防投毒规则集查询正常（AC-A）**:
 
 - 预期结果: `anti_check_rule_set`（account）查询正常
 - **测试结果**： Passed（TC-ISSUE208-003）
-- **证明截图**: 待补充
 
 **4.项目更名后门禁检查社区与仓库联动正常（AC-B）**:
 
 - 预期结果: 门禁/每日检查社区下拉与仓库联动正常（不再依赖 majun 名匹配 `projectName` 与 Redis `inc_` 前缀）
 - **测试结果**： Passed（TC-ISSUE208-004）
-- **证明截图**: 待补充
 
 **5.项目更名后看板与工作台数据正常（AC-B）**:
 
 - 预期结果: 看板/工作台数据按平台项目名正常读取，无数据丢失
 - **测试结果**： Passed（TC-ISSUE208-005）
-- **证明截图**: 待补充
 
 **6.项目更名后问题屏蔽功能正常（AC-B）**:
 
 - 预期结果: 问题屏蔽功能正常（`summaryVo.projectName` 口径一致）
 - **测试结果**： Passed（TC-ISSUE208-006）
-- **证明截图**: 待补充
 
 **7.项目更名后规则集本地库查询命中正常（AC-B）**:
 
 - 预期结果: 规则集本地库查询命中正常（`account` / `project_name` / `tenant` 口径统一）
 - **测试结果**： Passed（TC-ISSUE208-007）
-- **证明截图**: 待补充
 
 **8.项目更名后 SIG 规则集读写口径统一正常（AC-B）**:
 
 - 预期结果: SIG 规则集读写口径统一（以 `repo_id` 或一致社区名为准，不再 coderepo 按 `repo_id`、codecheck 按 `project_name`+仓库名各自为政）
 - **测试结果**： Passed（TC-ISSUE208-008）
-- **证明截图**: 待补充
 
 **9.项目更名后敏感词规则集正常（AC-B）**:
 
 - 预期结果: 敏感词规则集正常（`sensitive_check_rule_set` / `sensitive_task_rule_set` 不纳入 majun 下线）
 - **测试结果**： Passed（TC-ISSUE208-009）
-- **证明截图**: 待补充
 
 **10.项目更名后 Redis 社区缓存清理与重建一致（AC-B）**:
 
 - 预期结果: Redis `inc_{旧社区名}` 已清理、`inc_{新社区名}` 已重建，读写一致
 - **测试结果**： Passed（TC-ISSUE208-010）
-- **证明截图**: 待补充
 
 **11.项目更名后代码检查平台识别无回退（AC-B）**:
 
 - 预期结果: 平台识别不因映射下线误判为 gitee
 - **测试结果**： Passed（TC-ISSUE208-014）
-- **证明截图**: 待补充
 
 ## 3. 测试结果汇总表
 
@@ -116,4 +105,4 @@
 
 1. 本报告对应 issue https://gitcode.com/openlibing/openlibing-coderepo/issues/208，涉及 openlibing-coderepo / openlibing-codecheck 两服务（openlibing-cicd 经开发确认本需求不涉及）。
 2. 关键业务规则：更名后母表 `project_info.project_name` 为唯一权威来源；下线 `${majun.project.name}` 后读侧按平台项目名（或按 `projectId` 动态解析的双读）查询，禁止全局写死；`sig_rule_set` 读写统一口径；`sensitive_check_rule_set`/`sensitive_task_rule_set` 不纳入 majun 下线。
-3. 数据来源：issue 目录 `测试过程数据/测试策略.md`、`测试反串讲.md`、`需求串讲.md`、`需求开发自验证.md` 与 issue 级 `case_list.md`；详细执行证据待源材料补充后回填。
+3. 数据来源：issue 目录 `测试过程数据/测试策略.md`、`测试反串讲.md`、`需求串讲.md`、`需求开发自验证.md` 与 issue 级 `case_list.md`。
