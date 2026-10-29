@@ -7,7 +7,7 @@
   （2026-10-29 15:50 合入 master；初版 PR #177 因 pre-commit 失败关闭后重建）
 - 安全专项 Issue（22 个，仅建立关联，未关闭）：
   #32 #35 #36 #37 #38 #39 #40 #41 #42 #43 #44 #45 #46 #47 #49 #51 #52 #53 #54 #55 #58 #59
-- docs PR：本 PR（spec + 归档材料）
+- docs PR：https://gitcode.com/openlibing/openlibing-docs/merge_requests/1219
 
 ## 交付历程
 
