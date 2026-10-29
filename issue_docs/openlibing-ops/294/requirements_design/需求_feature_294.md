@@ -288,7 +288,8 @@ SELECT j.job_id, j.job_name, j.job_type, j.job_status,
        r.repo_id, r.repo_name, r.repo_url
 FROM pr_run_base r
 INNER JOIN dwr_rd_efc_pipeline_run_job_unified j
-    ON j.pipeline_run_id = r.pipeline_run_id
+    ON j.pipeline_id = r.pipeline_id
+   AND j.pipeline_run_id = r.pipeline_run_id
 WHERE r.end_time IS NOT NULL
   <if test="req.jobType != null and req.jobType != ''">
     AND j.job_type = #{req.jobType}
@@ -319,6 +320,8 @@ LIMIT #{req.pageSize} OFFSET #{offset}
 - `job_duration` / `job_pending_duration` 单位为**秒**，展示时 `ROUND(x/60, 1)` 换算分钟；`unified.duration_ms` 为毫秒，`ROUND(duration_ms/60000, 1)` 换算分钟
 - `npu_second` 为任务级 NPU 秒数，展示时 `ROUND(npu_second/3600, 2)` 换算卡时
 - `pipelineRunId` 下钻场景走同一 Mapper statement，仅附加 run 过滤与排序切换；total 使用同一 WHERE 片段
+- **job 行去重**：`dwr_rd_efc_pipeline_run_job_unified` 存在同一 `(pipeline_id, pipeline_run_id, job_id)` 的重复写入（一条带 `server_ip`/`job_run_start_time`，另一条为空，其余字段一致）。明细按 `ROW_NUMBER() OVER (PARTITION BY r.pipeline_id, r.pipeline_run_id, j.job_id ORDER BY job_end_time DESC, server_ip 非空优先, job_run_start_time 非空优先, job_start_time DESC)` 取 `rn = 1`：**先取最新结束时间**（避免取到旧版本，如 `job 3692e241…` 空 IP 行结束于 10-26、IP 行结束于 10-23），结束时间相同时再优先 `server_ip` 非空、调度时间非空；`total` 复用同一去重结果，避免同一任务重复展示、total 虚高
+- 数据佐证（project 4，2026-09-01 起）：job 候选行 148,396，去重后 job 数 117,519，约 21% 为重复写入；样例 run `892a7b8b…` 去重前 5 行、去重后 4 行。重复对中 97.7% 除 IP/调度时间外字段完全一致，2.3%（89/3,815，均为 codearts）存在时长/排队/结束时间小幅差异
 
 ## 8. 数据现状与限制
 
