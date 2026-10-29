@@ -1,5 +1,7 @@
 # 构建产物安全编译选项导出功能
 
+> **[已作废]** 本方案未实施（任务清单 0/12），已被 [sec-option-detail-export](../sec-option-detail-export/design.md) 替代。导出任务类型、接口路径、Sheet 结构与文件名规则均以新方案为准，禁止按本文档口径实现。
+
 > 跨仓 Full 模式需求设计文档。涉及 `openlibing-cicd-fork`（后端异步导出 + Excel 生成 + framework 对接 + OBS 上传）、`openlibing-cicd-web`（前端导出按钮 + 复用既有导出任务浮窗与下载中心）、`openlibing-framework`（"我的导出"任务表与签名 URL 复用，无需改动）。
 >
 > 目标：在产物包详情页新增"导出"按钮，点击后异步生成包含两个 sheet 的 Excel——Summary sheet 对齐"安全编译选项汇总"表（扫描项×数据列）；Detail sheet 对齐"文件扫描结果总览"矩阵，每个扫描项拆分为"原始值/备案值"两列，未备案文件的备案值列置空，便于离线审计与外部对接。

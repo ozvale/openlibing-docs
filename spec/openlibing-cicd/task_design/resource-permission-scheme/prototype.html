@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>成员管理页增强（权限组一页化）- 前端原型</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; }
+  body { background: #f0f2f5; padding: 24px; color: #191919; }
+  h1 { font-size: 20px; margin-bottom: 8px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+  .proto { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 32px; overflow: hidden; }
+  .proto-title { padding: 14px 20px; border-bottom: 1px solid #ebeef5; font-size: 15px; font-weight: 600; background: #fafbfc; }
+  .proto-title .tag { font-size: 12px; font-weight: normal; color: #888; margin-left: 8px; }
+  .proto-note { padding: 10px 20px; background: #fdf6ec; color: #a15c11; font-size: 12.5px; border-bottom: 1px solid #faecd8; line-height: 1.8; }
+  .body { padding: 20px; }
+
+  .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666; margin-bottom: 16px; }
+  .breadcrumb .cur { color: #191919; }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
+  .toolbar-left { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .toolbar-right { display: flex; gap: 10px; align-items: center; }
+  .btn-primary { background: #1387ff; color: #fff; border: none; padding: 7px 14px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+  .btn-plain { background: #fff; color: #1387ff; border: 1px solid #1387ff; padding: 7px 14px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+  .btn-link { background: none; border: none; color: #1387ff; font-size: 13px; cursor: pointer; padding: 4px 2px; }
+  .search { border: 1px solid #dcdfe6; border-radius: 4px; padding: 6px 10px; font-size: 13px; color: #999; width: 180px; }
+  .filter-label { font-size: 13px; color: #666; }
+  .select { border: 1px solid #dcdfe6; border-radius: 4px; padding: 6px 10px; font-size: 13px; background: #fff; color: #666; min-width: 140px; }
+
+  /* 多选下拉（权限组筛选） */
+  .multi-dd { position: relative; }
+  .multi-dd-btn { border: 1px solid #dcdfe6; border-radius: 4px; padding: 6px 10px; font-size: 13px; background: #fff; color: #666; min-width: 190px; cursor: pointer; text-align: left; position: relative; }
+  .multi-dd-btn::after { content: "▾"; position: absolute; right: 10px; color: #c0c4cc; }
+  .multi-dd-btn.active { border-color: #1387ff; color: #1387ff; }
+  .multi-dd-panel { display: none; position: absolute; top: 110%; left: 0; background: #fff; border: 1px solid #e4e7ed; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,.12); z-index: 30; min-width: 210px; }
+  .multi-dd.open .multi-dd-panel { display: block; }
+  .multi-dd-item { padding: 8px 12px; font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .multi-dd-item:hover { background: #f5f7fa; }
+  .multi-dd-item .cb { width: 14px; height: 14px; border: 1px solid #dcdfe6; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; }
+  .multi-dd-item.checked .cb { background: #1387ff; border-color: #1387ff; }
+  .multi-dd-item.checked .cb::after { content: "✓"; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #f4f6fa; text-align: left; padding: 10px 12px; color: #191919; font-weight: 600; border-bottom: 1px solid #f0f0f0; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; color: #333; }
+  tr:hover td { background: #f8fbff; }
+
+  .group-pill { display: inline-block; padding: 2px 10px; border-radius: 3px; font-size: 12px; background: #ecf5ff; color: #1387ff; border: 1px solid #d9ecff; }
+  .group-pill.default { background: #f4f4f5; color: #909399; border-color: #e9e9eb; }
+  .role-pill { display: inline-block; padding: 2px 10px; border-radius: 3px; font-size: 12px; background: #f0f9eb; color: #67c23a; border: 1px solid #e1f3d8; }
+  .role-pill.member { background: #f4f4f5; color: #909399; border-color: #e9e9eb; }
+  .icon-btn { display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; color: #1387ff; font-size: 15px; margin-right: 8px; }
+
+  .tip { position: relative; display: inline-block; }
+  .tip .tip-box { display: none; position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%); background: #303133; color: #fff; font-size: 12px; padding: 6px 10px; border-radius: 4px; white-space: nowrap; z-index: 10; }
+  .tip:hover .tip-box { display: block; }
+  .tip .tip-box::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #303133; }
+
+  .dialog-mask { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; align-items: flex-start; justify-content: center; padding-top: 60px; z-index: 100; }
+  .dialog-mask.open { display: flex; }
+  .dialog { background: #fff; border-radius: 8px; width: 640px; max-width: 94vw; box-shadow: 0 4px 24px rgba(0,0,0,.2); }
+  .dialog-header { display: flex; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #ebeef5; font-size: 15px; font-weight: 600; }
+  .dialog-body { padding: 20px; max-height: 62vh; overflow-y: auto; }
+  .dialog-footer { padding: 12px 20px; border-top: 1px solid #ebeef5; text-align: right; display: flex; justify-content: flex-end; gap: 10px; }
+
+  .form-row { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 13px; color: #666; margin-bottom: 6px; }
+  .form-label .req { color: #f56c6c; margin-right: 2px; }
+  .form-input { width: 100%; border: 1px solid #dcdfe6; border-radius: 4px; padding: 8px 10px; font-size: 13px; }
+  .form-hint { font-size: 12px; color: #999; margin-top: 4px; line-height: 1.7; }
+
+  .col-new-tag { font-size: 11px; background: #f0f9eb; color: #67c23a; padding: 1px 5px; border-radius: 3px; margin-left: 6px; border: 1px solid #e1f3d8; white-space: nowrap; }
+  .col-new-tag::before { content: "新增 "; }
+  th.new-col, td.new-cell { background: #f7fcf4; }
+  .btn-new { position: relative; outline: 2px dashed #67c23a; outline-offset: 2px; }
+
+  .flow-note { background: #ecf5ff; border: 1px solid #d9ecff; border-radius: 4px; padding: 10px 14px; font-size: 12.5px; color: #2b6cb0; line-height: 1.8; margin-bottom: 16px; }
+  .flow-note b { font-weight: 600; }
+
+  .check-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border: 1px solid #dcdfe6; border-radius: 4px; margin-bottom: 8px; cursor: pointer; font-size: 13px; }
+  .check-item.checked { border-color: #1387ff; background: #f0f9ff; }
+  .check-item .cb { width: 14px; height: 14px; margin-top: 2px; border: 1px solid #dcdfe6; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; flex: none; }
+  .check-item.checked .cb { background: #1387ff; border-color: #1387ff; }
+  .check-item.checked .cb::after { content: "✓"; }
+  .check-item .ci-desc { color: #999; font-size: 12px; }
+
+  .empty-tip { color: #c0c4cc; font-size: 12px; padding: 4px 0; }
+  .del-disabled { color: #c0c4cc; cursor: not-allowed; font-size: 13px; }
+  .warn-text { color: #e6a23c; font-size: 12.5px; line-height: 1.8; }
+  .confirm-box { border: 1px solid #faecd8; background: #fdf6ec; border-radius: 4px; padding: 12px 14px; font-size: 13px; color: #a15c11; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<h1>成员管理页增强（权限组一页化）- 前端原型</h1>
+<div class="subtitle">基于现有「项目管理-成员管理」页面（openlibing-web / projectUserManage.vue）原地增强。绿色虚线框 / 绿底列 = 本次新增元素。设计决策：①一页增强 ②删除权限组连带删除成员记录 ③新增成员弹窗内多选目标组。</div>
+
+<!-- ================= 界面一：成员管理页（增强后） ================= -->
+<div class="proto">
+  <div class="proto-title">界面一：成员管理页（增强后）<span class="tag">改造现有页面，无新增页面路由</span></div>
+  <div class="proto-note">
+    <b>查询变更：</b>原 <code>query-project-user</code> 接口原地增强为全组平铺（每行一条组记录），返回新增 <code>permGroupId / permGroupName</code> 字段；权限组筛选为可选参数（permGroupIds），不传时查全部组（含默认组行）。
+  </div>
+  <div class="body">
+    <div class="breadcrumb">项目管理&nbsp;/&nbsp;<span class="cur">成员管理：openLibing-CICD</span></div>
+
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button class="btn-primary" onclick="openDialog('dlg-add')">添加项目成员</button>
+        <button class="btn-primary">同步项目成员</button>
+      </div>
+      <div class="toolbar-right">
+        <span class="filter-label">账号</span><input class="search" placeholder="请输入账号">
+        <span class="filter-label">角色</span>
+        <select class="select"><option>请选择角色</option><option>项目经理</option><option>项目成员</option><option>流水线工程师</option></select>
+        <span class="filter-label" style="color:#67c23a;font-weight:600;">权限组</span>
+        <div class="multi-dd" id="groupFilter">
+          <div class="multi-dd-btn btn-new" onclick="toggleDD(event, 'groupFilter')">全部组</div>
+          <div class="multi-dd-panel">
+            <div class="multi-dd-item" data-group="默认组" onclick="toggleGroup(this)"><span class="cb"></span>默认组 <span style="color:#999;font-size:12px;">（正式项目成员）</span></div>
+            <div class="multi-dd-item" data-group="流水线管控组" onclick="toggleGroup(this)"><span class="cb"></span>流水线管控组</div>
+            <div class="multi-dd-item" data-group="发布管控组" onclick="toggleGroup(this)"><span class="cb"></span>发布管控组</div>
+          </div>
+        </div>
+        <button class="btn-link">刷新</button>
+        <button class="btn-plain btn-new" onclick="openDialog('dlg-groups')">管理权限组</button>
+      </div>
+    </div>
+
+    <table id="memberTable">
+      <thead>
+        <tr>
+          <th>用户名</th>
+          <th class="new-col">权限组<span class="col-new-tag"></span></th>
+          <th>角色</th>
+          <th>gitCode账号用户名</th>
+          <th>gitee账号用户名</th>
+          <th>openUBMC账号用户名</th>
+          <th>创建时间</th>
+          <th>备注</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr data-group="默认组">
+          <td>张三</td>
+          <td class="new-cell"><span class="group-pill default">默认组</span></td>
+          <td><span class="role-pill member">项目经理</span></td>
+          <td>zhangsan</td><td>zhangsan_g</td><td>zhangsan_u</td>
+          <td>2026-09-01 10:23</td><td></td>
+          <td>
+            <span class="tip"><span class="icon-btn" onclick="openDialog('dlg-edit-default')">✎</span>
+              <span class="tip-box">默认组行 → 存量接口（含同步/审计联动）</span></span>
+            <span class="tip"><span class="icon-btn" style="color:#f56c6c;">🗑</span>
+              <span class="tip-box">默认组行 → 存量 delete-project-user</span></span>
+          </td>
+        </tr>
+        <tr data-group="默认组">
+          <td>李四</td>
+          <td class="new-cell"><span class="group-pill default">默认组</span></td>
+          <td><span class="role-pill member">项目成员</span></td>
+          <td>lisi</td><td>lisi_g</td><td>lisi_u</td>
+          <td>2026-09-02 14:05</td><td></td>
+          <td>
+            <span class="icon-btn" onclick="openDialog('dlg-edit-default')">✎</span>
+            <span class="icon-btn" style="color:#f56c6c;">🗑</span>
+          </td>
+        </tr>
+        <tr data-group="流水线管控组">
+          <td>王五</td>
+          <td class="new-cell"><span class="group-pill">流水线管控组</span></td>
+          <td><span class="role-pill">流水线工程师</span></td>
+          <td>wangwu</td><td>wangwu_g</td><td>wangwu_u</td>
+          <td>2026-09-10 09:11</td><td></td>
+          <td>
+            <span class="tip"><span class="icon-btn" onclick="openDialog('dlg-edit-group')">✎</span>
+              <span class="tip-box">自定义组行 → 新接口（仅改本组记录）</span></span>
+            <span class="tip"><span class="icon-btn" style="color:#f56c6c;">🗑</span>
+              <span class="tip-box">自定义组行 → 新接口（删除该条组记录）</span></span>
+          </td>
+        </tr>
+        <tr data-group="发布管控组">
+          <td>王五</td>
+          <td class="new-cell"><span class="group-pill">发布管控组</span></td>
+          <td><span class="role-pill">测试工程师</span></td>
+          <td>wangwu</td><td>wangwu_g</td><td>wangwu_u</td>
+          <td>2026-09-11 16:40</td><td></td>
+          <td>
+            <span class="icon-btn" onclick="openDialog('dlg-edit-group')">✎</span>
+            <span class="icon-btn" style="color:#f56c6c;">🗑</span>
+          </td>
+        </tr>
+        <tr data-group="流水线管控组">
+          <td>赵六</td>
+          <td class="new-cell"><span class="group-pill">流水线管控组</span></td>
+          <td><span class="role-pill">流水线工程师</span></td>
+          <td>zhaoliu</td><td>zhaoliu_g</td><td>zhaoliu_u</td>
+          <td>2026-09-12 11:08</td><td></td>
+          <td>
+            <span class="icon-btn" onclick="openDialog('dlg-edit-group')">✎</span>
+            <span class="icon-btn" style="color:#f56c6c;">🗑</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:14px;font-size:12.5px;color:#999;">同一用户在多个组 = 多行记录（如王五）；行级编辑/删除由前端按行 permGroupId 路由：默认组行走存量接口，自定义组行走新接口。</div>
+  </div>
+</div>
+
+<!-- ================= 界面二：添加项目成员弹窗（增强） ================= -->
+<div class="proto">
+  <div class="proto-title">界面二：添加项目成员弹窗（增强 BatchAddMemberDialog）<span class="tag">新增「权限组」多选，可一次加入多个组</span></div>
+  <div class="body">
+    <div class="flow-note">
+      <b>规则：</b>权限组支持多选（同一账号可同时加入默认组 + 若干自定义组，各组角色独立）。<br>
+      <b>接口路由：</b>勾选「默认组」→ 存量 <code>add-project-user</code>（保留仓库成员同步等联动）；勾选自定义组 → 新接口 <code>updateGroupMembers</code>。两种可同时勾选，前端分别调用。
+    </div>
+    <div class="form-row">
+      <label class="form-label"><span class="req">*</span>账号类型 / 账号</label>
+      <div style="display:flex;gap:10px;">
+        <select class="select"><option>gitCode</option><option>gitee</option><option>openUBMC</option></select>
+        <input class="form-input" placeholder="请输入账号，多个账号以逗号分隔">
+      </div>
+      <div class="form-hint">存量交互不变（ContactInformation 组件）</div>
+    </div>
+    <div class="form-row">
+      <label class="form-label" style="color:#67c23a;font-weight:600;"><span class="req">*</span>权限组（可多选）</label>
+      <div class="check-item checked"><span class="cb"></span><div>默认组（正式项目成员）<div class="ci-desc">= 存量「添加项目成员」语义，走存量接口</div></div></div>
+      <div class="check-item"><span class="cb"></span><div>流水线管控组<div class="ci-desc">加入自定义权限组，走新接口</div></div></div>
+      <div class="check-item"><span class="cb"></span><div>发布管控组<div class="ci-desc">加入自定义权限组，走新接口</div></div></div>
+    </div>
+    <div class="form-row">
+      <label class="form-label"><span class="req">*</span>角色</label>
+      <select class="select" style="width:100%;"><option>请选择角色（仅项目型角色）</option><option>项目成员</option><option>流水线工程师</option><option>测试工程师</option></select>
+      <div class="form-hint">自定义组仅允许项目型角色（后端白名单校验）；所选角色写入全部勾选的组</div>
+    </div>
+    <div style="text-align:right;"><button class="btn-primary">确 定</button>　<button class="btn-plain">关 闭</button></div>
+  </div>
+</div>
+
+<!-- ================= 界面三：管理权限组弹窗 ================= -->
+<div class="proto">
+  <div class="proto-title">界面三：管理权限组弹窗<span class="tag">新建组 / 删除组入口；默认组仅此处一个特殊点</span></div>
+  <div class="body">
+    <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+      <span style="font-size:13px;color:#666;">项目下全部权限组（默认组为虚拟组，不可删除）</span>
+      <button class="btn-primary btn-new" onclick="openDialog('dlg-newgroup')">新建权限组</button>
+    </div>
+    <table>
+      <thead><tr><th>组名</th><th>描述</th><th>成员数</th><th>绑定资源数</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="group-pill default">默认组</span></td>
+          <td style="color:#999;">正式项目成员（虚拟组，perm_group_id=0）</td>
+          <td>12</td><td>—</td>
+          <td><span class="tip"><span class="del-disabled">删除</span><span class="tip-box">默认权限组不允许删除</span></span></td>
+        </tr>
+        <tr>
+          <td><span class="group-pill">流水线管控组</span></td>
+          <td>关键流水线操作管控</td>
+          <td>2</td>
+          <td>3 <span style="color:#999;font-size:12px;">（3条流水线）</span></td>
+          <td><span class="tip"><span class="del-disabled">删除</span><span class="tip-box">该权限组仍绑定了 3 个资源，请先解绑</span></span></td>
+        </tr>
+        <tr>
+          <td><span class="group-pill">发布管控组</span></td>
+          <td>发布类流水线管控</td>
+          <td>1</td>
+          <td>0</td>
+          <td><span class="btn-link" style="color:#f56c6c;" onclick="openDialog('dlg-delgroup')">删除</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:14px;font-size:12.5px;color:#999;">
+      绑定/解绑在「流水线列表页」行内进行（绑定后该流水线按组鉴权）；删除组前置校验：默认组拦截 + 绑定占用拦截。
+    </div>
+  </div>
+</div>
+
+<!-- ================= 界面四：删除权限组确认弹窗 ================= -->
+<div class="proto">
+  <div class="proto-title">界面四：删除权限组确认弹窗<span class="tag">连带删除成员记录（已确认的决策）</span></div>
+  <div class="body">
+    <div class="confirm-box">
+      确定删除权限组「发布管控组」？<br>
+      删除后组内 <b>1</b> 条成员记录将<b>连带删除</b>，相关成员立即失去该组赋予的权限（不影响其在默认组等其他组的身份）。
+    </div>
+    <div style="text-align:right;margin-top:16px;"><button class="btn-primary" style="background:#f56c6c;">删 除</button>　<button class="btn-plain">取 消</button></div>
+  </div>
+</div>
+
+<!-- ================= 弹窗集合（可交互） ================= -->
+<div class="dialog-mask" id="dlg-add">
+  <div class="dialog">
+    <div class="dialog-header"><span>添加项目成员</span><span style="cursor:pointer;" onclick="closeDialog('dlg-add')">✕</span></div>
+    <div class="dialog-body">
+      <div class="form-row">
+        <label class="form-label"><span class="req">*</span>账号类型 / 账号</label>
+        <div style="display:flex;gap:10px;">
+          <select class="select"><option>gitCode</option><option>gitee</option><option>openUBMC</option></select>
+          <input class="form-input" placeholder="请输入账号">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label" style="color:#67c23a;font-weight:600;"><span class="req">*</span>权限组（可多选）</label>
+        <div class="check-item checked"><span class="cb"></span><div>默认组（正式项目成员）<div class="ci-desc">走存量接口</div></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><span class="cb"></span><div>流水线管控组<div class="ci-desc">走新接口</div></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><span class="cb"></span><div>发布管控组<div class="ci-desc">走新接口</div></div></div>
+      </div>
+      <div class="form-row">
+        <label class="form-label"><span class="req">*</span>角色</label>
+        <select class="select" style="width:100%;"><option>请选择角色（仅项目型角色）</option><option>项目成员</option><option>流水线工程师</option></select>
+      </div>
+    </div>
+    <div class="dialog-footer"><button class="btn-primary">确 定</button><button class="btn-plain" onclick="closeDialog('dlg-add')">关 闭</button></div>
+  </div>
+</div>
+
+<div class="dialog-mask" id="dlg-groups">
+  <div class="dialog">
+    <div class="dialog-header"><span>管理权限组</span><span style="cursor:pointer;" onclick="closeDialog('dlg-groups')">✕</span></div>
+    <div class="dialog-body">
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+        <span style="font-size:13px;color:#666;">项目下全部权限组</span>
+        <button class="btn-primary btn-new" onclick="closeDialog('dlg-groups');openDialog('dlg-newgroup')">新建权限组</button>
+      </div>
+      <table>
+        <thead><tr><th>组名</th><th>描述</th><th>成员数</th><th>绑定资源数</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="group-pill default">默认组</span></td><td style="color:#999;">正式项目成员（虚拟组）</td><td>12</td><td>—</td>
+            <td><span class="tip"><span class="del-disabled">删除</span><span class="tip-box">默认权限组不允许删除</span></span></td>
+          </tr>
+          <tr>
+            <td><span class="group-pill">流水线管控组</span></td><td>关键流水线操作管控</td><td>2</td><td>3</td>
+            <td><span class="tip"><span class="del-disabled">删除</span><span class="tip-box">该权限组仍绑定了 3 个资源，请先解绑</span></span></td>
+          </tr>
+          <tr>
+            <td><span class="group-pill">发布管控组</span></td><td>发布类流水线管控</td><td>1</td><td>0</td>
+            <td><span class="btn-link" style="color:#f56c6c;" onclick="closeDialog('dlg-groups');openDialog('dlg-delgroup')">删除</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="dialog-footer"><button class="btn-plain" onclick="closeDialog('dlg-groups')">关 闭</button></div>
+  </div>
+</div>
+
+<div class="dialog-mask" id="dlg-newgroup">
+  <div class="dialog" style="width:480px;">
+    <div class="dialog-header"><span>新建权限组</span><span style="cursor:pointer;" onclick="closeDialog('dlg-newgroup')">✕</span></div>
+    <div class="dialog-body">
+      <div class="form-row">
+        <label class="form-label"><span class="req">*</span>组名</label>
+        <input class="form-input" placeholder="请输入权限组名称">
+      </div>
+      <div class="form-row">
+        <label class="form-label">描述</label>
+        <input class="form-input" placeholder="请输入该方案的用途描述">
+      </div>
+    </div>
+    <div class="dialog-footer"><button class="btn-primary">确 定</button><button class="btn-plain" onclick="closeDialog('dlg-newgroup')">取 消</button></div>
+  </div>
+</div>
+
+<div class="dialog-mask" id="dlg-delgroup">
+  <div class="dialog" style="width:480px;">
+    <div class="dialog-header"><span>删除权限组</span><span style="cursor:pointer;" onclick="closeDialog('dlg-delgroup')">✕</span></div>
+    <div class="dialog-body">
+      <div class="confirm-box">
+        确定删除权限组「发布管控组」？<br>
+        删除后组内 <b>1</b> 条成员记录将<b>连带删除</b>，相关成员立即失去该组赋予的权限（不影响其在默认组等其他组的身份）。
+      </div>
+    </div>
+    <div class="dialog-footer"><button class="btn-primary" style="background:#f56c6c;">删 除</button><button class="btn-plain" onclick="closeDialog('dlg-delgroup')">取 消</button></div>
+  </div>
+</div>
+
+<div class="dialog-mask" id="dlg-edit-default">
+  <div class="dialog" style="width:480px;">
+    <div class="dialog-header"><span>修改用户信息（默认组 · 存量逻辑）</span><span style="cursor:pointer;" onclick="closeDialog('dlg-edit-default')">✕</span></div>
+    <div class="dialog-body">
+      <div class="form-row">
+        <label class="form-label">用户名</label>
+        <input class="form-input" value="张三" disabled style="background:#f5f7fa;">
+      </div>
+      <div class="form-row">
+        <label class="form-label"><span class="req">*</span>角色</label>
+        <select class="select" style="width:100%;"><option>项目经理</option><option>项目成员</option></select>
+        <div class="form-hint">调用存量 update-project-user（含仓库成员同步联动）</div>
+      </div>
+    </div>
+    <div class="dialog-footer"><button class="btn-primary">确 定</button><button class="btn-plain" onclick="closeDialog('dlg-edit-default')">关 闭</button></div>
+  </div>
+</div>
+
+<div class="dialog-mask" id="dlg-edit-group">
+  <div class="dialog" style="width:480px;">
+    <div class="dialog-header"><span>修改用户信息（自定义组 · 新逻辑）</span><span style="cursor:pointer;" onclick="closeDialog('dlg-edit-group')">✕</span></div>
+    <div class="dialog-body">
+      <div class="form-row">
+        <label class="form-label">用户名</label>
+        <input class="form-input" value="王五" disabled style="background:#f5f7fa;">
+      </div>
+      <div class="form-row">
+        <label class="form-label">权限组</label>
+        <input class="form-input" value="流水线管控组" disabled style="background:#f5f7fa;">
+      </div>
+      <div class="form-row">
+        <label class="form-label"><span class="req">*</span>角色</label>
+        <select class="select" style="width:100%;"><option>流水线工程师</option><option>测试工程师</option></select>
+        <div class="form-hint">调用新接口 updateGroupMembers，仅修改该条组记录，不影响其他组身份</div>
+      </div>
+    </div>
+    <div class="dialog-footer"><button class="btn-primary">确 定</button><button class="btn-plain" onclick="closeDialog('dlg-edit-group')">关 闭</button></div>
+  </div>
+</div>
+
+<script>
+  function openDialog(id) { document.getElementById(id).classList.add('open'); }
+  function closeDialog(id) { document.getElementById(id).classList.remove('open'); }
+  function toggleCheck(el) { el.classList.toggle('checked'); }
+  function toggleDD(e, id) { e.stopPropagation(); document.getElementById(id).classList.toggle('open'); }
+  document.addEventListener('click', function () {
+    document.querySelectorAll('.multi-dd.open').forEach(function (d) { d.classList.remove('open'); });
+    updateFilterBtn();
+  });
+  function toggleGroup(item) {
+    event.stopPropagation();
+    item.classList.toggle('checked');
+    var selected = [];
+    document.querySelectorAll('#groupFilter .multi-dd-item.checked').forEach(function (i) { selected.push(i.dataset.group); });
+    document.querySelectorAll('#memberTable tbody tr').forEach(function (tr) {
+      tr.style.display = (selected.length === 0 || selected.indexOf(tr.dataset.group) >= 0) ? '' : 'none';
+    });
+  }
+  function updateFilterBtn() {
+    var n = document.querySelectorAll('#groupFilter .multi-dd-item.checked').length;
+    var btn = document.querySelector('#groupFilter .multi-dd-btn');
+    btn.textContent = n === 0 ? '全部组' : '已选 ' + n + ' 个组';
+    btn.classList.toggle('active', n > 0);
+  }
+</script>
+</body>
+</html>
