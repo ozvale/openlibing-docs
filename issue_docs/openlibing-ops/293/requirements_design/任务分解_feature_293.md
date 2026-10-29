@@ -2,14 +2,14 @@
 
 ## 1. 基本信息
 
-| 项目       | 内容                                                                                                    |
-| ---------- | ------------------------------------------------------------------------------------------------------- |
-| 需求文档   | [需求_feature_293.md](./需求_feature_293.md)                                                            |
-| 关联 Issue | https://gitcode.com/openlibing/openlibing-ops/issues/293                                                |
-| 开发分支   | `feature_293_new`                                                                                       |
-| 后端仓库   | openlibing-ops                                                                                          |
-| 指标字典   | openlibing-metric                                                                                       |
-| ETL        | DolphinScheduler（仓库外）                                                                              |
+| 项目       | 内容                                                                                                                    |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 需求文档   | [需求_feature_293.md](./需求_feature_293.md)                                                                            |
+| 关联 Issue | https://gitcode.com/openlibing/openlibing-ops/issues/293                                                                |
+| 开发分支   | `feature_293_new`                                                                                                       |
+| 后端仓库   | openlibing-ops                                                                                                          |
+| 指标字典   | openlibing-metric                                                                                                       |
+| ETL        | DolphinScheduler（仓库外）                                                                                              |
 | 目标       | 【本期仅例外备案】每仓最新合入 10 个 PR 的成功流水线中任一次单次达标；GitCode/GitHub 双平台；项目级分母保持全部运营仓库 |
 
 ## 2. 任务总览
@@ -22,7 +22,7 @@
 | T3   | 仓库级例外备案消费对齐            | openlibing-ops / 下钻        | `OpsRepoDetailMapper.xml`、`OpsRepoDetail*Resp.java` | T5     | `uses_proper_codecheck` 直读 ETL；明细优先级 |
 | T4   | 【暂缓】环境资源下钻对齐          | openlibing-ops / 下钻        | `OpsResourceDetailMapper.xml`                        | —      | 本期不实施                                   |
 | T4b  | 【暂缓】运行记录与 Excel 标注     | openlibing-ops               | `OpsResourceRun*`、`OpsOverviewMainResp.java`        | —      | 本期不实施                                   |
-| T5   | ETL 仓库级例外备案重写            | DolphinScheduler             | `dwi_repo_pipeline_quality_day`                      | T0     | 最新合入 10 个 PR 的成功流水线中任一次达标 |
+| T5   | ETL 仓库级例外备案重写            | DolphinScheduler             | `dwi_repo_pipeline_quality_day`                      | T0     | 最新合入 10 个 PR 的成功流水线中任一次达标   |
 | T6   | ETL 项目级例外备案率              | DolphinScheduler             | `dm_project_quality_overview_day`                    | T5     | 项目率与仓库级达标结果一致                   |
 | T7   | 指标字典与文案                    | openlibing-metric / 指标平台 | 指标定义数据                                         | T0     | 指标含义、统计范围与新口径一致               |
 | T8   | 回归验证与发布                    | Doris / 页面                 | —                                                    | T1-T7  | 数据、接口、页面、性能全部通过               |
