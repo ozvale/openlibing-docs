@@ -29,7 +29,7 @@
 
 ```vue
 <el-table-column label="是否对接华为云项目" prop="isHwProject">
-  <template #default="scope">{{ scope.row.isHwProject === 1 ? '是' : '否' }}</template>
+  <template #default="scope">{{ formatYesNo(scope.row.isHwProject) }}</template>
 </el-table-column>
 ```
 
@@ -68,8 +68,8 @@
 
 ### 3.4 API 与数据刷新
 
-- `src/api/url.ts` 新增 URL 常量（FRAME_WORK 前缀），`src/api/api.ts` 新增 `updateProjectName: RequestFunc`；路径已确认：POST `/project/update-project-name`，参数拼接在 URL query（`projectId: Integer`、`projectName`）
-- **树形缓存踩坑**：el-table lazy 树的行数据缓存在内部 `lazyTreeNodeMap`，改名后需刷新。方案：改名行若为子行，找到其父行重新触发 load；简化方案为整表重查（`tableData` ref 置空 + `queryProject` 重拉 + `el-table` ref 清空 lazy 缓存 `tableRef.value.store.states.lazyTreeNodeMap.value = {}`）。采用简化方案，行为可接受（项目列表数据量小）
+- `src/api/url.ts` 新增 URL 常量（FRAME_WORK 前缀），`src/api/api.ts` 新增 `updateProjectName: RequestFunc`；路径已确认：POST `/project/update-project-name`，参数经请求库 `params` 传递于 URL query（`projectId: Integer`、`projectName`）——请求库自动 URL 编码；若需手工拼接必须 `encodeURIComponent(projectName)`，防止项目名含 `&`/`#`/`+`/中文 时 query 解析错误
+- **树形缓存踩坑**：el-table lazy 树的行数据缓存在内部 `lazyTreeNodeMap`，改名后需刷新。方案：改名行若为子行，找到其父行重新触发 load；简化方案为整表重查（`tableData` ref 置空 + `queryProject` 重拉 + `el-table` ref 清空 lazy 缓存 `tableRef.value?.store?.states?.lazyTreeNodeMap.value = {}`，可选链防护表格未挂载场景）。采用简化方案，行为可接受（项目列表数据量小）。⚠️ `store.states.lazyTreeNodeMap` 是 el-table 内部状态而非公开 API，强依赖当前 Element Plus 内部实现，版本升级后需复核；若升级后失效，退化方案为给 el-table 加随刷新递增的 `:key` 强制重建
 
 ## 4. 漏洞视图「社区配置」二级页签（需求④）
 

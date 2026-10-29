@@ -18,9 +18,9 @@
 committerLoadState: "init" | "success" | "error";
 ```
 
-- 请求发起前置 `error`（或初始 `init`）
-- `.then` 成功 → `success`
-- 新增 `.catch` → `error`
+- 请求发起（弹窗打开触发 `queryBranchCommiter`）置 `init`
+- `.then` 成功 → `success`（仅在 `success` 且列表为空时，`#empty` 插槽展示引导文案）
+- 新增 `.catch` → `error`（仅请求真正失败时置 `error`；发起阶段不得置 `error`，避免在途请求窗口期被 `#empty` 插槽误判为「获取失败」）
 
 ### 2. 生效范围控制：新增 prop
 

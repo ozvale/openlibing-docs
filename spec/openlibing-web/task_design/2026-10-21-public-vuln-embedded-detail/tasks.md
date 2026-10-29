@@ -31,8 +31,9 @@
 ## 验证记录
 
 - [x] ESLint：改动文件 0 error（仅 5 条既有 no-nested-ternary warning，非本次引入）
-- [x] vue-tsc 类型检查：报错均为 vite.config.mts / internal 工具包 / node_modules 双实例等环境既有问题，无本次改动文件相关错误
+- [x] vue-tsc 类型检查：与改造前基线报错清单逐条比对，报错均为 vite.config.mts / internal 工具包 / node_modules 双实例等环境既有问题，无本次改动文件相关错误
 - [x] 样式回归：操作历史展开后左右间隔透出灰底；详情态外圈边距与原独立详情页一致；面包屑悬浮变色
+- [ ] 权限回归：有 `public_cve:details` 权限账号列表 cve 编号渲染为链接、可进入详情；无权限账号渲染纯文本；旧 URL `/apps/publicVulnerabilityAnalysis` 已不可直达
 - [x] pre-commit 钩子（prettier / ESLint / secrets 检测）全部通过
 
 ## 交付记录

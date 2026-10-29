@@ -100,7 +100,7 @@ async handleSync() {
 **改动**：
 
 1. **移除**工具栏搜索入口：模板 L35-52（`.menu-search-wrap` / `el-select-v2`）、scoped 样式 L1054-1067、全局样式 `menu-search-select-dropdown` L1150-1159；「新增」按钮保留
-2. menuName 列增加 `headerRenderer`：渲染「名称」文字 + 搜索图标按钮（视觉参照 ColumnFilter 表头图标：16px svg、hover 高亮、`selectedNodeId` 存在时激活态填充色）
+2. menuName 列增加 `headerCellRenderer`：渲染「名称」文字 + 搜索图标按钮（视觉参照 ColumnFilter 表头图标：16px svg、hover 高亮、`selectedNodeId` 存在时激活态填充色）
 3. **节点搜索弹窗**（新组件 `components/MenuSearchDialog.vue`，暂名 [TBD]，具体以 UX 稿为准）：
    - `el-dialog`，标题「搜索并选择节点」，宽度默认 480px [TBD]
    - 内容：搜索输入框（关键字过滤，匹配名称与祖先路径，复用 `flatMenuOptions`）+ 节点选项列表（展示「祖先路径 / 节点名」区分同名节点，单选高亮）
@@ -108,7 +108,7 @@ async handleSync() {
    - 确定 → 关闭弹窗 + 调用既有 `handleNodeSelect(nodeId)`；取消/关闭 → 不改变当前定位
    - 菜单节点量级为数百，普通列表即可；若 UX 稿要求树形展示/虚拟滚动再扩展 [TBD]
 4. `selectedNodeId` / `preSelectExpandedIds` / `restoreExpandSnapshot` / `getMenuList(keepState)` 逻辑全部保留，仅入口控件形态变化
-5. headerRenderer 内 `h()` 渲染的元素不带 scopeId，样式放非 scoped 块并以 `.menu-table-v2` 命名空间隔离（既有约定见 L1160-1161 注释）
+5. headerCellRenderer 内 `h()` 渲染的元素不带 scopeId，样式放非 scoped 块并以 `.menu-table-v2` 命名空间隔离（既有约定见 L1160-1161 注释）
 
 ### 入口形态备选
 

@@ -36,6 +36,7 @@
 - [ ] 项目管理列表：项目名称列后展示 3 个新列，值 1/0 分别渲染「是」「否」，树形展开子行正常
 - [ ] 有权限用户在操作列可见「修改名称」图标入口；无权限用户不可见（NoPermissionPopover 提示）
 - [ ] 修改名称弹窗：空值/超长/重复名称均被拦截并提示；合法修改保存后列表名称实时更新
+- [ ] 项目名含特殊字符（`&` / `#` / `+` / 中文）时保存成功，列表与编辑弹窗回显与原值一致（URL 编码正确）
 - [ ] 漏洞视图「配置」→「社区适配」二级页签末尾出现「社区配置」，3 个配置项支持查看/编辑/保存，保存后配置实时生效，交互样式与该页签内既有配置项一致
 - [ ] lint 通过，无本次改动引入的类型错误
 
@@ -43,7 +44,7 @@
 
 | #   | 接口                                                                                                                                                                                                                                                                         | 用途                    | 状态                 |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | -------------------- |
-| 1   | 项目名称修改接口：POST `/project/update-project-name`（FRAME_WORK 前缀），参数拼接在 URL query（`projectId: Integer`、`projectName`）                                                                                                                                        | 保存新名称              | 已确认               |
+| 1   | 项目名称修改接口：POST `/project/update-project-name`（FRAME_WORK 前缀），参数经请求库 `params` 传递于 URL query（`projectId: Integer`、`projectName`，自动 URL 编码防特殊字符解析错误）                                                                                     | 保存新名称              | 已确认               |
 | 2   | 重复校验：不提供独立接口，由 `/project/update-project-name` 保存接口校验名称重复并返回冲突错误信息，前端 toast 后端 message                                                                                                                                                  | 弹窗重复校验            | 已确认（无独立接口） |
 | 3   | 项目列表接口返回 `isHwProject` / `isHaveCommonAccount` / `isCve` 字段；详情接口返回 `isCve`                                                                                                                                                                                  | 列表新列展示 + 编辑回填 | 已确认               |
 | 4   | 社区配置接口（FRAME_WORK 前缀）：GET `/project/get-cve-config`（query: `projectId`）、POST `/project/add-cve-config`、POST `/project/update-cve-config`（body: `projectId`、`cveOrg`、`orgPath`、`enterpriseName`）、POST `/project/delete-cve-config`（query: `projectId`） | 社区配置页签            | 已确认               |

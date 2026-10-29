@@ -60,7 +60,8 @@ UX 设计稿：`https://moonvy.com/project/2801b8be-c42a-490b-8fdb-434c8561d40b/
 - [x] 菜单增删改后刷新仍保留展开/定位状态（getMenuList(true) 行为不回归）
 - [x] 已定位节点时表头漏斗图标激活态展示
 - [x] 树形缩进逐级左对齐（24px 网格），删除弹窗/同步弹窗符合公共 ConfirmDialog 规范，URL 提交 trim
-- [x] lint 通过，无本次改动引入的类型错误
+- [x] ESLint：改动文件 0 新增 error
+- [ ] vue-tsc：无本次改动引入的类型错误（未执行，与 tasks.md 验证记录同步）
 - [x] 定位面板视觉/交互细节已按 UX 设计稿定稿（2026-10-26 ~ 10-27 核验）
 - [x] 访问白名单：「请求方式」表头筛选（GET/POST/PUT/DELETE）可选，选择/清空即查、重置第 1 页、与 URL 筛选叠加
 - [x] 访问白名单：三个白名单列表头筛选（全部/是/否）行为同上，查询参数对应 httpMethod / exempFlag / noUsersInfoFlag / unauthenticatedFlag（1=是、0=否、''=全部）
