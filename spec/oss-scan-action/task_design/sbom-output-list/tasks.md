@@ -1,6 +1,6 @@
 # sbom-output-list — 实现任务
 
-## 进度: 0/7 complete
+## 进度: 7/7 complete
 
 ## 前置
 
@@ -10,13 +10,13 @@
 
 ## 实现任务
 
-- [ ] Task 1: `shared/index.js` 新增 `extractPackageList(resultJson)`（提取组件列表，按 Name 去重+排序，含 direct/indirect 统计）
-- [ ] Task 2: `shared/index.js` 新增 `packageListToTable(pkgs, maxRows=500)` 与 `packageListToCode(pkgs, maxRows=500)`（含截断+提示行）
-- [ ] Task 3: `shared/index.js` scan() 中解析 `sbom-output` / `sbom-output-type` 参数；在统计/明细后插入清单输出（Summary 截断 + 日志全量）；exports 补充
-- [ ] Task 4: `oss-pr-scan-action/action.yml` + `oss-version-scan-action/action.yml` 声明两输入
-- [ ] Task 5: 两插件 test 补充单测：参数解析（null/list/非法值）+ 清单生成（table/code/截断/统计行）
-- [ ] Task 6: 运行 `npm test`（PR/version 两套）全绿；`npm run build` 重建 dist
-- [ ] Task 7: README ×2 补充参数说明；docs 本分支 tasks.md 勾选完成
+- [x] Task 1: `shared/index.js` 新增 `extractPackageList(resultJson)`（提取组件列表，按 Name 去重+排序，含 direct/indirect 统计）
+- [x] Task 2: `shared/index.js` 新增 `packageListToTable(pkgs, maxRows=500)` 与 `packageListToCode(pkgs, maxRows=500)`（含截断+提示行）
+- [x] Task 3: `shared/index.js` scan() 中解析 `sbom-output` / `sbom-output-type` 参数；在统计/明细后插入清单输出（Summary 截断 + 日志全量）；exports 补充
+- [x] Task 4: `oss-pr-scan-action/action.yml` + `oss-version-scan-action/action.yml` 声明两输入
+- [x] Task 5: 两插件 test 补充单测：参数解析（null/list/非法值）+ 清单生成（table/code/截断/统计行）
+- [x] Task 6: 运行 `npm test`（PR/version 两套）全绿；`npm run build` 重建 dist
+- [x] Task 7: README ×2 补充参数说明；docs 本分支 tasks.md 勾选完成
 
 ## 验证方式
 
