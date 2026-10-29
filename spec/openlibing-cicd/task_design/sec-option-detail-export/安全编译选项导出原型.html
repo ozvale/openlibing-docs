@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>安全编译选项扫描详情导出 · 设计原型</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f0f2f5; color: #333; padding: 24px; }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: #888; font-size: 13px; margin-bottom: 24px; }
+  .card { background: #fff; border-radius: 8px; padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .card h2 { font-size: 16px; border-left: 4px solid #2563eb; padding-left: 10px; margin-bottom: 16px; }
+  .card h3 { font-size: 14px; margin: 14px 0 10px; color: #444; }
+
+  /* ===== 入口位置示意 ===== */
+  .page-mock { border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+  .mock-topbar { background: #f8fafc; border-bottom: 1px solid #e5e7eb; padding: 8px 16px; font-size: 12px; color: #666; display: flex; justify-content: space-between; }
+  .mock-title-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+  .mock-title-row .t { font-size: 14px; font-weight: bold; }
+  .mock-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; padding: 8px 16px; }
+  .btn-export { background: none; border: none; color: #333; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 0; }
+  .btn-export:hover { color: #2563eb; }
+  .btn-export svg { width: 14px; height: 14px; }
+  .kv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 24px; padding: 12px 16px; font-size: 12px; }
+  .kv-grid .k { color: #999; margin-right: 8px; }
+  .mini-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .mini-table th, .mini-table td { border: 1px solid #eee; padding: 5px 10px; text-align: left; }
+  .mini-table th { background: #f8fafc; }
+  .tag-old { font-size: 11px; color: #999; border: 1px dashed #ccc; border-radius: 3px; padding: 2px 6px; margin-left: 8px; }
+
+  /* ===== 流程 ===== */
+  .flow { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; }
+  .flow .step { flex: 1; min-width: 170px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; margin: 0 6px; }
+  .flow .step b { display: block; font-size: 12px; color: #2563eb; margin-bottom: 4px; }
+  .flow .step span { font-size: 12px; color: #555; line-height: 1.5; }
+
+  /* ===== Excel 模拟 ===== */
+  .excel { border: 2px solid #217346; border-radius: 4px; overflow: hidden; font-size: 12px; }
+  .excel-bar { background: #217346; color: #fff; padding: 6px 12px; font-size: 13px; display: flex; align-items: center; gap: 16px; }
+  .sheet-tab { padding: 3px 12px; border-radius: 3px 3px 0 0; cursor: default; }
+  .sheet-tab.active { background: #fff; color: #217346; font-weight: bold; }
+  .excel-bar .fname { margin-left: auto; opacity: .85; font-size: 12px; }
+  table.xl { width: 100%; border-collapse: collapse; }
+  table.xl td, table.xl th { border: 1px solid #d4d4d4; padding: 4px 8px; white-space: nowrap; }
+  table.xl th { background: #edf2f7; font-weight: bold; text-align: center; }
+  table.xl .rowno { background: #f1f5f9; color: #999; text-align: center; width: 28px; }
+  table.xl .colno { background: #f1f5f9; color: #999; text-align: center; }
+  .kv-block td.k { background: #f8fafc; font-weight: bold; width: 140px; }
+  .yes { color: #16a34a; } .mid { color: #e6a23c; } .no { color: #dc2626; } .na { color: #9ca3af; }
+  .filed { color: #dc2626; }
+  .filed-tag { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: 3px; font-size: 11px; padding: 0 4px; margin-left: 2px; }
+  .note { font-size: 12px; color: #666; margin-top: 8px; line-height: 1.7; }
+  .note b { color: #333; }
+  .pill { display: inline-block; background: #eff6ff; color: #2563eb; border-radius: 10px; padding: 1px 10px; font-size: 12px; margin-right: 8px; }
+  .legend { margin-top: 10px; font-size: 12px; color: #555; }
+  .legend span { margin-right: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>安全编译选项扫描详情导出 · 设计原型</h1>
+  <div class="sub">入口：产物扫描详情页「导出」按钮 ｜ 产物：一个 Excel（2 个 Sheet）｜ 链路：平台导出中心异步生成 + 自动下载</div>
+
+  <!-- ===================== 设计总览 ===================== -->
+  <div class="card">
+    <h2>一、设计总览</h2>
+
+    <h3>1. 导出入口（选项明细表格区右上角，文字按钮 + 导出图标）</h3>
+    <div class="page-mock">
+      <div class="mock-topbar"><span>构建产物 / 产物扫描详情</span><span>openlibing 控制台</span></div>
+      <div class="mock-title-row">
+        <span class="t">产物扫描详情</span>
+      </div>
+      <div class="kv-grid">
+        <div><span class="k">代码仓链接</span>gitcode.com/openlibing-test/zlib</div>
+        <div><span class="k">产物名称</span>zlib-build-artifacts.tar.gz</div>
+        <div><span class="k">流水线</span>security-compilation-options-scan-nightly #96</div>
+        <div><span class="k">扫描时间</span>2026-10-14 15:06:29</div>
+        <div><span class="k">总文件数</span>118</div>
+        <div><span class="k">扫描项数</span>14 项</div>
+      </div>
+      <div class="mock-toolbar">
+        <span style="font-size:12px;color:#dc2626">新增「导出」按钮 ▶</span>
+        <button class="btn-export"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/><path d="M14 3h7v7"/><path d="M10 14 21 3"/></svg>导出</button>
+      </div>
+      <table class="mini-table">
+        <tr><th>安全编译选项</th><th>描述</th><th>满足数</th><th>实际参与数</th><th>检测结果（覆盖率）</th><th>已备案文件数</th><th>备案后结果（覆盖率）</th></tr>
+        <tr><td>BIND_NOW</td><td>立即绑定</td><td>118</td><td>118</td><td>100.00%</td><td>1</td><td>100.00%</td></tr>
+        <tr><td>NO Rpath</td><td>动态库搜索路径（禁选）</td><td>116</td><td>118</td><td>98.31%</td><td>2</td><td>99.15%</td></tr>
+        <tr><td colspan="7" style="color:#999">…… 共 14 行选项明细 ……</td></tr>
+      </table>
+    </div>
+
+    <h3>2. 交互与生成流程</h3>
+    <div class="flow">
+      <div class="step"><b>① 用户</b><span>详情页点击「导出」</span></div>
+      <div class="step"><b>② 前端</b><span>POST /build-artifact/sec-option/detail/export（projectId + recordId）</span></div>
+      <div class="step"><b>③ 后端</b><span>权限与归属校验 → framework 创建导出任务（type=SEC_OPTION_DETAIL）→ 返回任务 ID</span></div>
+      <div class="step"><b>④ 前端</b><span>bus 事件 host-export-task 通知主站导出中心</span></div>
+      <div class="step"><b>⑤ 后端异步</b><span>BUILDING → 写 Sheet1 → 分批写 Sheet2 → UPLOADING → 上传 OBS → SUCCESS / FAILED</span></div>
+      <div class="step"><b>⑥ 导出中心</b><span>3 秒轮询进度，成功自动下载，失败展示原因</span></div>
+    </div>
+
+    <h3>3. Excel 结构（一个文件，两个 Sheet）</h3>
+    <div class="flow">
+      <div class="step"><b>Sheet1「扫描概览」</b><span>顶部基础信息块（8 项键值，链接可点击）＋ 14 行选项明细（选项名/描述/满足数/实际参与数/检测结果（覆盖率）/已备案文件数/备案后结果（覆盖率））</span></div>
+      <div class="step"><b>Sheet2「文件扫描结果」</b><span>每文件一行 × 16 列：文件名、文件路径、14 项选项（YES/NO/N/A）；命中备案的单元格附加「（已备案）」</span></div>
+    </div>
+  </div>
+
+  <!-- ===================== Sheet1 示例 ===================== -->
+  <div class="card">
+    <h2>二、Excel 示例 · Sheet1「扫描概览」</h2>
+    <div class="excel">
+      <div class="excel-bar">
+        <span class="sheet-tab active">扫描概览</span>
+        <span class="sheet-tab" style="opacity:.75">文件扫描结果</span>
+        <span class="fname">安全编译选项扫描详情_zlib-build-artifacts.tar.gz_2100065859476262912.xlsx</span>
+      </div>
+      <table class="xl">
+        <tr><td class="rowno"></td><td class="colno">A</td><td class="colno">B</td></tr>
+        <tr><td class="rowno">1</td><td class="k">代码仓链接</td><td><a href="#">gitcode.com/openlibing-test/zlib</a></td></tr>
+        <tr><td class="rowno">2</td><td class="k">产物名称</td><td>zlib-build-artifacts.tar.gz</td></tr>
+        <tr><td class="rowno">3</td><td class="k">流水线名称</td><td>security-compilation-options-scan-nightly</td></tr>
+        <tr><td class="rowno">4</td><td class="k">流水线运行编号</td><td>96</td></tr>
+        <tr><td class="rowno">5</td><td class="k">流水线链接</td><td><a href="#">https://gitcode.com/openlibing-test/zlib/actions/runs/98f475c7…</a></td></tr>
+        <tr><td class="rowno">6</td><td class="k">扫描状态</td><td>成功</td></tr>
+        <tr><td class="rowno">7</td><td class="k">扫描时间</td><td>2026-10-14 15:06:29</td></tr>
+        <tr><td class="rowno">8</td><td class="k">总文件数</td><td>118</td></tr>
+        <tr><td class="rowno">9</td><td colspan="2" style="background:#f8fafc"></td></tr>
+        <tr><td class="rowno">10</td>
+          <th>安全编译选项</th><th>描述</th><th>满足数</th><th>实际参与数</th><th>检测结果覆盖率</th><th>已备案文件数</th><th>备案后结果覆盖率</th>
+        </tr>
+        <tr><td class="rowno">11</td><td>BIND_NOW</td><td>立即绑定</td><td>118</td><td>118</td><td class="yes">100.00%</td><td>1</td><td class="yes">100.00%</td></tr>
+        <tr><td class="rowno">12</td><td>NX</td><td>堆栈不可执行</td><td>118</td><td>118</td><td class="yes">100.00%</td><td>0</td><td class="yes">100.00%</td></tr>
+        <tr><td class="rowno">13</td><td>PIC</td><td>地址无关</td><td>23</td><td>118</td><td class="no">19.49%</td><td>0</td><td class="no">19.49%</td></tr>
+        <tr><td class="rowno">14</td><td>PIE</td><td>随机化</td><td>23</td><td>118</td><td class="no">19.49%</td><td>0</td><td class="no">19.49%</td></tr>
+        <tr><td class="rowno">15</td><td>RELRO</td><td>GOT 表部分定向只读</td><td>118</td><td>118</td><td class="yes">100.00%</td><td>0</td><td class="yes">100.00%</td></tr>
+        <tr><td class="rowno">16</td><td>SP</td><td>栈保护</td><td>118</td><td>118</td><td class="yes">100.00%</td><td>0</td><td class="yes">100.00%</td></tr>
+        <tr><td class="rowno">17</td><td>NO Rpath</td><td>动态库搜索路径（禁选）</td><td>116</td><td>118</td><td class="yes">98.31%</td><td>2</td><td class="yes">99.15%</td></tr>
+        <tr><td class="rowno">18</td><td>FS</td><td>缓冲区溢出保护</td><td>12</td><td>118</td><td class="no">10.17%</td><td>0</td><td class="no">10.17%</td></tr>
+        <tr><td class="rowno">19</td><td>Ftrapv</td><td>整数溢出陷阱</td><td>0</td><td>118</td><td class="no">0.00%</td><td>0</td><td class="no">0.00%</td></tr>
+        <tr><td class="rowno">20</td><td>Strip</td><td>删除符号表</td><td>5</td><td>5</td><td class="yes">100.00%</td><td>0</td><td class="yes">100.00%</td></tr>
+        <tr><td class="rowno">21</td><td>ASLR</td><td>地址空间随机化</td><td>0</td><td>0</td><td class="na">N/A</td><td>0</td><td class="na">N/A</td></tr>
+        <tr><td class="rowno">22</td><td>Fvisibility</td><td>符号可见性隐藏</td><td>3</td><td>5</td><td class="mid">60.00%</td><td>0</td><td class="mid">60.00%</td></tr>
+        <tr><td class="rowno">23</td><td>Fstackcheck</td><td>栈检查</td><td>0</td><td>0</td><td class="na">N/A</td><td>0</td><td class="na">N/A</td></tr>
+        <tr><td class="rowno">24</td><td>Fstackclash</td><td>栈冲突保护</td><td>0</td><td>0</td><td class="na">N/A</td><td>0</td><td class="na">N/A</td></tr>
+      </table>
+    </div>
+    <div class="note"><b>说明：</b>第 1-8 行为基础信息块（键值两列）；第 10 行起为选项明细表，按 14 项固定顺序，与详情页选项表格同构；两个覆盖率列颜色与详情页 rateClass 规则一致：≥80% 绿色、50%~79% 黄色、&lt;50% 红色、N/A 灰色。</div>
+  </div>
+
+  <!-- ===================== Sheet2 示例 ===================== -->
+  <div class="card">
+    <h2>三、Excel 示例 · Sheet2「文件扫描结果」</h2>
+    <div class="excel">
+      <div class="excel-bar">
+        <span class="sheet-tab" style="opacity:.75">扫描概览</span>
+        <span class="sheet-tab active">文件扫描结果</span>
+        <span class="fname">安全编译选项扫描详情_zlib-build-artifacts.tar.gz_2100065859476262912.xlsx</span>
+      </div>
+      <table class="xl">
+        <tr>
+          <td class="rowno"></td>
+          <th>文件名</th><th>文件路径</th>
+          <th>BIND_NOW</th><th>NX</th><th>PIC</th><th>PIE</th><th>RELRO</th><th>SP</th><th>NO Rpath</th><th>FS</th><th>Ftrapv</th><th>Strip</th><th>ASLR</th><th>Fvisibility</th><th>Fstackcheck</th><th>Fstackclash</th>
+        </tr>
+        <tr><td class="rowno">1</td>
+          <td>libss.1.3.1</td><td>build/libss.1.3.1</td>
+          <td class="no">NO<span class="filed-tag">已备案</span></td><td class="yes">YES</td><td class="na">N/A</td><td class="na">N/A</td><td class="yes">YES</td><td class="yes">YES</td><td class="no">NO</td><td class="yes">YES</td><td class="no">NO</td><td class="yes">YES</td><td class="na">N/A</td><td class="no">NO</td><td class="na">N/A</td><td class="na">N/A</td>
+        </tr>
+        <tr><td class="rowno">2</td>
+          <td>libz.so.1.3.1</td><td>build/libz.so.1.3.1</td>
+          <td class="yes">YES</td><td class="yes">YES</td><td class="yes">YES</td><td class="yes">YES</td><td class="yes">YES</td><td class="yes">YES</td><td class="yes">YES</td><td class="no">NO</td><td class="no">NO</td><td class="yes">YES</td><td class="na">N/A</td><td class="no">NO</td><td class="na">N/A</td><td class="na">N/A</td>
+        </tr>
+        <tr><td class="rowno">3</td>
+          <td>minigzip</td><td>build/test/minigzip</td>
+          <td class="yes">YES</td><td class="yes">YES</td><td class="na">N/A</td><td class="yes">YES</td><td class="yes">YES</td><td class="yes">YES</td><td class="yes">YES</td><td class="no">NO</td><td class="no">NO</td><td class="no">NO</td><td class="na">N/A</td><td class="no">NO</td><td class="na">N/A</td><td class="na">N/A</td>
+        </tr>
+        <tr><td class="rowno">4</td>
+          <td>minizipstatic</td><td>build/test/minizipstatic</td>
+          <td class="yes">YES</td><td class="yes">YES</td><td class="na">N/A</td><td class="yes">YES</td><td class="yes">YES</td><td class="yes">YES</td><td class="no">NO<span class="filed-tag">已备案</span></td><td class="no">NO</td><td class="no">NO</td><td class="no">NO</td><td class="na">N/A</td><td class="no">NO</td><td class="na">N/A</td><td class="na">N/A</td>
+        </tr>
+        <tr><td class="rowno">5</td>
+          <td>zlib_example</td><td>build/test/zlib_example</td>
+          <td class="yes">YES</td><td class="yes">YES</td><td class="na">N/A</td><td class="yes">YES</td><td class="yes">YES</td><td class="yes">YES</td><td class="no">NO</td><td class="no">NO</td><td class="no">NO</td><td class="no">NO</td><td class="na">N/A</td><td class="yes">YES</td><td class="na">N/A</td><td class="na">N/A</td>
+        </tr>
+        <tr><td class="rowno">6</td>
+          <td>zlib_example64</td><td>build/test/zlib_example64</td>
+          <td class="yes">YES</td><td class="yes">YES</td><td class="na">N/A</td><td class="yes">YES</td><td class="yes">YES</td><td class="yes">YES</td><td class="no">NO</td><td class="no">NO</td><td class="no">NO</td><td class="no">NO</td><td class="na">N/A</td><td class="yes">YES</td><td class="na">N/A</td><td class="na">N/A</td>
+        </tr>
+        <tr><td class="rowno">7</td>
+          <td colspan="16" style="color:#999;text-align:center">…… 共 118 行，按文件路径升序（与弹窗展示顺序一致），分批（1000 条/批）流式写入 ……</td>
+        </tr>
+      </table>
+    </div>
+    <div class="legend">
+      <span><span class="yes">YES</span> = 满足该选项</span>
+      <span><span class="no">NO</span> = 不满足</span>
+      <span><span class="na">N/A</span> = 不适用（原样保留）</span>
+      <span><span class="filed">NO + <span class="filed-tag">已备案</span></span> = 该文件×选项存在备案记录，单元格附加「（已备案）」字样，如 <b>NO（已备案）</b></span>
+    </div>
+    <div class="note"><b>说明：</b>示例中 libss.1.3.1 的 BIND_NOW、minizipstatic 的 NO Rpath 命中备案记录，对应 Sheet1 中「已备案文件数」与「备案后结果（覆盖率）」列的来源；备案标注与详情页「文件扫描结果」弹窗中的「已备案」标签一致。</div>
+  </div>
+</div>
+</body>
+</html>
