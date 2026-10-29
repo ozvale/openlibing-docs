@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方案评审：分支列表 staticAlertCount 落表优化</title>
+<style>
+  :root {
+    --primary: #1e5eff;
+    --primary-dark: #0f3fbf;
+    --ink: #1c2333;
+    --ink-2: #4a5568;
+    --ink-3: #718096;
+    --bg: #f4f6fa;
+    --card: #ffffff;
+    --line: #e3e8f0;
+    --green: #0f9d58;
+    --green-bg: #e6f4ec;
+    --orange: #d97b0d;
+    --orange-bg: #fdf3e3;
+    --red: #d64541;
+    --red-bg: #fceaea;
+    --blue-bg: #eaf1ff;
+    --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+    background: var(--bg); color: var(--ink);
+    line-height: 1.75; font-size: 15px;
+  }
+  /* ===== 顶部导航 ===== */
+  header {
+    background: linear-gradient(135deg, #16233f 0%, #1e3a6e 60%, #1e5eff 140%);
+    color: #fff; padding: 36px 0 30px;
+  }
+  .header-inner { max-width: 1080px; margin: 0 auto; padding: 0 32px; }
+  header .tag-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .badge {
+    display: inline-block; padding: 2px 12px; border-radius: 20px;
+    font-size: 12.5px; font-weight: 600; letter-spacing: .5px;
+  }
+  .badge.light { background: rgba(255,255,255,.16); color: #dbe6ff; border: 1px solid rgba(255,255,255,.25); }
+  .badge.green { background: var(--green-bg); color: var(--green); }
+  header h1 { font-size: 27px; font-weight: 700; letter-spacing: .5px; }
+  header .sub { margin-top: 8px; color: #b8c7e8; font-size: 14px; }
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,.96); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 1px 8px rgba(20,40,80,.06);
+  }
+  nav .nav-inner { max-width: 1080px; margin: 0 auto; padding: 0 32px; display: flex; gap: 4px; overflow-x: auto; }
+  nav a {
+    padding: 12px 14px; color: var(--ink-2); text-decoration: none;
+    font-size: 14px; font-weight: 600; white-space: nowrap; border-bottom: 2.5px solid transparent;
+  }
+  nav a:hover { color: var(--primary); border-bottom-color: var(--primary); }
+  main { max-width: 1080px; margin: 0 auto; padding: 34px 32px 80px; }
+  section { margin-bottom: 46px; scroll-margin-top: 64px; }
+  h2 {
+    font-size: 21px; font-weight: 700; margin-bottom: 18px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  h2 .idx {
+    background: var(--primary); color: #fff; font-size: 14px; font-weight: 700;
+    width: 30px; height: 30px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+  }
+  h3 { font-size: 16.5px; margin: 20px 0 10px; color: var(--primary-dark); }
+  p { color: var(--ink-2); }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 24px 26px; margin-bottom: 18px;
+    box-shadow: 0 1px 4px rgba(20,40,80,.04);
+  }
+  code {
+    font-family: var(--mono); font-size: 13px; background: #eef2f9;
+    padding: 1px 6px; border-radius: 5px; color: #23417e;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    text-align: left; padding: 10px 14px; background: #f0f4fb;
+    color: var(--ink); font-weight: 700; border-bottom: 2px solid #dde5f2; white-space: nowrap;
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--ink-2); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .pill { display: inline-block; padding: 1px 10px; border-radius: 12px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+  .pill.green { background: var(--green-bg); color: var(--green); }
+  .pill.orange { background: var(--orange-bg); color: var(--orange); }
+  .pill.blue { background: var(--blue-bg); color: var(--primary-dark); }
+  .pill.red { background: var(--red-bg); color: var(--red); }
+  /* ===== 摘要卡片 ===== */
+  .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+  .summary-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px 22px; border-top: 4px solid var(--primary);
+  }
+  .summary-card h4 { font-size: 15px; margin-bottom: 8px; }
+  .summary-card p { font-size: 13.5px; color: var(--ink-2); }
+  .callout {
+    border-left: 4px solid var(--primary); background: var(--blue-bg);
+    border-radius: 0 12px 12px 0; padding: 16px 20px; margin: 14px 0;
+    font-size: 14.5px; color: #27406e;
+  }
+  .callout strong { color: var(--primary-dark); }
+  /* ===== 流程图 ===== */
+  .flow { display: flex; flex-direction: column; align-items: stretch; gap: 0; margin: 18px 0; }
+  .flow-row { display: flex; align-items: stretch; gap: 12px; }
+  .node {
+    flex: 1; border-radius: 12px; padding: 14px 16px; font-size: 13.5px;
+    border: 1.5px solid var(--line); background: var(--card); position: relative;
+  }
+  .node .t { font-weight: 700; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .node .d { color: var(--ink-3); font-size: 12.5px; line-height: 1.55; }
+  .node.src { border-color: #c9d7f5; background: #f6f9ff; }
+  .node.dst { border-color: #bfe3cd; background: #f4fbf6; }
+  .node.warn { border-color: #f2d9ad; background: #fffaf1; }
+  .node.hot { border-color: var(--primary); background: var(--blue-bg); }
+  .arrow-v {
+    text-align: center; color: #9db0d0; font-size: 20px; line-height: 1;
+    padding: 6px 0; font-weight: 700;
+  }
+  .arrow-v .label { font-size: 12.5px; font-weight: 600; color: var(--ink-2); vertical-align: 3px; margin-left: 8px; }
+  .lane {
+    border-radius: 14px; padding: 18px 18px 14px; border: 1.5px dashed #c4cfe2;
+  }
+  .lane-title { font-size: 13px; font-weight: 700; color: var(--ink-3); letter-spacing: 1px; margin-bottom: 10px; }
+  .lane.cc { background: #fbfcff; }
+  .lane.cr { background: #fbfff9; }
+  .mq-bar {
+    background: #fff8e9; border: 1.5px solid #ecd9ac; border-radius: 10px;
+    padding: 10px 16px; text-align: center; font-size: 13.5px; font-weight: 700; color: #8a6116;
+    margin: 10px 0;
+  }
+  /* 问题卡片 */
+  .pain { border-left: 4px solid var(--red); }
+  .pain .t::before { content: ""; }
+  .num-badge {
+    width: 24px; height: 24px; border-radius: 50%; background: var(--red-bg); color: var(--red);
+    font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex: none;
+  }
+  /* 三通道卡片 */
+  .channel-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .channel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  }
+  .channel .head { padding: 14px 18px 10px; border-bottom: 1px solid var(--line); }
+  .channel .head .no { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: var(--ink-3); }
+  .channel .head h4 { font-size: 16px; margin-top: 2px; }
+  .channel .body { padding: 14px 18px 16px; font-size: 13.5px; color: var(--ink-2); }
+  .channel .body ul { list-style: none; }
+  .channel .body li { padding: 3px 0 3px 16px; position: relative; }
+  .channel .body li::before {
+    content: ""; position: absolute; left: 2px; top: 12px;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--primary);
+  }
+  .channel .foot { padding: 10px 18px 14px; }
+  .channel.main { border-color: var(--primary); box-shadow: 0 2px 12px rgba(30,94,255,.10); }
+  /* before/after */
+  .ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .ba { border-radius: 14px; border: 1px solid var(--line); overflow: hidden; background: var(--card); }
+  .ba .head { padding: 12px 18px; font-weight: 700; font-size: 15px; }
+  .ba.before .head { background: var(--red-bg); color: var(--red); }
+  .ba.after .head { background: var(--green-bg); color: var(--green); }
+  .ba .body { padding: 14px 18px; font-size: 13.5px; color: var(--ink-2); }
+  .ba .body code { white-space: nowrap; }
+  ol.steps { counter-reset: step; list-style: none; }
+  ol.steps li {
+    position: relative; padding: 0 0 18px 46px; color: var(--ink-2);
+  }
+  ol.steps li::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--primary); color: #fff; font-weight: 700; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps li::after {
+    content: ""; position: absolute; left: 14.5px; top: 32px; bottom: 2px; width: 1.5px; background: #ccd8ee;
+  }
+  ol.steps li:last-child::after { display: none; }
+  ol.steps li b { color: var(--ink); }
+  .decision { border-left-color: var(--orange); background: var(--orange-bg); color: #7c5510; }
+  .decision strong { color: #9a6a0b; }
+  footer { text-align: center; color: var(--ink-3); font-size: 12.5px; padding: 30px 0 46px; }
+  @media (max-width: 860px) {
+    .summary-grid, .channel-grid, .ba-grid { grid-template-columns: 1fr; }
+    .flow-row { flex-direction: column; }
+  }
+  @media print {
+    nav { display: none; }
+    body { background: #fff; }
+    .card, .summary-card, .channel, .ba { box-shadow: none; break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="tag-row">
+      <span class="badge light">openlibing-coderepo × openlibing-codecheck</span>
+      <span class="badge light">性能优化</span>
+      <span class="badge light">方案评审稿</span>
+    </div>
+    <h1>分支列表 staticAlertCount 落表优化</h1>
+    <div class="sub">分支管理页告警数：从「每次查询实时跨服务聚合」到「落表 + 写时推送」的性能优化方案</div>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-inner">
+    <a href="#s1">一页概览</a>
+    <a href="#s2">现状与问题</a>
+    <a href="#s3">方案总览</a>
+    <a href="#s4">写入侧设计</a>
+    <a href="#s5">查询侧改造</a>
+    <a href="#s6">实施计划</a>
+    <a href="#s7">风险与对策</a>
+    <a href="#s8">评审关注点</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- ================= 一页概览 ================= -->
+<section id="s1">
+  <h2><span class="idx">1</span>一页概览</h2>
+  <div class="card">
+    <p><b>问题一句话：</b>分支管理页的告警数（staticAlertCount）每次查询都要<b>实时跨服务聚合</b> codecheck 的 Mongo 数据，且排序被迫<b>全量取回 + 内存排序</b>，页面越用越慢。</p>
+    <p style="margin-top:10px"><b>方案一句话：</b>把告警数<b>落表</b>到 coderepo 的 <code>repo_branch</code> 表——codecheck 在告警变化时（扫描完成 / 屏蔽 / 处理）<b>实时重算并推送</b>，coderepo 秒级落库；查询侧直接 SQL 排序分页，并保留定时兜底对账保证数据最终正确。</p>
+  </div>
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h4>查询性能</h4>
+      <p>列表接口消除每次查询的跨服务 Feign 调用；告警数排序从「全量取回 + 内存排序」变为数据库 <code>ORDER BY</code> 分页，大数据量下耗时与内存占用同步下降。</p>
+    </div>
+    <div class="summary-card">
+      <h4>数值秒级更新</h4>
+      <p>扫描完成、屏蔽、处理告警后，数值<b>秒级</b>推送到分支表——优于现状「只在查询时现算」，用户操作后立即可见。</p>
+    </div>
+    <div class="summary-card">
+      <h4>对外零感知</h4>
+      <p>接口出入参、字段语义、排序口径（含空值显示 -- 与 0 的区分）完全不变，前端无需改造；统计口径仍为「未处理告警数 OPEN + PENDING_REVIEW」。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 现状与问题 ================= -->
+<section id="s2">
+  <h2><span class="idx">2</span>现状与问题</h2>
+
+  <h3>现状链路：数值没有存储，每次查询"现算"</h3>
+  <div class="card">
+    <div class="flow">
+      <div class="flow-row">
+        <div class="node src">
+          <div class="t">前端 · 分支管理页</div>
+          <div class="d">GET /repo/branch/list（支持按告警数排序）</div>
+        </div>
+      </div>
+      <div class="arrow-v">&#9660;</div>
+      <div class="flow-row">
+        <div class="node">
+          <div class="t">coderepo · queryProjectBranch</div>
+          <div class="d">查 MySQL 分支行后，逐页实时回填告警数</div>
+        </div>
+      </div>
+      <div class="arrow-v">&#9660;<span class="label">每次查询都发起一次跨服务调用</span></div>
+      <div class="flow-row">
+        <div class="node warn">
+          <div class="t">codecheck · Mongo 实时聚合</div>
+          <div class="d">static_alarm_issue 集合按（项目, 仓库, 分支）聚合 OPEN + PENDING_REVIEW</div>
+        </div>
+      </div>
+      <div class="arrow-v">&#9660;</div>
+      <div class="flow-row">
+        <div class="node">
+          <div class="t">coderepo · 内存回填 / 排序 / 分页</div>
+          <div class="d">排序场景需全量取回所有分支行，内存排序后再切页</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card pain">
+    <div class="t" style="display:flex;gap:10px;align-items:center"><span class="num-badge">1</span><b>查询路径重</b></div>
+    <p style="margin-top:6px">每次列表查询都发起一次跨服务 Feign + Mongo 聚合，与页面访问量线性相关。</p>
+  </div>
+  <div class="card pain">
+    <div class="t" style="display:flex;gap:10px;align-items:center"><span class="num-badge">2</span><b>排序被迫全量取回</b></div>
+    <p style="margin-top:6px">告警数不是本地数据库列，无法 <code>ORDER BY</code>；按告警数排序时必须把筛选后的<b>全部分支行</b>取回内存排序后再分页，数据量放大耗时与内存。</p>
+  </div>
+  <div class="card pain">
+    <div class="t" style="display:flex;gap:10px;align-items:center"><span class="num-badge">3</span><b>非告警排序也要回填</b></div>
+    <p style="margin-top:6px">即使按更新时间等字段排序，当前页数据仍需实时调 codecheck 回填告警数用于展示。</p>
+  </div>
+</section>
+
+<!-- ================= 方案总览 ================= -->
+<section id="s3">
+  <h2><span class="idx">3</span>方案总览</h2>
+  <div class="card">
+    <div class="lane cc">
+      <div class="lane-title">openlibing-codecheck（数据源头）</div>
+      <div class="flow-row">
+        <div class="node src">
+          <div class="t">Mongo static_alarm_issue</div>
+          <div class="d">告警明细集合（计数数据源）</div>
+        </div>
+      </div>
+      <div class="arrow-v">&#9660;<span class="label">三个变更点完成后，各触发一次</span></div>
+      <div class="flow-row">
+        <div class="node hot">
+          <div class="t">BranchAlertCountPushService（新增）</div>
+          <div class="d">SARIF 解析完成 / 屏蔽与解除屏蔽 / 告警状态流转 → 对该 (仓库, 分支) 重算一次未处理数</div>
+        </div>
+      </div>
+    </div>
+    <div class="mq-bar">MQ：static_alert_count_refresh 队列（推送重算后的全量数值，非增量）</div>
+    <div class="lane cr">
+      <div class="lane-title">openlibing-coderepo（展示侧）</div>
+      <div class="flow-row">
+        <div class="node dst">
+          <div class="t">StaticAlertCountRefreshConsumer（新增）</div>
+          <div class="d">坐标反查仓库 → UPDATE repo_branch.static_alert_count（秒级落库）</div>
+        </div>
+        <div class="node">
+          <div class="t">StaticAlertCountRefreshHandler（新增 XXL-Job）</div>
+          <div class="d">定时兜底对账（默认 2h）+ 历史数据一次性回填（full 模式）</div>
+        </div>
+      </div>
+      <div class="arrow-v">&#9660;</div>
+      <div class="flow-row">
+        <div class="node dst">
+          <div class="t">查询侧：SQL 排序分页</div>
+          <div class="d">ORDER BY IFNULL(static_alert_count, 0)，移除查询链路的实时 Feign 回填与内存排序</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>核心正确性设计：</strong>推送的是"推送时点重算出的<b>全量数值</b>"而非增量差值——消息乱序、重复、丢失的最坏结果只是短暂旧值，不会累积错账；任何埋点遗漏由定时兜底对账收敛。<b>定时对账是正确性的最终防线，写时推送只负责实时性。</b>
+  </div>
+</section>
+
+<!-- ================= 写入侧设计 ================= -->
+<section id="s4">
+  <h2><span class="idx">4</span>写入侧设计：三条通道</h2>
+  <div class="channel-grid">
+    <div class="channel main">
+      <div class="head">
+        <div class="no">通道 1 · 主通道</div>
+        <h4>写时推送</h4>
+      </div>
+      <div class="body">
+        <ul>
+          <li>codecheck 三个变更点埋点：扫描解析完成、屏蔽/解除屏蔽、告警状态流转</li>
+          <li>推送前对该 (仓库, 分支) 重算一次未处理数（口径与现有批量接口同源）</li>
+          <li>coderepo 消费者坐标反查仓库后单行 UPDATE，秒级生效</li>
+        </ul>
+      </div>
+      <div class="foot"><span class="pill green">秒级</span> <span class="pill blue">覆盖日常变更</span></div>
+    </div>
+    <div class="channel">
+      <div class="head">
+        <div class="no">通道 2 · 防线</div>
+        <h4>定时兜底对账</h4>
+      </div>
+      <div class="body">
+        <ul>
+          <li>XXL-Job 低频（默认 2h，可配）增量刷新：只刷超龄 / 从未刷新的行</li>
+          <li>复用现有批量计数接口，分批限流</li>
+          <li>覆盖埋点遗漏、消息丢失、发布窗口缺口</li>
+        </ul>
+      </div>
+      <div class="foot"><span class="pill orange">小时级</span> <span class="pill blue">正确性最终防线</span></div>
+    </div>
+    <div class="channel">
+      <div class="head">
+        <div class="no">通道 3 · 一次性</div>
+        <h4>历史数据回填</h4>
+      </div>
+      <div class="body">
+        <ul>
+          <li>上线后手动触发一次 full 全量模式</li>
+          <li>复用通道 2 同一任务，无需额外开发</li>
+          <li>此后常态化低频增量运行</li>
+        </ul>
+      </div>
+      <div class="foot"><span class="pill orange">一次性</span> <span class="pill blue">零额外成本</span></div>
+    </div>
+  </div>
+
+  <h3>关键设计决策</h3>
+  <div class="card">
+    <table>
+      <tr><th style="width:230px">决策点</th><th>结论与理由</th></tr>
+      <tr>
+        <td><b>推全量值 vs 推增量</b></td>
+        <td><b>推全量值</b>。同分支可能并发解析多个扫描、屏蔽与解析交错，增量差值在并发下必然错账且无法自愈；全量值覆盖写天然幂等、可乱序。</td>
+      </tr>
+      <tr>
+        <td><b>MQ 推送 vs 同步调用</b></td>
+        <td><b>MQ 异步推送</b>。推送失败不应污染解析主流程（扫描记录状态）；削峰（批量扫描时可堆积）；消费端重试可控。同步调用的唯一优势（零延迟）对本场景非必需。</td>
+      </tr>
+      <tr>
+        <td><b>屏蔽是否覆盖</b></td>
+        <td><b>覆盖</b>。屏蔽（shield）与解除屏蔽（unshield）完成后均触发重算推送——屏蔽后数值即时减少，恢复后即时增加。</td>
+      </tr>
+      <tr>
+        <td><b>为何保留定时兜底</b></td>
+        <td>埋点遗漏、消息丢失、任一方发布窗口期的更新缺口，都需要一条低成本自愈路径；正确性不依赖埋点枚举的完备性。</td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>数据语义（与现状完全对齐）</h3>
+  <div class="card">
+    <table>
+      <tr><th style="width:120px">存储值</th><th>含义</th><th style="width:110px">前端展示</th></tr>
+      <tr><td><span class="pill">NULL</span></td><td>从未成功取数：坐标解析失败、新分支尚未扫描、服务长期不可用</td><td>--</td></tr>
+      <tr><td><span class="pill green">0</span></td><td>聚合明确返回该 (仓库, 分支) 无未处理告警</td><td>0</td></tr>
+      <tr><td><span class="pill blue">N &gt; 0</span></td><td>最近一次刷新时的未处理告警数（OPEN + PENDING_REVIEW）</td><td>N</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ================= 查询侧改造 ================= -->
+<section id="s5">
+  <h2><span class="idx">5</span>查询侧改造：前后对比</h2>
+  <div class="ba-grid">
+    <div class="ba before">
+      <div class="head">改造前</div>
+      <div class="body">
+        <ol style="padding-left:18px; display:grid; gap:8px">
+          <li>查总数</li>
+          <li>按告警数排序时：<b>全量取回</b>所有分支行</li>
+          <li>实时 Feign 调 codecheck <b>聚合 Mongo</b></li>
+          <li><b>内存排序</b> + 内存分页</li>
+          <li>非告警排序时也要对当前页实时回填</li>
+        </ol>
+      </div>
+    </div>
+    <div class="ba after">
+      <div class="head">改造后</div>
+      <div class="body">
+        <ol style="padding-left:18px; display:grid; gap:8px">
+          <li>一条 SQL：条件过滤 + <code>ORDER BY IFNULL(static_alert_count, 0)</code> + <b>LIMIT 分页</b></li>
+          <li>告警数列随行直出，<b>零跨服务调用</b></li>
+          <li>metrics 类排序字段保持现有内存排序路径，不受影响</li>
+          <li>接口出入参、排序语义（空值按 0）、前端展示完全不变</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+  <div class="callout" style="margin-top:16px">
+    <strong>口径一致性说明：</strong>排序用 <code>IFNULL(static_alert_count, 0)</code>，与现内存排序中空值按 0 的行为一致；统计口径仍为「未处理告警数 OPEN + PENDING_REVIEW」，且刷新范围<b>不区分分支是否接入代码检查</b>，与现查询口径完全一致（atomgit / gitcode 双域名坐标解析已兼容）。
+  </div>
+</section>
+
+<!-- ================= 实施计划 ================= -->
+<section id="s6">
+  <h2><span class="idx">6</span>实施计划</h2>
+
+  <h3>上线步骤</h3>
+  <div class="card">
+    <ol class="steps">
+      <li><b>数据库变更</b> —— repo_branch 表加两列（static_alert_count、static_alert_count_synced_at），NULL 默认，无锁风险低</li>
+      <li><b>发布 codecheck</b> —— 推送埋点 + MQ 队列声明（先于 coderepo 发布亦安全，消息暂存队列）</li>
+      <li><b>发布 coderepo</b> —— 查询侧切 SQL + 消费者上线</li>
+      <li><b>历史回填</b> —— XXL-Job 控制台手动触发一次 full 全量模式</li>
+      <li><b>常态运行</b> —— 启用低频增量兜底（2h），并观察消费者成功率、数据新鲜度、接口 P95、batch 接口调用量（应显著下降）</li>
+    </ol>
+  </div>
+
+  <h3>开发任务拆分</h3>
+  <div class="card">
+    <table>
+      <tr><th style="width:60px">#</th><th>任务</th><th style="width:110px">所属仓</th></tr>
+      <tr><td>1</td><td>DDL + 实体 / VO / mapper 列映射</td><td>coderepo</td></tr>
+      <tr><td>2</td><td>BranchAlertCountPushService + 三处埋点（解析 / 屏蔽 / 状态流转）+ 队列声明</td><td>codecheck</td></tr>
+      <tr><td>3</td><td>StaticAlertCountRefreshConsumer（坐标反查 + 落库 + 重试）</td><td>coderepo</td></tr>
+      <tr><td>4</td><td>staticAlertCountRefreshHandler（兜底对账 + 历史回填）</td><td>coderepo</td></tr>
+      <tr><td>5</td><td>查询侧切换 SQL 排序分页，移除查询链路 Feign 回填</td><td>coderepo</td></tr>
+      <tr><td>6</td><td>单测补充与全量回归（含端到端口径验证）</td><td>两仓</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ================= 风险 ================= -->
+<section id="s7">
+  <h2><span class="idx">7</span>风险与对策</h2>
+  <div class="card">
+    <table>
+      <tr><th style="width:220px">风险</th><th style="width:170px">影响</th><th>对策</th></tr>
+      <tr><td>推送消息乱序 / 重复 / 丢失</td><td>短暂旧值</td><td>推全量值覆盖写幂等；兜底对账定期收敛，最坏误差窗口 = 兜底周期</td></tr>
+      <tr><td>埋点遗漏（新增变更路径未接入推送）</td><td>该路径变更后数值延迟</td><td>推送收口到统一组件；兜底对账自愈</td></tr>
+      <tr><td>同分支并发推送互覆</td><td>可能短暂回退</td><td>覆盖写幂等，最终写者胜；兜底收敛</td></tr>
+      <tr><td>MQ 积压（批量扫描风暴）</td><td>数值延迟上升</td><td>消费逻辑极轻（一次反查 + 单行 UPDATE），必要时调大消费并发</td></tr>
+      <tr><td>坐标解析失败行恒为空</td><td>个别分支显示 --</td><td>与现状行为一致（现查询同样解析失败保持空）</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ================= 评审关注点 ================= -->
+<section id="s8">
+  <h2><span class="idx">8</span>评审关注点（请领导重点确认）</h2>
+  <div class="card">
+    <table>
+      <tr><th style="width:60px">#</th><th style="width:240px">待确认事项</th><th>说明</th></tr>
+      <tr><td>1</td><td>数值延迟容忍度</td><td>常规变更秒级（写时推送）；极端场景（消息丢失）最坏延迟 = 兜底周期（默认 2h，可调）。是否可接受？</td></tr>
+      <tr><td>2</td><td>兜底频率</td><td>默认 2h。若希望更激进可调 30min，代价是 codecheck 批量聚合调用量上升（轻聚合，可控）。</td></tr>
+      <tr><td>3</td><td>仓库 tab 是否同步改造</td><td>本期范围仅分支管理页；仓库管理 tab 的整仓告警数仍走现有实时接口。若希望同批落地（由分支表 SUM 派生），可纳入本期或二期，请定夺。</td></tr>
+      <tr><td>4</td><td>跨服务队列新增</td><td>新增一条 MQ 队列（static_alert_count_refresh），沿用现有 RabbitMQ 配置风格，需要平台侧知会。</td></tr>
+    </table>
+  </div>
+</section>
+
+<footer>
+  分支列表 staticAlertCount 落表优化 · 方案评审稿 ·
+  详细技术设计见同目录 <span style="font-family:Consolas,monospace">design.md</span> ·
+  数据链路梳理见 <span style="font-family:Consolas,monospace">staticAlertCount_data_flow.md</span>
+</footer>
+
+</main>
+</body>
+</html>
