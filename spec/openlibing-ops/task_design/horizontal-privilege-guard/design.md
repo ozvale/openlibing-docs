@@ -43,11 +43,11 @@ ops 本地不缓存、不引入 Redis 权限副本，每请求实时查 MySQL，
 ```
 userId 为空                                → 拒绝
 资源 id 为空 / 空集合                        → 跳过校验（必传参数由 @NotNull 挡）
-角色为 super_admin / admin / visitor        → 放行（全局管理员短路）
+角色为 super_admin / admin / platform_operater → 放行（全局管理员短路，对齐 framework checkProjectPermissions 口径）
 角色类型为 system / general                 → 放行
 角色类型为 product 且 product_id 匹配项目归属  → 放行
-角色类型为 project 且 project_id 匹配        → 放行
-角色类型为 repo 且 project_id 或 repo_id 匹配 → 放行
+角色类型为 project 且 project_id 匹配        → 放行（项目管理员经 REPO 反查后覆盖项目下所有仓）
+角色类型为 repo 且 project_id 或 repo_id 匹配 → 放行（仓库角色行带 project_id 时可访问项目下所有仓，既定口径）
 其余                                       → 拒绝，返回 403
 ```
 
@@ -56,6 +56,8 @@ userId 为空                                → 拒绝
 - 空资源 id 跳过：列表接口"不传 id 返回全量可见数据"的既有行为不破坏；跨项目拉取全量数据作为遗留项后续治理。
 - 集合参数逐个校验，任一无权限即整体拒绝（防部分越权）。
 - REPO 校验先反查 `repo_info.project_id`（repoId 不存在抛 403），再按 project+repo 双匹配判定。
+- visitor（普通用户）**不做全局短路**：visitor 是菜单级公开语义（gateway 垂直权限层生效），横向层普通用户按 project/repo 归属匹配，否则任何登录用户都能看全部数据，防护失效。
+- 全局管理员口径为 `super_admin` / `admin` / `platform_operater` 三角色（与 framework `checkProjectPermissions`、SelectServiceImpl、vulnerability 仓口径一致）。
 
 ## 3. 核心组件设计
 
