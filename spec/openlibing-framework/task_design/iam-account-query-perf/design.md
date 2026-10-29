@@ -6,29 +6,37 @@
 
 ## 架构决策
 
-1. **去 `distinct` join 膨胀**：原 SQL 用 2 个授权子查询 left join + `select distinct`，当授权表数据量大时中间结果膨胀。改为关联字段上做存在性判断（`EXISTS`/`IN` 或聚合子查询），保证每 iam 账户行数唯一。
-2. **模糊匹配走索引**：`locate(#{name}, a.name) > 0` 与 `locate(#{userName}, a.user_name) > 0` 必须全表扫。业务上为「前缀包含」语义时改 `LIKE 'xxx%'` 可走 `(name)`/`(user_name)` 索引；若必须「任意子串」则保留 locate 但评估成本与索引兜底。最终语义以等价性测试锁定。
-3. **分页排序**：`order by CASE ... create_time desc limit offset` 深分页成本高，先保留单表内 `create_time desc` + 索引，评估是否需 keyset 优化（接口契约不变前提下可选）。
+1. **去 `distinct` 与 join 膨胀**：原 SQL 用 2 张授权表全量子查询 left join + `select distinct`，账号×有效用户授权×有效角色授权产生笛卡尔中间态。改为授权存在性用 `EXISTS` 相关子查询判定（`is_has_grant_user`/`is_has_grant_role`），每个账号固定 1 行，天然无需 distinct。
+   - 相关子查询走 `(resource_id, validity_time)` 索引反查，避免授权表全量物化。
+2. **模糊匹配**：`locate(#{name}, a.name) > 0` 保持任意子串语义不变（改造为前缀匹配会改变功能，违背"零变化"承诺），未新增 name 索引；该过滤仅在用户显式输入时生效，非首屏路径。
+3. **分页排序**：`order by CASE WHEN create_by ... create_time desc limit offset` 交互不变；`(project_id, create_by)` 覆盖首屏（前端恒传 projectId）过滤与排序，未引入 keyset 深分页改造（等价成本高、收益待真实库确认）。
 
 ## 涉及文件
 
-| 文件                                                                      | 操作      | 说明                                |
-| ------------------------------------------------------------------------- | --------- | ----------------------------------- |
-| `src/main/resources/mapper/IAMAccountMapper.xml`                          | 修改      | `selectIAMAccounts` 的关联/查询重构 |
-| `src/main/resources/db/changelog/v1.0.1/iam_account_query_perf_index.xml` | 新增      | 索引 changelog                      |
-| `src/main/resources/db/changelog/db.changelog.xml`                        | 修改      | include 新 changelog                |
-| `src/main/resources/h2/schema.sql`                                        | 修改      | 测试库对齐索引（如需）              |
-| `src/test/java/.../IAM*Test.java`                                         | 修改/新增 | 重构后 SQL 行为测试                 |
+| 文件                                                                      | 操作 | 说明                                                            |
+| ------------------------------------------------------------------------- | ---- | --------------------------------------------------------------- |
+| `src/main/resources/mapper/IAMAccountMapper.xml`                          | 修改 | `selectIAMAccounts` 授权关联改 EXISTS 相关子查询，去掉 distinct |
+| `src/main/resources/db/changelog/v1.0.1/iam_account_query_perf_index.xml` | 新增 | 6 个索引，`tableExists`/`indexExists` 前置条件 + rollback       |
+| `src/main/resources/db/changelog/db.changelog.xml`                        | 修改 | include 新 changelog                                            |
+| `src/test/java/.../mapper/SelectIAMAccountsEquivalenceTest.java`          | 新增 | 旧/新 SQL 等价性测试（11 项）                                   |
+| `src/test/java/.../config/IAMAccountQueryIndexMigrationTest.java`         | 新增 | Liquibase 迁移幂等/缺表跳过测试（2 项）                         |
 
 ## 风险 & 缓解
 
-| 风险                                | 缓解                                                             |
-| ----------------------------------- | ---------------------------------------------------------------- |
-| SQL 重构结果与现网不一致            | 等价性对照：重构前后对同一数据执行、比对行集合与字段             |
-| 索引变更影响 DML 性能 / 加锁        | 索引在低峰通过 Liquibase 执行；单列短索引，避免覆盖索引冗余      |
-| 数据库迁移失败                      | changelog 版本号递增、不动已执行脚本；H2 对齐验证                |
-| 偶发性慢的根因不在 SQL（如网络/GC） | Task 1 基线与 EXPLAIN 先行定位，若 SQL 非瓶颈则停止改 SQL 并反馈 |
+| 风险                                             | 缓解                                                                                                                       |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| SQL 重构结果与现网不一致                         | 等价性测试：同一 seed 下旧/新 SQL 全分支比对，含多授权去重与脏数据场景                                                     |
+| `user_basic_info.user_id` 无唯一约束时可致行倍增 | 已由等价性脏数据用例佐证（同名不同 email 的重复行 distinct 本不去重，新旧一致）；生产环境 user_id 业务上唯一，风险窗口极窄 |
+| 索引前置列 project_id 与主过滤 create_by 的顺序  | 前端恒传 projectId（DTO `@NotNull`），复合索引可命中；ALL 分支 OR 结构本就走不了单列索引，不增冗余索引                     |
+| 数据库迁移失败/重复                              | changelog 幂等：`indexExists` 前置条件 + 迁移测试清 changelog 重估验证；不动已执行脚本                                     |
+| 偶发根因不在 SQL                                 | 已排除：queryAccount 单查询无缓存/串行依赖，主因即 SQL 结构                                                                |
+
+## 未决验证（部署后跟进）
+
+- 真实库 EXPLAIN 复测确认索引命中、基线耗时对比（本仓无真实库连接，测试只能在 H2 验证等价性）。
 
 ## 跨仓影响
 
-- 仅 `openlibing-framework` 后端 + `openlibing-docs` 文档。无接口契约变化，前端不受影响。
+- 仅 `openlibing-framework` 后端 + `openlibing-docs` 文档。无接口契约/返回结构变化，前端不受影响。
+- 关联业务 Issue：https://gitcode.com/openlibing/openlibing-framework/issues/116（子项）
+- 业务 PR：https://gitcode.com/openlibing/openlibing-framework/pull/488

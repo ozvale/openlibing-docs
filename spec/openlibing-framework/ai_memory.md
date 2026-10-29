@@ -153,3 +153,33 @@ public void setUserRoles(List<String> userRoles) {
 **注意**: `@Data` 生成的 getter/setter 不做防御性拷贝，有集合字段的 DTO 需手动编写 getter/setter。
 
 **来源**: 2026-09-10 PR#436 code review
+
+### 9. SQL 重构等价性测试（无真实库时）
+
+**场景**: 重构 MyBatis SQL（如去 `distinct` / 拆 join）需证明功能零变化，但本仓无真实库连接、无 MyBatis 集成测试基础设施。
+
+**方案**: 用 H2 内存库（MODE=MySQL）播种相同数据，把旧 SQL 以字符串常量作为 oracle，遍历新/旧分支比对完整结果集（含 `is_has_grant_user` 等布尔标志转 0/1）。展开 grantStatus 全分支 + 过滤 + 分页 + 关键脏数据场景。
+
+**关键点**:
+
+- 同账号多授权（2 有效用户 + 2 有效角色）去重用例必须覆盖——`distinct` 移除后行倍增的唯一结构差异点。
+- 分页用例必须带与生产一致的确定性 `order by`，否则 H2 行序不定导致偶发红。
+- 每用例补绝对期望集合断言（如 resource_id 集合），避免"新旧同错仍通过"。
+
+**来源**: 2026-10-28 iam-account-query-perf
+
+### 10. Liquibase 幂等测试必须重估 preCondition
+
+**场景**: changelog 用 `preConditions`（如 `tableExists`/`indexExists`）做幂等保护，测试要证明 preCondition 真实生效而非 DATABASECHANGELOG 短路。
+
+**方案**: 第二次 `liquibase.update()` 前先 `DELETE FROM DATABASECHANGELOG`，使 changeSet 被真正重新求值——此时索引已存在、`not indexExists` 为 false → onFail=MARK_RAN 跳过，不会重复 createIndex 报错。缺表场景单独用例断言无索引残留。
+
+**来源**: 2026-10-28 iam-account-query-perf
+
+### 11. OR 分支 + 复合索引的优化陷阱
+
+**场景**: WHERE 含 `a.create_by = ? or exists(...) or exists(...)` 的 OR 结构，即使建 `create_by` 单列索引，MySQL 优化器通常仍不走（Index Merge 对多 OR 子查询不生效）。
+
+**方案**: 索引设计以"必然携带的等值过滤字段"为前导列（如前端必传 projectId、DTO `@NotNull`），保证覆盖热点分支；不要为 OR 分支盲目加单列索引（增加写放大、无读收益）。若必优化 OR 分支，优先拆 UNION。
+
+**来源**: 2026-10-28 iam-account-query-perf
