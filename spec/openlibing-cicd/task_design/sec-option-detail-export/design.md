@@ -27,6 +27,20 @@
 
 复用仓内测试结果导出已验证的异步导出链路（`PipelineServiceImpl` 测试报告导出、`FileDownloadServiceImpl` 日志导出均基于该链路）：前端提交导出请求（仅携带记录标识），后端创建导出任务记录后立即返回；文件由后端异步生成（双 Sheet 流式写入）并上传 OBS；进度展示与下载由主站导出中心统一完成。
 
+## 与既有 sec-option-export 方案的关系
+
+同目录 `sec-option-export`（proposal/tasks/design，任务清单 0/12 均未实施）是同一导出能力的先行设计，本文档为其替代方案，旧文档已标注作废。关键口径差异：
+
+| 维度           | 旧方案 sec-option-export（作废）            | 本方案 sec-option-detail-export                             |
+| -------------- | ------------------------------------------- | ----------------------------------------------------------- |
+| 导出任务类型   | `SEC_OPTION`                                | `SEC_OPTION_DETAIL`                                         |
+| 接口路径       | `/build-artifact/sec-option/export`         | `/build-artifact/sec-option/detail/export`                  |
+| Sheet 结构     | Summary / Detail，扫描项拆原始值/备案值两列 | 扫描概览 / 文件扫描结果，备案项单元格附加「（已备案）」标注 |
+| 文件结果区形态 | 每个扫描项两列（原始值/备案值）             | 14 列 + 备案标注后缀，与弹窗展示一致                        |
+| 文件名规则     | recordId 与扫描时间戳                       | 产物名称 + recordId（雪花 ID，全局唯一稳定）                |
+
+后续实现一律以本文档为准，禁止再按旧方案口径实现同一能力。
+
 ## 采用该方案的原因
 
 - 平台导出中心已沉淀了任务记录、状态机、下载链接签发与「我的导出」历史等通用能力，框架侧零改动；
@@ -53,7 +67,7 @@
 1. 状态置为 BUILDING；
 2. 按 recordId 查询扫描记录，复用概览记录装配逻辑得到基础信息与逐选项指标（`OverviewOption` 列表，固定 14 项顺序）；
 3. 写入 Sheet1「扫描概览」：顶部基础信息块（键值两列），随后写入 14 行选项明细表（EasyExcel `ExcelWriter`，同一 Sheet 分区写入）；
-4. 分批循环查询 `sec_option_scan_file_detail`（recordId 维度，每批 1000 条，按 `file_path, id` 复合升序排序，与文件扫描结果弹窗展示顺序一致，以 (file_path, id) 复合游标翻页直至取完，保证多批之间不重不漏），同时一次性加载该记录关联的备案记录集合（文件 × 选项维度，仅取 fileName 与 optionKey 两个必要列）；
+4. 分批循环查询 `sec_option_scan_file_detail`（recordId 维度，每批 1000 条，按 `file_path, id` 复合升序排序，与文件扫描结果弹窗展示顺序一致，以 (file_path, id) 复合游标翻页直至取完，保证多批之间不重不漏），同时一次性加载与该记录产物维度匹配的备案集合：`sec_option_filing` 无 record_id 维度，按当前扫描记录的 projectId + gitUrl + packagePath（与备案写入时的唯一键口径一致，packagePath 隔离同项目同名产物；插件未上报的老数据 packagePath 为空，回退按 packageName 匹配）查出 file_path + option_key 集合，仅取这两个必要列；
 5. 每批映射为 Sheet2「文件扫描结果」行，流式写入：每个选项单元格取 YES/NO/N/A，命中备案记录的单元格附加「（已备案）」字样；
 6. 状态置为 UPLOADING，将临时文件上传 OBS（objectKey 规则：`日期/UUID`，与现有导出一致）；
 7. 上传成功回写 SUCCESS，任一步骤失败回写 FAILED（message 记录失败原因），finally 清理本地临时文件。
@@ -88,7 +102,7 @@
 | 扫描时间       | detectionCompletedAt |                                  |
 | 总文件数       | totalScannedFiles    |                                  |
 
-基础信息块下方为选项明细表（14 行 × 7 列，按 `SecOptionConstants#ALL_OPTION_KEYS` 固定顺序）：
+基础信息块下方为选项明细表（14 行 × 7 列，按 `SecOptionConstants#ALL_OPTION_KEYS` 固定顺序；未扫描项概览装配仅返回 `scanned:false`、无指标字段，其满足数/实际参与数/两列覆盖率/已备案文件数统一展示「-」，避免空单元格）：
 
 | 列名                 | 来源字段（OverviewOption） | 说明                            |
 | -------------------- | -------------------------- | ------------------------------- |
@@ -112,7 +126,7 @@
 | 文件路径    | 文件明细.文件路径（filePath） | 与弹窗「文件路径」列一致                                                                                                        |
 | 14 个选项列 | 文件明细.各选项扫描结果       | 列头为选项展示名（BIND_NOW、NX、PIC、PIE、RELRO、SP、NO Rpath、FS、Ftrapv、Strip、ASLR、Fvisibility、Fstackcheck、Fstackclash） |
 
-取值规则：单元格取 YES/NO/N/A；该文件 × 选项存在备案记录时，单元格附加「（已备案）」字样，如 `NO（已备案）`。
+取值规则：单元格取 YES/NO/N/A；文件明细缺失的扫描项原始值为 UNSCANNED（`SecOptionConstants.UNSCANNED_VALUE`），导出时统一映射为 N/A，与文件扫描结果弹窗展示一致；该文件 × 选项存在备案记录时，单元格附加「（已备案）」字样，如 `NO（已备案）`。
 
 不导出的页面字段及原因：`downloadUrl` 为 OBS 临时签名链接，存在时效，写入离线文件后很快失效；`id`、`recordId` 等内部标识对离线阅读无意义。
 
@@ -150,7 +164,7 @@
 # 5. 性能设计
 
 - 导出范围为单条扫描记录，数据量与包内文件数正相关；Sheet2 采用分批查询 + 流式写入，单批 1000 条，内存占用与批大小正相关而非文件总数，不因数据量增长而线性膨胀；
-- 备案记录集合按 recordId 一次性加载，仅取 fileName 与 optionKey 两个必要列构建轻量字符串集合（不加载全字段实体），内存占用为 O(备案记录数)；备案为用户低频确认操作，实际规模远小于「文件数 × 14」的理论上界，加载后内存匹配，避免逐文件查询备案表；
+- 备案集合按当前记录的 projectId + gitUrl + packagePath（老数据回退 packageName）一次性加载，仅取 file_path 与 option_key 两个必要列构建轻量字符串集合（不加载全字段实体），内存占用为 O(备案记录数)；备案为用户低频确认操作，实际规模远小于「文件数 × 14」的理论上界，加载后内存匹配，避免逐文件查询备案表；
 - 生成与上传全程异步执行，不占用 Web 请求线程；导出链路与现有测试结果导出共用异步任务执行器，频次为用户手动触发，无高频并发场景；
 - 分批查询沿用文件详情查询已有索引（recordId 维度），不引入新的慢查询模式；
 - 接口默认：满足 3 秒性能要求（导出提交接口仅创建任务记录即返回）；
@@ -216,5 +230,5 @@
 
 ## 示例文件
 
-- 原型（设计总览 + 双 Sheet 示例）：`安全编译选项导出原型.html`
-- 示例 Excel（可直接打开查看）：`安全编译选项详情导出示例.xlsx`
+- 原型（设计总览 + 双 Sheet 示例）：[安全编译选项导出原型.html](./安全编译选项导出原型.html)
+- 示例 Excel（可直接打开查看）：[安全编译选项详情导出示例.xlsx](./安全编译选项详情导出示例.xlsx)
