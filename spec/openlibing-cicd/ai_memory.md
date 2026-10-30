@@ -65,3 +65,9 @@
 - 操作级菜单拆分（operation_log v2 操作名区分）配置顺序：先为新菜单配置角色授权，再清理旧菜单下重复 URL 记录；顺序颠倒会直接导致所有相关接口全员 403。
 - 操作日志定长列（resource_name/ex_message）拼接列表值时统一模式：200 字符上限 + 超限回退条数摘要（`共N个资源，明细已省略`），避免超列长写入失败。
 - 资源展示名随请求由前端传递（id 本就前端传入），后端不做跨库反查资源主表——分库分表规划下不可依赖 framework 直查 pipeline_info。
+
+## PR 创建规范（测试人/评审人）
+
+- 创建 PR 时必须指定**测试人 liudongfang**、**评审人 ozvale**：`gitcode pr create -R <repo> --head <branch> --base <branch> -t <title> -b <body> -a liudongfang -r ozvale`（`-a` 负责人、`-r` 评审人）。
+- 测试人（testers）无法经 CLI/API 字段设置（`tester_ids`/`testers` 均 404/400），由 `lgtm` 评审自动记入 `approval_testers`；创建后在 PR 页面核对 Approval Progress。
+- 现有 PR 补设置仅 `reviewer_ids` 可走 `PATCH /pulls/{n}`（Bearer 认证），但需评审人具备该模块 reviewer 资格，否则 400。
