@@ -1,10 +1,8 @@
 # design: 代码度量分支表快照列（metrics-latest-snapshot）
 
-> 完整版设计文档：`D:\work\design\202610\metrics-latest-snapshot.md`（评审定稿），本文件为归档版。
-
 ## 1. 方案设计
 
-将页面展示的 5 个度量指标（代码规模 / 平均代码行数 / 平均圈复杂度 / 总代码重复率 / 总文件重复率）落为 `repo_branch_info` 分支表冗余值列，对齐 UT 行覆盖率先例：
+将页面展示的 5 个度量指标（代码规模 / 平均代码行数 / 平均圈复杂度 / 总代码重复率 / 总文件重复率）落为 `repo_branch` 分支表冗余值列，对齐 UT 行覆盖率先例：
 
 - **查询**：分支列表 SQL 直接带出值列，零拼接；度量排序下推 SQL `ORDER BY`，删除全量拉取 + 内存排序路径；
 - **写入**：`reportMetrics` 主记录入库后同步刷列（最新成功快照），失败仅告警不阻断主链路；
@@ -17,14 +15,14 @@
 
 ## 2. 实现逻辑设计
 
-### 2.1 写入（syncBranchMetricsColumns）
+### 2.1 写入（refreshBranchMetricsSnapshot）
 
 `persistMetrics` 四遍解析完成、recordId 生成后：
 
-1. `selectLatestByGitUrlAndBranch(gitUrl, branchName)` 取最新一条 `status=0`（含刚插入的本条）；
+1. `selectLatestByGitAndBranch(gitUrl, branchName)` 取最新一条 `status=0`（含刚插入的本条）；
 2. 解析其 `metrics_data_json` 的 5 个指标值（变体键 `average*` 双键 fallback 兼容读取，仅此读取点做兼容；解析失败按缺键处理并 warn）；
 3. `gitUrl → repoId`（repo_info 按 repo_url 反查，核对 URL 规范化口径）；
-4. `UPDATE repo_branch_info SET 5 值列 WHERE repo_id=? AND branch_name=? AND branch_type='0'`；
+4. `UPDATE repo_branch SET 5 值列 WHERE repo_id=? AND branch_name=? AND branch_type='0'`；
 5. 无匹配行（分支未录入）跳过；全程 try-catch，失败仅 warn 不阻断上报主链路。
 
 失败记录（status=1）/部分成功（status=2）不刷列，保持上次成功快照。
@@ -39,11 +37,11 @@
 
 ### 2.3 刷数任务（BranchMetricsSyncJob，XxlJob）
 
-| jobParam            | 模式                                                                       |
-| ------------------- | -------------------------------------------------------------------------- |
-| 空串                | 全量：遍历 `repo_branch_info`（branch_type='0'）join repo_info 取 repo_url |
-| 仅 gitUrl           | 定向-整仓                                                                  |
-| gitUrl + branchName | 定向-单分支                                                                |
+| jobParam            | 模式                                                                  |
+| ------------------- | --------------------------------------------------------------------- |
+| 空串                | 全量：遍历 `repo_branch`（branch_type='0'）join repo_info 取 repo_url |
+| 仅 gitUrl           | 定向-整仓                                                             |
+| gitUrl + branchName | 定向-单分支                                                           |
 
 单分支处理 `backfillBranchMetricsHistory(gitUrl, branchName)`（存量清洗补齐语义）：倒序取该分支全部成功记录（`selectSuccessHistoryByGitAndBranch`，`detection_completed_at DESC`）→ 空则跳过 → 从新到旧遍历解析 5 值（与写入点同一份解析代码 + 变体键 fallback），先到先得、5 键集齐提前收敛，单条 JSON 解析失败 warn 跳过继续向上 → 全历史均缺键的列写 NULL → UPDATE 分支表 5 值列（多项目 repoIds IN 批量）。与写入侧差异：写入只看最新一条（O(1)），刷数负责存量清洗收敛，缺键向上补齐历史值。幂等：同值 UPDATE 影响行数 0，成功记录集合不变则结果不变；并发安全（按 repo_id+branch_name 精确 UPDATE）；updated/no-change 计数汇总日志。
 
@@ -52,7 +50,7 @@
 | 类                                                                  | 变更                                                                                                                                                                                     |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `RepoBranchInfoEntity` / `ProjectBranchRowEntity`                   | +5 指标值字段                                                                                                                                                                            |
-| `RepoBranchInfoMapper.xml`                                          | 查询 select 列补齐；+`updateMetricsColumns`；排序注入                                                                                                                                    |
+| `RepoBranchInfoMapper.xml`                                          | 查询 select 列补齐；+`updateMetricsSnapshot`；排序注入                                                                                                                                   |
 | `CodeMetricsRecordMapper`（接口+XML）                               | +`selectLatestByGitAndBranch`（写入点，最新一条）+`selectSuccessHistoryByGitAndBranch`（刷数，倒序全历史）；-`selectLatestByGitUrls`                                                     |
 | `CodeMetricsServiceImpl`                                            | +`refreshBranchMetricsSnapshot`（写入点）+`backfillBranchMetricsHistory`（刷数补齐，共用 `syncBranchSnapshotColumns`）+ 5 指标解析公共方法；`persistMetrics` 接入；删除度量查询/拼接链路 |
 | `CodeMetricsService`（接口）                                        | -`getLatestMetricsByGitUrl(s)`                                                                                                                                                           |
@@ -63,7 +61,7 @@
 ## 4. 数据模型设计
 
 ```sql
-ALTER TABLE repo_branch_info
+ALTER TABLE repo_branch
   ADD COLUMN code_scale BIGINT DEFAULT NULL COMMENT '代码规模快照（最新成功扫描）',
   ADD COLUMN avg_function_loc DECIMAL(10,2) DEFAULT NULL COMMENT '平均代码行数快照',
   ADD COLUMN avg_cyclomatic_complexity DECIMAL(10,2) DEFAULT NULL COMMENT '平均圈复杂度快照',
