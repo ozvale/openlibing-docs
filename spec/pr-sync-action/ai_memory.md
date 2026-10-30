@@ -5,8 +5,12 @@
 - 含中文的文件读写必须显式 UTF-8：`Get-Content` 默认按系统 ANSI(GBK) 解码 UTF-8 文件，
   读后再写回会产生双重编码乱码（2026-10 pre-commit.yml 乱码事故）；优先用工具链的
   read/edit/write 能力，PowerShell 读写显式加 `-Encoding UTF8`。
+- ⚠️ PowerShell 5.1 的 `-Encoding UTF8` 写出的是 **UTF-8 with BOM**：`git commit -F` /
+  `--body-file` 会把 BOM 当作正文首字符（javac 等编译器也会报"非法字符 \ufeff"）。
+  无 BOM 写法：`[System.IO.File]::WriteAllText($path, $content, (New-Object
+  System.Text.UTF8Encoding($false)))`，或改用 PowerShell 7 的 `-Encoding utf8NoBOM`。
 - `git commit -m "<中文>"` 经 PowerShell 传参存在乱码风险；含中文的提交信息用
-  `git commit -F <UTF-8 文件>`。已合入仓库的提交信息经核验均为英文，无乱码。
+  `git commit -F <无 BOM UTF-8 文件>`。已合入仓库的提交信息经核验均为英文，无乱码。
 - GitCode 远端写操作（issue/PR 评论、body）含中文必须 `--body-file` + 显式 UTF-8 写盘，
   禁止 `--body` 直接传中文变量。
 

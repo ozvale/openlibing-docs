@@ -17,9 +17,10 @@
   - https://gitcode.com/openlibing/pr-sync-action/issues/16
   - https://gitcode.com/openlibing/pr-sync-action/issues/17
   - https://gitcode.com/openlibing/pr-sync-action/issues/18
+  - https://gitcode.com/openlibing/pr-sync-action/issues/20（构建产物 chmod 收敛：scripts/fix-bundle-chmod.js）
   - https://gitcode.com/openlibing/pr-sync-action/issues/21
   - https://gitcode.com/openlibing/pr-sync-action/issues/22
-- 未纳入本批次：#19（api-scan workflow，由独立 PR 交付）；#20（构建产物 chmod 收敛已随本批次交付，issue 关联见交付历程）
+- 未纳入本批次：#19（api-scan workflow，由独立 PR 交付）
 
 ## 交付历程
 
@@ -46,11 +47,11 @@
 - 单元测试：jest 18 套件 / 145 用例全部通过
 - 构建：npm run all 成功；ncc 打包后 fix-bundle-chmod 脚本收敛生效，dist/index.js 无 0666 残留
 - 安全收敛：dist/index.js 无 AppCode（X-Apig-AppCode）代码路径残留；日志脱敏正则覆盖 accessToken 字段
-- 流程验证：AppCode 回退禁用后，未声明 id-token 的工作流将跳过执行并输出迁移指引（预期行为变化，已在 PR 描述告知各接入仓检查）
+- 流程验证：AppCode 回退禁用后，未声明 id-token 的工作流将**跳过执行并输出迁移指引**。退出状态说明：跳过路径经 `writeSkipped()` 设置输出后正常 return，**以成功态（exit 0）结束**，仅打印指引日志；因此将本插件 job 配置为必需门禁（required status check）的接入仓会出现"绿色通过但实际未执行"的情况——此类接入仓应以任务结果页的三态标签（SC-RUNNING/SC-SUCC/SC-FAIL）而非 job 状态作为同步是否执行的判定依据，并在接入时确认已声明 `id-token: write`（预期行为变化，已在 PR 描述告知各接入仓检查）
 
 ## 设计偏差与取舍
 
-- #10 选择彻底禁用 AppCode 回退而非警告缓解（评审升级）：静态共享凭证无轮换机制，保留代码入口即保留风险；代价是未声明 id-token 的存量工作流需要补声明后才能使用
+- #10 选择彻底禁用 AppCode 回退而非警告缓解（评审升级）：静态共享凭证无轮换机制，保留代码入口即保留风险；代价是未声明 id-token 的存量工作流会以成功态（exit 0）跳过执行——已将退出状态与门禁判定建议写入"最终验证"，接入仓需以三态标签判定同步是否执行
 - #8 选择保留默认网关地址：评审确认"只需可覆盖"，避免破坏依赖默认值的存量接入
 - #20 选择构建后收敛而非升级依赖：上游 @actions/io 全版本（含 3.0.2）均含该回退且 3.x 为 ESM 无法被 CJS exec 引用；该代码路径运行时不可达，仅满足最小化基线，上游 toolkit 建议同步跟进
 - #15 选择不钉 SHA：评审确认内部 action 仓库受控、可变 tag 非风险项
