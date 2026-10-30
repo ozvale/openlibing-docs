@@ -44,14 +44,14 @@
   - #291 Nacos TLS、#302 RabbitMQ SSL 属平台/部署级变更，代码侧不做单点修改。
 - **B4 依赖升级（#161 #226 #228）**：`pom.xml` 中 log4j2 2.24.3 → 2.26.1（含 CVE-2026-49844）、jsoup 1.15.3 → 1.23.2、kotlin-stdlib 1.9.25 → 2.4.20、amqp-client 显式 5.37.0，并补齐 log4j-api 显式声明统一版本。
 - **B5 日志与审计（#214 #241 #256 #297）**：
-  - `LogSanitizer` 新增 `maskSensitiveFields`（token/accessToken/password/secret/private_key/AK/SK 等字段值掩码为 `***`）与 `sanitizeAndMask`（先 CRLF 净化再掩码）；
+  - `LogSanitizer` 新增 `maskSensitiveFields`（字段名不区分大小写，覆盖 token/accessToken/refresh_token/password/secret/private_key/access_key/secret_key/AK/SK 等 body/query 字段与 authorization/x-auth-token 等 header 字段，命中值掩码为 `***`）与 `sanitizeAndMask`（先 CRLF 净化再掩码）；接入含 PRIVATE-TOKEN/Cookie/Set-Cookie/api-key 等 header 的日志前须先补清单；
   - 接入点：HwApigController 4 处、InternalCodeFullController / InternalCodeIncController / MachineApiCheckboardController 各 1 处、RuleSetOperation 2 处、ProblemshieldDelegateImpl 1 处、webhook 入口 9 处 params、PipelineDelegateImpl:302、RestCodeCheckUtil 11 处响应体日志。
 - **输入校验与资源限制（#357 #242 #374 #366 #247）**：
   - #357 `RuleSetOperation` templateName、`SensitiveDelegateImpl` sensitiveId 3 处改用 `Pattern.quote()` 字面量转义；
   - #242 `SaveIncTaskResult.buildEmailContent` 5 处外部字段改 `HtmlUtils.htmlEscape()`；
   - #374 `SuppressionScanController` 与 `WebhookDelegateImpl` 4 处 catch 回显改固定文案，异常详情仅记服务端日志；
   - #366 FossScan filePath/componentName 改 `Pattern.quote()` + 限长 100；ruleTag/ruleName 限长 100；suppression 单次 500 文件、单文件 20000 行；
-  - #247 移除 50 URL / 50MB 硬限制，改用 `CountingInputStream` 统计字节，记录 obsUrlCount / fileSize / runs，不截断解析。
+  - #247 移除 50 URL / 50MB 硬限制，改用 `CountingInputStream` 统计字节，记录 obsUrlCount / fileSize / runs，不截断解析；遗留约束：须补可配置软上限（建议 `codescan.sarif.max-file-size` / `codescan.sarif.max-obs-url-count`，默认阈值由 #247 评估确定），超限拒绝该 URL 并告警。
 - **免认证接口越权（#389）**：
   - 新增 `CheckboardRepoAccessService` / `CheckboardRepoAccessHelper`：userId 为空仅公开仓只读放行；userId 非空调用框架校验用户对仓库的读权限；
   - `CheckboardDelegateImpl` 概览/趋势/详情统一走 Helper，替代原内联鉴权；
@@ -79,7 +79,7 @@
 - SSRF 下载增加 connect 5s / read 30s 超时，避免请求挂起；单个 URL 失败仅记录错误，不阻塞其他 URL 解析。
 - 归属条件基于已有索引字段（revision.userId / reviewerId / reviewers.userId），查询开销可忽略。
 - 或签抢占 `updateMulti` 原子条件绑定操作人，减少无效抢占与回滚，避免重复处理。
-- SARIF 解析不再硬截断，`CountingInputStream` 仅计数不缓存；规模写入日志用于后续确定合理限制值。
+- SARIF 解析不再硬截断，`CountingInputStream` 仅计数不缓存；规模写入日志用于后续确定合理限制值。**遗留约束**：当前仅记录规模、未设阈值，后续须补可配置软上限（建议 `codescan.sarif.max-file-size` / `codescan.sarif.max-obs-url-count`），超限拒绝该 URL 并告警（#247）。
 - Suppression 扫描限制单次 500 文件 / 单文件 20000 行，防止超大 PR 逐行匹配耗尽 CPU。
 - 仓可见性校验为每请求一次框架权限查询，与既有菜单鉴权开销一致。
 
@@ -95,7 +95,7 @@
 
 ### 鉴权
 
-- 身份层：网关注入可信 userId，客户端不可伪造（A 批 + 免认证接口全覆盖）；未登录/缺 userId → 必填参数校验 400。
+- 身份层：网关注入可信 userId，客户端不可伪造；A 批接口 userId 必填，未登录/缺 userId → 400；免认证/看板/导出接口 userId 为 `required=false`，为空时仅允许公开仓只读访问，非空时按用户仓库读权限校验。
 - 授权层：`checkPermission` 按 menu_url_info 表精确匹配；`projectId<=0` 一律 403，防止 projectId=0 绕过。
 - 资源归属：撤销/审核/抢占类接口操作人须为申请人或审核人，否则 403；空列表 50001。
 - 仓库可见性：看板/导出接口按仓库公开性 + 用户读权限校验，私有仓无 userId 一律拒绝。

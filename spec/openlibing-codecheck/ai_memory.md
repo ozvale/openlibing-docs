@@ -8,14 +8,14 @@
 - `projectId <= 0` → 403「projectId is invalid」，防止 projectId=0 绕过权限校验。
 - `!authUtils.checkPermission("/openlibing-codecheck" + 真实HTTP路径, projectId, userId)` → 403「no permission」；URL 约定 `/openlibing-codecheck` 前缀，`menu_url_info` 表精确匹配。
 - MultiResponse 返回型 `.code(403).message(...)`；DataResult 返回型 `DataResult.build(403, msg, null)`。
-- Controller 测试：`@Mock AuthUtils` + `@BeforeEach lenient().when(authUtils.checkPermission(anyString(), any(), anyString())).thenReturn(true)`；model 测试数据 `setProjectId(>0)`。
+- Controller 测试：`@Mock AuthUtils` 默认不 stub（等价拒绝），仅在正常路径用例中 `lenient().when(authUtils.checkPermission(anyString(), any(), anyString())).thenReturn(true)`；每个受保护接口至少保留一条 `checkPermission=false → 403「no permission」` 与 `projectId<=0 → 403「projectId is invalid」` 断言，防止鉴权调用被删除或写反而单测仍全绿；model 测试数据 `setProjectId(>0)`。
 - 资源归属校验（撤销/审核）：操作人须为申请人（revision.userId）或审核人（reviewerId/reviewers.userId 命中），否则 403；空列表 50001。
 
 ## apigateway SDK（java-sdk-core）URL 行为
 
 - `Request.setUrl()` 解析 query 后重建时**对已编码序列原样保留**（不把 `%26` 二次编码为 `%2526`），仅把 `+` 规范化为 `%20`。
 - 结论：参数注入修复可在 URL 构建层对 key/value 直接 `URLEncoder.encode(value, UTF_8)`，合法值（含空格/特殊字符）语义不变，无双重编码回归（实测验证，勿凭记忆改回裸拼接）。
-- 跨仓引用：`uses: owner/repo@ref`；GitCode 平台内置动作（checkout/setup-jdk/setup-go）无仓库路径，无法/无需 SHA 固定。
+- 跨仓引用：GitCode 平台内置动作（checkout/setup-jdk/setup-go）无仓库路径，无法/无需 SHA 固定；其余跨仓/第三方 action 必须固定 40 位 commit SHA，禁止 tag/branch 引用（#290 的豁免仅限平台内置动作）。
 
 ## Nacos / CSE
 
@@ -24,12 +24,12 @@
 
 ## 安全整改（ICSL）模式
 
-- 日志脱敏统一走 `LogSanitizer`：外部可控对象/响应体用 `sanitizeAndMask()`（先 CRLF 净化再掩码），敏感字段清单集中在 `maskSensitiveFields()`（token/accessToken/password/secret/private_key/AK/SK → `***`），禁止各调用点自写正则。
+- 日志脱敏统一走 `LogSanitizer`：外部可控对象/响应体用 `sanitizeAndMask()`（先 CRLF 净化再掩码），敏感字段清单集中在 `maskSensitiveFields()` 且字段名匹配不区分大小写；清单须覆盖 query/body 形态（token/accessToken/refresh_token/password/secret/private_key/access_key/secret_key/AK/SK）与 header 形态（authorization/PRIVATE-TOKEN/Cookie/Set-Cookie/api-key/x-auth-token），新增接入点须同步补清单，禁止各调用点自写正则。
 - 用户输入作 Mongo `$regex` 模式必须 `Pattern.quote()`；邮件/HTML 拼接外部字段必须 `HtmlUtils.htmlEscape()`；异常详情只记服务端日志，客户端返回固定文案。
-- 凭证传递三原则：不进 argv（环境变量/列表参数）、不进 URL 查询串（`PRIVATE-TOKEN` header）、不落盘（GIT_ASKPASS 临时脚本 + cleanup 清理）。
+- 凭证传递三原则：不进 argv（列表参数即 argv，仅承载命令与非敏感参数，凭证一律走环境变量 / GIT_ASKPASS / `PRIVATE-TOKEN` header）、不进 URL 查询串、不落盘（GIT_ASKPASS 临时脚本 + cleanup 清理）。
 - 免认证接口不能只靠业务主键（summaryId/taskId/uuid），必须叠加资源归属/仓库可见性校验：`userId` 为空仅放行公开仓只读，非空调用框架校验仓库读权限（`CheckboardRepoAccessHelper` 模式）；`userId` 必须从 Query 由网关注入，禁止从 body 取。
 - SMTP TLS 由平台统一改造，本服务禁止单独加 STARTTLS（#392）；Nacos TLS / RabbitMQ SSL 同属平台/部署级变更，代码侧不改。
-- SARIF 下载解析不设硬截断（50 URL/50MB 会误伤合法大报告），用 `CountingInputStream` 统计 obsUrlCount/fileSize/runs 并记录日志，限制值待定（#247）。
+- SARIF 下载解析不设硬截断（50 URL/50MB 会误伤合法大报告），用 `CountingInputStream` 统计 obsUrlCount/fileSize/runs 并记录日志；必须补可配置软上限（fileSize/obsUrlCount），超限拒绝该 URL 并告警，默认阈值待定（#247）。
 - 依赖漏洞只升级本仓直接依赖；common 包引入组件（jackson/httpclient5/nacos-client 等）由 openlibing-common 跟踪，不在本仓强行 override。
 
 ## GitCode CLI / Windows

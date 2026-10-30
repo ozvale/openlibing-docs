@@ -45,7 +45,8 @@ openlibing-codecheck 于 2026 年 10 月完成两轮安全问题整改，累计�
 - [x] B3：内部服务调用为 https；SMTP STARTTLS 已回退并记录 #392 平台跟踪
 - [x] B4：依赖树为 jsoup 1.23.2 / kotlin-stdlib 2.4.20 / log4j 2.26.1 / amqp-client 5.37.0，`mvn test-compile` 通过
 - [x] B5：CRLF 控制字符被净化；token/password/secret/AK/SK 等字段日志掩码为 `***`；LogSanitizerTest 23 项通过
-- [x] 输入校验：#357 正则特殊字符按字面量匹配；#242 邮件 HTML 转义；#374 异常详情不回显；#366 限长 100 / 500 文件 / 20000 行生效；#247 不截断解析并记录 obsUrlCount/fileSize/runs
+- [x] 输入校验：#357 正则特殊字符按字面量匹配；#242 邮件 HTML 转义；#374 异常详情不回显；#366 限长 100 / 500 文件 / 20000 行生效
+- [ ] #247 移除 50 URL/50MB 硬截断并记录 obsUrlCount/fileSize/runs；可配置软上限待定，Issue #247 保持 open（豁免/遗留项）
 - [x] 免认证接口：私有仓无 userId 拒绝（403/4001），公开仓匿名只读放行，登录态按仓权限放行；Excel 导出 userId 从 body 移至 Query
 - [x] 相关 PR CI 通过并打 `ai-assisted` 标签；合并后全量单测 1571 通过，pre-commit（gitleaks/spotless/checkstyle/spotbugs/pmd）通过
 
