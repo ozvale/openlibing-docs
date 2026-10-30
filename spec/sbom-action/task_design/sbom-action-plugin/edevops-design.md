@@ -18,7 +18,7 @@ sbom-action 插件（Node action，ncc 打包）
   → 按 platform/arch 下载 openlibing/trivy-sbom-tools release 包并解压（内置 v1.1.1）
   → trivy fs --format spdx-json --offline-scan 扫描 target-dir（输出固定临时目录）
   → addAndPublishProduct 建品+发布单步完成（自动采集 gitUrl；产品已存在由服务端事务容忍）
-  │    └─ productType 缺省时（openlibing-sbom 服务端同一事务内）
+  │    └─ productType 缺省时（openlibing-sbom 服务端，反查阶段无锁、尚无数据库写入）
   │         → 调 coderepo POST /project-repo/internal/query-project-names（新增机机接口）
   │         ├─ 失败/空 → 报错
   │         └─ projectNames 候选数组 → 逐候选 dry-run 现有校验
@@ -27,7 +27,7 @@ sbom-action 插件（Node action，ncc 打包）
   │              └─ 全部不合法 → 聚合报错（候选 + 各自原因）
   │    └─ body 含 sbomContent（spdx_2.2_json_sbom，OIDC callApig 认证）
   → 输出 task-id / sbom-file（编程取数 + 可读概览双通道）
-  → finally 清理 trivy 临时目录
+  → finally 清理 trivy 临时目录（SBOM 输出目录保留，见 design.md「9. 遗留项」）
 ```
 
 ## 三、详细设计
@@ -38,15 +38,15 @@ sbom-action 插件（Node action，ncc 打包）
 
 **输入（action.yml 终态）**：`name`（必填，平台制品名）、`project-type`（可选，缺省由服务端反查）、15 个平铺属性 input（kebab-case，对应平台 `sbom_new_product_config` 表字段，经显式映射表 `ATTRIBUTE_INPUT_TO_FIELD` 转平台 ConfigValue name；component/packageName/arch_type/versionName/service_branch 5 个概念重复字段不暴露）、`target-dir`（必填）、`analyze-all-python` / `analyze-dirs`（可选）、`env`（prod / test，缺省 prod）、`debug`（sbom 调试日志开关）。已移除：`trivy-version`（内置 v1.1.1）、`sbom-output`（固定 `os.tmpdir()/sbom-action-output/{运行ID}/sbom-result.spdx.json`）、`attribute`（平铺化）。
 
-**gitUrl 自动采集**：三级降级——runner 注入 `ATOMGIT_REPOSITORY_URL` → 工作区根 `git remote get-url origin`（token 清洗 `https://user:token@host` → `https://host`）→ 空字符串（不阻塞）。body 字段名保持 `productType`（后端 DTO 原名），gitUrl 为提前携带的额外字段（Spring Boot 容忍未知字段），前后端上线顺序解耦。
+**gitUrl 自动采集**：三级降级——runner 注入 `ATOMGIT_REPOSITORY_URL`（原样上报，不做凭证清洗，依赖 runner 注入无凭证公开地址）→ 工作区根 `git remote get-url origin`（token 清洗，正则仅覆盖 `https://user:token@host` → `https://host` 形态；http/query/ssh 形态不清洗，见 design.md「9. 遗留项」）→ 空字符串（不阻塞）。body 字段名保持 `productType`（后端 DTO 原名），gitUrl 为提前携带的额外字段（Spring Boot 容忍未知字段），前后端上线顺序解耦。
 
-**trivy 工具包**：platform/arch → 5 二进制映射（linux amd/arm、darwin amd/arm、win）；下载 URL `https://gitcode.com/openlibing/trivy-sbom-tools/releases/download/{tag}/{zip}`；解压至 `os.tmpdir()/sbom-action-trivy/{tag}`（执行前清理残留，finally 再清理）。
+**trivy 工具包**：platform/arch → 5 二进制映射（linux amd/arm、darwin amd/arm、win）；下载 URL `https://gitcode.com/openlibing/trivy-sbom-tools/releases/download/{tag}/{zip}`；解压至 `os.tmpdir()/sbom-action-trivy/{tag}`（执行前清理残留，finally 再清理；当前实现无 sha256 完整性校验、目录无运行 ID 隔离，见 design.md「9. 遗留项」）。
 
 **上传链路（OIDC，单接口）**：`@openlibing/huaweicloud-oidc-client` 的 `callApig`（OIDC ID Token → STS → APIW V11 签名）；`POST /action-api/sbom/addAndPublishProduct` 建品+发布一个 service 事务完成（body 含 gitUrl/productName/attribute/sbomContent/`sbomContentType=spdx_2.2_json_sbom`/可选 productType；attribute 须覆盖 productType 全部配置项；非 2xx 或 `success!==true` 抛错，202 + `{success, taskId, errorInfo}` 成功输出 taskId；产品已存在由服务端事务内容忍，发布失败回滚新建产品）。网关前缀：prod `https://apig.openlibing.com:443`；test `https://f209a4ca505e492b96d2dc70f5578641.apic.cn-southwest-2.huaweicloudapis.com`。workflow 必须声明 `permissions: id-token: write`，缺失时启动即报错指引。
 
 **插件输出**：编程取数 `steps.<id>.outputs.task-id` / `sbom-file`；可读概览（STEP_OUTPUT 输出文件）`任务ID（taskId）` / `SBOM文件（sbomFile）`。
 
-**实现清单**：index.js（核心逻辑）、action.yml、package.json（构建脚本 package/zip/build/bump/release）、zip.js、eslint.config.mjs、.gitignore、README.md（含 18 社区属性配置映射表）、dist/index.js（ncc 产物）。仓初始化：`.pre-commit-config.yaml`（公共 hooks + gitleaks + markdownlint + prettier + eslint-sarif）、流水线 `pre-commit.yml` / `code-metrics.yml` / `nightly-schedule-scan.yml`。
+**实现清单**：index.js（核心逻辑）、action.yml、package.json（构建脚本 package/zip/build/bump/release）、zip.js、eslint.config.mjs、.gitignore、README.md（15 个社区属性输入说明 + 18 个社区 productType 配置对照表）、dist/index.js（ncc 产物）。仓初始化：`.pre-commit-config.yaml`（公共 hooks + gitleaks + markdownlint + prettier + eslint-sarif）、流水线 `pre-commit.yml` / `code-metrics.yml` / `nightly-schedule-scan.yml`。
 
 ### 3.2 openlibing-coderepo：新增内部反查接口
 
@@ -58,14 +58,14 @@ sbom-action 插件（Node action，ncc 打包）
 
 ### 3.3 openlibing-sbom：addProduct 解析链改造
 
-| 文件                                   | 改动                                                                                                                                                      |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AddProductRequest`                    | + `gitUrl`（非必填）                                                                                                                                      |
-| `clients/feign/CoderepoClient`（新增） | FeignClient `openlibing-coderepo`，queryProjectNames                                                                                                      |
-| `application.properties`               | `feign.coderepo.name: openlibing-coderepo`                                                                                                                |
-| `SbomServiceImpl`                      | 抽取 `validateProductType(req, productType)`（现有校验链参数化）；新增 `resolveProductTypeFromGitUrl` + `queryProjectsViaCoderepo`；`addProduct` 接入分支 |
+| 文件                                   | 改动                                                                                                                                                                                               |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AddProductRequest`                    | + `gitUrl`（非必填）                                                                                                                                                                               |
+| `clients/feign/CoderepoClient`（新增） | FeignClient `openlibing-coderepo`，queryProjectNames                                                                                                                                               |
+| `application.properties`               | `feign.coderepo.name: openlibing-coderepo`                                                                                                                                                         |
+| `SbomServiceImpl`                      | 抽取 `validateProductType(req, productType)`（现有校验链参数化）；新增 `queryProductCandidatesFromGitUrl` + `resolveProductTypeFromCandidates` + `queryProjectsViaCoderepo`；`addProduct` 接入分支 |
 
-关键约束：`validateProductType` 为现有校验逻辑的逐字参数化抽取，dry-run 与主链路共用同一实现，保证候选判定与真实落库判定一致；锁表（`lockTable`）仍在最前，解析在锁内完成。
+关键约束：`validateProductType` 为现有校验逻辑的逐字参数化抽取，dry-run 与主链路共用同一实现，保证候选判定与真实落库判定一致。gitUrl 反查改造后 `addProduct` 主链路不再调用 `lockTable()`（dao 方法定义保留，生产代码零调用，测试以 `never()` 断言守护）：反查与候选 dry-run 位于判重/落库之前、全程无锁（经 `addAndPublishProduct` 调用时处于外层事务内但尚无写入），coderepo 慢响应只影响本次请求，不会阻塞数据库操作或放大为建品接口整体不可用。
 
 ## 四、方案开放问题与决策
 

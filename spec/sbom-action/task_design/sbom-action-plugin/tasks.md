@@ -21,7 +21,7 @@
 - [x] trivy 版本内置固定：移除 `trivy-version` 输入，`downloadTrivy` / `cleanupTrivy` / 日志统一改用 `DEFAULT_TRIVY_VERSION`（v1.1.1）
 - [x] SBOM 输出内置固定：移除 `sbom-output` 输入，新增 `resolveSbomOutput()`（`os.tmpdir()/sbom-action-output/{ATOMGIT_RUN_ID|时间戳}/sbom-result.spdx.json`，目录预创建）
 - [x] debug 输入重构为 sbom 调试日志：模块级开关 `debugEnabled` + `debugLog()`（gitUrl 解析来源、请求响应详情、SBOM 前 512 字符预览）
-- [x] attribute 输入平铺化：移除 `attribute` 输入与 `parseAttribute()`，新增 `ATTRIBUTE_INPUT_TO_FIELD` 显式映射表（终态 15 字段，component/packageName/arch_type/versionName/service_branch 5 个概念重复平台字段不暴露）+ `buildAttribute()`（收集非空项，全空报错）；产品名输入为 `name`，属性输入含 `product-name`；README 新增「各社区属性配置」章节（18 社区映射表）
+- [x] attribute 输入平铺化：移除 `attribute` 输入与 `parseAttribute()`，新增 `ATTRIBUTE_INPUT_TO_FIELD` 显式映射表（终态 15 字段，component/packageName/arch_type/versionName/service_branch 5 个概念重复平台字段不暴露）+ `buildAttribute()`（收集非空项，全空报错）；产品名输入为 `name`（落 body.productName，与属性 input `product-name` 相互独立、无自动回填），属性输入含 `product-name`（部分社区 productType 的配置项 key）；README 新增「各社区属性配置」章节（15 个属性输入 + 18 个社区 productType 配置对照表）
 - [x] 修复 camelCase 字段输入名映射：字段名转输入名同时处理 snake_case 与 camelCase，原 `replace(/_/g,'-')` 漏掉 camelCase 致 9 个字段取不到 input 静默丢弃
 - [x] 输入名方案终版（用户裁定）：action.yml 对外统一 kebab-case，index.js 用显式映射表 `ATTRIBUTE_INPUT_TO_FIELD`（kebab-case 输入名 → 平台 ConfigValue name 原文）替代正则转换；脚本验证 15 字段 kebab 归一化两两不同（早期中间态曾为 20 字段全量，后裁剪 5 个概念重复字段）
 - [x] README.md：输入表 `project-type` 可选化、使用示例更名、注意事项新增 gitUrl 自动上报说明
@@ -40,8 +40,8 @@
 - [x] clients 模块新增 `CoderepoClient`（`${feign.coderepo.name:openlibing-coderepo}`）+ `QueryProjectNamesPo` + `ProjectNameVo`（返回反序列化）
 - [x] `application.properties` 新增 `feign.coderepo.name: openlibing-coderepo`
 - [x] `SbomServiceImpl`：抽取 `validateProductType(req, productType)`（现有校验链参数化）
-- [x] `SbomServiceImpl`：新增 `resolveProductTypeFromGitUrl(req)` + `queryProjectsViaCoderepo(gitUrl)`（gitUrl 空报错 / 反查失败与空报错 / 逐候选 dry-run 第一个合法采用 / 全失败聚合报错）
-- [x] `addProduct` 主流程接入解析分支（显式传入零影响）
+- [x] `SbomServiceImpl`：新增 `queryProductCandidatesFromGitUrl(req)` + `resolveProductTypeFromCandidates(req, candidates)` + `queryProjectsViaCoderepo(gitUrl)`（gitUrl 空报错 / 反查失败与空报错 / 逐候选 dry-run 第一个合法采用 / 全失败聚合报错）
+- [x] `addProduct` 主流程接入解析分支（显式传入零影响；反查位于判重/落库之前、无锁，`lockTable` 不再被生产代码调用）
 - [x] UT：显式 productType 不调 client / gitUrl 空报错 / 反查空与异常报错 / 多候选采纳第一个合法 / 全不合法聚合报错（6 个用例通过，already exists 容忍由既有用例覆盖）
 
 ## 收尾

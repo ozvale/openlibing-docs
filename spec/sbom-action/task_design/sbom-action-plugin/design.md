@@ -31,7 +31,7 @@ sbom-action 插件（Node action，ncc 打包 dist/index.js）
 | productType 可选化 | 插件 `project-type` 可选 + 服务端 gitUrl 反查                                                                                                                                                                | 平台已知信息不转嫁用户配置；显式传入为多社区仓逃生口                                                                  |
 | 多候选裁决         | 逐候选 dry-run 现有校验，第一个合法者自动采用；全不合法聚合报错                                                                                                                                              | 各社区配置项不同，多数多候选场景仅一个能通过 attribute 覆盖校验（用户 2026-10-22 裁定，修订早期"命中 2+ 即报错"方案） |
 | trivy 版本         | 移除 `trivy-version` 输入，内置 `DEFAULT_TRIVY_VERSION = 'v1.1.1'`                                                                                                                                           | 版本升级由插件发版承载，消除 TAG 外部输入面                                                                           |
-| SBOM 输出          | 移除 `sbom-output` 输入，固定 `os.tmpdir()/sbom-action-output/{ATOMGIT_RUN_ID                                                                                                                                | 时间戳}/sbom-result.spdx.json`                                                                                        | 按流水线运行 ID 隔离，不落入工作区 |
+| SBOM 输出          | 移除 `sbom-output` 输入，固定 `os.tmpdir()/sbom-action-output/{ATOMGIT_RUN_ID \| 时间戳}/sbom-result.spdx.json`                                                                                              | 按流水线运行 ID 隔离，不落入工作区                                                                                    |
 | attribute 入参形态 | 15 个平台 `sbom_new_product_config` 字段平铺为独立可选 input（kebab-case 输入名 + 显式映射表 `ATTRIBUTE_INPUT_TO_FIELD`；component/packageName/arch_type/versionName/service_branch 5 个概念重复字段不暴露） | 消除自由文本双写法解析；映射表替代正则转换（正则漏 camelCase 曾致 9 字段静默丢弃）                                    |
 | coderepo 反查接口  | 新增专用 `query-project-names`（不扩展现有 query-repo）                                                                                                                                                      | 现成接口仅返回 projectId 无 projectName，且纯精确匹配对多来源 gitUrl 命中率不足                                       |
 | gitUrl 匹配口径    | 复用 `RepoCoordinateResolver.resolveByCoordinate`（URL 全串 + 平台坐标 owner/repo，域名无关）                                                                                                                | 容忍 `.git` 后缀与 gitcode.com ↔ atomgit.com 跨域差异；避免裸 repoName 同名误命中                                     |
@@ -47,14 +47,14 @@ sbom-action 插件（Node action，ncc 打包 dist/index.js）
 
 | 输入                          | 必填           | 说明                                                                                                                                                                                                                                               |
 | ----------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| name                          | 是             | 平台制品名，nightly 重跑需一致                                                                                                                                                                                                                     |
+| name                          | 是             | 平台制品名，nightly 重跑需一致（与属性 input `product-name` 相互独立：前者落 `body.productName`，后者是部分社区 productType 的配置项 key，服务端按各 productType 的 config keys 校验 attribute 覆盖性，二者无自动回填或一致性约束）                |
 | project-type                  | 否             | 平台 productType；缺省时由服务端按 gitUrl 反查                                                                                                                                                                                                     |
 | 15 个属性 input（kebab-case） | 否（全空报错） | `image-format` / `language` / `torch-version` 等，对应平台 `sbom_new_product_config` 表字段，经 `ATTRIBUTE_INPUT_TO_FIELD` 映射表转平台 ConfigValue name 原文（component/packageName/arch_type/versionName/service_branch 5 个概念重复字段不暴露） |
 | target-dir                    | 是             | 扫描目标目录/文件                                                                                                                                                                                                                                  |
 | analyze-all-python            | 否             | 解析 requirements.txt（pip 下载，增加耗时）                                                                                                                                                                                                        |
 | analyze-dirs                  | 否             | 直接依赖 git 目录，逗号分隔                                                                                                                                                                                                                        |
 | env                           | 否             | prod / test 网关前缀切换                                                                                                                                                                                                                           |
-| debug                         | 否             | sbom 调试日志开关（gitUrl 来源、请求/响应详情、SBOM 预览）                                                                                                                                                                                         |
+| debug                         | 否             | sbom 调试日志开关（gitUrl 来源、请求/响应详情、SBOM 内容前 512 字符预览；脱敏边界见 2.8 与遗留项）                                                                                                                                                 |
 
 已移除输入：`product-type`（更名）、`attribute`（平铺化）、`trivy-version`（内置）、`sbom-output`（内置）。
 
@@ -68,7 +68,7 @@ sbom-action 插件（Node action，ncc 打包 dist/index.js）
 | darwin   | arm64 | sbom-tools-trivy-mac.zip | trivy-darwin-arm    |
 | win32    | *     | sbom-tools-trivy-win.zip | trivy-win.exe       |
 
-下载 URL：`https://gitcode.com/openlibing/trivy-sbom-tools/releases/download/{tag}/{zip}`。解压到 `os.tmpdir()/sbom-action-trivy/{tag}`（执行前清理旧 zip/二进制，避免残留不完整下载）；linux/mac `chmod 0o755`。
+下载 URL：`https://gitcode.com/openlibing/trivy-sbom-tools/releases/download/{tag}/{zip}`。解压到 `os.tmpdir()/sbom-action-trivy/{tag}`（执行前清理旧 zip/二进制，避免残留不完整下载）；linux/mac `chmod 0o755`。当前实现无 sha256 完整性校验、目录仅按 TAG 命名（无运行 ID 隔离），已知缺口见「9. 遗留项」。
 
 ### 2.3 扫描命令
 
@@ -164,7 +164,15 @@ addAndPublishProduct（建品+发布一个 service 事务）:
 
 性能：trivy 每次全新下载（清旧缓存）；`analyze-all-python` 默认关；全文单次上传（仅 1 次 APIG 调用）。
 
-安全：OIDC 临时凭证无静态入参；curl / trivy / git 均经 `execFileSync` 参数数组（防注入）；gitUrl 回退路径统一 token 清洗（CI 临时凭证不入上报数据与日志）；`ATOMGIT_REPOSITORY_URL` 为 runner 注入的公开地址可直接打印；必填/枚举/路径 fail-fast 校验。
+安全：OIDC 临时凭证无静态入参；curl / trivy / git 均经 `execFileSync` 参数数组（防注入）；gitUrl 二级回退路径（`git remote get-url origin`）对 `https://user:token@host` 形态做 token 清洗（CI 临时凭证不入上报数据）；必填/枚举/路径 fail-fast 校验。
+
+gitUrl 清洗覆盖边界（如实记录当前实现）：
+
+- 一级来源 `ATOMGIT_REPOSITORY_URL` 为 runner 注入值，插件**原样上报**（含 debug 开启时打印原值），不做凭证剥离，依赖 runner 侧注入的是无凭证公开地址；
+- 二级来源清洗正则 `/https:\/\/[^@]+@/` 仅覆盖 `https://` userinfo 形态；`http://`、query 参数（`?private_token=`）、`ssh://` 形态不清洗；
+- debug 日志的业务层 `debugLog` 打印完整请求 body JSON 与 512 字符 SBOM 预览，无业务层脱敏（OIDC SDK 自身日志有关键字段脱敏，不覆盖业务 debugLog）。
+
+以上边界作为已知风险收敛在「9. 遗留项」，不构成本轮交付口径。
 
 ## 3. openlibing-coderepo 设计
 
@@ -173,7 +181,7 @@ addAndPublishProduct（建品+发布一个 service 事务）:
 `POST /project-repo/internal/query-project-names`
 
 - 入参 body：`{"gitUrl": "..."}`（`@NotBlank`）
-- 返回：`DataResult<List<ProjectNameVO>>`，data 为 `{projectId, projectName}` 组合数组（按 projectId 去重、projectName 去重），未命中返回空数组
+- 返回：`DataResult<List<ProjectNameVO>>`，data 为 `{projectId, projectName}` 组合数组（按 projectId 去重，同名不同 projectId 的项目均返回为候选），未命中返回空数组
 - 匹配语义：复用 `RepoCoordinateResolver.resolveByCoordinate(gitUrl)`——URL 全串精确匹配快路径 + 平台坐标（repoType + owner + repo，域名无关、忽略大小写）慢路径兜底
 - 机机接口：无 userId、不做横向越权校验、网关层完成服务鉴权（与同 Controller 其他端点一致）
 
@@ -205,12 +213,14 @@ return repos.stream()
 
 ```
 addProduct(req):
-  lockTable()
+  productName 非空校验（blank → AddProductException）
   if productType 非空:
-    走现有逻辑（不调 coderepo，存量零影响）
+    走现有校验（不调 coderepo，存量零影响）
   else:
     gitUrl 为空      → AddProductException（productType 与 gitUrl 至少提供一个）
-    调 CoderepoClient 反查:
+    调 CoderepoClient 反查（此阶段为纯 Feign 网络调用，位于判重与落库之前，不持有任何
+      数据库锁、尚无数据库写入；经 addAndPublishProduct 调用时处于外层事务内但事务中
+      尚无变更，coderepo 慢响应不阻塞也不放大数据库操作）:
       调用异常/失败   → AddProductException（透出原因）
       返回空数组      → AddProductException（repo not found in coderepo）
       返回候选数组    → 逐候选 dry-run 现有校验（product_type 存在 + attribute 覆盖
@@ -221,38 +231,47 @@ addProduct(req):
   findByName 已存在检查 → addProductInner 落库（均不变）
 ```
 
-关键约束：`validateProductType(req, productType)` 为现有校验链的逐字参数化抽取，dry-run 与主链路共用同一实现，保证候选判定与真实落库判定一致；锁表仍在最前，解析在锁内完成。
+关键约束：`validateProductType(req, productType)` 为现有校验链的逐字参数化抽取，dry-run 与主链路共用同一实现，保证候选判定与真实落库判定一致。gitUrl 反查改造后 `addProduct` 主链路**不再调用 `productTypeRepository.lockTable()`**（`lockTable` 方法定义保留在 dao 层，生产代码零调用，仅测试以 `never()` 断言守护）：反查与候选 dry-run 全部在判重/落库之前完成、全程无锁（经 `addAndPublishProduct` 调用时处于外层事务内但尚无写入），并发防护由 `findByName` 同名判重与 `queryProductByFullAttributes` 属性全等改名续跑承担，避免了持锁区间内的网络 I/O。
 
 ### 4.2 文件改动
 
-| 文件                                                 | 改动                                                                                                                                                                                   |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `model/.../request/sbom/AddProductRequest.java`      | 新增 `gitUrl` 字段 + getter/setter + toString                                                                                                                                          |
-| `clients/.../feign/CoderepoClient.java`              | 新增 FeignClient：`@FeignClient(name = "${feign.coderepo.name:openlibing-coderepo}")`，`queryProjectNames(@RequestBody QueryProjectNamesPo po)` 返回 `DataResult<List<ProjectNameVo>>` |
-| `sbom-web/src/main/resources/application.properties` | 新增 `feign.coderepo.name: openlibing-coderepo`                                                                                                                                        |
-| `sbom-web/.../impl/SbomServiceImpl.java`             | 抽取 `validateProductType(req, productType)`；新增 `resolveProductTypeFromGitUrl(req)` + `queryProjectsViaCoderepo(gitUrl)`；`addProduct` 接入解析分支                                 |
+| 文件                                                 | 改动                                                                                                                                                                                                                                                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model/.../request/sbom/AddProductRequest.java`      | 新增 `gitUrl` 字段 + getter/setter + toString                                                                                                                                                                                                                                   |
+| `clients/.../feign/CoderepoClient.java`              | 新增 FeignClient：`@FeignClient(name = "${feign.coderepo.name:openlibing-coderepo}")`，`queryProjectNames(@RequestBody QueryProjectNamesPo po)` 返回 `DataResult<List<ProjectNameVo>>`                                                                                          |
+| `sbom-web/src/main/resources/application.properties` | 新增 `feign.coderepo.name: openlibing-coderepo`                                                                                                                                                                                                                                 |
+| `sbom-web/.../impl/SbomServiceImpl.java`             | 抽取 `validateProductType(req, productType)`；新增 `queryProductCandidatesFromGitUrl(req)`（gitUrl 空校验 + 反查 + 空候选报错）+ `resolveProductTypeFromCandidates(req, candidates)`（逐候选裁决）+ `queryProjectsViaCoderepo(gitUrl)`（Feign 封装）；`addProduct` 接入解析分支 |
 
 ```java
-private Map<String, ProductConfig> resolveProductTypeFromGitUrl(AddProductRequest req) {
-  if (StringUtils.isBlank(req.getGitUrl())) {
-    throw new AddProductException(
-        "productType and gitUrl are both empty, please specify at least one");
-  }
-  List<String> candidates = queryProjectsViaCoderepo(req.getGitUrl()); // 异常/空已抛错
+// addProduct 主链路：反查在判重/落库之前（无锁、无事务），coderepo 慢响应不阻塞数据库操作
+List<CoderepoClient.ProjectNameVo> gitUrlCandidates = List.of();
+if (StringUtils.isBlank(req.getProductType())) {
+  gitUrlCandidates = queryProductCandidatesFromGitUrl(req);
+}
+...
+productConfigs = resolveProductTypeFromCandidates(req, gitUrlCandidates); // 逐候选 dry-run，第一个合法者回填
+```
+
+```java
+private Map<String, ProductConfig> resolveProductTypeFromCandidates(
+    AddProductRequest req, List<CoderepoClient.ProjectNameVo> candidates) {
   Map<String, String> failures = new LinkedHashMap<>();
-  for (String candidate : candidates) {
+  for (CoderepoClient.ProjectNameVo candidate : candidates) {
+    if (StringUtils.isBlank(candidate.projectName())) {
+      // 脏数据防御：projectName 缺失时 findById(null) 会抛非业务异常并短路整次反查，跳过并记录
+      continue;
+    }
     try {
-      Map<String, ProductConfig> configs = validateProductType(req, candidate);
-      req.setProductType(candidate);
-      logger.info("productType [{}] resolved from gitUrl", candidate);
-      return configs;
+      Map<String, ProductConfig> productConfigs = validateProductType(req, candidate.projectName());
+      req.setProductType(candidate.projectName());
+      return productConfigs;
     } catch (AddProductException e) {
-      failures.put(candidate, e.getMessage());
+      failures.put(candidate.projectName(), e.getMessage());
     }
   }
   throw new AddProductException(
-      "no valid productType resolved from gitUrl [%s], candidates: %s, failures: %s"
-          .formatted(req.getGitUrl(), candidates, failures));
+      "no valid productType resolved from gitUrl [%s], candidates and failures: %s"
+          .formatted(req.getGitUrl(), failures));
 }
 ```
 
@@ -264,6 +283,7 @@ private Map<String, ProductConfig> resolveProductTypeFromGitUrl(AddProductReques
 
 - productType 显式传入路径零额外开销（不调 coderepo）。
 - 缺省路径新增一次 Feign 调用（内部服务，同机房）+ 每候选一次 `findByProductTypeOrderByOrdAsc`（候选通常 1~2 个，索引查询）；dry-run 结果复用，不重复查库。
+- 反查与候选 dry-run 位于判重/落库之前且不持有锁与事务，coderepo 抖动仅影响本次请求，不会放大为建品接口整体不可用。
 - `resolveByCoordinate` 慢路径有 owner/repo LIKE 预过滤，单次查询毫秒级。
 
 ## 7. 安全设计
@@ -277,3 +297,16 @@ private Map<String, ProductConfig> resolveProductTypeFromGitUrl(AddProductReques
 - 插件（Node action 无 UT 框架）：`node --check` 语法校验 + `npm run build` 重建 dist（grep 验证关键点、旧引用清零）+ 流水线自测；本地调试可用 `mock/oidc-mock.js` 预加载 mock（`node --require` 方式，不改动 index.js，不影响真实流水线）。
 - coderepo UT：`RepoServiceImpl.internalQueryProjectNames`（坐标命中多项目去重、projectId 缺 projectName 过滤、空 URL、resolveByCoordinate 返回空）+ Controller 参数校验。
 - sbom UT：`SbomServiceImpl.addProduct`——显式 productType 不触发 client；缺省 + gitUrl 空报错；反查空/异常报错；多候选第一个合法者采用；全不合法聚合报错；已存在容忍不受影响。`CoderepoClient` 契约（路径/入参/返回类型）。
+
+## 9. 遗留项（PR #1270 检视意见核实确认，本轮不修）
+
+以下缺口经代码核实属实，作为已知风险记录，后续迭代整改：
+
+| #   | 缺口                        | 现状（代码为准）                                                                                                                                      | 风险                                                                                                 | 整改方向                                                                                     |
+| --- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 1   | trivy 下载无完整性校验      | `downloadTrivy` 下载后直接解压执行，无 sha256/签名校验；TAG `v1.1.1` 与 release 资产在 gitcode 侧可被替换而不改 URL                                   | 供应链投毒 → 在 runner 执行任意二进制，进程内可申请 OIDC ID Token → STS 凭证 → 平台 API 调用能力外泄 | 插件内置 5 个 zip 的 sha256 白名单，解压前 digest 比对，失败即退出                           |
+| 2   | trivy 临时目录无运行隔离    | 解压目录 `os.tmpdir()/sbom-action-trivy/{tag}` 仅按 TAG 命名；执行前清理 + finally 清理均作用于该共享路径（与 SBOM 输出目录的运行 ID 隔离口径不一致） | 同一自托管 runner 并发多个 sbom job 时互相删除对方正在使用的二进制（ETXTBSY/ENOENT 间歇性失败）      | 目录改为 `{tag}/{运行 ID}` 隔离，finally 仅清理本次子目录                                    |
+| 3   | gitUrl 一级来源不做凭证清洗 | `ATOMGIT_REPOSITORY_URL` 原样上报，debug 开启时打印原值                                                                                               | runner 若注入带凭证克隆地址，token 明文上送平台落库与日志                                            | 三级取值后统一 sanitize（剥离 userinfo/query 凭证）                                          |
+| 4   | token 清洗正则仅覆盖 https  | `/https:\/\/[^@]+@/` 只匹配 `https://user:token@` 形态；`http://`、`?private_token=` query、`ssh://` 形态不清洗                                       | 同上，清洗承诺与实现范围不符                                                                         | 正则改为任意 scheme 的 userinfo 匹配 `^([a-z][a-z0-9+.-]*:\/\/)[^@/]+@`，并补 query 参数清洗 |
+| 5   | debug 业务日志无脱敏        | `debugLog` 打印完整请求 body JSON（含 gitUrl、attribute）与 SBOM 内容前 512 字符；SDK 层脱敏不覆盖业务 debugLog                                       | 签名头之外的请求体与依赖清单（可推断内部技术栈）落入流水线日志（成员可见、长期留存）                 | debug 输出增加字段摘要化与鉴权类字段屏蔽                                                     |
+| 6   | SBOM 输出目录不清理         | `run()` finally 仅清理 trivy 目录；`os.tmpdir()/sbom-action-output/{运行ID}/` 保留                                                                    | 自托管 runner 系统临时目录随 nightly 反复执行持续累积（大工程可达数十 MB/次）                        | finally 补充 SBOM 输出子目录清理，或声明保留策略                                             |
