@@ -8,7 +8,7 @@
 2. Java 侧 `buildMergedMetricsVO` 从新到旧逐条解析历史 JSON 做跨记录补齐，翻每页重复付全价；
 3. 按度量排序时全量拉分支 + 全历史度量记录，内存排序 + 内存分页，无法下推 SQL。
 
-**方案**：将 5 个指标值直接落为 `repo_branch_info` 分支表冗余列（对齐 UT 行覆盖率先例），查询零拼接、排序下推 SQL；写入侧上报入库后同步刷列；存量由定时任务刷入。`code_metrics_record` 与 `metrics_data_json` 原文保留不动（详情页与 codecheck 机机接口继续使用）。
+**方案**：将 5 个指标值直接落为 `repo_branch` 分支表冗余列（对齐 UT 行覆盖率先例），查询零拼接、排序下推 SQL；写入侧上报入库后同步刷列；存量由定时任务刷入。`code_metrics_record` 与 `metrics_data_json` 原文保留不动（详情页与 codecheck 机机接口继续使用）。
 
 **范围**：仅 `openlibing-coderepo` 单仓；前端零改动；UT 三列与代码检查告警数（staticAlertCount，存 codecheck Mongo）本次不改动，记后续优化。
 
