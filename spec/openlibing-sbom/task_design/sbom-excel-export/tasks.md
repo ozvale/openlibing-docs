@@ -12,7 +12,7 @@
 - [x] 5. 新增 `SbomExportStatusEnum`（中文 message 契约 + buildFailedMessage 截断 255 + QUEUE_FULL_REASON）
 - [x] 6. 新增 `SbomExportExecutorConfig`（双 `ThreadPoolTaskExecutor`：Excel 并发 2 / 文档并发 1，AbortPolicy，参数 `@Value` 带默认值）
 - [x] 7. 新增 `SbomObsBucketService` + Impl（懒加载 ObsClient、AK/SK 解密、uploadFile/deleteObject）
-- [x] 8. 新增 `SbomPackageExportVO`（14 列 EasyExcel 注解 VO）
+- [x] 8. 新增 `SbomPackageExportVO`（15 列 EasyExcel 注解 VO）
 - [x] 9. `SbomController` 新增 `POST /exportSbomExcel`、`POST /exportSbomDocument`
 - [x] 10. `SbomExportServiceImpl` 导出编排：submitExportTask（校验/鉴权/建任务/线程池 execute + 拒绝回写）、processExport（type 分发 + CAS 骨架）、processExportQuietly（线程池兜底 catch）、generatePackageExcel（分页游标 + EasyExcel 多 Sheet）、generateDocument（复用 writeSbom）、casUpdateStatus/queryExportRecord/updateExportFailure
 - [x] 11. 配置：beta/gamma/prod 三个环境 properties 的 `spring.config.import` 增加 `optional:nacos:framework`（OBS/security.part1 由 framework data-id 统一下发，对齐 codecheck；线程池参数默认值可运行，可选配置；application.properties 不提交改动）

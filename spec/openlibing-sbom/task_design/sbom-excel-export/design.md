@@ -1,6 +1,6 @@
 # SBOM 导出异步化改造 — 技术设计
 
-> 完整设计文档（评审版）：`D:\work\design\202610\sbom-excel-export.md`，本文件为归档用同步版本。
+> 本文件为归档用同步版本，与 [proposal.md](./proposal.md)、[archive.md](./archive.md) 配套。
 > change-name: `sbom-excel-export`
 
 ## 1. 方案设计
@@ -24,11 +24,11 @@
 
 ### 1.2 职责划分
 
-| 端 | 职责 |
-|---|---|
-| openlibing-web | 「全量导出」弹窗改造（「类型」单选切换 + 统一异步提交 + 标题/气泡文案更新）；轮询/下载/《我的导出》复用现有设施 |
-| openlibing-sbom | 两类导出编排（建任务/线程池调度/CAS 状态）、全量取数、Excel 生成、规范文档生成（复用 writeSbom）、OBS 上传 |
-| openlibing-framework | 任务记录/状态机/签名 URL/过期清理（零改动） |
+| 端                   | 职责                                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| openlibing-web       | 「全量导出」弹窗改造（「类型」单选切换 + 统一异步提交 + 标题/气泡文案更新）；轮询/下载/《我的导出》复用现有设施 |
+| openlibing-sbom      | 两类导出编排（建任务/线程池调度/CAS 状态）、全量取数、Excel 生成、规范文档生成（复用 writeSbom）、OBS 上传      |
+| openlibing-framework | 任务记录/状态机/签名 URL/过期清理（零改动）                                                                     |
 
 ### 1.3 双线程池隔离
 
@@ -59,51 +59,51 @@ SBOM_DOCUMENT 生成是整树内存构建（重），SBOM_PACKAGE 是分批查�
 
 两个独立 `ThreadPoolTaskExecutor` Bean，AbortPolicy 拒绝策略，`waitForTasksToCompleteOnShutdown=true`：
 
-| Bean | 池参数（`@Value` 带默认值，可选配置） | 线程名前缀 |
-|---|---|---|
-| `packageExportExecutor` | core=2 / max=2 / queue=100（`sbom.export.package-pool.*`） | `sbom-pkg-export-` |
+| Bean                     | 池参数（`@Value` 带默认值，可选配置）                       | 线程名前缀         |
+| ------------------------ | ----------------------------------------------------------- | ------------------ |
+| `packageExportExecutor`  | core=2 / max=2 / queue=100（`sbom.export.package-pool.*`）  | `sbom-pkg-export-` |
 | `documentExportExecutor` | core=1 / max=1 / queue=100（`sbom.export.document-pool.*`） | `sbom-doc-export-` |
 
 线程池任务体 `processExportQuietly` 兜底 catch `RuntimeException` 并回写失败，防止异常静默导致状态卡死。
 
 ### 2.4 异常与边界
 
-| 场景 | 处理 |
-|---|---|
-| 制品不存在 / 参数空 / spec 非法 | 提交侧拦截；异步侧 CAS 前校验回写失败 |
-| 线程池队列打满拒绝 | 捕获 `RejectedExecutionException`，回写「导出失败：导出任务排队已满，请稍后重试」+ 抛业务异常 |
-| 任务执行中未预期异常 | `processExportQuietly` 兜底 catch + 回写失败 |
-| 重复触发 | CAS 抢占失败直接 return（幂等） |
-| 生成/上传异常 | catch 精确异常回写原因，finally 删临时文件 |
-| CAS 失败（已被置 FAILED） | 中止，防覆盖失败态 |
-| 实例重启时在途任务 | 停留中间态，3 天后 framework CleanObsFileJob 清理（无持久化重投递，接受该边界） |
+| 场景                            | 处理                                                                                          |
+| ------------------------------- | --------------------------------------------------------------------------------------------- |
+| 制品不存在 / 参数空 / spec 非法 | 提交侧拦截；异步侧 CAS 前校验回写失败                                                         |
+| 线程池队列打满拒绝              | 捕获 `RejectedExecutionException`，回写「导出失败：导出任务排队已满，请稍后重试」+ 抛业务异常 |
+| 任务执行中未预期异常            | `processExportQuietly` 兜底 catch + 回写失败                                                  |
+| 重复触发                        | CAS 抢占失败直接 return（幂等）                                                               |
+| 生成/上传异常                   | catch 精确异常回写原因，finally 删临时文件                                                    |
+| CAS 失败（已被置 FAILED）       | 中止，防覆盖失败态                                                                            |
+| 实例重启时在途任务              | 停留中间态，3 天后 framework CleanObsFileJob 清理（无持久化重投递，接受该边界）               |
 
 ## 3. 类设计
 
 ### openlibing-sbom
 
-| 类 | 操作 | 说明 |
-|---|---|---|
-| `SbomController` | 修改 | 新增 `exportSbomExcel(productName, userId)`、`exportSbomDocument(productName, spec, specVersion, format, userId)`，返回 `ResponseEntity<DataResult<String>>` recordId |
-| `SbomExportService`（接口，interface 模块 `api.sbom` 包） | 新增 | `exportSbomPackageExcel` / `exportSbomDocument` / `processExport(recordId)`（遵循 AuthService/SbomService 惯例） |
-| `SbomExportServiceImpl` | 新增 | 编排实现；私有：`submitExportTask`/`processExportQuietly`/`generatePackageExcel`/`generateDocument`/`writePackageExcel`/`toExportVo`/`casUpdateStatus`/`queryExportRecord`/`updateExportFailure` |
-| `SbomExportExecutorConfig` | 新增 | 双 `ThreadPoolTaskExecutor`（Excel 并发 2 / 文档并发 1），AbortPolicy，参数 `@Value` 带默认值 |
-| `SbomExportType` | 新增 | `SBOM_PACKAGE` / `SBOM_DOCUMENT`，枚举名即 obs_file.type，并决定路由线程池 |
-| `SbomExportStatusEnum` | 新增 | `INITIALIZED/BUILDING/UPLOADING/SUCCESS/FAILED`（中文 message 对齐 framework 与前端契约）+ `buildFailedMessage`（截断 255）+ `QUEUE_FULL_REASON` |
-| `SbomObsBucketService` + Impl | 新增 | `uploadFile(objectKey, tempFile, downloadFileName)` / `deleteObject`；懒加载 ObsClient + `SecurityUtil.decrypt` |
-| `FrameworkClient`（clients 模块） | 修改 | 新增 `createExportTask` / `updateExportTask` / `queryExportTask` |
-| Obs DTO ×4 | 新增 | `ObsFileCreateRequestDTO / ObsFileUpdateRequestDTO / ObsFileQueryRequestDTO / ObsFileResponseDTO`（照抄 codecheck 契约） |
-| `SbomPackageExportVO` | 新增 | EasyExcel `@ExcelProperty` 列 VO |
-| `ProductRepository` | 修改 | 附带改动：4 处查询 LEFT JOIN → INNER JOIN（见第 8 节） |
+| 类                                                        | 操作 | 说明                                                                                                                                                                                             |
+| --------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SbomController`                                          | 修改 | 新增 `exportSbomExcel(productName, userId)`、`exportSbomDocument(productName, spec, specVersion, format, userId)`，返回 `ResponseEntity<DataResult<String>>` recordId                            |
+| `SbomExportService`（接口，interface 模块 `api.sbom` 包） | 新增 | `exportSbomPackageExcel` / `exportSbomDocument` / `processExport(recordId)`（遵循 AuthService/SbomService 惯例）                                                                                 |
+| `SbomExportServiceImpl`                                   | 新增 | 编排实现；私有：`submitExportTask`/`processExportQuietly`/`generatePackageExcel`/`generateDocument`/`writePackageExcel`/`toExportVo`/`casUpdateStatus`/`queryExportRecord`/`updateExportFailure` |
+| `SbomExportExecutorConfig`                                | 新增 | 双 `ThreadPoolTaskExecutor`（Excel 并发 2 / 文档并发 1），AbortPolicy，参数 `@Value` 带默认值                                                                                                    |
+| `SbomExportType`                                          | 新增 | `SBOM_PACKAGE` / `SBOM_DOCUMENT`，枚举名即 obs_file.type，并决定路由线程池                                                                                                                       |
+| `SbomExportStatusEnum`                                    | 新增 | `INITIALIZED/BUILDING/UPLOADING/SUCCESS/FAILED`（中文 message 对齐 framework 与前端契约）+ `buildFailedMessage`（截断 255）+ `QUEUE_FULL_REASON`                                                 |
+| `SbomObsBucketService` + Impl                             | 新增 | `uploadFile(objectKey, tempFile, downloadFileName)` / `deleteObject`；懒加载 ObsClient + `SecurityUtil.decrypt`                                                                                  |
+| `FrameworkClient`（clients 模块）                         | 修改 | 新增 `createExportTask` / `updateExportTask` / `queryExportTask`                                                                                                                                 |
+| Obs DTO ×4                                                | 新增 | `ObsFileCreateRequestDTO / ObsFileUpdateRequestDTO / ObsFileQueryRequestDTO / ObsFileResponseDTO`（照抄 codecheck 契约）                                                                         |
+| `SbomPackageExportVO`                                     | 新增 | EasyExcel `@ExcelProperty` 列 VO                                                                                                                                                                 |
+| `ProductRepository`                                       | 修改 | 附带改动：4 处查询 LEFT JOIN → INNER JOIN（见第 8 节）                                                                                                                                           |
 
 ### openlibing-web
 
-| 文件 | 操作 | 说明 |
-|---|---|---|
-| `CompositionAnalysis/index.vue` | 修改 | 下拉项不变；「全量导出」tooltip 更新 |
-| `component/sbomExportDialog.vue` | 重构 | 标题改「导出软件物料清单（SBOM）」；新增「类型」radio（软件物料清单（SBOM）默认 / 软件成分数据（.xlsx））；SBOM→三级联动展示→`exportSbomDocument`；xlsx→隐藏三级联动→`exportSbomExcel`；统一 `useExportTaskSubmit`；移除 blob 下载逻辑 |
-| `api/sbom/url.ts` + `api.ts` | 修改 | 新增 `EXPORT_SBOM_EXCEL` / `EXPORT_SBOM_DOCUMENT` |
-| `views/MyExports/mapExportRecord.ts` | 修改 | `TYPE_LABEL` 增加 `SBOM_PACKAGE: 'SBOM包清单'`、`SBOM_DOCUMENT: 'SBOM文档'` |
+| 文件                                 | 操作 | 说明                                                                                                                                                                                                                           |
+| ------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CompositionAnalysis/index.vue`      | 修改 | 下拉项不变；「全量导出」tooltip 更新                                                                                                                                                                                           |
+| `component/sbomExportDialog.vue`     | 重构 | 标题改「导出软件物料数据」；新增「类型」radio（软件物料清单（SBOM）默认 / 软件成分数据（.xlsx））；SBOM→三级联动展示→`exportSbomDocument`；xlsx→隐藏三级联动→`exportSbomExcel`；统一 `useExportTaskSubmit`；移除 blob 下载逻辑 |
+| `api/sbom/url.ts` + `api.ts`         | 修改 | 新增 `EXPORT_SBOM_EXCEL` / `EXPORT_SBOM_DOCUMENT`                                                                                                                                                                              |
+| `views/MyExports/mapExportRecord.ts` | 修改 | `TYPE_LABEL` 增加 `SBOM_PACKAGE: 'SBOM包清单'`、`SBOM_DOCUMENT: 'SBOM文档'`                                                                                                                                                    |
 
 ## 4. 数据模型设计
 
@@ -111,7 +111,7 @@ SBOM_DOCUMENT 生成是整树内存构建（重），SBOM_PACKAGE 是分批查�
 - 异步调度为本地线程池，无中间件资源新增。
 - 配置获取：OBS 统一导出配置（`obs.export.bucket` / `obs.access-key-id` / `obs.secret-access-key` / `obs.endpoint` / `security.part1`）由 framework 在 Nacos `framework` data-id 统一管理；sbom 三个环境 properties 的 `spring.config.import` 增加 `optional:nacos:framework`（对齐 codecheck），配置键与 codecheck 完全一致，无需在 sbom data-id 重复维护。线程池参数 `sbom.export.*-pool.*` 代码默认值即可运行，可选配置。
 
-### Excel 列（14 列，对齐前端表格口径）
+### Excel 列（15 列，对齐前端表格口径）
 
 软件包名称 / 版本 / 依赖类型 / 语言类型 / 包管理器类型 / 严重 / 高危 / 中危 / 低危 / 无风险 / 未知 / License（逗号拼接按 licenseId 排序）/ PURL / Supplier / 来源信息（statistics 为空时回退 externalVulRefs 现算，同 `PackageStatisticsVo.fromPackage`）。
 
@@ -124,9 +124,9 @@ SBOM_DOCUMENT 生成是整树内存构建（重），SBOM_PACKAGE 是分批查�
 
 ## 6. API 接口设计
 
-| 接口 | 方法 | 入参（query） | 出参 |
-|---|---|---|---|
-| `/sbom-api/exportSbomExcel` | POST | productName、userId（必填） | `DataResult<String>` recordId |
+| 接口                           | 方法 | 入参（query）                                          | 出参                          |
+| ------------------------------ | ---- | ------------------------------------------------------ | ----------------------------- |
+| `/sbom-api/exportSbomExcel`    | POST | productName、userId（必填）                            | `DataResult<String>` recordId |
 | `/sbom-api/exportSbomDocument` | POST | productName、spec、specVersion、format、userId（必填） | `DataResult<String>` recordId |
 
 - 后续轮询/下载复用 framework `GET /export/detail`、`GET /export/download-url`（3 小时签名 URL）。
@@ -147,12 +147,12 @@ SBOM_DOCUMENT 生成是整树内存构建（重），SBOM_PACKAGE 是分批查�
 
 ### 8.2 涉及查询
 
-| 查询方法 | 用途 | 改动 |
-|---|---|---|
-| `getProductListMultiFilterPage`（主+count） | 制品信息列表 | 改 INNER JOIN |
-| `getProductNamesMultiFilter` | `/internal-api/queryProductNamesByMultiFilter`（SCA 全量制品名） | 同上 |
-| `countProductsByAttributeKey` / `countProductsByName` | 筛选徽标聚合 | 同上（口径一致） |
-| `countProductsByScanStatus` | 解析状态徽标 | 不动（已有 IS NOT NULL） |
+| 查询方法                                              | 用途                                                             | 改动                     |
+| ----------------------------------------------------- | ---------------------------------------------------------------- | ------------------------ |
+| `getProductListMultiFilterPage`（主+count）           | 制品信息列表                                                     | 改 INNER JOIN            |
+| `getProductNamesMultiFilter`                          | `/internal-api/queryProductNamesByMultiFilter`（SCA 全量制品名） | 同上                     |
+| `countProductsByAttributeKey` / `countProductsByName` | 筛选徽标聚合                                                     | 同上（口径一致）         |
+| `countProductsByScanStatus`                           | 解析状态徽标                                                     | 不动（已有 IS NOT NULL） |
 
 ### 8.3 影响与边界
 
