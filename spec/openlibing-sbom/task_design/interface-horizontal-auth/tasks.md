@@ -12,7 +12,7 @@
 
 - [x] AuthService 接口 +checkPermissionByProductName / +checkPermissionByPackageId 声明
 - [x] PackageRepository +findProductTypeByPackageId（native 三表 JOIN 标量）
-- [x] AuthServiceImpl 构造注入两个 Repository，+2 公开方法 +2 私有 resolve
+- [x] AuthServiceImpl 字段注入（@Autowired）两个 Repository，+2 公开方法 +2 私有 resolve
 - [x] SbomController productName 类 20 接口补 userId 入参 + 鉴权样板
 - [x] SbomController packageId 类 6 接口补 userId 入参 + 鉴权样板
 - [x] 文件流接口（exportSbomFile/exportSbom/exportPackageSbom/exportAllPackageSbom）403 直写 response
@@ -30,5 +30,5 @@
 
 - [x] 报告分支/文件清单/验证结果（用户审查通过）
 - [x] commit → 合入 gamma 测试分支部署验证通过
-- [x] 业务 PR 关联 6 个安全 issue：https://gitcode.com/openlibing/openlibing-sbom/pull/169（base: release_20261029_iter2，已合入）
+- [x] 业务 PR 关联 6 个安全 issue：https://gitcode.com/openlibing/openlibing-sbom/merge_requests/169（base: release_20261029_iter2，已合入）
 - [x] spec 归档 docs 仓 PR：https://gitcode.com/openlibing/openlibing-docs/merge_requests/1274

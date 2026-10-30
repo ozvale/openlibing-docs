@@ -39,4 +39,4 @@
 - [x] mvn 编译 + 相关单测全绿 + pre-commit 全部通过
 - [x] PR 关联 6 个 issue（Fixes + 完整 URL）
 
-交付结果（2026-10-30）：全部达成。业务 PR https://gitcode.com/openlibing/openlibing-sbom/pull/169 已合入 release_20261029_iter2（AuthServiceImplTest 15/15、SbomControllerTest 44/44 全绿，pre-commit 全通过）。
+交付结果（2026-10-30）：全部达成。业务 PR https://gitcode.com/openlibing/openlibing-sbom/merge_requests/169 已合入 release_20261029_iter2（AuthServiceImplTest 15/15、SbomControllerTest 44/44 全绿，pre-commit 全通过）。
