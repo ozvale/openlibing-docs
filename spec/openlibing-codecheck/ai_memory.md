@@ -22,6 +22,16 @@
 - `spring-cloud-alibaba`（2025.1.0.0）`NacosConfigProperties` **没有** `secure` 字段，`spring.cloud.nacos.config.secure` 无效；`secure` 仅存在于 `NacosDiscoveryProperties`（服务实例注册为 HTTPS，与配置拉取传输加密无关）。
 - 客户端→Nacos 传输加密需 nacos-client TLS（`tls.enable` 系统属性 + 证书信任）+ 服务端开通 TLS，属部署级变更。
 
+## 安全整改（ICSL）模式
+
+- 日志脱敏统一走 `LogSanitizer`：外部可控对象/响应体用 `sanitizeAndMask()`（先 CRLF 净化再掩码），敏感字段清单集中在 `maskSensitiveFields()`（token/accessToken/password/secret/private_key/AK/SK → `***`），禁止各调用点自写正则。
+- 用户输入作 Mongo `$regex` 模式必须 `Pattern.quote()`；邮件/HTML 拼接外部字段必须 `HtmlUtils.htmlEscape()`；异常详情只记服务端日志，客户端返回固定文案。
+- 凭证传递三原则：不进 argv（环境变量/列表参数）、不进 URL 查询串（`PRIVATE-TOKEN` header）、不落盘（GIT_ASKPASS 临时脚本 + cleanup 清理）。
+- 免认证接口不能只靠业务主键（summaryId/taskId/uuid），必须叠加资源归属/仓库可见性校验：`userId` 为空仅放行公开仓只读，非空调用框架校验仓库读权限（`CheckboardRepoAccessHelper` 模式）；`userId` 必须从 Query 由网关注入，禁止从 body 取。
+- SMTP TLS 由平台统一改造，本服务禁止单独加 STARTTLS（#392）；Nacos TLS / RabbitMQ SSL 同属平台/部署级变更，代码侧不改。
+- SARIF 下载解析不设硬截断（50 URL/50MB 会误伤合法大报告），用 `CountingInputStream` 统计 obsUrlCount/fileSize/runs 并记录日志，限制值待定（#247）。
+- 依赖漏洞只升级本仓直接依赖；common 包引入组件（jackson/httpclient5/nacos-client 等）由 openlibing-common 跟踪，不在本仓强行 override。
+
 ## GitCode CLI / Windows
 
 - Issue `state_event` 仅接受 open/closed/reopen/close，**无法设置自定义状态**（如"修复中"）→ 告知用户在网页手动切换。
