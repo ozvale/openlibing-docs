@@ -17,7 +17,11 @@
 ## 关键验证
 
 - Gitee PRIVATE-TOKEN 兼容性实测：真实令牌对 `GET /api/v5/user` 分别以 access_token 参数 / PRIVATE-TOKEN 头 / Authorization 头调用，三者均 200 且返回账号信息——统一 PRIVATE-TOKEN 方案在 Gitee 可用（响应检视 #196589491）
-- 仓库收口：`grep "access_token=" src/main` 剩余处均为 !634（RepoServiceImpl/BranchServiceImpl/queryPrTitle）/ #332（WebhookRefreshService、WebhookMigrationHelper，随下线删除）/ LabelServiceImpl（本次 c8f423a43 已收口）归属，无遗漏
+- 本 PR 实际收口：CrossRegionServiceImpl(2)、PrServiceImpl(19)、PrCommentServiceImpl(4)、PrLabelServiceImpl(1)、PipelineServiceImpl PR 标签方法(2)，共 28 处调用点（含 LabelServiceImpl，本次 c8f423a43 收口）
+- 剩余命中（非本 PR 范围，需对应归属方跟进）：
+  - !634 已覆盖 5 处：RepoServiceImpl(3)/BranchServiceImpl(1)/PipelineServiceImpl#queryPrTitle(1)
+  - 随 #332 webhook 下线删除：WebhookRefreshService、WebhookMigrationHelper
+- 豁免说明（#361）：`XxlJobHandler.java:806` 的 `invitation_token` 为上游 GitCode 官方接口契约要求，非本平台令牌，红线复扫（7.1.11）时引用该豁免，不重复开单
 - CI 全绿：CheckStyle / SpotBugs / PMD / pre-commit 全部 Passed
 
 ## 用户自测反馈
