@@ -1,6 +1,6 @@
 # Tasks: sbom-prometheus-metrics
 
-特性分支：`feat-sbom-prometheus-metrics`（最终基线 `prod/release_20261029_iter2`，即 PR 目标分支；PR #167）
+特性分支：`feat-sbom-prometheus-metrics`（最终基线与 PR #167 目标分支均为源仓 `release_20261029_iter2`；`prod/` 前缀仅为本地 remote-tracking 名）
 
 ## 编码
 
@@ -31,3 +31,4 @@
 - [x] 16. gamma 库 EXPLAIN ANALYZE 验证索引生效，4 条 SQL 亚毫秒级
 - [x] 17. fork 推送 + issue #165 + PR #167
 - [x] 18. spec 归档 docs PR（Phase 9）
+- [ ] 19. （上线动作）存量/生产环境执行 `CREATE INDEX CONCURRENTLY idx_raw_sbom_update_time ON raw_sbom (update_time);`，并 EXPLAIN ANALYZE 确认查询走索引（gamma 已建并验证，生产待执行）

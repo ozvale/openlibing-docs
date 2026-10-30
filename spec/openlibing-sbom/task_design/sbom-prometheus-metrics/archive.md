@@ -55,6 +55,9 @@ SBOM 服务接入 CCE 云原生监控（Prometheus 自定义指标上报 AOM）�
 ## 遗留与后续
 
 - **AOM 看板/告警改名**：若已按旧名 `sbom_task_duration_p99` 配置，合入后需同步改为 `sbom_task_duration_p99_seconds`（已在 PR 回复提醒）。
+- **存量/生产环境索引 DDL**：gamma 已建 `idx_raw_sbom_update_time` 并验证生效；存量/生产环境上线时需手工执行 `CREATE INDEX CONCURRENTLY idx_raw_sbom_update_time ON raw_sbom (update_time);` 并 EXPLAIN ANALYZE 确认走索引（见 tasks.md 待办 19）。
+- **端点访问面收敛（上线前置条件）**：管理端点默认与业务端口同监听，步骤②部署侧须确认网关/ingress 不路由 `/actuator`、集群内仅云原生监控插件可达；如需端口级隔离由步骤②启用独立 `management.server.port` / NetworkPolicy，代码侧不引入。
+- **update_time NULL 防御（可选加固）**：`update_time` 由 Hibernate `@UpdateTimestamp` 保证写入（gamma 652 行实证 0 条 NULL；DB 列允许 NULL，保证来自 ORM 层），样本排序暂不加 `IS NOT NULL` / `NULLS LAST`；若出现绕过 ORM 的修数路径，再评估 SQL 防御。
 - **committer 评审**：检视修复 commit 推送后 lgtm 标签被自动移除，需 committer 重新 `/lgtm` + `/approve`。
 - **task_status 索引**：数据规模增长或出现抓取超时后再评估（设计文档第 5 节）。
 - **步骤②③④**：部署侧负载配置、集群监控插件安装、AOM 上报，非本仓代码范围。

@@ -26,7 +26,8 @@ openlibing-sbom 服务目前无任何 `/actuator` 管理端点与 Micrometer 集
 4. 新增 `PipelineMetricsService` 实现，提供 4 项指标查询（基于 `raw_sbom` 表 + `sbom_batch_job_execution` 直查）；
 5. 新增 `TaskMetricsMeterBinder` 将 Provider 注册为 Micrometer Gauge；
 6. `raw_sbom` 新增 `update_time` 单列索引（实体注解声明 + 存量环境手工 DDL），消除近 100 条排序查询的全表扫描；
-7. 补充单测。
+7. 补充单测；
+8. 采集点访问面约定：`/actuator/prometheus` 仅供集群内（云原生监控插件）抓取，禁止经外部 ingress/LB 暴露；端口级隔离（独立 management.server.port）与网络策略由步骤②部署侧配置，代码侧不引入。
 
 ### 指标口径（用户确认）
 

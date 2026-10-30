@@ -51,7 +51,8 @@ EXTRACT(EPOCH) 直接返回秒，Java 侧排序取 `index = ceil(0.99 * n) - 1`�
 
 - Provider 查询抛 RuntimeException：Binder 兜底 catch → error 日志（含 scenario）→ 返回 NaN，不阻断其他指标；
 - 空表/无终态：running/queued=0，successRate=NaN；
-- P99 无样本：NaN；终态任务缺失 job_execution_id 或起止时间的记录不入样本（数据完整性过滤，有效样本数可能少于成功率样本数，gamma 实证 100→97）。
+- P99 无样本：NaN；终态任务缺失 job_execution_id 或起止时间的记录不入样本（数据完整性过滤，有效样本数可能少于成功率样本数，gamma 实证 100→97）；
+- `update_time` 恒非空前提：由 Hibernate `@UpdateTimestamp` 在插入/更新时写入，gamma 库 652 行实证 0 条 NULL（DB 列本身允许 NULL，保证来自 ORM 层），`ORDER BY update_time DESC` 无需 NULLS LAST；若后续出现绕过 ORM 的数据修复路径，再评估 SQL 增加 `IS NOT NULL` / `NULLS LAST` 防御（见 archive 遗留）。
 
 ## 3. 类设计
 
@@ -125,7 +126,7 @@ sbom_task_duration_p99_seconds{scenario="sbom",application="openlibing-sbom"} 18
 ## 7. 安全设计
 
 - 仅暴露 `health,prometheus`，不暴露 env/configprops/heapdump 等敏感端点；
-- `/actuator/prometheus` 仅供集群内抓取，部署侧网关路由白名单不含 `/actuator`（步骤②配合项）；
+- 管理端点默认与业务端口同监听（代码侧未配 `management.server.port`），代码侧访问收敛约定：`/actuator/prometheus` 仅允许集群内（云原生监控插件）抓取，禁止经外部 ingress/LB 暴露；**上线前置条件**为步骤②部署侧确认网关路由白名单不含 `/actuator`、集群内仅监控插件可达；如需端口级隔离，由步骤②启用独立 `management.server.port` 或 NetworkPolicy，代码侧不额外引入；
 - 指标 SQL 全部为固定常量 SQL，无外部入参拼接，无注入风险；
 - 不读取/输出任何凭证与敏感信息；
 - micrometer 版本由 spring-boot-starter-parent 4.1.1 BOM 管理，随平台安全基线治理。
