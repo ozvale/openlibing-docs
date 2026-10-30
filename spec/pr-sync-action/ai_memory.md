@@ -8,7 +8,7 @@
 - ⚠️ PowerShell 5.1 的 `-Encoding UTF8` 写出的是 **UTF-8 with BOM**：`git commit -F` /
   `--body-file` 会把 BOM 当作正文首字符（javac 等编译器也会报"非法字符 \ufeff"）。
   无 BOM 写法：`[System.IO.File]::WriteAllText($path, $content, (New-Object
-  System.Text.UTF8Encoding($false)))`，或改用 PowerShell 7 的 `-Encoding utf8NoBOM`。
+System.Text.UTF8Encoding($false)))`，或改用 PowerShell 7 的 `-Encoding utf8NoBOM`。
 - `git commit -m "<中文>"` 经 PowerShell 传参存在乱码风险；含中文的提交信息用
   `git commit -F <无 BOM UTF-8 文件>`。已合入仓库的提交信息经核验均为英文，无乱码。
 - GitCode 远端写操作（issue/PR 评论、body）含中文必须 `--body-file` + 显式 UTF-8 写盘，
