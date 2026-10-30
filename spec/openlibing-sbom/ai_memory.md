@@ -160,6 +160,18 @@ BFS/DFS 遍历关系表时，循环内查询关系数据必须用 projection DTO
 - 多实例部署：进程内锁失效，但若底层操作幂等（如 `upsert` / `INSERT IGNORE`），重复触发只会重复计算不会数据损坏，可接受
 - 需要严格去重时再引入 Redis 或 DB 行锁，避免过度设计
 
+## 监控指标规则
+
+### Prometheus 指标接入契约
+
+新增服务监控指标时复用 `TaskMetricsProvider` 契约（`org.opensourceway.sbom.service.metrics`）+ `TaskMetricsMeterBinder` 统一注册，不要自建 Controller/端点：
+
+- 实现 `TaskMetricsProvider` 接口即可接入，`scenario()` 返回值非 null 且各 Provider 间唯一（Micrometer 同名同标签 Gauge 只复用首实例，重复会导致指标静默丢弃）
+- Gauge 取值走 Micrometer 懒求值，查询异常在 Binder 层兜底返回 NaN，不阻断抓取
+- **NaN = 无数据，0 = 全部失败**：样本可能为空的比率/分位指标空样本必须返回 NaN，不得返回 0
+- 有单位的指标注册时必须声明 `baseUnit`（如 `seconds`，暴露名自动带后缀 `_seconds`），并补 description
+- 指标查询仅用固定常量 SQL / 派生查询，口径常量（终态集合、窗口）单点定义并驱动 SQL，禁止双份硬编码
+
 ## WebClient 远程调用规则
 
 ### URI 模板变量禁止手动 URL 编码
