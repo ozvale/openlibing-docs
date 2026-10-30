@@ -2,7 +2,7 @@
 
 - FE 需求名称：【黄蓝协同】GitCode 与 AtomGit 双域名兼容
 - 业务 Issue：openlibing/openlibing-coderepo#259（https://gitcode.com/openlibing/openlibing-coderepo/issues/259，issue_state=已完成）
-- 业务 PR：!281（https://gitcode.com/openlibing/openlibing-coderepo/merge_requests/281）
+- 业务 PR：openlibing/openlibing-coderepo!281（https://gitcode.com/openlibing/openlibing-coderepo/merge_requests/281）
   - 分支：`fix/dev` → `release_20261029_iter2`
   - 已合入：2026-10-29（approved + lgtm + CI 通过）
 - 同主题关联：openlibing/openlibing-coderepo#234（SIG 仓库同步链路跨域名幂等）
@@ -28,4 +28,4 @@
 
 ## 遗留事项
 
-- 跨域名场景的坐标反查为单次 DB 查询无缓存；若跨域名录入占比显著上升，可在 `RepoCoordinateResolver` 内评估加短 TTL 缓存。
+- 每条 repoUrl 非空的 PR 同步事件都经 `resolveByCoordinate` 执行至少一次 DB 查询（快路径精确匹配），跨域名（快路径未命中）追加一次慢路径坐标兜底查询且无缓存；若跨域名录入占比显著上升，可在 `RepoCoordinateResolver` 内评估加短 TTL 缓存。

@@ -1,6 +1,6 @@
 # Design：GitCode 与 AtomGit 双域名兼容（openlibing-coderepo 黄蓝协同 PrSync 链路）
 
-关联：proposal.md（同目录）、业务 Issue openlibing/openlibing-coderepo#259、业务 PR !281（fix/dev → release_20261029_iter2）。
+关联：proposal.md（同目录）、业务 Issue openlibing/openlibing-coderepo#259、业务 PR openlibing/openlibing-coderepo!281（fix/dev → release_20261029_iter2）。
 
 ## 1. 方案设计
 
@@ -16,7 +16,7 @@
 
 1. `resolveRegisteredRepoUrl(prInfo)`：
    - `prInfo.repoUrl` 为空直接返回；
-   - `repoCoordinateResolver.resolveByCoordinate(repoUrl)` 按坐标（owner/repo/platform）反查已录入仓库；
+   - `repoCoordinateResolver.resolveByCoordinate(repoUrl)`：**「先精确匹配、未命中才坐标兜底」的短路逻辑在该方法内部实现**（`RepoCoordinateResolverImpl`：快路径按 URL 全串精确匹配 `selectByRepoUrl`，命中直接返回；未命中才走慢路径按坐标（owner/repo/platform）兜底反查已录入仓库）；
    - 反查命中（非空列表）且首行 `repo_url` 非空 → `prInfo.repoUrl = 录入域名 repoUrl`；
    - 反查未命中 → 保持 payload 原样（后续 token 反查按原逻辑报 `No valid access token`，不静默改写）。
 2. 归一后的 `prInfo.repoUrl` 随后贯穿：token 反查、`gitee_pr_info` 落库、MQ 消息体、流水线记录——下游全部使用录入域名口径。
@@ -37,7 +37,7 @@
 
 ## 5. 性能设计
 
-- 坐标反查仅在**全串精确匹配未命中**（跨域名）时触发一次 DB 查询；同域名正常路径零额外开销。
+- 每条 repoUrl 非空的 PR 同步事件都会经 `resolveByCoordinate` 执行至少一次 DB 查询：同域名（快路径精确匹配命中）为 1 次精确匹配查询；跨域名（快路径未命中）追加 1 次慢路径坐标兜底查询（LIKE 预过滤 + 内存比对）。
 - 反查结果未做缓存（单事件单次查询，量级可控）；如后续跨域名仓库占比显著，可评估在 `RepoCoordinateResolver` 内加短 TTL 缓存。
 
 ## 6. API 接口设计
