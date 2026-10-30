@@ -8,7 +8,7 @@
 
 - [x] Task 1: 创建插件骨架 — `action.yml`（inputs，runs 固定 node16 + dist/index.js）、`package.json`（@actions/core / huaweicloud-oidc-client / adm-zip，ncc 编译）、`zip.js`（输出 openlibing-sbom-action.zip）、`.gitignore`
 - [x] Task 2: `index.js` 工具层 — getInput 连字符/下划线兼容、setOutput 双通道输出（setOutput 编程取数 + STEP_OUTPUT 输出文件可读概览）
-- [x] Task 3: `index.js` trivy 层 — pickTrivyAsset（platform/arch → 5 二进制映射）、downloadTrivy（curl 参数数组 + AdmZip 解压 + chmod，执行前清理旧 zip/二进制）、buildScanArgs（--offline-scan + 可选 --analyze-all-python / --analyze-dir）
+- [x] Task 3: `index.js` trivy 层 — pickTrivyAsset（platform/arch → 5 二进制映射）、downloadTrivy（curl 参数数组 + AdmZip 解压 + chmod，工作目录 `{tag}/{运行 ID}` 两级隔离，运行 ID 由 `run()` 取值一次传入，finally 仅清理本次子目录，下载前打印 `trivy workdir`；执行前清理旧 zip/二进制）、buildScanArgs（--offline-scan + 可选 --analyze-all-python / --analyze-dir）
 - [x] Task 4: `index.js` 上传层 — OIDC 探测（ACTIONS_ID_TOKEN_REQUEST_URL）、addAndPublishProduct 单接口（body 含 attribute 扁平 JSON → ConfigValueLabel + sbomContent spdx_2.2_json_sbom；非 2xx / success!==true 抛错；产品已存在容忍在服务端 service 层事务内）
 - [x] Task 5: README.md — 简介、工作流程、输入/输出参数表、使用示例（permissions: id-token: write）、注意事项
 - [x] Task 6: 仓初始化补齐（gitcode-openlibing-repo-init Step 2）— `.pre-commit-config.yaml` 补 eslint-sarif 钩子、`eslint.config.mjs` + devDeps、`nightly-schedule-scan.yml`、`.gitignore` 补 tmp_pre-commit-reports/

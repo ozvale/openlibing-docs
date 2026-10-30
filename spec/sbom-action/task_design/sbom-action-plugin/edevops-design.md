@@ -40,7 +40,7 @@ sbom-action 插件（Node action，ncc 打包）
 
 **gitUrl 自动采集**：三级降级——runner 注入 `ATOMGIT_REPOSITORY_URL`（原样上报，不做凭证清洗，依赖 runner 注入无凭证公开地址）→ 工作区根 `git remote get-url origin`（token 清洗，正则仅覆盖 `https://user:token@host` → `https://host` 形态；http/query/ssh 形态不清洗，见 design.md「9. 遗留项」）→ 空字符串（不阻塞）。body 字段名保持 `productType`（后端 DTO 原名），gitUrl 为提前携带的额外字段（Spring Boot 容忍未知字段），前后端上线顺序解耦。
 
-**trivy 工具包**：platform/arch → 5 二进制映射（linux amd/arm、darwin amd/arm、win）；下载 URL `https://gitcode.com/openlibing/trivy-sbom-tools/releases/download/{tag}/{zip}`；解压至 `os.tmpdir()/sbom-action-trivy/{tag}`（执行前清理残留，finally 再清理；当前实现无 sha256 完整性校验、目录无运行 ID 隔离，见 design.md「9. 遗留项」）。
+**trivy 工具包**：platform/arch → 5 二进制映射（linux amd/arm、darwin amd/arm、win）；下载 URL `https://gitcode.com/openlibing/trivy-sbom-tools/releases/download/{tag}/{zip}`；解压至 `os.tmpdir()/sbom-action-trivy/{tag}/{运行 ID}`（执行前清理残留，finally 清理本次运行子目录；目录 TAG + 运行 ID 两级隔离，运行 ID 全程取值一次、与 SBOM 输出目录共用，下载前打印 `trivy workdir`；当前实现无 sha256 完整性校验，见 design.md「9. 遗留项」）。
 
 **上传链路（OIDC，单接口）**：`@openlibing/huaweicloud-oidc-client` 的 `callApig`（OIDC ID Token → STS → APIW V11 签名）；`POST /action-api/sbom/addAndPublishProduct` 建品+发布一个 service 事务完成（body 含 gitUrl/productName/attribute/sbomContent/`sbomContentType=spdx_2.2_json_sbom`/可选 productType；attribute 须覆盖 productType 全部配置项；非 2xx 或 `success!==true` 抛错，202 + `{success, taskId, errorInfo}` 成功输出 taskId；产品已存在由服务端事务内容忍，发布失败回滚新建产品）。网关前缀：prod `https://apig.openlibing.com:443`；test `https://f209a4ca505e492b96d2dc70f5578641.apic.cn-southwest-2.huaweicloudapis.com`。workflow 必须声明 `permissions: id-token: write`，缺失时启动即报错指引。
 

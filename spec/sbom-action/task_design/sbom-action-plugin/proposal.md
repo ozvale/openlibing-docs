@@ -22,7 +22,7 @@
 
 ### sbom-action 插件（sbom-action 仓）
 
-- 按当前系统与架构（linux amd/arm、windows、mac amd/arm）从 `openlibing/trivy-sbom-tools` release 下载对应 trivy 工具包，解压并赋可执行权限；版本内置固定 `v1.1.1`，升级由插件发版承载（当前实现无下载完整性校验，见 design.md「9. 遗留项」）
+- 按当前系统与架构（linux amd/arm、windows、mac amd/arm）从 `openlibing/trivy-sbom-tools` release 下载对应 trivy 工具包，解压并赋可执行权限；版本内置固定 `v1.1.1`，升级由插件发版承载；工作目录按 TAG + 运行 ID 两级隔离（finally 仅清理本次子目录，同机并发任务互不干扰，下载前打印 `trivy workdir`）；当前实现无下载完整性校验，见 design.md「9. 遗留项」
 - `trivy fs --format spdx-json --offline-scan` 扫描 `target-dir`（必填），生成 SPDX 2.2 JSON；输出到临时目录按流水线运行 ID 隔离的子目录，文件名固定 `sbom-result.spdx.json`
 - 可选参数：`analyze-all-python`（解析 requirements.txt 依赖）、`analyze-dirs`（额外 git 目录作为直接依赖）
 - 产品属性按平台 `sbom_new_product_config` 表已录入字段**平铺为独立可选 input**（kebab-case 输入名 + 显式映射表转平台 ConfigValue name，共 15 个，5 个概念重复平台字段不暴露），仅非空项拼入 attribute，全部未填时报错
