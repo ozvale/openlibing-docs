@@ -1,0 +1,29 @@
+# tasks: 代码度量分支表快照列（metrics-latest-snapshot）
+
+- [x] 1. Liquibase：`db.changelog.xml` 新增 changeset `20261022_add_metrics_snapshot_to_repo_branch`，`repo_branch` 增加 5 个指标值列（含对称回滚）
+- [x] 2. Entity：`RepoBranchInfoEntity` / `ProjectBranchRowEntity` 增加 5 字段
+- [x] 3. Mapper：
+  - [x] 3.1 `CodeMetricsRecordMapper`：复用既有 `selectLatestByGitAndBranch`（详情兜底/写入共用）；删除 `selectLatestByGitUrl(s)`
+  - [x] 3.2 `RepoBranchInfoMapper.xml`：`queryByLimit` select 列补齐；新增 `updateMetricsSnapshot`（多项目 repoIds IN 批量覆盖）
+  - [x] 3.3 `RepoBranchInfoMapper.xml` 项目分支查询：select 列 +5；`projectBranchOrderBy` 度量排序注入（5 个真实列名 when）
+  - [x] 3.4 `RepoBranchInfoMapper`：新增 `selectBranchMetricsSyncTargets`（刷数遍历查询）
+- [x] 4. 写入链路：`CodeMetricsServiceImpl.refreshBranchMetricsSnapshot`（public，写入链路专用）+ `resolveMetricSnapshotValue`（变体 fallback）；`persistMetrics` 接入；try-catch 不阻断主链路
+- [x] 5. 删除度量查询链路：`getLatestMetricsByGitUrl(s)`（接口+实现）、`buildBranchMetricsMap` / `buildMergedMetricsVO` / `resolveMetricsFromRecord` / `buildMetricKeyList` / `getPrimaryKey` / `MAX_METRIC_KEYS` / `selectLatestByGitUrls` / `codeMetricsRecordLatestMap`
+- [x] 6. 查询链路：`queryRepoBranchInfo` 新增 `buildBranchMetricsVo(entity)`；`queryProjectBranch` 从行实体构建 + 排序下推（`PROJECT_BRANCH_SORT_FIELD_MAP` 5 字段映射真实列名，`PROJECT_BRANCH_MEMORY_SORT_FIELDS` 仅剩 staticAlertCount）；删除内存排序路径
+- [x] 7. 刷数任务：`XxlJobHandler.branchMetricsSyncHandler`（`@XxlJob("branchMetricsSyncHandler")`，全量/定向仓/定向分支三模式，updated/no-change 汇总日志）；刷数走**存量清洗补齐语义**（见 13）
+- [x] 8. 测试：
+  - [x] 8.1 指标解析（规范键 / 变体键 fallback / 缺键写 null）
+  - [x] 8.2 写入刷列（成功更新 / 未录入仓返回 0）
+  - [x] 8.3 查询构建（单仓 / 跨仓 / 排序下推断言 sortField=code_scale）
+  - [x] 8.4 既有测试适配（删除 8 个旧链路测试，改写 2 个排序测试）
+  - [x] 8.5 全量单测 1355 个通过
+  - [x] 8.6 刷数补齐语义测试（缺键取历史值 / 最新集齐用新值 / 全历史缺键写 NULL / 无记录 0 / 单条 JSON 异常跳过继续向上）
+- [x] 9. 本地验证：编译 + 相关单测全绿（`Tests run: 1355, Failures: 0, Errors: 0`）
+- [x] 10. pre-commit：13 个改动文件全部 Passed（Spotless 自动格式化 7 文件后复验通过）
+- [x] 11. 报告改动文件清单（暂不 commit，等待用户审查）
+- [x] 12. 子下钻回归评估（已结案，无需代码改动）：`metrics[key].pipelineRunId` 恒空不影响子下钻——master 前端 MetricsDetailDialog 已从 file-detail 响应回填 runId 后再调 `getDuplicationBlockDetail` / `getFileContent`，两接口 `pipelineRunId` 保持必传，DTO/服务层与 master 原样一致；曾实现过后端兜底方案（DTO 改可选 + locateMetricsRecord 签名泛化），核实前端 master 行为后已完整回退
+- [x] 13. 刷数语义调整（用户评审决策，写入/刷数职责分离）：写入侧保持"只看最新一条、缺键写空"不变；刷数任务改为**存量清洗补齐语义**——`backfillBranchMetricsHistory` 按 `detection_completed_at` 倒序遍历全部成功记录，5 键先到先得、集齐提前收敛，单条 JSON 异常跳过继续向上，全历史缺键写 NULL，与改造前页面展示语义完全等价；新增 `selectSuccessHistoryByGitAndBranch`（倒序全历史）；写入/刷数共用 `syncBranchSnapshotColumns`（repoId 反查 + 批量 UPDATE）。**上线顺序强约束随之解除**（任何时刻刷数均为当时最新正确值、不丢数据），降级为建议项：尽快全量刷数缩短存量列漏显窗口
+- [x] 14. 测试分支（develop_202610_iter2）合入与 BETA 部署验证：iter2 演进为全 SQL 分页（staticAlertCount 落列统一下推），feat 快照列与 SQL 下推语义融合；BETA 实测写入刷列 / 刷数补齐 / 排序 / 跳转详情正常
+- [x] 15. PR 交付：#278（feat-metrics-latest-snapshot → release_20261029_iter2），Fixes #257，ai-assisted 标签，CI 全绿
+- [x] 16. 检视意见处理（两轮）：第一轮 11 条（6 采纳修复 commit e2a4a9fc，5 条技术论证保持现状并逐条追评）；第二轮 2 条（gitUrl-only 整仓刷数误杀修复 3a95c7a9；stripTrailingZeros 科学计数法修复 dd02246e），均已采纳并逐条回复
+- [x] 17. release_20261029_iter2 分支适配：两次冲突合并（0de08308 等），融合 release 分批 top-N 排序架构与 feat 快照列 SQL 下推（度量排序走 SQL 下推、staticAlertCount 走分批内存堆排），清理双向孤儿方法
