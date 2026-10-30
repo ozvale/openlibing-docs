@@ -22,19 +22,21 @@
 ## 整改范围
 
 1. **需求 1**：移除 `AuthServiceImpl.checkPermissionByProductType` 中 userId 为空直接放行分支（已完成修改，随本分支交付）；
-2. **需求 2**：SbomController 25 个入参含 productName/packageId 的人机接口补齐横向鉴权：
-   - productName 类 19 个（反查 product.attribute.productType）
+2. **需求 2**：SbomController 26 个入参含 productName/packageId 的人机接口补齐横向鉴权：
+   - productName 类 20 个（反查 product.attribute.productType）
    - packageId 类 6 个（package → sbom → product 反查）
-   - 前端在用 13 个 + 前端不用 12 个（决策 b1 全部补鉴权，废弃接口暂不下线）
+   - 前端在用 13 个 + 前端不用 13 个（决策 b1 全部补鉴权，废弃接口暂不下线）
 3. **行为变化**：refreshDependencyType productName 必传化（空刷全量分支删除，批量走调用方循环）。
 
 ## 验收标准
 
-- [ ] userId 为空时不再放行，走远端鉴权并被拒绝（fail-closed）
-- [ ] 25 个接口无权限/反查失败时返回 403（固定文案，不泄露内部细节），warn 日志记录反查失败原因
-- [ ] 机机白名单 10 个接口不受影响（InternalController / ApigController / publishSbomFile / publishSbomFileWithCompress / addProduct）
-- [ ] 前端零改造（gateway 注入 userId，可选 query 参数，缺省空）
-- [ ] 反查失败默认拒绝（gamma 断链约 1.1% package 数据可接受被拒）
-- [ ] 单测覆盖：AuthServiceImpl 新方法各场景 + Controller 403 用例
-- [ ] mvn 编译 + 相关单测全绿 + pre-commit 全部通过
-- [ ] PR 关联 6 个 issue（Fixes + 完整 URL）
+- [x] userId 为空时不再放行，走远端鉴权并被拒绝（fail-closed）
+- [x] 26 个接口无权限/反查失败时返回 403（固定文案，不泄露内部细节），warn 日志记录反查失败原因
+- [x] 机机白名单接口不受影响（InternalController /internal-api 5 接口 + ApigController /apig-api 9 接口 + SbomController 机机通道 publishSbomFile / publishSbomFileWithCompress / sync，鉴权豁免由 APIG 通道凭证与网络隔离保障）
+- [x] 除 refreshDependencyType 外前端零改造（gateway 注入 userId，可选 query 参数，缺省空；refreshDependencyType 前端无引用，行为变化不影响前端）
+- [x] 反查失败默认拒绝（gamma 断链约 1.1% package 数据可接受被拒；2026-10-29 gamma PG 只读实测：约 1.89 万悬空 sbom_id + 5 个 product 缺失，断链排查/补数列为可选后续任务）
+- [x] 单测覆盖：AuthServiceImpl 新方法各场景 + Controller 403 用例（代表性覆盖，26 接口参数化鉴权矩阵列为遗留增强项）
+- [x] mvn 编译 + 相关单测全绿 + pre-commit 全部通过
+- [x] PR 关联 6 个 issue（Fixes + 完整 URL）
+
+交付结果（2026-10-30）：全部达成。业务 PR https://gitcode.com/openlibing/openlibing-sbom/pull/169 已合入 release_20261029_iter2（AuthServiceImplTest 15/15、SbomControllerTest 44/44 全绿，pre-commit 全通过）。

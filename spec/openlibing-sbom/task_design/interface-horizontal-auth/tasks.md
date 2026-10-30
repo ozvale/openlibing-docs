@@ -1,30 +1,34 @@
 # Tasks：SBOM 接口横向鉴权整改
 
-## 需求 1：移除空 userId 放行分支（已在工作区完成）
+> 状态：已全部交付（业务 PR 已合入 release_20261029_iter2）
+
+## 需求 1：移除空 userId 放行分支
 
 - [x] AuthServiceImpl 移除 blank userId 放行分支 + 清理 StringUtils import
 - [x] AuthService 接口 Javadoc 更新（机机迁移说明）
-- [x] AuthServiceImplTest 新增 blankUserId 拒绝用例（6/6 通过）
+- [x] AuthServiceImplTest 新增 blankUserId 拒绝用例
 
-## 需求 2：25 接口补横向鉴权
+## 需求 2：26 接口补横向鉴权
 
-- [ ] AuthService 接口 +checkPermissionByProductName / +checkPermissionByPackageId 声明
-- [ ] PackageRepository +findProductTypeByPackageId（native 三表 JOIN 标量）
-- [ ] AuthServiceImpl 构造注入两个 Repository，+2 公开方法 +2 私有 resolve
-- [ ] SbomController productName 类 19 接口补 userId 入参 + 鉴权样板
-- [ ] SbomController packageId 类 6 接口补 userId 入参 + 鉴权样板
-- [ ] 文件流接口（exportSbomFile/exportSbom/exportPackageSbom/exportAllPackageSbom）403 直写 response
-- [ ] body 入参接口（MultiFilter/VulCountSummary）productName blank 前置 400
-- [ ] refreshDependencyType productName 必传化 + 删空刷全量分支
+- [x] AuthService 接口 +checkPermissionByProductName / +checkPermissionByPackageId 声明
+- [x] PackageRepository +findProductTypeByPackageId（native 三表 JOIN 标量）
+- [x] AuthServiceImpl 构造注入两个 Repository，+2 公开方法 +2 私有 resolve
+- [x] SbomController productName 类 20 接口补 userId 入参 + 鉴权样板
+- [x] SbomController packageId 类 6 接口补 userId 入参 + 鉴权样板
+- [x] 文件流接口（exportSbomFile/exportSbom/exportPackageSbom/exportAllPackageSbom）403 直写 response
+- [x] body 入参接口（MultiFilter/VulCountSummary）productName blank 前置 400
+- [x] refreshDependencyType productName 必传化 + 删空刷全量分支
 
 ## 测试与验证
 
-- [ ] AuthServiceImplTest：新方法成功/反查失败/blank/非法 UUID/远端拒绝用例
-- [ ] SbomControllerTest：受影响既有用例补 mock；新增 403 用例
-- [ ] mvn 编译 + AuthServiceImplTest/SbomControllerTest 全绿
-- [ ] pre-commit 全部改动文件通过
+- [x] AuthServiceImplTest：新方法成功/反查失败/blank/非法 UUID/远端拒绝用例（15/15 通过）
+- [x] SbomControllerTest：受影响既有用例补 mock + 新增代表性 403 用例（44/44 通过；26 接口参数化鉴权矩阵用例列为遗留增强项，见 design.md §7）
+- [x] mvn 编译 + 单测全绿
+- [x] pre-commit 全部改动文件通过
 
-## 交付（用户确认后）
+## 交付
 
-- [ ] 报告分支/文件清单/验证结果，暂不 commit
-- [ ] 用户自测确认后：commit → 合测试分支部署验证 → PR（关联 6 issue）→ spec 归档
+- [x] 报告分支/文件清单/验证结果（用户审查通过）
+- [x] commit → 合入 gamma 测试分支部署验证通过
+- [x] 业务 PR 关联 6 个安全 issue：https://gitcode.com/openlibing/openlibing-sbom/pull/169（base: release_20261029_iter2，已合入）
+- [x] spec 归档 docs 仓 PR：https://gitcode.com/openlibing/openlibing-docs/merge_requests/1274
