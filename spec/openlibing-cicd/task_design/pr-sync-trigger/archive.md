@@ -38,3 +38,54 @@
 ## 归档日期
 
 2026-09-22
+
+---
+
+# 演进归档（2026-10-29）— 幂等加固 / compile 降级 / 检视闭环（PR !641）
+
+## 关联
+
+- 业务 PR: https://gitcode.com/openlibing/openlibing-cicd/pull/641
+- 关联 Issue（均为黄蓝协同侧整改项，issue 定性"本仓不修改、归属协同侧"；实际由 pr-sync 功能在本仓落地了其中服务端可落地部分，**issue 整体闭环仍待协同侧验收**）:
+  - #312（0929-003 维度限流）——已落地触发接口维度限流；端点鉴权部分随 #310/#311 由协同侧统一处理
+  - #314（0929-016 msgId 绑定）——已落地 msgId 落库 + 回调强校验 + extension/mrLink 格式校验
+  - #315（0929-017 幂等保护）——已落地窗口幂等 + 不可复用记录打断重建
+  - #316（0929-018 令牌收紧）——已落地 DTO 移除 accessToken/gitUrl，MQS 不携带调用方令牌
+- 分支: `feat/pr-sync-yellow-blue`（基于 release_20261029_iter2 对 pr-sync 全量提交重建，并同步 develop）
+
+## 本轮交付
+
+- pr-sync 全量提交（10 个）在 release 基线重建并合入 `develop_202610_iter2`
+- commit `55bd4784b`: compile 降级——首次同步（无历史记录或 MR 状态未回写 WAIT_START）发 compile 全量同步，重触发（已回写）发 update
+- commit `a874769c5`: 检视修复——幂等判定先于限流（窗口内重复触发走幂等 graceful 而非硬拒）、MQS 发送失败释放限流占位、`WAIT_START` 落库与判据同源（枚举 getCode）、DTO 死字段 gitUrl 清理
+- commit `95969cc5d`: 幂等命中增加 msgId 前置条件（ozvale 检视）——无 msgId 记录（/compile、Gitee 标签链路写入）不再被误命中返回假 SEND_OK，改走打断重建并降级 compile
+- commit `e4ce211b5`: CI google-java-format 格式化对齐
+
+## 安全整改关联（安全 issue 闭环）
+
+- #315（0929-017）：幂等键——窗口内重复触发返回已有实例（msgId），不重复打断/建记录/发 MQS
+- #314（0929-016）：msgId 落库 + 回调强校验（不一致拒绝），`yellow_region_pipeline` 新增 `msg_id` 列（liquibase）；extension/mrLink 格式校验
+- #312（0929-003）：触发接口维度限流（Redis SET NX EX）+ 限流器故障 fail-open + 发送失败释放占位
+- #316（0929-018）：`PrSyncTriggerReqDTO` 移除 `accessToken`/`gitUrl` 字段，MQS 消息不携带调用方令牌
+
+## 用户自测反馈
+
+- 黄区回调 `extension` 为 JSON primitive 时被蓝区校验拒绝（`Invalid callback payload`）→ 定性为黄区侧报文格式待对齐（合并前置项）
+
+## 最终验证
+
+- `CrossRegionServiceImplTest` 90 用例全绿（触发/msgId 落库/compile 降级/幂等命中/死记录重建/限流拒绝/fail-open/回调 msgId 校验/复合状态计算全场景）
+- AI 检视 8 条全部修复并 resolve；人工评审 liudongfang `/lgtm`；CI 全绿
+
+## 设计偏差与取舍
+
+- 幂等语义保持 0929-017 设计：窗口内重复触发返回已有实例不发新消息（评审提出的新提交漏同步风险已确认为设计取舍，新提交由 MR 更新事件在窗口过期后触发）
+- 幂等命中增加 msgId 前置条件：无 msgId 记录（compile/Gitee 标签链路写入）视为不可复用，降级 compile 全量同步
+
+## 可复用经验
+
+- 见 [ai_memory.md](../../ai_memory.md)：长生命周期分支并行合并静默回退、CI/本地 spotless 行为分歧处置
+
+## 归档日期
+
+2026-10-29
