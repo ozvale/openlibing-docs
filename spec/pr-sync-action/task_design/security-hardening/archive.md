@@ -17,7 +17,7 @@
   - https://gitcode.com/openlibing/pr-sync-action/issues/16
   - https://gitcode.com/openlibing/pr-sync-action/issues/17
   - https://gitcode.com/openlibing/pr-sync-action/issues/18
-  - https://gitcode.com/openlibing/pr-sync-action/issues/20（构建产物 chmod 收敛：scripts/fix-bundle-chmod.js）
+  - issue #20（原链接已失效：该 issue 已被删除；构建产物 chmod 0666 收敛的交付证据为 commit `06314f1` 与 `scripts/fix-bundle-chmod.js`）
   - https://gitcode.com/openlibing/pr-sync-action/issues/21
   - https://gitcode.com/openlibing/pr-sync-action/issues/22
 - 未纳入本批次：#19（api-scan workflow，由独立 PR 交付）
