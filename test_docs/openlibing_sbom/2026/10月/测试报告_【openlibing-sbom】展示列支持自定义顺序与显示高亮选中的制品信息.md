@@ -2,7 +2,7 @@
 
 ## 1. 基本信息
 
-- **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-sbom/issues/356
+- **对应task(issueID)链接**: https://gitcode.com/openlibing/openlibing-web/issues/356
 - **需求名称**: 【openlibing-sbom】展示列支持自定义顺序与显示高亮选中的制品信息
 - **开发责任人**: 宁欣龙
 - **测试责任人**: 赵威
