@@ -141,14 +141,15 @@
 
 **9.env测试生产网关切换与数据落点验证**:
 
-- 前置条件: prod 与 test 两套网关均可访问（prod `https://apig.openlibing.com:443`，test `https://f209a4ca505e492b96d2dc70f5578641.apic.cn-southwest-2.huaweicloudapis.com`）；两环境 openlibing-sbom 数据均可查询；执行前清理两环境同名测试产品残留
+- 前置条件: prod 与 test 两套网关均可访问（prod `https://apig.openlibing.com:443`，test `https://f209a4ca505e492b96d2dc70f5578641.apic.cn-southwest-2.huaweicloudapis.com`）；两环境 openlibing-sbom 数据均可查询；prod 仅做只读验证（不调用 addProduct/publishSbomFile 写接口），端到端造数仅在 test 环境执行并留存审批记录
 - 测试步骤:
-  1. 不配置 env（默认 prod）运行 → 断言请求发往 apig.openlibing.com，产品与任务落生产环境
-  2. env=test 运行 → 断言请求发往测试网关，产品与任务落测试环境，生产环境无本次新增数据
+  1. 不配置 env（默认 prod）运行，通过日志中的请求地址确认网关落点 → 断言请求发往 apig.openlibing.com；保持只读，不调用 addProduct/publishSbomFile 写接口，断言生产环境无本次新增产品与任务
+  2. env=test 运行 → 断言请求发往测试网关，产品与任务落测试环境；端到端造数仅在 test 环境执行，执行前登记测试产品名并留存审批记录
   3. 断言两环境 taskId、产品互相隔离，查询接口不串数据
   4. 传入非法 env 值（如 uat）→ 断言明确报错或按默认 prod 处理（记录实现结论）
   5. 检查日志中的请求地址 → 断言地址与 env 对应，且无凭证明文
-- 预期结果: env 切换准确，数据落点与网关一致且互相隔离；非法 env 行为明确，不静默发往错误环境
+  6. 执行后清理 test 环境本次测试数据，复核生产环境无本次新增数据
+- 预期结果: env 切换准确，数据落点与网关一致且互相隔离；生产环境仅做只读验证、无新增数据；非法 env 行为明确，不静默发往错误环境
 
 **10.扫描与上报异常链路容错验证**:
 
@@ -190,10 +191,10 @@
 
 - 前置条件: 测试仓库 remote 可临时修改并在测试后恢复；平台可查询产品信息中的 gitUrl 字段；debug=true 便于观察请求内容（或具备网关抓包条件）
 - 测试步骤:
-  1. 将 remote 临时设置为含 token 的 HTTPS 地址（`https://user:token@gitcode.com/org/repo.git`）→ 运行插件
+  1. 将 remote 临时设置为含占位令牌的 HTTPS 地址（`https://dummy-user:dummy-token@gitcode.com/org/repo.git`，禁止使用真实令牌）→ 运行插件
   2. 获取 addProduct 上报的 gitUrl（平台产品信息 / 请求日志）→ 断言已去除 userinfo/token，仅保留协议+域名+路径
   3. 检索 job 日志、ATOMGIT_OUTPUT、ATOMGIT_STEP_SUMMARY → 断言无 token 明文
   4. 恢复为常规 HTTPS 地址（无 token）运行 → 断言 gitUrl 不被误改，归属反查正常
   5. 使用 SSH 地址（`git@gitcode.com:org/repo.git`）运行 → 断言按实现规范化后上报（记录转换规则），且可正常反查
-  6. 测试结束恢复 remote 配置，确认仓库状态无残留
+  6. 测试结束恢复 remote 配置，检索确认 `.git/config`、shell 历史与 CI 日志均无 token 残留
 - 预期结果: 含凭证地址被清洗后上报，任何输出通道无 token 明文；正常 HTTPS / SSH 地址不被破坏；环境恢复无残留

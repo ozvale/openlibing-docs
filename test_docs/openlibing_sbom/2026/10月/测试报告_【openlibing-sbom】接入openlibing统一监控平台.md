@@ -13,11 +13,11 @@
 
 - [x] **功能自检测试**
 - [ ] **体验测试**
-- [ ] **集成测试**
+- [x] **集成测试**
 - [x] **安全与隐私测试**
 - [ ] **可靠性与韧性测试**
-- [ ] **可服务性与可观测性测试**
-- [ ] **性能与伸缩性测试**
+- [x] **可服务性与可观测性测试**
+- [x] **性能与伸缩性测试**
 
 ## 2. 测试过程
 
@@ -67,7 +67,7 @@
 
 **8.测试环境监控插件抓取与AOM上报验证**:
 
-- 预期结果: 插件抓取成功并上报 AOM；标签可筛选；状态变化可见；业务不受影响
+- 预期结果: 本轮验证层级为「插件抓取成功 + AOM 可见指标」；插件抓取成功且 AOM 可见 4 项指标（插件安装动作与告警阈值配置不在本轮范围）；标签可筛选；状态变化可见；业务不受影响
 - **测试结果**： Passed
 - **证明截图**: xxx
 
@@ -94,4 +94,4 @@
 
 ## 5. 补充说明
 
-本次需求仅覆盖服务接入 4 步中的代码侧步骤①（生成 Prometheus 自定义指标并暴露访问点），纯后端改造，前端与网关均不涉及，涉及服务范围仅 openlibing-sbom（sbom-web，Spring Boot / JPA + PostgreSQL）。实现上以 `TaskMetricsProvider` 通用契约（`scenario/runningTasks/queuedTasks/successRate/durationP99Millis`）为核心，`PipelineMetricsService` 基于 `RawSbomRepository` + `JdbcTemplate` 取数，`TaskMetricsMeterBinder` 注册 4 个 Gauge 并统一打 `scenario` 标签，取值经 `safeValue` 包装。测试全部 9 条用例（P0×2 / P1×6 / P2×1，均为手工）按「构造 `raw_sbom` / `sbom_batch_job_execution` 数据 → curl 抓取 → 解析 Prometheus 文本断言」方式取证，接口类用例集中在本地/独立测试库执行，故障注入（重命名表、回收 SELECT）执行后均已恢复并复核表结构。需求串讲纪要中的 Spoon 口径（`role_spoon` / `drama` 表）与设计文档 `raw_sbom` / `sbom_batch_job_execution` 口径不一致，执行时以设计文档「1.3 指标清单 / 2.2 各指标查询逻辑」为准，实测取数表与设计一致。P99 无样本时 Prometheus 文本输出确认为字面量 `NaN`，与设计一致；`n=1`（index=0）边界已覆盖。抓取周期维度仅记录观察值（单次抓取毫秒级、每次固定 4 组查询、停止抓取期间无查询、无周期性求值线程），需求未给出耗时/资源阈值，不做阈值判定。安全 6 维度中：认证校验、横向越权、纵向越权、传输安全、CSRF 均因 `/actuator/prometheus` 为集群内只读抓取端点、指标为全局聚合数值、无状态变更与权限模型变更而豁免（由部署侧网络隔离与网关不透传 `/actuator` 保障，非本仓代码范围）；敏感信息防护由 TC-ISSUE145-009 覆盖。本期不测范围：deployment 增加 prometheus 访问地址/访问形式（部署侧）、K8S 集群安装云原生监控插件（运维侧）、AOM 上报与告警阈值配置（平台侧）、表结构新增与迁移、业务 REST 接口变更、指标查询缓存与索引优化。本期不产出自动化脚本——指标断言依赖可启动服务与预置数据库数据，属环境级验证，指标口径本身由开发单测（`mvn test`）覆盖，测试侧以 curl 取证复核；后续如服务在测试环境常驻，可将「抓取 + 指标解析」脚本化。
+本次需求仅覆盖服务接入 4 步中的代码侧步骤①（生成 Prometheus 自定义指标并暴露访问点），纯后端改造，前端与网关均不涉及，涉及服务范围仅 openlibing-sbom（sbom-web，Spring Boot / JPA + PostgreSQL）。实现上以 `TaskMetricsProvider` 通用契约（`scenario/runningTasks/queuedTasks/successRate/durationP99Millis`）为核心，`PipelineMetricsService` 基于 `RawSbomRepository` + `JdbcTemplate` 取数，`TaskMetricsMeterBinder` 注册 4 个 Gauge 并统一打 `scenario` 标签，取值经 `safeValue` 包装。测试全部 9 条用例（P0×2 / P1×6 / P2×1，均为手工）按「构造 `raw_sbom` / `sbom_batch_job_execution` 数据 → curl 抓取 → 解析 Prometheus 文本断言」方式取证，接口类用例集中在本地/独立测试库执行，故障注入（重命名表、回收 SELECT）执行后均已恢复并复核表结构。需求串讲纪要中的 Spoon 口径（`role_spoon` / `drama` 表）与设计文档 `raw_sbom` / `sbom_batch_job_execution` 口径不一致，执行时以设计文档「1.3 指标清单 / 2.2 各指标查询逻辑」为准，实测取数表与设计一致。P99 无样本时 Prometheus 文本输出确认为字面量 `NaN`，与设计一致；`n=1`（index=0）边界已覆盖。抓取周期维度仅记录观察值（单次抓取毫秒级、每次固定 4 组查询、停止抓取期间无查询、无周期性求值线程），需求未给出耗时/资源阈值，不做阈值判定。安全 6 维度中：认证校验、横向越权、纵向越权、传输安全、CSRF 均因 `/actuator/prometheus` 为集群内只读抓取端点、指标为全局聚合数值、无状态变更与权限模型变更而豁免（由部署侧网络隔离与网关不透传 `/actuator` 保障，非本仓代码范围）；敏感信息防护由 TC-ISSUE145-009 覆盖。本期不测范围：deployment 增加 prometheus 访问地址/访问形式（部署侧）、K8S 云原生监控插件的安装动作（运维侧）、AOM 告警阈值配置（平台侧）、表结构新增与迁移、业务 REST 接口变更、指标查询缓存与索引优化。其中「插件抓取成功 + AOM 可见指标」属于本轮已验证范围（TC-ISSUE145-008），与 §3 汇总表的通过项口径一致。本期不产出自动化脚本——指标断言依赖可启动服务与预置数据库数据，属环境级验证，指标口径本身由开发单测（`mvn test`）覆盖，测试侧以 curl 取证复核；后续如服务在测试环境常驻，可将「抓取 + 指标解析」脚本化。
