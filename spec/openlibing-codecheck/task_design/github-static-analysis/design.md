@@ -10,11 +10,11 @@ openLiBing 的代码检查链路当前主要面向 GitCode Actions：各静态�
 
 1. 在 GitHub 平台 `openlibing-test` 组织下准备可运行的 clang-tidy 流水线，覆盖 workflow 全量扫描与 pre-commit 集成两种入口；
 2. 扫描结果能够生成合法 SARIF，上传 OBS 并回调 openLiBing beta 环境；
-3. 「代码检查」页面筛选 GitHub 平台后能看到问题列表与详情，仓库、分支、规则、文件行号、检测工具、原始扫描链接、流水线字段均正常；
+3. 「代码检查」页面筛选 GitHub 平台后能看到问题列表与详情；列表页支持 GitHub 平台与 GitHub Action 来源展示，详情页仅需适配两处 GitHub Action 标签（右侧「数据来源」、扫描记录来源），其余字段与交互沿用现有页面；
 4. 满足以上条件即可转入测试流程；
 5. 同步更新 GitCode `docs` 仓的用户文档（在 full-analysis 方案内补充 GitHub 接入章节）。
 
-前端目标态原型见 [prototype.html](./prototype.html)，覆盖平台筛选新增 GitHub、数据来源新增 GitHub Action、列表与详情字段、原始扫描链接跳转 GitHub Actions 运行页。
+前端目标态原型见 [prototype.html](./prototype.html)，覆盖列表页 GitHub 平台筛选与来源展示，以及详情页右侧「数据来源」和「扫描记录」两处 GitHub Action 标签。
 
 ## 2. 设计关键点
 
@@ -38,7 +38,7 @@ clang-tidy 输出文本诊断，经 `clang-tidy-sarif` 转换为 SARIF v2.1.0；
 | 工作流     | `.github/workflows/`，使用 `actions/checkout`、`actions/setup-python`                                         |
 | 触发方式   | 手动、push、PR、5 位 POSIX 定时                                                                               |
 | 上下文     | 插件内识别 `GITHUB_ACTIONS`，读取 `GITHUB_*` 变量                                                             |
-| 上传认证   | AK/SK 静态凭证（`OBS_AK` / `OBS_SK`），华为云无需信任 GitHub OIDC issuer                                      |
+| 上传认证   | OIDC 免密换证，华为云 IAM 使用 `GitHubActions` 身份提供商                                                     |
 | 流水线字段 | `pipelineId=GITHUB_JOB`、`pipelineRunId=GITHUB_RUN_ID`、`pipelineName=GITHUB_WORKFLOW`、`commitId=GITHUB_SHA` |
 | 外部依赖   | `clang-tidy-sarif` 二进制随仓预置，CI 运行时不访问外网                                                        |
 
@@ -114,23 +114,24 @@ flowchart TD
 
 ### 4.3 验证结论
 
-| 验证项           | 结果                                                          |
-| ---------------- | ------------------------------------------------------------- |
-| GitHub workflow  | 手动 / push / PR / 定时触发均可用                             |
-| clang-tidy 扫描  | 12 个源文件全量扫描通过                                       |
-| SARIF 生成       | 单次扫描生成 140 条结果                                       |
-| OBS 上传         | 成功，对象位于 `clang-tidy-results/` 前缀下                   |
-| openLiBing 回调  | 返回 `{"code":200,"msg":"success"}`                           |
-| beta 解析入库    | 测试库按指纹归一后入库 128 条问题                             |
-| 前端展示         | 筛选 GitHub 平台后列表与详情正常                              |
-| 来源与流水线字段 | 来源当前为 `GITCODE_ACTION`；流水线字段已按 GitHub 上下文映射 |
+| 验证项           | 结果                                                               |
+| ---------------- | ------------------------------------------------------------------ |
+| GitHub workflow  | 手动 / push / PR / 定时触发均可用                                  |
+| clang-tidy 扫描  | 12 个源文件全量扫描通过                                            |
+| SARIF 生成       | 单次扫描生成 140 条结果                                            |
+| OBS 上传         | 成功，对象位于 `clang-tidy-results/` 前缀下                        |
+| openLiBing 回调  | 返回 `{"code":200,"msg":"success"}`                                |
+| beta 解析入库    | 测试库按指纹归一后入库 128 条问题                                  |
+| 前端展示         | 筛选 GitHub 平台后列表与详情正常                                   |
+| 来源与流水线字段 | 来源当前为 `GITCODE_ACTION`；流水线字段已按 GitHub 上下文映射      |
+| OIDC 验证        | `openlibing-test` 仓库换证被 IAM 拒绝（STS5.1001），待信任策略放行 |
 
 ### 4.4 目标态迁移项
 
-1. 在 `openlibing-test` 组织下创建 `clang-tidy-full-scan-demo`、`pre-commit-action`、`upload-sarif-action` 三个仓库；
-2. 为测试仓配置 `OBS_AK` / `OBS_SK` Secrets，`env_type` 指向 `beta`；
-3. 跑通两条 workflow，确认回调成功、beta 可解析入库；
-4. 前端筛选 GitHub 平台，逐项核对列表、详情、原始扫描链接与流水线字段。
+1. 在 `openlibing-test` 组织下创建 `clang-tidy-full-scan-demo`、`pre-commit-action`、`upload-sarif-action` 三个仓库（已完成）；
+2. 在华为云 IAM 侧为 `gitcode-actions` 委托补充 GitHub OIDC 信任策略（`iss` / `aud` / `sub`），放行 `openlibing-test` 目标仓库换证；
+3. 跑通两条 workflow（`env_type` 指向 `beta`），确认回调成功、beta 可解析入库；
+4. 前端筛选 GitHub 平台，核对列表页平台/来源展示，以及详情页两处 GitHub Action 标签（右侧「数据来源」、扫描记录）；其余字段与交互沿用现有页面。
 
 ## 5. 验收标准
 
@@ -138,7 +139,7 @@ flowchart TD
 - 扫描结果能生成合法 SARIF 并成功上传 OBS；
 - 回调 openLiBing beta 成功，结果可解析入库；
 - 前端选择 GitHub 平台后能看到问题列表与详情；
-- 平台图标、来源标记、原始扫描链接、流水线字段、文件行号等功能正常；
+- 列表页平台筛选与来源展示正常；详情页右侧「数据来源」与扫描记录显示 GitHub Action 标签，其余字段与交互正常；
 - pre-commit 集成可在本地或流水线复用同一份规则配置；
 - `docs` 仓已补充 GitHub 接入的用户文档。
 

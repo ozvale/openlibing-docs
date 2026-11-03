@@ -248,6 +248,28 @@
         color: var(--border-strong);
       }
 
+      .goal-card {
+        padding: 14px 16px;
+        margin-bottom: 16px;
+        background: linear-gradient(90deg, var(--accent-soft), #fff 70%);
+        border: 1px solid #54aeff66;
+        border-left: 4px solid var(--accent);
+        border-radius: var(--radius);
+      }
+
+      .goal-title {
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--accent-strong);
+      }
+
+      .goal-card p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
       .page-head {
         display: flex;
         gap: 16px;
@@ -684,6 +706,7 @@
         padding: 0 7px;
         font-size: 11px;
         color: var(--accent-strong);
+        text-decoration: none;
         background: var(--accent-soft);
         border: 1px solid #54aeff66;
         border-radius: 999px;
@@ -808,7 +831,7 @@
         z-index: 100;
         display: flex;
         flex-direction: column;
-        width: min(560px, 92vw);
+        width: min(1080px, 94vw);
         background: var(--panel);
         box-shadow: var(--shadow);
         transform: translateX(100%);
@@ -984,6 +1007,241 @@
         font-size: 12px;
       }
 
+      .detail-title-line {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .detail-submeta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .state-pill {
+        padding: 1px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--green);
+        background: var(--green-soft);
+        border: 1px solid #4ac26b66;
+        border-radius: 999px;
+      }
+
+      .detail-drawer .drawer-head {
+        padding: 18px 24px;
+      }
+
+      .detail-drawer .drawer-body {
+        padding: 20px 24px 28px;
+      }
+
+      .detail-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 248px;
+        gap: 24px;
+        align-items: start;
+      }
+
+      .detail-thread {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+      }
+
+      .detail-card {
+        overflow: hidden;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+
+      .detail-code-head {
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        background: #f6f8fa;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .detail-code-path {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        color: var(--accent);
+      }
+
+      .detail-code-hint {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .detail-code-card .code-block {
+        border: 0;
+        border-radius: 0;
+      }
+
+      .detail-warning {
+        padding: 12px 14px;
+        background: #fff8f0;
+        border-top: 1px solid var(--border);
+      }
+
+      .detail-warning-head {
+        display: inline-block;
+        margin-bottom: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--red);
+      }
+
+      .detail-warning strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .detail-warning em {
+        display: block;
+        margin-top: 4px;
+        font-size: 12px;
+        font-style: normal;
+        color: var(--muted);
+      }
+
+      .detail-warning small {
+        color: var(--muted-soft);
+      }
+
+      .detail-rule-meta {
+        display: flex;
+        gap: 40px;
+        padding: 14px 16px;
+      }
+
+      .detail-rule-meta div {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .detail-rule-meta span {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .detail-rule-meta strong {
+        font-size: 12px;
+      }
+
+      .detail-section-title {
+        padding: 12px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .detail-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px;
+      }
+
+      .detail-timeline-item {
+        display: flex;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .timeline-dot {
+        flex-shrink: 0;
+        width: 9px;
+        height: 9px;
+        margin-top: 5px;
+        background: #fff;
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+      }
+
+      .detail-timeline-item .timeline-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .detail-timeline-item p {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .timeline-nested {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 10px;
+        margin-top: 8px;
+        background: #f6f8fa;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+
+      .timeline-commit {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+        color: var(--accent);
+      }
+
+      .category-tag {
+        padding: 1px 6px;
+        font-size: 11px;
+        color: var(--muted);
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+      }
+
+      .detail-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding: 16px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+
+      .detail-sidebar h3 {
+        margin: 0 0 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+      }
+
+      .detail-repo {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        font-size: 12px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+
+      .detail-empty {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
       .note-panel {
         position: fixed;
         right: 20px;
@@ -1117,6 +1375,10 @@
           padding-right: 24px;
         }
 
+        .detail-layout {
+          grid-template-columns: 1fr;
+        }
+
         .note-panel {
           display: none;
         }
@@ -1211,6 +1473,18 @@
         <main class="main">
           <div class="main-inner">
             <div class="breadcrumb">开发管理<span>/</span>代码检查</div>
+
+            <section class="goal-card">
+              <div class="goal-title">需求整体目标</div>
+              <p>
+                在 GitHub 平台 <strong>openlibing-test</strong>
+                组织下跑通静态代码分析流水线（本 US 为 clang-tidy），扫描结果回传
+                openLiBing beta；在「代码检查」页面筛选 GitHub
+                平台后可正常查看问题列表与详情，相关字段与功能正常即可转入测试流程。转测前，需求设计与原型等文档改动需合入
+                <strong>openlibing-docs</strong> 仓的
+                <strong>github-static-analysis</strong> 分支。
+              </p>
+            </section>
 
             <div class="page-head">
               <div>
@@ -1424,13 +1698,20 @@
 
     <div class="drawer-mask" id="drawerMask"></div>
 
-    <aside class="drawer" id="drawer" aria-hidden="true">
+    <aside class="drawer detail-drawer" id="drawer" aria-hidden="true">
       <div class="drawer-head">
         <div class="drawer-title">
-          <span class="sev-badge critical" id="drawerSeverity">严重</span>
+          <div class="detail-title-line">
+            <span class="sev-badge critical" id="drawerSeverity">严重</span>
+            <span class="rule-id" id="drawerRuleId"
+              >readability-identifier-length</span
+            >
+          </div>
           <h2 id="drawerTitle">参数名称过短，影响可读性</h2>
-          <div class="rule-id" id="drawerRuleId">
-            readability-identifier-length
+          <div class="detail-submeta">
+            <span class="state-pill">待处理</span>
+            <span class="branch-pill" id="drawerBranch">main</span>
+            <span id="drawerUpdated">更新于 2026-11-03 15:30</span>
           </div>
         </div>
         <button
@@ -1454,80 +1735,105 @@
       </div>
 
       <div class="drawer-body">
-        <div class="meta-grid">
-          <div class="meta-cell">
-            <label>仓库</label>
-            <div id="drawerRepo">openlibing-test/clang-tidy-full-scan-demo</div>
-          </div>
-          <div class="meta-cell">
-            <label>分支</label>
-            <div id="drawerBranch">main</div>
-          </div>
-          <div class="meta-cell">
-            <label>数据来源</label>
-            <div id="drawerSource">GitHub Action</div>
-          </div>
-          <div class="meta-cell">
-            <label>检测工具</label>
-            <div>clang-tidy 0.8.0</div>
-          </div>
-          <div class="meta-cell">
-            <label>流水线</label>
-            <div id="drawerPipeline">clang-tidy-scan · #1001</div>
-          </div>
-          <div class="meta-cell">
-            <label>提交</label>
-            <div id="drawerCommit">c334712</div>
-          </div>
-        </div>
+        <div class="detail-layout">
+          <main class="detail-thread">
+            <section class="detail-card detail-code-card">
+              <div class="detail-code-head">
+                <span class="detail-code-path" id="drawerFile"
+                  >src/utils.c:6</span
+                >
+                <span class="detail-code-hint">问题行已高亮</span>
+              </div>
+              <div class="code-block" id="drawerCode"></div>
+              <div class="detail-warning">
+                <span class="detail-warning-head" id="drawerWarningLevel"
+                  >严重</span
+                >
+                <strong id="drawerRuleName">参数名称过短，影响可读性</strong>
+                <em id="drawerMessage"
+                  >clang-tidy 在该位置检出规则告警，请结合代码上下文修复。</em
+                >
+                <small>clang-tidy</small>
+              </div>
+            </section>
 
-        <a
-          class="run-link"
-          id="drawerRunLink"
-          href="#"
-          target="_blank"
-          rel="noreferrer"
-          data-note="3"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              d="M3.75 2h3.5a.75.75 0 0 1 0 1.5h-3.5a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-3.5a.75.75 0 0 1 1.5 0v3.5A1.75 1.75 0 0 1 12.25 14h-8.5A1.75 1.75 0 0 1 2 12.25v-8.5C2 2.784 2.784 2 3.75 2Zm6.5-1.5h4.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0V3.56L8.28 9.28a.751.751 0 0 1-1.06-1.06l5.72-5.72h-2.69a.75.75 0 0 1 0-1.5Z"
-            ></path>
-          </svg>
-          查看原始扫描（GitHub Actions）
-        </a>
+            <section class="detail-card detail-rule-meta">
+              <div>
+                <span>检测工具</span>
+                <strong>clang-tidy</strong>
+              </div>
+              <div>
+                <span>规则 ID</span>
+                <strong id="drawerRuleIdMeta"
+                  >readability-identifier-length</strong
+                >
+              </div>
+            </section>
 
-        <div class="section-title">问题位置</div>
-        <div class="meta-grid" style="margin-bottom: 0">
-          <div class="meta-cell">
-            <label>文件</label>
-            <div id="drawerFile">src/buffer.c</div>
-          </div>
-          <div class="meta-cell">
-            <label>行号</label>
-            <div id="drawerLine">12</div>
-          </div>
-        </div>
+            <section class="detail-card">
+              <div class="detail-section-title">扫描记录</div>
+              <div class="detail-timeline">
+                <div class="detail-timeline-item">
+                  <span class="timeline-dot"></span>
+                  <div class="timeline-content">
+                    <p>
+                      <span class="timeline-time">2026-11-03 15:30</span>
+                      系统 首次扫描发现该问题
+                    </p>
+                    <div class="timeline-nested">
+                      <span class="timeline-commit" id="drawerCommit"
+                        >c334712</span
+                      >
+                      <span class="category-tag">business</span>
+                      <a
+                        class="source-badge"
+                        id="drawerScanSource"
+                        data-note="4"
+                        href="#"
+                        target="_blank"
+                        rel="noreferrer"
+                        >GitHub Action</a
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="detail-timeline-item">
+                  <span class="timeline-dot"></span>
+                  <div class="timeline-content">
+                    <p>
+                      <span class="timeline-time">2026-11-03 15:30</span>
+                      系统 状态更新为「待处理」
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </main>
 
-        <div class="section-title">代码片段</div>
-        <div class="code-block" id="drawerCode"></div>
-
-        <div class="section-title">处理记录</div>
-        <div class="timeline">
-          <div class="timeline-item">
-            <div class="timeline-time">2026-11-03 15:30</div>
-            <div class="timeline-text">GitHub Actions 扫描首次发现该问题</div>
-          </div>
-          <div class="timeline-item">
-            <div class="timeline-time">2026-11-03 15:30</div>
-            <div class="timeline-text">状态：待处理</div>
-          </div>
+          <aside class="detail-sidebar">
+            <section>
+              <h3>问题级别</h3>
+              <span class="sev-badge critical" id="drawerSeveritySide"
+                >严重</span
+              >
+            </section>
+            <section>
+              <h3>仓库</h3>
+              <span class="detail-repo" id="drawerRepo"></span>
+            </section>
+            <section data-note="3">
+              <h3>数据来源</h3>
+              <span class="source-badge" id="drawerSource">GitHub Action</span>
+            </section>
+            <section>
+              <h3>扫描类别</h3>
+              <span class="category-tag">business</span>
+            </section>
+            <section>
+              <h3>CWE</h3>
+              <p class="detail-empty">--</p>
+            </section>
+          </aside>
         </div>
       </div>
     </aside>
@@ -1556,24 +1862,24 @@
       </div>
       <div class="note-panel-body">
         <div class="note-item">
-          <span class="note-index">1</span>平台筛选新增 GitHub，并增加 GitHub
-          图标。
+          <span class="note-index">1</span>列表页：平台筛选新增
+          GitHub，并展示 GitHub 图标。
         </div>
         <div class="note-item">
-          <span class="note-index">2</span>数据来源新增「GitHub
-          Action」，替代当前复用 GitCode Action 的展示。
+          <span class="note-index">2</span
+          >列表页：数据来源筛选新增「GitHub Action」。
         </div>
         <div class="note-item">
-          <span class="note-index">3</span>「查看原始扫描」跳转 GitHub Actions
-          运行页。
+          <span class="note-index">3</span
+          >详情页：右侧「数据来源」新增 GitHub Action 标签。
         </div>
         <div class="note-item">
-          <span class="note-index">4</span>流水线字段映射 GitHub 上下文：job /
-          run / workflow / commit。
+          <span class="note-index">4</span
+          >详情页：「扫描记录」新增 GitHub Action 标签。
         </div>
         <div class="note-item">
           <span class="note-index">5</span
-          >列表与详情字段一致：仓库、分支、规则、文件、行号、工具、来源。
+          >详情页其余结构沿用现有页面，不新增字段或交互。
         </div>
       </div>
     </div>
@@ -1753,6 +2059,7 @@
         mode: "target",
         tab: "pending",
         annotations: true,
+        currentIndex: null,
       };
 
       const sourceLabel = () =>
@@ -1841,10 +2148,10 @@
           ? "· GitHub 平台 · GitHub Action 来源"
           : "· GitCode 平台 · GitCode Action 来源";
         document.getElementById("bannerTitle").textContent = isTarget
-          ? "GitHub 目标态：平台筛选、来源标记、原始扫描链接均已适配"
+          ? "GitHub 目标态：平台筛选与数据来源标签已适配"
           : "现状：仅支持 GitCode / Gitee，来源显示 GitCode Action";
         document.getElementById("bannerText").textContent = isTarget
-          ? "数据来自 GitHub openlibing-test 项目的 Actions：clang-tidy 全量扫描 → SARIF → OBS → openLiBing beta。点击任意问题可查看 GitHub Actions 原始扫描链接。"
+          ? "数据来自 GitHub openlibing-test 项目的 Actions：clang-tidy 全量扫描 → SARIF → OBS → openLiBing beta。详情页仅需适配右侧「数据来源」和「扫描记录」两处 GitHub Action 标签。"
           : "同一页面在接入 GitHub 前的展示效果：平台筛选只有 GitCode / Gitee，尚无 GitHub 图标与 GitHub Action 来源。";
         document.getElementById("protoBadge").textContent = isTarget
           ? "需求原型 · 目标态"
@@ -1860,27 +2167,50 @@
           .classList.toggle("current", !isTarget);
 
         renderIssues();
+
+        // 详情已打开时同步切换来源标签（现状 / 目标态）
+        if (
+          state.currentIndex !== null &&
+          document.getElementById("drawer").classList.contains("open")
+        ) {
+          openDrawer(state.currentIndex);
+        }
       }
 
       function openDrawer(index) {
         const issue = ISSUES[index];
         if (!issue) return;
+        state.currentIndex = index;
 
-        document.getElementById("drawerSeverity").className =
-          `sev-badge ${issue.severity}`;
-        document.getElementById("drawerSeverity").textContent =
+        const severityEl = document.getElementById("drawerSeverity");
+        severityEl.className = `sev-badge ${issue.severity}`;
+        severityEl.textContent = issue.severityText;
+        const severitySideEl = document.getElementById("drawerSeveritySide");
+        severitySideEl.className = `sev-badge ${issue.severity}`;
+        severitySideEl.textContent = issue.severityText;
+        document.getElementById("drawerWarningLevel").textContent =
           issue.severityText;
         document.getElementById("drawerTitle").textContent = issue.rule;
+        document.getElementById("drawerRuleName").textContent = issue.rule;
         document.getElementById("drawerRuleId").textContent = issue.ruleId;
-        document.getElementById("drawerRepo").textContent = issue.repo;
+        document.getElementById("drawerRuleIdMeta").textContent = issue.ruleId;
+        document.getElementById("drawerRepo").innerHTML =
+          `${platformIcon(14)}<span>${escapeHtml(issue.repo)}</span>`;
         document.getElementById("drawerBranch").textContent = issue.branch;
-        document.getElementById("drawerSource").textContent = sourceLabel();
-        document.getElementById("drawerPipeline").textContent =
-          `${issue.pipeline} · #${issue.runId}`;
+        document.getElementById("drawerFile").textContent =
+          `${issue.file}:${issue.line}`;
         document.getElementById("drawerCommit").textContent = issue.commit;
-        document.getElementById("drawerFile").textContent = issue.file;
-        document.getElementById("drawerLine").textContent = String(issue.line);
-        document.getElementById("drawerRunLink").href =
+        document.getElementById("drawerMessage").textContent =
+          `${issue.ruleId} 在该位置触发告警，请结合代码上下文修复。`;
+
+        // 详情的两处 GitHub 适配：右侧数据来源标签、扫描记录标签
+        const sourceEl = document.getElementById("drawerSource");
+        sourceEl.textContent = sourceLabel();
+        sourceEl.classList.toggle("current", state.mode !== "target");
+        const scanSourceEl = document.getElementById("drawerScanSource");
+        scanSourceEl.textContent = sourceLabel();
+        scanSourceEl.classList.toggle("current", state.mode !== "target");
+        scanSourceEl.href =
           state.mode === "target"
             ? `https://github.com/${issue.repo}/actions/runs/${issue.runId}`
             : "#";
