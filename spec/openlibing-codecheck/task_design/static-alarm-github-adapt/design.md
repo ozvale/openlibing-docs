@@ -12,6 +12,11 @@
 
 不改动 `CodePlatformUtil`、`CodePlateHelper`、`CheckboardDelegateImpl`、`ProblemshieldDelegateImpl`：这些属于代码检查执行链路与非静态告警页面，当前平台尚未全面接入 GitHub，改动会扩散风险且与本次需求无关。
 
+下游链路无平台硬编码的核查证据：
+
+- 在 `business/service/impl/alarm`、`business/service/producer`、`business/operation/alarm` 三个包内检索平台关键词，仅命中 `SarifParseServiceImpl` 的 OBS 白名单常量与 `StaticAlarmReceiveServiceImpl` 的一处注释；屏蔽、取消屏蔽、指定责任人、清理、导出、告警数推送均按 `issueId`、`repo_key` 处理，不存在平台分支，因此新增 `GITHUB_ACTION` 后无需改动即可生效。
+- 两处 Delegate 的平台分支只出现在拼接用户主页链接的方法中：`CheckboardDelegateImpl#getCodeHostingPlatform`、`#buildUserUrl`、`ProblemshieldDelegateImpl#resolveHostingPlatform`、`#buildReviewerUserUrl`。GitHub 时返回空串，表现为评审人/责任人主页链接不展示，不影响任何功能操作；该主页链接能力已在 proposal「不在本次范围」中列明。
+
 ## 2. 实现逻辑设计
 
 ### 2.1 接收流程
@@ -26,7 +31,7 @@ StaticAlarmReceiveController
      → source 处理
         显式传入 → 枚举校验，非法则拒绝（source 表示上报载体，与平台无强绑定，不做交叉校验）
         未传     → 按 repoType 推断（github→GITHUB_ACTION / gitee→GITEE_ACTION / gitcode→GITCODE_ACTION）
-                  推断成功且为兜底 → WARN 日志（含 repoUrl、pipelineId、pipelineRunId）
+                  推断成功 → 记 WARN 日志（含 repoUrl、pipelineId、pipelineRunId），按推断值入库
                   无法推断（如 codehub）→ IllegalArgumentException，要求显式传入
      → resolveProjectIds(repoUrl)（坐标反查，委托 RepoInfoCoordinateResolver）
      → 写 static_alarm_scan_run → 发 MQ
