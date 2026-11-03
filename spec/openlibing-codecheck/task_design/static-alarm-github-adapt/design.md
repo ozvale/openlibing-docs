@@ -25,6 +25,7 @@ StaticAlarmReceiveController
      → repoType 一致性校验（dto.repoType 非空且与解析结果不一致 → IllegalArgumentException）
      → source 处理
         显式传入 → 枚举校验，非法则拒绝
+                  与 repoType 可推断出的平台不一致 → 仅 WARN 日志，不拒绝入库
         未传     → 按 repoType 推断（github→GITHUB_ACTION / gitee→GITEE_ACTION / gitcode→GITCODE_ACTION）
                   推断成功且为兜底 → WARN 日志（含 repoUrl、pipelineId、pipelineRunId）
                   无法推断（如 codehub）→ IllegalArgumentException，要求显式传入
@@ -45,7 +46,7 @@ StaticAlarmReceiveController
 
 ### 2.3 兼容性
 
-- 显式传 source 的上报方（CICD 传 `HUAWEI_PIPELINE`、GitCode Action 传 `GITCODE_ACTION`）行为不变；已核验 CICD 侧 DTO 默认值即为 `HUAWEI_PIPELINE`，仓内不存在依赖缺省 source 的调用方。
+- 显式传 source 的上报方（CICD 传 `HUAWEI_PIPELINE`、GitCode Action 传 `GITCODE_ACTION`）行为不变；已核验 CICD 侧 DTO 默认值即为 `HUAWEI_PIPELINE`，仓内不存在依赖缺省 source 的调用方。显式 source 与可推断平台不一致时只记 WARN，不拒绝入库，避免拦截上游已显式声明来源的调用。
 - 未传 source 且平台无对应来源枚举（如 codehub）的上报，由改动前的"入库为 `GITCODE_ACTION`"变为拒绝入库；该类上报方接入前必须显式传 source。
 - 存量 `repoType=gitcode/gitee` 数据不受影响。
 - 新增枚举值不会改变已有数据的读写口径。
@@ -93,7 +94,7 @@ StaticAlarmReceiveController
 
 ## 7. 安全设计
 
-1. **防伪造**：`repoType` 与 `repoUrl` 解析结果不一致时拒绝，避免调用方绕过接口伪造平台归属；该校验只覆盖"声明平台 vs URL 解析平台"，`source` 仅做枚举合法性校验，不参与交叉校验。
+1. **防伪造**：`repoType` 与 `repoUrl` 解析结果不一致时拒绝，避免调用方绕过接口伪造平台归属；`source` 仅做枚举合法性校验，与可推断平台不一致时记录 WARN 但不拒绝，保持上游显式声明来源的兼容性。
 2. **SSRF 防护**：OBS 下载白名单仍为强校验，仅新增明确的 GitHub Action 桶域名；host 为精确匹配，白名单域名的子域名或后缀拼接域名均被拒绝；仍禁止重定向。
 3. **日志安全**：新增 WARN 日志仅输出仓库地址、流水线标识，不输出 token 等敏感信息；URL 统一经 `LogSanitizer` 处理。
 4. **配置安全**：域名关键字配置不参与鉴权，但会决定第 1 条一致性校验的对比基准；约束为按 host 包含匹配（不对整条 URL 匹配）、平台值限定 `gitcode` / `gitee` / `github` / `codehub`。误配会导致平台判错或上报被拒（fail-closed），不会放开任何接口访问控制。
