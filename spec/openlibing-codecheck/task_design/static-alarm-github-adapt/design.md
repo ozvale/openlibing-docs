@@ -41,8 +41,8 @@ StaticAlarmReceiveController
 配置仅做补充与优先覆盖，未配置时行为与现状完全一致。配置约束：
 
 - 匹配对象是从 URL 解析出的 host（已转小写），采用包含匹配，不对整条 URL 做子串匹配。
-- 平台值仅支持 `gitcode` / `gitee` / `github` / `codehub`；配置其它值时该 host 解析出的 `repoType` 无法映射来源，上报会被拒绝（fail-closed）。
-- 配置关键字优先级高于内置关键字，且不校验与内置关键字的冲突；误配（如 `gitcode:github`）会把对应平台判错，配置后需按域名逐一验证。
+- 平台值仅支持 `gitcode` / `gitee` / `github` / `codehub`（大小写不敏感，统一转小写）；配置其它值时该项被忽略并记 WARN，该 host 回退到内置关键字匹配，仍无法识别则 `repoUrl` 解析失败、上报被拒绝（fail-closed）。
+- 同一关键字重复配置时后者覆盖前者，并记 WARN；配置关键字优先级高于内置关键字，不校验与内置关键字的冲突；误配（如 `gitcode:github`）会把对应平台判错，配置后需按域名逐一验证。
 
 ### 2.3 兼容性
 
@@ -62,16 +62,16 @@ StaticAlarmReceiveController
 
 ## 3. 类设计
 
-| 类                                | 改动                                                                                                                     |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `StaticAlarmSourceEnum`           | 新增 `GITHUB_ACTION`、`GITEE_ACTION`；新增 `inferByRepoType(String)` 静态方法                                            |
-| `StaticAlarmReceiveDTO`           | 删除 `DEFAULT_SOURCE_CODE` 常量；`source` 字段注释补充取值                                                               |
-| `StaticAlarmReceiveServiceImpl`   | 注入域名关键字配置；新增 repoType 一致性校验、source 推断、WARN 日志                                                     |
-| `RepoUrlParser`                   | 新增 `parse(String, Map<String,String>)` / `isSameRepo(String, String, Map<String,String>)` 重载；内置映射抽为不可变常量 |
-| `RepoHostKeywordSettings`（新增） | `@Value("${codecheck.repo-host-keywords:}")` + `@RefreshScope`，解析为不可变 `Map<String,String>`，默认空                |
-| `RepoInfoCoordinateResolverImpl`  | 坐标反查调用带额外关键字的重载                                                                                           |
-| `SarifParseServiceImpl`           | OBS 白名单默认值增加 GitHub Action 桶                                                                                    |
-| 实体 / VO / DTO 注释              | repoType、source 取值说明补充 github / GITHUB_ACTION / GITEE_ACTION                                                      |
+| 类                                | 改动                                                                                                                          |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `StaticAlarmSourceEnum`           | 新增 `GITHUB_ACTION`、`GITEE_ACTION`；新增 `inferByRepoType(String)` 静态方法                                                 |
+| `StaticAlarmReceiveDTO`           | 删除 `DEFAULT_SOURCE_CODE` 常量；`source` 字段注释补充取值                                                                    |
+| `StaticAlarmReceiveServiceImpl`   | 注入域名关键字配置；新增 repoType 一致性校验、source 推断、WARN 日志                                                          |
+| `RepoUrlParser`                   | 新增 `parse(String, Map<String,String>)` / `isSameRepo(String, String, Map<String,String>)` 重载；内置映射抽为不可变常量      |
+| `RepoHostKeywordSettings`（新增） | `@Value("${codecheck.repo-host-keywords:}")` + `@RefreshScope`，解析为不可变 `Map<String,String>`，含平台值白名单校验，默认空 |
+| `RepoInfoCoordinateResolverImpl`  | 坐标反查调用带额外关键字的重载                                                                                                |
+| `SarifParseServiceImpl`           | OBS 白名单默认值增加 GitHub Action 桶                                                                                         |
+| 实体 / VO / DTO 注释              | repoType、source 取值说明补充 github / GITHUB_ACTION / GITEE_ACTION                                                           |
 
 ## 4. 数据模型设计
 
@@ -97,4 +97,4 @@ StaticAlarmReceiveController
 1. **防伪造**：`repoType` 与 `repoUrl` 解析结果不一致时拒绝，避免调用方绕过接口伪造平台归属；`source` 仅做枚举合法性校验，与可推断平台不一致时记录 WARN 但不拒绝，保持上游显式声明来源的兼容性。
 2. **SSRF 防护**：OBS 下载白名单仍为强校验，仅新增明确的 GitHub Action 桶域名；host 为精确匹配，白名单域名的子域名或后缀拼接域名均被拒绝；仍禁止重定向。
 3. **日志安全**：新增 WARN 日志仅输出仓库地址、流水线标识，不输出 token 等敏感信息；URL 统一经 `LogSanitizer` 处理。
-4. **配置安全**：域名关键字配置不参与鉴权，但会决定第 1 条一致性校验的对比基准；约束为按 host 包含匹配（不对整条 URL 匹配）、平台值限定 `gitcode` / `gitee` / `github` / `codehub`。误配会导致平台判错或上报被拒（fail-closed），不会放开任何接口访问控制。
+4. **配置安全**：域名关键字配置不参与鉴权，但会决定第 1 条一致性校验的对比基准；约束为按 host 包含匹配（不对整条 URL 匹配）、平台值限定 `gitcode` / `gitee` / `github` / `codehub`，非法平台值的配置项被忽略并记 WARN。误配会导致平台判错或上报被拒（fail-closed），不会放开任何接口访问控制。
