@@ -12,12 +12,12 @@ permissions:
 
 jobs:
   code-metrics-scan:
-    name: 浠ｇ爜搴﹂噺鎸囨爣鎵弿
+    name: 代码度量指标扫描
     runs-on: ["self-hosted", "region=cn"]
     steps:
       - name: Checkout
         uses: checkout
 
-      # 鎻掍欢浣跨敤 OIDC 鑱旈偊璁よ瘉涓婁紶锛堟棤闇€鍑瘉锛夛紝permissions: id-token: write 宸插０鏄?
+      # 插件使用 OIDC 联邦认证上传（无需凭证），permissions: id-token: write 已声明
       - name: code-metrics-scan
         uses: openlibing/code-metrics-action@v1.0.3
