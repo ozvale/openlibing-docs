@@ -57,7 +57,7 @@ StaticAlarmReceiveController
 | `codecheck.alarm.obs-host-whitelist` | 否       | `openlibing-gitcode-action.obs.cn-southwest-2.myhuaweicloud.com,openlibing-github-action.obs.cn-southwest-2.myhuaweicloud.com` | 当前 Nacos 未配置该项，走代码默认双桶；若后续显式配置，必须同时包含两个桶，否则会覆盖默认值导致 GitHub SARIF 下载被白名单拒绝                                                             |
 | `codecheck.repo-host-keywords`       | 否       | 空 Map，仅使用内置关键字 `gitcode` / `atomgit` / `gitee` / `github` / `codehub`                                                | 仅 GitHub Enterprise 自定义域名需要在 Nacos 配置，格式 `域名关键字:平台`，如 `git.corp.example.com:github`；关键字按 host 包含匹配，平台值限定 `gitcode` / `gitee` / `github` / `codehub` |
 
-两项均未在 Nacos 配置，本次上线不需要变更任何配置；`code.platform.address` 无需增加 github 项，静态告警链路不依赖账号平台地址。
+两项均未在 Nacos 配置，本次上线不需要变更任何配置；`code.platform.address` 在静态告警链路中未被引用，无需增加 github 项（问题屏蔽页的 GitHub 用户主页链接不在本次范围）。
 
 ## 3. 类设计
 
