@@ -437,6 +437,8 @@
     "statusText": "不满足",
     "level": "error",
     "naReason": null,
+    "naReasonCode": null,
+    "naReasonDetail": null,
     "scanTime": "2026-09-27 15:56:56"
   },
   "repo": {
@@ -500,8 +502,14 @@
 | scoreStatus                                   | String     | **展示判定态（前端以这个为准）**：`PASS` 满分达标 / `FAIL` 未达标 / `NA` 不适用 / `DEFERRED` 暂缓 |
 | statusText                                    | String     | scoreStatus 对应中文：`满足` / `不满足` / `不适用` / `暂缓`                                       |
 | level                                         | String     | 配色：`success`（PASS）/ `error`（FAIL）/ `na`（NA/DEFERRED）                                     |
-| naReason                                      | String     | NA/DEFERRED 时的原因文案（如"该仓库本期未扫描"），可能为 null                                     |
+| naReason                                      | String     | NA 原因中文文案（如"仓库无默认分支记录，无法拉取代码"），页面直接展示；非 NA 时为 null            |
+| naReasonCode                                  | String     | NA 原因原始码（如 `no_default_branch`），仅供排查与悬浮提示，页面不直接展示；缺失为 null          |
+| naReasonDetail                                | String     | NA 原因明细（脚本侧 message 原文），作响应字段保留，页面暂不展示；缺失为 null                     |
 | scanTime                                      | String     | 该仓批次时间                                                                                      |
+
+> NA 原因文案口径（后端 `SecurityNaReasonResolver` 统一翻译，前端只做展示）：解析优先级 `detail_json.na_reason` → `detail_json.reason` → COPYRIGHT 按 `license_type` 派生 → 明细为空时"本期未产出扫描明细" → 统一兜底"未采集到 NA 原因，请联系支持人员"。未收录的原始码也回落兜底文案，页面不出现英文错误码；`naReasonCode` 仅用于悬浮提示排查。
+
+> SQL/ETL 指标（SIGNED_RELEASES / CODE_REVIEW / CI_TESTS / CONTRIBUTORS）的原因由清洗链路写入：SIGNED_RELEASES、CONTRIBUTORS 落 `detail_json.na_reason`；CODE_REVIEW / CI_TESTS 落 `dwi_rd_efc_security_pr_scan.na_reason`，接口经 `raw.na_reason` 透传后同样由 resolver 翻译，前端无需额外处理。
 
 > 判定规则（后端算好，前端直接用 scoreStatus）：**score=10 → PASS**；0≤score<10 → FAIL；score=null+status=na → NA；score=null+status=deferred → DEFERRED。
 

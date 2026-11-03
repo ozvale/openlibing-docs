@@ -44,7 +44,7 @@
 INSERT INTO openlibing.dwi_rd_efc_security_pr_scan
     (repo_id, scan_time, repo_url, pr_total_count, pr_numbers,
      pr_reviewed_count, pr_unreviewed_detail, score_review,
-     pr_ci_detail, score_ci, is_na, etl_time)
+     pr_ci_detail, score_ci, is_na, na_reason, etl_time)
 WITH pr30 AS (
     SELECT p.repo_id, p.repo_url, p.number, p.title, p.creator, p.url, p.merged_at
     FROM (
@@ -117,6 +117,35 @@ stat AS (
                       '","has_ci":', IF(has_ci = 1, 'true', 'false'), '}') ORDER BY merged_at DESC), ']') AS JSON)      AS ci_json
     FROM   pr_agg
     GROUP BY repo_id
+),
+diag AS (
+    -- NA 原因诊断：区分"镜像 -dev 仓数据 / 维表有但汇总表无 / 完全无 PR 数据"
+    SELECT oc.repo_id,
+           IFNULL(su.cnt, 0)   AS sum_cnt,
+           IFNULL(mi.cnt, 0)   AS mirror_cnt,
+           IFNULL(di.cnt, 0)   AS dim_cnt
+    FROM   (SELECT cf.repo_id, cf.repo_url,
+                   CONCAT(LOWER(SPLIT_PART(SPLIT_PART(cf.repo_url, '/', -1), '.', 1)),
+                          '-dev.git')                              AS dev_seg
+            FROM   openlibing.sdi_rd_efc_repo_operate_conf cf
+            JOIN   openlibing.sdi_repo_info ri ON ri.repo_id = cf.repo_id
+            WHERE  cf.is_operate = 1
+              AND  ri.platform = 'gitcode') oc
+    LEFT JOIN (SELECT repo_url, COUNT(*) AS cnt
+               FROM   openlibing.dwi_rd_efc_pr_info_sum
+               WHERE  merged_at IS NOT NULL
+               GROUP BY repo_url) su
+           ON su.repo_url = oc.repo_url
+    LEFT JOIN (SELECT LOWER(SPLIT_PART(repo_url, '/', -1)) AS seg, COUNT(*) AS cnt
+               FROM   openlibing.dwi_rd_efc_pr_info_sum
+               WHERE  merged_at IS NOT NULL
+               GROUP BY LOWER(SPLIT_PART(repo_url, '/', -1))) mi
+           ON mi.seg = oc.dev_seg
+    LEFT JOIN (SELECT repo_id, COUNT(*) AS cnt
+               FROM   openlibing.sdi_repo_pull_request_info
+               WHERE  merged_at IS NOT NULL
+               GROUP BY repo_id) di
+           ON di.repo_id = oc.repo_id
 )
 SELECT oc.repo_id,
        NOW()                                                AS scan_time,
@@ -131,13 +160,18 @@ SELECT oc.repo_id,
        CASE WHEN IFNULL(s.total_cnt, 0) = 0 THEN NULL
             ELSE ROUND(10.0 * s.ci_cnt / s.total_cnt, 2) END       AS score_ci,
        IF(IFNULL(s.total_cnt, 0) = 0, 1, 0)                 AS is_na,
+       CASE WHEN IFNULL(s.total_cnt, 0) > 0 THEN NULL
+            WHEN d.mirror_cnt > 0 THEN 'pr_repo_mismatch'
+            WHEN d.dim_cnt   > 0 THEN 'pr_data_mismatch'
+            ELSE 'no_pr_record' END                        AS na_reason,
        NOW()                                                AS etl_time
 FROM   (SELECT cf.repo_id, cf.repo_url
         FROM   openlibing.sdi_rd_efc_repo_operate_conf cf
         JOIN   openlibing.sdi_repo_info ri ON ri.repo_id = cf.repo_id
         WHERE  cf.is_operate = 1
           AND  ri.platform = 'gitcode') oc
-LEFT JOIN stat s ON s.repo_id = oc.repo_id;
+LEFT JOIN stat s ON s.repo_id = oc.repo_id
+LEFT JOIN diag d ON d.repo_id = oc.repo_id;
 
 -- =====================================================================
 -- [D2] 指标9 WEBHOOKS + 11 SIGNED_RELEASES + 18 CONTRIBUTORS
@@ -241,7 +275,9 @@ SELECT oc.repo_id,
                    ',"signed_count":', CAST(IFNULL(s.signed_cnt, 0) AS STRING),
                    ',"all_signed":', IF(IFNULL(s.release_cnt, 0) > 0
                                          AND s.signed_cnt = s.release_cnt, 'true', 'false'),
-                   ',"releases":[', IFNULL(s.releases_json, ''), ']}') AS JSON),
+                   ',"na_reason":"',
+                   IF(IFNULL(s.release_cnt, 0) = 0, 'no_valid_release', ''),
+                   '","releases":[', IFNULL(s.releases_json, ''), ']}') AS JSON),
        CASE WHEN IFNULL(s.release_cnt, 0) = 0 THEN NULL           -- 无有效版本 → NA
             WHEN s.signed_cnt = s.release_cnt THEN 10             -- 全满足
             ELSE 0 END                                            AS score,
@@ -340,6 +376,35 @@ authors_json AS (
                ORDER BY pr_cnt DESC, user_login ASC) AS au
     FROM   author_org
     GROUP BY repo_id
+),
+diag AS (
+    -- 与 D1 同口径：区分"镜像 -dev 仓数据 / 维表有但汇总表无 / 完全无 PR 数据"
+    SELECT oc.repo_id,
+           IFNULL(su.cnt, 0)   AS sum_cnt,
+           IFNULL(mi.cnt, 0)   AS mirror_cnt,
+           IFNULL(di.cnt, 0)   AS dim_cnt
+    FROM   (SELECT cf.repo_id, cf.repo_url,
+                   CONCAT(LOWER(SPLIT_PART(SPLIT_PART(cf.repo_url, '/', -1), '.', 1)),
+                          '-dev.git')                              AS dev_seg
+            FROM   openlibing.sdi_rd_efc_repo_operate_conf cf
+            JOIN   openlibing.sdi_repo_info ri ON ri.repo_id = cf.repo_id
+            WHERE  cf.is_operate = 1
+              AND  ri.platform = 'gitcode') oc
+    LEFT JOIN (SELECT repo_url, COUNT(*) AS cnt
+               FROM   openlibing.dwi_rd_efc_pr_info_sum
+               WHERE  merged_at IS NOT NULL
+               GROUP BY repo_url) su
+           ON su.repo_url = oc.repo_url
+    LEFT JOIN (SELECT LOWER(SPLIT_PART(repo_url, '/', -1)) AS seg, COUNT(*) AS cnt
+               FROM   openlibing.dwi_rd_efc_pr_info_sum
+               WHERE  merged_at IS NOT NULL
+               GROUP BY LOWER(SPLIT_PART(repo_url, '/', -1))) mi
+           ON mi.seg = oc.dev_seg
+    LEFT JOIN (SELECT repo_id, COUNT(*) AS cnt
+               FROM   openlibing.sdi_repo_pull_request_info
+               WHERE  merged_at IS NOT NULL
+               GROUP BY repo_id) di
+           ON di.repo_id = oc.repo_id
 )
 SELECT oc.repo_id,
        'CONTRIBUTORS'                                      AS metric_code,
@@ -348,7 +413,13 @@ SELECT oc.repo_id,
        CAST(CONCAT('{"author_count":', CAST(IFNULL(ac.author_count, 0) AS STRING),
                    ',"n_orgs":', CAST(IFNULL(s.n_orgs, 0) AS STRING),
                    ',"qualified_orgs":[', IFNULL(GROUP_CONCAT_json.qo, ''), '],',
-                   '"authors":[', IFNULL(aj.au, ''), ']}') AS JSON),
+                   '"authors":[', IFNULL(aj.au, ''), '],',
+                   '"na_reason":"',
+                   CASE WHEN IFNULL(ac.author_count, 0) > 0 THEN ''
+                        WHEN d.mirror_cnt > 0 THEN 'pr_repo_mismatch'
+                        WHEN d.dim_cnt   > 0 THEN 'pr_data_mismatch'
+                        ELSE 'no_pr_record' END,
+                   '"}') AS JSON),
        CASE WHEN IFNULL(ac.author_count, 0) = 0 THEN NULL
             ELSE LEAST(10, ROUND(10.0 * IFNULL(s.n_orgs, 0) / 3, 2)) END AS score,
        IF(IFNULL(ac.author_count, 0) = 0, 1, 0)            AS is_na,
@@ -361,6 +432,7 @@ FROM   (SELECT cf.repo_id, cf.repo_url
 LEFT JOIN stat s              ON s.repo_id  = oc.repo_id
 LEFT JOIN author_cnt ac       ON ac.repo_id = oc.repo_id
 LEFT JOIN authors_json aj      ON aj.repo_id = oc.repo_id
+LEFT JOIN diag d              ON d.repo_id  = oc.repo_id
 LEFT JOIN (SELECT repo_id, GROUP_CONCAT(CONCAT('"', org_login, '"')) AS qo
            FROM org_pass WHERE has_active = 1 GROUP BY repo_id) GROUP_CONCAT_json
        ON GROUP_CONCAT_json.repo_id = oc.repo_id;

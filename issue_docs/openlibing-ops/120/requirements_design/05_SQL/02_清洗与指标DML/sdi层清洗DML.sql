@@ -128,21 +128,31 @@ WHERE  CAST(etl_time AS DATE) = (SELECT MAX(CAST(etl_time AS DATE)) FROM openlib
 -- =====================================================================
 -- [6] 指标2 代码评审人 → sdi_rd_efc_pr_review_reviewer
 --     复用 raw_pr_comment_gitcode，owner+repo 反查 repo_id
---     ⚠️ 2026-09-26 修正（三项）：
+--     ⚠️ 2026-09-26 修正（四项）：
 --        ① 反查源改用 sdi_repo_info（sdi 层保全量，不与 operate_conf 关联、
 --           不做扫描范围过滤——范围过滤下放指标层 D1 处理；
---           2026-09-18 "sdi_repo_info 为空表" 的结论已过时，现有 1587 仓，
---           评论可匹配率约 98%）
+--           2026-09-18 "sdi_repo_info 为空表" 的结论已过时，现有 1946 仓
+--           其中 gitcode 1576 仓；评论仓库可匹配 1189/1233）
 --        ② 修复 repo_name 拆解 bug：SUBSTRING_INDEX(repo_url,'/',5) 在
 --           https://gitcode.com/owner/repo.git 这种 5 段 URL 上返回的是
 --           完整 URL 而非第 5 段，JOIN 永不命中（旧版实测清洗 0 行）；
 --           改为 SUBSTRING_INDEX(repo_url,'/',-1) 取末段再去 .git
---        ③ sdi_repo_info 存在 142 组同 owner/repo 多 repo_id（JOIN 扇出，
+--        ③ sdi_repo_info 存在 228 组同 owner/repo 多 repo_id（JOIN 扇出，
 --           不去重时 384 万 raw 会膨胀到 581 万行）；字典按 owner/repo
 --           GROUP BY 去重，repo_id 取 MIN(repo_id)
+--        ④ 2026-11-02 增加 platform = 'gitcode' 过滤：同一 owner/repo 可能
+--           同时登记 gitee/gitcode/github（实测 175 组 gitcode+gitee、
+--           2 组 gitcode+github），无平台条件时 MIN(repo_id) 会优先取到
+--           gitee 老记录（如 powerapi 绑到 400236 gitee/not_exist，而非
+--           401866 gitcode/normal），实测导致 130 仓、539,367 条评论绑错平台。
+--           raw_pr_comment_gitcode 只可能来自 GitCode，故只保留 gitcode，
+--           不纳入 github；同平台重复登记仍由 MIN 收敛。
 --        ⚠️ 已知坐标系错位（4 仓，待数据侧治理）：operate_conf 与
---           sdi_repo_info 同 owner/repo 但 repo_id 不同（cann/ops-batchinvariant、
---           Ascend/MindIE-Motor、Ascend/MultimodalSDK、cann/shmem）。
+--           sdi_repo_info 同 owner/repo 但 repo_id 不同
+--           （Ascend/MindIE-Motor 405549 vs 403615、
+--           Ascend/MultimodalSDK 405131 vs 403632、
+--           openeuler/polymind 402012 vs 403409、
+--           openeuler/witty-service 402015 vs 403419）。
 --           指标层 D1 的 pr30.repo_id 取自 operate_conf，这 4 仓的评论
 --           repo_id（sdi_repo_info 口径）JOIN 不上 → 评审判不到。
 --           根因是两表 repo_id 不一致，需在源数据治理（统一 repo_id）或
@@ -162,15 +172,23 @@ WHERE  CAST(etl_time AS DATE) = (SELECT MAX(CAST(etl_time AS DATE)) FROM openlib
 truncate table sdi_rd_efc_pr_review_reviewer;
 INSERT INTO openlibing.sdi_rd_efc_pr_review_reviewer
     (repo_id, pr_number, reviewer_login, reviewer_user_id, review_type, is_bot, is_effective_review, comment_time, etl_time)
--- 性能与正确性优化（2026-09-26，2026-10-20 v4.8 调整）：
---   ① JSON 每字段只解析一次（内层子查询提取，避免同行 8 次 get_json_string）
---   ② 正则只算必要次数：review_type 取首命令一次；has_lgtm 做 token 级
---      匹配一次（is_effective_review 改由 has_lgtm 判定，不再依赖 review_type）
---   ③ GROUP BY 预聚合到"每评审人×每PR 一行"再写入：384 万评论 → 去重后行数，
---      消除 UNIQUE KEY 写入侧海量键冲突的合并代价；同时修复键覆盖 bug——
---      旧写法后写入的行胜出，评审人先 /lgtm 后闲聊会被覆盖成 is_effective_review=0，
---      现 MAX(is_effective_review) 保证"历史上打过 /lgtm（任意行）即有效"，
---      review_type 对有效评审统一归一 '/lgtm'（非有效兜底取首命令）
+-- 性能优化 v3（2026-11-02，修正 v2 预过滤失效）：
+--   ⚠️ v2 的 WHERE 预过滤在生产执行计划里被完全吃掉。EXPLAIN（Nereids）显示
+--   VOlapScanNode 的 final projections 直接包含全部 get_json_string 表达式，
+--   PREDICATES 也挂在同一个 Scan 节点（login IS NOT NULL + like），说明 JSON
+--   解析是在过滤之前对 464 万行全量执行的 —— 因此加预过滤只多扫一遍
+--   CAST+LOWER（生产耗时 10min → 17min）。根因是 Nereids 投影下推：只要投影
+--   只依赖 data_json、不依赖 JOIN/聚合结果，就会被推到 Scan 输出处，子查询
+--   分层拦不住。
+--   v3 用"聚合阻塞层"解决：先 WHERE 过滤 + GROUP BY(owner,repo,number,
+--   comment_id) 做一次聚合，把整条 JSON 收敛成 js 列（44 万行）；外层 JSON
+--   解析依赖聚合输出，Nereids 无法再下推，只能对 44 万行执行。
+--   全表只多付一次 CAST+LOWER（实测 13s），换来 8 遍全量解析 → 4 遍 × 44 万行。
+--   ⚠️ 口径：只保留 body 含 /lgtm 的候选行。has_lgtm=0 的行 is_effective_review
+--   恒为 0，下游 D1/D7 只读 is_effective_review=1，指标结果等价；若需保留全部
+--   评论人（含 /approve 等），去掉该 WHERE。
+--   ⚠️ 4 列已是 raw 表的 UNIQUE KEY（组内唯一），JSON 类型不支持比较，故用
+--   MAX(CAST(data_json AS STRING)) 在聚合中保留整条 JSON 文本。
 SELECT t.repo_id,
        t.pr_number,
        t.reviewer_login,
@@ -191,29 +209,51 @@ FROM (
            IF(c.is_bot = 1, 0, c.has_lgtm)                        AS is_effective_review,
            c.comment_time
     FROM (
-        -- 内层：每字段只做一次 JSON 解析 / 一次正则
+        -- 派生层：只做字符串运算，不触发任何 JSON 解析
         SELECT owner,
                repo,
                number,
-               get_json_string(data_json, '$.user.login')  AS login,
-               get_json_string(data_json, '$.user.id')     AS uid,
-               CONCAT('/', LOWER(IFNULL(regexp_extract(get_json_string(data_json,'$.body'),
-                                                       '^/([A-Za-z0-9_-]+)', 1), '其他'))) AS review_type,
+               login,
+               uid,
+               CONCAT('/', LOWER(IFNULL(regexp_extract(body, '^/([A-Za-z0-9_-]+)', 1), '其他'))) AS review_type,
                -- v4.8：body 任意行存在独立 /lgtm 命令（空白符边界 token 匹配，
                -- 覆盖 /lgtm 独发、/lgtm\n/approve、/approve\n/lgtm 跨行、
                -- /lgtm\n\n/approve 空行分隔；/lgtmfoo、/lgtm-cancel 不误伤）
-               IF(lower(get_json_string(data_json,'$.body')) REGEXP
-                  '(^|[[:space:]])/lgtm($|[^a-z0-9_-])', 1, 0) AS has_lgtm,
-               IF( LOWER(IFNULL(get_json_string(data_json,'$.user.login'),'')) LIKE '%bot%'
-                 OR LOWER(IFNULL(get_json_string(data_json,'$.user.login'),'')) LIKE '%robot%'
-                 OR LOWER(IFNULL(get_json_string(data_json,'$.user.login'),'')) LIKE '%[bot]%'
-                 , 1, 0)                                AS is_bot,
-               CAST(get_json_string(data_json, '$.created_at') AS DATETIME) AS comment_time
-        FROM   openlibing.raw_pr_comment_gitcode
+               IF(LOWER(IFNULL(body, '')) REGEXP
+                  '(^|[[:space:]])/lgtm($|[^a-z0-9_-])', 1, 0)        AS has_lgtm,
+               IF( LOWER(IFNULL(login, '')) LIKE '%bot%'
+                 OR LOWER(IFNULL(login, '')) LIKE '%robot%'
+                 OR LOWER(IFNULL(login, '')) LIKE '%[bot]%'
+                 , 1, 0)                                              AS is_bot,
+               CAST(created_at_str AS DATETIME)                       AS comment_time
+        FROM (
+            -- 取值层：只对聚合收敛后的 44 万候选行解析，每字段 1 次
+            SELECT owner,
+                   repo,
+                   number,
+                   get_json_string(js, '$.user.login')  AS login,
+                   get_json_string(js, '$.user.id')     AS uid,
+                   get_json_string(js, '$.body')        AS body,
+                   get_json_string(js, '$.created_at')  AS created_at_str
+            FROM (
+                -- 阻塞层：先过滤 + 聚合，命中行整条 JSON 收敛为 js 列；
+                -- 上层 JSON 解析依赖聚合输出，Nereids 无法再下推到 Scan
+                SELECT owner,
+                       repo,
+                       number,
+                       comment_id,
+                       MAX(CAST(data_json AS STRING)) AS js
+                FROM   openlibing.raw_pr_comment_gitcode
+                WHERE  LOWER(CAST(data_json AS STRING)) LIKE '%/lgtm%'
+                GROUP BY owner, repo, number, comment_id
+            ) g
+        ) c0
     ) c
     INNER JOIN (
-        -- owner/repo → repo_id 字典：仅 sdi_repo_info，按 owner/repo 去重防扇出，
-        -- repo_id 取 MIN（同 owner/repo 多登记时选最小 id 作为 canonical）
+        -- owner/repo → repo_id 字典：仅 sdi_repo_info 中 platform='gitcode'
+        -- 的登记（raw_pr_comment_gitcode 只可能来自 GitCode，避免 MIN 取到
+        -- gitee/github 镜像记录）；按 owner/repo 去重防扇出，repo_id 取 MIN
+        -- （同 owner/repo 多登记时选最小 id 作为 canonical）
         SELECT t.repo_owner,
                t.repo_name,
                MIN(t.repo_id) AS repo_id
@@ -226,6 +266,7 @@ FROM (
                         ELSE SUBSTRING_INDEX(repo_url, '/', -1)
                    END                                                           AS repo_name
             FROM   openlibing.sdi_repo_info
+            WHERE  platform = 'gitcode'
         ) t
         GROUP BY t.repo_owner, t.repo_name
     ) dic

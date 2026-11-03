@@ -15,15 +15,24 @@ import sys
 
 BASE = r'c:\Users\caoxiaolin\Desktop\openlibing'
 CLASSPATH = BASE + r'\openlibing-ops\src\main\resources\security\detail-conf\PINNED_DEP.json'
-UPDATE_SQL = BASE + r'\docs\0912\detail-conf-gcheck-update.sql'
-INIT_SQL = (BASE + r'\openlibing-docs\spec\openlibing-ops\task_design'
-            r'\2026-09-23_安全合规评分看板接口\detail-conf-init.sql')
+UPDATE_SQLS = [
+    BASE + r'\docs\0912\detail-conf-gcheck-update.sql',
+    BASE + r'\openlibing-docs\issue_docs\openlibing-ops\120\requirements_design'
+           r'\05_SQL\03_明细展示配置\detail-conf-gcheck-update.sql',
+]
+INIT_SQLS = [
+    BASE + r'\openlibing-docs\spec\openlibing-ops\task_design'
+           r'\2026-09-23_安全合规评分看板接口\detail-conf-init.sql',
+    BASE + r'\openlibing-docs\issue_docs\openlibing-ops\120\requirements_design'
+           r'\05_SQL\03_明细展示配置\detail-conf-init.sql',
+]
 
 # 修订记录（追加到 update.sql 头部注释，按时间顺序插在最后一条修订之后）
 REVISION_NOTE = (
-    '-- 修订：ai-assisted 2026-10-16 PINNED_DEP 移除「依赖明细」表格分组——全量明细已迁移至\n'
-    '--       独立分页接口 /security/pinned-dep-list（表 dwi_rd_efc_security_pinned_dep_detail），\n'
-    '--       metric-detail 响应保留判据汇总与不满足项卡片。\n')
+    '-- 修订：ai-assisted 2026-10-26 PINNED_DEP 未满足卡片只展示总体原因——\n'
+    '--       failItems.reason 去掉括号内的 gcheck 判定依据文案（{reason}）。\n'
+)
+REVISION_GUARD = '2026-10-26 PINNED_DEP 未满足卡片只展示总体原因'
 
 # update.sql 实际结构：
 # UPDATE openlibing.dm_rd_efc_security_metric_detail_conf
@@ -64,53 +73,60 @@ def main():
     print(f'classpath 压缩后 {len(compact)} 字节')
 
     # --- update.sql：替换 PINNED_DEP UPDATE 的 conf_json ---
-    up = read(UPDATE_SQL)
-    m = PAT_UPDATE.search(up)
-    if not m:
-        print('!! update.sql 未找到 PINNED_DEP UPDATE 段')
-        return 1
-    up_new = PAT_UPDATE.sub(lambda _: m.group(1) + compact + m.group(3), up, count=1)
-    # 头部补修订记录（已含则不重复加）；插在头部注释收尾分隔线之前（按时间顺序排最后）
-    if '2026-10-16 PINNED_DEP 移除「依赖明细」' not in up_new:
-        head_end = up_new.index('UPDATE openlibing')   # 第一条 UPDATE 之前
-        sep = up_new.rindex('-- ====', 0, head_end)    # 头部注释收尾分隔线
-        up_new = up_new[:sep] + REVISION_NOTE + up_new[sep:]
-    write(UPDATE_SQL, up_new)
-    print(f'update.sql PINNED_DEP 段已替换（{len(m.group(2))} -> {len(compact)} 字节）')
+    for path in UPDATE_SQLS:
+        up = read(path)
+        m = PAT_UPDATE.search(up)
+        if not m:
+            print(f'!! update.sql 未找到 PINNED_DEP UPDATE 段: {path}')
+            return 1
+        up_new = PAT_UPDATE.sub(lambda _: m.group(1) + compact + m.group(3), up, count=1)
+        # 头部补修订记录（已含则不重复加）；插在头部注释收尾分隔线之前（按时间顺序排最后）
+        if REVISION_GUARD not in up_new:
+            head_end = up_new.index('UPDATE openlibing')   # 第一条 UPDATE 之前
+            sep = up_new.rindex('-- ====', 0, head_end)    # 头部注释收尾分隔线
+            up_new = up_new[:sep] + REVISION_NOTE + up_new[sep:]
+        write(path, up_new)
+        print(f'update.sql PINNED_DEP 段已替换（{len(m.group(2))} -> {len(compact)} 字节）: {path}')
 
     # --- init.sql：替换 PINNED_DEP INSERT 的 conf_json（保留 definition 合并） ---
-    ini = read(INIT_SQL)
-    m2 = PAT_INIT.search(ini)
-    if not m2:
-        print('!! init.sql 未找到 PINNED_DEP INSERT 段')
-        return 1
-    old_ini_conf = json.loads(m2.group(2))
-    definition = old_ini_conf.get('definition')
-    if definition is not None and 'definition' not in conf:
-        merged = {}
-        for k, v in conf.items():
-            merged[k] = v
-            if k == 'rule':
-                merged['definition'] = definition
-        print(f'init.sql 保留原有 definition 块（{len(json.dumps(definition, ensure_ascii=False))} 字节）')
-    else:
-        merged = conf
-    compact_ini = json.dumps(merged, ensure_ascii=False, separators=(',', ':'))
-    ini_new = PAT_INIT.sub(lambda _: m2.group(1) + compact_ini + m2.group(3), ini, count=1)
-    write(INIT_SQL, ini_new)
-    print(f'init.sql PINNED_DEP 段已替换（{len(m2.group(2))} -> {len(compact_ini)} 字节）')
+    for path in INIT_SQLS:
+        ini = read(path)
+        m2 = PAT_INIT.search(ini)
+        if not m2:
+            print(f'!! init.sql 未找到 PINNED_DEP INSERT 段: {path}')
+            return 1
+        old_ini_conf = json.loads(m2.group(2))
+        definition = old_ini_conf.get('definition')
+        if definition is not None and 'definition' not in conf:
+            merged = {}
+            for k, v in conf.items():
+                merged[k] = v
+                if k == 'rule':
+                    merged['definition'] = definition
+            print(f'init.sql 保留原有 definition 块（{len(json.dumps(definition, ensure_ascii=False))} 字节）')
+        else:
+            merged = conf
+        compact_ini = json.dumps(merged, ensure_ascii=False, separators=(',', ':'))
+        ini_new = PAT_INIT.sub(lambda _: m2.group(1) + compact_ini + m2.group(3), ini, count=1)
+        write(path, ini_new)
+        print(f'init.sql PINNED_DEP 段已替换（{len(m2.group(2))} -> {len(compact_ini)} 字节）: {path}')
 
     # --- 校验 ---
     a = json.dumps(json.loads(read(CLASSPATH)), ensure_ascii=False, separators=(',', ':'))
-    b = PAT_UPDATE.search(read(UPDATE_SQL)).group(2)
-    c_raw = json.loads(PAT_INIT.search(read(INIT_SQL)).group(2))
-    c_raw.pop('definition', None)
-    c = json.dumps(c_raw, ensure_ascii=False, separators=(',', ':'))
-    ok_u = a == b
-    ok_i = a == c
-    print('classpath == update.sql               :', ok_u)
-    print('classpath == init.sql(去 definition)  :', ok_i)
-    return 0 if (ok_u and ok_i) else 1
+    ok = True
+    for path in UPDATE_SQLS:
+        b = PAT_UPDATE.search(read(path)).group(2)
+        same = a == b
+        ok = ok and same
+        print(f'classpath == {path} : {same}')
+    for path in INIT_SQLS:
+        c_raw = json.loads(PAT_INIT.search(read(path)).group(2))
+        c_raw.pop('definition', None)
+        c = json.dumps(c_raw, ensure_ascii=False, separators=(',', ':'))
+        same = a == c
+        ok = ok and same
+        print(f'classpath == {path}(去 definition) : {same}')
+    return 0 if ok else 1
 
 
 if __name__ == '__main__':

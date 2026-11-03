@@ -58,11 +58,16 @@ CREATE TABLE IF NOT EXISTS dwi_rd_efc_security_pr_scan
     pr_ci_detail        JSON         NULL     COMMENT '每PR是否跑CI[{number,has_ci}]',
     score_ci            DECIMAL(5,2) NULL     COMMENT '指标10得分=10*有CI/总数;NA=NULL',
     is_na               TINYINT      NULL     COMMENT '是否NA(剔机器人后PR数=0)',
+    na_reason           VARCHAR(32)  NULL     COMMENT 'NA原因码:pr_repo_mismatch/pr_data_mismatch/no_pr_record',
     etl_time            DATETIME     NULL     COMMENT '入库时间'
 )
 UNIQUE KEY (repo_id, scan_time)
 DISTRIBUTED BY HASH(repo_id) BUCKETS 8
 PROPERTIES ("replication_allocation" = "tag.location.default: 3");
+
+-- 存量表升级（表已存在时执行）：
+-- ALTER TABLE openlibing.dwi_rd_efc_security_pr_scan
+--   ADD COLUMN na_reason VARCHAR(32) NULL COMMENT 'NA原因码:pr_repo_mismatch/pr_data_mismatch/no_pr_record';
 
 -- ---------- [3] 指标8 分支保护（✅ 2026-09-28 规则更新转正 v4.4，D7 产出） ----------
 -- 规则坍缩为二元：平台默认满足 T1/T2/T3 得基础 8 分；rebot.yaml 配 lgtm_need_num=2
