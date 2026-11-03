@@ -1,0 +1,1979 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>静态代码分析 GitHub 接入 · clang-tidy 需求原型</title>
+    <style>
+      :root {
+        --bg: #f6f8fa;
+        --panel: #ffffff;
+        --border: #d0d7de;
+        --border-strong: #afb8c1;
+        --text: #24292f;
+        --muted: #57606a;
+        --muted-soft: #6e7781;
+        --accent: #0969da;
+        --accent-strong: #0550ae;
+        --accent-soft: #ddf4ff;
+        --green: #1a7f37;
+        --green-soft: #dafbe1;
+        --red: #cf222e;
+        --red-soft: #ffebe9;
+        --orange: #bc4c00;
+        --orange-soft: #fff1e5;
+        --yellow: #9a6700;
+        --yellow-soft: #fff8c5;
+        --shadow: 0 8px 24px rgba(140, 149, 159, 0.2);
+        --radius: 6px;
+        --sidebar: 216px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--text);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
+          "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-size: 14px;
+        background: var(--bg);
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      .topbar {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        height: 56px;
+        padding: 0 20px;
+        color: #fff;
+        background: #24292f;
+      }
+
+      .brand {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-right: 28px;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 26px;
+        height: 26px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #24292f;
+        background: linear-gradient(135deg, #7ee787, #2da44e);
+        border-radius: 8px;
+        place-items: center;
+      }
+
+      .project-switch {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        height: 30px;
+        padding: 0 10px;
+        font-size: 13px;
+        color: #d0d7de;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: var(--radius);
+      }
+
+      .project-switch strong {
+        color: #fff;
+        font-weight: 600;
+      }
+
+      .topbar-spacer {
+        flex: 1;
+      }
+
+      .mode-switch {
+        display: flex;
+        gap: 2px;
+        padding: 2px;
+        margin-right: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 7px;
+      }
+
+      .mode-switch button {
+        padding: 4px 12px;
+        font-size: 12px;
+        color: #d0d7de;
+        cursor: pointer;
+        background: transparent;
+        border: 0;
+        border-radius: 5px;
+      }
+
+      .mode-switch button.active {
+        color: #24292f;
+        font-weight: 600;
+        background: #fff;
+      }
+
+      .annotate-btn {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        height: 30px;
+        padding: 0 12px;
+        font-size: 12px;
+        color: #fff;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: var(--radius);
+      }
+
+      .annotate-btn.on {
+        color: #24292f;
+        background: #fff8c5;
+        border-color: #d4a72c;
+      }
+
+      .avatar {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        margin-left: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #24292f;
+        background: #d0d7de;
+        border-radius: 50%;
+        place-items: center;
+      }
+
+      .body {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .sidebar {
+        flex-shrink: 0;
+        width: var(--sidebar);
+        padding: 16px 12px;
+        background: var(--panel);
+        border-right: 1px solid var(--border);
+      }
+
+      .nav-group-title {
+        padding: 6px 10px;
+        font-size: 11px;
+        color: var(--muted-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+      }
+
+      .nav-item {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 8px 10px;
+        margin-bottom: 2px;
+        font-size: 13px;
+        color: var(--text);
+        cursor: pointer;
+        border-radius: var(--radius);
+      }
+
+      .nav-item:hover {
+        background: #f3f4f6;
+      }
+
+      .nav-item.active {
+        font-weight: 600;
+        color: var(--accent-strong);
+        background: var(--accent-soft);
+      }
+
+      .nav-dot {
+        width: 8px;
+        height: 8px;
+        background: currentcolor;
+        border-radius: 2px;
+        opacity: 0.55;
+      }
+
+      .main {
+        flex: 1;
+        min-width: 0;
+        overflow: auto;
+      }
+
+      .main-inner {
+        max-width: 1440px;
+        padding: 20px 24px 40px;
+        margin: 0 auto;
+      }
+
+      .breadcrumb {
+        margin-bottom: 10px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .breadcrumb span {
+        margin: 0 6px;
+        color: var(--border-strong);
+      }
+
+      .page-head {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+        margin-bottom: 14px;
+      }
+
+      .page-title {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+      }
+
+      .proto-badge {
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #7d4e00;
+        background: var(--yellow-soft);
+        border: 1px solid #d4a72c;
+        border-radius: 999px;
+      }
+
+      .page-desc {
+        margin: 6px 0 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .page-actions {
+        display: flex;
+        gap: 8px;
+        margin-left: auto;
+      }
+
+      .btn {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        height: 32px;
+        padding: 0 12px;
+        font-size: 12px;
+        color: var(--text);
+        cursor: pointer;
+        background: #f6f8fa;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+
+      .btn:hover {
+        background: #f3f4f6;
+      }
+
+      .btn.primary {
+        color: #fff;
+        background: var(--green);
+        border-color: rgba(27, 31, 36, 0.15);
+      }
+
+      .banner {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 12px 14px;
+        margin-bottom: 16px;
+        background: var(--accent-soft);
+        border: 1px solid #54aeff66;
+        border-radius: var(--radius);
+      }
+
+      .banner.current {
+        background: #f6f8fa;
+        border-color: var(--border);
+      }
+
+      .banner-icon {
+        flex-shrink: 0;
+        margin-top: 1px;
+        color: var(--accent);
+      }
+
+      .banner.current .banner-icon {
+        color: var(--muted);
+      }
+
+      .banner-title {
+        margin: 0 0 2px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .banner-text {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .stat-card {
+        padding: 14px 16px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .stat-value {
+        margin-top: 6px;
+        font-size: 26px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .stat-value.red {
+        color: var(--red);
+      }
+
+      .stat-value.orange {
+        color: var(--orange);
+      }
+
+      .stat-value.green {
+        color: var(--green);
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+
+      .tabs {
+        display: flex;
+        gap: 4px;
+        padding: 8px 12px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .tab {
+        padding: 10px 12px;
+        font-size: 13px;
+        color: var(--muted);
+        cursor: pointer;
+        background: transparent;
+        border: 0;
+        border-bottom: 2px solid transparent;
+      }
+
+      .tab:hover {
+        color: var(--text);
+      }
+
+      .tab.active {
+        font-weight: 600;
+        color: var(--text);
+        border-bottom-color: #fd8c73;
+      }
+
+      .tab-count {
+        padding: 1px 6px;
+        margin-left: 4px;
+        font-size: 11px;
+        color: var(--muted);
+        background: #f6f8fa;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .search {
+        position: relative;
+        flex: 1 1 240px;
+        min-width: 200px;
+      }
+
+      .search svg {
+        position: absolute;
+        top: 50%;
+        left: 10px;
+        color: var(--muted);
+        transform: translateY(-50%);
+      }
+
+      .search input {
+        width: 100%;
+        height: 32px;
+        padding: 0 10px 0 32px;
+        font-size: 12px;
+        background: #f6f8fa;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        outline: none;
+      }
+
+      .search input:focus {
+        background: #fff;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px #0969da33;
+      }
+
+      .filter-chip {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        height: 30px;
+        padding: 0 10px;
+        font-size: 12px;
+        color: var(--text);
+        cursor: pointer;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+
+      .filter-chip:hover {
+        border-color: var(--border-strong);
+      }
+
+      .filter-chip .chip-label {
+        color: var(--muted);
+      }
+
+      .filter-chip .chip-value {
+        font-weight: 600;
+      }
+
+      .filter-chip .remove {
+        display: grid;
+        width: 16px;
+        height: 16px;
+        margin-left: 2px;
+        color: var(--muted);
+        cursor: pointer;
+        border-radius: 50%;
+        place-items: center;
+      }
+
+      .filter-chip .remove:hover {
+        color: var(--text);
+        background: #f3f4f6;
+      }
+
+      .clear-link {
+        padding: 4px 6px;
+        font-size: 12px;
+        color: var(--accent);
+        cursor: pointer;
+        background: none;
+        border: 0;
+      }
+
+      .list-head {
+        display: flex;
+        align-items: center;
+        padding: 10px 16px;
+        font-size: 12px;
+        color: var(--muted);
+        background: #f6f8fa;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .list-head .result {
+        flex: 1;
+      }
+
+      .list-head .sort {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .issue-row {
+        position: relative;
+        display: flex;
+        gap: 12px;
+        padding: 14px 16px 14px 20px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .issue-row:last-child {
+        border-bottom: 0;
+      }
+
+      .issue-row:hover {
+        background: #f6f8fa;
+      }
+
+      .severity-bar {
+        position: absolute;
+        top: 14px;
+        bottom: 14px;
+        left: 0;
+        width: 4px;
+        border-radius: 0 4px 4px 0;
+      }
+
+      .severity-bar.critical {
+        background: var(--red);
+      }
+
+      .severity-bar.high {
+        background: var(--orange);
+      }
+
+      .severity-bar.medium {
+        background: var(--yellow);
+      }
+
+      .severity-bar.low {
+        background: var(--green);
+      }
+
+      .issue-main {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .issue-title {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 7px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .issue-title .rule-id {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--muted);
+      }
+
+      .sev-badge {
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        padding: 0 7px;
+        font-size: 11px;
+        font-weight: 600;
+        border-radius: 999px;
+      }
+
+      .sev-badge.critical {
+        color: var(--red);
+        background: var(--red-soft);
+      }
+
+      .sev-badge.high {
+        color: var(--orange);
+        background: var(--orange-soft);
+      }
+
+      .sev-badge.medium {
+        color: var(--yellow);
+        background: var(--yellow-soft);
+      }
+
+      .sev-badge.low {
+        color: var(--green);
+        background: var(--green-soft);
+      }
+
+      .issue-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 12px;
+        align-items: center;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .repo {
+        display: inline-flex;
+        gap: 5px;
+        align-items: center;
+        color: var(--text);
+      }
+
+      .repo svg {
+        flex-shrink: 0;
+      }
+
+      .meta-item {
+        display: inline-flex;
+        gap: 5px;
+        align-items: center;
+      }
+
+      .branch-pill {
+        padding: 1px 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+        color: var(--muted);
+        background: #f6f8fa;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+      }
+
+      .file-path {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        color: var(--accent);
+      }
+
+      .source-badge {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+        height: 20px;
+        padding: 0 7px;
+        font-size: 11px;
+        color: var(--accent-strong);
+        background: var(--accent-soft);
+        border: 1px solid #54aeff66;
+        border-radius: 999px;
+      }
+
+      .source-badge.current {
+        color: var(--muted);
+        background: #f6f8fa;
+        border-color: var(--border);
+      }
+
+      .issue-trailing {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        color: var(--muted);
+      }
+
+      .trailing-time {
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .icon-btn {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        color: var(--muted);
+        cursor: pointer;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: var(--radius);
+        place-items: center;
+      }
+
+      .icon-btn:hover {
+        color: var(--text);
+        background: #f3f4f6;
+        border-color: var(--border);
+      }
+
+      .empty {
+        padding: 64px 24px;
+        text-align: center;
+        color: var(--muted);
+      }
+
+      .empty strong {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--text);
+      }
+
+      .flow-card {
+        padding: 16px;
+        margin-top: 16px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+
+      .flow-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .flow-title span {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--muted);
+      }
+
+      .flow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .flow-step {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 10px;
+        font-size: 12px;
+        background: #f6f8fa;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+
+      .flow-step strong {
+        font-weight: 600;
+      }
+
+      .flow-arrow {
+        color: var(--border-strong);
+      }
+
+      .drawer-mask {
+        position: fixed;
+        inset: 0;
+        z-index: 90;
+        pointer-events: none;
+        background: rgba(27, 31, 36, 0);
+        transition: background 0.18s ease;
+      }
+
+      .drawer-mask.open {
+        pointer-events: auto;
+        background: rgba(27, 31, 36, 0.4);
+      }
+
+      .drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        width: min(560px, 92vw);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        transform: translateX(100%);
+        transition: transform 0.22s ease;
+      }
+
+      .drawer.open {
+        transform: translateX(0);
+      }
+
+      .drawer-head {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .drawer-title {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .drawer-title h2 {
+        margin: 4px 0 6px;
+        font-size: 17px;
+        line-height: 1.4;
+      }
+
+      .drawer-title .rule-id {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .drawer-body {
+        flex: 1;
+        padding: 16px 18px 24px;
+        overflow: auto;
+      }
+
+      .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 16px;
+        padding: 12px 14px;
+        margin-bottom: 16px;
+        background: #f6f8fa;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+
+      .meta-cell label {
+        display: block;
+        margin-bottom: 3px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .meta-cell div {
+        font-size: 12px;
+        word-break: break-all;
+      }
+
+      .run-link {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 34px;
+        margin-bottom: 18px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #fff;
+        text-decoration: none;
+        background: var(--green);
+        border-radius: var(--radius);
+      }
+
+      .run-link:hover {
+        background: #1a7f37e6;
+      }
+
+      .section-title {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin: 18px 0 8px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .section-title:first-child {
+        margin-top: 0;
+      }
+
+      .code-block {
+        overflow: hidden;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.7;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+
+      .code-line {
+        display: flex;
+        min-width: max-content;
+      }
+
+      .code-line.highlight {
+        background: var(--yellow-soft);
+      }
+
+      .code-line .ln {
+        width: 42px;
+        padding-right: 10px;
+        color: var(--muted-soft);
+        text-align: right;
+        user-select: none;
+      }
+
+      .code-line .code {
+        flex: 1;
+        padding-right: 12px;
+        white-space: pre;
+      }
+
+      .timeline {
+        position: relative;
+        padding-left: 18px;
+      }
+
+      .timeline::before {
+        position: absolute;
+        top: 6px;
+        bottom: 6px;
+        left: 5px;
+        width: 2px;
+        content: "";
+        background: var(--border);
+      }
+
+      .timeline-item {
+        position: relative;
+        padding-bottom: 12px;
+      }
+
+      .timeline-item::before {
+        position: absolute;
+        top: 5px;
+        left: -17px;
+        width: 10px;
+        height: 10px;
+        content: "";
+        background: #fff;
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+      }
+
+      .timeline-item:last-child {
+        padding-bottom: 0;
+      }
+
+      .timeline-time {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .timeline-text {
+        margin-top: 2px;
+        font-size: 12px;
+      }
+
+      .note-panel {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 80;
+        width: 320px;
+        max-height: 46vh;
+        overflow: auto;
+        background: var(--panel);
+        border: 1px solid #d4a72c;
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        opacity: 0;
+        transform: translateY(12px);
+        transition:
+          opacity 0.18s ease,
+          transform 0.18s ease;
+        pointer-events: none;
+      }
+
+      .note-panel.open {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+
+      .note-panel-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--yellow-soft);
+        border-bottom: 1px solid #d4a72c;
+        border-radius: 8px 8px 0 0;
+      }
+
+      .note-panel-body {
+        padding: 10px 12px;
+      }
+
+      .note-item {
+        display: flex;
+        gap: 8px;
+        padding: 6px 0;
+        font-size: 12px;
+        line-height: 1.5;
+        border-bottom: 1px dashed var(--border);
+      }
+
+      .note-item:last-child {
+        border-bottom: 0;
+      }
+
+      .note-index {
+        display: grid;
+        flex-shrink: 0;
+        width: 18px;
+        height: 18px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #7d4e00;
+        background: var(--yellow-soft);
+        border: 1px solid #d4a72c;
+        border-radius: 50%;
+        place-items: center;
+      }
+
+      /* 标注面板为右侧悬浮层，预留水平空间避免遮挡内容 */
+      body.annotations .main-inner {
+        padding-right: 360px;
+      }
+
+      body.annotations [data-note] {
+        position: relative;
+        outline: 2px dashed #d4a72c;
+        outline-offset: 2px;
+      }
+
+      body.annotations [data-note]::after {
+        position: absolute;
+        top: -9px;
+        right: -9px;
+        z-index: 5;
+        display: grid;
+        width: 18px;
+        height: 18px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #7d4e00;
+        content: attr(data-note);
+        background: var(--yellow-soft);
+        border: 1px solid #d4a72c;
+        border-radius: 50%;
+        place-items: center;
+      }
+
+      body:not(.annotations) [data-note] {
+        outline: none;
+      }
+
+      body:not(.annotations) [data-note]::after {
+        display: none;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @media (max-width: 1080px) {
+        .sidebar {
+          display: none;
+        }
+
+        .stats {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 900px) {
+        body.annotations .main-inner {
+          padding-right: 24px;
+        }
+
+        .note-panel {
+          display: none;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .topbar {
+          padding: 0 12px;
+        }
+
+        .project-switch,
+        .mode-switch {
+          display: none;
+        }
+
+        .main-inner {
+          padding: 16px 12px 32px;
+        }
+
+        .page-head {
+          flex-direction: column;
+        }
+
+        .page-actions {
+          margin-left: 0;
+        }
+
+        .stats {
+          grid-template-columns: 1fr;
+        }
+
+        .issue-trailing .trailing-time {
+          display: none;
+        }
+
+        .meta-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body class="annotations">
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">OL</div>
+          openLiBing
+        </div>
+        <div class="project-switch">
+          项目：<strong>openlibing-test 静态检查验证</strong>
+          <span>300125</span>
+        </div>
+        <div class="topbar-spacer"></div>
+        <div class="mode-switch" role="group" aria-label="原型状态切换">
+          <button type="button" data-mode="current">现状</button>
+          <button type="button" data-mode="target" class="active">
+            目标态
+          </button>
+        </div>
+        <button type="button" class="annotate-btn on" id="annotateBtn">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
+            ></path>
+          </svg>
+          设计标注
+        </button>
+        <div class="avatar" title="演示账号">YZ</div>
+      </header>
+
+      <div class="body">
+        <aside class="sidebar">
+          <div class="nav-group-title">开发管理</div>
+          <div class="nav-item"><span class="nav-dot"></span>项目概览</div>
+          <div class="nav-item"><span class="nav-dot"></span>代码仓管理</div>
+          <div class="nav-item"><span class="nav-dot"></span>流水线</div>
+          <div class="nav-item active">
+            <span class="nav-dot"></span>代码检查
+          </div>
+          <div class="nav-item"><span class="nav-dot"></span>代码度量</div>
+          <div class="nav-group-title" style="margin-top: 16px">设置</div>
+          <div class="nav-item"><span class="nav-dot"></span>规则集</div>
+          <div class="nav-item"><span class="nav-dot"></span>成员管理</div>
+        </aside>
+
+        <main class="main">
+          <div class="main-inner">
+            <div class="breadcrumb">开发管理<span>/</span>代码检查</div>
+
+            <div class="page-head">
+              <div>
+                <h1 class="page-title">
+                  代码检查
+                  <span class="proto-badge" id="protoBadge"
+                    >需求原型 · 目标态</span
+                  >
+                </h1>
+                <p class="page-desc" id="pageDesc">
+                  静态分析工具在 GitHub Actions 执行，SARIF 回传 openLiBing
+                  beta，按 GitHub 平台筛选查看结果。
+                </p>
+              </div>
+              <div class="page-actions">
+                <button type="button" class="btn">导出</button>
+                <button type="button" class="btn primary">刷新数据</button>
+              </div>
+            </div>
+
+            <section class="banner" id="modeBanner" data-note="1">
+              <span class="banner-icon">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
+                  ></path>
+                </svg>
+              </span>
+              <div>
+                <p class="banner-title" id="bannerTitle">
+                  GitHub 目标态：平台筛选、来源标记、原始扫描链接均已适配
+                </p>
+                <p class="banner-text" id="bannerText">
+                  数据来自 GitHub openlibing-test 项目的 Actions：clang-tidy
+                  全量扫描 → SARIF → OBS → openLiBing
+                  beta。切换右上角「现状 / 目标态」可对比改造前后差异。
+                </p>
+              </div>
+            </section>
+
+            <section class="stats">
+              <div class="stat-card">
+                <div class="stat-label">待处理问题</div>
+                <div class="stat-value" id="statPending">128</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">严重</div>
+                <div class="stat-value red">6</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">高危</div>
+                <div class="stat-value orange">37</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">涉及仓库</div>
+                <div class="stat-value green">1</div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="tabs" role="tablist">
+                <button
+                  type="button"
+                  class="tab active"
+                  data-tab="pending"
+                  role="tab"
+                >
+                  待处理 <span class="tab-count" id="pendingCount">128</span>
+                </button>
+                <button type="button" class="tab" data-tab="ignored" role="tab">
+                  已忽略 <span class="tab-count">0</span>
+                </button>
+                <button
+                  type="button"
+                  class="tab"
+                  data-tab="resolved"
+                  role="tab"
+                >
+                  已修复 <span class="tab-count">0</span>
+                </button>
+              </div>
+
+              <div class="toolbar">
+                <div class="search">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"
+                    ></path>
+                  </svg>
+                  <input
+                    type="search"
+                    placeholder="搜索规则、文件、仓库或流水线"
+                    aria-label="搜索"
+                  />
+                </div>
+
+                <div class="filter-chip" data-note="1" id="platformFilter">
+                  <span class="chip-label">平台</span>
+                  <span class="chip-value" id="platformValue">GitHub</span>
+                  <span class="remove" role="button" aria-label="移除平台筛选"
+                    >×</span
+                  >
+                </div>
+
+                <div class="filter-chip" data-note="2" id="sourceFilter">
+                  <span class="chip-label">数据来源</span>
+                  <span class="chip-value" id="sourceValue">GitHub Action</span>
+                  <span class="remove" role="button" aria-label="移除来源筛选"
+                    >×</span
+                  >
+                </div>
+
+                <div class="filter-chip">
+                  <span class="chip-label">组织</span>
+                  <span class="chip-value">openlibing-test</span>
+                  <span class="remove" role="button" aria-label="移除组织筛选"
+                    >×</span
+                  >
+                </div>
+
+                <div class="filter-chip">
+                  <span class="chip-label">仓库</span>
+                  <span class="chip-value">clang-tidy-full-scan-demo</span>
+                  <span class="remove" role="button" aria-label="移除仓库筛选"
+                    >×</span
+                  >
+                </div>
+
+                <div class="filter-chip">
+                  <span class="chip-label">检测工具</span>
+                  <span class="chip-value">clang-tidy</span>
+                  <span class="remove" role="button" aria-label="移除工具筛选"
+                    >×</span
+                  >
+                </div>
+
+                <button type="button" class="clear-link">清空筛选</button>
+              </div>
+
+              <div class="list-head">
+                <div class="result">
+                  共 <strong id="resultCount">128</strong> 个问题
+                  <span id="resultScope"
+                    >· GitHub 平台 · GitHub Action 来源</span
+                  >
+                </div>
+                <div class="sort">
+                  按最近发现排序
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M4.427 9.573 8 6l3.573 3.573a.75.75 0 1 0 1.06-1.06l-4-4a.75.75 0 0 0-1.06 0l-4 4a.75.75 0 1 0 1.06 1.06Z"
+                    ></path>
+                  </svg>
+                </div>
+              </div>
+
+              <div id="issueList"></div>
+            </section>
+
+            <section class="flow-card" data-note="4">
+              <div class="flow-title">
+                GitHub 数据链路
+                <span id="flowHint">需求原型示意，非真实数据</span>
+              </div>
+              <div class="flow">
+                <div class="flow-step">
+                  <strong>GitHub Actions</strong> 触发扫描
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">
+                  <strong>clang-tidy</strong> 全量分析
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step"><strong>SARIF</strong> 结果转换</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">
+                  <strong>upload-sarif-action</strong> 上传
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">
+                  <strong>OBS + 回调</strong> openLiBing beta
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">
+                  <strong>代码检查</strong> 平台筛选 GitHub
+                </div>
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div class="drawer-mask" id="drawerMask"></div>
+
+    <aside class="drawer" id="drawer" aria-hidden="true">
+      <div class="drawer-head">
+        <div class="drawer-title">
+          <span class="sev-badge critical" id="drawerSeverity">严重</span>
+          <h2 id="drawerTitle">参数名称过短，影响可读性</h2>
+          <div class="rule-id" id="drawerRuleId">
+            readability-identifier-length
+          </div>
+        </div>
+        <button
+          type="button"
+          class="icon-btn"
+          id="drawerClose"
+          aria-label="关闭详情"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.749.749 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.749.749 0 1 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"
+            ></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="meta-grid">
+          <div class="meta-cell">
+            <label>仓库</label>
+            <div id="drawerRepo">openlibing-test/clang-tidy-full-scan-demo</div>
+          </div>
+          <div class="meta-cell">
+            <label>分支</label>
+            <div id="drawerBranch">main</div>
+          </div>
+          <div class="meta-cell">
+            <label>数据来源</label>
+            <div id="drawerSource">GitHub Action</div>
+          </div>
+          <div class="meta-cell">
+            <label>检测工具</label>
+            <div>clang-tidy 0.8.0</div>
+          </div>
+          <div class="meta-cell">
+            <label>流水线</label>
+            <div id="drawerPipeline">clang-tidy-scan · #1001</div>
+          </div>
+          <div class="meta-cell">
+            <label>提交</label>
+            <div id="drawerCommit">c334712</div>
+          </div>
+        </div>
+
+        <a
+          class="run-link"
+          id="drawerRunLink"
+          href="#"
+          target="_blank"
+          rel="noreferrer"
+          data-note="3"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M3.75 2h3.5a.75.75 0 0 1 0 1.5h-3.5a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-3.5a.75.75 0 0 1 1.5 0v3.5A1.75 1.75 0 0 1 12.25 14h-8.5A1.75 1.75 0 0 1 2 12.25v-8.5C2 2.784 2.784 2 3.75 2Zm6.5-1.5h4.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0V3.56L8.28 9.28a.751.751 0 0 1-1.06-1.06l5.72-5.72h-2.69a.75.75 0 0 1 0-1.5Z"
+            ></path>
+          </svg>
+          查看原始扫描（GitHub Actions）
+        </a>
+
+        <div class="section-title">问题位置</div>
+        <div class="meta-grid" style="margin-bottom: 0">
+          <div class="meta-cell">
+            <label>文件</label>
+            <div id="drawerFile">src/buffer.c</div>
+          </div>
+          <div class="meta-cell">
+            <label>行号</label>
+            <div id="drawerLine">12</div>
+          </div>
+        </div>
+
+        <div class="section-title">代码片段</div>
+        <div class="code-block" id="drawerCode"></div>
+
+        <div class="section-title">处理记录</div>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-time">2026-11-03 15:30</div>
+            <div class="timeline-text">GitHub Actions 扫描首次发现该问题</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-time">2026-11-03 15:30</div>
+            <div class="timeline-text">状态：待处理</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="note-panel open" id="notePanel">
+      <div class="note-panel-head">
+        设计标注
+        <button
+          type="button"
+          class="icon-btn"
+          id="noteClose"
+          aria-label="关闭标注"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.749.749 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.749.749 0 1 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"
+            ></path>
+          </svg>
+        </button>
+      </div>
+      <div class="note-panel-body">
+        <div class="note-item">
+          <span class="note-index">1</span>平台筛选新增 GitHub，并增加 GitHub
+          图标。
+        </div>
+        <div class="note-item">
+          <span class="note-index">2</span>数据来源新增「GitHub
+          Action」，替代当前复用 GitCode Action 的展示。
+        </div>
+        <div class="note-item">
+          <span class="note-index">3</span>「查看原始扫描」跳转 GitHub Actions
+          运行页。
+        </div>
+        <div class="note-item">
+          <span class="note-index">4</span>流水线字段映射 GitHub 上下文：job /
+          run / workflow / commit。
+        </div>
+        <div class="note-item">
+          <span class="note-index">5</span
+          >列表与详情字段一致：仓库、分支、规则、文件、行号、工具、来源。
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const ISSUES = [
+        {
+          id: 1,
+          severity: "critical",
+          severityText: "严重",
+          rule: "参数名称过短，影响可读性",
+          ruleId: "readability-identifier-length",
+          file: "src/utils.c",
+          line: 6,
+          repo: "openlibing-test/clang-tidy-full-scan-demo",
+          branch: "main",
+          pipeline: "clang-tidy-scan",
+          runId: "1001",
+          commit: "c334712",
+          time: "15:30",
+          code: [
+            "int demo_add(int a, int b)",
+            "{",
+            "    return a + b;",
+            "}",
+            "",
+            "int demo_find_char(const char *buf, size_t len, char target)",
+            "{",
+            "    if (len == 0) {",
+            "        return -1;",
+            "    }",
+            "    for (size_t i = 0; i < len; ++i) {",
+            "        if (buf[i] == target) {",
+            "            return (int)i;",
+            "        }",
+            "    }",
+            "    return -1;",
+            "}",
+          ],
+          highlight: 1,
+        },
+        {
+          id: 2,
+          severity: "critical",
+          severityText: "严重",
+          rule: "atoi 未检查转换错误",
+          ruleId: "cert-err34-c",
+          file: "src/io_utils.c",
+          line: 13,
+          repo: "openlibing-test/clang-tidy-full-scan-demo",
+          branch: "main",
+          pipeline: "clang-tidy-scan",
+          runId: "1001",
+          commit: "c334712",
+          time: "15:30",
+          code: [
+            "int io_read_int_from_stdin(void)",
+            "{",
+            "    char line[32];",
+            "    if (fgets(line, sizeof(line), stdin) == NULL) {",
+            "        return -1;",
+            "    }",
+            "    return atoi(line);",
+            "}",
+          ],
+          highlight: 7,
+        },
+        {
+          id: 3,
+          severity: "high",
+          severityText: "高危",
+          rule: "size_t 到 int 的窄化转换",
+          ruleId: "bugprone-narrowing-conversions",
+          file: "src/buffer.c",
+          line: 12,
+          repo: "openlibing-test/clang-tidy-full-scan-demo",
+          branch: "main",
+          pipeline: "clang-tidy-scan",
+          runId: "1001",
+          commit: "c334712",
+          time: "15:29",
+          code: [
+            "int demo_buffer_append(buffer_t *buf, const char *text, size_t len)",
+            "{",
+            "    if (buf == NULL || text == NULL) {",
+            "        return -1;",
+            "    }",
+            "    strncat(buf->data, text, len);",
+            "    return len;",
+            "}",
+          ],
+          highlight: 7,
+        },
+        {
+          id: 4,
+          severity: "high",
+          severityText: "高危",
+          rule: "相邻参数类型可互换，容易误传",
+          ruleId: "bugprone-easily-swappable-parameters",
+          file: "src/utils.c",
+          line: 12,
+          repo: "openlibing-test/clang-tidy-full-scan-demo",
+          branch: "main",
+          pipeline: "clang-tidy-scan",
+          runId: "1001",
+          commit: "c334712",
+          time: "15:29",
+          code: [
+            "int demo_find_char(const char *buf, size_t len, char target)",
+            "{",
+            "    for (size_t i = 0; i < len; ++i) {",
+            "        if (buf[i] == target) {",
+            "            return (int)i;",
+            "        }",
+            "    }",
+            "    return -1;",
+            "}",
+          ],
+          highlight: 1,
+        },
+        {
+          id: 5,
+          severity: "medium",
+          severityText: "中危",
+          rule: "整数除法导致精度丢失",
+          ruleId: "bugprone-integer-division",
+          file: "src/math_utils.c",
+          line: 18,
+          repo: "openlibing-test/clang-tidy-full-scan-demo",
+          branch: "main",
+          pipeline: "clang-tidy-scan",
+          runId: "1001",
+          commit: "c334712",
+          time: "15:28",
+          code: [
+            "double demo_math_idiv(int total, int count)",
+            "{",
+            "    if (count == 0) {",
+            "        return 0.0;",
+            "    }",
+            "    return total / count;",
+            "}",
+          ],
+          highlight: 6,
+        },
+        {
+          id: 6,
+          severity: "medium",
+          severityText: "中危",
+          rule: "C 风格强制类型转换",
+          ruleId: "cppcoreguidelines-pro-type-cstyle-cast",
+          file: "src/linked_list.c",
+          line: 21,
+          repo: "openlibing-test/clang-tidy-full-scan-demo",
+          branch: "main",
+          pipeline: "clang-tidy-scan",
+          runId: "1001",
+          commit: "c334712",
+          time: "15:27",
+          code: [
+            "node_t *demo_list_prepend(node_t *head, int value)",
+            "{",
+            "    node_t *node = (node_t *)malloc(sizeof(node_t));",
+            "    if (node == NULL) {",
+            "        return head;",
+            "    }",
+            "    node->value = value;",
+            "    node->next = head;",
+            "    return node;",
+            "}",
+          ],
+          highlight: 3,
+        },
+      ];
+
+      const state = {
+        mode: "target",
+        tab: "pending",
+        annotations: true,
+      };
+
+      const sourceLabel = () =>
+        state.mode === "target" ? "GitHub Action" : "GitCode Action";
+
+      const platformIcon = (size = 14) =>
+        state.mode === "target"
+          ? `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"></path></svg>`
+          : `<span style="display:inline-flex;width:${size}px;height:${size}px;align-items:center;justify-content:center;border-radius:3px;background:#2da44e;color:#fff;font-size:${Math.max(
+              8,
+              size - 6,
+            )}px;font-weight:700;line-height:1">G</span>`;
+
+      function renderIssues() {
+        const list = document.getElementById("issueList");
+        if (state.tab !== "pending") {
+          list.innerHTML = `
+            <div class="empty">
+              <strong>${state.tab === "ignored" ? "暂无已忽略问题" : "暂无已修复问题"}</strong>
+              在 GitHub 目标态下，处理动作与 GitCode 链路保持一致。
+            </div>`;
+          document.getElementById("resultCount").textContent = "0";
+          document.getElementById("pendingCount").textContent = "128";
+          document.getElementById("statPending").textContent = "128";
+          return;
+        }
+
+        list.innerHTML = ISSUES.map((issue, index) => {
+          return `
+            <article class="issue-row" data-index="${index}" tabindex="0" role="button" aria-label="查看问题详情">
+              <div class="severity-bar ${issue.severity}"></div>
+              <div class="issue-main">
+                <div class="issue-title">
+                  <span class="sev-badge ${issue.severity}">${issue.severityText}</span>
+                  ${issue.rule}
+                  <span class="rule-id">${issue.ruleId}</span>
+                </div>
+                <div class="issue-meta">
+                  <span class="repo">${platformIcon()} ${issue.repo}</span>
+                  <span class="meta-item"><span class="branch-pill">${issue.branch}</span></span>
+                  <span class="file-path">${issue.file}:${issue.line}</span>
+                  <span class="source-badge ${state.mode === "target" ? "" : "current"}">${sourceLabel()}</span>
+                  <span class="meta-item">${issue.pipeline} · #${issue.runId}</span>
+                  <span class="meta-item">${issue.time}</span>
+                </div>
+              </div>
+              <div class="issue-trailing">
+                <span class="trailing-time">最近发现</span>
+                <span class="icon-btn" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"></path>
+                  </svg>
+                </span>
+              </div>
+            </article>`;
+        }).join("");
+
+        document.getElementById("resultCount").textContent = "128";
+        document.getElementById("pendingCount").textContent = "128";
+        document.getElementById("statPending").textContent = "128";
+
+        list.querySelectorAll(".issue-row").forEach((row) => {
+          row.addEventListener("click", () =>
+            openDrawer(Number(row.dataset.index)),
+          );
+          row.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              openDrawer(Number(row.dataset.index));
+            }
+          });
+        });
+      }
+
+      function applyMode() {
+        document.querySelectorAll("[data-mode]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.mode === state.mode);
+        });
+
+        const isTarget = state.mode === "target";
+        document.getElementById("platformValue").textContent = isTarget
+          ? "GitHub"
+          : "GitCode";
+        document.getElementById("sourceValue").textContent = sourceLabel();
+        document.getElementById("resultScope").textContent = isTarget
+          ? "· GitHub 平台 · GitHub Action 来源"
+          : "· GitCode 平台 · GitCode Action 来源";
+        document.getElementById("bannerTitle").textContent = isTarget
+          ? "GitHub 目标态：平台筛选、来源标记、原始扫描链接均已适配"
+          : "现状：仅支持 GitCode / Gitee，来源显示 GitCode Action";
+        document.getElementById("bannerText").textContent = isTarget
+          ? "数据来自 GitHub openlibing-test 项目的 Actions：clang-tidy 全量扫描 → SARIF → OBS → openLiBing beta。点击任意问题可查看 GitHub Actions 原始扫描链接。"
+          : "同一页面在接入 GitHub 前的展示效果：平台筛选只有 GitCode / Gitee，尚无 GitHub 图标与 GitHub Action 来源。";
+        document.getElementById("protoBadge").textContent = isTarget
+          ? "需求原型 · 目标态"
+          : "需求原型 · 现状对比";
+        document.getElementById("pageDesc").textContent = isTarget
+          ? "静态分析工具在 GitHub Actions 执行，SARIF 回传 openLiBing beta，按 GitHub 平台筛选查看结果。"
+          : "当前 GitCode / Gitee 链路的展示效果，用于对比 GitHub 接入后的差异。";
+        document.getElementById("flowHint").textContent = isTarget
+          ? "需求原型示意，非真实数据"
+          : "下方为目标态链路，当前态仍走 GitCode Actions";
+        document
+          .getElementById("modeBanner")
+          .classList.toggle("current", !isTarget);
+
+        renderIssues();
+      }
+
+      function openDrawer(index) {
+        const issue = ISSUES[index];
+        if (!issue) return;
+
+        document.getElementById("drawerSeverity").className =
+          `sev-badge ${issue.severity}`;
+        document.getElementById("drawerSeverity").textContent =
+          issue.severityText;
+        document.getElementById("drawerTitle").textContent = issue.rule;
+        document.getElementById("drawerRuleId").textContent = issue.ruleId;
+        document.getElementById("drawerRepo").textContent = issue.repo;
+        document.getElementById("drawerBranch").textContent = issue.branch;
+        document.getElementById("drawerSource").textContent = sourceLabel();
+        document.getElementById("drawerPipeline").textContent =
+          `${issue.pipeline} · #${issue.runId}`;
+        document.getElementById("drawerCommit").textContent = issue.commit;
+        document.getElementById("drawerFile").textContent = issue.file;
+        document.getElementById("drawerLine").textContent = String(issue.line);
+        document.getElementById("drawerRunLink").href =
+          state.mode === "target"
+            ? `https://github.com/${issue.repo}/actions/runs/${issue.runId}`
+            : "#";
+
+        document.getElementById("drawerCode").innerHTML = issue.code
+          .map((line, i) => {
+            const lineNo = i + 1;
+            return `<div class="code-line ${lineNo === issue.highlight ? "highlight" : ""}"><span class="ln">${lineNo}</span><span class="code">${escapeHtml(line) || " "}</span></div>`;
+          })
+          .join("");
+
+        document.getElementById("drawer").classList.add("open");
+        document.getElementById("drawerMask").classList.add("open");
+        document.getElementById("drawer").setAttribute("aria-hidden", "false");
+      }
+
+      function closeDrawer() {
+        document.getElementById("drawer").classList.remove("open");
+        document.getElementById("drawerMask").classList.remove("open");
+        document.getElementById("drawer").setAttribute("aria-hidden", "true");
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function toggleAnnotations(force) {
+        state.annotations =
+          typeof force === "boolean" ? force : !state.annotations;
+        document.body.classList.toggle("annotations", state.annotations);
+        document
+          .getElementById("annotateBtn")
+          .classList.toggle("on", state.annotations);
+        document
+          .getElementById("notePanel")
+          .classList.toggle("open", state.annotations);
+      }
+
+      document.querySelectorAll("[data-mode]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.mode = btn.dataset.mode;
+          applyMode();
+        });
+      });
+
+      document.querySelectorAll(".tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          document
+            .querySelectorAll(".tab")
+            .forEach((item) => item.classList.remove("active"));
+          tab.classList.add("active");
+          state.tab = tab.dataset.tab;
+          renderIssues();
+        });
+      });
+
+      document.querySelectorAll(".filter-chip .remove").forEach((remove) => {
+        remove.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const chip = remove.closest(".filter-chip");
+          chip.style.display = "none";
+        });
+      });
+
+      document.querySelector(".clear-link").addEventListener("click", () => {
+        document.querySelectorAll(".filter-chip").forEach((chip) => {
+          chip.style.display = "";
+        });
+      });
+
+      document
+        .getElementById("drawerClose")
+        .addEventListener("click", closeDrawer);
+      document
+        .getElementById("drawerMask")
+        .addEventListener("click", closeDrawer);
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeDrawer();
+      });
+
+      document
+        .getElementById("annotateBtn")
+        .addEventListener("click", () => toggleAnnotations());
+      document
+        .getElementById("noteClose")
+        .addEventListener("click", () => toggleAnnotations(false));
+
+      applyMode();
+    </script>
+  </body>
+</html>
