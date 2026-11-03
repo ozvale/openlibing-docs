@@ -37,20 +37,25 @@ StaticAlarmReceiveController
 1. 配置的域名关键字（`codecheck.repo-host-keywords`，按配置顺序）
 2. 内置关键字：`gitcode` / `atomgit`→gitcode、`gitee`→gitee、`github`→github、`codehub`→codehub
 
-配置仅做补充与优先覆盖，未配置时行为与现状完全一致。
+配置仅做补充与优先覆盖，未配置时行为与现状完全一致。配置约束：
+
+- 匹配对象是从 URL 解析出的 host（已转小写），采用包含匹配，不对整条 URL 做子串匹配。
+- 平台值仅支持 `gitcode` / `gitee` / `github` / `codehub`；配置其它值时该 host 解析出的 `repoType` 无法映射来源，上报会被拒绝（fail-closed）。
+- 配置关键字优先级高于内置关键字，且不校验与内置关键字的冲突；误配（如 `gitcode:github`）会把对应平台判错，配置后需按域名逐一验证。
 
 ### 2.3 兼容性
 
-- 显式传 source 的上报方（CICD 传 `HUAWEI_PIPELINE`、GitCode Action 传 `GITCODE_ACTION`）行为不变。
+- 显式传 source 的上报方（CICD 传 `HUAWEI_PIPELINE`、GitCode Action 传 `GITCODE_ACTION`）行为不变；已核验 CICD 侧 DTO 默认值即为 `HUAWEI_PIPELINE`，仓内不存在依赖缺省 source 的调用方。
+- 未传 source 且平台无对应来源枚举（如 codehub）的上报，由改动前的"入库为 `GITCODE_ACTION`"变为拒绝入库；该类上报方接入前必须显式传 source。
 - 存量 `repoType=gitcode/gitee` 数据不受影响。
 - 新增枚举值不会改变已有数据的读写口径。
 
 ### 2.4 配置项与兜底值
 
-| 配置项                               | 是否必配 | 代码兜底值                                                                                                                     | 说明                                                                                                                          |
-| ------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `codecheck.alarm.obs-host-whitelist` | 否       | `openlibing-gitcode-action.obs.cn-southwest-2.myhuaweicloud.com,openlibing-github-action.obs.cn-southwest-2.myhuaweicloud.com` | 当前 Nacos 未配置该项，走代码默认双桶；若后续显式配置，必须同时包含两个桶，否则会覆盖默认值导致 GitHub SARIF 下载被白名单拒绝 |
-| `codecheck.repo-host-keywords`       | 否       | 空 Map，仅使用内置关键字 `gitcode` / `atomgit` / `gitee` / `github` / `codehub`                                                | 仅 GitHub Enterprise 自定义域名需要在 Nacos 配置，格式 `域名关键字:平台`，如 `git.corp.example.com:github`                    |
+| 配置项                               | 是否必配 | 代码兜底值                                                                                                                     | 说明                                                                                                                                                                                      |
+| ------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `codecheck.alarm.obs-host-whitelist` | 否       | `openlibing-gitcode-action.obs.cn-southwest-2.myhuaweicloud.com,openlibing-github-action.obs.cn-southwest-2.myhuaweicloud.com` | 当前 Nacos 未配置该项，走代码默认双桶；若后续显式配置，必须同时包含两个桶，否则会覆盖默认值导致 GitHub SARIF 下载被白名单拒绝                                                             |
+| `codecheck.repo-host-keywords`       | 否       | 空 Map，仅使用内置关键字 `gitcode` / `atomgit` / `gitee` / `github` / `codehub`                                                | 仅 GitHub Enterprise 自定义域名需要在 Nacos 配置，格式 `域名关键字:平台`，如 `git.corp.example.com:github`；关键字按 host 包含匹配，平台值限定 `gitcode` / `gitee` / `github` / `codehub` |
 
 两项均未在 Nacos 配置，本次上线不需要变更任何配置；`code.platform.address` 无需增加 github 项，静态告警链路不依赖账号平台地址。
 
@@ -88,7 +93,7 @@ StaticAlarmReceiveController
 
 ## 7. 安全设计
 
-1. **防伪造**：`repoType` 与 `repoUrl` 解析结果不一致时拒绝，避免调用方绕过接口伪造平台归属。
-2. **SSRF 防护**：OBS 下载白名单仍为强校验，仅新增明确的 GitHub Action 桶域名；仍禁止重定向。
+1. **防伪造**：`repoType` 与 `repoUrl` 解析结果不一致时拒绝，避免调用方绕过接口伪造平台归属；该校验只覆盖"声明平台 vs URL 解析平台"，`source` 仅做枚举合法性校验，不参与交叉校验。
+2. **SSRF 防护**：OBS 下载白名单仍为强校验，仅新增明确的 GitHub Action 桶域名；host 为精确匹配，白名单域名的子域名或后缀拼接域名均被拒绝；仍禁止重定向。
 3. **日志安全**：新增 WARN 日志仅输出仓库地址、流水线标识，不输出 token 等敏感信息；URL 统一经 `LogSanitizer` 处理。
-4. **配置安全**：域名关键字配置只影响平台识别，不涉及鉴权；配置缺失时回退内置规则，不会放宽任何访问控制。
+4. **配置安全**：域名关键字配置不参与鉴权，但会决定第 1 条一致性校验的对比基准；约束为按 host 包含匹配（不对整条 URL 匹配）、平台值限定 `gitcode` / `gitee` / `github` / `codehub`。误配会导致平台判错或上报被拒（fail-closed），不会放开任何接口访问控制。

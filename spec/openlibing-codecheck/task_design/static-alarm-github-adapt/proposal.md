@@ -4,7 +4,7 @@
 
 代码检查页的静态告警功能目前只适配了 Gitee 与 GitCode（含 atomgit.com 别名域名）。平台开始接入 GitHub，GitHub 仓库的静态扫描结果（SARIF）需要与 GitCode Action 一样上报到 codecheck，并在代码检查页正常展示与处理。
 
-GitHub Action 侧上报链路与 GitCode Action 完全一致，唯一差异是代码托管平台由 gitcode 变为 github。
+GitHub Action 侧上报链路与 GitCode Action 一致，差异在代码托管平台标识：`repoType` 为 github、来源为 `GITHUB_ACTION`，其余接收、解析、展示与处理链路不变。
 
 关联 Issue：https://gitcode.com/openlibing/openlibing-codecheck/issues/397
 
@@ -31,7 +31,7 @@ GitHub Action 侧上报链路与 GitCode Action 完全一致，唯一差异是�
 
 1. GitHub 仓库上报 SARIF 后，`static_alarm_scan_run.repoType` 为 `github`；未显式传 source 时自动推断为 `GITHUB_ACTION`，并产生可追溯的告警日志。
 2. 静态告警列表、详情、数量统计、筛选项能正确展示 GitHub 仓库数据，平台筛选项包含 `github`。
-3. 屏蔽、取消屏蔽、指定责任人、清理、导出对 GitHub 仓库数据均可用。
+3. 屏蔽、取消屏蔽、指定责任人、清理、导出对 GitHub 仓库数据均可用（责任人取自系统用户表 `user_basic_info`，不依赖 GitHub 账号映射）。
 4. 消失问题自动流转（已解决）与分支告警数推送对 GitHub 仓库生效。
 5. repoType 与 repoUrl 不一致、source 非法或无法推断时，上报被拒绝并返回可读错误。
 6. SARIF 从 GitHub Action 的 OBS 桶可正常下载；白名单外域名仍被拒绝。
