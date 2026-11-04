@@ -30,7 +30,7 @@
 
 1. **批次 1（日志与常量）**
    - #386：`log4j2-spring.xml` 的 `MANAGE_LOG_FILE` PatternLayout 改为 `%enc{%msg}{CRLF}%n`；`ManageLogHelper` 对自由文本字段增加净化防御。
-   - #400：`SuppressionScanServiceImpl` 不再打印完整响应体与异常 message 原文，改为安全的状态码/长度信息与脱敏摘要；异常类型与堆栈保留。
+   - #400：`SuppressionScanServiceImpl` 不再打印完整响应体与异常 message 原文，改为安全的状态码/长度信息；异常类型与堆栈保留。
    - #215：在 `ProjectConstant.Role` 补充 `PLATFORM_OPERATOR`、`COMMUNITY_MANAGER`，替换 `AuthUtils` 及同类角色字面量。
    - #399：统一 5 组共 9 处 admin/角色判断为角色常量与集中校验方法；`checkPermission` 保留 null guard，仅去掉空集合短路（空列表结果不变）。
 
@@ -71,7 +71,7 @@
 - [ ] #215：管理员、平台运营、社区管理员、普通用户的鉴权结果与修改前一致。
 - [ ] #399：5 组共 9 处 admin/角色判断均使用角色常量，且 `checkPermission` 保留 null guard、去掉空集合短路后结果不变。
 - [ ] #399：敏感词权限校验对 admin / platform_operator / 普通用户 / null / 空角色列表结果与修改前一致。
-- [ ] #400：IO/JSON 异常日志不再输出完整响应体与异常 message 原文，仅输出脱敏摘要；异常类型与堆栈仍保留。
+- [ ] #400：IO/JSON 异常日志不再输出完整响应体与异常 message 原文，仅保留异常类型与前 10 帧堆栈摘要。
 - [ ] #400：正常响应解析与失败返回行为不变。
 
 ### 批次 2

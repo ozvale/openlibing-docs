@@ -13,9 +13,9 @@
   - 不改变 JSON 字段名与结构
 
 - [ ] 3. #386/#400 扩展既有 `common/util/LogSanitizer.java`（注意包路径为 `common/util`，不是 `common/utils`）
-  - `sanitize(null)` 返回空串，避免 NPE
-  - 新增最大长度截断（默认 512，支持重载传入）
-  - 新增/扩展 `LogSanitizerTest`：null、`\r\n`、`\t`、控制字符、超长文本
+  - 保持既有 `sanitize(null) -> null` 语义不变
+  - 新增 `sanitize(String, int)` 最大长度截断重载（默认调用方可传 512）
+  - 扩展 `LogSanitizerTest`：null、`\r\n`、`\t`、控制字符、超长文本、非正数上限
 
 - [ ] 4. #386 补充 `ManageLogHelperTest`
   - 输入含 `\r\n`、`\t`、控制字符时输出不含真实换行
@@ -23,9 +23,9 @@
 
 - [ ] 5. #400 修改 `business/service/impl/SuppressionScanServiceImpl.java`
   - `API response code is not 0` 日志不再打印完整 `responseBody`，改为状态码/长度
-  - IO / JSON 异常日志保留异常类型与前 10 帧堆栈摘要，message 经 `LogSanitizer.sanitize` 截断
+  - IO / JSON 异常日志保留异常类型与前 10 帧堆栈摘要，省略 message（避免响应体/URL 原文）
   - 不再把异常对象直接作为 throwable 传入，避免 message 原文随堆栈输出
-  - `platform` 参数统一 `LogSanitizer.sanitize`
+  - `platform` 等上下文参数统一 `LogSanitizer.sanitize`
 
 - [ ] 6. #400 补充/验证日志测试
   - 异常消息含 URL/token/响应片段时日志中不出现原文
@@ -46,8 +46,8 @@
   - 鉴权入口对上述角色结果与修改前一致
 
 - [ ] 10. #399 统一 admin 判断（5 组共 9 处）
-  - `business/impl/SensitiveDelegateImpl.java:746` 使用角色常量
-  - `checkPermission` 保留 null guard，去掉空集合短路与重复 `queryByUserId` 调用；空列表结果不变
+  - `business/impl/SensitiveDelegateImpl.java:746` 使用 `ProjectConstant.Role.ADMIN`
+  - `checkPermission` 保留 null guard，去掉空集合短路与重复 `queryByUserId` 调用；空列表、platform_operator、普通角色结果均不变
   - `business/operation/common/CommonOperation.java:298/312`
   - `business/operation/sensitive/CheckPermissionOperation.java:40/46`
 

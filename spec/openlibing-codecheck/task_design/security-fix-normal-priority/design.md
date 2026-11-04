@@ -26,9 +26,9 @@
 
 - `SuppressionScanServiceImpl.parsePrFilesResponse`：
   - `LOGGER.error("API response code is not 0: {}", responseBody)` 改为只记录状态码与响应体长度，不打印完整响应体；
-  - IO/JSON 异常日志**保留异常类型与堆栈**：记录 `e.getClass().getName()`、`LogSanitizer.sanitize(e.getMessage())`（截断至 512 字符）以及前 10 帧 `StackTraceElement` 摘要；不再把异常对象直接作为 throwable 传入，避免 message 原文随堆栈输出；
-  - `platform` 入参统一 `LogSanitizer.sanitize`。
-- `LogSanitizer` 为既有类（`common/util/LogSanitizer.java`），本次复用；若现有实现未处理 `null`，补充 `null` 返回空串，并新增最大长度截断能力。
+  - IO/JSON 异常日志**保留异常类型与堆栈**：记录 `e.getClass().getName()` 与前 10 帧 `StackTraceElement` 摘要；**省略异常 message**（可能包含响应体/URL 原文），不再把异常对象直接作为 throwable 传入；
+  - `platform` 等上下文参数统一 `LogSanitizer.sanitize`。
+- `LogSanitizer` 为既有类（`common/util/LogSanitizer.java`），本次复用；保持既有 `null -> null` 语义不变，新增带最大长度的 `sanitize(String, int)` 重载供可控文本截断使用。
 - 不改变解析逻辑与返回值，仅收敛日志内容。
 
 #### #399 带 admin 操作的控制语句
@@ -46,7 +46,7 @@
   - `SensitiveDelegateImpl:746`（1 处）
   - `CheckPermissionOperation:40/46`（2 处）
   - `CommonOperation:298/312`（2 处）
-- `SensitiveDelegateImpl.checkPermission` 目标形态（保留 null 防御，仅去掉空集合短路，不改变空列表结果）：
+- `SensitiveDelegateImpl.checkPermission` 目标形态（保留 null 防御，仅去掉空集合短路，不改变空列表与 platform_operator 结果）：
   ```java
   public boolean checkPermission(String userId) {
     List<UserRoleInfoEntity> roles = userRoleMapper.queryByUserId(userId);
@@ -54,14 +54,14 @@
       return false; // null 安全；空列表走循环自然返回 false
     }
     for (UserRoleInfoEntity role : roles) {
-      if (role != null && AuthUtils.isSystemAdmin(role.getRole())) {
+      if (role != null && ProjectConstant.Role.ADMIN.equals(role.getRole())) {
         return true;
       }
     }
     return false;
   }
   ```
-  语义边界：`roles == null` 返回 `false`；空列表返回 `false`；含 admin / platform_operator 返回 `true`；仅含普通角色返回 `false`。同时去掉循环内重复调用 `queryByUserId` 的写法。
+  语义边界：`roles == null` 返回 `false`；空列表返回 `false`；含 admin 返回 `true`；platform_operator / 普通角色返回 `false`（与修改前一致）。同时去掉循环内重复调用 `queryByUserId` 的写法。
 
 #### #385 接口参数未校验
 
@@ -220,7 +220,7 @@ public final class PageParams {
 ### 2.1 批次 1
 
 1. 修改 `log4j2-spring.xml` 的 `MANAGE_LOG_FILE` pattern。
-2. `ManageLogHelper.writeLog` 增加字段净化；补充 `LogSanitizer` 的 `null` 处理与长度截断。
+2. `ManageLogHelper.writeLog` 增加字段净化；新增 `LogSanitizer.sanitize(String, int)` 长度截断重载（保持既有 `null -> null` 语义）。
 3. `SuppressionScanServiceImpl` 收敛响应体与异常日志（保留异常类型与堆栈）。
 4. 新增角色常量与集中判断方法，替换 5 组共 9 处角色字面量。
 5. 运行 `ManageLogHelperTest`、`AuthUtilsTest`、`SensitiveDelegateImplTest`，补充新断言（`AuthUtilsTest` 扩展现有文件，覆盖 `isSystemAdmin` 的 admin / platform_operator / community_manager / 普通角色 / null / 空串）。
@@ -267,7 +267,7 @@ public final class PageParams {
 | `common/aop/ShieldLogHandler.java`            | shield 接口操作日志补数                   |
 | `common/aop/StaticAlarmAssignLogHandler.java` | assign-owner 操作日志补数                 |
 
-> `LogSanitizer` 为**既有类**（`common/util/LogSanitizer.java`，注意不是 `common/utils`），本次复用并补充 `null` 处理与长度截断，不列入新增类。
+> `LogSanitizer` 为**既有类**（`common/util/LogSanitizer.java`，注意不是 `common/utils`），本次复用并新增长度截断重载（保持既有 `null -> null` 语义），不列入新增类。
 
 ### 3.2 修改类
 
@@ -334,15 +334,15 @@ public final class PageParams {
 
 ### 7.1 威胁覆盖
 
-| 威胁                         | 覆盖方式                                                       |
-| ---------------------------- | -------------------------------------------------------------- |
-| 日志伪造（CWE-117）          | 输出层 `%enc{CRLF}` + 字段净化                                 |
-| 参数绕过（CWE-20）           | `@Valid` + 模型约束 + delegate 业务校验                        |
-| 资源耗尽（CWE-400）          | 分页/导出/SARIF 上限 + 流式读取                                |
-| 鉴权逻辑不一致（CWE-511）    | 角色常量集中，避免字面量漂移                                   |
-| 敏感地址/凭证泄露（CWE-798） | 配置化 + 白名单查表                                            |
-| 敏感信息泄露（CWE-209）      | 收敛响应体与异常 message 日志，保留异常类型/堆栈并输出脱敏摘要 |
-| 操作不可追溯（CWE-778）      | 操作日志 Handler 补齐 + 网关菜单打标                           |
+| 威胁                         | 覆盖方式                                                    |
+| ---------------------------- | ----------------------------------------------------------- |
+| 日志伪造（CWE-117）          | 输出层 `%enc{CRLF}` + 字段净化                              |
+| 参数绕过（CWE-20）           | `@Valid` + 模型约束 + delegate 业务校验                     |
+| 资源耗尽（CWE-400）          | 分页/导出/SARIF 上限 + 流式读取                             |
+| 鉴权逻辑不一致（CWE-511）    | 角色常量集中，避免字面量漂移                                |
+| 敏感地址/凭证泄露（CWE-798） | 配置化 + 白名单查表                                         |
+| 敏感信息泄露（CWE-209）      | 省略响应体/异常 message 原文，保留异常类型/堆栈与脱敏上下文 |
+| 操作不可追溯（CWE-778）      | 操作日志 Handler 补齐 + 网关菜单打标                        |
 
 ### 7.2 密钥与敏感信息
 
