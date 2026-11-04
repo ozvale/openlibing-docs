@@ -30,8 +30,9 @@
 
 ## 四、测试
 
-- [ ] 改造前基线：执行现有 `AuthInterceptorTest`，记录通过用例数与用例名清单
-- [ ] 改造前锁定存量语义（characterization）：方法级 `@ProjectAuth` 的取参来源、错误码、使用的 SQL 方法名
+- [ ] 改造前基线：执行现有 `AuthInterceptorTest`（`mvn -o test -Dtest=AuthInterceptorTest`），记录结果（实测 50 例全通过）
+- [ ] 改造前锁定存量语义（characterization）：方法级 `@ProjectAuth` 的取参来源、错误码，并用 `verify` 锁定调用的是 `hasPermission` 而非 `hasProjectMenuPermission`、菜单 URL 不做坍缩
+- [ ] `@BeforeEach` 新增 1 行 fixture stub `lenient().when(handlerMethod.getBeanType()).thenReturn(AuthInterceptorTest.class)`：`HandlerMethod` 为 mock，`getBeanType()` 默认返回 null，改造后类级回查会 NPE
 - [ ] `AuthInterceptorTest` 补类级用例：
   - [ ] 类级注解命中 + 路径变量 projectId + 有权限 → 放行
   - [ ] 类级注解命中 + 路径变量缺失 → fail-closed
@@ -42,9 +43,9 @@
   - [ ] gitcode pulls 后缀坍缩
   - [ ] 占位符改名负向用例：`/pulls/{prNumber}/commits` 仍坍缩为 `/pulls/{number}`
   - [ ] 方法级 `@ProjectAuth` 行为不变（query/body 取参、不含 visitor）
-- [ ] 改造后回归：存量用例不改一行，全部通过；新增用例全部通过
-- [ ] 守卫测试：扫描全部 `HandlerMapping`，所有 `/project/**` 形态端点必须带方法级或类级 `@ProjectAuth`，并断言端点总数（49）
-- [ ] 执行 `mvn -pl openlibing-cicd test -Dtest=AuthInterceptorTest` 及相关测试
+- [ ] 改造后回归：存量 50 个用例的用例体不改，仅依赖上述 fixture stub，全部通过；新增用例全部通过
+- [ ] 守卫测试：用 `ClassPathScanningCandidateComponentProvider` 扫描 `com.openlibing.cicd.business.controller`（不启动 Spring 上下文、不依赖 DB），所有 `/project/**` 形态端点必须带方法级或类级 `@ProjectAuth`，并断言端点总数（49）
+- [ ] 执行 `mvn test -Dtest=AuthInterceptorTest` 及相关测试（该仓为单模块仓，不用 `-pl`）
 
 ## 五、交付与验证
 
