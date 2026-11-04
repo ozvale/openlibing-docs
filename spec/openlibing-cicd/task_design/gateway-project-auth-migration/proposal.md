@@ -19,17 +19,18 @@ openlibing-gateway 的 `PermissionCheckFilter`（order=3）对所有 `/openlibin
 - 不改动 `PipelineControllerV2` 现有 3 个方法级 `@ProjectAuth` 与 30 个 `@CheckPermission` 的行为（已核实这 3 个方法均未标注 `@CheckPermission`）。
 - 不改动网关侧代码（由网关同事执行删除）。
 - **已知等价偏差（接受，本次不修）**：`GET /project/{projectId}/pr/get-pr-pipeline` 未在 `menu_url_info` 登记，迁移前后对所有角色（含项目 admin）均返回 403。该端点当前不可用，本次只保证「与删除前一致」，不恢复可用性；BETA 验证中单列，不计入 48 个可用端点的通过项。
+- **已知配置差异（接受）**：不保留网关 SQL 中的 `or uri.role = 'visitor'` 分支。现状 `visitor` 角色未授予这 49 个端点任何菜单，改造前后判定一致；若后续给 `visitor` 配置这些菜单，配置在 cicd 侧不会生效，需单独评审后显式修改代码。
 
 ## 验收标准
 
 1. 7 个 Controller 的类级 `@ProjectAuth` 生效，49 个端点均要求登录 + 项目菜单权限；匿名请求返回 401（`MISSING_USER_ID`），无权限返回 403（`PERMISSION_DENIED`）。
 2. 类级鉴权的 projectId 只从路径变量 `projectId` 获取；路径中缺失该变量时 fail-closed（400/403），不回落到 query 或 body。
-3. 类级鉴权 SQL 含 `visitor` 角色放行，与网关 `UserRoleMapper.hasPermission` 逐字等价（已逐行比对一致，本次仅改名）。
+3. 类级鉴权使用 cicd 现有 `hasPermission`，SQL 正文与 Mapper 均不改动；与网关 SQL 的唯一差异是不保留 `or uri.role = 'visitor'`（依据：`visitor` 角色未授予这 49 个端点任何菜单，该分支从未命中）。
 4. `/pr/pulls/{number}/**` 与 `/pr/gitcode/pulls/{number}/**` 按 `/pr/pulls/{number}`、`/pr/gitcode/pulls/{number}` 查询菜单权限，复刻网关坍缩行为；实现按路径段正则匹配，不依赖占位符字面名。
 5. 类级 `@ProjectAuth` 与 `@CheckPermission` 同时存在时，两者均执行（AND 叠加），项目级校验在前。
 6. `PipelineControllerV2` 3 个方法级 `@ProjectAuth` 行为不变（仍走 query/body 取 projectId、不含 visitor 的 SQL）；因这 3 个方法均无 `@CheckPermission`，删除提前返回不改变判定结果。
-7. `AuthInterceptorTest` 覆盖以上判定分支并全部通过；守卫测试扫描全量 `HandlerMapping`，断言所有 `/project/**` 端点均带 `@ProjectAuth` 且端点总数守恒。
-8. BETA 环境按角色矩阵（admin / platform_operater / repo_observer / visitor / 项目成员 / 项目外用户 / 匿名）人工验证，48 个已登记端点结果与删除前一致，`get-pr-pipeline` 单独确认前后均为 403。
+7. `AuthInterceptorTest` 覆盖以上判定分支并全部通过；守卫测试扫描全量 `HandlerMapping`，断言所有 `/project/**` 端点均带 `@ProjectAuth`、类级注解所在类的映射路径均含名为 `projectId` 的路径变量，且端点总数守恒。
+8. BETA 环境按角色矩阵（admin / platform_operater / repo_observer / 纯 visitor 账号 / 项目成员 / 项目外用户 / 匿名）人工验证：48 个已登记端点结果与删除前一致（纯 visitor 账号仍为 403），`get-pr-pipeline` 单独确认前后均为 403。
 
 ## 关联 Issue
 

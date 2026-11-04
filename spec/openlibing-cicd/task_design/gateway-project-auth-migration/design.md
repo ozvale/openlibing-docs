@@ -45,23 +45,30 @@ userId 统一只取网关注入的 query 参数（`userIdKey`），不采信请�
 
 ### 2.4 SQL 选择
 
-| 来源   | 方法                                                        | visitor 放行 |
-| ------ | ----------------------------------------------------------- | ------------ |
-| 类级   | `hasProjectMenuPermission`（原 `hasPublicPermission` 改名） | 是           |
-| 方法级 | `hasPermission`                                             | 否           |
+类级与方法级统一使用 cicd 现有的 `hasPermission`，SQL 正文不改动，Mapper 与 XML 均无需修改。
 
-类级 SQL 与网关 `openlibing-gateway` 的 `UserRoleMapper.hasPermission` **逐字一致**，已逐行比对确认（仅缩进不同）：
+| 来源   | 方法            |
+| ------ | --------------- |
+| 类级   | `hasPermission` |
+| 方法级 | `hasPermission` |
+
+该语句与网关 `UserRoleMapper.hasPermission` 的唯一差异是不含 `or uri.role = 'visitor'`：
 
 ```sql
 select role from user_role_info uri
-    where uri.user_id = #{userId} and ((uri.project_id = #{projectId} and uri.perm_group_id = 0) or uri.role = 'admin' or uri.role = 'visitor') and
+    where uri.user_id = #{userId} and ((uri.project_id = #{projectId} and uri.perm_group_id = 0) or uri.role = 'admin') and
     uri.role in (select role from role_type_info rti
     left join role_permission_manager rpm on rti.id = rpm.role_id
     left join menu_url_info mui on rpm.menu_id = mui.menu_id
     where mui.menu_url = #{menuUrl})
 ```
 
-cicd 侧存量 `hasPublicPermission` 与该语句在 `visitor` 放行、`role_type_info` 关联、`menu_url_info` 匹配三个维度上完全一致，因此本次只需改名，正文不改动。
+不保留 `visitor` 分支的依据：
+
+- `visitor` 角色被授予的 39 条菜单全部为流水线查看类，与本需求 49 个端点的 URL 无交集，该分支对这批端点从未命中；
+- 流水线路径在网关过滤器内已被 `/pipeline/` 正则提前放行，不会进入这条 SQL。
+
+因此去掉该分支不改变任何现有用户的判定结果，且方向更严格，不放开权限。
 
 ### 2.5 pulls 路径坍缩（复刻网关）
 
@@ -108,11 +115,9 @@ private static final Pattern GATEWAY_PULLS_PATTERN =
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ProjectAuth`                     | `@Target({METHOD, TYPE})`                                                                                                                                |
 | `AuthInterceptor`                 | 新增类级注解查找；`handleProjectAuth` 增加 `fromClassLevel` 参数；新增 `resolveClassLevelProjectId`、`collapsePullsSuffix`、常量 `GATEWAY_PULLS_PATTERN` |
-| `UserRoleMapper`（cicd）          | `hasPublicPermission` 改名 `hasProjectMenuPermission`（无 Java 调用方，纯改名）                                                                          |
-| `UserRoleMapper.xml`（cicd）      | 对应 `<select id>` 改名                                                                                                                                  |
 | `PrController` 等 7 个 Controller | 类级加 `@ProjectAuth`                                                                                                                                    |
 
-`PipelineControllerV2` 不改动。
+`PipelineControllerV2` 不改动；`UserRoleMapper` 与 `UserRoleMapper.xml` 不改动。
 
 「7 个 Controller / 49 个端点」是人工枚举结果，不作为代码可推导的假设。守卫测试不遍历白名单类，而是扫描全部 `HandlerMapping`：所有 `/project/**` 形态的端点必须带方法级或类级 `@ProjectAuth`，并核对端点总数，使将来新增的 Controller 漏标时测试直接失败。
 
@@ -142,4 +147,6 @@ private static final Pattern GATEWAY_PULLS_PATTERN =
 - 缺参数即 fail-closed，不出现默认放行分支。
 - 类级与流水线级校验 AND 叠加，任一失败即拒绝。
 - 删除网关过滤器后不存在双通道并存：cicd 侧校验先上线，网关后删除。
+- 不保留 `visitor` 分支：现状该分支对 49 个端点从未命中，去掉后方向更严格，不放开权限。
 - 已知等价偏差（已确认接受）：`GET /project/{projectId}/pr/get-pr-pipeline` 未登记菜单，删除前后均为 403。
+- 已知配置差异（已确认接受）：后续若给 `visitor` 角色配置这 49 个端点的菜单，cicd 侧不会生效；如确需对访客开放，须单独评审并显式修改代码。
