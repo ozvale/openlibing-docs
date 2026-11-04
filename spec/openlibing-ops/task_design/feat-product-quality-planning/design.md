@@ -1,4 +1,4 @@
-# 产品质量-质量策划模块技术设计
+# 质量管理-质量策划模块技术设计
 
 ## 1. 设计依据与现状约束
 
@@ -9,7 +9,7 @@
 - 当前权限库没有里程碑主数据，本需求新增；不修改其他项目已有表。
 - 当前 `ResourcePermissionMapper` 只证明项目归属，不能直接表达“项目质量负责人”，需新增模块内权限查询。
 - 当前权限设计文档将 `role_type_info.type = 'project'` 且 `project_id` 匹配描述为项目管理员。本设计沿用该语义；通过 product/repo 归属获得访问权的用户按普通成员只读处理，不虚构新的角色名称。
-- 当前 `UserUtil.currentUserId` 存在 query 参数兜底。产品质量模块写权限不能依赖可伪造的外部参数，因此新增 token-only 的用户身份入口供本模块使用，保留原方法避免影响存量接口。
+- 当前 `UserUtil.currentUserId` 存在 query 参数兜底。质量管理模块写权限不能依赖可伪造的外部参数，因此新增 token-only 的用户身份入口供本模块使用，保留原方法避免影响存量接口。
 
 需求与代码冲突时以当前代码为准。上述权限和身份差异是适配器必须显式处理的边界，不能只在 Controller 上加注解后默认安全。
 
@@ -529,7 +529,7 @@ Controller
 
 新增 `ProductQualityLogHandler extends AbstractLogHandler` 和请求级快照支撑，复用现有 Recorder 的公共字段、菜单标识、IP、起止时间及写入链路。
 
-1. 所有 POST/PUT/DELETE 写接口标注仓库要求的日志注解，并由 Handler 精确匹配产品质量路径。
+1. 所有 POST/PUT/DELETE 写接口标注仓库要求的日志注解，并由 Handler 精确匹配质量管理路径。
 2. App Service 在修改前冻结旧实体/DTO 快照并存入请求级上下文：批量删除保存旧记录列表，初始化保存空策划快照，质量负责人变更保存旧负责人集合。这样不依赖 AOP `before` 阶段再次路由全部业务表。
 3. 业务保存成功后立即冻结新实体/DTO 快照；Handler 在 `after` 阶段一次性消费请求级旧/新快照，避免并发请求回查混入其他数据。失败操作不填成功的新快照。
 4. 快照字段来自白名单业务实体，不序列化 `HttpServletRequest`、Cookie、token、JWT 或完整 HTTP 报文。

@@ -1,11 +1,11 @@
-# 威胁模型：产品质量-质量策划模块
+# 威胁模型：质量管理-质量策划模块
 
 ## 1. 范围与假设
 
 - 业务 Issue：[openlibing-ops #328](https://gitcode.com/openlibing/openlibing-ops/issues/328)。
 - 范围：新增项目里程碑、质量策划初始化、目录、项目质量负责人、17 类策划内容的 REST API 与 MySQL 持久化。
 - 不在范围内：前端、质量评估、导入导出、列设置、外部作业平台集成。
-- 认证继续使用 OPS 现有 token Cookie 与 JWT 组件；产品质量模块不接受 query 参数身份。
+- 认证继续使用 OPS 现有 token Cookie 与 JWT 组件；质量管理模块不接受 query 参数身份。
 - 网关、HTTPS、数据库账号和日志平台属于现有信任基础设施，本需求不重建，但上线前必须验证其安全配置。
 
 ## 2. 资产清单

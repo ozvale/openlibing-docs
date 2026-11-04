@@ -148,7 +148,7 @@ Generated-by: kimi-k3.1-pro
 - [ ] 写敏感信息测试：快照序列化不包含 token、Cookie、HttpServletRequest、数据库配置和完整 HTTP 报文。
 - [ ] 运行 `mvn "-Dtest=ProductQualityLogHandlerTest,ProductQualityLogSnapshotTest" test`，预期 FAIL。
 - [ ] 实现请求级白名单 payload，App Service 在修改前冻结 old、成功后冻结 new；Handler `after` 一次性消费并调用 `OperationLogHandlerSupport.applySnapshot` 或等价现有能力。
-- [ ] Handler 只匹配产品质量写请求，不能影响 `DashboardCommonLogHandler`；日志异常按现有框架策略处理且不暴露内部细节。
+- [ ] Handler 只匹配质量管理写请求，不能影响 `DashboardCommonLogHandler`；日志异常按现有框架策略处理且不暴露内部细节。
 - [ ] 重跑审计测试及 `DashboardCommonLogHandlerTest`，预期全部 PASS。
 - [ ] 执行通用验证与提交，建议主题：`feat(productquality): add operation audit snapshots`。
 
