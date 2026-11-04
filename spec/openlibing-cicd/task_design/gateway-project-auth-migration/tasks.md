@@ -10,10 +10,11 @@
   - [ ] 类级：使用 `hasProjectMenuPermission`
   - [ ] 类级：菜单 URL 经 `collapsePullsSuffix` 处理
   - [ ] 方法级：保持 query/body 取 projectId + `hasPermission`，行为不变
-- [ ] `AuthInterceptor`：新增常量 `GATEWAY_PULLS_COLLAPSE_PREFIXES` 与私有方法 `collapsePullsSuffix`
+- [ ] `AuthInterceptor`：新增常量 `GATEWAY_PULLS_PATTERN` 与私有方法 `collapsePullsSuffix`
 
 ## 二、Mapper
 
+- [ ] 比对 cicd `hasPublicPermission` 与网关 `hasPermission` 的 SQL 正文（已核实逐字一致，仅缩进不同）
 - [ ] `UserRoleMapper.hasPublicPermission` 改名 `hasProjectMenuPermission`
 - [ ] `UserRoleMapper.xml` 对应 `<select id>` 改名
 
@@ -29,6 +30,8 @@
 
 ## 四、测试
 
+- [ ] 改造前基线：执行现有 `AuthInterceptorTest`，记录通过用例数与用例名清单
+- [ ] 改造前锁定存量语义（characterization）：方法级 `@ProjectAuth` 的取参来源、错误码、使用的 SQL 方法名
 - [ ] `AuthInterceptorTest` 补类级用例：
   - [ ] 类级注解命中 + 路径变量 projectId + 有权限 → 放行
   - [ ] 类级注解命中 + 路径变量缺失 → fail-closed
@@ -37,8 +40,10 @@
   - [ ] 类级 + `@CheckPermission` 同时存在且项目级通过、流水线级拒绝 → 拒绝（AND 叠加）
   - [ ] pulls 后缀坍缩：`/pulls/{number}/commits` 查询 URL 为 `/pulls/{number}`
   - [ ] gitcode pulls 后缀坍缩
+  - [ ] 占位符改名负向用例：`/pulls/{prNumber}/commits` 仍坍缩为 `/pulls/{number}`
   - [ ] 方法级 `@ProjectAuth` 行为不变（query/body 取参、不含 visitor）
-- [ ] 守卫测试：7 个 Controller 的类级注解存在性 + 其所有 mapping 路径均含 `{projectId}` 路径变量
+- [ ] 改造后回归：存量用例不改一行，全部通过；新增用例全部通过
+- [ ] 守卫测试：扫描全部 `HandlerMapping`，所有 `/project/**` 形态端点必须带方法级或类级 `@ProjectAuth`，并断言端点总数（49）
 - [ ] 执行 `mvn -pl openlibing-cicd test -Dtest=AuthInterceptorTest` 及相关测试
 
 ## 五、交付与验证

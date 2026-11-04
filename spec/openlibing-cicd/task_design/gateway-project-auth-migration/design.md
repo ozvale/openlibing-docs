@@ -32,6 +32,8 @@ preHandle:
 
 删除原 `return true` 后，两者同时存在时项目级先校验、流水线级后校验，任一失败即拒绝。
 
+该规则对方法级与类级 `@ProjectAuth` 一视同仁。已核实：`PipelineControllerV2` 中 3 个方法级 `@ProjectAuth`（`/updatePipelineConfig`、`/batchUpdatePipelineConfig`、`/cancelPipelineQueue`）均**未**同时标注 `@CheckPermission`，`@CheckPermission` 的 30 处均不在这些方法上；全仓 Controller 中也不存在同时标注两者的方法。因此删除提前返回后，现有端点判定结果不变；AND 叠加只对将来新增的「两类注解共存」方法生效。
+
 ### 2.3 projectId 来源
 
 | 来源           | projectId 取值                                                        | 缺失处理                                                        |
@@ -48,30 +50,41 @@ userId 统一只取网关注入的 query 参数（`userIdKey`），不采信请�
 | 类级   | `hasProjectMenuPermission`（原 `hasPublicPermission` 改名） | 是           |
 | 方法级 | `hasPermission`                                             | 否           |
 
-类级 SQL 与网关 `openlibing-gateway` 的 `UserRoleMapper.hasPermission` 逐字一致，保证等价。
+类级 SQL 与网关 `openlibing-gateway` 的 `UserRoleMapper.hasPermission` **逐字一致**，已逐行比对确认（仅缩进不同）：
+
+```sql
+select role from user_role_info uri
+    where uri.user_id = #{userId} and ((uri.project_id = #{projectId} and uri.perm_group_id = 0) or uri.role = 'admin' or uri.role = 'visitor') and
+    uri.role in (select role from role_type_info rti
+    left join role_permission_manager rpm on rti.id = rpm.role_id
+    left join menu_url_info mui on rpm.menu_id = mui.menu_id
+    where mui.menu_url = #{menuUrl})
+```
+
+cicd 侧存量 `hasPublicPermission` 与该语句在 `visitor` 放行、`role_type_info` 关联、`menu_url_info` 匹配三个维度上完全一致，因此本次只需改名，正文不改动。
 
 ### 2.5 pulls 路径坍缩（复刻网关）
 
-网关历史实现：
+网关历史实现（`PermissionCheckFilter` L41-44、L108-120）两个模式并存：
 
 ```java
 PIPELINE_PR_PATTERN = Pattern.compile("/pr/pulls/(.*)");
-Matcher m = PIPELINE_PR_PATTERN.matcher(requestPath);
-if (m.find()) {
-  requestPath = requestPath.replace("/pr/pulls/" + m.group(1), "/pr/pulls/{number}");
-}
+PIPELINE_PR_GITCODE_PATTERN = Pattern.compile("/pr/gitcode/pulls/(.*)");
 ```
 
-即 `/pr/pulls/{number}` 及其任意子路径统一按 `/pr/pulls/{number}` 查菜单权限；`/pr/gitcode/pulls/**` 同理。实现改为前缀截断：
+命中后分别把 `/pr/pulls/<捕获串>` 整体替换为 `/pr/pulls/{number}`、`/pr/gitcode/pulls/<捕获串>` 整体替换为 `/pr/gitcode/pulls/{number}`。即两类 pulls 前缀及其任意子路径统一按前缀本身查菜单权限。
+
+cicd 侧实现不依赖占位符字面名，按路径段正则坍缩：
 
 ```java
-// 网关下移时原样保留的 pulls 路径坍缩前缀
-private static final String[] GATEWAY_PULLS_COLLAPSE_PREFIXES = {
-  "/pr/pulls/{number}", "/pr/gitcode/pulls/{number}"
-};
+// 复刻网关下移前对 pulls 子路径的坍缩规则
+private static final Pattern GATEWAY_PULLS_PATTERN =
+    Pattern.compile("^(/openlibing-cicd/project/\\{projectId\\}/pr/(?:gitcode/)?pulls)/[^/]+(?:/.*)?$");
 ```
 
-`collapsePullsSuffix(menuUrl)`：若 menuUrl 包含任一前缀，返回 `menuUrl.substring(0, index + prefix.length())`；否则原样返回。
+`collapsePullsSuffix(menuUrl)`：命中时返回 `matcher.group(1) + "/{number}"`，否则原样返回。正则按段匹配而非匹配 `{number}` 字面量，因此占位符改名（如 `{prNumber}`）不会静默失效。
+
+已核实：`PrController` 中 12 处 pulls mapping 全部使用 `{number}` 占位符，且测试用 `{prNumber}` 形态做负向用例。
 
 仅类级分支调用（方法级 3 个端点为 `/project/pipeline/**`，网关从未坍缩）。
 
@@ -91,15 +104,17 @@ private static final String[] GATEWAY_PULLS_COLLAPSE_PREFIXES = {
 
 ## 3. 类设计
 
-| 类                                | 变更                                                                                                                                                               |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ProjectAuth`                     | `@Target({METHOD, TYPE})`                                                                                                                                          |
-| `AuthInterceptor`                 | 新增类级注解查找；`handleProjectAuth` 增加 `fromClassLevel` 参数；新增 `resolveClassLevelProjectId`、`collapsePullsSuffix`、常量 `GATEWAY_PULLS_COLLAPSE_PREFIXES` |
-| `UserRoleMapper`（cicd）          | `hasPublicPermission` 改名 `hasProjectMenuPermission`（无 Java 调用方，纯改名）                                                                                    |
-| `UserRoleMapper.xml`（cicd）      | 对应 `<select id>` 改名                                                                                                                                            |
-| `PrController` 等 7 个 Controller | 类级加 `@ProjectAuth`                                                                                                                                              |
+| 类                                | 变更                                                                                                                                                     |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ProjectAuth`                     | `@Target({METHOD, TYPE})`                                                                                                                                |
+| `AuthInterceptor`                 | 新增类级注解查找；`handleProjectAuth` 增加 `fromClassLevel` 参数；新增 `resolveClassLevelProjectId`、`collapsePullsSuffix`、常量 `GATEWAY_PULLS_PATTERN` |
+| `UserRoleMapper`（cicd）          | `hasPublicPermission` 改名 `hasProjectMenuPermission`（无 Java 调用方，纯改名）                                                                          |
+| `UserRoleMapper.xml`（cicd）      | 对应 `<select id>` 改名                                                                                                                                  |
+| `PrController` 等 7 个 Controller | 类级加 `@ProjectAuth`                                                                                                                                    |
 
 `PipelineControllerV2` 不改动。
+
+「7 个 Controller / 49 个端点」是人工枚举结果，不作为代码可推导的假设。守卫测试不遍历白名单类，而是扫描全部 `HandlerMapping`：所有 `/project/**` 形态的端点必须带方法级或类级 `@ProjectAuth`，并核对端点总数，使将来新增的 Controller 漏标时测试直接失败。
 
 ## 4. 数据模型设计
 
