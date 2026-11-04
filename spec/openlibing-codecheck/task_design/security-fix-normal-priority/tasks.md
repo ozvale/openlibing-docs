@@ -76,9 +76,10 @@
   - `@NotBlank repoName`
   - `@NotEmpty ruleSets`
 
-- [ ] 17. #385 修改 `ShieldModel.java` / `IdArray.java`
+- [ ] 17. #385 修改 `ShieldModel.java`
   - `shieldType`、`reason` 增加 `@Size(max = 512)`
   - 保留 `notifyType` 的 `@NotBlank`
+  - `IdArray` 无这两个字段，不新增约束
 
 - [ ] 18. #373 修改 `QueryTaskSummaryMachineApiModel.java`
   - `pageNum`：`@Min(1)`
@@ -90,8 +91,8 @@
 
 - [ ] 20. #373 修改 `FullSummaryOperation.java`
   - skip 使用 long 计算
-  - `skip < 0` 抛 `PageSkipException`
-  - 分页参数缺失时走 #365 统一上限策略
+  - 分页参数非法、`skip < 0` 或 `skip > Integer.MAX_VALUE` 抛 `PageSkipException`
+  - 分页参数缺失时限制最多返回 1000 条，走 #365 统一上限策略
 
 - [ ] 21. #373 补 `StaticAlarmServiceImpl.searchRepos` 回归测试
   - 现有 `Math.max(1, Math.min(limit, 50))` 裁剪保持不变
@@ -101,7 +102,7 @@
 - [ ] 22. 批次 2 验证
   - `ProblemshieldControllerTest`、`RuleControllerTest`、`FileDownLoadControllerTest`
   - `MachineApiCheckboardControllerTest`、`HwApigControllerTest`
-  - 新增非法入参用例：缺字段、`projectId=0`、`pageSize=101`、只传一个分页参数
+  - 新增非法入参用例：缺字段、`projectId=0`、`pageSize=101`、只传一个分页参数，断言 `4010103`
   - `mvn -DskipTests clean compile`
 
 ## 批次 3 — 配置化（#202）

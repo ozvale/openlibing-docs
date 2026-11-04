@@ -71,8 +71,9 @@
   - `@Min(value = 1, message = "projectId必须大于0")`
   - `@NotBlank(message = "repoName不能为空")`
   - `@NotEmpty(message = "ruleSets不能为空")`
-- `ShieldModel` / `IdArray` 的 `shieldType`、`reason` 文档未标必填，仅增加 `@Size(max = 512)`，避免行为突变。
+- `ShieldModel` 的 `shieldType`、`reason` 文档未标必填，仅增加 `@Size(max = 512)`，避免行为突变；`IdArray` 无这两个字段，不新增约束。
 - delegate 层保留现有 reviewer、occupied、ownership 校验，不重复实现参数非空校验。
+- 非法入参由 `GlobalExceptionHandler` 统一返回 `DataResult.code=4010103`（方法参数不合法），不进入 delegate。
 
 #### #373 机机接口分页参数未校验
 
@@ -83,8 +84,8 @@
 - 两个入口 Controller 增加 `@Valid`。
 - `FullSummaryOperation`：
   - skip 使用 `long` 计算，避免整型溢出；
-  - `skip < 0` 抛 `PageSkipException`；
-  - 分页参数缺失时不再进入全量查询，按 #365 的统一上限处理。
+  - 分页参数非法、`skip < 0` 或 `skip > Integer.MAX_VALUE` 抛 `PageSkipException`；
+  - 分页参数缺失时不再进入全量查询，先限制最多返回 1000 条（批次 5 统一收敛到 `PageParams.MAX_UNPAGED_SIZE`）。
 - `StaticAlarmServiceImpl.searchRepos`：当前代码已将 `limit` 裁剪到 `[1, 50]`（`Math.max(1, Math.min(limit, 50))`），本次不重复改造，仅补回归测试；当前 Controller 未暴露 `limit` 入参，若后续暴露需同步加 `@Min(1) @Max(50)`。
 
 #### #365 pageSize 无上限
@@ -230,7 +231,7 @@ public final class PageParams {
 1. 模型层补约束注解。
 2. Controller 入参加 `@Valid`。
 3. `FullSummaryOperation` 改造 skip 计算与异常抛出。
-4. Controller 测试补充非法入参用例，断言 400 或 `50001`。
+4. Controller 测试补充非法入参用例，断言 `4010103`（复用 `GlobalExceptionHandler` 现有参数错误码）。
 
 ### 2.3 批次 3
 
@@ -277,7 +278,7 @@ public final class PageParams {
 | `SuppressionScanServiceImpl`                                                                                                                        | 响应体/异常日志收敛  |
 | `AuthUtils` / `SensitiveDelegateImpl` / `CommonOperation` / `CheckPermissionOperation`                                                              | 角色常量与集中判断   |
 | `ProblemshieldController` / `RuleController` / `FileDownLoadController`                                                                             | `@Valid`             |
-| `UpdateRuleModel` / `ShieldModel` / `IdArray`                                                                                                       | 校验注解             |
+| `UpdateRuleModel` / `ShieldModel`                                                                                                                   | 校验注解             |
 | `QueryTaskSummaryMachineApiModel`                                                                                                                   | 分页约束与一致性校验 |
 | `FullSummaryOperation` / `StaticAlarmSummaryOperation` / `FossScanOperation` / `WorkbenchOperaton` / `IncDetailsOperation` / `FullDetailsOperation` | 分页上限与计数查询   |
 | `StaticAlarmServiceImpl` / `FileDownloadDelegateImpl` / `ExcelReportImpl`                                                                           | 导出上限             |
@@ -320,7 +321,7 @@ public final class PageParams {
 - 不新增、不删除、不改名任何接口路径。
 - 不改变请求/响应字段结构。
 - 行为变化：
-  - 非法入参由“静默接受”变为 400 或 `50001`；
+  - 非法入参由“静默接受”变为 `DataResult.code=4010103`；
   - 越权/参数非法由业务层返回 403；
   - 导出/SARIF 超限返回明确错误信息；
   - 机机接口分页参数只传一个时返回参数错误。

@@ -76,11 +76,11 @@
 
 ### 批次 2
 
-- [ ] #385：`shieldSubmit` 缺失 `notifyType` 返回 400 或 `50001`，不执行写操作。
+- [ ] #385：`shieldSubmit` 缺失 `notifyType` 返回 `DataResult.code=4010103`，不执行写操作。
 - [ ] #385：`shieldReferral` / `shieldRevoke` 缺失 `notifyType`、`updateRule` 缺失 `taskId`、`exportBoardByFile` 缺失必填字段均被拒绝。
 - [ ] #385：合法请求行为不变，现有 Controller 测试通过。
 - [ ] #373：机机接口 `pageNum=0`、`pageSize=101`、仅传一个分页参数均返回参数错误。
-- [ ] #373：`pageNum=Integer.MAX_VALUE` 不再产生负 skip 或 500。
+- [ ] #373：`pageNum=Integer.MAX_VALUE` 返回分页参数错误（`PageSkipException`，错误码 51123），不产生负 skip 或 500。
 - [ ] #373：合法分页查询结果与修改前一致。
 
 ### 批次 3
@@ -117,11 +117,11 @@
 
 - **修改文件（预估）**：
   - 批次 1：`src/main/resources/log4j2-spring.xml`、`ManageLogHelper.java`、`SuppressionScanServiceImpl.java`、`LogSanitizer.java`（既有类补 null/截断）、`AuthUtils.java`、`ProjectConstant.java`、`SensitiveDelegateImpl.java`、`CommonOperation.java`、`CheckPermissionOperation.java`
-  - 批次 2：`ProblemshieldController.java`、`RuleController.java`、`FileDownLoadController.java`、`UpdateRuleModel.java`、`ShieldModel.java`、`IdArray.java`、`QueryTaskSummaryMachineApiModel.java`、`MachineApiCheckboardController.java`、`HwApigController.java`、`FullSummaryOperation.java`
+  - 批次 2：`ProblemshieldController.java`、`RuleController.java`、`FileDownLoadController.java`、`UpdateRuleModel.java`、`ShieldModel.java`、`QueryTaskSummaryMachineApiModel.java`、`MachineApiCheckboardController.java`、`HwApigController.java`、`FullSummaryOperation.java`
   - 批次 3：`CheckboardDelegateImpl.java`、`ProblemshieldDelegateImpl.java`、`PipelineDelegateImpl.java`、新增 `CodePlatformProperties.java`
   - 批次 4：`ProblemshieldController.java`、`StaticAlarmController.java`、`RuleController.java`、新增 `ShieldLogHandler.java`、新增 `StaticAlarmAssignLogHandler.java`、`RuleSetLogHandler.java`、`SensitiveLogHandler.java`
   - 批次 5：`PageParams.java`、新增 `LimitedInputStream.java`、`FossScanOperation.java`、`QueryFossScanModel.java`、`QuerySensitiveRuleModel.java`、`RuleModel.java`、`SelfShieldModel.java`、`WorkbenchOperaton.java`、`IncDetailsOperation.java`、`FullDetailsOperation.java`、`StaticAlarmSummaryOperation.java`、`StaticAlarmServiceImpl.java`、`FileDownloadDelegateImpl.java`、`ExcelReportImpl.java`、`SarifParseServiceImpl.java`
-- **接口/契约变化**：无路径与签名变化；部分接口对非法入参从“静默接受”变为 400/403/50001。
+- **接口/契约变化**：无路径与签名变化；部分接口对非法入参从“静默接受”变为 `DataResult.code=4010103` / 403。
 - **数据库/Schema**：无。
 - **依赖**：无新增。
 - **配置**：新增 `codecheck.platform.*`、`codecheck.notification.*`、`codecheck.export.*`、`codecheck.alarm.sarif.*` 配置项。
