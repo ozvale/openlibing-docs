@@ -120,11 +120,11 @@
   - 批次 2：`ProblemshieldController.java`、`RuleController.java`、`FileDownLoadController.java`、`UpdateRuleModel.java`、`ShieldModel.java`、`QueryTaskSummaryMachineApiModel.java`、`MachineApiCheckboardController.java`、`HwApigController.java`、`FullSummaryOperation.java`
   - 批次 3：`CheckboardDelegateImpl.java`、`ProblemshieldDelegateImpl.java`、`PipelineDelegateImpl.java`、新增 `CodePlatformProperties.java`
   - 批次 4：`RuleSetLogHandler.java`、`SensitiveLogHandler.java`、`StaticAlarmOperation.java`、新增 `ShieldLogHandler.java`、新增 `StaticAlarmAssignLogHandler.java`
-  - 批次 5：`PageParams.java`、新增 `LimitedInputStream.java`、`FossScanOperation.java`、`QueryFossScanModel.java`、`QuerySensitiveRuleModel.java`、`RuleModel.java`、`SelfShieldModel.java`、`WorkbenchOperaton.java`、`IncDetailsOperation.java`、`FullDetailsOperation.java`、`StaticAlarmSummaryOperation.java`、`StaticAlarmServiceImpl.java`、`FileDownloadDelegateImpl.java`、`ExcelReportImpl.java`、`SarifParseServiceImpl.java`
+  - 批次 5：新增 `PageParams.java`、`PaginationProperties.java`、`LimitedInputStream.java`；`FossScanOperation.java`、`QueryFossScanModel.java`、`QuerySensitiveRuleModel.java`、`RuleModel.java`、`SelfShieldModel.java`、`WorkbenchModel.java`、`WorkbenchOperaton.java`、`RuleSetOperation.java`、`SensitiveRuleOperation.java`、`SensitiveDelegateImpl.java`、`SensitiveController.java`、`ProblemShieldOperation.java`、`IncDetailsOperation.java`、`FullDetailsOperation.java`、`StaticAlarmSummaryOperation.java`、`StaticAlarmServiceImpl.java`、`FileDownloadDelegateImpl.java`、`ExcelReportImpl.java`、`SarifParseServiceImpl.java`、`CheckboardDelegateImpl.java`
 - **接口/契约变化**：无路径与签名变化；部分接口对非法入参从“静默接受”变为 `DataResult.code=4010103` / 403。
 - **数据库/Schema**：无。
 - **依赖**：无新增。
-- **配置**：新增 `codecheck.platform.*`、`codecheck.notification.*`、`codecheck.export.*`、`codecheck.alarm.sarif.*` 配置项。
+- **配置**：新增 `codecheck.platform.*`、`codecheck.notification.*`、`codecheck.pagination.*`、`codecheck.export.*`、`codecheck.alarm.sarif.*` 配置项。
 
 ## 批次安排
 

@@ -170,17 +170,18 @@
 > 参数已按建议值确认：见 `design.md` §1.3 批次 5 已确认参数（#365 分页上限、#364 导出上限、#247 SARIF 上限）。
 > #247 不支持 `0 = 不限制`；0/负数启动校验失败并告警。
 
-- [ ] 34. #365 新增 `common/utils/PageParams.java` 并接入 10 个端点
+- [ ] 34. #365 新增 `common/utils/PageParams.java` + `common/config/PaginationProperties.java` 并接入 10 个端点
+  - 分页上限支持配置覆盖：`codecheck.pagination.max-page-size` / `max-unpaged-size`，0/负数启动校验失败
   - 机机 summary `/machine-api/v1/codecheck/full/task/result/summary`
   - APIG summary `/apig/v1/machine-api/v1/codecheck/full/task/result/summary`
   - 记录列表 `/machine-api/v1/full-codecheck-record/list`（`queryFullSummaryList`）
   - 静态告警汇总
-  - FOSS 查询/导出
-  - 敏感词规则
-  - 规则查询
-  - 自定义屏蔽
+  - FOSS 查询/导出（查询缺失分页按上限截断，导出按导出行数上限）
+  - 敏感词规则（`queryRules` 缺失分页按上限截断；`querySensitiveRuleSetSettingsById` 改为 count + 按 type 聚合，去掉 `queryRules(criteria, null, null)` 全量加载）
+  - 规则查询（缺失分页按上限截断；`getAllRulesBySet` 总数/启用数改用 count）
+  - 自定义屏蔽（缺失分页按 `max-unpaged-size` 截断）
   - 工作台
-  - metrics
+  - metrics（`total` 改用 `countFullMetricsDetail` / `getIncMetricsCount` 的 `mongoTemplate.count`，缺失分页按上限截断）
   - 原 Webhook Mongo 查询 `/ci-portal/webhook/codecheck/v1/find/by/mongoDB` 已由提交 `bdc9636b` 删除 `WebhookController` 下线，不纳入
 
 - [ ] 35. #364 导出上限
@@ -193,6 +194,7 @@
   - `SarifParseServiceImpl.parseAllUrls` 校验 `obsUrls` 数量，超过 `max-urls` 整批拒绝，不截断
   - `downloadAndParse` 使用 `LimitedInputStream`
   - 增加 runs / results 上限，按单 URL 隔离失败
+  - Jackson 3 非受检解析异常统一转换为 `IOException`，避免单 URL 失败中断整批
 
 - [ ] 37. #247 配置合法性校验
   - `max-urls` / `max-file-bytes` / `max-runs` / `max-results` 均要求 `>= 1`
@@ -210,10 +212,11 @@
   - 本项只补测试，不重复改造已有防护
 
 - [ ] 40. 批次 5 验证
-  - `PageParamsTest`、`LimitedInputStreamTest`
-  - `SarifParseServiceImplTest` 超限场景（整批拒绝 / 单 URL 隔离）
+  - `PageParamsTest`、`PaginationPropertiesTest`、`LimitedInputStreamTest`
+  - `SarifParseServiceImplTest` 超限场景（整批拒绝 / 单 URL 隔离 / 配置非法）
+  - `SensitiveDelegateImplTest`（配置统计不再全量加载）、`CheckboardDelegateImplTest`（metrics 不再全量加载）
   - 导出相关测试
-  - FOSS 正则回归测试
+  - FOSS 正则回归测试（filePath / componentName 元字符转义、超长跳过）
   - `mvn test` 全量通过
 
 ## 交付

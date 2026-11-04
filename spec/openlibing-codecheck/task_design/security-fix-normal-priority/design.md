@@ -106,18 +106,23 @@ public final class PageParams {
 
 各链路统一接入（共 **10 个端点**，对应原 Issue 11 条链路中剔除已下线 Webhook 接口后的 10 条）：
 
-| #   | 链路                                                                   | 处理                                                          |
-| --- | ---------------------------------------------------------------------- | ------------------------------------------------------------- |
-| 1   | `/machine-api/v1/codecheck/full/task/result/summary`                   | 缺失分页时 `limit(MAX_UNPAGED_SIZE)`，并记录 warn             |
-| 2   | `/apig/v1/machine-api/v1/codecheck/full/task/result/summary`           | 同上                                                          |
-| 3   | `/machine-api/v1/full-codecheck-record/list`（`queryFullSummaryList`） | 补分页上限；缺失分页时 `limit(MAX_UNPAGED_SIZE)`，并记录 warn |
-| 4   | 静态告警汇总                                                           | 缺失分页时同上                                                |
-| 5   | FOSS 查询/导出                                                         | `QueryFossScanModel` 加范围约束，skip 用 long                 |
-| 6   | 敏感词规则                                                             | `QuerySensitiveRuleModel` 加范围约束，Controller 加 `@Valid`  |
-| 7   | 规则查询                                                               | `RuleModel` 加范围约束，Controller 加 `@Valid`                |
-| 8   | 自定义屏蔽                                                             | `SelfShieldModel` 加范围约束，`getSelfShieldData` 加 `@Valid` |
-| 9   | 工作台                                                                 | 缺失分页时使用默认上限                                        |
-| 10  | metrics                                                                | total 使用 `mongoTemplate.count`，不再置空分页全量加载        |
+| #   | 链路                                                                   | 处理                                                                                                         |
+| --- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 1   | `/machine-api/v1/codecheck/full/task/result/summary`                   | 缺失分页时 `limit(MAX_UNPAGED_SIZE)`，并记录 warn                                                            |
+| 2   | `/apig/v1/machine-api/v1/codecheck/full/task/result/summary`           | 同上                                                                                                         |
+| 3   | `/machine-api/v1/full-codecheck-record/list`（`queryFullSummaryList`） | 补分页上限；缺失分页时 `limit(MAX_UNPAGED_SIZE)`，并记录 warn                                                |
+| 4   | 静态告警汇总                                                           | 缺失分页时同上                                                                                               |
+| 5   | FOSS 查询/导出                                                         | `QueryFossScanModel` 加范围约束，skip 用 long；查询缺失分页按上限截断，导出按导出行数上限                    |
+| 6   | 敏感词规则                                                             | `QuerySensitiveRuleModel` 加范围约束，Controller 加 `@Valid`；缺失分页按上限截断                             |
+| 7   | 规则查询                                                               | `RuleModel` 加范围约束，Controller 加 `@Valid`；缺失分页按上限截断，`getAllRulesBySet` 总数/启用数改用 count |
+| 8   | 自定义屏蔽                                                             | `SelfShieldModel` 加范围约束，`getSelfShieldData` 加 `@Valid`                                                |
+| 9   | 工作台                                                                 | 缺失分页时使用默认上限                                                                                       |
+| 10  | metrics                                                                | total 使用 `mongoTemplate.count`，缺失分页按上限截断，不再置空分页全量加载                                   |
+
+- 分页上限支持配置覆盖：`codecheck.pagination.max-page-size`（默认 100）、`codecheck.pagination.max-unpaged-size`（默认 1000），由 `PaginationProperties` 在启动/刷新时写入 `PageParams`；0 或负数启动校验失败。
+- `SensitiveDelegateImpl.querySensitiveRuleSetSettingsById` 不再 `queryRules(criteria, null, null)` 全量加载，启用数改用 `getRuleCount`，`typeCount` 改用按 `type` 聚合计数。
+- `CheckboardDelegateImpl.getFullMetrics` / `getIncMetrics` 不再置空分页后全量重查，`total` 改由 `countFullMetricsDetail` / `getIncMetricsCount` 的 `mongoTemplate.count` 提供。
+- 自定义屏蔽（`fullShieldDetail` / `incShieldDetail`）未传分页时按 `max-unpaged-size` 截断。
 
 > FOSS 链路的第二个子问题（用户参数拼接正则）当前代码已具备防护：`FossScanOperation` 对 `filePath` / `componentName` 使用 `Pattern.quote(...)` 包裹，并通过 `MAX_REGEX_PARAM_LENGTH` 跳过超长参数。本次不重复改造，只补回归验证（正则元字符按字面量匹配、超长参数跳过过滤）。
 
@@ -172,6 +177,7 @@ public final class PageParams {
 
 - `parseAllUrls` 进入下载前先校验 `obsUrls` 数量：超过 `max-urls` **整批拒绝**，不下载解析任何 URL，并记录错误（携带实际数量与阈值），避免“截断后静默丢 URL”。
 - `downloadAndParse` 使用 `LimitedInputStream`（本次新增类），读取超过 `max-file-bytes` 抛 `IOException`，该 URL 独立失败。
+- Jackson 3 的解析异常为非受检 `RuntimeException`，`downloadAndParse` 统一转换为 `IOException` 抛出，确保超限/格式异常都按 URL 隔离，不中断整批解析。
 - 解析后校验 runs 数量；issue 总数超过 `max-results` 时停止该 URL 并记录错误。
 - 单 URL 的 `max-file-bytes` / `max-runs` / `max-results` 超限相互隔离，不影响同批其余 URL 入库。
 - 保留 `fileSize` / `bytesRead` 日志，超限时打印阈值。
@@ -276,23 +282,25 @@ public final class PageParams {
 
 ### 2.5 批次 5
 
-1. 新增 `PageParams`，逐链路替换分页计算（10 个端点，含 `/machine-api/v1/full-codecheck-record/list`）。
-2. 新增导出上限配置与校验。
-3. SARIF 增加 `LimitedInputStream`、数量校验与配置合法性校验（拒绝 0/负数）。
-4. 补 FOSS 正则防护与 StaticAlarm `searchRepos` limit 的回归用例。
-5. 批次 5 实施前先确认默认值。
+1. 新增 `PageParams` 与 `PaginationProperties`，逐链路替换分页计算（10 个端点，含 `/machine-api/v1/full-codecheck-record/list`），上限可配置。
+2. 敏感词配置统计改为 `count` + 按 `type` 聚合；metrics `total` 改为 `mongoTemplate.count`，不再置空分页全量加载。
+3. 新增导出上限配置与校验。
+4. SARIF 增加 `LimitedInputStream`、数量校验与配置合法性校验（拒绝 0/负数）；Jackson 3 的非受检解析异常统一转为 `IOException`，保证按 URL 隔离失败。
+5. 补 FOSS 正则防护与 StaticAlarm `searchRepos` limit 的回归用例。
+6. 批次 5 实施前先确认默认值。
 
 ## 3. 类设计
 
 ### 3.1 新增类
 
-| 类                                            | 职责                                      |
-| --------------------------------------------- | ----------------------------------------- |
-| `common/utils/PageParams.java`                | 统一分页默认值、上限、skip 计算与负值校验 |
-| `common/config/CodePlatformProperties.java`   | 平台域名、API 地址、通知邮箱配置          |
-| `common/io/LimitedInputStream.java`           | 限制读取字节数的输入流包装（本次新增）    |
-| `common/aop/ShieldLogHandler.java`            | shield 接口操作日志补数                   |
-| `common/aop/StaticAlarmAssignLogHandler.java` | assign-owner 操作日志补数                 |
+| 类                                            | 职责                                       |
+| --------------------------------------------- | ------------------------------------------ |
+| `common/utils/PageParams.java`                | 统一分页默认值、上限、skip 计算与负值校验  |
+| `common/config/PaginationProperties.java`     | 分页上限配置（可覆盖 `PageParams` 默认值） |
+| `common/config/CodePlatformProperties.java`   | 平台域名、API 地址、通知邮箱配置           |
+| `common/io/LimitedInputStream.java`           | 限制读取字节数的输入流包装（本次新增）     |
+| `common/aop/ShieldLogHandler.java`            | shield 接口操作日志补数                    |
+| `common/aop/StaticAlarmAssignLogHandler.java` | assign-owner 操作日志补数                  |
 
 > `LogSanitizer` 为**既有类**（`common/util/LogSanitizer.java`，注意不是 `common/utils`），本次复用并新增长度截断重载（保持既有 `null -> null` 语义），不列入新增类。
 
@@ -303,10 +311,12 @@ public final class PageParams {
 | `ManageLogHelper`                                                                                                                                   | 日志字段净化         |
 | `SuppressionScanServiceImpl`                                                                                                                        | 响应体/异常日志收敛  |
 | `AuthUtils` / `SensitiveDelegateImpl` / `CommonOperation` / `CheckPermissionOperation`                                                              | 角色常量与集中判断   |
-| `ProblemshieldController` / `RuleController` / `FileDownLoadController`                                                                             | `@Valid`             |
-| `UpdateRuleModel` / `ShieldModel`                                                                                                                   | 校验注解             |
+| `ProblemshieldController` / `RuleController` / `FileDownLoadController` / `SensitiveController`                                                     | `@Valid`             |
+| `UpdateRuleModel` / `ShieldModel` / `QueryFossScanModel` / `RuleModel` / `SelfShieldModel` / `WorkbenchModel` / `QuerySensitiveRuleModel`           | 校验注解             |
 | `QueryTaskSummaryMachineApiModel`                                                                                                                   | 分页约束与一致性校验 |
 | `FullSummaryOperation` / `StaticAlarmSummaryOperation` / `FossScanOperation` / `WorkbenchOperaton` / `IncDetailsOperation` / `FullDetailsOperation` | 分页上限与计数查询   |
+| `SensitiveRuleOperation` / `SensitiveDelegateImpl`                                                                                                  | 敏感词统计聚合计数   |
+| `ProblemShieldOperation`                                                                                                                            | 自定义屏蔽分页上限   |
 | `StaticAlarmServiceImpl` / `FileDownloadDelegateImpl` / `ExcelReportImpl`                                                                           | 导出上限             |
 | `SarifParseServiceImpl`                                                                                                                             | SARIF 上限           |
 | `CheckboardDelegateImpl` / `ProblemshieldDelegateImpl` / `PipelineDelegateImpl`                                                                     | 配置化地址与邮箱     |
@@ -328,6 +338,8 @@ public final class PageParams {
 | `codecheck.export.max-rows`                | `200000`                    | 已确认 |
 | `codecheck.export.max-file-bytes`          | `104857600`                 | 已确认 |
 | `codecheck.export.max-merge-parts`         | `50`                        | 已确认 |
+| `codecheck.pagination.max-page-size`       | `100`                       | 已确认 |
+| `codecheck.pagination.max-unpaged-size`    | `1000`                      | 已确认 |
 | `codecheck.alarm.sarif.max-urls`           | `50`                        | 已确认 |
 | `codecheck.alarm.sarif.max-file-bytes`     | `52428800`                  | 已确认 |
 | `codecheck.alarm.sarif.max-runs`           | `20`                        | 已确认 |
