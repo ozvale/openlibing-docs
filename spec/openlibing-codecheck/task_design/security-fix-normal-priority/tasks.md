@@ -143,7 +143,7 @@
 
 ## 批次 5 — 资源上限（最后实施）
 
-> 实施前必须确认：见 `design.md` §1.3 批次 5 待确认项（#365 分页上限、#364 导出上限、#247 SARIF 上限）。
+> 参数已按建议值确认：见 `design.md` §1.3 批次 5 已确认参数（#365 分页上限、#364 导出上限、#247 SARIF 上限）。
 
 - [ ] 31. #365 新增 `common/utils/PageParams.java` 并接入 10 条链路（原 Webhook Mongo 查询接口已下线，不纳入）
   - 机机 summary / APIG summary

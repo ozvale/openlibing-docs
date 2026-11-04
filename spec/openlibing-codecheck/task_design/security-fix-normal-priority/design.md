@@ -77,7 +77,7 @@
 public final class PageParams {
   public static final int DEFAULT_PAGE_SIZE = 20;
   public static final int MAX_PAGE_SIZE = 100;
-  public static final int MAX_UNPAGED_SIZE = 1000; // 待确认
+  public static final int MAX_UNPAGED_SIZE = 1000;
 
   public static long resolveSkip(Integer pageNum, Integer pageSize);
   public static int resolveLimit(Integer pageSize);
@@ -102,7 +102,7 @@ public final class PageParams {
 
 #### #364 导出/本地文件无大小限制
 
-- 新增配置（默认值待确认）：
+- 新增配置（已确认）：
   - `codecheck.export.max-rows=200000`
   - `codecheck.export.max-file-bytes=104857600`
   - `codecheck.export.max-merge-parts=50`
@@ -136,9 +136,9 @@ public final class PageParams {
 
 #### #247 SARIF 解析无界
 
-新增配置（默认值待确认）：
+新增配置（已确认）：
 
-| 配置项                                 | 建议默认值       |
+| 配置项                                 | 确认值           |
 | -------------------------------------- | ---------------- |
 | `codecheck.alarm.sarif.max-urls`       | 50               |
 | `codecheck.alarm.sarif.max-file-bytes` | 52428800（50MB） |
@@ -152,9 +152,9 @@ public final class PageParams {
 
 > #249（RabbitMQ 消息无签名）经确认暂不修复，不在本批次实现签名与验签，保留 Issue 打开后续单独评估。
 
-### 1.3 批次 5 待确认项
+### 1.3 批次 5 已确认参数
 
-| Issue | 待确认项                        | 建议值                             |
+| Issue | 确认项                          | 确认值                             |
 | ----- | ------------------------------- | ---------------------------------- |
 | #365  | 机机接口“不传分页”时的返回上限  | 1000 条                            |
 | #365  | 通用 `pageSize` 上限            | 100                                |
@@ -261,7 +261,7 @@ public final class PageParams {
 
 - 数据库 schema 无变更。
 - 请求模型仅新增校验注解，不改变 JSON 字段名与结构。
-- 新增配置项如下（默认值待确认项已标注）：
+- 新增配置项如下（参数已确认）：
 
 | 配置项                                     | 默认值                      | 状态   |
 | ------------------------------------------ | --------------------------- | ------ |
@@ -270,13 +270,13 @@ public final class PageParams {
 | `codecheck.platform.gitcode-api-base-url`  | `https://api.gitcode.com/`  | 确定   |
 | `codecheck.notification.mail-from-name`    | `openLiBingCI`              | 确定   |
 | `codecheck.notification.mail-from-address` | `pre-commit@openlibing.com` | 确定   |
-| `codecheck.export.max-rows`                | `200000`                    | 待确认 |
-| `codecheck.export.max-file-bytes`          | `104857600`                 | 待确认 |
-| `codecheck.export.max-merge-parts`         | `50`                        | 待确认 |
-| `codecheck.alarm.sarif.max-urls`           | `50`                        | 待确认 |
-| `codecheck.alarm.sarif.max-file-bytes`     | `52428800`                  | 待确认 |
-| `codecheck.alarm.sarif.max-runs`           | `20`                        | 待确认 |
-| `codecheck.alarm.sarif.max-results`        | `100000`                    | 待确认 |
+| `codecheck.export.max-rows`                | `200000`                    | 已确认 |
+| `codecheck.export.max-file-bytes`          | `104857600`                 | 已确认 |
+| `codecheck.export.max-merge-parts`         | `50`                        | 已确认 |
+| `codecheck.alarm.sarif.max-urls`           | `50`                        | 已确认 |
+| `codecheck.alarm.sarif.max-file-bytes`     | `52428800`                  | 已确认 |
+| `codecheck.alarm.sarif.max-runs`           | `20`                        | 已确认 |
+| `codecheck.alarm.sarif.max-results`        | `100000`                    | 已确认 |
 
 ## 5. 性能设计
 
@@ -327,7 +327,7 @@ public final class PageParams {
 
 ### 7.4 已知边界
 
-- #365 机机接口“不传分页=全量”的既有语义会变为“最多返回上限条数”，需调用方确认。
-- #364 / #247 的默认上限值需业务确认，避免误伤正常大仓库。
+- #365 机机接口“不传分页=全量”的既有语义会变为“最多返回上限条数”，参数已确认，上线前需通知调用方。
+- #364 / #247 的默认上限值已按建议值确认，避免误伤正常大仓库。
 - #363 的代码侧 Handler 可在本仓完成，但操作日志切面依赖网关 `X-Operation-Log` 头；菜单 `write_log` 与 URL 绑定需部署侧配置，否则代码改动不会生效。
 - #249（RabbitMQ 消息无签名）暂不修复，保留 Issue 打开，本批次不涉及 Producer/Consumer 改动。
