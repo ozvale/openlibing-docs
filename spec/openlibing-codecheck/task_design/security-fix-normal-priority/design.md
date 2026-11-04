@@ -150,11 +150,13 @@ public final class PageParams {
 | `codecheck.platform.gitcode-web-base-url`  | `https://gitcode.com/`      |
 | `codecheck.platform.gitee-web-base-url`    | `https://gitee.com/`        |
 | `codecheck.platform.gitcode-api-base-url`  | `https://api.gitcode.com/`  |
+| `codecheck.platform.gitee-api-base-url`    | `https://api.gitee.com/`    |
+| `codecheck.platform.github-api-base-url`   | `https://api.github.com/`   |
 | `codecheck.notification.mail-from-name`    | `openLiBingCI`              |
 | `codecheck.notification.mail-from-address` | `pre-commit@openlibing.com` |
 
 - 替换 `CheckboardDelegateImpl.buildUserUrl`、`ProblemshieldDelegateImpl` 同类方法、`PipelineDelegateImpl` API 地址与默认发件账号。
-- `"https://api." + repoType + ".com"` 改为 `Map<String, String>` 白名单查表（gitee/gitcode/github）。
+- `"https://api." + repoType + ".com"` 改为 `Map<String, String>` 白名单查表（gitee/gitcode/github），三个平台 API 地址均来自配置项，不再在 Delegate 内保留字面量。
 - **`.mvn/settings.xml` 不修改。**
 
 #### #247 SARIF 解析无界

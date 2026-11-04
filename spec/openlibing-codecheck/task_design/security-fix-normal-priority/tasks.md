@@ -111,6 +111,8 @@
   - `gitcode-web-base-url`
   - `gitee-web-base-url`
   - `gitcode-api-base-url`
+  - `gitee-api-base-url`
+  - `github-api-base-url`
   - `mail-from-name`
   - `mail-from-address`
 
