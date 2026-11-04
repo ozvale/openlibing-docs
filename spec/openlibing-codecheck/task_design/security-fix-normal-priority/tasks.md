@@ -134,31 +134,35 @@
 
 ## 批次 4 — 审计日志（#363）
 
-- [ ] 28. 核对 12 个写接口与现有 Handler 的覆盖矩阵
-  - 已覆盖：规则集（`RuleSetLogHandler`）、敏感词（`SensitiveLogHandler`）
-  - 待补：shield 6 个接口、`assign-owner`、`default/template`、`modify/createUser`
+- [ ] 28. 核对在线写接口与现有 Handler 的覆盖矩阵
+  - 已覆盖：`attributes/ruleSet/config`（`CreateRuleSetModel`）
+  - 待补：`ruleSetList`、`sensitive/config/ruleSet`、shield 5 个在线接口、`assign-owner`、`default/template`、`modify/createUser`
+  - `shield-all-result` 已由 `bdc9636b` 下线，不纳入
 
 - [ ] 29. 新增 `common/aop/ShieldLogHandler.java`
   - `matches`：`ShieldModel` / `IdArray` / `AuditModel`
-  - `before`：按 `detailsId` 回查问题状态
-  - `after`：填 projectId、resourceId、newData
-  - 不记录屏蔽原因全文
+  - `before`：按 `detailsId` 回查问题状态分布（数量 + 状态计数）
+  - `after`：填 projectId、resourceId、newData（动作、shieldType、auditResult、数量摘要）
+  - 不记录屏蔽原因与审核意见全文
 
 - [ ] 30. 新增 `common/aop/StaticAlarmAssignLogHandler.java`
-  - `matches`：assign-owner 入参
-  - `before/after`：记录问题 ID 列表与责任人变化
+  - `matches`：`StaticAlarmAssignOwnerDTO`
+  - `before`：按问题 ID 回查旧责任人（最多 100 条）
+  - `after`：记录问题数与新责任人列表
+  - `StaticAlarmOperation` 新增 `findIssueOwnersByIds` 投影查询
 
-- [ ] 31. 扩展 `common/aop/RuleSetLogHandler.java`
-  - 覆盖 `default/template` 散参
-  - 覆盖 `modify/createUser` 散参
+- [ ] 31. 扩展 `RuleSetLogHandler` / `SensitiveLogHandler`
+  - `RuleSetLogHandler` 覆盖 `ruleSetList` 的 `RuleSetListParamModel`
+  - `RuleSetLogHandler` 覆盖 `default/template`、`modify/createUser` 散参
+  - `SensitiveLogHandler` 覆盖 `sensitive/config/ruleSet` 的 `SensitiveRuleSet`
 
 - [ ] 32. 输出网关菜单 `write_log` 配置清单
-  - 12 个接口的 URL 与菜单绑定关系
+  - 11 个在线接口的 URL 与菜单绑定关系（见 `design.md` §#363）
   - 交部署侧配置，代码仓不修改框架库表
 
 - [ ] 33. 批次 4 验证
   - `ShieldLogHandlerTest`、`StaticAlarmAssignLogHandlerTest`
-  - `RuleSetLogHandlerTest` 扩展用例
+  - `RuleSetLogHandlerTest`、`SensitiveLogHandlerTest` 扩展用例
   - 联调验证操作日志可查询到操作者、时间、对象、结果
 
 ## 批次 5 — 资源上限（最后实施）

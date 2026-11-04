@@ -201,22 +201,46 @@ public final class PageParams {
 
 #### #363 非查询接口无审计日志
 
-- 现有能力：common 的 `OperationLogAspect` + `RuleSetLogHandler` / `SensitiveLogHandler` / `TestingCenterLogHandler`，由网关 `X-Operation-Log` 头触发。
-- 覆盖核对：
-  - 规则集相关（`attributes/ruleSet/config`、`ruleSetList`）由 `RuleSetLogHandler` 覆盖；
-  - 敏感词配置由 `SensitiveLogHandler` 覆盖；
-  - shield 6 个接口、`assign-owner`、`default/template`、`modify/createUser` 目前未覆盖。
+- 现有能力：common 的 `OperationLogAspect` + `RuleSetLogHandler` / `SensitiveLogHandler` / `TestingCenterLogHandler`，由网关 `X-Operation-Log` 头触发；无 Handler 命中时仍写入通用审计记录，仅缺少业务字段补数。
+- 覆盖核对（以当前代码为准）：
+  - `/attributes/ruleSet/config`：入参 `CreateRuleSetModel`，已由 `RuleSetLogHandler` 覆盖；
+  - `/operate/project/ruleSetList`：入参 `RuleSetListParamModel`，`RuleSetLogHandler` 需扩展；
+  - `/sensitive/config/ruleSet`：入参 `SensitiveRuleSet`，`SensitiveLogHandler` 需扩展；
+  - shield 接口：当前在线 5 个（submit / audit / auditRevoke / referral / revoke），需新增 `ShieldLogHandler`；#363 清单中的 `shield-all-result` 已由 `bdc9636b` 下线，不纳入；
+  - `assign-owner`：需新增 `StaticAlarmAssignLogHandler`；
+  - `default/template`、`modify/createUser`：散参，需扩展 `RuleSetLogHandler`。
 - 新增 `ShieldLogHandler`：
   - `matches`：命中 `ShieldModel` / `IdArray` / `AuditModel`；
-  - `before`：按 `detailsId` 回查问题当前状态；
-  - `after`：填 projectId、resourceId、newData（状态变化摘要），不记录屏蔽原因全文。
+  - `before`：按 `detailsId` 回查问题状态分布（数量 + 状态计数）；
+  - `after`：填 projectId、resourceId、newData（操作类型、shieldType、auditResult、数量摘要），不记录屏蔽原因与审核意见全文。
 - 新增 `StaticAlarmAssignLogHandler`：
-  - `matches`：命中 assign-owner 入参；
-  - `before/after`：记录问题 ID 列表与责任人变化。
+  - `matches`：命中 assign-owner 入参 `StaticAlarmAssignOwnerDTO`；
+  - `before/after`：按问题 ID 回查旧责任人（最多记录 100 条），记录问题数与责任人变化。
 - `RuleSetLogHandler` 扩展：
-  - 支持 `default/template` 的散参（projectId/templateId/language）；
-  - 支持 `modify/createUser` 的散参。
+  - 支持 `ruleSetList` 的 `RuleSetListParamModel`（更新场景按 ruleSetListId 回查旧集合）；
+  - 支持 `default/template` 的散参（projectId/templateId/language/userId）；
+  - 支持 `modify/createUser` 的散参（projectId/templateId/userId）。
+- `SensitiveLogHandler` 扩展：
+  - 支持 `sensitive/config/ruleSet` 的 `SensitiveRuleSet`（按 templateId 回查旧规则集）。
 - 代码仓不修改网关菜单表；需部署侧在菜单上配置 `write_log=1` 并绑定对应 URL，否则切面不会触发。
+
+**网关菜单 `write_log` 配置清单（部署侧执行）**
+
+| #   | 菜单绑定 URL（含应用前缀）                                                | 方法 | 说明                     |
+| --- | ------------------------------------------------------------------------- | ---- | ------------------------ |
+| 1   | `/openlibing-codecheck/ci-portal/shield/submit`                           | POST | 提交屏蔽申请             |
+| 2   | `/openlibing-codecheck/ci-portal/shield/audit`                            | POST | 屏蔽申请审核             |
+| 3   | `/openlibing-codecheck/ci-portal/shield/auditRevoke`                      | POST | 撤销审核通过的问题       |
+| 4   | `/openlibing-codecheck/ci-portal/shield/referral`                         | POST | 待审核问题转审           |
+| 5   | `/openlibing-codecheck/ci-portal/shield/revoke`                           | POST | 已审核问题撤销           |
+| 6   | `/openlibing-codecheck/ci-portal/v2/grant/auth/attributes/ruleSet/config` | POST | 创建/配置规则集          |
+| 7   | `/openlibing-codecheck/codecheck/operate/project/ruleSetList`             | POST | 删除/保存/更新规则集集合 |
+| 8   | `/openlibing-codecheck/ci-portal/v2/grant/auth/default/template`          | GET  | 设置默认规则集           |
+| 9   | `/openlibing-codecheck/ci-portal/v2/grant/auth/modify/createUser`         | GET  | 修改规则集创建人         |
+| 10  | `/openlibing-codecheck/ci-portal/ci-sensitive/sensitive/config/ruleSet`   | POST | 配置敏感词集到规则集     |
+| 11  | `/openlibing-codecheck/static-alarm/v1/issue/assign-owner`                | POST | 批量指定问题责任人       |
+
+> `shield-all-result` 已随 `bdc9636b` 下线，无对应 URL，不需要配置。
 
 ## 2. 实现逻辑设计
 

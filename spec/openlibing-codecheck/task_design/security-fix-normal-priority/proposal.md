@@ -92,8 +92,8 @@
 
 ### 批次 4
 
-- [ ] #363：12 个写接口逐一核对，shield 6 个接口、`assign-owner`、`default/template`、`modify/createUser` 在操作日志中有记录。
-- [ ] #363：规则集、敏感词相关接口复用现有 Handler，不产生重复日志。
+- [ ] #363：11 个在线写接口逐一核对（shield 5 个、`ruleSetList`、`sensitive/config/ruleSet`、`default/template`、`modify/createUser`、`assign-owner`），在操作日志中有记录；`shield-all-result` 已由 `bdc9636b` 下线，不纳入。
+- [ ] #363：规则集、敏感词、shield、assign-owner 相关接口复用或扩展 Handler，不产生重复日志。
 - [ ] #363：网关菜单 `write_log` 配置完成后，实际操作可在操作日志中查询到操作者、时间、对象与结果。
 - [ ] #363：未命中菜单打标的接口有明确清单，交由部署侧补齐。
 
@@ -119,7 +119,7 @@
   - 批次 1：`src/main/resources/log4j2-spring.xml`、`ManageLogHelper.java`、`SuppressionScanServiceImpl.java`、`LogSanitizer.java`（既有类补 null/截断）、`AuthUtils.java`、`ProjectConstant.java`、`SensitiveDelegateImpl.java`、`CommonOperation.java`、`CheckPermissionOperation.java`
   - 批次 2：`ProblemshieldController.java`、`RuleController.java`、`FileDownLoadController.java`、`UpdateRuleModel.java`、`ShieldModel.java`、`QueryTaskSummaryMachineApiModel.java`、`MachineApiCheckboardController.java`、`HwApigController.java`、`FullSummaryOperation.java`
   - 批次 3：`CheckboardDelegateImpl.java`、`ProblemshieldDelegateImpl.java`、`PipelineDelegateImpl.java`、新增 `CodePlatformProperties.java`
-  - 批次 4：`ProblemshieldController.java`、`StaticAlarmController.java`、`RuleController.java`、新增 `ShieldLogHandler.java`、新增 `StaticAlarmAssignLogHandler.java`、`RuleSetLogHandler.java`、`SensitiveLogHandler.java`
+  - 批次 4：`RuleSetLogHandler.java`、`SensitiveLogHandler.java`、`StaticAlarmOperation.java`、新增 `ShieldLogHandler.java`、新增 `StaticAlarmAssignLogHandler.java`
   - 批次 5：`PageParams.java`、新增 `LimitedInputStream.java`、`FossScanOperation.java`、`QueryFossScanModel.java`、`QuerySensitiveRuleModel.java`、`RuleModel.java`、`SelfShieldModel.java`、`WorkbenchOperaton.java`、`IncDetailsOperation.java`、`FullDetailsOperation.java`、`StaticAlarmSummaryOperation.java`、`StaticAlarmServiceImpl.java`、`FileDownloadDelegateImpl.java`、`ExcelReportImpl.java`、`SarifParseServiceImpl.java`
 - **接口/契约变化**：无路径与签名变化；部分接口对非法入参从“静默接受”变为 `DataResult.code=4010103` / 403。
 - **数据库/Schema**：无。
