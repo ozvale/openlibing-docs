@@ -24,34 +24,34 @@ HiDevLab DevEnv 容器默认开启网络隔离（`apply_network_isolation`）：
 
 ## 验收标准
 
-- [ ] `POST /docker/isolation/peers` 接受 JSON 数组（每元素一台物理机），逐机 SSH + 机内串行调 `network_peer.sh`
-- [ ] 兼容旧版单对象入参：自动包成单元素数组
-- [ ] 请求体非法（非数组、空数组、host 字段缺失、containers 非非空数组、action 非 add/remove）返 400，错误信息能定位到 `host[idx]`
-- [ ] 鉴权失败返 401；未预期异常返 500
-- [ ] 每容器返回 `{ip, name, live, persist, status, reason}`，`status` 由 `live`+`persist` 派生
-- [ ] `allow`/`deny` 无条件维护 `peers/<容器名>.list`；`allow` 幂等去重，`deny` 整行精确移除；删空后文件自动删除
-- [ ] 容器未运行时 `allow`/`deny` 仅落盘，`live=false, persist=true, status=partial_success`
-- [ ] 容器重启后 `apply_network_isolation` 调 `network_peer.sh restore` 按持久化文件回灌 `allowed_peers`
-- [ ] `deny` 对不在集合中的 IP 幂等（视为成功，与 `allow` 的 `add -exist` 对称）
-- [ ] 单容器失败不中断同机其他容器；主机级失败（SSH 连不上/异常）展开为该机每容器一条 `failure`
-- [ ] 全量硬失败（所有容器 `status=failure`）返 500 触发上游重试；存在任一非 `failure` 则返 200
-- [ ] 响应保留 `failed_containers`（live 未成功子集，兼容旧调用方）与 `failed`（计数）
-- [ ] 所有容器名/peer IP/share 路径经 `CommandSecurity` 校验，命令拼参用 `shlex.quote` 转义
-- [ ] `network_peer.sh` per-container `flock` 串行化同容器的 allow/deny/restore，防 `peers/<容器名>.list` 读-改-写丢更新与 ipset 竞态
-- [ ] 容器删除流程清理 `peers/<容器名>.list` 持久化文件与 `/var/lock/network_peer/<容器名>.lock` 锁文件
+- [x] `POST /docker/isolation/peers` 接受 JSON 数组（每元素一台物理机），逐机 SSH + 机内串行调 `network_peer.sh`
+- [x] 兼容旧版单对象入参：自动包成单元素数组
+- [x] 请求体非法（非数组、空数组、host 字段缺失、containers 非非空数组、action 非 add/remove）返 400，错误信息能定位到 `host[idx]`
+- [x] 鉴权失败返 401；未预期异常返 500
+- [x] 每容器返回 `{ip, name, live, persist, status, reason}`，`status` 由 `live`+`persist` 派生
+- [x] `allow`/`deny` 无条件维护 `peers/<容器名>.list`；`allow` 幂等去重，`deny` 整行精确移除；删空后文件自动删除
+- [x] 容器未运行时 `allow`/`deny` 仅落盘，`live=false, persist=true, status=partial_success`
+- [x] 容器重启后 `apply_network_isolation` 调 `network_peer.sh restore` 按持久化文件回灌 `allowed_peers`
+- [x] `deny` 对不在集合中的 IP 幂等（视为成功，与 `allow` 的 `add -exist` 对称）
+- [x] 单容器失败不中断同机其他容器；主机级失败（SSH 连不上/异常）展开为该机每容器一条 `failure`
+- [x] 全量硬失败（所有容器 `status=failure`）返 500 触发上游重试；存在任一非 `failure` 则返 200
+- [x] 响应保留 `failed_containers`（live 未成功子集，兼容旧调用方）与 `failed`（计数）
+- [x] 所有容器名/peer IP/share 路径经 `CommandSecurity` 校验，命令拼参用 `shlex.quote` 转义
+- [x] `network_peer.sh` per-container `flock` 串行化同容器的 allow/deny/restore，防 `peers/<容器名>.list` 读-改-写丢更新与 ipset 竞态（同机互斥；跨机并发由调用方去重或将锁文件置于共享存储，见 design.md 风险表）
+- [x] 容器删除流程清理 `peers/<容器名>.list` 持久化文件与 `/var/lock/network_peer/<容器名>.lock` 锁文件
 
 ## 影响范围
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `transport.py` | 新增 | `@APP.route("/docker/isolation/peers")` 视图函数；校验、摘要日志、调用 `update_isolation_peers_multi_host` |
-| `service/docker_manager.py` | 新增 | `DockerManager.update_isolation_peers_batch`（机内串行）+ `_parse_peer_result`/`_parse_peer_failure_reason`；模块级 `update_isolation_peers_multi_host`（多机并行 `ThreadPoolExecutor`） |
-| `script/network_peer.sh` | 新增 | 点对点放通/删除/恢复脚本；两通道模型 + `PEER_RESULT` 输出契约 + per-container `flock` |
-| `script/lib_container.sh` | 修改 | `apply_network_isolation` 创建 `allowed_peers` ipset 后调 `network_peer.sh restore` 回灌 |
-| `script/resource_restart_container.sh` | 修改 | 重启流程在 `apply_network_isolation` 后自动回灌 peer 规则 |
-| `script/resource_start_docker.sh` | 修改 | 创建流程同上 |
-| `script/resource_delete_docker.sh` | 修改 | 容器删除流程清理 `peers/<容器名>.list` 与 `flock` 锁文件 |
-| `docs/docker-isolation-peers-api.md` | 新增 | 接口契约文档（请求体/响应/持久化文件格式/行为说明） |
+| 文件                                   | 操作 | 说明                                                                                                                                                                                     |
+| -------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transport.py`                         | 新增 | `@APP.route("/docker/isolation/peers")` 视图函数；校验、摘要日志、调用 `update_isolation_peers_multi_host`                                                                               |
+| `service/docker_manager.py`            | 新增 | `DockerManager.update_isolation_peers_batch`（机内串行）+ `_parse_peer_result`/`_parse_peer_failure_reason`；模块级 `update_isolation_peers_multi_host`（多机并行 `ThreadPoolExecutor`） |
+| `script/network_peer.sh`               | 新增 | 点对点放通/删除/恢复脚本；两通道模型 + `PEER_RESULT` 输出契约 + per-container `flock`                                                                                                    |
+| `script/lib_container.sh`              | 修改 | `apply_network_isolation` 创建 `allowed_peers` ipset 后调 `network_peer.sh restore` 回灌                                                                                                 |
+| `script/resource_restart_container.sh` | 修改 | 重启流程在 `apply_network_isolation` 后自动回灌 peer 规则                                                                                                                                |
+| `script/resource_start_docker.sh`      | 修改 | 创建流程同上                                                                                                                                                                             |
+| `script/resource_delete_docker.sh`     | 修改 | 容器删除流程清理 `peers/<容器名>.list` 与 `flock` 锁文件                                                                                                                                 |
+| `docs/docker-isolation-peers-api.md`   | 新增 | 接口契约文档（请求体/响应/持久化文件格式/行为说明）                                                                                                                                      |
 
 **不修改的文件：**
 

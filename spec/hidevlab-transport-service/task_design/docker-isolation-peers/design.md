@@ -14,32 +14,32 @@
 
 ## 架构决策
 
-| 决策点 | 选择 | 原因 |
-|--------|------|------|
-| 接口形态 | 单接口 `POST /docker/isolation/peers`，action 字段区分 add/remove | 双向互通需两端各调一次，单接口支持数组批量降低跨机双向放通的墙钟时间；分两个接口（add/delete）会双倍 SSH 连接 |
-| 并发模型 | 多机并行（`ThreadPoolExecutor` ≤10）+ 机内串行 | 同机容器共享一条 SSH 连接（连接复用），串行避免 ipset/文件锁竞态；跨机并行降低 A↔B 双向放通的墙钟时间 |
-| 两通道拆分 | live + persist 独立取布尔，status 派生 | 容器未运行时仍可落盘（重启后 restore 回灌），不丢规则；调用方可按 per-container status 精确处理，不全成功也不全失败 |
-| 持久化事实源 | `peers/<容器名>.list`（每行一个 IPv4） | 共享存储随物理机持久化；纯文本便于排查；`restore` 逐行回灌幂等（`ipset add -exist`） |
-| 重启回灌入口 | `apply_network_isolation` 内调 `restore` | 创建/重启容器时 netns 新建，此时 `allowed_peers` 仅含网关，正好按文件回灌历史放通 |
-| `deny` 幂等语义 | IP 不在集合视为成功（与 `allow` 的 `add -exist` 对称） | 期望态达成即成功，避免调用方重试时误报失败 |
-| 全量硬失败 500 | 所有容器 `status=failure` 才返 500 | SSH 不可达等硬失败值得上游重试；`partial_success`（容器未运行）重试无益，持久化已兜底 |
-| 兼容旧出参 | 保留 `failed_containers`（live 未成功子集）+ `failed`（计数） | 旧调用方读 `failed_containers` 判失败，新调用方按 per-container `live/status` 精确处理；过渡期双契约 |
-| 兼容旧入参 | 单对象自动包成单元素数组 | 旧 CBB 单机调用无需改入参即可升级到新接口 |
-| `flock` 粒度 | per-container（`/var/lock/network_peer/<容器名>.lock`） | 串行化同容器的 allow/deny/restore，不影响其他容器并发；锁随进程退出自动释放 |
-| 脚本位置 | `{share_path}/share/docker_config/network_peer.sh`（共享存储） | 多机共享一份脚本，部署/升级一致；`share_path` 缺省 `/data/gluster`，可按容器覆写 |
+| 决策点          | 选择                                                              | 原因                                                                                                                |
+| --------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 接口形态        | 单接口 `POST /docker/isolation/peers`，action 字段区分 add/remove | 双向互通需两端各调一次，单接口支持数组批量降低跨机双向放通的墙钟时间；分两个接口（add/delete）会双倍 SSH 连接       |
+| 并发模型        | 多机并行（`ThreadPoolExecutor` ≤10）+ 机内串行                    | 同机容器共享一条 SSH 连接（连接复用），串行避免 ipset/文件锁竞态；跨机并行降低 A↔B 双向放通的墙钟时间               |
+| 两通道拆分      | live + persist 独立取布尔，status 派生                            | 容器未运行时仍可落盘（重启后 restore 回灌），不丢规则；调用方可按 per-container status 精确处理，不全成功也不全失败 |
+| 持久化事实源    | `peers/<容器名>.list`（每行一个 IPv4）                            | 共享存储随物理机持久化；纯文本便于排查；`restore` 逐行回灌幂等（`ipset add -exist`）                                |
+| 重启回灌入口    | `apply_network_isolation` 内调 `restore`                          | 创建/重启容器时 netns 新建，此时 `allowed_peers` 仅含网关，正好按文件回灌历史放通                                   |
+| `deny` 幂等语义 | IP 不在集合视为成功（与 `allow` 的 `add -exist` 对称）            | 期望态达成即成功，避免调用方重试时误报失败                                                                          |
+| 全量硬失败 500  | 所有容器 `status=failure` 才返 500                                | SSH 不可达等硬失败值得上游重试；`partial_success`（容器未运行）重试无益，持久化已兜底                               |
+| 兼容旧出参      | 保留 `failed_containers`（live 未成功子集）+ `failed`（计数）     | 旧调用方读 `failed_containers` 判失败，新调用方按 per-container `live/status` 精确处理；过渡期双契约                |
+| 兼容旧入参      | 单对象自动包成单元素数组                                          | 旧 CBB 单机调用无需改入参即可升级到新接口                                                                           |
+| `flock` 粒度    | per-container（`/var/lock/network_peer/<容器名>.lock`）           | 串行化同容器的 allow/deny/restore，不影响其他容器并发；锁随进程退出自动释放                                         |
+| 脚本位置        | `{share_path}/share/docker_config/network_peer.sh`（共享存储）    | 多机共享一份脚本，部署/升级一致；`share_path` 缺省 `/data/gluster`，可按容器覆写                                    |
 
 ## 涉及文件
 
-| 文件 | 操作 | 关键改动 |
-|------|------|---------|
-| `transport.py` | 新增路由 | `@APP.route("/docker/isolation/peers")` `docker_isolation_peers`：鉴权 → JSON 解析（兼容单对象）→ 逐机/逐容器校验（`host[idx]`/`containers[c_idx]` 定位）→ 脱敏摘要日志 → 调 `update_isolation_peers_multi_host` → 派生 `failed_containers`/`failed` → 全量硬失败 500 |
-| `service/docker_manager.py` | 新增方法/函数 | `DockerManager.update_isolation_peers_batch`（机内串行，逐容器拼参+解析 `PEER_RESULT`）；`DockerManager._parse_peer_result`/`_parse_peer_failure_reason`（解析脚本输出）；模块级 `update_isolation_peers_multi_host`（多机 `ThreadPoolExecutor`） |
-| `script/network_peer.sh` | 新增脚本 | `allow`/`deny`/`restore` 三动作；两通道模型 + `PEER_RESULT` 输出契约 + per-container `flock` + 持久化文件维护（幂等增删） |
-| `script/lib_container.sh` | 修改 `apply_network_isolation` | 创建 `allowed_peers` ipset 后调 `bash network_peer.sh restore "$CONTAINER_NAME"` 回灌 |
-| `script/resource_restart_container.sh` | 修改重启流程 | `apply_network_isolation` 失败即 `DEPLOY_FAILED`，回灌由该函数内部完成 |
-| `script/resource_start_docker.sh` | 修改创建流程 | 同上 |
-| `script/resource_delete_docker.sh` | 修改删除流程 | 容器删除后清理 `peers/<容器名>.list` 与 `/var/lock/network_peer/<容器名>.lock` |
-| `docs/docker-isolation-peers-api.md` | 新增文档 | 接口契约（请求体/响应/`status` 派生/持久化文件格式/行为说明） |
+| 文件                                   | 操作                           | 关键改动                                                                                                                                                                                                                                                              |
+| -------------------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transport.py`                         | 新增路由                       | `@APP.route("/docker/isolation/peers")` `docker_isolation_peers`：鉴权 → JSON 解析（兼容单对象）→ 逐机/逐容器校验（`host[idx]`/`containers[c_idx]` 定位）→ 脱敏摘要日志 → 调 `update_isolation_peers_multi_host` → 派生 `failed_containers`/`failed` → 全量硬失败 500 |
+| `service/docker_manager.py`            | 新增方法/函数                  | `DockerManager.update_isolation_peers_batch`（机内串行，逐容器拼参+解析 `PEER_RESULT`）；`DockerManager._parse_peer_result`/`_parse_peer_failure_reason`（解析脚本输出）；模块级 `update_isolation_peers_multi_host`（多机 `ThreadPoolExecutor`）                     |
+| `script/network_peer.sh`               | 新增脚本                       | `allow`/`deny`/`restore` 三动作；两通道模型 + `PEER_RESULT` 输出契约 + per-container `flock` + 持久化文件维护（幂等增删）                                                                                                                                             |
+| `script/lib_container.sh`              | 修改 `apply_network_isolation` | 创建 `allowed_peers` ipset 后调 `bash network_peer.sh restore "$CONTAINER_NAME"` 回灌                                                                                                                                                                                 |
+| `script/resource_restart_container.sh` | 修改重启流程                   | `apply_network_isolation` 失败即 `DEPLOY_FAILED`，回灌由该函数内部完成                                                                                                                                                                                                |
+| `script/resource_start_docker.sh`      | 修改创建流程                   | 同上                                                                                                                                                                                                                                                                  |
+| `script/resource_delete_docker.sh`     | 修改删除流程                   | 容器删除后清理 `peers/<容器名>.list` 与 `/var/lock/network_peer/<容器名>.lock`                                                                                                                                                                                        |
+| `docs/docker-isolation-peers-api.md`   | 新增文档                       | 接口契约（请求体/响应/`status` 派生/持久化文件格式/行为说明）                                                                                                                                                                                                         |
 
 ## 方法签名
 
@@ -121,12 +121,12 @@ def update_isolation_peers_multi_host(hosts):
 PEER_RESULT: live=<true|false> persist=<true|false> status=<full_success|partial_success|failure> reason=<text>
 ```
 
-| live | persist | status | exit |
-|------|---------|--------|------|
-| true | true | `full_success` | 0 |
-| true | false | `partial_success` | 0 |
-| false | true | `partial_success` | 0 |
-| false | false | `failure` | 1 |
+| live  | persist | status            | exit |
+| ----- | ------- | ----------------- | ---- |
+| true  | true    | `full_success`    | 0    |
+| true  | false   | `partial_success` | 0    |
+| false | true    | `partial_success` | 0    |
+| false | false   | `failure`         | 1    |
 
 `live=false` 含未尝试：容器未运行 / 依赖缺失（nsenter/ipset）/ 未配置隔离（无 `allowed_peers` ipset）。`reason` 写明失败通道、具体 IP、未尝试原因与重启影响。
 
@@ -149,26 +149,40 @@ PEER_RESULT: live=<true|false> persist=<true|false> status=<full_success|partial
 
 ## 错误处理
 
-| 失败场景 | HTTP | 处理 |
-|---------|------|------|
-| 鉴权失败 | 401 | `auth_filter` 拦截 |
-| 请求体非非空 JSON 数组 / host 字段缺失 / containers 非非空数组 / action 非法 | 400 | 错误信息定位到 `host[idx]` / `host[idx] containers[c_idx]` |
-| 单容器 `network_peer.sh` 异常退出（无 `PEER_RESULT`） | 200 | 该容器 `status=failure`，`reason` 取 `_parse_peer_failure_reason`；不阻断同机其他容器 |
-| 主机级 SSH 失败 / 异常 | 200 | 展开为该机每容器一条 `failure`（同 reason）；不返 500（除非全部 failure） |
-| 全量硬失败（所有容器 `status=failure`） | 500 | 触发上游重试 |
-| 未预期异常 | 500 | `str(e)` |
+| 失败场景                                                                     | HTTP | 处理                                                                                  |
+| ---------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------- |
+| 鉴权失败                                                                     | 401  | `auth_filter` 拦截                                                                    |
+| 请求体非非空 JSON 数组 / host 字段缺失 / containers 非非空数组 / action 非法 | 400  | 错误信息定位到 `host[idx]` / `host[idx] containers[c_idx]`                            |
+| 单容器 `network_peer.sh` 异常退出（无 `PEER_RESULT`）                        | 200  | 该容器 `status=failure`，`reason` 取 `_parse_peer_failure_reason`；不阻断同机其他容器 |
+| 主机级 SSH 失败 / 异常                                                       | 200  | 展开为该机每容器一条 `failure`（同 reason）；不返 500（除非全部 failure）             |
+| 全量硬失败（所有容器 `status=failure`）                                      | 500  | 触发上游重试                                                                          |
+| 未预期异常                                                                   | 500  | `str(e)`                                                                              |
 
 ## 风险 & 缓解
 
-| 风险 | 缓解 |
-|------|------|
-| 容器未运行时 `live=false`，调用方误判失败 | 派生 `status=partial_success`（persist 已落盘），`reason` 显式说明「仅持久化落盘; 重启后由 restore 按持久化对账」；响应保留 `failed_containers` 兼容旧调用方 |
-| `network_peer.sh` 异常退出无 `PEER_RESULT` | `_parse_peer_result` 返回 `None` 时按退出码兜底判 `failure`，不臆测 `live/persist=true`；`_parse_peer_failure_reason` 取首个 `错误:/失败:/FAIL` 行 |
-| 并发同容器 allow/deny/restore 竞态 | per-container `flock -w 120`；`touch` 预检锁文件可创建防非交互 bash 静默退出 |
-| `peers/<容器名>.list` 被手改污染 | `restore` 逐行 IPv4 格式校验跳过非法行；`allow` 幂等去重；`deny` 整行精确移除 |
-| `share_storage.path` 路径穿越 | `CommandSecurity.validate_path` 校验 + `shlex.quote`；`isinstance(_ss, dict)` 兜底非 dict 真值 |
-| 跨机双向放通漏调一端 | 由调用方（CBB `ContainerIsolationSPI`）保证 A 放 B 且 B 放 A；transport 仅执行单方向，不臆测双向 |
-| 容器删除后 `peers/<容器名>.list` 残留 | `resource_delete_docker.sh` 容器删除后清理持久化文件与 `flock` 锁文件 |
+| 风险                                       | 缓解                                                                                                                                                            |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 容器未运行时 `live=false`，调用方误判失败  | 派生 `status=partial_success`（persist 已落盘），`reason` 显式说明「仅持久化落盘; 重启后由 restore 按持久化对账」；响应保留 `failed_containers` 兼容旧调用方    |
+| `network_peer.sh` 异常退出无 `PEER_RESULT` | `_parse_peer_result` 返回 `None` 时按退出码兜底判 `failure`，不臆测 `live/persist=true`；`_parse_peer_failure_reason` 取首个 `错误:/失败:/FAIL` 行              |
+| 并发同容器 allow/deny/restore 竞态（同机） | per-container `flock -w 120`（`/var/lock/network_peer/<容器名>.lock`，host-local）；`touch` 预检锁文件可创建防非交互 bash 静默退出                              |
+| 跨机并发同容器名读写 `peers/<容器名>.list` | `flock` 仅保证同机互斥，**不跨机**；跨机并发（容器漂移/重试打到另一台机）需调用方按容器名去重，或把锁文件置于 `.list` 同一共享存储上（已知边界，见 §已知边界）  |
+| `peers/<容器名>.list` 被手改污染（非法行） | `restore` 逐行 IPv4 格式校验跳过非法行；`allow` 幂等去重；`deny` 整行精确移除                                                                                   |
+| `peers/<容器名>.list` 被注入合法恶意 IP    | IPv4 格式校验**不覆盖格式合法的恶意 IP**；持久化文件须仅 root 可写、容器无写权限（部署要求）；后续可对回灌 IP 加来源范围校验（已知边界，见 §已知边界）          |
+| `share_storage.path` 路径穿越              | `CommandSecurity.validate_path` 字符级校验（防 `..`/空字节/特殊字符）+ `shlex.quote`；**非根目录白名单**，无法阻止指向任意已存在目录（已知边界，见 §已知边界）  |
+| `share_storage.path` 覆写致脚本任意执行    | `script_path` 直接来自请求 `share_storage.path`，`validate_path` 是字符级过滤非 realpath 白名单；建议后续升级为 realpath 落在允许根下或固定脚本路径（已知边界） |
+| 跨机双向放通漏调一端                       | 由调用方（CBB `ContainerIsolationSPI`）保证 A 放 B 且 B 放 A；transport 仅执行单方向，不臆测双向                                                                |
+| 容器删除后 `peers/<容器名>.list` 残留      | `resource_delete_docker.sh` 容器删除后清理持久化文件与 `flock` 锁文件                                                                                           |
+| `ThreadPoolExecutor(max_workers=0)` 抛异常 | `update_isolation_peers_multi_host` 调用前 transport.py 已校验 `data` 为非空数组（空数组返 400），保证 `len(hosts) ≥ 1`；复用该范式时须保留非空前置校验         |
+
+## 已知边界
+
+以下边界在当前需求内不修复，记录于此供后续演进与运维参考：
+
+- **`flock` 仅同机互斥，不跨机**：`/var/lock/network_peer/<容器名>.lock` 是 host-local 目录，跨物理机并发操作同名容器（漂移/重试打到另一台机）时两台机各持本地锁互不互斥，对共享存储上的 `peers/<容器名>.list` 读-改-写可能后写覆盖前写。当前由调用方按容器名去重保证单机执行；若未来出现多机并发同名场景，需把锁文件置于 `.list` 同一共享存储上。
+- **`peers/<容器名>.list` 信任边界**：IPv4 格式校验只能挡被写坏的行，不挡「格式合法的恶意 IP」。任何对 `{share}/share/docker_config/peers/` 有写权限的主体（多租户场景下容器可能挂载/可写 `{share}/share/...`）向 `<他容器名>.list` 追加合法 IP，等该容器下次重启 `restore` 即可被放通。部署要求：该目录仅 root 可写、容器无写权限；后续可对回灌 IP 加来源范围校验。
+- **`share_storage.path` 路径白名单**：`CommandSecurity.validate_path` 是字符级过滤（防 `..`/空字节/特殊字符），非 realpath 根目录白名单。调用方可把 `share_storage.path` 指向宿主机任意已存在目录，`network_peer.sh` 会从该目录被读取并以 SSH 账号（通常 root）在宿主机上 `bash` 执行。建议后续升级为 realpath 后必须落在允许根下，或取消按容器覆写 `share_path` 的能力、固定脚本路径；并补充脚本目录权限（仅 root 可写）的部署要求。
+- **`deny` partial_success 安全语义**：`deny` 在容器未运行时仅落盘（`live=false, persist=true, status=partial_success`），HTTP 200；但容器在重启前网络通路仍然开放（`restore` 才会移除）。调用方撤除放通时须读 per-container `live` 判断是否已实时生效，`partial_success` 需重试或等待重启 `restore`，不能仅凭 HTTP 200 判定已生效（fail-open 风险）。
+- **`ThreadPoolExecutor` 非空前置**：`max_workers=min(len(hosts),10)` 在 `hosts` 为空列表时会取 0 触发 `ValueError`；transport.py 入口已校验 `data` 非空数组（空数组返 400）保证 `len(hosts) ≥ 1`，复用该范式时须保留非空前置校验，或改为 `max(1, min(len(hosts),10))`。
 
 ## 跨仓影响
 
