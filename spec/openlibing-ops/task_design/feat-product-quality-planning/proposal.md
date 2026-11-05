@@ -6,7 +6,19 @@
 - 业务 Issue：[#328 【蓝区】开源社区质量管理IT建设-质量策划](https://gitcode.com/openlibing/openlibing-ops/issues/328)
 - 流程模式：Full
 - 需求名称：`feat-product-quality-planning`
-- 目标分支：`yanhongbing_main_01`
+- 当前开发分支：`yanhongbing_fork_01`
+
+## 1.1 本轮里程碑增量基线（2026-11-05，优先于后文）
+
+本轮只交付项目里程碑 CRUD 及独立修改日志，不交付后文所述策划初始化、目录和其他策划业务表接口。经用户确认，本轮规则如下：
+
+1. 以 `V20261104__product_quality_planning.sql` 当前 `pq_milestone` DDL 为准：`project_id` 为 `VARCHAR(64)`，包含 `project_name`，没有 `deleted` 字段；实体中的项目 ID 使用 `String`。
+2. 里程碑字段为项目名称、里程碑名称、计划时间、实际时间及审计字段。同一项目内里程碑名称唯一，通过服务校验和 `(project_id, milestone_name)` 唯一索引共同保证。
+3. 删除为**物理删除**，不依赖 `pq_quality_plan`，也不存在“已初始化策划不可删除”的本轮约束。后文涉及里程碑逻辑删除、策划初始化状态和项目成员角色矩阵的内容属于旧总体方案，不作为本轮验收依据。
+4. 新增 `pq_milestone_log`：主键 ID、里程碑 ID、旧数据 JSON、新数据 JSON、修改人、修改时间。修改保存旧/新完整快照；删除保存旧快照且新数据为 `NULL`；创建不写该表。
+5. 修改/删除与日志插入处于同一本地事务，日志插入失败必须回滚业务操作。保留公共 `@LogApi` 操作日志，但不以 best-effort AOP 代替事务日志表。
+6. 权限复用当前 `ProductQualityPermissionService.canRead/canWrite` 全局白名单和 token-only 用户身份，不在本轮实现旧方案的项目成员/项目质量负责人角色矩阵。
+7. 本轮全程不提交代码、不推送、不创建 PR；后续其他策划模块仍按原需求另行实施和验收。
 
 ## 2. 背景与问题
 

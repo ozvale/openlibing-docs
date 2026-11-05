@@ -13,6 +13,44 @@
 
 需求与代码冲突时以当前代码为准。上述权限和身份差异是适配器必须显式处理的边界，不能只在 Controller 上加注解后默认安全。
 
+### 1.1 本轮里程碑实施基线（2026-11-05，优先于后文）
+
+本轮仅实现里程碑 CRUD 和独立修改日志，后文策划初始化、目录、项目成员权限矩阵及其他业务表接口不属于本轮交付。冲突处以本节和当前 SQL 为准。
+
+#### 数据模型
+
+- `pq_milestone`：`id BIGINT UNSIGNED`、`project_id VARCHAR(64)`、`project_name VARCHAR(255)`、`milestone_name VARCHAR(255)`、`planned_time DATETIME`、`actual_time DATETIME NULL` 和创建/更新审计字段；没有 `deleted`。Java `projectId` 使用 `String`，实体不继承含 `@TableLogic deleted` 的 `PqBaseModel`。
+- 将普通索引 `idx_pq_milestone_project(project_id, milestone_name)` 调整为唯一索引 `uk_pq_milestone_project_name(project_id, milestone_name)`；服务层在新增/修改前检查名称，数据库唯一键兜底并发冲突。
+- 新增 `pq_milestone_log`：`id BIGINT UNSIGNED AUTO_INCREMENT`、`milestone_id BIGINT UNSIGNED NOT NULL`、`old_data JSON NOT NULL`、`new_data JSON NULL`、`update_by VARCHAR(64) NOT NULL`、`update_time DATETIME NOT NULL`，主键 `id`，索引 `idx_pq_milestone_log_milestone(milestone_id, update_time)`。
+- 日志模型不继承公共逻辑删除模型；JSON 列在 Java 中使用字符串承载，插入内容仅来自里程碑实体的完整快照。
+- 当前 SQL 不含 `pq_quality_plan` / `pq_plan_catalog`，本轮删除不查询或依赖这两张表，采用物理删除。
+
+#### API 与权限
+
+统一基础路径为 `/projects/product-quality/milestones`，路径中不携带业务参数，`projectId` 和 `id` 均通过 `@RequestParam` 注入：
+
+| 方法 | 路径 | 权限 | 行为 |
+|---|---|---|---|
+| POST | 根路径 | `canWrite` | 创建，接收 `projectName/milestoneName/plannedTime/actualTime` |
+| GET | 根路径，`projectId/page/pageSize` | `canRead` | 数据库分页，按 `id DESC` |
+| GET | `/detail?projectId=&id=` | `canRead` | 按 `id + projectId` 查询详情 |
+| PUT | `/update?projectId=&id=` | `canWrite` | 全量修改四个可编辑字段，保留创建审计信息 |
+| DELETE | `/delete?projectId=&id=` | `canWrite` | 按 `id + projectId` 物理删除 |
+
+请求体不接收项目 ID、主键或审计字段。项目名称、里程碑名称、计划时间必填；`projectId` 非空且最长 64，名称最长 255；分页从 1 开始，每页 1～100。响应使用 `Result<T>` 和 `PageResult<T>`，不直接暴露持久化实体。读、写分别调用当前全局白名单权限服务，写操作操作者来自 token-only `ProductQualityUserAdapter`。
+
+#### 事务与日志
+
+- App Service 负责权限、身份、DTO 转换、事务及公共 AOP 快照；Domain Service 负责持久化、名称唯一校验和日志记录；Mapper/XML 负责带项目归属条件的 SQL。两个里程碑 Mapper 不继承 `BaseMapper`，包括 `insert` 在内的 SQL 均在 XML 中显式声明，便于直接检索和审查。所有里程碑 SQL 的表名均显式使用 `openlibing_quality` 库名前缀（如 `openlibing_quality.pq_milestone`），不依赖当前默认数据库。
+- 修改：先查询旧实体，在同一事务内更新并插入 `old_data=旧完整 JSON`、`new_data=新完整 JSON` 的日志。
+- 删除：先查询旧实体，在同一事务内物理删除并插入 `old_data=旧完整 JSON`、`new_data=NULL` 的日志。
+- 创建不写 `pq_milestone_log`。查询不写业务日志。任何更新/删除影响行数不等于 1、日志插入失败或序列化失败均抛出异常，由 `@Transactional` 回滚。
+- POST/PUT/DELETE 保留 `@LogApi`，并继续通过 `ProductQualityAuditSupport` 提供公共日志快照；该链路是补充审计，不替代上述强一致日志表。
+
+#### 测试与交付约束
+
+采用 RED → GREEN → REFACTOR：先更新 SQL/Mapper 契约测试并观察失败，再实现模型和 DDL；先写 Domain/App/Controller 失败测试，再实现对应代码。覆盖 CRUD、归属隔离、名称唯一、字段校验、白名单权限、修改/删除日志快照、日志失败异常传播和事务注解。运行定向测试、`ProductQuality*Test` 回归及编译/静态检查；本机没有 MySQL 时明确标注未做真实数据库事务验证。全程不 commit、不 push、不创建 PR。
+
 ## 2. 方案选择
 
 采用**全固定表模型**：每类 Issue 已定义字段的业务数据使用独立表、独立实体和强类型请求/响应；目录使用统一模板和实例表；权限、归属校验、批量删除和日志快照使用公共支撑组件。
