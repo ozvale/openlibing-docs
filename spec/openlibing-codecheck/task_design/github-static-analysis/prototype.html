@@ -523,8 +523,12 @@
         width: 16px;
         height: 16px;
         margin-left: 2px;
+        padding: 0;
+        font: inherit;
         color: var(--muted);
         cursor: pointer;
+        background: transparent;
+        border: 0;
         border-radius: 50%;
         place-items: center;
       }
@@ -1555,19 +1559,33 @@
                 <button
                   type="button"
                   class="tab active"
+                  id="tabPending"
                   data-tab="pending"
                   role="tab"
+                  aria-selected="true"
+                  aria-controls="issueList"
                 >
                   待处理 <span class="tab-count" id="pendingCount">128</span>
                 </button>
-                <button type="button" class="tab" data-tab="ignored" role="tab">
+                <button
+                  type="button"
+                  class="tab"
+                  id="tabIgnored"
+                  data-tab="ignored"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="issueList"
+                >
                   已忽略 <span class="tab-count">0</span>
                 </button>
                 <button
                   type="button"
                   class="tab"
+                  id="tabResolved"
                   data-tab="resolved"
                   role="tab"
+                  aria-selected="false"
+                  aria-controls="issueList"
                 >
                   已修复 <span class="tab-count">0</span>
                 </button>
@@ -1596,41 +1614,61 @@
                 <div class="filter-chip" data-note="1" id="platformFilter">
                   <span class="chip-label">平台</span>
                   <span class="chip-value" id="platformValue">GitHub</span>
-                  <span class="remove" role="button" aria-label="移除平台筛选"
-                    >×</span
+                  <button
+                    type="button"
+                    class="remove"
+                    aria-label="移除平台筛选"
                   >
+                    ×
+                  </button>
                 </div>
 
                 <div class="filter-chip" data-note="2" id="sourceFilter">
                   <span class="chip-label">数据来源</span>
                   <span class="chip-value" id="sourceValue">GitHub Action</span>
-                  <span class="remove" role="button" aria-label="移除来源筛选"
-                    >×</span
+                  <button
+                    type="button"
+                    class="remove"
+                    aria-label="移除来源筛选"
                   >
+                    ×
+                  </button>
                 </div>
 
                 <div class="filter-chip">
                   <span class="chip-label">组织</span>
                   <span class="chip-value">openlibing-test</span>
-                  <span class="remove" role="button" aria-label="移除组织筛选"
-                    >×</span
+                  <button
+                    type="button"
+                    class="remove"
+                    aria-label="移除组织筛选"
                   >
+                    ×
+                  </button>
                 </div>
 
                 <div class="filter-chip">
                   <span class="chip-label">仓库</span>
                   <span class="chip-value">clang-tidy-full-scan-demo</span>
-                  <span class="remove" role="button" aria-label="移除仓库筛选"
-                    >×</span
+                  <button
+                    type="button"
+                    class="remove"
+                    aria-label="移除仓库筛选"
                   >
+                    ×
+                  </button>
                 </div>
 
                 <div class="filter-chip">
                   <span class="chip-label">检测工具</span>
                   <span class="chip-value">clang-tidy</span>
-                  <span class="remove" role="button" aria-label="移除工具筛选"
-                    >×</span
+                  <button
+                    type="button"
+                    class="remove"
+                    aria-label="移除工具筛选"
                   >
+                    ×
+                  </button>
                 </div>
 
                 <button type="button" class="clear-link">清空筛选</button>
@@ -1659,7 +1697,7 @@
                 </div>
               </div>
 
-              <div id="issueList"></div>
+              <div id="issueList" role="tabpanel" aria-labelledby="tabPending"></div>
             </section>
 
             <section class="flow-card" data-note="4">
@@ -1698,7 +1736,12 @@
 
     <div class="drawer-mask" id="drawerMask"></div>
 
-    <aside class="drawer detail-drawer" id="drawer" aria-hidden="true">
+    <aside
+      class="drawer detail-drawer"
+      id="drawer"
+      aria-hidden="true"
+      inert
+    >
       <div class="drawer-head">
         <div class="drawer-title">
           <div class="detail-title-line">
@@ -1736,7 +1779,7 @@
 
       <div class="drawer-body">
         <div class="detail-layout">
-          <main class="detail-thread">
+          <div class="detail-thread">
             <section class="detail-card detail-code-card">
               <div class="detail-code-head">
                 <span class="detail-code-path" id="drawerFile"
@@ -1808,7 +1851,7 @@
                 </div>
               </div>
             </section>
-          </main>
+          </div>
 
           <aside class="detail-sidebar">
             <section>
@@ -1980,7 +2023,7 @@
           rule: "相邻参数类型可互换，容易误传",
           ruleId: "bugprone-easily-swappable-parameters",
           file: "src/utils.c",
-          line: 12,
+          line: 11,
           repo: "openlibing-test/clang-tidy-full-scan-demo",
           branch: "main",
           pipeline: "clang-tidy-scan",
@@ -2060,6 +2103,7 @@
         tab: "pending",
         annotations: true,
         currentIndex: null,
+        drawerTrigger: null,
       };
 
       const sourceLabel = () =>
@@ -2090,20 +2134,20 @@
         list.innerHTML = ISSUES.map((issue, index) => {
           return `
             <article class="issue-row" data-index="${index}" tabindex="0" role="button" aria-label="查看问题详情">
-              <div class="severity-bar ${issue.severity}"></div>
+              <div class="severity-bar ${escapeHtml(issue.severity)}"></div>
               <div class="issue-main">
                 <div class="issue-title">
-                  <span class="sev-badge ${issue.severity}">${issue.severityText}</span>
-                  ${issue.rule}
-                  <span class="rule-id">${issue.ruleId}</span>
+                  <span class="sev-badge ${escapeHtml(issue.severity)}">${escapeHtml(issue.severityText)}</span>
+                  ${escapeHtml(issue.rule)}
+                  <span class="rule-id">${escapeHtml(issue.ruleId)}</span>
                 </div>
                 <div class="issue-meta">
-                  <span class="repo">${platformIcon()} ${issue.repo}</span>
-                  <span class="meta-item"><span class="branch-pill">${issue.branch}</span></span>
-                  <span class="file-path">${issue.file}:${issue.line}</span>
+                  <span class="repo">${platformIcon()} ${escapeHtml(issue.repo)}</span>
+                  <span class="meta-item"><span class="branch-pill">${escapeHtml(issue.branch)}</span></span>
+                  <span class="file-path">${escapeHtml(issue.file)}:${escapeHtml(issue.line)}</span>
                   <span class="source-badge ${state.mode === "target" ? "" : "current"}">${sourceLabel()}</span>
-                  <span class="meta-item">${issue.pipeline} · #${issue.runId}</span>
-                  <span class="meta-item">${issue.time}</span>
+                  <span class="meta-item">${escapeHtml(issue.pipeline)} · #${escapeHtml(issue.runId)}</span>
+                  <span class="meta-item">${escapeHtml(issue.time)}</span>
                 </div>
               </div>
               <div class="issue-trailing">
@@ -2217,20 +2261,36 @@
 
         document.getElementById("drawerCode").innerHTML = issue.code
           .map((line, i) => {
-            const lineNo = i + 1;
-            return `<div class="code-line ${lineNo === issue.highlight ? "highlight" : ""}"><span class="ln">${lineNo}</span><span class="code">${escapeHtml(line) || " "}</span></div>`;
+            // 按文件真实行号渲染：片段首行 = 问题行 - (高亮下标 - 1)
+            const lineNo = issue.line - (issue.highlight - 1) + i;
+            return `<div class="code-line ${i + 1 === issue.highlight ? "highlight" : ""}"><span class="ln">${lineNo}</span><span class="code">${escapeHtml(line) || " "}</span></div>`;
           })
           .join("");
 
-        document.getElementById("drawer").classList.add("open");
+        const drawerEl = document.getElementById("drawer");
+        // 记录触发元素，关闭抽屉后把焦点还回去
+        if (!drawerEl.classList.contains("open")) {
+          state.drawerTrigger = document.activeElement;
+        }
+        drawerEl.classList.add("open");
         document.getElementById("drawerMask").classList.add("open");
-        document.getElementById("drawer").setAttribute("aria-hidden", "false");
+        drawerEl.setAttribute("aria-hidden", "false");
+        // 关闭态通过 inert 屏蔽抽屉内可聚焦控件，打开时解除
+        drawerEl.removeAttribute("inert");
+        document.getElementById("drawerClose").focus();
       }
 
       function closeDrawer() {
-        document.getElementById("drawer").classList.remove("open");
+        const drawerEl = document.getElementById("drawer");
+        drawerEl.classList.remove("open");
         document.getElementById("drawerMask").classList.remove("open");
-        document.getElementById("drawer").setAttribute("aria-hidden", "true");
+        drawerEl.setAttribute("aria-hidden", "true");
+        drawerEl.setAttribute("inert", "");
+        // 焦点归还给打开抽屉的列表行，避免键盘焦点丢失
+        if (state.drawerTrigger && state.drawerTrigger.isConnected) {
+          state.drawerTrigger.focus();
+        }
+        state.drawerTrigger = null;
       }
 
       function escapeHtml(value) {
@@ -2263,11 +2323,16 @@
 
       document.querySelectorAll(".tab").forEach((tab) => {
         tab.addEventListener("click", () => {
-          document
-            .querySelectorAll(".tab")
-            .forEach((item) => item.classList.remove("active"));
-          tab.classList.add("active");
+          document.querySelectorAll(".tab").forEach((item) => {
+            const isActive = item === tab;
+            item.classList.toggle("active", isActive);
+            item.setAttribute("aria-selected", String(isActive));
+          });
           state.tab = tab.dataset.tab;
+          // 同步 tabpanel 的可访问名称，保证读屏能识别当前选中的标签页
+          document
+            .getElementById("issueList")
+            .setAttribute("aria-labelledby", tab.id);
           renderIssues();
         });
       });
