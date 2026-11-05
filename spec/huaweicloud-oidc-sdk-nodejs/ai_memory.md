@@ -18,13 +18,17 @@
 
 ## 待办 / 暂缓
 
-- **undici 5.29.0 的 CVE 批次（#22–#37）与 #19 同根因**
-  advisory 修复版本为 `6.29.1 / 7.30.1 / 8.12.2`，5.x 无修复版本。
-  但三个测试 Action（test-apig-action / test-apig-obs-action / test-obs-action）运行时为 `node16`，
-  而 undici 6+ 要求 Node ≥18.17，升级必须连带调整 Action 运行时（属行为变化，须评审）。
-  2026-11-03 用户决定暂不升级、先自行调查，代码与 issue 均保持现状。
+- **undici CVE 批次（#22–#37）与 #19：已整改（PR #15，待合入）**
+  最终方案不是升级 undici（Node 16 运行时无法满足 undici 6+ 的 Node ≥18.17 要求），
+  而是**移除 undici 依赖**：新增 `_nodeFetch` 基于 Node 内置 http/https 的等价实现，
+  并用 `overrides` 固定传递依赖版本。结论：受运行时版本约束的 HTTP 库 CVE，
+  优先移除依赖 + 运行时内置能力等价实现，禁止连带升级运行时。
+  issue #19 / #22–#37 待 PR 合入后统一关闭。
 
-- **#18 STS 端点拼接 / http 协议校验（2026-11-03 用户裁决：暂不实施）**
-  拟改点：`configure()` 对 `region`（`[a-z0-9-]`）与 `stsAssumePath`（以 `/` 开头、不含 `@`）
-  做白名单校验；`sendRequest()` 拒绝非 https 协议。属输入拒绝 + 失败语义变化，
-  影响公开 API `sendRequest` 的 http 用法，方案已评估但暂缓实施。
+- **#18 STS 端点拼接 / http 协议校验：已整改（PR #16 + #17，待合入）**
+  `configure()` 对 `region`（`[a-z0-9-]`）与 `stsAssumePath`（以 `/` 开头、不含 `@`/空白/`?`/`#`/`://`）
+  做白名单校验；`sendRequest()` 首行拒绝非 https 协议，URL 无法解析时同样拒绝。
+  2026-11-04 用户确认采用「全量拒绝 http」方案并接受测试用例调整；
+  端到端已在 `openlibing-test/openlibing-cicd-test` PR #282 验证通过
+  （OIDC 取 token → STS 换证 → APIG 调用 → OBS 上传全链路正常）。
+  issue #18 待 PR 合入后关闭。

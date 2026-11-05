@@ -1,0 +1,54 @@
+# 【upload-sarif-action】安全整改 2026Q4 — 归档
+
+## 关联
+
+- 业务仓：openlibing/upload-sarif-action（docs 目录沿用 `openlibing-upload-sarif`）
+- 安全 Issue 总量：20
+- 业务 PR：#18（统一整改批次 + 单测）、#24（转换临时文件清理、日志清洗、移除入库 zip）、#26（历史 test.yaml 测试凭据登记 gitleaks 白名单）
+- 统一测试分支：`fix-security-remediation`
+- docs PR：本归档 PR
+
+## 整改范围
+
+### 1. 统一整改批次（PR #18，已合入）
+
+- 凭证片段掩码、临时目录清理、OBS ACL 可配置化等一批等价加固。
+
+### 2. 临时文件与残留治理（PR #24，open）
+
+- SARIF 转换产物上传后清理临时文件（#27）。
+- 安装包残留：移除入库的 zip 打包产物（#28）。
+- 日志注入：日志输出清洗换行与控制字符（#31）。
+
+### 3. 历史凭据白名单（PR #26，open）
+
+- 公开历史中残留 `test.yaml`（root commit `6d8ef41` 与 `c215f65`）内嵌全量 PAT，已确认当前所有分支工作树中无该文件。
+- GitCode 服务端保留 keep-around / merge-requests 引用，重写历史无法清除旧 blob 且会导致全仓 commit hash 变更，故采用「作废 token + `.gitleaksignore` 指纹白名单」的最小改动方案。
+- 白名单仅登记两条指纹，全历史复扫 0 命中。
+
+## 存量核对
+
+| 指标 | 数量 |
+|---|---:|
+| 总体 | 20 |
+| 已修复（closed） | 14 |
+| 剩余（open） | 6 |
+
+## 剩余项
+
+| Issue | 内容 | 状态 |
+|---|---|---|
+| #27 / #28 / #31 | 临时文件 / 安装包残留 / 日志注入 | PR #24 已覆盖，待合入 |
+| #25 | 任意文件读取与 public-read 源码片段泄露链 | 无 PR，需定性 |
+| #24 | workflow 检出 PR 代码执行 npm install 与钩子 | 无 PR，需定性（同类 pwn request 场景在 pre-commit-action 侧已判定为有意门禁设计） |
+| #11 | SENS-14：含源码片段的 SARIF 缓存本地 tmp 并以 public-read 上传 OBS | 无 PR，需定性（public-read 为后端匿名下载依赖，改造需后端先支持凭证下载） |
+
+## 可复用经验
+
+- 公开历史中的凭据，服务端 keep-around 引用会导致本地重写无效；优先「作废凭据 + 白名单登记」，历史重写不是必选项。
+- `.gitleaksignore` 指纹格式为 `<commit>:<file>:<rule-id>:<line>`，登记后需用全历史扫描复验 0 命中。
+- 临时文件整改要同时覆盖「上传后清理」与「入库残留」两个方向。
+
+## 归档日期
+
+2026-11-05
