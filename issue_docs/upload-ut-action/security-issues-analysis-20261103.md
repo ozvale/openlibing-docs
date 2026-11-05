@@ -6,10 +6,10 @@
 
 ## 汇总
 
-| 分类 | Issue | 处理建议 |
-| ---- | ----- | -------- |
-| 真问题·部分整改，改默认值暂缓（后端依赖） | #4 | ACL 已参数化（`obs_acl`，PR #1）；默认 `public-read` 切 `private` 依赖后端支持带凭证/签名 URL 下载，暂缓待后端联动 |
-| 真问题·须用户评审（大小上限） + 暂缓（ACL） | #21 | 第 1 点 ACL 同 #4；第 2 点上传无大小上限属「资源限制阈值」（硬规则 2-6），需先给出合法体量口径并评审 |
+| 分类                                        | Issue | 处理建议                                                                                                           |
+| ------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------ |
+| 真问题·部分整改，改默认值暂缓（后端依赖）   | #4    | ACL 已参数化（`obs_acl`，PR #1）；默认 `public-read` 切 `private` 依赖后端支持带凭证/签名 URL 下载，暂缓待后端联动 |
+| 真问题·须用户评审（大小上限） + 暂缓（ACL） | #21   | 第 1 点 ACL 同 #4；第 2 点上传无大小上限属「资源限制阈值」（硬规则 2-6），需先给出合法体量口径并评审               |
 
 ---
 
@@ -17,11 +17,11 @@
 
 ### 1.1 issue 原列三点与现状核实
 
-| 原问题点 | 现状（`upstream/main` 8283a4d） | 结论 |
-| -------- | ------------------------------ | ---- |
-| `ObsUploader.js:124` 硬编码 `ACL: 'public-read'` | 已参数化：[index.js:119-123](file:///e:/work/huawei/fork/upload-ut-action/index.js) 读取 `obs_acl` 输入并做 `public-read` / `private` 白名单校验 → [index.js:188](file:///e:/work/huawei/fork/upload-ut-action/index.js) 传入 `uploadAndNotify` → [ObsUploader.js:188](file:///e:/work/huawei/fork/upload-ut-action/src/obs/ObsUploader.js) 形参 `obsAcl = 'public-read'` → [ObsUploader.js:142](file:///e:/work/huawei/fork/upload-ut-action/src/obs/ObsUploader.js) `putObject({ ..., ACL: acl })`。**默认值仍为 `public-read`** | 部分整改 |
-| `ObsUploader.js:82-86` Key 可预测（`repo/{yyyyMMdd}.{HH}/{runId}/ut-coverage.json`） | [ObsUploader.js:94](file:///e:/work/huawei/fork/upload-ut-action/src/obs/ObsUploader.js) `buildObsKey` 已对 `repoName` / `runId` 走 `sanitizeKeySegment`（仅保留 `[a-zA-Z0-9._-]`，非法字符折叠，空值回退 `unknown-repo` / `manual`）；单测已覆盖（`test/obs-uploader.test.js`） | 已整改，但 Key 结构本身仍可枚举（属于 ACL 暴露的衍生后果） |
-| `ObsUploader.js:36` 公网读取端点 | [ObsUploader.js:40](file:///e:/work/huawei/fork/upload-ut-action/src/obs/ObsUploader.js) `OBS_READ_ENDPOINT` 仍为公网读地址；对象能否匿名读由 ACL 决定，端点本身不构成额外风险 | 随 ACL 联动 |
+| 原问题点                                                                             | 现状（`upstream/main` 8283a4d）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | 结论                                                       |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `ObsUploader.js:124` 硬编码 `ACL: 'public-read'`                                     | 已参数化：[index.js:119-123](file:///e:/work/huawei/fork/upload-ut-action/index.js) 读取 `obs_acl` 输入并做 `public-read` / `private` 白名单校验 → [index.js:188](file:///e:/work/huawei/fork/upload-ut-action/index.js) 传入 `uploadAndNotify` → [ObsUploader.js:188](file:///e:/work/huawei/fork/upload-ut-action/src/obs/ObsUploader.js) 形参 `obsAcl = 'public-read'` → [ObsUploader.js:142](file:///e:/work/huawei/fork/upload-ut-action/src/obs/ObsUploader.js) `putObject({ ..., ACL: acl })`。**默认值仍为 `public-read`** | 部分整改                                                   |
+| `ObsUploader.js:82-86` Key 可预测（`repo/{yyyyMMdd}.{HH}/{runId}/ut-coverage.json`） | [ObsUploader.js:94](file:///e:/work/huawei/fork/upload-ut-action/src/obs/ObsUploader.js) `buildObsKey` 已对 `repoName` / `runId` 走 `sanitizeKeySegment`（仅保留 `[a-zA-Z0-9._-]`，非法字符折叠，空值回退 `unknown-repo` / `manual`）；单测已覆盖（`test/obs-uploader.test.js`）                                                                                                                                                                                                                                                   | 已整改，但 Key 结构本身仍可枚举（属于 ACL 暴露的衍生后果） |
+| `ObsUploader.js:36` 公网读取端点                                                     | [ObsUploader.js:40](file:///e:/work/huawei/fork/upload-ut-action/src/obs/ObsUploader.js) `OBS_READ_ENDPOINT` 仍为公网读地址；对象能否匿名读由 ACL 决定，端点本身不构成额外风险                                                                                                                                                                                                                                                                                                                                                     | 随 ACL 联动                                                |
 
 ### 1.2 为什么暂缓切默认值
 
@@ -41,10 +41,10 @@
 
 ### 2.1 逐点核实
 
-| 序号 | 位置 | 核实结论 |
-| ---- | ---- | -------- |
-| 1 | `src/obs/ObsUploader.js:142`（`dist/index.js` 同步） | 属实，但已参数化，默认 `public-read`。与 #4 同一根因，处理方式一致：暂缓待后端联动 |
-| 2 | `src/obs/ObsUploader.js:132-142` 写临时文件后直接上传，无大小校验 | 属实。`JSON.stringify(standardJson, null, 2)` 全量落盘后 `putObject`，全程无 `stat` / 长度上限判断 |
+| 序号 | 位置                                                              | 核实结论                                                                                           |
+| ---- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 1    | `src/obs/ObsUploader.js:142`（`dist/index.js` 同步）              | 属实，但已参数化，默认 `public-read`。与 #4 同一根因，处理方式一致：暂缓待后端联动                 |
+| 2    | `src/obs/ObsUploader.js:132-142` 写临时文件后直接上传，无大小校验 | 属实。`JSON.stringify(standardJson, null, 2)` 全量落盘后 `putObject`，全程无 `stat` / 长度上限判断 |
 
 ### 2.2 风险与边界
 
@@ -54,11 +54,11 @@
 
 ### 2.3 候选方案（待用户裁决）
 
-| 方案 | 改动 | 分类 | 说明 |
-| ---- | ---- | ---- | ---- |
-| A | 新增可选输入 `max_upload_bytes`，缺省 `0` = 不限制 | 新增可选参数，缺省行为不变 | 等价加固；使用方按需开启，默认零行为变化 |
-| B | 内置硬上限（如 50 MB），超限报错 | 资源限制阈值 + 失败语义变化 | 需后端确认合法大报告体量分布，属须评审 |
-| C | 维持现状，不加上限 | 非问题/观察项 | 与 upload-sarif-action #26 的「易用性取舍」口径一致 |
+| 方案 | 改动                                               | 分类                        | 说明                                                |
+| ---- | -------------------------------------------------- | --------------------------- | --------------------------------------------------- |
+| A    | 新增可选输入 `max_upload_bytes`，缺省 `0` = 不限制 | 新增可选参数，缺省行为不变  | 等价加固；使用方按需开启，默认零行为变化            |
+| B    | 内置硬上限（如 50 MB），超限报错                   | 资源限制阈值 + 失败语义变化 | 需后端确认合法大报告体量分布，属须评审              |
+| C    | 维持现状，不加上限                                 | 非问题/观察项               | 与 upload-sarif-action #26 的「易用性取舍」口径一致 |
 
 ---
 
@@ -72,8 +72,8 @@
 
 ## 四、历史整改对照
 
-| 相关 PR | 内容 | 与本案关系 |
-| ------- | ---- | ---------- |
-| PR #1（已合入） | `obs_acl` 可配置、OIDC API 基址可注入 | 解决 #4「硬编码」的一半，默认值保持原行为 |
-| PR #4（已合入） | ObsUploader 临时文件秒级随机名、runId Key 清洗、TLS 校验 | 解决 #4 的 Key 可预测衍生后果 |
-| PR #5 / #3（已合入） | `resolveRepoRoot` 去 shell 拼接 | 与本案无关，仅记录 |
+| 相关 PR              | 内容                                                     | 与本案关系                                |
+| -------------------- | -------------------------------------------------------- | ----------------------------------------- |
+| PR #1（已合入）      | `obs_acl` 可配置、OIDC API 基址可注入                    | 解决 #4「硬编码」的一半，默认值保持原行为 |
+| PR #4（已合入）      | ObsUploader 临时文件秒级随机名、runId Key 清洗、TLS 校验 | 解决 #4 的 Key 可预测衍生后果             |
+| PR #5 / #3（已合入） | `resolveRepoRoot` 去 shell 拼接                          | 与本案无关，仅记录                        |

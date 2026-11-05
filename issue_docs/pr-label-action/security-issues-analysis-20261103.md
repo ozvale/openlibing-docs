@@ -6,12 +6,12 @@
 
 ## 汇总
 
-| 分类 | Issue | 处理建议 |
-| ---- | ----- | -------- |
-| 真问题·等价加固（可直接做） | #12 | `maskToken` 统一遮蔽为 `****`，不再保留首末各 2 字符；只改日志内容，不改任何接口行为 |
-| 真问题·等价加固（可直接做） | #13 | 点 1（labelName 未编码拼 URL）已由 #11 的 `encodeURIComponent` 修复；点 2（日志注入）新增日志出口清洗（剥离 CR/LF 与控制字符） |
-| 非问题（用户决策 2026-11-03） | #8 | 互斥标签并发竞态按非安全问题处理，本轮不做任何改动，暂不处理 |
-| 非安全项，不处理 | #10 | 功能需求（api-scan workflow），不在本流程范围 |
+| 分类                          | Issue | 处理建议                                                                                                                       |
+| ----------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 真问题·等价加固（可直接做）   | #12   | `maskToken` 统一遮蔽为 `****`，不再保留首末各 2 字符；只改日志内容，不改任何接口行为                                           |
+| 真问题·等价加固（可直接做）   | #13   | 点 1（labelName 未编码拼 URL）已由 #11 的 `encodeURIComponent` 修复；点 2（日志注入）新增日志出口清洗（剥离 CR/LF 与控制字符） |
+| 非问题（用户决策 2026-11-03） | #8    | 互斥标签并发竞态按非安全问题处理，本轮不做任何改动，暂不处理                                                                   |
+| 非安全项，不处理              | #10   | 功能需求（api-scan workflow），不在本流程范围                                                                                  |
 
 ---
 
@@ -19,14 +19,14 @@
 
 ### 1.1 现状核实
 
-| 位置 | 现状 | 结论 |
-| ---- | ---- | ---- |
-| [src/index.js:35-38](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L35-L38) | `maskToken` 逻辑：`str.substring(0, 2) + "****" + str.substring(str.length - 2)`，长度 ≤4 时直接 `****` | 属实，token 首末各 2 字符落日志 |
-| [src/index.js:42-53](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L42-L53) | `redact` 先按实际 token 值替换为 `maskToken(token)`，再兜底替换 `access_token=...` 与 `Bearer xxx` | #4 整改后全链路日志已过 redact，明文 token 本身不再落日志；残留仅为“掩码露出 4 字符” |
-| [src/index.js:145-172](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L145-L172) | 请求 URL / headers / body、响应 headers / body、错误消息均经 `redact` | 覆盖完整，无旁路日志 |
-| `dist/index.js` | 已确认包含同一 `substring(0,2)+"****"` 实现，源码与产物同步 | 无 dist 漂移 |
+| 位置                                                                                       | 现状                                                                                                    | 结论                                                                                 |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| [src/index.js:35-38](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L35-L38)     | `maskToken` 逻辑：`str.substring(0, 2) + "****" + str.substring(str.length - 2)`，长度 ≤4 时直接 `****` | 属实，token 首末各 2 字符落日志                                                      |
+| [src/index.js:42-53](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L42-L53)     | `redact` 先按实际 token 值替换为 `maskToken(token)`，再兜底替换 `access_token=...` 与 `Bearer xxx`      | #4 整改后全链路日志已过 redact，明文 token 本身不再落日志；残留仅为“掩码露出 4 字符” |
+| [src/index.js:145-172](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L145-L172) | 请求 URL / headers / body、响应 headers / body、错误消息均经 `redact`                                   | 覆盖完整，无旁路日志                                                                 |
+| `dist/index.js`                                                                            | 已确认包含同一 `substring(0,2)+"****"` 实现，源码与产物同步                                             | 无 dist 漂移                                                                         |
 
-补充：`info(`  Token: ${TOKEN_SOURCE}`)`（[src/index.js:321](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L321)）只打印 token 来源（`input` / `ATOMGIT_TOKEN` / `none`），不打印值，无泄露。
+补充：`info(` Token: ${TOKEN_SOURCE}`)`（[src/index.js:321](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L321)）只打印 token 来源（`input` / `ATOMGIT_TOKEN` / `none`），不打印值，无泄露。
 
 ### 1.2 风险与定性
 
@@ -46,24 +46,24 @@
 
 ### 2.1 逐点核实
 
-| 序号 | issue 描述 | 现状（upstream/main b26940e） | 结论 |
-| ---- | ---------- | ----------------------------- | ---- |
-| 1 | `src/index.js:182` labelName 未编码直接拼入 URL | [src/index.js:209](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L209) 已为 `${api}/pulls/${prNumber}/labels/${encodeURIComponent(labelName)}`；`addLabel` 的标签名走 JSON 请求体（[src/index.js:193](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L193)），不拼 URL | 已由 #11 修复（同根因），本批无需再改 |
-| 2 | `src/index.js:121-125,141,219-220` 含原始标签名的 URL、响应体、names 原样输出 | 行号已随 #4/#5 整改偏移，实际残留见 2.2 清单；`info` / `warning` 直接 `console.log`，无 CR/LF 与控制字符清洗 | 属实，需整改 |
+| 序号 | issue 描述                                                                    | 现状（upstream/main b26940e）                                                                                                                                                                                                                                                               | 结论                                  |
+| ---- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| 1    | `src/index.js:182` labelName 未编码直接拼入 URL                               | [src/index.js:209](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L209) 已为 `${api}/pulls/${prNumber}/labels/${encodeURIComponent(labelName)}`；`addLabel` 的标签名走 JSON 请求体（[src/index.js:193](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L193)），不拼 URL | 已由 #11 修复（同根因），本批无需再改 |
+| 2    | `src/index.js:121-125,141,219-220` 含原始标签名的 URL、响应体、names 原样输出 | 行号已随 #4/#5 整改偏移，实际残留见 2.2 清单；`info` / `warning` 直接 `console.log`，无 CR/LF 与控制字符清洗                                                                                                                                                                                | 属实，需整改                          |
 
 ### 2.2 日志注入残留点（当前行号）
 
-| 位置 | 外部数据 |
-| ---- | -------- |
-| [src/index.js:145](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L145) | 请求 URL（含已编码 labelName） |
-| [src/index.js:147-150](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L147-L150) | 请求头、请求体（含原始 labelName） |
-| [src/index.js:163-165](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L163-L165) | API 响应头、响应体（平台返回内容） |
-| [src/index.js:187,195,199,202](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L187-L202) | addLabel 的 labelName、错误 message |
+| 位置                                                                                               | 外部数据                               |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| [src/index.js:145](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L145)                  | 请求 URL（含已编码 labelName）         |
+| [src/index.js:147-150](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L147-L150)         | 请求头、请求体（含原始 labelName）     |
+| [src/index.js:163-165](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L163-L165)         | API 响应头、响应体（平台返回内容）     |
+| [src/index.js:187,195,199,202](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L187-L202) | addLabel 的 labelName、错误 message    |
 | [src/index.js:207,214,218,222](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L207-L222) | removeLabel 的 labelName、错误 message |
-| [src/index.js:248](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L248) | 现有标签名列表（names） |
-| [src/index.js:252,256](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L252-L256) | JSON 解析错误 message、HTTP 状态 |
-| [src/index.js:322-323,352,355](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L322-L355) | add/remove 标签清单、SKIP 清单 |
-| [src/index.js:396-398](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L396-L398) | 结果汇总中的标签名 |
+| [src/index.js:248](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L248)                  | 现有标签名列表（names）                |
+| [src/index.js:252,256](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L252-L256)         | JSON 解析错误 message、HTTP 状态       |
+| [src/index.js:322-323,352,355](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L322-L355) | add/remove 标签清单、SKIP 清单         |
+| [src/index.js:396-398](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L396-L398)         | 结果汇总中的标签名                     |
 
 ### 2.3 风险与定性
 
@@ -74,10 +74,10 @@
 
 ### 2.4 整改方案（待裁决 A/B）
 
-| 方案 | 改动 | 说明 |
-| ---- | ---- | ---- |
+| 方案      | 改动                                                                                                                  | 说明                                                                                                                                                    |
+| --------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A（建议） | 在日志出口 `info()` / `warning()` 内统一 `sanitizeLog`：剥离 `\r`、`\n` 与 `\x00-\x1F`、`\x7F` 控制字符（替换为空格） | 覆盖全部出口，后续新增日志自动受保护；与 upload-sarif-action 的 console 出口统一清洗口径一致。`setFailed` 的 `console.error` 保留原样（错误栈需要换行） |
-| B | 逐点只清洗 labelName / 响应体 / names 的插值处 | 改动面更小，但新增日志点容易漏 |
+| B         | 逐点只清洗 labelName / 响应体 / names 的插值处                                                                        | 改动面更小，但新增日志点容易漏                                                                                                                          |
 
 - `dist` 由 `npm run package` 重建。
 - 说明：`::warning::` 工作流命令本身也在被清洗的字符串内，清洗只作用于消息内容，不影响命令前缀。
@@ -90,12 +90,12 @@
 
 ### 3.1 现状核实
 
-| 步骤 | 位置 | 现状 |
-| ---- | ---- | ---- |
-| 读取 | [src/index.js:329](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L329) `fetchLabels` | 单次 GET，无 ETag / 版本号 |
-| 过滤 | [src/index.js:344-357](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L344-L357) | 基于读取结果过滤 add / remove |
-| 写入 | [src/index.js:374-392](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L374-L392) | 先逐个 POST 添加，再逐个 DELETE 删除；单步失败仅置 `allOk=false`，无重试、无回滚 |
-| 无锁 / 串行化 | 全文件 | 无本地锁、无平台原子批量写、无写后复核 |
+| 步骤          | 位置                                                                                            | 现状                                                                             |
+| ------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 读取          | [src/index.js:329](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L329) `fetchLabels` | 单次 GET，无 ETag / 版本号                                                       |
+| 过滤          | [src/index.js:344-357](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L344-L357)      | 基于读取结果过滤 add / remove                                                    |
+| 写入          | [src/index.js:374-392](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L374-L392)      | 先逐个 POST 添加，再逐个 DELETE 删除；单步失败仅置 `allOk=false`，无重试、无回滚 |
+| 无锁 / 串行化 | 全文件                                                                                          | 无本地锁、无平台原子批量写、无写后复核                                           |
 
 消费方现状（证据）：
 
@@ -114,12 +114,12 @@
 
 ### 3.3 候选方案（本轮不采纳，仅备查）
 
-| 方案 | 改动 | 分类 | 说明 |
-| ---- | ---- | ---- | ---- |
-| A | 写入完成后重新 `fetchLabels`，检测互斥集合并存时输出 `::warning::`（可选新增输入 `verify_mutex_labels`，缺省关闭＝零行为变化） | 等价加固（仅观测） | 插件侧能做到的上限；不纠正标签，只暴露问题，需配合消费方 concurrency 才根治 |
-| B | 删除失败时重试 N 次（如 2 次，固定小重试） | 失败语义/请求次数变化 → 须评审 | 减少“删除失败残留”的确定性场景，但无法解决跨流水线交错 |
-| C | 改用平台原子批量替换接口 | 契约变化 → 须评审 | 需先验证接口存在与语义（是否覆盖未列出标签），风险最高 |
-| D | 不做插件侧改动，转由消费方工作流加 `concurrency`，本 issue 按平台/使用方职责归档 | 非问题（平台/使用方） | 与 #6/#7（pwn request、可变 tag）同类口径：门禁正确性属工作流配置职责 |
+| 方案 | 改动                                                                                                                           | 分类                           | 说明                                                                        |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ | --------------------------------------------------------------------------- |
+| A    | 写入完成后重新 `fetchLabels`，检测互斥集合并存时输出 `::warning::`（可选新增输入 `verify_mutex_labels`，缺省关闭＝零行为变化） | 等价加固（仅观测）             | 插件侧能做到的上限；不纠正标签，只暴露问题，需配合消费方 concurrency 才根治 |
+| B    | 删除失败时重试 N 次（如 2 次，固定小重试）                                                                                     | 失败语义/请求次数变化 → 须评审 | 减少“删除失败残留”的确定性场景，但无法解决跨流水线交错                      |
+| C    | 改用平台原子批量替换接口                                                                                                       | 契约变化 → 须评审              | 需先验证接口存在与语义（是否覆盖未列出标签），风险最高                      |
+| D    | 不做插件侧改动，转由消费方工作流加 `concurrency`，本 issue 按平台/使用方职责归档                                               | 非问题（平台/使用方）          | 与 #6/#7（pwn request、可变 tag）同类口径：门禁正确性属工作流配置职责       |
 
 ---
 
@@ -134,14 +134,14 @@
 
 ### 4.2 执行记录
 
-| 项目 | 内容 |
-| ---- | ---- |
-| 整改分支 | `fix-log-sanitize`（基于 `upstream/main` b26940e） |
-| 提交 | `614b7ac fix(security): mask token fully and sanitize log output` |
-| PR | openlibing/pr-label-action#7（`ai-assisted`） |
-| 统一测试分支 | `fix-security-remediation` 已合入，推送至 fork，HEAD `cd984ac` |
-| 改动文件 | `src/index.js`、`dist/index.js`（ncc 重建）、`AGENTS.md`（同步函数说明） |
-| 验证 | `node --check` 通过；源码函数冒烟通过（CRLF 清洗、`maskToken()` 返回 `****`、`redact` 全遮蔽）；dist 确认包含新实现 |
+| 项目         | 内容                                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| 整改分支     | `fix-log-sanitize`（基于 `upstream/main` b26940e）                                                                  |
+| 提交         | `614b7ac fix(security): mask token fully and sanitize log output`                                                   |
+| PR           | openlibing/pr-label-action#7（`ai-assisted`）                                                                       |
+| 统一测试分支 | `fix-security-remediation` 已合入，推送至 fork，HEAD `cd984ac`                                                      |
+| 改动文件     | `src/index.js`、`dist/index.js`（ncc 重建）、`AGENTS.md`（同步函数说明）                                            |
+| 验证         | `node --check` 通过；源码函数冒烟通过（CRLF 清洗、`maskToken()` 返回 `****`、`redact` 全遮蔽）；dist 确认包含新实现 |
 
 **业务逻辑影响声明**：本改动未触及业务逻辑。仅日志文本变化（掩码 `xx****xx`→`****`、日志中 CR/LF 与控制字符替换为空格），API 请求/响应、标签状态、输出变量、退出码与 `fail_on_error` 语义均不变。
 

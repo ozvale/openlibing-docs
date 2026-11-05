@@ -30,23 +30,23 @@
 
 ## 交付历程
 
-| PR | 内容 | 状态 |
-|---|---|---|
-| #11 | 日志敏感值脱敏 | merged |
-| #12 | npm token 文件权限收紧与清理 | merged |
-| #13 | V11 签名 x-sdk-date 大小写不敏感查找 | merged |
-| #14 | OBS 客户端开启 TLS 校验 | merged |
-| #15 | 移除 undici 依赖（#19、#22–#37） | open，`ci-pipeline-passed` |
-| #16 | sendRequest 强制 HTTPS（#18） | open，`ci-pipeline-passed` |
-| #17 | region / stsAssumePath 校验（#18） | open，`ci-pipeline-passed` |
+| PR  | 内容                                 | 状态                       |
+| --- | ------------------------------------ | -------------------------- |
+| #11 | 日志敏感值脱敏                       | merged                     |
+| #12 | npm token 文件权限收紧与清理         | merged                     |
+| #13 | V11 签名 x-sdk-date 大小写不敏感查找 | merged                     |
+| #14 | OBS 客户端开启 TLS 校验              | merged                     |
+| #15 | 移除 undici 依赖（#19、#22–#37）     | open，`ci-pipeline-passed` |
+| #16 | sendRequest 强制 HTTPS（#18）        | open，`ci-pipeline-passed` |
+| #17 | region / stsAssumePath 校验（#18）   | open，`ci-pipeline-passed` |
 
 ## 存量核对
 
-| 指标 | 数量 |
-|---|---:|
-| 总体 | 31 |
-| 已修复（closed） | 13 |
-| 剩余（open） | 18 |
+| 指标             | 数量 |
+| ---------------- | ---: |
+| 总体             |   31 |
+| 已修复（closed） |   13 |
+| 剩余（open）     |   18 |
 
 剩余 18 条均已被 #15 / #16 / #17 覆盖，属于「代码已改、PR 待合入、issue 未关单」，无真实欠账。
 

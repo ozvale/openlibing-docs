@@ -14,7 +14,7 @@
   - `!12` fix-sec-npmrc-token：发布流程 `umask 077` + `if: always()` 清理 `~/.npmrc` → #7 #15
   - `!13` fix-sec-signer-header：`getHeaderIgnoreCase` + canonical 头小写归并 → #16
   - `!14` fix-sec-obs-ssl-verify：测试 Action 显式 `sslVerify: true` → #20
-  以上 issue 已于 2026-11-03 核实并关闭。
+    以上 issue 已于 2026-11-03 核实并关闭。
 
 ## 待办 / 暂缓
 
