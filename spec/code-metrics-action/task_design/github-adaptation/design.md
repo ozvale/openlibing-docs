@@ -22,14 +22,14 @@
 | 平台判定    | `GITHUB_ACTIONS=true`                     | 无该标志                    |
 | 仓库地址    | `GITHUB_SERVER_URL` + `GITHUB_REPOSITORY` | `git remote get-url origin` |
 | 当前分支    | `GITHUB_REF_NAME`                         | `ATOMGIT_REF_NAME`          |
-| PR 目标分支 | `GITHUB_BASE_REF`                         | `ATOMGIT_HEAD_REF`          |
+| PR 目标分支 | `GITHUB_BASE_REF`                         | `ATOMGIT_BASE_REF`          |
 | 运行 ID     | `GITHUB_RUN_ID`                           | `ATOMGIT_RUN_ID`            |
 | 运行编号    | `GITHUB_RUN_NUMBER`                       | `ATOMGIT_RUN_NUMBER`        |
 | 提交 SHA    | `GITHUB_SHA`                              | `ATOMGIT_SHA`               |
 | 工作流名称  | `GITHUB_WORKFLOW`                         | `ATOMGIT_WORKFLOW`          |
 | 工作区      | `GITHUB_WORKSPACE`                        | `ATOMGIT_WORKSPACE`         |
 
-分支优先取本地 git 信息（`git remote` / `git rev-parse`），失败或 detached HEAD 时回退上表 CI 上下文；PR 事件统一按**目标分支**归属数据。
+分支优先取本地 git 信息（`git remote` / `git rev-parse`），失败或 detached HEAD 时回退上表 CI 上下文；PR 事件统一按**目标分支**归属数据。注意 GitCode 的 `ATOMGIT_HEAD_REF` 语义为 PR **源分支**（对应 `GITHUB_HEAD_REF`），目标分支必须取 `ATOMGIT_BASE_REF`，两者不可混用。
 
 ### 1.3 认证方案
 
@@ -61,7 +61,7 @@ OIDC 下 APIG 走 `/action-api` 前缀，AK/SK 下走 `/openlibing-coderepo` 前
 
 - GitCode 场景只读取 `ATOMGIT_*` 变量并保留 `ATOMGIT_OUTPUT` 输出，存量工作流无需修改；
 - 移除旧配置 `PIPELINE_RUN_ID` / `PIPELINE_RUN_NUMBER` 兼容，运行信息统一取自平台标准变量；
-- `action.yml` 保持 `runs.using: node16` 与 GitCode 专属元数据：GitCode runner 仅支持 node16；GitHub 会将 node16 动作强制按 node20 运行；
+- `action.yml` 保持 `runs.using: node16` 与 GitCode 专属元数据：GitCode runner 仅支持 node16；GitHub 会将 node16 动作强制按 node20 运行。Node 16 已于 2023-09 结束官方支持、不再获得安全修复，而本插件直接处理外部仓库不可信内容并持有 OBS 临时凭证；迁移条件为 GitCode runner 支持 node20 后立即升级，在此之前将 node16 视为已知风险并纳入依赖/运行时升级跟踪，不作为长期正确配置；
 - AK/SK 入参保留，避免存量脚本立即失效；README 只描述 OIDC；
 - 上报接口与对象 key 规则不变；OBS 桶按平台隔离（GitCode 为 `openlibing-gitcode-action`，GitHub 为 `openlibing-github-action`），后端下载白名单需支持 GitHub 桶；
 
@@ -94,13 +94,13 @@ OIDC 下 APIG 走 `/action-api` 前缀，AK/SK 下走 `/openlibing-coderepo` 前
 
 ### 2.4 异常与降级
 
-| 场景                           | 处理                                         |
-| ------------------------------ | -------------------------------------------- |
-| 未识别到 `lizard`/pip 安装失败 | 记录错误日志，函数级指标置 0，不中断扫描     |
-| OBS 上传失败                   | 直接返回失败，提示可重跑                     |
-| report 接口失败                | 输出 OBS 链接与补导入提示，不影响已上传数据  |
-| 摘要/输出面板写入失败          | 仅告警降级，不影响扫描与上报结果             |
-| AK/SK 缺失且未启用 OIDC        | 返回明确失败原因，提示声明 `id-token: write` |
+| 场景                           | 处理                                                                                                                                                                                                                                                           |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 未识别到 `lizard`/pip 安装失败 | 记录 error 日志，函数级指标置 0，不中断扫描；**已知限制**：0 值与真实优秀值不可区分且 `status` 仍为成功，属于以成功状态写入缺失数据。后续需引入可区分的降级语义（`status` 新增枚举或 `errorMessage` 标注缺失项，并在摘要中提示），避免缺失值被当作真实指标入库 |
+| OBS 上传失败                   | 直接返回失败，提示可重跑                                                                                                                                                                                                                                       |
+| report 接口失败                | 输出 OBS 链接与补导入提示，不影响已上传数据                                                                                                                                                                                                                    |
+| 摘要/输出面板写入失败          | 仅告警降级，不影响扫描与上报结果                                                                                                                                                                                                                               |
+| AK/SK 缺失且未启用 OIDC        | 返回明确失败原因，提示声明 `id-token: write`                                                                                                                                                                                                                   |
 
 ## 3. 类设计
 
