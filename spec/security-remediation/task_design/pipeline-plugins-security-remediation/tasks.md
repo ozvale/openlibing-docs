@@ -26,12 +26,12 @@
 ### upload-sarif-action
 
 - [x] #10 端点集中配置（`src/config/endpoints.js`，5 项端点，默认值逐字一致）
-- [x] #12/#31 凭证 snippet 与 `message.text` 掩码（保留前 2 后 2）
+- [x] #12 凭证 snippet 与 `message.text` 掩码（保留前 2 后 2）
 - [x] #16/#18 SARIF uri 边界 + `realpathSync` 二次校验
 - [x] #20 `find` → `execFileSync` 数组传参
-- [x] #19/#30 OBS TLS：`sslVerify: obsSslCaFile || true`
+- [ ] #19/#30 OBS TLS：键名仍为驼峰 `sslVerify`（SDK 静默忽略，校验实际未生效），待改 `ssl_verify: true` 后复测
 - [ ] #27 临时目录清理（等价加固，待提 PR）
-- [ ] #31 日志注入清洗（等价加固，待提 PR）
+- [x] #31 日志注入清洗（等价加固，PR #24 open，已实施待合入）
 - [ ] #28 zip 构建产物出库（等价加固，待提 PR）
 - [ ] #26 扩展名/大小校验、#29 region 校验（须评审，先出影响评估）
 - [ ] #11/#25 对象 ACL 改 private（暂缓，待后端带凭证下载）

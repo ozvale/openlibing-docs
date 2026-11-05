@@ -2,7 +2,7 @@
 
 - **关联 proposal**: [proposal.md](./proposal.md)
 - **日期**: 2026-10-31
-- **定位**: 说明定性模型、分类型整改手法、逐仓落地方式、工程规范与验证设计；完整论述见 `e:\work\huawei\fork\设计文档.md`
+- **定位**: 说明定性模型、分类型整改手法、逐仓落地方式、工程规范与验证设计。
 
 ## 1. 设计原则
 
@@ -137,16 +137,16 @@ Phase 4  闭环（合入 → 检视意见处置 → 核实关闭 issue → 方�
 
 ## 6. 逐仓落地
 
-| 仓库                                | 改动要点                                                                                                                                          | 遗留                                                                                                                            |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| upload-sarif-action                 | 端点集中配置；凭证 snippet 掩码（含 `message.text`）；URI 边界 + realpath 终裁；`execFileSync find`；`sslVerify: obsSslCaFile \|\| true`          | #27 tmp 不清理、#31 日志注入、#28 zip 入库（等价加固待提 PR）；#26 扩展名/大小校验、#29 region 校验（须评审）；#11/#25 ACL 暂缓 |
-| upload-ut-action                    | 端点多环境变量注入 + `obs_acl` 可选参数；`find` → `fs` 递归；临时文件名随机后缀；runId 清洗；`ssl_verify: true`                                   | #1/#15/#18/#21 ACL 暂缓；#9/#10 判定当前不可利用                                                                                |
-| pre-commit-action                   | 镜像与环境变量注入；`gc_token` → `GIT_ASKPASS`；临时报告目录清理；`GONOSUMDB` 删除；版本固定                                                      | #48 日志注入、#43 报告目录跨任务残留                                                                                            |
-| pr-label-action                     | 端点集中配置；Bearer 收口；全链路脱敏；标签名 `encodeURIComponent` + 危险字符拒绝                                                                 | #8 标签并发竞态（逻辑 bug，暂缓）                                                                                               |
-| pr-sync-action                      | token 改 Bearer；日志脱敏；域名环境变量注入                                                                                                       | #11/#16/#21/#22 补 AppCode 响应/错误脱敏；#9/#12/#13/#18 须评审；#10/#20 暂缓                                                   |
-| security-compilation-options-action | 日志单通道 + 路径 basename 化；sanitize 覆盖 `ATOMGIT_OUTPUT`；pip 临时空目录；gitUrl 任意 scheme 去 userinfo；symlink 越界拒绝；win32 死分支删除 | #21 端到端签名（合规需求，延期后端联调）                                                                                        |
-| code-metrics-action                 | gitUrl 正则泛化；路径日志脱敏；sanitize；scc/pip 数组化 + 临时 cwd；临时文件 0600 + 随机名；死 fallback 删除；obsutil → SDK 迁移                  | 检视意见按「非必要不改」口径回复；lizard 模块遮蔽需评估                                                                         |
-| huaweicloud-oidc-sdk-nodejs         | npmrc 权限 + 清理；日志脱敏（含 audience 单行化）；`x-sdk-date` 大小写兼容；OBS TLS 校验；`undici` 零依赖回退；region / STS 参数白名单校验        | #11 账号 ID（建议非问题归档）；profile / dist 同步类检视意见                                                                    |
+| 仓库                                | 改动要点                                                                                                                                          | 遗留                                                                                                                                                                                                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| upload-sarif-action                 | 端点集中配置；凭证 snippet 掩码（含 `message.text`）；URI 边界 + realpath 终裁；`execFileSync find`                                               | #19/#30 TLS 键名误写驼峰 `sslVerify`（SDK 静默忽略，校验实际仍关闭，待改 `ssl_verify` 后复测）；#27 tmp 不清理、#31 日志注入（PR #24 open，已实施待合入）、#28 zip 入库（等价加固待提 PR）；#26 扩展名/大小校验、#29 region 校验（须评审）；#11/#25 ACL 暂缓 |
+| upload-ut-action                    | 端点多环境变量注入 + `obs_acl` 可选参数；`find` → `fs` 递归；临时文件名随机后缀；runId 清洗；`ssl_verify: true`                                   | #1/#15/#18/#21 ACL 暂缓；#9/#10 判定当前不可利用                                                                                                                                                                                                             |
+| pre-commit-action                   | 镜像与环境变量注入；`gc_token` → `GIT_ASKPASS`；临时报告目录清理；`GONOSUMDB` 删除；版本固定                                                      | #48 日志注入、#43 报告目录跨任务残留                                                                                                                                                                                                                         |
+| pr-label-action                     | 端点集中配置；Bearer 收口；全链路脱敏；标签名 `encodeURIComponent` + 危险字符拒绝                                                                 | #8 标签并发竞态（逻辑 bug，暂缓）                                                                                                                                                                                                                            |
+| pr-sync-action                      | token 改 Bearer；日志脱敏；域名环境变量注入                                                                                                       | #11/#16/#21/#22 补 AppCode 响应/错误脱敏；#9/#12/#13/#18 须评审；#10/#20 暂缓                                                                                                                                                                                |
+| security-compilation-options-action | 日志单通道 + 路径 basename 化；sanitize 覆盖 `ATOMGIT_OUTPUT`；pip 临时空目录；gitUrl 任意 scheme 去 userinfo；symlink 越界拒绝；win32 死分支删除 | #21 端到端签名（合规需求，延期后端联调）                                                                                                                                                                                                                     |
+| code-metrics-action                 | gitUrl 正则泛化；路径日志脱敏；sanitize；scc/pip 数组化 + 临时 cwd；临时文件 0600 + 随机名；死 fallback 删除；obsutil → SDK 迁移                  | 检视意见按「非必要不改」口径回复；lizard 模块遮蔽需评估                                                                                                                                                                                                      |
+| huaweicloud-oidc-sdk-nodejs         | npmrc 权限 + 清理；日志脱敏（含 audience 单行化）；`x-sdk-date` 大小写兼容；OBS TLS 校验；`undici` 零依赖回退；region / STS 参数白名单校验        | #11 账号 ID（建议非问题归档）；profile / dist 同步类检视意见                                                                                                                                                                                                 |
 
 ## 7. 工程规范
 

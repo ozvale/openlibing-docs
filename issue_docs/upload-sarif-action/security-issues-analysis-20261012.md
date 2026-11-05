@@ -6,15 +6,15 @@
 
 ## 汇总
 
-| 分类                                           | Issue                           | 处理建议                                                                                                                      |
-| ---------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 已修复/重复，待合入后关闭                      | #12                             | 回复说明覆盖关系（PR #13），整改分支合入主线后关闭                                                                            |
-| 已实施·集中配置化（2026-10-16，待自测）        | #10                             | 见第一节详述                                                                                                                  |
-| 已实施·边界校验（2026-10-16 用户批准，待自测） | #18 #16（同根因）               | SARIF uri 读取限定 sourceRoots 边界，见第二节详述                                                                             |
-| 已实施·等价加固（2026-10-16，待自测）          | #20                             | execCapture 改 execFileSync 数组传参，行为等价                                                                                |
-| 真问题·需验证后修复                            | #19                             | 已实施（2026-10-16，sslVerify: true + obs_ssl_ca_file 可选输入）；需在自托管 runner 实测（企业代理/自签 CA 场景）             |
-| 平台/后端依赖·须评审                           | #11（暂缓回退） #14（残留部分） | 默认 ACL 切 private / 回写行为调整依赖后端演进，插件侧无法单方面整改，待后端联动后统一实施                                    |
-| 不是问题                                       | #13 #15 #17                     | #13 业务功能需求（nightly 全量扫描）；#15 静态 AK/SK 直连是易用性设计取舍；#17 pwn request 属 CI 门禁固有形态——均见第六节详述 |
+| 分类                                           | Issue                           | 处理建议                                                                                                                                                        |
+| ---------------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 已修复/重复，待合入后关闭                      | #12                             | 回复说明覆盖关系（PR #13），整改分支合入主线后关闭                                                                                                              |
+| 已实施·集中配置化（2026-10-16，待自测）        | #10                             | 见第一节详述                                                                                                                                                    |
+| 已实施·边界校验（2026-10-16 用户批准，待自测） | #18 #16（同根因）               | SARIF uri 读取限定 sourceRoots 边界，见第二节详述                                                                                                               |
+| 已实施·等价加固（2026-10-16，待自测）          | #20                             | execCapture 改 execFileSync 数组传参，行为等价                                                                                                                  |
+| 真问题·需验证后修复                            | #19                             | ⚠️ 实现键名误用（传 `sslVerify`，SDK 只认 `ssl_verify`），SDK 静默忽略 → 校验实际仍关闭；待修正为 `ssl_verify: true` 后实测（企业 CA 走 `NODE_EXTRA_CA_CERTS`） |
+| 平台/后端依赖·须评审                           | #11（暂缓回退） #14（残留部分） | 默认 ACL 切 private / 回写行为调整依赖后端演进，插件侧无法单方面整改，待后端联动后统一实施                                                                      |
+| 不是问题                                       | #13 #15 #17                     | #13 业务功能需求（nightly 全量扫描）；#15 静态 AK/SK 直连是易用性设计取舍；#17 pwn request 属 CI 门禁固有形态——均见第六节详述                                   |
 
 ---
 
@@ -76,10 +76,10 @@ symlink 返回 null；界内 symlink 与正常文件解析不受影响（等价�
 
 ### #19 esdk-obs-nodejs 默认 sslVerify=false（TLS 证书校验未启用）【中】
 
-- **状态**：✅ **已实施（2026-10-16），待真实 runner 实测**（fix-issue19-obs-tls-verify 分支，commit 7f18d16，已合入 fix-security-remediation）
+- **状态**：⚠️ **实施未生效（2026-10-26 复核）**：`fix-issue19-obs-tls-verify` 分支（commit 7f18d16，已合入 fix-security-remediation）传的是驼峰 `sslVerify`，SDK 只读 `ssl_verify`，该键被静默忽略，`rejectUnauthorized` 仍为 `false`；待修正键名后复测
 - **位置**：`new ObsClient({...})` 原未传 sslVerify；SDK 内部默认 `this.sslVerify = false`，实际效果 `rejectUnauthorized: false`
-- **实施内容**：构造时传 `sslVerify: obsSslCaFile || true`（默认严格校验）；新增 `obs_ssl_ca_file` 可选输入（action.yml 已注册），自托管 runner 经企业自签 TLS 代理出网时配置企业 CA 证书文件路径即可（SDK 支持传路径，内部读取为 ca 选项），无需关闭校验；dist 已同步重建
-- **实测要点**：在真实自托管 runner 上验证上传链路——① 默认场景（证书链正常）应直接通过；② 企业自签代理场景需配置 `obs_ssl_ca_file` 指向企业 CA。注意后端 SarifParseServiceImpl 匿名下载链路不受本改动影响（校验仅作用于插件侧上传连接）
+- **实施内容（待修正）**：当前构造时传 `sslVerify: obsSslCaFile || true`，因键名驼峰被 SDK 忽略，实际未生效；应改为 `ssl_verify: true`（默认严格校验），企业自签 CA 通过 `NODE_EXTRA_CA_CERTS` 注入（不把路径塞进 `ssl_verify`）；`obs_ssl_ca_file` 可选输入保留。dist 已重建但同样无效，待修正后重新构建
+- **实测要点**：在真实自托管 runner 上验证上传链路——① 默认场景（证书链正常）应直接通过；② 企业自签代理场景需通过 `NODE_EXTRA_CA_CERTS` 提供企业 CA。注意后端 SarifParseServiceImpl 匿名下载链路不受本改动影响（校验仅作用于插件侧上传连接）
 
 ---
 
@@ -111,11 +111,11 @@ PR !18 合入后，逐条对照 `upstream/main` 代码复核全部 open issue（
 | #12 SENS-15 snippet 明文   | 已整改                        | `index.js:415-439` mask*，`569-598` 覆盖 snippet/contextRegion/message                                                                 | ✅ 已评论并关闭                                                                            |
 | #16 / #18 uri 任意路径读取 | 已整改                        | `index.js:467-485` `isWithinRoots` + `confirmWithinRootsRealpath`；`497-535` 全分支校验                                                | ✅ 已评论并关闭                                                                            |
 | #20 execSync 拼 find       | 已整改                        | `index.js:95` `execFileSync('find', args)`；残留 `index.js:116` `sleep` 为整型常量，无外部输入                                         | ✅ 已评论并关闭                                                                            |
-| #30 不安全协议             | 已整改                        | `index.js:934-944` `sslVerify: obsSslCaFile \|\| true`                                                                                 | ✅ 已评论并关闭                                                                            |
+| #30 不安全协议             | **未生效**                    | `index.js:934-944` 传驼峰 `sslVerify: obsSslCaFile \|\| true`，SDK 只认 `ssl_verify`，键被忽略                                         | 已评论说明，保持 open（2026-10-26 复核，待改键名）                                         |
 | #11 SENS-14                | 部分整改                      | 掩码已做；`convertOutDir`（`index.js:802-804`）无清理；`ACL: 'public-read'`（`index.js:964`）未改                                      | 已评论说明：tmp 拆到 #27，ACL 暂缓，保持 open                                              |
 | #25 读取+公读泄露链        | 部分整改                      | 前两跳已斩断（边界校验 + 掩码）；第三跳 ACL 依赖后端                                                                                   | 已评论说明，保持 open                                                                      |
 | #27 临时文件不清理         | **未整改**                    | `convertOutDir` 仅 `mkdirSync`，全仓无 `rm/unlink`                                                                                     | 待提 PR（等价加固：`finally` 清理）                                                        |
-| #31 日志注入               | **未整改**                    | `sanitizePath` 仅脱敏 IP；`CodeArtsCheckApi.js:178-183` 直接拼 `resp.body`；parser warnings 输出报告原文                               | 待提 PR（日志清洗 CRLF/控制字符）                                                          |
+| #31 日志注入               | **已实施待合入**              | `sanitizePath` 仅脱敏 IP；`CodeArtsCheckApi.js:178-183` 直接拼 `resp.body`；parser warnings 输出报告原文                               | PR #24 open（日志清洗 CRLF/控制字符，已实施待合入）                                        |
 | #28 zip 产物入库           | **未整改**                    | `openlibing-upload-sarif.zip` 仍被跟踪；`.gitignore` 已有 `*.zip` 但对已跟踪文件无效；zip 仅 `zip.js` 生成、源码不消费                 | 待提 PR（`git rm --cached`，最小改动）                                                     |
 | #26 上传约束缺失           | **未整改**                    | 目录扫描仅过滤 `.sarif`；显式文件路径不校验扩展名；`putObject` 无大小上限                                                              | 待评审（新增输入拒绝 + 阈值，硬规则 2 第 5/6 类）                                          |
 | #29 SSRF（region 拼 host） | **未整改**                    | `resolveRegion()` 无格式/白名单校验，region 直接进 `codecheck-ext.{region}.myhuaweicloud.com`                                          | 待评审（新增输入拒绝）                                                                     |
@@ -123,12 +123,12 @@ PR !18 合入后，逐条对照 `upstream/main` 代码复核全部 open issue（
 
 ### 待办 PR 计划
 
-| 批次 | 覆盖 issue | 性质                                                                             | 前置条件                       |
-| ---- | ---------- | -------------------------------------------------------------------------------- | ------------------------------ |
-| PR-A | #27 + #31  | 等价加固（临时文件治理 / 日志脱敏），同一 index.js 日志与临时目录链路，合并一 PR | 无                             |
-| PR-B | #28        | 产物治理（`git rm --cached` + 确认 `.gitignore`）                                | 无                             |
-| PR-C | #26        | 输入拒绝 + 资源阈值                                                              | 《业务逻辑影响评估》经用户批准 |
-| PR-D | #29        | region 白名单/格式校验                                                           | 《业务逻辑影响评估》经用户批准 |
-| PR-E | #24        | 工作流结构（secrets 隔离）                                                       | 与 #17 结论对齐后定方案        |
+| 批次 | 覆盖 issue | 性质                                                                                 | 前置条件                       |
+| ---- | ---------- | ------------------------------------------------------------------------------------ | ------------------------------ |
+| PR-A | #27        | 等价加固（临时文件治理）；#31 日志脱敏已由 PR #24 实施（open，待合入），不再并入本批 | 无                             |
+| PR-B | #28        | 产物治理（`git rm --cached` + 确认 `.gitignore`）                                    | 无                             |
+| PR-C | #26        | 输入拒绝 + 资源阈值                                                                  | 《业务逻辑影响评估》经用户批准 |
+| PR-D | #29        | region 白名单/格式校验                                                               | 《业务逻辑影响评估》经用户批准 |
+| PR-E | #24        | 工作流结构（secrets 隔离）                                                           | 与 #17 结论对齐后定方案        |
 
 ACL 私有化（#11/#25 残留）：维持 `public-read`，标注暂缓，待后端支持带凭证/签名 URL 下载后统一实施（2026-10-29 用户决策）。

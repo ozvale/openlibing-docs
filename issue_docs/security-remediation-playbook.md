@@ -39,9 +39,11 @@
   逐项迁入配置；跨多文件改动时按硬规则 4 与同文件的其他整改合并为一个 PR。
 - **验证方式**：默认配置下行为与整改前一致（请求地址逐项比对）；切换配置
   能命中新环境。
-- **实施案例**：upload-sarif-action#10（方案 B 已定待实施：OIDC_PROD_BASE、
-  OIDC_BETA_BASE、OBS_BUCKET、OBS_READ_ENDPOINT、CodeArts host 共 5 项收敛），
-  详见 `issue_docs/upload-sarif-action/security-issues-analysis-20261012.md`；
+- **实施案例**：upload-sarif-action#10（**已实施并关闭**：commit `1178ec2`，2026-10-29
+  复核后按证据关闭；OIDC_PROD_BASE、OIDC_BETA_BASE、OBS_BUCKET、OBS_READ_ENDPOINT、
+  CodeArts host 共 5 项收敛），详见
+  `issue_docs/upload-sarif-action/security-issues-analysis-20261012.md`（ncc 打包剥离注释，
+  `gitleaks:allow` 仅对 src 生效，dist 中配置值仍以字符串形态存在）；
   upload-ut-action#2（PR #1，环境变量注入 + gitleaks:allow 白名单，2026-10）。
 
 ---
