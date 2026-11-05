@@ -32,12 +32,20 @@ ALTER TABLE product_statistics ADD COLUMN IF NOT EXISTS pending_medium_vul_count
 ALTER TABLE product_statistics ADD COLUMN IF NOT EXISTS pending_low_vul_count BIGINT;
 ALTER TABLE product_statistics ADD COLUMN IF NOT EXISTS pending_none_vul_count BIGINT;
 ALTER TABLE product_statistics ADD COLUMN IF NOT EXISTS pending_unknown_vul_count BIGINT;
--- package_statistics 同上 7 列
+
+ALTER TABLE package_statistics ADD COLUMN IF NOT EXISTS pending_vul_count BIGINT;
+ALTER TABLE package_statistics ADD COLUMN IF NOT EXISTS pending_critical_vul_count BIGINT;
+ALTER TABLE package_statistics ADD COLUMN IF NOT EXISTS pending_high_vul_count BIGINT;
+ALTER TABLE package_statistics ADD COLUMN IF NOT EXISTS pending_medium_vul_count BIGINT;
+ALTER TABLE package_statistics ADD COLUMN IF NOT EXISTS pending_low_vul_count BIGINT;
+ALTER TABLE package_statistics ADD COLUMN IF NOT EXISTS pending_none_vul_count BIGINT;
+ALTER TABLE package_statistics ADD COLUMN IF NOT EXISTS pending_unknown_vul_count BIGINT;
 ```
 
-- isPending 口径（vulnerability 服务实现）：`issue_customize_state NOT IN (已挂起,已拒绝,已完成)（社区适配值）AND issue_state != 'rejected' AND issue_labels 不含 UNAFFECTED AND cvss_score ∈ [0,100)`；
+- isPending 口径（vulnerability 服务实现）：`issue_customize_state NOT IN (已挂起,已拒绝,已完成)（社区适配值）AND issue_state != 'rejected' AND issue_labels 不含 UNAFFECTED AND cvss_score ∈ [0,100)`。cvss 边界与漏洞运营平台既有过滤（`OverdueScreeningStrategy`：`gte(0).lt(100)`，MongoDB 数值比较对缺失字段同样不匹配）完全一致——cvss=100 或缺失判非待闭环，与平台现状对齐，单测以 100/NULL 边界用例固定该行为；
 - 漏洞级聚合：该包×漏洞下任一匹配 issue 的 isPending=true → evf.is_pending=true；
-- 存量行为 NULL：未重算前查询按 NULL 兜底展示，由解析跑批/漏洞刷新/每日清洗首跑回刷；
+- 存量行为 NULL：未重算前查询按 NULL 兜底，由解析跑批/漏洞刷新/每日清洗首跑回刷。展示语义：pending 列为 NULL 时主数字展示 `--`（区别于真 0「确实无待闭环」），悬浮气泡标注「待重算」，避免发布窗口期被误读为"已全部闭环"；NULL 不参与排序置顶（`NULLS LAST`）；
+- 弹窗「是否闭环」筛选对 NULL 安全：SQL 使用 `COALESCE(evf.is_pending, false)`，存量 NULL 行在筛选「否」时可见，与行内展示口径（false/null→否）一致；
 - 快照模式（product_statistics 追加式 + DISTINCT ON 取最新）与加列兼容；
 - 无新增索引：evf 筛选在 pkg_id 过滤后的小结果集上进行，lifecycle 关联走内存索引。
 
@@ -45,11 +53,11 @@ ALTER TABLE product_statistics ADD COLUMN IF NOT EXISTS pending_unknown_vul_coun
 
 ### openlibing-vulnerability
 
-| 文件                                                                  | 操作 | 说明                                                                                                                  |
-| --------------------------------------------------------------------- | ---- | --------------------------------------------------------------------------------------------------------------------- |
-| `src/main/java/com/openlibing/common/entity/vo/CveDetailToSbom.java`  | 修改 | +`issueState`、+`isPending`（Boolean）                                                                                |
-| `src/main/java/com/openlibing/business/operation/AdminOperation.java` | 修改 | `queryCveDetailsToSbom` include 追加 `issue_state`/`issue_labels`/`cvss_score`；新增 isPending 计算（口径唯一实现点） |
-| `src/test/java/...`（对应单测）                                       | 新增 | 四条件 × 边界断言（已完成/rejected/挂起/UNAFFECTED/cvss 越界）                                                        |
+| 文件                                                                  | 操作 | 说明                                                                                                                     |
+| --------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------ |
+| `src/main/java/com/openlibing/common/entity/vo/CveDetailToSbom.java`  | 修改 | +`issueState`、+`isPending`（Boolean）                                                                                   |
+| `src/main/java/com/openlibing/business/operation/AdminOperation.java` | 修改 | `queryCveDetailsToSbom` include 追加 `issue_state`/`issue_labels`/`cvss_score`；新增 isPending 计算（口径唯一实现点）    |
+| `src/test/java/...`（对应单测）                                       | 新增 | 四条件 × 边界断言（已完成/rejected/挂起/UNAFFECTED/cvss 越界，含 cvss=100 与缺失两个边界用例，固定与平台口径一致的行为） |
 
 ### openlibing-sbom（主仓）
 
@@ -67,11 +75,11 @@ ALTER TABLE product_statistics ADD COLUMN IF NOT EXISTS pending_unknown_vul_coun
 | `sbom-web/.../service/vul/impl/MajunVulServiceImpl.java`                                                      | 修改 | 同步透传 issueState/isPending                                                                                                                                                                                                                                        |
 | `batch/.../step/CollectStatisticsStep.java`                                                                   | 修改 | 写入点①：遍历包×漏洞聚合 lifecycle.is_pending → evf 标志 + 统计列                                                                                                                                                                                                    |
 | `sbom-web/.../service/sbom/refresh/VulRefreshStrategy.java`                                                   | 修改 | 写入点②：同上 + 制品级重算                                                                                                                                                                                                                                           |
-| `sbom-web/.../common/config/XxlJobConfig.java`                                                                | 新增 | `XxlJobSpringExecutor` Bean（appname=openlibing-sbom-executor）                                                                                                                                                                                                      |
+| `sbom-web/.../common/config/XxlJobConfig.java`                                                                | 新增 | `XxlJobSpringExecutor` Bean（appname=openlibing-sbom-executor）；启动校验 adminAddresses/accessToken 非空，缺失输出 ERROR 日志告警（防 optional 配置缺失静默不注册）                                                                                                 |
 | xxl handler（新增类）                                                                                         | 新增 | `fetchMajunCveHandler`（复制 quartz 同步逻辑）、`pendingVulCleanHandler`（清洗任务，SQL 预圈定 + lifecycle 内存索引 + 只 UPDATE 变化行）                                                                                                                             |
 | `sbom-web/.../service/sbom/impl/SbomServiceImpl.java`                                                         | 修改 | `getSuitableVulnerabilityLifecycle` 抽公共供聚合复用；`getVulnerabilityStatus` 透传 issueState/isPending 并按 isPending 降序组装 data；`queryVulnerability` 加筛选参数；`queryPackageVulnerability` 适配（筛选 + 行内补漏洞级 isPending 与优先 issue 的 issueState） |
 | `sbom-web/.../controller/SbomController.java`                                                                 | 修改 | queryVulnerability / queryPackageVulnerability 签名透传调整                                                                                                                                                                                                          |
-| Nacos 配置                                                                                                    | 修改 | profile 追加 `optional:nacos:xxl-job`；新增 sbom executor 段（port/logpath/retentiondays）                                                                                                                                                                           |
+| Nacos 配置                                                                                                    | 修改 | profile 追加 `optional:nacos:xxl-job`（对齐 coderepo/codecheck 平台接入模式）；admin 地址/accessToken 复用平台级 `xxl.job.admin.*` 配置，新增 sbom executor 段（port/logpath/retentiondays）                                                                         |
 
 ### openlibing-web
 
@@ -88,8 +96,8 @@ ALTER TABLE product_statistics ADD COLUMN IF NOT EXISTS pending_unknown_vul_coun
 2. **sbom 透传**：`MajunVulServiceImpl.syncMajunVulData` 既有 deleteByType + saveAll 流程透传落 `vulnerability_lifecycle`；存量由下一轮全量刷新补齐。
 3. **写入点①（解析跑批）**：`CollectStatisticsStep` 按 `cveNum + productType` 建 lifecycle 内存索引（全表 9 万行可承受），复用 `getSuitableVulnerabilityLifecycle` 匹配，任一匹配行 isPending=true → evf 标志，同遍历聚合 pending 统计列。
 4. **写入点②（漏洞刷新）**：`VulRefreshStrategy` 写新 evf 时聚合 lifecycle.is_pending；`recalculatePackageStatistics` 聚合 pending 列；同批 lifecycle 索引下聚合 product_statistics pending 列（修复存量不对称）。
-5. **写入点③（每日清洗，xxl-job）**：cron 晚于 quartz lifecycle 同步完成 ≥30 分钟；SQL 预圈定 `package_statistics.vul_count>0` 的包（gamma 实测 172 万包 → 6.7 万，evf 199 万 → 144 万）；lifecycle 全量加载预解析 versions 为 Set；只 UPDATE 变化行、JDBC batch；幂等（值由 lifecycle 快照唯一决定，最后写胜出）。耗时估算：首轮约 4~6 分钟、日常约 1 分钟。
-6. **查询与排序**：制品/包列表、summary 扩 pending 列（LEFT JOIN 已存在）；弹窗 `queryVulnerability` 主 SQL `all_vul` CTE 加 `AND (:isPending IS NULL OR evf.is_pending = :isPending)` 并带出 is_pending 列，排序 `is_pending DESC → score DESC`；`getVulnerabilityStatus` 组装 data 按 isPending 降序稳定排序（折叠首条即未闭环）；软件包详情 `queryPackageVulnerability` 走 ExternalVulRef 实体查询（`evf.*` 已含 is_pending），同款筛选排序，行内补漏洞级 isPending 与优先未闭环 issue 的 issueState（每页 10 条 N+1 可接受）。
+5. **写入点③（每日清洗，xxl-job）**：cron 晚于 quartz lifecycle 同步完成 ≥30 分钟；SQL 预圈定 `package_statistics.vul_count>0` 的包（gamma 实测 172 万包 → 6.7 万，evf 199 万 → 144 万）；lifecycle 全量加载预解析 versions 为 Set；只 UPDATE 变化行、JDBC batch。**快照一致性防护**：任务开始记录 lifecycle 当前最大更新时间，分批写入前校验其未变化（期间发生手动重同步/其它写入则中止本轮并告警，下一轮收敛），杜绝旧快照反写覆盖新值。耗时估算：首轮约 4~6 分钟、日常约 1 分钟。
+6. **查询与排序**：制品/包列表、summary 扩 pending 列（LEFT JOIN 已存在）；弹窗 `queryVulnerability` 主 SQL `all_vul` CTE 加 `AND (:isPending IS NULL OR COALESCE(evf.is_pending, false) = :isPending)`（NULL 安全，存量未重算行在筛选「否」时可见，与展示口径一致）并带出 is_pending 列，排序 `is_pending DESC → score DESC`；`getVulnerabilityStatus` 组装 data 按 isPending 降序稳定排序（折叠首条即未闭环）；软件包详情 `queryPackageVulnerability` 走 ExternalVulRef 实体查询（`evf.*` 已含 is_pending），同款筛选排序，行内补漏洞级 isPending 与优先未闭环 issue 的 issueState（每页 10 条 N+1 可接受）。
 7. **下钻筛选联动（纯前端）**：点级别块/总数块 → 写入 `queryInfo.includeVulSeverities`（既有 IncludeExcludeFilter 模型）→ 既有 `INCLUDE_VUL_SEVERITIES` 后端筛选；漏斗旁 3 秒气泡（自动消失 + × 关闭）。
 
 ## API 接口契约变化
@@ -105,7 +113,9 @@ ALTER TABLE product_statistics ADD COLUMN IF NOT EXISTS pending_unknown_vul_coun
 | `GET /sbom-api/queryVulnerability`                                      | +`isPending` 筛选参数（Boolean 可空）；VulnerabilityVo +`issueState` +`isPending`；默认排序行为变化（is_pending DESC → score DESC） |
 | `GET /sbom-api/queryPackageVulnerability`                               | 同款适配（软件包详情页）；行内 +漏洞级 isPending、优先 issue 的 issueState                                                          |
 
-前端展示映射（仅前端）：issue_state：open→已开启、progressing→进行中、closed→已关闭、rejected→已拒绝、其他→`--`；is_pending：true→是、false/null→否。下钻筛选联动复用既有 `INCLUDE_VUL_SEVERITIES` 参数，无新增接口参数。
+前端展示映射（仅前端）：issue_state：open→已开启、progressing→进行中、closed→已关闭、rejected→已拒绝、其他→`--`；is_pending：true→是、false/null→否（NULL 视同否，与筛选 COALESCE 口径一致）。下钻筛选联动复用既有 `INCLUDE_VUL_SEVERITIES` 参数，无新增接口参数。
+
+Excel 导出字段对应（防实现误接）：列表「漏洞总数」块悬浮双值与导出两列一一对应——「漏洞总数」列 = `vul_count`（全量），「待闭环漏洞数」列 = `pending_vul_count`；`PackageSortField.VUL_COUNT` 排序对应 `vul_count`，pending 枚举对应 pending 列，勿交叉。
 
 ## 性能设计
 
@@ -123,17 +133,18 @@ ALTER TABLE product_statistics ADD COLUMN IF NOT EXISTS pending_unknown_vul_coun
 - **输入校验**：唯一新增输入为 isPending 筛选参数（Boolean 可空），无注入面；issueState/isPending 为上游透传，前端白名单映射（非白名单值显示 `--`）；
 - **SQL 注入**：native SQL 改动均为追加 SELECT 列/常量条件/参数化排序键映射，`:param` 参数化不变；
 - **敏感信息**：issue_state/is_pending 非敏感；issueUrl 展示逻辑不变；
-- **权限越权**：不改变任何接口鉴权范围。
+- **权限越权**：不改变任何接口鉴权范围；
+- **xxl-job executor 暴露面**：executor 监听 HTTP 端口（`/run`/`/kill`/`/beat`/`/log` 端点），accessToken 复用平台级 `xxl.job.admin.accessToken` 非空配置（与 coderepo/codecheck 一致），端口仅限平台内网访问（与既有服务部署网络策略相同）；启动时校验 adminAddresses/accessToken 非空并输出 ERROR 日志，防 `optional:nacos:xxl-job` 缺失时以空 token 静默启动。
 
 ## 风险 & 缓解
 
-| 风险                                           | 缓解                                                                                          |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| quartz 与 xxl 同步任务双跑                     | xxl 侧 fetchMajunCveHandler 默认停用，仅管理台手动触发；文档注明未来统一切换步骤              |
-| 清洗任务与解析跑批/漏洞刷新并发写 evf          | 值由 lifecycle 快照唯一决定，最后写胜出，无脏数据；xxl 阻塞策略丢弃后续、路由单实例           |
-| quartz 分布式锁 TTL 5 分钟 < 同步耗时 3~9 分钟 | 存量隐患，本次不动 quartz；xxl 侧超时上限设 30 分钟                                           |
-| 存量 NULL 展示                                 | 查询按 NULL 兜底，三条重算路径回刷                                                            |
-| 下钻筛选语义与"待闭环"口径解耦                 | 漏洞级别筛选语义=「包含该级别的漏洞」（既有机制），不引入新筛选参数；气泡提示明示已按类型筛选 |
+| 风险                                           | 缓解                                                                                                                                                                  |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| quartz 与 xxl 同步任务双跑                     | `fetchMajunCveHandler` 复用同一把分布式锁 `majun_fetch_quartz_lock`（quartz 跑批中手动触发 xxl 会被锁挡住，天然互斥）；且 xxl 侧默认停用，仅管理台手动触发作应急/补偿 |
+| 清洗任务与解析跑批/漏洞刷新并发写 evf          | 最终一致：清洗启动记录 lifecycle 最大更新时间，写入前校验未变化（变化则中止本轮告警，下一轮收敛）；xxl 阻塞策略丢弃后续、路由单实例                                   |
+| quartz 分布式锁 TTL 5 分钟 < 同步耗时 3~9 分钟 | 存量隐患，本次不动 quartz；xxl 侧超时上限设 30 分钟                                                                                                                   |
+| 存量 NULL 展示                                 | 主数字展示 `--`（区别于 0）+ 气泡标注待重算；筛选 COALESCE NULL 安全；三条重算路径回刷                                                                                |
+| 下钻筛选语义与"待闭环"口径解耦                 | 漏洞级别筛选语义=「包含该级别的漏洞」（既有机制），不引入新筛选参数；气泡提示明示已按类型筛选                                                                         |
 
 ## 跨仓影响
 
