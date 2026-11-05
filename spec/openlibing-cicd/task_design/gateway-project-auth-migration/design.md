@@ -119,7 +119,7 @@ private static final Pattern GATEWAY_PULLS_PATTERN =
 
 `PipelineControllerV2` 不改动；`UserRoleMapper` 与 `UserRoleMapper.xml` 不改动。
 
-「7 个 Controller / 49 个端点」是人工枚举结果，不作为代码可推导的假设。守卫测试不遍历白名单类，而是扫描全部 `HandlerMapping`：所有 `/project/**` 形态的端点必须带方法级或类级 `@ProjectAuth`，并核对端点总数，使将来新增的 Controller 漏标时测试直接失败。
+「7 个 Controller / 49 个端点」是人工枚举结果，不作为代码可推导的假设。守卫测试不遍历白名单类，而是用 `ClassPathScanningCandidateComponentProvider` 扫描 controller 包下全部 `@RestController`（不启动 Spring 上下文、不依赖数据库）：所有 `/project/{变量}/**` 形态的端点必须带方法级或类级 `@ProjectAuth`，类级注解所在类的映射路径必须包含名为 `projectId` 的路径变量，并核对端点总数（49），使将来新增的 Controller 漏标时测试直接失败。
 
 ## 4. 数据模型设计
 

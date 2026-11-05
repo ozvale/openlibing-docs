@@ -29,7 +29,7 @@ openlibing-gateway 的 `PermissionCheckFilter`（order=3）对所有 `/openlibin
 4. `/pr/pulls/{number}/**` 与 `/pr/gitcode/pulls/{number}/**` 按 `/pr/pulls/{number}`、`/pr/gitcode/pulls/{number}` 查询菜单权限，复刻网关坍缩行为；实现按路径段正则匹配，不依赖占位符字面名。
 5. 类级 `@ProjectAuth` 与 `@CheckPermission` 同时存在时，两者均执行（AND 叠加），项目级校验在前。
 6. `PipelineControllerV2` 3 个方法级 `@ProjectAuth` 行为不变（仍走 query/body 取 projectId、不含 visitor 的 SQL）；因这 3 个方法均无 `@CheckPermission`，删除提前返回不改变判定结果。
-7. `AuthInterceptorTest` 覆盖以上判定分支并全部通过；守卫测试扫描全量 `HandlerMapping`，断言所有 `/project/**` 端点均带 `@ProjectAuth`、类级注解所在类的映射路径均含名为 `projectId` 的路径变量，且端点总数守恒。
+7. `AuthInterceptorTest` 覆盖以上判定分支并全部通过；守卫测试扫描 controller 包下全部 `@RestController`（不启动 Spring 上下文），断言所有 `/project/{变量}/**` 端点均带 `@ProjectAuth`、类级注解所在类的映射路径均含名为 `projectId` 的路径变量，且端点总数守恒。
 8. BETA 环境按角色矩阵（admin / platform_operater / repo_observer / 纯 visitor 账号 / 项目成员 / 项目外用户 / 匿名）人工验证：48 个已登记端点结果与删除前一致（纯 visitor 账号仍为 403），`get-pr-pipeline` 单独确认前后均为 403。
 
 ## 关联 Issue
