@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>代码度量指标插件支持 GitHub · 需求原型</title>
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --ink: #1b2430;
+    --sub: #5b6b7c;
+    --line: #e3e9f0;
+    --brand: #2f6bff;
+    --brand-soft: #eaf1ff;
+    --green: #10a37f;
+    --green-soft: #e6f7f1;
+    --amber: #b7791f;
+    --amber-soft: #fff6e5;
+    --purple: #7b5cff;
+    --purple-soft: #f0ecff;
+    --shadow: 0 12px 32px rgba(27, 36, 48, 0.08);
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, #e9f0ff 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, #eef7f4 0%, transparent 55%),
+      var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.65;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 48px 24px 72px; }
+
+  /* Hero */
+  .hero { margin-bottom: 40px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--brand); background: var(--brand-soft);
+    padding: 6px 12px; border-radius: 999px; font-weight: 600;
+  }
+  .hero h1 { font-size: 40px; line-height: 1.25; margin: 16px 0 12px; letter-spacing: -0.02em; }
+  .hero p.lead { font-size: 16px; color: var(--sub); max-width: 820px; margin: 0 0 20px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    font-size: 13px; color: var(--sub); background: #fff;
+    border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px;
+    text-decoration: none;
+  }
+  .chip strong { color: var(--ink); font-weight: 600; }
+  .chip.link:hover { border-color: var(--brand); color: var(--brand); }
+  .status-ok { color: var(--green); background: var(--green-soft); border-color: transparent; font-weight: 600; }
+  .status-wait { color: var(--amber); background: var(--amber-soft); border-color: transparent; font-weight: 600; }
+
+  /* Sections */
+  section { margin-top: 44px; }
+  .section-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
+  .section-head h2 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  .section-head span { font-size: 13px; color: var(--sub); }
+
+  /* Cards */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+  }
+  .card-pad { padding: 22px; }
+  .card-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .card-title h3 { font-size: 15px; margin: 0; }
+  .tag { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+  .tag.green { background: var(--green-soft); color: var(--green); }
+  .tag.purple { background: var(--purple-soft); color: var(--purple); }
+
+  /* Mock window */
+  .mock { overflow: hidden; }
+  .mock-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; background: #f0f3f8; border-bottom: 1px solid var(--line);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #cfd8e3; }
+  .mock-bar .path { margin-left: 8px; font-size: 12px; color: var(--sub); }
+  .mock-body { padding: 18px; }
+  .run-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .run-head .ok { width: 20px; height: 20px; border-radius: 50%; background: var(--green); position: relative; flex: none; }
+  .run-head .ok::after {
+    content: ""; position: absolute; left: 6px; top: 5px; width: 6px; height: 10px;
+    border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
+  }
+  .run-head .name { font-weight: 600; font-size: 14px; }
+  .run-head .time { margin-left: auto; font-size: 12px; color: var(--sub); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--sub); font-weight: 600; background: #fafbfd; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  .table-title { font-size: 13px; font-weight: 600; margin: 16px 0 8px; }
+  .table-title:first-child { margin-top: 0; }
+  .link { color: var(--brand); text-decoration: none; }
+  .link:hover { text-decoration: underline; }
+  .muted { color: var(--sub); }
+  .pill {
+    display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 6px;
+    background: var(--brand-soft); color: var(--brand);
+  }
+
+  /* GitCode output panel */
+  .output-panel { margin-top: 16px; border: 1px dashed #cfd8e3; border-radius: 12px; padding: 14px; background: #fbfcfe; }
+  .output-panel .panel-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: 13px; }
+  .kv div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+  .kv b { color: var(--brand); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* Key points */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .point { padding: 20px; }
+  .point .idx {
+    width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: var(--brand); background: var(--brand-soft); margin-bottom: 12px;
+  }
+  .point h4 { margin: 0 0 6px; font-size: 15px; }
+  .point p { margin: 0; font-size: 13px; color: var(--sub); }
+
+  /* Flow */
+  .flow { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+  .step {
+    flex: 1 1 150px; background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px; position: relative; box-shadow: 0 6px 18px rgba(27,36,48,.05);
+  }
+  .step .no { font-size: 11px; color: var(--brand); font-weight: 700; letter-spacing: .06em; }
+  .step h5 { margin: 6px 0 4px; font-size: 14px; }
+  .step p { margin: 0; font-size: 12px; color: var(--sub); }
+  .arrow { align-self: center; color: #b8c4d4; font-size: 18px; }
+  .branch-note {
+    margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  .branch-note .box { border-radius: 12px; padding: 14px; font-size: 13px; }
+  .box.oidc { background: var(--green-soft); border: 1px solid #cdeee2; }
+  .box.aksk { background: var(--amber-soft); border: 1px solid #f3e2bf; }
+  .box b { display: block; margin-bottom: 4px; }
+
+  /* Boundary */
+  .boundary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .boundary .item { padding: 18px; }
+  .boundary h4 { margin: 0 0 6px; font-size: 14px; }
+  .boundary p { margin: 0; font-size: 13px; color: var(--sub); }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--sub); }
+  footer a { color: var(--brand); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 900px) {
+    .grid-2, .grid-3, .boundary, .branch-note { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 30px; }
+    .arrow { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== Hero ===== -->
+  <header class="hero">
+    <span class="eyebrow">US · 代码度量指标插件支持 GitHub</span>
+    <h1>同一份插件，同时跑通 GitCode 与 GitHub</h1>
+    <p class="lead">
+      插件运行时自动识别代码托管平台，GitHub 场景采用 OIDC 免密认证；扫描结果统一回流到 Actions 摘要、
+      openLiBing 代码仓管理页与平台 OBS 桶，GitCode 原有上报、展示与下钻保持不变。
+    </p>
+    <div class="meta">
+      <span class="chip status-ok">GitHub 测试仓扫描已跑通</span>
+      <span class="chip status-wait">OIDC 信任策略待配置</span>
+      <span class="chip status-wait">GitCode 兼容待回归</span>
+      <a class="chip link" href="https://gitcode.com/openlibing/code-metrics-action/issues/74" target="_blank" rel="noopener"><strong>Issue</strong> #74</a>
+      <a class="chip link" href="https://gitcode.com/openlibing/code-metrics-action/merge_requests/44" target="_blank" rel="noopener"><strong>PR</strong> #44</a>
+    </div>
+  </header>
+
+  <!-- ===== 目标态效果 ===== -->
+  <section>
+    <div class="section-head">
+      <h2>目标态效果</h2>
+      <span>从 Actions 摘要到平台分支页、OBS 留存，全链路可核对</span>
+    </div>
+
+    <div class="grid-2">
+      <!-- GitHub -->
+      <div class="card mock">
+        <div class="mock-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="path">GitHub Actions · code-metrics-scan</span>
+        </div>
+        <div class="mock-body">
+          <div class="run-head">
+            <span class="ok"></span>
+            <span class="name">Code metrics scan</span>
+            <span class="time">success · 1m 42s</span>
+          </div>
+
+          <div class="table-title">扫描信息</div>
+          <table>
+            <tr><th style="width:34%">项目</th><th>值</th></tr>
+            <tr><td>仓库</td><td>github.com/acme/demo-service</td></tr>
+            <tr><td>分支</td><td>main</td></tr>
+            <tr><td>提交</td><td><code>a1b2c3d</code></td></tr>
+            <tr><td>流水线</td><td><a class="link" href="#">#128</a></td></tr>
+            <tr><td>扫描完成时间</td><td>2026-11-03 15:42:10 (UTC+8)</td></tr>
+          </table>
+
+          <div class="table-title">指标概览</div>
+          <table>
+            <tr><th>指标</th><th style="text-align:right">数值</th><th>说明</th></tr>
+            <tr><td>代码规模</td><td class="num">18,642 行</td><td class="muted">有效代码行数</td></tr>
+            <tr><td>平均函数代码行</td><td class="num">16.4 行</td><td class="muted">函数体有效代码行均值</td></tr>
+            <tr><td>平均圈复杂度</td><td class="num">2.7</td><td class="muted">函数级复杂度均值</td></tr>
+            <tr><td>总代码重复率</td><td class="num">3.21%</td><td class="muted">重复代码行占比</td></tr>
+            <tr><td>总文件重复率</td><td class="num">1.08%</td><td class="muted">完全一致文件占比</td></tr>
+          </table>
+
+          <p style="margin:16px 0 0;font-size:13px">
+            <a class="link" href="#">查看详情：代码度量指标扫描结果 →</a>
+          </p>
+        </div>
+      </div>
+
+      <!-- GitCode -->
+      <div class="card mock">
+        <div class="mock-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="path">GitCode Actions · code-metrics-scan</span>
+        </div>
+        <div class="mock-body">
+          <div class="run-head">
+            <span class="ok"></span>
+            <span class="name">代码度量检测</span>
+            <span class="time">成功 · 1m 38s</span>
+          </div>
+
+          <div class="table-title">运行摘要（Markdown 表格）</div>
+          <table>
+            <tr><th style="width:34%">项目</th><th>值</th></tr>
+            <tr><td>仓库</td><td>gitcode.com/openlibing/demo</td></tr>
+            <tr><td>分支</td><td>master</td></tr>
+            <tr><td>提交</td><td><code>e5f6a7b</code></td></tr>
+            <tr><td>流水线</td><td><a class="link" href="#">#66</a></td></tr>
+            <tr><td>扫描完成时间</td><td>2026-11-03 15:40:02 (UTC+8)</td></tr>
+          </table>
+
+          <div class="table-title">指标概览</div>
+          <table>
+            <tr><th>指标</th><th style="text-align:right">数值</th></tr>
+            <tr><td>代码规模</td><td class="num">9,315 行</td></tr>
+            <tr><td>平均函数代码行</td><td class="num">14.2 行</td></tr>
+            <tr><td>平均圈复杂度</td><td class="num">2.3</td></tr>
+            <tr><td>总代码重复率</td><td class="num">2.76%</td></tr>
+            <tr><td>总文件重复率</td><td class="num">0.91%</td></tr>
+          </table>
+
+          <div class="output-panel">
+            <div class="panel-title">输出面板（保持原有能力）</div>
+            <div class="kv">
+              <div><span>代码规模</span><b>9,315</b></div>
+              <div><span>平均函数代码行</span><b>14.2</b></div>
+              <div><span>平均圈复杂度</span><b>2.3</b></div>
+              <div><span>总代码重复率</span><b>2.76%</b></div>
+              <div><span>总文件重复率</span><b>0.91%</b></div>
+              <div><span>扫描结果</span><a class="link" href="#">查看详情</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- openLiBing 代码仓管理 · 分支指标 -->
+    <div class="card mock" style="margin-top:20px">
+      <div class="mock-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="path">openLiBing · 代码仓管理 · 分支管理</span>
+      </div>
+      <div class="mock-body">
+        <div class="run-head">
+          <span class="name">仓库分支扫描指标</span>
+          <span class="time">与 Actions 摘要、OBS 明细同源</span>
+        </div>
+        <table>
+          <tr>
+            <th>代码托管平台</th>
+            <th>仓库</th>
+            <th>分支</th>
+            <th style="text-align:right">代码规模</th>
+            <th style="text-align:right">平均函数行</th>
+            <th style="text-align:right">平均圈复杂度</th>
+            <th style="text-align:right">代码重复率</th>
+            <th style="text-align:right">文件重复率</th>
+          </tr>
+          <tr>
+            <td><span class="pill">GitHub</span></td>
+            <td>acme/demo-service</td>
+            <td>main</td>
+            <td class="num">18,642 行</td>
+            <td class="num">16.4</td>
+            <td class="num">2.7</td>
+            <td class="num">3.21%</td>
+            <td class="num">1.08%</td>
+          </tr>
+          <tr>
+            <td><span class="pill">GitHub</span></td>
+            <td>acme/demo-service</td>
+            <td>release/1.0</td>
+            <td class="num">17,980 行</td>
+            <td class="num">16.1</td>
+            <td class="num">2.6</td>
+            <td class="num">3.05%</td>
+            <td class="num">1.02%</td>
+          </tr>
+          <tr>
+            <td><span class="tag green">GitCode</span></td>
+            <td>openlibing/demo</td>
+            <td>master</td>
+            <td class="num">9,315 行</td>
+            <td class="num">14.2</td>
+            <td class="num">2.3</td>
+            <td class="num">2.76%</td>
+            <td class="num">0.91%</td>
+          </tr>
+        </table>
+        <p class="muted" style="margin:14px 0 0;font-size:13px">
+          分支行指标与当次 Actions 摘要、OBS 全量明细完全一致；点击分支可下钻查看文件级指标与重复代码块，GitHub / GitCode 仓库统一按该口径展示。
+        </p>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:20px">
+      <!-- OBS 桶 -->
+      <div class="card mock">
+        <div class="mock-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="path">华为云 OBS · openlibing-github-action</span>
+        </div>
+        <div class="mock-body">
+          <div class="run-head">
+            <span class="name">对象浏览</span>
+            <span class="time">私有桶</span>
+          </div>
+          <div class="kv" style="margin-bottom:14px">
+            <div><span>桶名</span><b>openlibing-github-action</b></div>
+            <div><span>区域</span><b>西南-贵阳一</b></div>
+            <div><span>访问权限</span><b>私有</b></div>
+            <div><span>目录前缀</span><b>code-metrics-action/</b></div>
+          </div>
+          <table>
+            <tr><th>对象路径</th><th style="text-align:right">大小</th><th>上传时间</th></tr>
+            <tr>
+              <td><code>code-metrics-action/acme/demo-service/128/20261103T154210-metrics.json</code></td>
+              <td class="num">2.4 MB</td>
+              <td class="muted">11-03 15:42</td>
+            </tr>
+            <tr>
+              <td><code>code-metrics-action/acme/demo-service/127/20261102T182005-metrics.json</code></td>
+              <td class="num">2.3 MB</td>
+              <td class="muted">11-02 18:20</td>
+            </tr>
+          </table>
+          <p class="muted" style="margin:14px 0 0;font-size:13px">
+            GitCode 对应桶为 <code>openlibing-gitcode-action</code>，两平台对象 key 结构一致；后端按 obsUrl 下载解析，report 接口仅传链接。
+          </p>
+        </div>
+      </div>
+
+      <!-- GitCode 兼容 -->
+      <div class="card mock">
+        <div class="mock-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="path">GitCode Actions · 原有链路兼容</span>
+        </div>
+        <div class="mock-body">
+          <div class="run-head">
+            <span class="name">兼容性核对</span>
+            <span class="time">存量工作流零改动</span>
+          </div>
+          <table>
+            <tr><th style="width:26%">环节</th><th>结果</th></tr>
+            <tr>
+              <td>上报</td>
+              <td>仍走 <code>/action-api</code>（OIDC）或 <code>/openlibing-coderepo</code>（AK/SK），报文结构不变</td>
+            </tr>
+            <tr>
+              <td>展示</td>
+              <td>保留 <code>ATOMGIT_STEP_SUMMARY</code> 摘要与 <code>ATOMGIT_OUTPUT</code> 输出面板</td>
+            </tr>
+            <tr>
+              <td>下钻</td>
+              <td>平台详情链接、文件级明细、重复代码块展示与改造前一致</td>
+            </tr>
+            <tr>
+              <td>OBS</td>
+              <td>仍上传 <code>openlibing-gitcode-action</code>，key 结构不变</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 设计关键点 ===== -->
+  <section>
+    <div class="section-head">
+      <h2>设计关键点</h2>
+      <span>不改扫描口径，只做平台适配与展示增强</span>
+    </div>
+    <div class="grid-3">
+      <div class="card point">
+        <div class="idx">01</div>
+        <h4>上下文变量识别平台</h4>
+        <p>启动时以 <code>GITHUB_ACTIONS=true</code> 一次判定平台：GitHub 只读 <code>GITHUB_*</code>，GitCode 只读 <code>ATOMGIT_*</code>，不跨平台混用，一份代码同时适配两平台。</p>
+      </div>
+      <div class="card point">
+        <div class="idx">02</div>
+        <h4>OIDC 免密认证</h4>
+        <p>GitHub 下自动切换身份提供商为 GitHubActions、信任委托为 github-actions，仓库不配置任何长期密钥。</p>
+      </div>
+      <div class="card point">
+        <div class="idx">03</div>
+        <h4>摘要双通道</h4>
+        <p>GitHub 写 GITHUB_STEP_SUMMARY，GitCode 写 ATOMGIT_STEP_SUMMARY，统一表格样式。</p>
+      </div>
+      <div class="card point">
+        <div class="idx">04</div>
+        <h4>GitCode 原有链路兼容</h4>
+        <p>上报接口、ATOMGIT_STEP_SUMMARY 摘要、ATOMGIT_OUTPUT 输出面板与详情下钻全部保持，存量工作流零改动。</p>
+      </div>
+      <div class="card point">
+        <div class="idx">05</div>
+        <h4>依赖精简</h4>
+        <p>移除未使用的 config-file/js-yaml 与 winston，产物体积下降约 513KB。</p>
+      </div>
+      <div class="card point">
+        <div class="idx">06</div>
+        <h4>上报桶按平台隔离</h4>
+        <p>GitCode 上传 <code>openlibing-gitcode-action</code>，GitHub 上传 <code>openlibing-github-action</code>；对象 key 结构一致，后端按桶名区分平台。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 业务流程 ===== -->
+  <section>
+    <div class="section-head">
+      <h2>业务流程</h2>
+      <span>从触发到结果回流的完整链路</span>
+    </div>
+
+    <div class="flow">
+      <div class="step"><div class="no">STEP 1</div><h5>触发流水线</h5><p>手动 / 推送 / PR / 定时</p></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="no">STEP 2</div><h5>识别平台与上下文</h5><p>GITHUB_ACTIONS 判定平台，之后只读对应平台变量</p></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="no">STEP 3</div><h5>执行扫描</h5><p>scc + lizard + 重复检测</p></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="no">STEP 4</div><h5>上传全量明细</h5><p>按平台选桶，OBS 私有对象</p></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="no">STEP 5</div><h5>上报平台</h5><p>元数据 + OBS 链接，一次调用</p></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="no">STEP 6</div><h5>Actions 展示</h5><p>摘要表格 + 输出面板</p></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="no">STEP 7</div><h5>平台可见</h5><p>分支管理页展示指标并可下钻</p></div>
+    </div>
+
+    <div class="branch-note">
+      <div class="box oidc">
+        <b>认证路径 A：OIDC（推荐）</b>
+        声明 id-token: write → 申请 OIDC ID Token → 华为云 STS 临时凭证 → 调用 /action-api 上报。
+      </div>
+      <div class="box aksk">
+        <b>认证路径 B：AK/SK（已废弃）</b>
+        仅用于测试仓临时验证，不写入对外文档；后续统一收敛到 OIDC。
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 边界 ===== -->
+  <section>
+    <div class="section-head">
+      <h2>范围边界</h2>
+      <span>避免与其他 US 重叠</span>
+    </div>
+    <div class="boundary">
+      <div class="card item">
+        <h4>页面展示复用现有能力</h4>
+        <p>分支管理页的指标展示与下钻沿用现有页面；GitHub 来源如需字段适配由前端配套 US 承接，本 US 保证上报数据准确、可解析。</p>
+      </div>
+      <div class="card item">
+        <h4>不包含 PR 门禁</h4>
+        <p>GitHub PR 质量门禁、趋势看板不在本期范围。</p>
+      </div>
+      <div class="card item">
+        <h4>OIDC 依赖 IAM 配置</h4>
+        <p>华为云侧需先完成 GitHubActions 身份提供商与信任委托配置。</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>SPEC 文档：</span>
+    <a href="openlibing-docs/spec/code-metrics-action/task_design/github-adaptation/proposal.md">proposal.md</a>
+    <a href="openlibing-docs/spec/code-metrics-action/task_design/github-adaptation/design.md">design.md</a>
+    <a href="openlibing-docs/spec/code-metrics-action/task_design/github-adaptation/tasks.md">tasks.md</a>
+    <span style="margin-left:auto">代码度量指标插件 GitHub 适配 · 需求原型</span>
+  </footer>
+
+</div>
+</body>
+</html>

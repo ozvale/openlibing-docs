@@ -1,5 +1,7 @@
 # 代码度量指标插件支持 GitHub · 设计文档
 
+> 配套页面原型：[prototype.html](./prototype.html)（浏览器打开查看目标态交互：GitHub/GitCode Summary、openLiBing 代码仓管理页指标展示、OBS 桶视图）。
+
 ## 1. 方案设计
 
 ### 1.1 总体方案
