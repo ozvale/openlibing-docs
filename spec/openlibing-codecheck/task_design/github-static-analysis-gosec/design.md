@@ -30,22 +30,22 @@ openLiBing 的代码检查链路当前主要面向 GitCode Actions：各静态�
 
 ### 1.3 关键选型与理由
 
-| 决策点         | 选择                                                | 理由                                                                                       |
-| -------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| 认证方式       | OIDC 免密换证（`GitHubActions` 身份提供商）         | 复用 clang-tidy 已打通的链路，不落任何长期 AK/SK                                            |
-| OBS 桶         | GitHub 使用 `openlibing-github-action`              | 与 GitCode 桶隔离，便于权限与成本归集（复用既有桶，无新增）                                 |
-| SARIF 转换     | gosec 原生 `-fmt sarif` 直出                        | **零转换器、零预置二进制**，较 clang-tidy 需随仓预置 `clang-tidy-sarif` 显著简化供应链       |
-| 编译数据库     | 不需要                                              | gosec 直接解析 Go 源码（依赖 `go.mod` 定位模块），无需 `compile_commands.json`，扫描分钟级   |
-| 入口形态       | pre-commit 集成 + workflow 全量扫描并存             | 分别覆盖提交前拦截与全量归档场景，共用同一份 `gosec.json` 规则                              |
-| 产品侧改动范围 | 无                                                  | 来源枚举与前端标签已由 clang-tidy US 交付，本 US 仅验证复用                                 |
+| 决策点         | 选择                                        | 理由                                                                                       |
+| -------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 认证方式       | OIDC 免密换证（`GitHubActions` 身份提供商） | 复用 clang-tidy 已打通的链路，不落任何长期 AK/SK                                           |
+| OBS 桶         | GitHub 使用 `openlibing-github-action`      | 与 GitCode 桶隔离，便于权限与成本归集（复用既有桶，无新增）                                |
+| SARIF 转换     | gosec 原生 `-fmt sarif` 直出                | **零转换器、零预置二进制**，较 clang-tidy 需随仓预置 `clang-tidy-sarif` 显著简化供应链     |
+| 编译数据库     | 不需要                                      | gosec 直接解析 Go 源码（依赖 `go.mod` 定位模块），无需 `compile_commands.json`，扫描分钟级 |
+| 入口形态       | pre-commit 集成 + workflow 全量扫描并存     | 分别覆盖提交前拦截与全量归档场景，共用同一份 `gosec.json` 规则                             |
+| 产品侧改动范围 | 无                                          | 来源枚举与前端标签已由 clang-tidy US 交付，本 US 仅验证复用                                |
 
 ### 1.4 涉及文件与跨仓影响
 
-| 仓库 / 模块          | 涉及内容                                                                       |
-| -------------------- | ------------------------------------------------------------------------------ |
-| `gosec-full-scan-demo` | `.github/workflows/` 两套 GitHub 工作流、`gosec.json`、`.pre-commit-config.yaml` |
-| `openlibing-docs`    | 本设计文档归档                                                                 |
-| `docs`               | gosec README 增加 GitCode / GitHub 差异速查表，demos 拆分 `gitcode/` 与 `github/` 目录 |
+| 仓库 / 模块            | 涉及内容                                                                               |
+| ---------------------- | -------------------------------------------------------------------------------------- |
+| `gosec-full-scan-demo` | `.github/workflows/` 两套 GitHub 工作流、`gosec.json`、`.pre-commit-config.yaml`       |
+| `openlibing-docs`      | 本设计文档归档                                                                         |
+| `docs`                 | gosec README 增加 GitCode / GitHub 差异速查表，demos 拆分 `gitcode/` 与 `github/` 目录 |
 
 `upload-sarif-action`、`pre-commit-action`、`openlibing-codecheck` 后端、`openlibing-web` 前端均无改动（复用 clang-tidy US 已交付成果）。
 
@@ -110,37 +110,37 @@ GitHub 代码仓触发 workflow
 
 ### 2.5 边界与异常处理
 
-| 场景                                 | 处理                                                                     |
-| ------------------------------------ | ------------------------------------------------------------------------ |
-| gosec 钩子按文件列表扫描             | pre-commit 钩子必须 `pass_filenames: false` 并传 `./...`（gosec 以包/模块为单位分析）；否则 SARIF 可能 results 为空但上传成功，openLiBing 无告警 |
-| vendor / 生成代码                    | 扫描命令 `-exclude-dir=vendor -exclude-generated`，`gosec.json` 的 `exclude-rules` 按路径排除 |
-| GitHub PR 事件                       | 场景二使用 `pull_request`（GitHub 默认只读 token，无 fork 篡改风险；GitCode 侧用 `pull_request_target` 的差异已在用户文档速查表标注） |
-| gosec 安装与扫描拆分到不同 step      | `go install` 的 PATH 修改无法跨 step 继承，安装与扫描放同一步            |
-| pre-commit 产物路径                  | gosec 输出路径固定，upload 直接引用 `/tmp/pre-commit-reports/gosec.sarif`，不依赖 `sarif-files` output（可能为空） |
-| 华为云 IAM 未放行仓库 OIDC 换证      | STS 返回 403 / `STS5.1001`，插件输出 iss/aud/sub 诊断信息并失败          |
-| 未生成 SARIF 文件                    | 上传步骤失败并提示检查扫描步骤                                           |
-| OBS 上传失败 / APIG 回调失败         | 沿用指数退避重试 3 次；回调失败仅 WARN，不改变 OBS 上传成功的结果        |
-| Go 模块拉取超时                      | GitCode 执行机需配置 `GOPROXY` 国内代理；GitHub `ubuntu-latest` 一般直连默认代理即可 |
+| 场景                            | 处理                                                                                                                                             |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| gosec 钩子按文件列表扫描        | pre-commit 钩子必须 `pass_filenames: false` 并传 `./...`（gosec 以包/模块为单位分析）；否则 SARIF 可能 results 为空但上传成功，openLiBing 无告警 |
+| vendor / 生成代码               | 扫描命令 `-exclude-dir=vendor -exclude-generated`，`gosec.json` 的 `exclude-rules` 按路径排除                                                    |
+| GitHub PR 事件                  | 场景二使用 `pull_request`（GitHub 默认只读 token，无 fork 篡改风险；GitCode 侧用 `pull_request_target` 的差异已在用户文档速查表标注）            |
+| gosec 安装与扫描拆分到不同 step | `go install` 的 PATH 修改无法跨 step 继承，安装与扫描放同一步                                                                                    |
+| pre-commit 产物路径             | gosec 输出路径固定，upload 直接引用 `/tmp/pre-commit-reports/gosec.sarif`，不依赖 `sarif-files` output（可能为空）                               |
+| 华为云 IAM 未放行仓库 OIDC 换证 | STS 返回 403 / `STS5.1001`，插件输出 iss/aud/sub 诊断信息并失败                                                                                  |
+| 未生成 SARIF 文件               | 上传步骤失败并提示检查扫描步骤                                                                                                                   |
+| OBS 上传失败 / APIG 回调失败    | 沿用指数退避重试 3 次；回调失败仅 WARN，不改变 OBS 上传成功的结果                                                                                |
+| Go 模块拉取超时                 | GitCode 执行机需配置 `GOPROXY` 国内代理；GitHub `ubuntu-latest` 一般直连默认代理即可                                                             |
 
 ### 2.6 验证情况
 
-| 验证项                 | 结果                                                                       |
-| ---------------------- | -------------------------------------------------------------------------- |
+| 验证项                 | 结果                                                                                                                                           |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | docs 用户文档          | gosec README 已含 GitCode / GitHub 差异速查表与实操清单，`demos/github/` 两套工作流示例已提交（`docs` 仓 `github-static-analysis-gosec` 分支） |
-| GitHub 侧 gosec 流水线 | 待验证：demo 仓工作流推送、两条工作流运行、OIDC 换证、OBS 上传、回调与前端展示全链路核对 |
+| GitHub 侧 gosec 流水线 | 待验证：demo 仓工作流推送、两条工作流运行、OIDC 换证、OBS 上传、回调与前端展示全链路核对                                                       |
 
 ## 3. 类设计
 
 本 US 无后端 / 前端代码改动，涉及文件集中在 demo 仓与文档仓：
 
-| 模块 / 文件                                   | 职责                              | 本次变化                                             |
-| --------------------------------------------- | --------------------------------- | ---------------------------------------------------- |
-| `.github/workflows/gosec-scan.yml`            | workflow 全量扫描                 | 新增：checkout → setup-go → 安装并扫描 → 上传       |
-| `.github/workflows/gosec-precommit.yml`       | pre-commit 集成                   | 新增：checkout → setup-python/go → 装到 `.github/bin` → 双插件两步 |
-| `.pre-commit-config.yaml`                     | gosec local hook                  | 新增：`entry: .github/bin/gosec`、`pass_filenames: false` |
-| `gosec.json`                                  | 规则单一事实源                    | 新增：两场景共享，含 G101 熵值、G301/G302/G306/G307 权限位等 |
-| `upload-sarif-action`（`source-platform-detection` 分支） | SARIF 上传 OBS + APIG 回调 | 复用，不改                                           |
-| `pre-commit-action`（`main` 分支）            | 执行钩子并收集 SARIF              | 复用，不改                                           |
+| 模块 / 文件                                               | 职责                       | 本次变化                                                           |
+| --------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------ |
+| `.github/workflows/gosec-scan.yml`                        | workflow 全量扫描          | 新增：checkout → setup-go → 安装并扫描 → 上传                      |
+| `.github/workflows/gosec-precommit.yml`                   | pre-commit 集成            | 新增：checkout → setup-python/go → 装到 `.github/bin` → 双插件两步 |
+| `.pre-commit-config.yaml`                                 | gosec local hook           | 新增：`entry: .github/bin/gosec`、`pass_filenames: false`          |
+| `gosec.json`                                              | 规则单一事实源             | 新增：两场景共享，含 G101 熵值、G301/G302/G306/G307 权限位等       |
+| `upload-sarif-action`（`source-platform-detection` 分支） | SARIF 上传 OBS + APIG 回调 | 复用，不改                                                         |
+| `pre-commit-action`（`main` 分支）                        | 执行钩子并收集 SARIF       | 复用，不改                                                         |
 
 ## 4. 数据模型设计
 
