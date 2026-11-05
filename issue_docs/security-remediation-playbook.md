@@ -4,6 +4,7 @@
 方案，保证同类问题统一整改方式，避免每个仓临时发明方案。
 
 **使用规则**：
+
 - 定性/出整改建议前先查本库，命中类型直接引用模板
 - 新类型方案经用户确认或实施验证后回写本库
 - 方案被推翻（如整改回退）时同步标注"暂缓，待 <条件> 后实施"
@@ -81,12 +82,12 @@
 
 - **识别特征**：扫描报 `execSync`/`spawn`（`shell: true` 或默认 shell）+
   模板字符串拼接 workspace、输入参数等外部路径，如
-  `` execSync(`find ${workspace} -maxdepth 3 ...`) ``。
+  ``execSync(`find ${workspace} -maxdepth 3 ...`)``。
 - **风险本质**：外部输入含空格或 shell 元字符（`$(...)`、`;`、反引号）时
   形成命令注入面。
 - **整改方案（JS/Node 项目）**：用 Node 原生 API 重写等价逻辑，彻底删除
   `child_process` 依赖——`find` 查目录 → `fs.readdirSync(dir,
-  { withFileTypes: true })` BFS 递归（深度语义对齐 `find -maxdepth N`，
+{ withFileTypes: true })` BFS 递归（深度语义对齐 `find -maxdepth N`，
   注意 N 层 = 距根 N 跳的目录，测试用例层级易写错）；grep/sed 类需求优先
   找 Node 等价物，不保留任何 shell 出口。
 - **等价性约束**：查找范围、首个命中语义、日志输出、兜底行为（如无 .git
@@ -210,5 +211,6 @@
    预计算百分比字段**（如 coverage.py JSON 的 `totals.percent_covered`
    除以 100）。整改只需在透传入口 clamp（`Math.min(100, Math.max(0, v))`），
    不动全局 pct 签名，避免防御面扩大引入无谓行为变化。
+
 - **实施案例**：upload-ut-action#9/#10（2026-10，影响评估待用户裁决，
   见 `issue_docs/upload-ut-action/blia-issue9-10-20261020.md`）。

@@ -10,8 +10,9 @@
 > - **基线 B（在途整改）**：`fix-security-remediation` = `475066d`（已合并 PR #3 / issue #5）
 >
 > 仓库形态：Node SDK（`src/`，整改前唯一第三方依赖为 `undici`，整改后零第三方依赖）
-> + 3 个 GitCode Action（`.gitcode/actions/`，ncc 打包产物 `dist/` 入库，内含
-> `@actions/core`/`@actions/http-client` 等三方内联代码）+ 本仓自身 CI workflow。
+>
+> - 3 个 GitCode Action（`.gitcode/actions/`，ncc 打包产物 `dist/` 入库，内含
+>   `@actions/core`/`@actions/http-client` 等三方内联代码）+ 本仓自身 CI workflow。
 
 ## 0. 结论速览
 
@@ -31,22 +32,22 @@
 
 ## 1. 汇总表
 
-| 分类 | Issue | 处置 |
-|---|---|---|
-| 已实施·待 PR #3 合入主线 | #5 | 等待 PR #3 review 合入后关闭 |
-| 已整改·待建 PR | #19 #18 #7 #15 #10 #17 #21 #16 #20 | #19 方案 C 零依赖 fetch 回退（4.2）；#18 按调用点补参数校验（4.1）；#7 #15 #10 #17 #21 #16 #20 于 2026-10-26 第二轮整改完成（3.1-3.4），均含在分支 `fix-undici-fetch-fallback`（commit `1694a33`） |
-| 待用户裁决 | #11 | 建议非问题归档；如需外置走环境变量注入 |
-| 非问题·归档 | #6 #9 #12 | 回复说明后关闭，回写非问题目录 |
-| 已关闭（无需动作） | #8 #14 | #8 与 #6 同根因；#14 已由依赖升级关闭 |
-| 功能需求（不在整改范围） | #13 | 不走安全整改流程 |
+| 分类                     | Issue                              | 处置                                                                                                                                                                                               |
+| ------------------------ | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 已实施·待 PR #3 合入主线 | #5                                 | 等待 PR #3 review 合入后关闭                                                                                                                                                                       |
+| 已整改·待建 PR           | #19 #18 #7 #15 #10 #17 #21 #16 #20 | #19 方案 C 零依赖 fetch 回退（4.2）；#18 按调用点补参数校验（4.1）；#7 #15 #10 #17 #21 #16 #20 于 2026-10-26 第二轮整改完成（3.1-3.4），均含在分支 `fix-undici-fetch-fallback`（commit `1694a33`） |
+| 待用户裁决               | #11                                | 建议非问题归档；如需外置走环境变量注入                                                                                                                                                             |
+| 非问题·归档              | #6 #9 #12                          | 回复说明后关闭，回写非问题目录                                                                                                                                                                     |
+| 已关闭（无需动作）       | #8 #14                             | #8 与 #6 同根因；#14 已由依赖升级关闭                                                                                                                                                              |
+| 功能需求（不在整改范围） | #13                                | 不走安全整改流程                                                                                                                                                                                   |
 
 ## 2. 已实施·待合入（3 条）
 
-| Issue | 内容 | 证据链 | 状态 |
-|---|---|---|---|
-| #5 | SENINFO 公网地址硬编码（APIG 网关域名 6 处） | 基线 B `e667c90` 改动 `.gitcode/actions/test-apig-action/index.js:16-19`、`test-apig-obs-action/index.js:21-25` 及两份 `dist`：改为 `core.getInput('apig_url')` / `TEST_APIG_URL` 环境变量优先，保留原地址为回退默认值并登记 `gitleaks:allow` | PR #3 open，已进 `fix-security-remediation` |
-| #19 | SCA：undici 5.x 存在已知漏洞 | `package.json` 原 `"undici": "^5.29.0"` 为唯一直接依赖，使用点仅 `src/http.js` 的 Node 16 回退分支。改为内联零依赖 `_nodeFetch`（Node 内置 `http`/`https`）并删除整个 `dependencies`；3 个测试 Action 用 ncc 重建 `dist`；新增单测 23 覆盖回退链路 | 分支 `fix-undici-fetch-fallback` 已推送（commit `69091ff`），待建 PR |
-| #18 | STS 端点拼接参数未校验（region/stsAssumePath）+ OIDC 请求地址未强制 https | 按调用点补校验：`src/config.js` 的 `configure()` 对 `region`/`stsAssumePath` 白名单校验（先校验后写入，避免部分覆盖）；`src/oidc.js` 对 `ACTIONS_ID_TOKEN_REQUEST_URL` 强制 `https:`。通用 `sendRequest` 语义不变；3 个 Action 重建 `dist`；新增单测 24 覆盖全部拒绝场景 | 分支 `fix-undici-fetch-fallback` 已提交（`911230a`），待建 PR |
+| Issue | 内容                                                                      | 证据链                                                                                                                                                                                                                                                                   | 状态                                                                 |
+| ----- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| #5    | SENINFO 公网地址硬编码（APIG 网关域名 6 处）                              | 基线 B `e667c90` 改动 `.gitcode/actions/test-apig-action/index.js:16-19`、`test-apig-obs-action/index.js:21-25` 及两份 `dist`：改为 `core.getInput('apig_url')` / `TEST_APIG_URL` 环境变量优先，保留原地址为回退默认值并登记 `gitleaks:allow`                            | PR #3 open，已进 `fix-security-remediation`                          |
+| #19   | SCA：undici 5.x 存在已知漏洞                                              | `package.json` 原 `"undici": "^5.29.0"` 为唯一直接依赖，使用点仅 `src/http.js` 的 Node 16 回退分支。改为内联零依赖 `_nodeFetch`（Node 内置 `http`/`https`）并删除整个 `dependencies`；3 个测试 Action 用 ncc 重建 `dist`；新增单测 23 覆盖回退链路                       | 分支 `fix-undici-fetch-fallback` 已推送（commit `69091ff`），待建 PR |
+| #18   | STS 端点拼接参数未校验（region/stsAssumePath）+ OIDC 请求地址未强制 https | 按调用点补校验：`src/config.js` 的 `configure()` 对 `region`/`stsAssumePath` 白名单校验（先校验后写入，避免部分覆盖）；`src/oidc.js` 对 `ACTIONS_ID_TOKEN_REQUEST_URL` 强制 `https:`。通用 `sendRequest` 语义不变；3 个 Action 重建 `dist`；新增单测 24 覆盖全部拒绝场景 | 分支 `fix-undici-fetch-fallback` 已提交（`911230a`），待建 PR        |
 
 > 等价性（#5）：回退默认值与原硬编码逐字节一致，仅新增注入能力；输出契约未变。
 > 待 PR #3 合入主线后再关闭 issue #5。
@@ -57,10 +58,10 @@
 
 ### 3.1 发布流程 npm token 落盘（#7 + #15，同段代码合并一个 PR）
 
-| Issue | 位置（基线 A/B 一致） | 代码事实 |
-|---|---|---|
-| #7 | `.gitcode/workflows/deploy.yml:53-59` | `echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > ~/.npmrc`，写后无清理 |
-| #15 | `.gitcode/workflows/deploy.yml:56,59` | 同上，且未设权限（默认 644） |
+| Issue | 位置（基线 A/B 一致）                 | 代码事实                                                                             |
+| ----- | ------------------------------------- | ------------------------------------------------------------------------------------ |
+| #7    | `.gitcode/workflows/deploy.yml:53-59` | `echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > ~/.npmrc`，写后无清理 |
+| #15   | `.gitcode/workflows/deploy.yml:56,59` | 同上，且未设权限（默认 644）                                                         |
 
 - **根因**：同一段代码的「残留」与「权限」两个视角，属硬规则 4「同一块代码必须合并到一个 PR」。
 - **整改**（`security-remediation-playbook.md` → 临时文件残留 + 权限最小化）：
@@ -73,12 +74,12 @@
 
 ### 3.2 src 日志出口脱敏与日志注入（#10 + #17 + #21，同一批日志出口合并一个 PR）
 
-| Issue | 位置 | 代码事实（基线 A） |
-|---|---|---|
-| #10（红线 7.1.11） | `src/oidc.js:54` | `error(\`OIDC Token 申请失败（HTTP ${res.status}）: ${JSON.stringify(res.data)}\`)`，唯一绕过 `maskBody` 的日志出口 |
-| #17-1 | `src/oidc.js:54` | 同 #10 |
-| #17-2 | `src/http.js:41` | `throw new Error(\`网络请求失败 ${method} ${url}: ${err.message}\`)`，URL query 随异常消息外泄 |
-| #21 | `src/credentials.js:124` | `info(\`-- OIDC 免密换证开始：区域 ${cfg.region}，提供商 ${providerName}，委托 ${cfg.agencyName} --\`)`，`configure()` 可控值未清洗换行 |
+| Issue              | 位置                     | 代码事实（基线 A）                                                                                                                      |
+| ------------------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| #10（红线 7.1.11） | `src/oidc.js:54`         | `error(\`OIDC Token 申请失败（HTTP ${res.status}）: ${JSON.stringify(res.data)}\`)`，唯一绕过 `maskBody` 的日志出口                     |
+| #17-1              | `src/oidc.js:54`         | 同 #10                                                                                                                                  |
+| #17-2              | `src/http.js:41`         | `throw new Error(\`网络请求失败 ${method} ${url}: ${err.message}\`)`，URL query 随异常消息外泄                                          |
+| #21                | `src/credentials.js:124` | `info(\`-- OIDC 免密换证开始：区域 ${cfg.region}，提供商 ${providerName}，委托 ${cfg.agencyName} --\`)`，`configure()` 可控值未清洗换行 |
 
 - **对照证据**：同仓 `src/credentials.js:136/150` 已使用 `maskBody(res.data)`；`src/logger.js:80`
   已提供 `maskBody`（JSON 深度脱敏 + 非 JSON 文本 JWT 掩码），本组整改即「对齐既有惯例」。
@@ -143,20 +144,20 @@
 
 ### 4.1 #18 STS 端点拼接参数校验（已实施·按调用点反向匹配）
 
-| 子项 | 位置 | 原状 | 处置 |
-|---|---|---|---|
-| 1 | `src/credentials.js:103`（issue 写 `config.js:53`，实际端点在此拼接） | `` `https://sts.${cfg.region}.myhuaweicloud.com${cfg.stsAssumePath}` `` 无校验 | **已整改**：在唯一可控入口 `configure()` 补白名单校验 |
-| 2 | `src/http.js:35` | `sendRequest` 不校验协议，允许 `http://` | **非问题**：通用 HTTP 工具，全仓无 `http://` 字面量，且强制 https 会打断本地调试与单测 23 |
+| 子项 | 位置                                                                  | 原状                                                                           | 处置                                                                                      |
+| ---- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| 1    | `src/credentials.js:103`（issue 写 `config.js:53`，实际端点在此拼接） | `` `https://sts.${cfg.region}.myhuaweicloud.com${cfg.stsAssumePath}` `` 无校验 | **已整改**：在唯一可控入口 `configure()` 补白名单校验                                     |
+| 2    | `src/http.js:35`                                                      | `sendRequest` 不校验协议，允许 `http://`                                       | **非问题**：通用 HTTP 工具，全仓无 `http://` 字面量，且强制 https 会打断本地调试与单测 23 |
 
 - **方案（2026-10-26 用户决策）**：不改通用 `sendRequest`，而是**按调用点反向匹配**，只在真正携带
   敏感令牌的入口补参数校验，符合现有调用场景。
 - **调用点全量审计**（`sendRequest` 共 4 处）：
-  | 调用点 | URL 来源 | 是否需校验 |
-  |---|---|---|
-  | `src/credentials.js:103`（STS 换证） | `cfg.region`/`cfg.stsAssumePath`，仅由 `configure()` 覆盖 | ✅ 在 `configure()` 校验，覆盖全部下游 |
-  | `src/oidc.js`（获取 ID Token） | 环境变量 `ACTIONS_ID_TOKEN_REQUEST_URL`，携带 Bearer 请求令牌 | ✅ 校验 `protocol === 'https:'` |
-  | `src/credentials.js`（callApig 使用者传入 url） | 使用方入参，SDK 不掌握语义 | ❌ 保持通用工具语义 |
-  | `src/credentials.js`（STS 模板拼接后调用） | 由前两项推导，已被入口校验覆盖 | ❌ 无需重复校验 |
+  | 调用点                                          | URL 来源                                                      | 是否需校验                             |
+  | ----------------------------------------------- | ------------------------------------------------------------- | -------------------------------------- |
+  | `src/credentials.js:103`（STS 换证）            | `cfg.region`/`cfg.stsAssumePath`，仅由 `configure()` 覆盖     | ✅ 在 `configure()` 校验，覆盖全部下游 |
+  | `src/oidc.js`（获取 ID Token）                  | 环境变量 `ACTIONS_ID_TOKEN_REQUEST_URL`，携带 Bearer 请求令牌 | ✅ 校验 `protocol === 'https:'`        |
+  | `src/credentials.js`（callApig 使用者传入 url） | 使用方入参，SDK 不掌握语义                                    | ❌ 保持通用工具语义                    |
+  | `src/credentials.js`（STS 模板拼接后调用）      | 由前两项推导，已被入口校验覆盖                                | ❌ 无需重复校验                        |
 - **实施内容**：
   1. `src/config.js`：新增 `REGION_PATTERN = /^[a-z0-9-]+$/` 与 `_validateOverride()`；`configure()`
      在写入前对全部 override 先校验，非法即抛 `TypeError`，避免配置被部分覆盖。
@@ -215,24 +216,24 @@
 
 ## 6. 非问题（3 条，待回复后关闭）
 
-| Issue | 判定依据（`security-non-issue-catalog.md`） | 已核实的缓解因素 |
-|---|---|---|
-| #6（+ 已关 #8，同根因） | 门禁设计：`pull_request_target` 检出并执行外部 PR 代码 | ① `pre-commit.yml:67` 的 pre-commit job **未引用任何 secrets**（`ROBOT_TOKEN` 只在 `pr-label-running`/`label-pr` 两个不检出 PR 代码的 job，`:30`/`:78`）；② 代码快照已无 `allow-unsafe-pr-checkout` 字段（见 `pre-commit.yml:42-46`）；③ 残留的 workflow 级 `permissions: pr: write` 收敛属平台侧整体加固，不在单仓整改范围 |
-| #9 | 自有门禁配置中的可变 tag 依赖 | `openlibing/pr-label-action@v1.0.0`、`openlibing-pre-commit-action` 为一方式插件；hook 来自 `gh_mirrors`/`GitHub_Trending` 镜像的官方上游。可顺手固定 SHA，但不作安全整改项 |
-| #12 | **新增模式**：捆绑三方库中条件性关闭证书校验（默认不可达） | `test-apig-action/dist/index.js:2161` `this._ignoreSslError = false` 为 `@actions/http-client` 默认值，仅当调用方传 `requestOptions.ignoreSslError` 才置 true；全仓（src 与 dist 调用侧）**无任何 `ignoreSslError`/`allowUnauthorized` 传参**，`:2551/:2575` 分支不可达。为三方库自带实现，属「三方库自带代码」噪音 |
+| Issue                   | 判定依据（`security-non-issue-catalog.md`）                | 已核实的缓解因素                                                                                                                                                                                                                                                                                                            |
+| ----------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #6（+ 已关 #8，同根因） | 门禁设计：`pull_request_target` 检出并执行外部 PR 代码     | ① `pre-commit.yml:67` 的 pre-commit job **未引用任何 secrets**（`ROBOT_TOKEN` 只在 `pr-label-running`/`label-pr` 两个不检出 PR 代码的 job，`:30`/`:78`）；② 代码快照已无 `allow-unsafe-pr-checkout` 字段（见 `pre-commit.yml:42-46`）；③ 残留的 workflow 级 `permissions: pr: write` 收敛属平台侧整体加固，不在单仓整改范围 |
+| #9                      | 自有门禁配置中的可变 tag 依赖                              | `openlibing/pr-label-action@v1.0.0`、`openlibing-pre-commit-action` 为一方式插件；hook 来自 `gh_mirrors`/`GitHub_Trending` 镜像的官方上游。可顺手固定 SHA，但不作安全整改项                                                                                                                                                 |
+| #12                     | **新增模式**：捆绑三方库中条件性关闭证书校验（默认不可达） | `test-apig-action/dist/index.js:2161` `this._ignoreSslError = false` 为 `@actions/http-client` 默认值，仅当调用方传 `requestOptions.ignoreSslError` 才置 true；全仓（src 与 dist 调用侧）**无任何 `ignoreSslError`/`allowUnauthorized` 传参**，`:2551/:2575` 分支不可达。为三方库自带实现，属「三方库自带代码」噪音         |
 
 > #12 需在 `security-non-issue-catalog.md` 新增「三方库条件性不安全默认值（不可达路径）」条目。
 
 ## 7. PR 分组策略（硬规则 4：同类同段合并）
 
-| PR | 关联 Issue | 改动文件 | 说明 |
-|---|---|---|---|
-| PR-A（已实施） | #7 #15 | `.gitcode/workflows/deploy.yml` | 同段代码（npmrc 写入/清理/权限），commit `1694a33` |
-| PR-B（已实施） | #10 #17 #21 | `src/oidc.js`、`src/http.js`、`src/credentials.js`、`test/` | 同一批日志出口脱敏与清洗，commit `1694a33` |
-| PR-C（已实施） | #16 | `src/signer-v11.js`、`test/` | 独立缺陷（header 取值路径），commit `1694a33` |
-| PR-D（已实施） | #20 | `.gitcode/actions/test-{obs,apig-obs}-action/index.js` + 重建 `dist` | Action 产物，commit `1694a33`，需统一自测 |
-| PR-E（已实施） | #18 | `src/config.js`、`src/oidc.js`、`test/` + 3 个 Action 的 `dist` | 按调用点补参数校验；分支 `fix-undici-fetch-fallback`，待建 PR |
-| PR-F（已实施） | #19 | `src/http.js`、`package.json`、`package-lock.json`、3 个 Action 的 `dist`/lock、`test/` | 零依赖回退替代升 undici；分支 `fix-undici-fetch-fallback`（`69091ff`），待建 PR |
+| PR             | 关联 Issue  | 改动文件                                                                                | 说明                                                                            |
+| -------------- | ----------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| PR-A（已实施） | #7 #15      | `.gitcode/workflows/deploy.yml`                                                         | 同段代码（npmrc 写入/清理/权限），commit `1694a33`                              |
+| PR-B（已实施） | #10 #17 #21 | `src/oidc.js`、`src/http.js`、`src/credentials.js`、`test/`                             | 同一批日志出口脱敏与清洗，commit `1694a33`                                      |
+| PR-C（已实施） | #16         | `src/signer-v11.js`、`test/`                                                            | 独立缺陷（header 取值路径），commit `1694a33`                                   |
+| PR-D（已实施） | #20         | `.gitcode/actions/test-{obs,apig-obs}-action/index.js` + 重建 `dist`                    | Action 产物，commit `1694a33`，需统一自测                                       |
+| PR-E（已实施） | #18         | `src/config.js`、`src/oidc.js`、`test/` + 3 个 Action 的 `dist`                         | 按调用点补参数校验；分支 `fix-undici-fetch-fallback`，待建 PR                   |
+| PR-F（已实施） | #19         | `src/http.js`、`package.json`、`package-lock.json`、3 个 Action 的 `dist`/lock、`test/` | 零依赖回退替代升 undici；分支 `fix-undici-fetch-fallback`（`69091ff`），待建 PR |
 
 > 实际交付形态：PR-A/B/C/D/E/F 全部落在同一分支 `fix-undici-fetch-fallback`
 > （`69091ff` → `911230a` → `1694a33`）。因 3 个 Action 的 `dist` 为共用产物（各 1.6MB 单文件），

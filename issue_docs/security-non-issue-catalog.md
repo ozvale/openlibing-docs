@@ -9,6 +9,7 @@
 保留在各仓定性文档（`issue_docs/<repo>/security-issues-analysis-*.md`）。
 
 **使用规则**：
+
 - 新一批扫描 issue 定性时先比对本库：命中同根因/同模式的直接复用结论排除，
   标注"非问题判定（catalog，决策日期）"
 - 新的模式级判定经用户确认后按文末模板回写本库
@@ -35,7 +36,7 @@
 ## 扫描器噪音：三方库自带文案 / CI 标准端点
 
 - **识别特征**：三方依赖源码内自带的文档示例 URL；`token.actions.
-  githubusercontent.com` 等 CI 平台标准 OIDC 端点。
+githubusercontent.com` 等 CI 平台标准 OIDC 端点。
 - **为什么不是问题**：三方库自带内容不在整改范围；CI 平台标准端点是公开
   协议约定，无敏感性。
 - **处置**：在 issue 定性文档标注噪音原因后排除。
