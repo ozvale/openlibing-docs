@@ -13,7 +13,7 @@
 
 ## 2. #158 出站解码缓冲统一
 
-`LicenseClientImpl.createWebClientForPlainText` 删除硬编码 `1024 * 1024 * 1024`，改为 `(int) DataSize.parse(maxInMemorySize).toBytes()` 复用 `spring.codec.max-in-memory-size`（256MB）。这是全仓最后一处 1GB 级解码上限；GZIP 解压的双上限（min(256MB, 压缩体×100)）此前已收敛。
+`LicenseClientImpl.createWebClientForPlainText` 删除硬编码 `1024 * 1024 * 1024`，改为 `(int) DataSize.parse(maxInMemorySize).toBytes()` 复用 `spring.codec.max-in-memory-size`。全局值固定 **256MB**（`application.properties` 显式配置），系经评估的业务决策：SBOM 数据体量大，10MB 级上限不适用。本项消除的是代码中最后一处**游离于配置治理之外的 1GB 级上限**；残余 DoS 面（大响应驻留堆内存、出站下载无并发限流）不因本项闭环，大文件下载流式化、出站并发限流、Spring 解码器 shim 移除确认已登记为待办（见 tasks.md）。GZIP 解压的双上限（min(256MB, 压缩体×100)）此前已收敛。
 
 ## 3. #90 依赖治理（漏洞依赖整改）
 
@@ -21,7 +21,7 @@
 - `openlibing-common` BOM `1.0.21.2 → 1.0.21.3` 统一治理；显式升级 `httpcore5/httpcore5-h2 5.4.3`（CVE-2026-54399/54428）、`joda-time 2.14.3`。
 - Log4j 版本治理移交 Spring Boot BOM（删除本地硬编码属性与 dependencyManagement 条目）。
 - 扫描清单逐项定性：`apr/jruby/jsch/jline/latencyutils/lz4/plexus-utils/analyzer` 均不在本仓 Maven 依赖树（扫描环境 OS 包/工具运行时），非业务运行时依赖。
-- kotlin 链路说明：`kotlin-stdlib-common 1.8.0` 由 okio-jvm 传递引入；kotlin-bom 2.x 对该 artifact 仅声明 `type=pom` 无法匹配 jar 依赖，管理失效为 Kotlin 生态已知残留；该 artifact 为空壳元数据、无可执行代码，无 CVE 实际风险（待向 common 仓反馈版本治理）。
+- kotlin 链路说明：`kotlin-stdlib-common 1.8.0` 由 okio-jvm 3.4.0 传递引入（dependency:tree 确认）；kotlin-bom 2.x 对该 artifact 仅声明 `type=pom` 无法匹配 jar 依赖，管理失效为 Kotlin 生态已知残留。空壳定性有实测证据：本地仓库 jar（`kotlin-stdlib-common-1.8.0.jar`）共 374 个 entry、**0 个 `.class` 文件**（仅 `.kotlin_metadata`/`.kotlin_builtins`/MANIFEST），无可执行字节码，无 CVE 攻击面。注意：#90 扫描所报 kotlin CVE（CVE-2020-29582 等）针对 2.0.20 完整 stdlib，与本 artifact 是两条不同链路。（版本治理仍待向 common 仓反馈。）
 
 ### 删 spring-boot-starter-parent 的两个连锁坑（已修）
 
@@ -34,9 +34,10 @@
 
 ## 4. #89 / #100 运行时域名外置 Nacos
 
-### 分类（78 项命中）
+### 分类（78 项命中，A 16 + B 1 + C 61 = 78）
 
-- **A 类（17 项，整改）**：vcs/uvp/sonatype/license.properties 全部域名 + `sbom.service.website.domain` → 本地值清空、key 保留占位，值迁各环境 Nacos `sbom` dataId；token 类维持 `${ENV_VAR:}` 占位不变。
+- **A 类（16 项，整改）**：vcs/uvp/sonatype/license.properties 全部域名 → 本地值清空、key 保留占位，值迁各环境 Nacos `sbom` dataId；token 类维持 `${ENV_VAR:}` 占位不变。
+- **清单外增量（1 项）**：`sbom.service.website.domain`（非本次 78 项命中，关联 #105）一并外置，故外置 key 合计 17 个。
 - **B 类（1 项，整改）**：`LicenseClientImpl` 的 `static final GITCODE_LICENSE_BASE_URL` 改 `@Value` 注入（static final 无法被外部配置覆盖）。
 - **C 类（61 项，噪音）**：licenseMap.yml 许可证静态映射、.mvn/settings.xml、gradle/dockerfile 镜像源、pre-commit hook 源、规则文档链接——构建链路/静态数据，非运行时出网。
 
@@ -46,7 +47,11 @@
 
 ### 验证
 
-临时 `NacosConfigCheckRunner`（ApplicationRunner）启动时打印全部外置 key 的解析结果；gamma 部署实测 17/17 `[OK]` 后该类已删除。注意 Nacos 值不能带反引号等杂质（URL 非法，运行时调用才暴露）。
+临时 `NacosConfigCheckRunner`（ApplicationRunner）启动时打印全部外置 key 的解析结果；**gamma 部署实测 17/17 `[OK]`**（16 A 类 + 1 增量项），验证后该类已删除；beta 与 gamma 共用 openlibing-beta namespace 的同一份 Nacos 值，gamma 结果对 beta 同样成立。**prod 侧 Nacos 值已录入但未随镜像部署实测**，登记为待办。注意 Nacos 值不能带反引号等杂质（URL 非法，运行时调用才暴露）。
+
+### 非 Nacos 环境空值兜底
+
+本地值清空后，域名取值完全依赖 Nacos 覆盖。当前所有部署 profile（local/beta/gama/prod）均配置 Nacos import，CI 仅构建不运行应用，故无实际受影响环境；但缺省空值在「Nacos 不可达 + 配置缺失」场景下会导致非守卫 client（LicenseClientImpl/SonatypeClientImpl 等）以空 base url 发起出站调用，运行期才暴露。缓解已登记待办：对 A 类关键 key 增加启动期非空 fail-fast 断言、其余出站 client 空值守卫对齐 `UvpClientImpl.needRequest()` 模式。
 
 ## 5. SpotBugs/findsecbugs 门禁加固
 

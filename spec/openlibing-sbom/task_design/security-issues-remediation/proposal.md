@@ -22,8 +22,8 @@ openlibing-sbom 批量安全扫描（SENINFO / SpotBugs+findsecbugs / SecBinaryC
 ## 三、验收标准
 
 1. 导出失败回执不透传 `IOException`/未知 `RuntimeException` 的 `e.getMessage()`；业务异常（SbomRuntimeException）文案保留；新增单测覆盖两条收敛路径。
-2. 全仓不存在 1GB 级出站响应解码上限，统一走 `spring.codec.max-in-memory-size`（256MB）配置。
-3. 生产源码（`src/main`）中不再含明文运行时域名；`@Value` 注入均可由 Nacos 按环境覆盖；缺省空值不影响应用启动。
+2. 全仓不存在游离于配置治理之外的 1GB 级出站响应解码上限，统一走 `spring.codec.max-in-memory-size`（256MB，经评估的业务决策）配置；大文件下载流式化、出站并发限流等残余 DoS 面登记为遗留待办，不在本项闭环范围。
+3. 生产源码（`src/main`）中不再含明文运行时域名；`@Value` 注入均可由 Nacos 按环境覆盖；缺省空值不影响应用启动。验证范围：beta/gamma 已随镜像实测通过（17/17），prod 为 Nacos 配置就绪、待部署期验证；启动期 fail-fast 域名非空校验未实施，登记为遗留待办。
 4. 依赖树中无 sshd-core；关键 CVE 组件升级至修复版本；升级前后依赖树对比无意外增减。
 5. pre-commit（SpotBugs+findsecbugs+bandit 等 14 钩子）全绿；CRLF/COMMAND_INJECTION 误报以注解+exclude 基线精确豁免，白名单检测保持在线。
 6. 各 Issue 评论区发布整改/定性记录。
