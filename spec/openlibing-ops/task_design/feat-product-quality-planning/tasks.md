@@ -1,4 +1,66 @@
-# 里程碑 CRUD 与事务修改日志实施计划
+# 质量策划目录查询实施计划（2026-11-05 当前增量）
+
+> 执行要求：按任务顺序使用 TDD；用户明确要求开发完成后不要提交代码，因此不执行 commit、push、PR 或归档操作。
+
+**目标：** 基于 `pq_basic_catalog` 和 `pq_milestone_catalog` 提供左侧基础目录树及指定里程碑的完整右侧目录树查询接口。
+
+**架构：** 沿用 `Controller → App Service → Domain Service → Mapper/MySQL`。每个接口一次查询当前范围全部节点，应用服务按 `parentId` 在内存组树，避免 N+1 和递归 CTE。
+
+**技术栈：** Java 21、Spring Boot、MyBatis、MySQL 8.0、JUnit 5、Mockito、AssertJ、standalone MockMvc。
+
+## 当前任务
+
+### Task 1：目录模型与 Mapper 契约
+
+**文件：**
+
+- Create: `domain/model/productquality/PqBasicCatalog.java`、`PqMilestoneCatalog.java`
+- Create: `domain/mapper/productquality/PqBasicCatalogMapper.java`、`PqMilestoneCatalogMapper.java`
+- Create: `resources/mapper/productquality/PqBasicCatalogMapper.xml`、`PqMilestoneCatalogMapper.xml`
+- Modify: `src/test/java/com/openlibing/ops/domain/mapper/productquality/ProductQualityCoreMapperXmlTest.java`
+
+- [ ] RED：断言左查询固定 `catalog_level=0`，右查询仅绑定 `milestone_id` 且不包含 `catalog_id` 查询条件，同时保留 `catalog_id` 响应映射；两表使用 `openlibing_quality` 前缀、无 `deleted` 条件、按 `sort_no,id` 排序。
+- [ ] 运行 Mapper 契约测试并确认因新实现不存在而失败。
+- [ ] GREEN：实现两个独立模型、Mapper 和 XML；不复用旧 `PqPlanCatalog`，模型不继承 `PqBaseModel`。
+- [ ] 重跑同一测试并确认通过。
+
+### Task 2：Domain 与 App Service 组树
+
+**文件：**
+
+- Create: `domain/service/productquality/ProductQualityCatalogDomainService.java`
+- Create: `api/response/productquality/CatalogResp.java`
+- Create: `app/service/productquality/ProductQualityCatalogService.java`
+- Create: 对应 Domain/App JUnit 测试。
+
+- [ ] RED：覆盖 Mapper 单 `milestoneId` 参数委托、白名单拒绝、基础/里程碑 DTO 映射、空结果、三级乱序父子挂载、稳定顺序和叶子 `children=[]`。
+- [ ] 运行 Domain/App 测试并确认失败。
+- [ ] GREEN：一次查询后以 ID 索引和父 ID 关系组树；基础根为 level 0，里程碑根为 `parentId=null`，不跨里程碑查询范围挂接节点。
+- [ ] 重跑同一测试并确认通过。
+
+### Task 3：Controller 查询契约
+
+**文件：**
+
+- Create: `api/controller/ProductQualityCatalogController.java`
+- Create: `src/test/java/com/openlibing/ops/api/controller/ProductQualityCatalogControllerTest.java`
+
+- [ ] RED：覆盖两个 GET 路由、`Result<List<CatalogResp>>`、嵌套 `children` JSON、右接口必填正整数 `milestoneId` 参数及无写操作日志。
+- [ ] 运行 Controller 测试并确认失败。
+- [ ]  GREEN：实现 `/projects/product-quality/catalogs/basic` 和 `/projects/product-quality/catalogs/milestone`，无效参数不调用 Service。
+- [ ] 重跑同一测试并确认通过。
+
+### Task 4：回归验证与本地交付
+
+- [ ] 运行所有 `ProductQualityCatalog*Test` 和 `ProductQualityCoreMapperXmlTest`。
+- [ ] 运行 `mvn "-Dtest=ProductQuality*Test" test` 回归。
+- [ ] 运行 `mvn spotless:apply` 后重跑定向测试，再运行 checkstyle 和跳过测试的编译。
+- [ ] 执行 `git diff --check`、`git status --short`，核对变更范围；无 MySQL 时明确未做真实数据库集成验证。
+- [ ] 最终报告接口、变更文件、实际测试证据和未验证项，明确未提交代码，不进入 Phase 4/5。
+
+---
+
+# 历史计划：里程碑 CRUD 与事务修改日志实施计划
 
 > 执行要求：按任务顺序使用 TDD；本轮用户明确要求全程不提交代码，因此不执行 commit、push、PR 或归档操作。
 

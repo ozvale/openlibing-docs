@@ -51,6 +51,31 @@
 
 采用 RED → GREEN → REFACTOR：先更新 SQL/Mapper 契约测试并观察失败，再实现模型和 DDL；先写 Domain/App/Controller 失败测试，再实现对应代码。覆盖 CRUD、归属隔离、名称唯一、字段校验、白名单权限、修改/删除日志快照、日志失败异常传播和事务注解。运行定向测试、`ProductQuality*Test` 回归及编译/静态检查；本机没有 MySQL 时明确标注未做真实数据库事务验证。全程不 commit、不 push、不创建 PR。
 
+## 1.2 本轮目录查询增量设计（2026-11-05，优先于后文）
+
+### 数据与查询边界
+
+- `pq_basic_catalog` 字段为 `id/parent_id/catalog_en_name/catalog_cn_name/catalog_level/sort_no/optional_flag` 及审计字段，无 `deleted`。左接口一次查询 `catalog_level=0` 的全部记录，应用层按 `parent_id` 组树。
+- `pq_milestone_catalog` 在相同目录字段外增加 `milestone_id INT` 和 `catalog_id BIGINT UNSIGNED`，无 `deleted`。`catalog_id` 是当前节点自身的目录 ID，不作为左侧树查询条件。右接口一次查询指定 `milestone_id` 的全部 1～3 级记录，应用层按 `id/parent_id` 组树，根条件为 `parent_id IS NULL`。
+- 两张表均使用 `openlibing_quality` 库名前缀。Mapper 使用 MyBatis 参数绑定，排序固定 `ORDER BY sort_no ASC, id ASC`；不采用逐节点查询的 N+1，也不引入递归 CTE。
+- 新增独立 `PqBasicCatalog`、`PqMilestoneCatalog` 及对应 Mapper/XML，不复用旧 `PqPlanCatalog` 或 `pq_plan_catalog`。模型不继承包含逻辑删除字段的 `PqBaseModel`。
+
+### API 与分层
+
+| 方法 | 路径 | 参数 | 响应 |
+|---|---|---|---|
+| GET | `/projects/product-quality/catalogs/basic` | 无 | `Result<List<CatalogResp>>` |
+| GET | `/projects/product-quality/catalogs/milestone` | 必填正整数 `milestoneId` | `Result<List<CatalogResp>>` |
+
+- `CatalogResp` 包含 `id/milestoneId/catalogId/parentId/catalogEnName/catalogCnName/catalogLevel/sortNo/optionalFlag/children`；基础目录的 `milestoneId/catalogId` 为 `null`，所有节点的 `children` 初始化为空数组。
+- `ProductQualityCatalogController` 仅负责参数校验和统一响应；`ProductQualityCatalogService` 负责 `canRead`、DTO 转换和内存组树；`ProductQualityCatalogDomainService` 委托两个 Mapper 查询。
+- 组树以 ID 建索引、以 `parentId` 建子节点关系，形成完整父子层级，仅返回当前里程碑查询范围内的根节点。若子记录先于父记录出现仍能正确挂载；空查询返回空列表；叶节点保持空 `children`。
+- 两个 GET 均不加 `@LogApi`，不引入写事务、项目 ID 参数或项目归属校验。
+
+### 测试与交付约束
+
+先新增 Mapper XML 契约、Domain、App 和 standalone MockMvc 失败测试并观察 RED，再写最小实现观察 GREEN。覆盖固定查询条件、参数绑定、排序、权限拒绝、跨里程碑隔离、三级乱序父子节点、空结果、非空 `children` 和参数校验。随后运行目录定向测试、`ProductQualityCoreMapperXmlTest`、`ProductQuality*Test` 回归、格式化后重测、checkstyle/compile 与 `git diff --check`。无真实 MySQL 时明确不声称数据库集成验证通过；全程不 commit、不 push、不创建 PR。
+
 ## 2. 方案选择
 
 采用**全固定表模型**：每类 Issue 已定义字段的业务数据使用独立表、独立实体和强类型请求/响应；目录使用统一模板和实例表；权限、归属校验、批量删除和日志快照使用公共支撑组件。

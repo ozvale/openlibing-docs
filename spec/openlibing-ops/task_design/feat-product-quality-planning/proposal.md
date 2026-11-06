@@ -20,6 +20,27 @@
 6. 权限复用当前 `ProductQualityPermissionService.canRead/canWrite` 全局白名单和 token-only 用户身份，不在本轮实现旧方案的项目成员/项目质量负责人角色矩阵。
 7. 本轮全程不提交代码、不推送、不创建 PR；后续其他策划模块仍按原需求另行实施和验收。
 
+## 1.2 本轮目录查询增量基线（2026-11-05，优先于后文）
+
+本轮在既有里程碑代码基础上，只增加基础目录和里程碑目录的只读查询，不交付策划初始化、目录写入或其他策划业务表接口：
+
+1. 以 `V20261104__product_quality_planning.sql` 中 `pq_basic_catalog` 和 `pq_milestone_catalog` 当前 DDL 为准。前者 `catalog_level=0` 的记录构成左侧目录；后者按 `milestone_id` 隔离，`catalog_id` 是当前节点自身的目录 ID 而非左侧树目录 ID，保存从 1 级开始的右侧目录，不保存左侧 0 级节点。
+2. 新增 `GET /projects/product-quality/catalogs/basic`，无需业务查询参数，返回全部左侧目录树。
+3. 新增 `GET /projects/product-quality/catalogs/milestone?milestoneId=`，`milestoneId` 为必填正整数，返回所选里程碑的全部右侧目录树。
+4. 两个接口均返回 `Result<List<CatalogResp>>`。每个节点包含目录标识、父节点、名称、层级、排序号、可选标记和非空 `children` 数组；右侧节点还返回 `milestoneId/catalogId`。
+5. 同级按 `sort_no ASC, id ASC` 稳定排序。数据库中没有记录时返回空数组；不根据目录名称推测或补造节点。
+6. 查询权限复用当前 `ProductQualityPermissionService.canRead` 全局白名单，GET 不写业务变更日志；本轮不增加项目归属或项目成员角色校验。
+7. 全程不提交代码、不推送、不创建 PR；完成后保留本地变更供用户自测。
+
+### 本轮验收标准
+
+- [ ] 左侧接口仅返回 `pq_basic_catalog` 的 0 级根节点及其下级节点，响应数组中每个节点都有 `children`。
+- [ ] 右侧接口严格按 `milestoneId` 查询该里程碑的全部目录，不使用 `catalogId` 过滤，不混入其他里程碑的数据。
+- [ ] 右侧按 `id/parent_id` 父子层级返回 1～3 级目录树，根节点为当前范围内 `parent_id IS NULL` 的记录，顺序稳定，叶子节点 `children=[]`。
+- [ ] 两个接口均执行白名单读权限校验；无效参数不调用业务服务；空结果返回成功空数组。
+- [ ] Mapper SQL、应用服务组树和 Controller 契约测试通过，既有 productquality 测试无本轮回归。
+- [ ] 所有代码和文档修改仅保留在工作区，未 commit、push 或创建 PR。
+
 ## 2. 背景与问题
 
 OPS 当前没有项目里程碑主数据，也没有按项目、里程碑维护质量策划数据的能力。Issue #328 要求增加质量管理入口，首先交付质量策划后端能力：维护里程碑，为一个里程碑初始化一份质量策划，提供三级策划目录、权限控制和各策划子模块的增删改查、批量删除及操作日志。
