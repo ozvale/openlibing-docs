@@ -85,6 +85,7 @@
 - `FullSummaryOperation`：
   - skip 使用 `long` 计算，避免整型溢出；
   - 分页参数非法、`skip < 0` 或 `skip > Integer.MAX_VALUE` 抛 `PageSkipException`；
+  - 上述校验在最终实现中保留（机机/APIG summary 与 `queryFullSummaryList`），不随批次 5 改用 `PageParams.resolveSkip` 的静默截断；`PageParams.MAX_SKIP`（1,000,000）截断仅作用于其他分页链路；
   - 分页参数缺失时不再进入全量查询，先限制最多返回 1000 条（批次 5 统一收敛到 `PageParams.MAX_UNPAGED_SIZE`）。
 - `StaticAlarmServiceImpl.searchRepos`：当前代码已将 `limit` 裁剪到 `[1, 50]`（`Math.max(1, Math.min(limit, 50))`），本次不重复改造，仅补回归测试；当前 Controller 未暴露 `limit` 入参，若后续暴露需同步加 `@Min(1) @Max(50)`。
 
@@ -97,12 +98,15 @@ public final class PageParams {
   public static final int DEFAULT_PAGE_SIZE = 20;
   public static final int MAX_PAGE_SIZE = 100;
   public static final int MAX_UNPAGED_SIZE = 1000;
+  public static final long MAX_SKIP = 1_000_000L;
 
   public static long resolveSkip(Integer pageNum, Integer pageSize);
   public static int resolveLimit(Integer pageSize);
   public static int resolveUnpagedLimit(Integer requested);
 }
 ```
+
+- `resolveSkip` 对超过 `MAX_SKIP` 的 skip 静默截断，作为通用分页链路的深分页兜底；#373 涉及的机机/APIG summary 与 `queryFullSummaryList` 不适用该兜底，仍按上文抛 `PageSkipException`。
 
 各链路统一接入（共 **10 个端点**，对应原 Issue 11 条链路中剔除已下线 Webhook 接口后的 10 条）：
 
@@ -274,8 +278,8 @@ public final class PageParams {
 
 ### 2.4 批次 4
 
-1. 核对现有 Handler 与 12 个接口的匹配关系，产出覆盖矩阵。
-2. 新增 `ShieldLogHandler` 覆盖 6 个 shield 接口。
+1. 核对现有 Handler 与 11 个在线接口的匹配关系，产出覆盖矩阵。
+2. 新增 `ShieldLogHandler` 覆盖 5 个 shield 接口。
 3. 新增 `StaticAlarmAssignLogHandler` 覆盖 `assign-owner`。
 4. 扩展 `RuleSetLogHandler` 覆盖 `default/template`、`modify/createUser`。
 5. 输出网关菜单 `write_log` 配置清单，交部署侧执行。

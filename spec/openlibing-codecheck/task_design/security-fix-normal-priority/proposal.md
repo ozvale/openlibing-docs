@@ -43,7 +43,7 @@
    - **`.mvn/settings.xml` 不修改**（用户明确要求）。
 
 4. **批次 4（审计日志补齐）**
-   - #363：核对 12 个写接口的 common 操作日志 Handler 覆盖情况；新增 shield 系列与 assign-owner 的 Handler，补齐 default/template、modify/createUser 的匹配规则；配套网关菜单 `write_log` 配置（部署侧）。
+   - #363：核对 11 个在线写接口（shield 5 个；`shield-all-result` 已由 `bdc9636b` 下线）的 common 操作日志 Handler 覆盖情况；新增 shield 系列与 assign-owner 的 Handler，补齐 default/template、modify/createUser 的匹配规则；配套网关菜单 `write_log` 配置（部署侧）。
    - 现有 `RuleSetLogHandler`、`SensitiveLogHandler` 已覆盖规则集与敏感词写入，优先复用，不重复造轮子。
 
 5. **批次 5（资源上限，最后实施）**
@@ -80,7 +80,7 @@
 - [ ] #385：`shieldReferral` / `shieldRevoke` 缺失 `notifyType`、`updateRule` 缺失 `taskId`、`exportBoardByFile` 缺失必填字段均被拒绝。
 - [ ] #385：合法请求行为不变，现有 Controller 测试通过。
 - [ ] #373：机机接口 `pageNum=0`、`pageSize=101`、仅传一个分页参数均返回参数错误。
-- [ ] #373：`pageNum=Integer.MAX_VALUE` 返回分页参数错误（`PageSkipException`，错误码 51123），不产生负 skip 或 500。
+- [ ] #373：`pageNum=Integer.MAX_VALUE` 返回分页参数错误（`PageSkipException`，错误码 51123），不产生负 skip 或 500。最终实现保留该链路（机机/APIG summary、`queryFullSummaryList`）的分页参数校验，不使用 `PageParams.MAX_SKIP` 的静默截断。
 - [ ] #373：合法分页查询结果与修改前一致。
 
 ### 批次 3
@@ -153,5 +153,10 @@
   - https://gitcode.com/openlibing/openlibing-codecheck/issues/247
 - 暂不修复 Issue：
   - https://gitcode.com/openlibing/openlibing-codecheck/issues/249
-- 业务 PR：<待创建>
-- Docs PR：<待创建>
+- 业务 PR：
+  - 批次 1：https://gitcode.com/openlibing/openlibing-codecheck/merge_requests/393
+  - 批次 2：https://gitcode.com/openlibing/openlibing-codecheck/merge_requests/394
+  - 批次 3：https://gitcode.com/openlibing/openlibing-codecheck/merge_requests/395
+  - 批次 4：https://gitcode.com/openlibing/openlibing-codecheck/merge_requests/396
+  - 批次 5：https://gitcode.com/openlibing/openlibing-codecheck/merge_requests/397
+- Docs PR：https://gitcode.com/openlibing/openlibing-docs/merge_requests/1296
