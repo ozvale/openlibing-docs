@@ -17,7 +17,7 @@
 
 1. 方法级 `@ProjectAuth`（`handlerMethod.getMethodAnnotation`）优先；
 2. 方法级不存在时，取类级（`handlerMethod.getBeanType().getAnnotation`）；
-3. 记录来源 `fromClassLevel`，后续取参与 SQL 选择由来源决定。
+3. 记录来源 `fromClassLevel`，后续取参口径由来源决定（方法级取 query/body，类级取路径变量）；两级校验使用同一套 `hasPermission` SQL。
 
 ### 2.2 校验顺序（AND 叠加）
 
@@ -30,7 +30,7 @@ preHandle:
   ... 现有流水线级校验 ...
 ```
 
-删除原 `return true` 后，两者同时存在时项目级先校验、流水线级后校验，任一失败即拒绝。
+删除原 `return true` 后，两者同时存在时项目级先校验、流水线级后校验，任一失败即拒绝。类级命中时，流水线级校验沿用的 projectId 同样取路径变量，不再回读 query/body，避免两级校验使用不同的项目口径。
 
 该规则对方法级与类级 `@ProjectAuth` 一视同仁。已核实：`PipelineControllerV2` 中 3 个方法级 `@ProjectAuth`（`/updatePipelineConfig`、`/batchUpdatePipelineConfig`、`/cancelPipelineQueue`）均**未**同时标注 `@CheckPermission`，`@CheckPermission` 的 30 处均不在这些方法上；全仓 Controller 中也不存在同时标注两者的方法。因此删除提前返回后，现有端点判定结果不变；AND 叠加只对将来新增的「两类注解共存」方法生效。
 
@@ -42,6 +42,8 @@ preHandle:
 | 类级（新增）   | 仅 `HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE` 中的 `projectId` | 直接 fail-closed（`MISSING_PROJECT_ID`），**不**回落 query/body |
 
 userId 统一只取网关注入的 query 参数（`userIdKey`），不采信请求体。
+
+`@ProjectAuth` 来自类级时，同一请求的流水线级校验复用该路径变量 projectId，不再按方法级规则从 query/body 取值。
 
 ### 2.4 SQL 选择
 
@@ -106,6 +108,8 @@ private static final Pattern GATEWAY_PULLS_PATTERN =
 | 缺 userId      | 401  | `MISSING_USER_ID`    |
 | 缺 projectId   | 400  | `MISSING_PROJECT_ID` |
 | 菜单权限不通过 | 403  | `PERMISSION_DENIED`  |
+
+类级场景下另有一条 fail-closed 分支同样归入 403 `PERMISSION_DENIED`：请求匹配模式缺失（取不到 `BEST_MATCHING_PATTERN_ATTRIBUTE` 时拒绝，避免菜单 URL 退化为根路径匹配）。路径变量缺失按上表返回 400 `MISSING_PROJECT_ID`（见 2.3）。
 
 与现有一致，不改动。
 

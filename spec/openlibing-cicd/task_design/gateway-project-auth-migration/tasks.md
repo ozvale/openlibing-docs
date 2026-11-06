@@ -30,6 +30,8 @@
 - [x] `AuthInterceptorTest` 补类级用例：
   - [x] 类级注解命中 + 路径变量 projectId + 有权限 → 放行
   - [x] 类级注解命中 + 路径变量缺失 → fail-closed
+  - [x] 类级注解命中 + 缺少 `URI_TEMPLATE_VARIABLES_ATTRIBUTE` → fail-closed
+  - [x] 类级注解命中 + 缺少 `BEST_MATCHING_PATTERN_ATTRIBUTE` → 403 拒绝，不降级为根路径匹配
   - [x] 类级注解命中 + 无权限 → 403 `PERMISSION_DENIED`
   - [x] 类级注解命中 + 缺 userId → 401 `MISSING_USER_ID`
   - [x] 类级 + `@CheckPermission` 同时存在且项目级通过、流水线级拒绝 → 拒绝（AND 叠加）
@@ -39,7 +41,7 @@
   - [x] 方法级 `@ProjectAuth` 行为不变（query/body 取参，优先于类级且不坍缩）
 - [x] 改造后回归：存量 50 个用例的用例体不改，仅依赖上述 fixture stub，全部通过；新增用例全部通过
 - [x] 守卫测试：用 `ClassPathScanningCandidateComponentProvider` 扫描 `com.openlibing.cicd.business.controller`（不启动 Spring 上下文、不依赖 DB），所有 `/project/{变量}/**` 形态端点必须带方法级或类级 `@ProjectAuth`，类级注解所在类的映射路径必须包含名为 `projectId` 的路径变量，并断言端点总数（49）
-- [x] 执行 `mvn -o clean test -Dtest=AuthInterceptorTest`（该仓为单模块仓，不用 `-pl`），61 例全通过
+- [x] 执行 `mvn -o clean test -Dtest=AuthInterceptorTest`（该仓为单模块仓，不用 `-pl`），63 例全通过
 
 ## 四、交付与验证
 
