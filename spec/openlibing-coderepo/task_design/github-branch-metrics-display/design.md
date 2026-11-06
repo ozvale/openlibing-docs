@@ -1,7 +1,7 @@
 # 分支管理页 GitHub 度量结果展示适配（github-branch-metrics-display） · 设计文档
 
 > 所属 FE：代码度量指标支持 GitHub 仓库扫描与展示（[Issue #74](https://gitcode.com/openlibing/code-metrics-action/issues/74)）。
-> 配套设计：[code-metrics-action GitHub 适配](../../../code-metrics-action/task_design/github-adaptation/design.md)（插件侧平台识别、OIDC、结果摘要、OBS 桶隔离）。本 US 承接平台侧（openlibing-coderepo）的接收与展示链路。
+> 配套设计：code-metrics-action GitHub 适配（插件侧平台识别、OIDC、结果摘要、OBS 桶隔离）。本 US 承接平台侧（openlibing-coderepo）的接收与展示链路。
 
 ## 1. 方案设计
 
