@@ -79,7 +79,7 @@ GitHub 代码仓触发 workflow / pre-commit
 ### 2.3 认证与上传逻辑
 
 - OIDC 免密换证：workflow 声明 `permissions: id-token: write`，身份提供商 `GitHubActions`、信任委托 `github-actions`（与 GitCode 的 `gitcode-actions` 隔离）；
-- OBS 桶按平台自动切换为 `openlibing-github-action`，对象 key 结构与 GitCode 保持一致（`eslint-results/{owner}/{repo}/{runId}/eslint.sarif`）；
+- OBS 桶按平台自动切换为 `openlibing-github-action`，对象 key 结构与 GitCode 保持一致（beta 实测形如 `eslint-results/{repo}/{轮次}/{runId}/eslint.sarif`，与 §2.6 实测记录一致）；
 - 回调 `source=GITHUB_ACTION`、`env_type=beta`；AK/SK 输入已从插件移除，全链路无静态凭证。
 
 ### 2.4 前端展示逻辑
@@ -90,13 +90,14 @@ GitHub 代码仓触发 workflow / pre-commit
 
 ### 2.5 边界与异常处理
 
-| 场景                            | 行为                                                                                                             |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| 未提交 `package-lock.json`      | `setup-node` 的 `cache: npm` 前置条件不满足，工作流启动即失败；lock 文件必须随仓提交（实测首跑踩坑）             |
-| pre-commit 场景 ESLint 退出非零 | 预期行为（存在违规即非零）；upload 步骤声明 `if: always()`，由 pre-commit-action 兜底收集已生成的 SARIF 继续上传 |
-| fork PR 触发                    | GitHub 不下发 `ACTIONS_ID_TOKEN_REQUEST_URL`，OIDC 换证失败；测试与验证必须使用同仓分支                          |
-| 插件分支不可达                  | `Unable to resolve action` 直接失败；`source-platform-detection` 为验证期临时分支，稳定后收敛为 tag              |
-| 代码无违规                      | ESLint 退出码 0，SARIF 仍生成（runs 为空数组），链路正常入库、页面 0 条                                          |
+| 场景                              | 行为                                                                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 未提交 `package-lock.json`        | `setup-node` 的 `cache: npm` 前置条件不满足，工作流启动即失败；lock 文件必须随仓提交（实测首跑踩坑）                                        |
+| pre-commit 场景 ESLint 退出非零   | 预期行为（存在违规即非零）；upload 步骤声明 `if: always()`，由 pre-commit-action 兜底收集已生成的 SARIF 继续上传                            |
+| workflow 全量扫描 ESLint 退出非零 | 同为预期行为；`eslint-scan.yml` 的 upload 步骤同样声明 `if: always()`，ESLint 违规不阻断 SARIF 上传（实测 32 条违规场景两工作流均 success） |
+| fork PR 触发                      | GitHub 不下发 `ACTIONS_ID_TOKEN_REQUEST_URL`，OIDC 换证失败；测试与验证必须使用同仓分支                                                     |
+| 插件分支不可达                    | `Unable to resolve action` 直接失败；`source-platform-detection` 为验证期临时分支，稳定后收敛为 tag                                         |
+| 代码无违规                        | ESLint 退出码 0，SARIF 仍生成（runs 为空数组），链路正常入库、页面 0 条                                                                     |
 
 ### 2.6 验证情况
 
