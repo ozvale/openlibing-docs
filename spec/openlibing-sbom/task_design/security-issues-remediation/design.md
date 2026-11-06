@@ -2,7 +2,7 @@
 
 ## 1. #170 导出回执异常文案收敛
 
-[SbomExportServiceImpl.processExport](file:///d:/CODE/JAVACODE/AIDev/openlibing/openlibing-sbom/sbom-web/src/main/java/org/opensourceway/sbom/service/sbom/impl/SbomExportServiceImpl.java) catch 链按仓内异常收敛约定分层：
+[SbomExportServiceImpl.processExport](https://gitcode.com/openlibing/openlibing-sbom/blob/sbom-dev/sbom-web/src/main/java/org/opensourceway/sbom/service/sbom/impl/SbomExportServiceImpl.java)（`sbom-web/src/main/java/org/opensourceway/sbom/service/sbom/impl/SbomExportServiceImpl.java`）catch 链按仓内异常收敛约定分层：
 
 - `SbomRuntimeException` → 保留 `e.getMessage()`（业务语义文案，约定允许对外暴露）
 - `IOException` → 固定文案「导出文件生成失败，请重试」
