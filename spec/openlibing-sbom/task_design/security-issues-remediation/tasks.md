@@ -38,13 +38,15 @@
 - [x] C 类 61 项噪音定性归档
 - [x] Nacos 侧配置录入（openlibing-beta / openlibing-prod 两个 namespace 的 `sbom` dataId）
 - [x] gamma 部署验证 17/17 `[OK]`（16 A 类 + 1 增量；临时 NacosConfigCheckRunner，验证后删除）
-- [x] Issue #89、#100 评论区发布整改/定性记录（#100 弱口令定性为环境侧，建议测试资源改密）
+- [x] Issue #89、#100 评论区发布整改/定性记录（#100 弱口令定性为测试用例假口令，非真实凭据、不与任何真实实例重合，无占位化/轮换需求）
 
-## 门禁加固
+## 门禁规则豁免（含依据）与工具链整改
 
-- [x] root pom 激活 findsecbugs-plugin + sb-contrib
-- [x] CRLF 误报：4 类 `@SuppressFBWarnings` + spotbugs-annotations(provided)；白名单检测保持在线
-- [x] COMMAND_INJECTION：`spotbugs-exclude.xml` 方法级豁免 SignatureUtil.sign
+> 说明：规则豁免/检测抑制属门禁弱化操作，以下各项均记录判定依据与缓解位置；豁免仅覆盖列明的方法/文件，新增代码不受豁免。
+
+- [x] root pom 激活 findsecbugs-plugin + sb-contrib（真实门禁增强）
+- [x] CRLF 误报：4 类 `@SuppressFBWarnings` + spotbugs-annotations(provided)，justification 注明运行时 log4j2 `%enc{CRLF}`/`%replace` 清洗兜底；include 白名单该 pattern 保持在线，豁免仅限列明 4 类
+- [x] COMMAND_INJECTION 豁免：`spotbugs-exclude.xml` 以 Class+Method 级 Match 仅覆盖 `SignatureUtil.sign` 两个重载，注释写明判定依据与缓解位置——数组式 `ProcessBuilder.command()` 不经 shell；`file` 上游 `sign(String,byte[])` 已 normalize+startsWith(tmpDir) 白名单校验；`client/clientConfig/keyName` 为 `@Value` 服务端配置且 `checkFile()` 做存在性校验。残留面（`sign(String)` 重载为 public、可被未来调用方传入任意路径）在此记录；不单独立 Issue，失效前提（命令改字符串拼接或引入用户可控入参须删除豁免重新评估）写入豁免注释。
 - [x] bandit：branch-diff.py 去 shell=True；run-mvn.py nosec 独立行
 - [x] 清理 root 模块陈旧 `target/classes`（56 处误报的本地根因）
 - [x] `pre-commit run --all-files` 14/14 全绿

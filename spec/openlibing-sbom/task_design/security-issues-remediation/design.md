@@ -53,11 +53,11 @@
 
 本地值清空后，域名取值完全依赖 Nacos 覆盖。当前所有部署 profile（local/beta/gama/prod）均配置 Nacos import，CI 仅构建不运行应用，故无实际受影响环境；但缺省空值在「Nacos 不可达 + 配置缺失」场景下会导致非守卫 client（LicenseClientImpl/SonatypeClientImpl 等）以空 base url 发起出站调用，运行期才暴露。缓解已登记待办：对 A 类关键 key 增加启动期非空 fail-fast 断言、其余出站 client 空值守卫对齐 `UvpClientImpl.needRequest()` 模式。
 
-## 5. SpotBugs/findsecbugs 门禁加固
+## 5. SpotBugs/findsecbugs 门禁调整（激活 + 规则豁免）
 
-- root pom 激活 `findsecbugs-plugin`（`findsecbugs.version` 属性此前已声明但未挂载）与 `sb-contrib`。
+- root pom 激活 `findsecbugs-plugin`（`findsecbugs.version` 属性此前已声明但未挂载）与 `sb-contrib`（真实门禁增强）。
 - **CRLF_INJECTION_LOGS 56 处**：该检测器对一切非字面量 logger 参数告警、不做污点分析，无法通过 Sanitizer 包装消除（已实验验证）；运行时防护已由 log4j2 `%enc{%msg}{CRLF}`（文件）/`%replace`（console）落地。处置：`SbomController`/`ApigController`/`InternalController`/`SignatureUtil` 4 个类加 `@SuppressFBWarnings("CRLF_INJECTION_LOGS")`（justification 注明运行时清洗兜底）；新增 `spotbugs-annotations` provided 依赖；include 白名单保持该 pattern 在线，其他类照常扫描。
-- **SignatureUtil COMMAND_INJECTION**：误报（`ProcessBuilder` 数组式 exec 无 shell、临时目录路径白名单校验、输入仅来自配置），以新建 `spotbugs-exclude.xml`（挂载为 `excludeFilterFile`）方法级豁免。
+- **SignatureUtil COMMAND_INJECTION 豁免（含依据）**：`spotbugs-exclude.xml` 以 Class+Method 级 Match 仅覆盖 `sign` 两个重载。判定依据：数组式 `ProcessBuilder.command()` 不经 shell、无拼接注入面；缓解位置：`file` 上游 `sign(String,byte[])` 的 normalize+startsWith(tmpDir) 白名单校验、`client/clientConfig/keyName` 为 `@Value` 服务端配置并由 `checkFile()` 做存在性校验。注释同步写入 exclude 文件。**残留面**：`sign(String)` 重载为 public，未来调用方可传入任意路径；若命令改为字符串拼接或引入用户可控入参，须删除豁免重新评估（失效前提已写入豁免注释，不单独立 Issue）。
 
 ## 6. bandit 整改
 
