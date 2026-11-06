@@ -71,14 +71,14 @@ GitHub workflow 触发（手动 / push / PR）
   → pre-commit-action@main 读取 .pre-commit-config.yaml 执行 cargo-clippy local hook
     （pass_filenames: false，钩子内 cargo clippy | clippy-sarif 输出到 report-dir）
   → push / 手动：upload-sarif-action 收集 sarif-files 输出，上传 OBS + 回调（归档语义）
-  → PR：跳过上传步骤（门禁语义，见 2.4）
+  → PR：跳过上传步骤（门禁语义，见 2.3）
 ```
 
 ### 2.2 平台识别与上下文映射
 
 复用 clang-tidy US 已交付的插件能力，本 US 无代码改动。平台判定 `GITHUB_ACTIONS=true`；回调字段映射（`repoUrl`/`pipelineId=GITHUB_JOB`/`pipelineName=GITHUB_WORKFLOW`/`pipelineRunId=GITHUB_RUN_ID`/`commitId=GITHUB_SHA` 等）与 gosec US 一致，不再赘述。
 
-### 2.4 触发事件与门禁/归档语义
+### 2.3 触发事件与门禁/归档语义
 
 | 触发                         | pre-commit 工作流                                                                                                                                                                                                                                          | 全量扫描工作流                    |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
