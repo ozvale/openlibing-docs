@@ -33,7 +33,7 @@
 ### #18 / #16 SARIF uri 驱动的任意文件读取（同根因，合并处理）【高危】
 
 - **状态**：✅ **已实施（2026-10-16，用户批准边界校验方案），待自测**（fix-issue18-16-uri-boundary 分支，commit 6988409，已合入 fix-security-remediation）
-- **位置**：`resolveSourceFile`，[index.js:470-504](file:///e:/work/huawei/fork/upload-sarif-action/index.js#L470-L504)
+- **位置**：`resolveSourceFile`，`upload-sarif-action/index.js:470-504`
 - **核实**：真实。修复前三条读取路径均无 workspace 边界校验：
   1. `file://` 前缀 → `decodeURIComponent` 后直接 `fs.existsSync` 读取
   2. 绝对路径（盘符或 `/` 开头）→ 直接读取

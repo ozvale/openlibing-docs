@@ -2,7 +2,7 @@
 
 - **归档日期**: 2026-10-31
 - **关联**: [proposal.md](./proposal.md) / [design.md](./design.md) / [tasks.md](./tasks.md)
-- **状态口径**: 整改 PR 均已合入默认分支；**部分 issue 仍处「须评审 / 暂缓 / 待补漏」状态，尚未全部闭环**，遗留项见第 4 节。
+- **状态口径**: 多数整改 PR 已合入默认分支，仍有 open 的在途整改 PR（清单见下）；**部分 issue 仍处「须评审 / 暂缓 / 待补漏」状态，尚未全部闭环**，遗留项见第 4 节。
 
 ## 1. 交付结果总览
 
@@ -17,7 +17,10 @@
 | code-metrics-action                 | 安全 PR 已全部合入（open 列表已无安全项） | `issue_docs/code-metrics-action/security-issues-analysis-20261027.md`                 |
 | huaweicloud-oidc-sdk-nodejs         | #11、#12、#13、#14                        | `issue_docs/huaweicloud-oidc-sdk-nodejs/security-issues-analysis-20261026.md`         |
 
-> PR 状态以 2026-10-31 `gitcode pr list -s merged` 实测为准。各仓当前 open PR 均为非安全类（api-scan workflow、UT 门禁、report_dir 重命名等）。
+> PR 状态以 2026-10-31 `gitcode pr list` 实测为准。**在途安全类 open PR**：huaweicloud-oidc-sdk-nodejs
+> #19 → PR #15、#18 → PR #17（参数校验）/ PR #16（强制 https）；upload-sarif-action #31 → PR #24。
+> 其余 open PR 为非安全类（api-scan workflow、UT 门禁、report_dir 重命名等）。各仓明细与
+> issue 状态以 `issue_docs/` 下对应定性文档为准。
 
 ## 2. 处置结果统计口径
 

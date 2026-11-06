@@ -14,7 +14,7 @@
   随主副本同步更新
 
 人工鉴定的**非问题判定**另见 skill 内置
-[security-non-issue-catalog.md](../../.agents/skills/gitcode-security-remediation/references/security-non-issue-catalog.md)。
+[security-non-issue-catalog.md](./security-non-issue-catalog.md)。
 
 ---
 
@@ -214,5 +214,6 @@
    除以 100）。整改只需在透传入口 clamp（`Math.min(100, Math.max(0, v))`），
    不动全局 pct 签名，避免防御面扩大引入无谓行为变化。
 
-- **实施案例**：upload-ut-action#9/#10（2026-10，影响评估待用户裁决，
-  见 `issue_docs/upload-ut-action/blia-issue9-10-20261020.md`）。
+- **实施案例**：upload-ut-action#9/#10（2026-10 影响评估，已于 2026-10-22 定性：#9 缺陷成立但当前部署
+  不可利用、整改低优先级可选，#10 非问题按功能需求处理，见
+  `issue_docs/upload-ut-action/blia-issue9-10-20261020.md`）。

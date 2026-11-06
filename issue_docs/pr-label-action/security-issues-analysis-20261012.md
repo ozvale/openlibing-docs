@@ -68,7 +68,7 @@
 
 ### #5 输入校验：标签名未校验未编码，拼入 URL 路径与请求体【低危】
 
-- **位置**：`parseLabels`（[src/index.js:38-45](file:///e:/work/huawei/fork/pr-label-action/src/index.js#L38-L45)）仅拆分 trim；`removeLabel` 的 `labels/${labelName}`（src/index.js:171）直接拼路径
+- **位置**：`parseLabels`（`pr-label-action/src/index.js:38-45`）仅拆分 trim；`removeLabel` 的 `labels/${labelName}`（`pr-label-action/src/index.js:171`）直接拼路径
 - **拆分定性**：
   - **`encodeURIComponent(labelName)` → 等价加固，可直接做**：该编码仅作用于 DELETE 的路径参数；POST 走 JSON body（`JSON.stringify` 后直传），由 `validateLabelName` 拒绝特殊字符；正常标签名编码前后语义一致，行为不变
   - **白名单拒绝含 `/ ? # ,` 及控制字符（`\u0000-\u001f`，含 CR/LF）的标签名 → 新增输入拒绝（硬规则 2 第 5 类），须评审**：需确认现网工作流是否有传入特殊字符标签名的合法用法（当前所有调用点传入的都是字面量常量标签，实际风险低）
@@ -80,7 +80,7 @@
 
 ### #7 CI 供应链：Action 与 pre-commit 钩子以可变 tag 引用【非问题（2026-10-13 用户决策）】
 
-- **原始描述**：[.gitcode/workflows/pre-commit.yml:31/70/83](file:///e:/work/huawei/fork/pr-label-action/.gitcode/workflows/pre-commit.yml#L31) 的 `pr-label-action@v1.0.0`、`pre-commit-action@v1.0.1`，及 [.pre-commit-config.yaml:8/25](file:///e:/work/huawei/fork/pr-label-action/.pre-commit-config.yaml#L8) 的 `rev: v6.0.0`、`rev: v8.30.1` 均为可变 tag 引用
+- **原始描述**：`pr-label-action/.gitcode/workflows/pre-commit.yml:31/70/83` 的 `pr-label-action@v1.0.0`、`pre-commit-action@v1.0.1`，及 `pr-label-action/.pre-commit-config.yaml:8/25` 的 `rev: v6.0.0`、`rev: v8.30.1` 均为可变 tag 引用
 - **定性理由**：tag 引用升级方便、易用性好，是**有意的易用性设计取舍**——固定 SHA 后每次升级都要手动换 40 位哈希，运维成本明显；且引用对象均为公司自维护仓（pr-label-action / pre-commit-action）与知名开源工具官方发布 tag，投毒面可控。插件侧不整改，可回复说明后关闭
 
 ### #6 pwn request：特权上下文执行不可信 PR 代码【非问题（2026-10-13 用户决策）】
