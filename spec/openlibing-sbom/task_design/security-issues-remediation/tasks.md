@@ -56,7 +56,6 @@
 - [ ] #53 LogSanitizer 残留确认关闭
 - [ ] CVE 子 issue（#77/#70/#69/#66/#59/#48/#33/#19）随 #90 关闭
 - [ ] 向 common 仓反馈 kotlin.version Beta → stable
-- [ ] prod 环境 Nacos 外置域名的部署期验证（配置已录入，未随镜像部署实测）
 - [ ] 启动期 fail-fast 校验：对 A 类关键域名 key 做非空断言，覆盖非 Nacos/配置缺失场景（当前仅 UvpClientImpl 有空值守卫）
 - [ ] Spring 解码器 shim 移除确认（`BOOT-INF/classes` 下不得存在 `org/springframework` 覆盖路径）
 - [ ] 大文件下载路径流式化 + 出站下载并发限流（#158 残余 DoS 面）

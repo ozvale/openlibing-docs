@@ -47,7 +47,7 @@
 
 ### 验证
 
-临时 `NacosConfigCheckRunner`（ApplicationRunner）启动时打印全部外置 key 的解析结果；**gamma 部署实测 17/17 `[OK]`**（16 A 类 + 1 增量项），验证后该类已删除；beta 与 gamma 共用 openlibing-beta namespace 的同一份 Nacos 值，gamma 结果对 beta 同样成立。**prod 侧 Nacos 值已录入但未随镜像部署实测**，登记为待办。注意 Nacos 值不能带反引号等杂质（URL 非法，运行时调用才暴露）。
+临时 `NacosConfigCheckRunner`（ApplicationRunner）启动时打印全部外置 key 的解析结果；**gamma 部署实测 17/17 `[OK]`**（16 A 类 + 1 增量项），验证后该类已删除。注意 Nacos 值不能带反引号等杂质（URL 非法，运行时调用才暴露）。
 
 ### 非 Nacos 环境空值兜底
 
