@@ -80,7 +80,7 @@ GET /projects/product-quality/catalogs/basic?milestoneId=7
 | `403` | `没有权限` | token Cookie 缺失、无效或未包含有效用户 ID |
 | `500` | `系统异常` | 未被其他处理器捕获的系统异常 |
 
-`milestoneId` 缺失或格式非法时不会进入目录业务逻辑。前端必须将其作为必传整数参数处理，不应依赖错误响应补救。
+`milestoneId` 缺失或格式非法时不会进入目录业务逻辑；右侧目录树接口新增的 `catalogId` 同样必填。前端必须将各接口的必填参数作为整数处理，不应依赖错误响应补救。
 
 错误响应示例：
 
@@ -147,16 +147,20 @@ GET /projects/product-quality/catalogs/basic?milestoneId=7
 ### 4.1 请求
 
 ```http
-GET /projects/product-quality/catalogs/milestone?milestoneId=7
+GET /projects/product-quality/catalogs/milestone?milestoneId=7&catalogId=1
 ```
 
-- 请求参数：仅公共 Query 参数 `milestoneId`。
+| 参数 | 位置 | 类型 | 必填 | 说明 |
+|---|---|---|---|---|
+| `milestoneId` | Query | Long | 是 | 公共参数，里程碑 ID |
+| `catalogId` | Query | Long | 是 | 左侧根目录的目录 ID，取左侧接口返回节点的 `catalogId`，不是记录主键 `id` |
+
 - 无请求体。
-- 查询指定里程碑的 `catalog_level > 0` 记录，即 1～3 级目录，并在服务端组装为树。
+- 查询指定里程碑的 `catalog_level > 0` 记录，即 1～3 级目录，在服务端组装为树后，仅返回属于 `catalogId` 指定左侧根目录的右侧子树。
 - 不包含 `catalog_level = 0` 的左侧根目录。
-- 返回值为顶层节点数组，可能包含多个顶层节点，前端不应假设只有一个根节点。
-- 右侧顶层节点的 `parentId` 可能指向未包含在当前 `data` 中的 0 级目录；当前实现会将父节点不在本次查询结果中的节点作为顶层节点返回。
-- 未初始化目录或指定里程碑没有非根目录时，成功返回 `data: []`。
+- 返回值为所选左侧根目录下的顶层节点数组，可能包含多个顶层节点，前端不应假设只有一个根节点。
+- 右侧顶层节点的 `parentId` 等于请求参数 `catalogId`，其指向的 0 级左侧根目录不包含在当前 `data` 中。
+- 未初始化目录、指定里程碑没有非根目录，或所选左侧根目录下没有右侧目录时，成功返回 `data: []`。
 
 ### 4.2 成功响应
 
@@ -195,7 +199,7 @@ GET /projects/product-quality/catalogs/milestone?milestoneId=7
 }
 ```
 
-上述示例中，顶层节点的 `parentId = 1` 对应左侧根目录的 `catalogId = 1`；子节点的 `parentId = 2` 对应其父节点的 `catalogId = 2`。
+上述示例中，请求参数 `catalogId = 1` 对应左侧根目录的 `catalogId = 1`，因此顶层节点的 `parentId = 1`；子节点的 `parentId = 2` 对应其父节点的 `catalogId = 2`。其他左侧根目录下的目录不会出现在该响应中。
 
 ## 5. 初始化里程碑目录
 
