@@ -1,5 +1,34 @@
 # 质量管理-质量策划模块技术设计
 
+## 1.4 本轮内部改进要求和重点工作增量设计（2026-11-07，优先于后文）
+
+### 数据模型与接口
+
+采用独立强类型表格资源，沿用 `Controller → App Service → Domain Service → Mapper/MySQL`，不引入通用 Map CRUD，也不依赖旧规划的 `planId`。
+
+- `PqInternalImprovement` 继承 `PqBaseModel`，字段为 `projectId/milestoneId/milestoneName/category/name/improvementTarget/implementationMeasure/ownerName/plannedFinishTime/status/progress/progressDescription`；`projectId` 为 `Integer`，`progress` 为 `BigDecimal`，计划完成时间按当前 DDL 使用字符串。
+- 新增 `pq_internal_improvement_log`：`id/internal_improvement_id/old_data/new_data/update_by/update_time`，索引 `(internal_improvement_id, update_time)`。业务表与日志表均使用 `openlibing_quality` 库名前缀，Mapper SQL 显式声明且仅使用参数绑定。
+- `InternalImprovementSaveReq` 仅接收业务字段；`InternalImprovementResp` 返回完整业务字段和审计字段；`BatchDeleteReq` 接收非空、最多 200 项的 ID 列表。
+
+| 方法 | 相对路径 | Query 参数 | 成功响应 |
+|---|---|---|---|
+| POST | `/add` | `milestoneId` | `Result<InternalImprovementResp>` |
+| GET | `/getPage` | `milestoneId/page/pageSize` | `Result<PageResult<InternalImprovementResp>>` |
+| GET | `/detail` | `milestoneId/id` | `Result<InternalImprovementResp>` |
+| POST | `/update` | `milestoneId/id` | `Result<InternalImprovementResp>` |
+| GET | `/delete` | `milestoneId/id` | `Result<Void>` |
+| POST | `/batch-delete` | `milestoneId` | `Result<Void>`，body 为 ID 列表 |
+
+统一基础路径为 `/projects/product-quality/internal-improvements`。分页默认 `1/20`，`pageSize<=200`，列表固定 `id DESC`。新增时校验里程碑存在并生成项目归属；详情、修改和删除均固定 `milestone_id + id + deleted=0` 条件。修改为全量覆盖可编辑字段，保留归属和创建审计字段。
+
+### 事务与日志
+
+App Service 负责权限、token 用户、DTO、事务和公共审计快照；Domain Service 负责持久化、归属校验、批量完整性和独立日志。修改先查询旧实体，再更新并插入旧/新 JSON；单条删除按里程碑读取目标后逻辑删除并插入旧 JSON，批量删除先锁定当前里程碑的全部目标记录，数量不一致即拒绝，再逐条更新 `deleted=1` 并插入旧 JSON、`new_data=NULL`。所有写操作影响行数必须为 1，日志异常向外传播以回滚事务。
+
+### 测试与交付约束
+
+按 Standard 模式采用 RED → GREEN → REFACTOR，覆盖 SQL/Mapper 契约、Domain CRUD 和日志、App 权限/归属/DTO/事务、Controller 路由和参数校验。运行定向测试、`ProductQuality*Test` 回归、格式化、checkstyle、SpotBugs、PMD 和全量测试；无真实 MySQL 时明确未执行数据库事务集成验证。最终使用中文提交并推送当前分支，不创建 PR。
+
 ## 1. 设计依据与现状约束
 
 - 需求：Issue [#328](https://gitcode.com/openlibing/openlibing-ops/issues/328)。
