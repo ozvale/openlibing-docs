@@ -1,4 +1,46 @@
-# 质量策划目录查询实施计划（2026-11-05 当前增量）
+# 质量策划版本摘要实施计划（2026-11-07 当前增量）
+
+> 执行要求：按任务顺序使用 TDD；用户明确要求开发完成后不要提交代码，因此不执行 commit、push、PR 或归档操作。
+
+**目标：** 基于 `pq_version_summary` 提供按里程碑查询和首次创建/后续更新能力，并以独立日志表强一致记录修改快照。
+
+**架构：** 沿用 `Controller → App Service → Domain Service → Mapper/MySQL`。App Service 负责权限、身份、DTO、事务和公共审计快照；Domain Service 负责持久化、HTML 清理和独立修改日志。
+
+**技术栈：** Java 21、Spring Boot、MyBatis、MySQL 8.0、OWASP Java HTML Sanitizer、JUnit 5、Mockito、AssertJ、standalone MockMvc。
+
+### Task 1：DDL、模型与 Mapper 契约
+
+- [x] RED：扩展 `ProductQualityPlanningSqlTest` 和 `ProductQualityCoreMapperXmlTest`，断言日志表字段/索引、有效摘要查询、显式 SQL、库名前缀和模型字段。
+- [x] 运行两个契约测试并确认因日志表和新 Mapper 不存在而失败。
+- [x] GREEN：新增 `pq_version_summary_log` DDL、`PqVersionSummary`、`PqVersionSummaryLog`、两个 Mapper 及 XML，并在 `pom.xml` 固定 HTML Sanitizer 版本。
+- [x] 重跑同一测试并确认通过（14 个测试）。
+
+### Task 2：Domain Service 保存与事务日志
+
+- [x] RED：新增 `ProductQualityVersionSummaryDomainServiceTest`，覆盖空查询、首次创建不写日志、后续更新旧/新快照、HTML 清理、影响行数异常和日志失败传播。
+- [x] 运行领域测试并确认因领域服务不存在而失败。
+- [x] GREEN：实现最小领域服务，创建与更新分离，更新和日志插入不捕获并吞掉异常。
+- [x] 重跑领域测试并确认通过（7 个测试，显式加载 Mockito Agent）。
+
+### Task 3：App Service 权限、DTO 与事务
+
+- [x] RED：新增 `ProductQualityVersionSummaryServiceTest`，覆盖读写权限、空响应、里程碑项目/名称生成、创建审计、更新审计保留、公共快照和事务注解。
+- [x] 运行应用服务测试并确认失败。
+- [x] GREEN：实现 `VersionSummarySaveReq`、`VersionSummaryResp` 和 `ProductQualityVersionSummaryService`，数字字符串项目 ID 转为 DDL 对应的 `Integer`。
+- [x] 重跑应用服务测试并确认通过（8 个测试）。
+
+### Task 4：Controller 契约与回归交付
+
+- [x] RED：新增 `ProductQualityVersionSummaryControllerTest`，覆盖两个路由、统一响应、请求体、正整数 Query 参数和无路径变量。
+- [x] 运行 Controller 测试并确认失败，随后实现 `ProductQualityVersionSummaryController` 并重跑通过（6 个测试）。
+- [x] 运行版本摘要定向测试及 `ProductQuality*Test` 回归（92 个测试通过，0 失败、0 错误）。
+- [x] 运行 `mvn spotless:apply` 后重跑定向测试（35 个测试通过），checkstyle 0 违规，跳过测试的编译成功。
+- [x] 执行 `git diff --check`、`git status --short`，核对变更范围；未执行真实 MySQL DDL、事务回滚或数据库集成验证。
+- [x] 最终报告接口、变更文件、实际测试证据和未验证项，明确未提交代码，不进入 Phase 4/5。
+
+---
+
+# 历史计划：质量策划目录查询实施计划（2026-11-05）
 
 > 执行要求：按任务顺序使用 TDD；用户明确要求开发完成后不要提交代码，因此不执行 commit、push、PR 或归档操作。
 

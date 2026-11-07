@@ -285,6 +285,35 @@ GET /projects/product-quality/milestones/delete?projectId=project-1&id=1
 
 先新增 Mapper XML 契约、Domain、App 和 standalone MockMvc 失败测试并观察 RED，再写最小实现观察 GREEN。覆盖固定查询条件、参数绑定、排序、权限拒绝、跨里程碑隔离、三级乱序父子节点、空结果、非空 `children` 和参数校验。随后运行目录定向测试、`ProductQualityCoreMapperXmlTest`、`ProductQuality*Test` 回归、格式化后重测、checkstyle/compile 与 `git diff --check`。无真实 MySQL 时明确不声称数据库集成验证通过；全程不 commit、不 push、不创建 PR。
 
+## 1.3 本轮版本摘要增量设计（2026-11-07，优先于后文）
+
+### 方案与数据模型
+
+采用独立版本摘要资源，沿用 `Controller → App Service → Domain Service → Mapper/MySQL`，不提前抽象通用单条内容框架，也不复用里程碑日志表。
+
+- `PqVersionSummary` 继承 `PqBaseModel`，业务字段为 `Integer projectId`、`Long milestoneId`、`String milestoneName`、`String summaryHtml`。当前里程碑模型的项目 ID 为字符串，而摘要 DDL 为 `INT`；首次创建时将里程碑的数字字符串项目 ID 安全转换为 `Integer`，非数字按参数异常拒绝。
+- 新增 `pq_version_summary_log`：`id BIGINT UNSIGNED AUTO_INCREMENT`、`version_summary_id BIGINT UNSIGNED NOT NULL`、`old_data JSON NOT NULL`、`new_data JSON DEFAULT NULL`、`update_by VARCHAR(64) NOT NULL`、`update_time DATETIME NOT NULL`，索引 `idx_pq_version_summary_log_summary(version_summary_id, update_time)`。
+- 摘要和日志 Mapper 不继承 `BaseMapper`，所有 SQL 在 XML 显式声明，表名使用 `openlibing_quality` 前缀；有效摘要查询固定 `milestone_id=#{milestoneId} AND deleted=0`。
+
+### API 与保存流程
+
+| 方法 | 路径 | 参数 | 响应 |
+|---|---|---|---|
+| GET | `/projects/product-quality/version-summary/detail` | 必填正整数 `milestoneId` | `Result<VersionSummaryResp>`，无记录时 `data=null` |
+| POST | `/projects/product-quality/version-summary/update` | Query `milestoneId`；body `VersionSummarySaveReq` | `Result<VersionSummaryResp>` |
+
+`VersionSummarySaveReq` 仅包含可空的 `summaryHtml`，最大 100,000 字符。响应包含摘要主键、项目 ID、里程碑 ID/名称、富文本和完整审计字段。
+
+- 查询：`canRead` 后按里程碑查询有效摘要，不伪造空实体。
+- 首次保存：`canWrite` 后校验里程碑存在，从里程碑取得项目 ID 和名称，插入有效摘要；创建不写 `pq_version_summary_log`。
+- 后续保存：保留主键、项目、里程碑和创建审计字段，仅更新清理后的 `summaryHtml`、更新人和更新时间；更新影响行数必须为 1，并在同一事务插入旧、新完整 JSON 快照。日志插入异常向外传播以回滚业务更新。
+- App Service 继续使用 `ProductQualityAuditSupport` 冻结公共审计快照；独立日志表是强一致修改记录，不由 best-effort AOP 替代。
+- 使用 OWASP Java HTML Sanitizer 固定版本依赖和白名单策略，保留基本排版、列表、表格及安全链接，移除脚本、事件属性和危险 URL。
+
+### 测试与交付约束
+
+按 RED → GREEN → REFACTOR 依次更新 SQL/Mapper 契约、Domain、App 和 standalone MockMvc 测试。覆盖空查询、首次创建、后续更新、归属数据生成、审计字段保留、HTML 清理、新旧日志快照、影响行数异常、日志失败传播、白名单权限和参数校验。运行定向测试、`ProductQuality*Test` 回归、格式化、checkstyle 和编译；无真实 MySQL 时不声称数据库事务集成验证通过。全程不 commit、不 push、不创建 PR。
+
 ## 2. 方案选择
 
 采用**全固定表模型**：每类 Issue 已定义字段的业务数据使用独立表、独立实体和强类型请求/响应；目录使用统一模板和实例表；权限、归属校验、批量删除和日志快照使用公共支撑组件。

@@ -41,6 +41,27 @@
 - [ ] Mapper SQL、应用服务组树和 Controller 契约测试通过，既有 productquality 测试无本轮回归。
 - [ ] 所有代码和文档修改仅保留在工作区，未 commit、push 或创建 PR。
 
+## 1.3 本轮版本摘要增量基线（2026-11-07，优先于后文）
+
+本轮只交付 Step1 策划导入的版本摘要查询和保存，不交付其他 Step1 业务模块、删除或日志查询接口。经用户确认，本轮规则如下：
+
+1. 以 `V20261104__product_quality_planning.sql` 当前 `pq_version_summary` DDL 为准：按 `milestone_id` 每个里程碑保存一条有效富文本，`project_id` 为 `INT`，并包含 `milestone_name`、审计字段和 `deleted`。
+2. 新增 `GET /projects/product-quality/version-summary/detail?milestoneId=` 和 `POST /projects/product-quality/version-summary/update?milestoneId=`。请求体仅包含 `summaryHtml`，项目 ID 和里程碑名称由服务端根据里程碑生成。
+3. 查询无记录返回 `data=null`；首次保存自动创建且不写独立修改日志；后续保存全量更新富文本并记录修改日志。
+4. 新增 `pq_version_summary_log`，字段参照 `pq_milestone_log`：`id/version_summary_id/old_data/new_data/update_by/update_time`。更新保存旧、新完整 JSON 快照，业务更新与日志插入在同一事务。
+5. 读写权限复用当前 `ProductQualityPermissionService.canRead/canWrite` 全局白名单和 token-only 用户身份。
+6. 富文本允许清空，最大 100,000 字符；保存前使用白名单清理危险 HTML。
+7. 全程不提交代码、不推送、不创建 PR，完成后保留本地变更供用户自测。
+
+### 本轮验收标准
+
+- [ ] 查询严格按 `milestoneId + deleted=0` 返回单条摘要，无记录返回成功空数据。
+- [ ] 首次保存从里程碑补齐项目 ID 和里程碑名称，后续保存不覆盖主键及创建审计字段。
+- [ ] 后续更新写入正确的新旧完整 JSON 快照，日志失败可回滚业务更新；创建不写独立日志。
+- [ ] 无效里程碑、超长或危险富文本、无权限请求按既有异常语义处理。
+- [ ] SQL/Mapper、Domain、App、Controller 契约测试及 productquality 回归通过。
+- [ ] 所有代码和文档修改仅保留在工作区，未 commit、push 或创建 PR。
+
 ## 2. 背景与问题
 
 OPS 当前没有项目里程碑主数据，也没有按项目、里程碑维护质量策划数据的能力。Issue #328 要求增加质量管理入口，首先交付质量策划后端能力：维护里程碑，为一个里程碑初始化一份质量策划，提供三级策划目录、权限控制和各策划子模块的增删改查、批量删除及操作日志。
