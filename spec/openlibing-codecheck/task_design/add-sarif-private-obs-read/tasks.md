@@ -29,3 +29,8 @@
 - [x] 5.1 `mvn -Dtest=ObsBucketServiceImplTest,SarifParseServiceImplTest test` 通过
 - [x] 5.2 `mvn spotless:check` 通过
 - [x] 5.3 确认未提交本地调试文件（`MongoConfig.java`、`RedisConfig.java`、`.codegraph/`、`.serena/`、`docs/`、`src/main/resources/cacerts`）
+
+## Task 6 存量兼容性验证
+
+- [ ] 6.1 抽样线上 `static_alarm_scan_run.obs_url`，逐条校验桶名、目录前缀、`.sarif` 后缀、段数、仓库段，确认存量对象均能命中新访问策略
+- [ ] 6.2 若发现不满足策略的存量对象，评估其工具维度是否同时存在其他可用 URL，避免消失清理误判

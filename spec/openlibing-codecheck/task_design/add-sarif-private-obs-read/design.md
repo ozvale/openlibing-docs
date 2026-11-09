@@ -83,7 +83,10 @@ StaticAlarmEventConsumer
 | 全部 URL 失败                             | scanRun 置 FAILED，错误信息聚合所有 URL 原因（现状不变）     |
 | 部分 URL 失败                             | scanRun 置 PARTIAL_SUCCESS（现状不变，本次不改消失清理语义） |
 | 临时文件删除失败                          | 仅告警日志，不影响解析结果                                   |
-| 配置文件内容非法                          | 告警日志 + 回退默认值                                        |
+| 配置文件单条正则非法                      | 丢弃该条并告警，其余条目继续生效                             |
+| 配置文件为空或全部非法                    | 回退默认值并告警                                             |
+
+消失清理（`StaticAlarmOperation.resolveDisappearedIssues`）按本次成功解析的 tool 与 language 过滤：整个工具下载失败时该工具不在清理范围内，告警不会被误判为消失；仅当同一工具有多个 URL、部分 URL 被拒时，被拒 URL 的告警存在被清理的可能，需通过存量兼容性验证排除。
 
 ## 3. 类设计
 
