@@ -44,7 +44,11 @@ Issue: openlibing/hidevlab-infra-manager-service#60
 **回参**
 
 ```json
-{"code": 200, "msg": "success", "data": {"switch_ip": "10.0.0.254", "rule_id": [101, 102]}}
+{
+  "code": 200,
+  "msg": "success",
+  "data": { "switch_ip": "10.0.0.254", "rule_id": [101, 102] }
+}
 ```
 
 `switch_ip` 为实际下发规则的交换机 IP（入参 `switch_ip` 有值时为该值，无值时为 CORE_SWITCH）；`rule_id` 为 `[正向 rule_id, 反向 rule_id]`。失败时 `code` 为参数错误码，`msg` 为失败原因。

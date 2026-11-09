@@ -43,10 +43,10 @@
 
 ## 影响范围
 
-| 文件 | 改动 |
-| --- | --- |
-| `service/network_isolation.py` | 新增 `add_oneway_acl_in_core_switcher`（约 80 行） |
-| `hidevlab_blue_service.py` | 新增 import + 路由 `add_oneway_cross_acl`（约 30 行） |
+| 文件                           | 改动                                                  |
+| ------------------------------ | ----------------------------------------------------- |
+| `service/network_isolation.py` | 新增 `add_oneway_acl_in_core_switcher`（约 80 行）    |
+| `hidevlab_blue_service.py`     | 新增 import + 路由 `add_oneway_cross_acl`（约 30 行） |
 
 不修改任何现有函数，无存量接口行为变化。
 
