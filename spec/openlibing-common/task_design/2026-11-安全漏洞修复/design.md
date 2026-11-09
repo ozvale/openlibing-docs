@@ -67,7 +67,7 @@
 - **原因**：原实现每次调用全量重跑 Base64 解码 + XOR + PBKDF2×10000 + AES-GCM（CPU/GC/内存残留代价），团队 11-06 决定缓存 `getWorkKey()` 结果减少 PBKDF2 运算次数。
 - **实现**：key=part1；`expireAfterWrite(1800s)` 标准写法；`get(key, mappingFn)` 内置并发单飞；`CryptoException` 经 `UncheckedCryptoException` 桥接，失败**不缓存**、向上传播；`clearWorkKeyCache()` 提供显式失效。
 - **影响**：仅内存缓存，无行为变化；新增一个依赖（需走供应链合规）。
-- **测试**：`WorkKeyCacheTest`（首调/命中/不同 part1/clear 重算/失败不缓存/并发单飞）。
+- **测试**：`WorkKeyCacheTest`（首调/命中/不同 part1/clear 重算/失败不缓存/并发单飞/TTL 过期（Caffeine policy API 动态调 TTL））。
 
 ### 决策 9：okio 升级 + AES/HMAC 密钥约束文档（#52 第3/4条）
 

@@ -46,7 +46,7 @@
 - [x] pom 引入 `com.github.benmanes.caffeine`（BOM 管理 3.2.4）
 - [x] 新增 `WorkKeyCache`：key=part1、`expireAfterWrite(1800s)`、并发单飞、失败不缓存向上抛
 - [x] `AESCipher.getWorkKey` 接入缓存；新增 `clearWorkKeyCache()`
-- [x] 新增 `WorkKeyCacheTest`（首调/命中/不同 part1/clear 重算/失败不缓存/并发单飞）
+- [x] 新增 `WorkKeyCacheTest`（首调/命中/不同 part1/clear 重算/失败不缓存/并发单飞/TTL 过期（Caffeine policy API 动态调 TTL））
 
 ### Issue #52（第3条）okio 升级
 
