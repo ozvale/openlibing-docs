@@ -24,10 +24,10 @@
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
+| 文件                       | 操作 | 说明                                                                     |
+| -------------------------- | ---- | ------------------------------------------------------------------------ |
 | `hidevlab_blue_service.py` | 修改 | 新增 `/switcher/src/acl/port/add` 路由 + `async_batch_add_port_acl` 函数 |
-| `base/config.py` | 修改 | 新增 Apollo 配置 `SWITCHER_ACL_PORT_ADD_CALLBACK_URL` |
+| `base/config.py`           | 修改 | 新增 Apollo 配置 `SWITCHER_ACL_PORT_ADD_CALLBACK_URL`                    |
 
 ## 核心流程
 
@@ -56,12 +56,12 @@ async_batch_add_port_acl(task_id, machines, dst_ip, dst_port_range):
 
 ## 风险 & 缓解
 
-| 风险 | 缓解 |
-|------|------|
-| 回传 ACL 编号硬编码 3998（在 `add_port_acl_to_core_switcher` 内） | 不修改原函数，沿用现有行为；接口入参的 `acl_number` 仅用于正向 ACL |
-| 单次 SSH 失败导致部分规则添加 | 失败不回滚，回调 msg 记录失败 IP 与原因，调用方决定清理 |
-| Apollo 未配置回调 URL | `sign_request` 仍会执行（与 transport-service 一致风格），由 Apollo 保证配置 |
-| 交换机并发 SSH 会话冲突 | 串行处理每个源 IP，不使用 ThreadPoolExecutor |
+| 风险                                                              | 缓解                                                                         |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 回传 ACL 编号硬编码 3998（在 `add_port_acl_to_core_switcher` 内） | 不修改原函数，沿用现有行为；接口入参的 `acl_number` 仅用于正向 ACL           |
+| 单次 SSH 失败导致部分规则添加                                     | 失败不回滚，回调 msg 记录失败 IP 与原因，调用方决定清理                      |
+| Apollo 未配置回调 URL                                             | `sign_request` 仍会执行（与 transport-service 一致风格），由 Apollo 保证配置 |
+| 交换机并发 SSH 会话冲突                                           | 串行处理每个源 IP，不使用 ThreadPoolExecutor                                 |
 
 ## 跨仓影响
 
