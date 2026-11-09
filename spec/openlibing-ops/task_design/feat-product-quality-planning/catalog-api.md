@@ -66,6 +66,10 @@ GET /projects/product-quality/catalogs/basic?milestoneId=7
 | `catalogLevel` | Integer | 否 | 目录层级：`0` 为左侧根目录；右侧目录为 `1`～`3` |
 | `sortNo` | Integer | 否 | 同级排序号，由基础目录复制 |
 | `optionalFlag` | Integer | 否 | 是否可选目录：`0` 否，`1` 是 |
+| `createBy` | String | 是 | 创建人用户 ID |
+| `createTime` | String | 是 | 创建时间，格式 `yyyy-MM-dd HH:mm:ss` |
+| `updateBy` | String | 是 | 最后修改人用户 ID |
+| `updateTime` | String | 是 | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss` |
 | `children` | `CatalogResp[]` | 否 | 子目录数组；无子目录时为 `[]`，不会返回 `null` |
 
 前端组树或处理节点关系时，应使用 `catalogId` 与 `parentId`，不要使用 `id` 与 `parentId` 配对。
@@ -212,7 +216,7 @@ POST /projects/product-quality/catalogs/init?milestoneId=7
 - 请求参数：仅公共 Query 参数 `milestoneId`。
 - 无请求体，不需要构造 JSON Body。
 - 服务端校验里程碑存在后，将 `pq_basic_catalog` 的全部基础目录复制到 `pq_milestone_catalog`。
-- 复制内容包括目录 ID、父目录 ID、中英文名称、层级、排序号和可选标记；创建人与更新人由服务端根据 token 用户生成。
+- 复制内容包括目录 ID、父目录 ID、中英文名称、层级、排序号和可选标记；创建人与更新人由服务端根据 token 用户生成，创建时间与更新时间由服务端按 `yyyy-MM-dd HH:mm:ss` 生成。
 - 初始化在事务中执行。
 
 ### 5.2 幂等与返回值
@@ -283,6 +287,10 @@ interface CatalogResp {
   catalogLevel: 0 | 1 | 2 | 3;
   sortNo: number;
   optionalFlag: 0 | 1;
+  createBy: string | null;
+  createTime: string | null;
+  updateBy: string | null;
+  updateTime: string | null;
   children: CatalogResp[];
 }
 ```
