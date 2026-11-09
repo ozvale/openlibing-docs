@@ -1,6 +1,7 @@
 # 蓝区支持查询容器内用户连接 — 确保容器无人使用
 
 ## 关联 PR
+
 openlibing/hidevlab-transport-service#84
 
 ## 需求背景
@@ -8,6 +9,7 @@ openlibing/hidevlab-transport-service#84
 在在线开发（IDE）场景中，蓝区（调度/控制面）需要判断容器是否正在被用户使用，以决定是否可以安全回收、重启或迁移容器。当前缺少一种可靠的机制来检测容器内是否存在活跃的用户连接。
 
 黄区（前端/业务面）调用 transport-service 接口，在容器内执行检测脚本，检查以下三类连接是否存在：
+
 1. SSH 连接
 2. CodeServer（VSCode Server）连接
 3. 本地 IDE 连接
