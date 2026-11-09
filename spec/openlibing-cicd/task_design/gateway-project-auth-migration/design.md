@@ -67,7 +67,7 @@ select role from user_role_info uri
 
 不保留 `visitor` 分支的依据：
 
-- `visitor` 角色被授予的 39 条菜单全部为流水线查看类，与本需求 49 个端点的 URL 无交集，该分支对这批端点从未命中；
+- BETA 实测 `visitor` 角色共 144 条菜单授权，其中 cicd 相关 44 条（43 条流水线类路径 + 1 条 `repo/event-trigger/template`），与本需求 49 个端点的 URL 交集为 0，该分支对这批端点从未命中；
 - 流水线路径在网关过滤器内已被 `/pipeline/` 正则提前放行，不会进入这条 SQL。
 
 因此去掉该分支不改变任何现有用户的判定结果，且方向更严格，不放开权限。
