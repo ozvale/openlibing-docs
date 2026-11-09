@@ -71,15 +71,18 @@ openLiBing 代码检查链路原以 GitCode Actions 为主：静态分析工具�
 | `.github/workflows/bandit-precommit.yml` | pre-commit 集成：手动 / push main / PR 门禁                                                                                                                                                                            |
 | `requirements.txt`                       | `bandit[sarif]==1.9.4`                                                                                                                                                                                                 |
 | `demo/insecure_demo.py`                  | 常规风险样例（B101/B104/B105/B311/B324/B404/B506/B602/B110）                                                                                                                                                           |
-| `demo/safe_demo.py`                      | 安全对照写法（预期通过）                                                                                                                                                                                               |
+| `demo/safe_demo.py`                      | 安全对照写法（预期零检出；不引入 subprocess 等即使安全用法也会触发 LOW 规则的示例）                                                                                                                                    |
 | `demo/high_risk_demo.py`                 | 高危样例：恰好 3 条 HIGH/HIGH——B605 os.system 命令注入、B701 jinja2 关闭自动转义、B501 requests 关闭证书校验                                                                                                           |
 
 私有仓（与插件仓可见性一致）；样例代码仅用于工具能力验证，README 声明请勿在生产代码参考。
 
+全仓检出口径：12 条问题 / 12 类规则（insecure_demo 9 类 + high_risk_demo 3 类，safe_demo 零检出）。
+
 ### 1.7 平台约束（沿承 clang-tidy/clippy 结论）
 
 - 上传类工作流**不含 `pull_request` 触发**：IAM 信任策略仅放行 push 形 sub（`repo:<org>/<repo>:ref:refs/heads/<branch>`），`pull_request` 形 sub 换证被拒；
-- precommit 工作流 PR 事件语义：纯门禁（钩子命中即失败拦截），跳过上传归档；push/手动为门禁 + 归档。
+- precommit 工作流 PR 事件语义：纯门禁（钩子命中即失败拦截），跳过上传归档；push/手动为门禁 + 归档；
+- **action 引用策略**：验证期统一以分支引用插件（`upload-sarif-action@source-platform-detection` / `pre-commit-action@main`，与 clang-tidy/gosec/clippy 全系列一致，便于插件迭代即时生效）；插件稳定发版后统一切换 tag/commit SHA 固化，消除可变分支在持 OIDC 凭证 job 中的供应链风险（后续 US）。
 
 ## 2. 实现逻辑设计
 
@@ -90,7 +93,9 @@ GitHub 代码仓触发 workflow（手动 / push main / 定时）
   → checkout → setup-python 3.12
   → pip install "bandit[sarif]==1.9.4"（回显 --version，安装失败立即暴露）
   → bandit -c .bandit.yml -r demo -f sarif -o <临时目录>/bandit.sarif
-      捕获退出码；test -s 校验 SARIF 非空；检出问题仅日志提示，exit 0 继续
+      退出码语义：0=无检出，1=有检出，>=2=运行错误
+      rc>=2 直接失败（防止运行错误被"非门禁"吞掉导致静默假绿）；
+      rc=1 仅日志提示并 exit 0 继续；test -s 校验 SARIF 非空
   → upload-sarif-action@source-platform-detection（category=business）
 ```
 
@@ -98,7 +103,7 @@ GitHub 代码仓触发 workflow（手动 / push main / 定时）
 
 ```text
 GitHub 代码仓触发 workflow（手动 / push main / PR）
-  → checkout → setup-python 3.12 → pip install pre-commit
+  → checkout → setup-python 3.12 → pip install "pre-commit==4.6.0"（版本固定，见 2.5）
   → mkdir -p 报告目录（GitHub 版插件不预创建，见 2.5）
   → pre-commit-action@main（--all-files --hook-stage=manual 收集原生 SARIF）
   → upload-sarif-action@source-platform-detection（category=pre-commit-report）
@@ -115,29 +120,30 @@ workflow 声明 `permissions: id-token: write` → GitHub Actions OIDC 接口申
 
 ### 2.5 异常与边界处理（实施实证）
 
-| 边界                                             | 处理                                                                                                                                                                                |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GitHub 版 pre-commit-action 的 `extra_args` 校验 | 按空格拆 token 且要求以 `--` 开头，`--hook-stage manual` 中 `manual` 被拒（`Invalid extra_args`）；必须用等号形式 `--hook-stage=manual`（argparse 兼容，单 token）                  |
-| GitHub 版 pre-commit-action 不预创建 report 目录 | 目录缺失时 bandit `-o` 写文件直接失败（exit 2），插件静默退化为日志解析兜底 SARIF（问题数正确但元数据受损，难察觉）；workflow 必须先 `mkdir -p`。GitCode 版会预创建，两侧行为不一致 |
-| bandit 1.9.x 配置格式                            | `-c` 仅支持 YAML/TOML，裸 `.bandit` INI 报 `expected '<document start>'`；配置命名 `.bandit.yml`                                                                                    |
-| pre-commit 4.x stages 语义                       | 未声明 `stages` 的 hook 在 manual 阶段同样执行（默认含全部阶段），本地拦截 hook 与 manual 专用 SARIF hook 共存无冲突                                                                |
-| 扫描非门禁                                       | bandit 检出问题退出码 1，扫描工作流捕获后继续上传（报告完整性优先）；pre-commit 场景保持门禁语义（失败即拦截）                                                                      |
-| SARIF 产出校验                                   | 扫描后 `test -s` 校验报告非空，失败立即报错，避免被上传步骤的"路径不存在"误导                                                                                                       |
-| 严重度标定                                       | B301（pickle）、B506（yaml.load）在 bandit 1.9.4 已降为 MEDIUM，高危样例选型经本地实测校准                                                                                          |
+| 边界                                             | 处理                                                                                                                                                                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GitHub 版 pre-commit-action 的 `extra_args` 校验 | 按空格拆 token 且要求以 `--` 开头，`--hook-stage manual` 中 `manual` 被拒（`Invalid extra_args`）；必须用等号形式 `--hook-stage=manual`（argparse 兼容，单 token）                                           |
+| GitHub 版 pre-commit-action 不预创建 report 目录 | 目录缺失时 bandit `-o` 写文件直接失败（exit 2），插件静默退化为日志解析兜底 SARIF（问题数正确但元数据受损，难察觉）；workflow 必须先 `mkdir -p`。GitCode 版会预创建，两侧行为不一致                          |
+| bandit 1.9.x 配置格式                            | `-c` 仅支持 YAML/TOML，裸 `.bandit` INI 报 `expected '<document start>'`；配置命名 `.bandit.yml`                                                                                                             |
+| pre-commit 4.x stages 语义                       | 未声明 `stages` 的 hook 在 manual 阶段同样执行（默认含全部阶段），本地拦截 hook 与 manual 专用 SARIF hook 共存无冲突                                                                                         |
+| 扫描非门禁                                       | bandit 退出码语义 0=无检出 / 1=有检出 / >=2=运行错误；rc=1 时扫描工作流捕获后继续上传（报告完整性优先），rc>=2 直接失败（防止运行错误被"非门禁"吞掉导致静默假绿）；pre-commit 场景保持门禁语义（失败即拦截） |
+| SARIF 产出校验                                   | 扫描后 `test -s` 校验报告非空，失败立即报错，避免被上传步骤的"路径不存在"误导                                                                                                                                |
+| 严重度标定                                       | B301（pickle）、B506（yaml.load）在 bandit 1.9.4 已降为 MEDIUM，高危样例选型经本地实测校准                                                                                                                   |
+| pre-commit 版本固定                              | CI 安装 `pre-commit==4.6.0`（与 4.x stages 语义前提一致，保证 CI 环境可复现）                                                                                                                                |
 
 ### 2.6 验证情况
 
-演示仓四个 commit 迭代（初始 → 修复 extra_args → 修复 report 目录 → 追加高危样例），全链路核对结果：
+演示仓五个 commit 迭代（初始 → 修复 extra_args → 修复 report 目录 → 追加高危样例 → 检视修复：退出码细化/pre-commit 钉版本/安全对照样例零检出），最终 commit `10bf370` 全链路核对结果：
 
-| 检查点          | 结果                                                                   |
-| --------------- | ---------------------------------------------------------------------- |
-| Actions 运行    | `bandit-scan` / `bandit-precommit` 均 success                          |
-| 来源标记        | 日志 `[INFO] 来源标记: GITHUB_ACTION`                                  |
-| OIDC 换证       | 提供商 `GitHubActions`、委托 `github-actions`，STS 换证成功            |
-| OBS 上传        | 桶 `openlibing-github-action`，key 含 owner/repo/runId                 |
-| 回调            | `/codescan/v1/result/receive` 返回 `{"code":200,"msg":"success"}`      |
-| 原生 SARIF 链路 | precommit 收集日志确认"bandit 已提供 sarif 文件，直接使用"，无兜底解析 |
-| 结果集          | 全量 14 条问题、10 类规则；高危样例恰好 3 条 HIGH/HIGH                 |
+| 检查点          | 结果                                                                                                                 |
+| --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Actions 运行    | `bandit-scan` / `bandit-precommit` 均 success                                                                        |
+| 来源标记        | 日志 `[INFO] 来源标记: GITHUB_ACTION`                                                                                |
+| OIDC 换证       | 提供商 `GitHubActions`、委托 `github-actions`，STS 换证成功                                                          |
+| OBS 上传        | 桶 `openlibing-github-action`，key 含 owner/repo/runId                                                               |
+| 回调            | `/codescan/v1/result/receive` 返回 `{"code":200,"msg":"success"}`                                                    |
+| 原生 SARIF 链路 | precommit 收集日志确认"bandit 已提供 sarif 文件，直接使用"，无兜底解析                                               |
+| 结果集          | 全量 12 条问题、12 类规则（insecure_demo 9 类 + high_risk_demo 3 类，safe_demo 零检出）；高危样例恰好 3 条 HIGH/HIGH |
 
 ## 3. 类设计
 
