@@ -1,5 +1,26 @@
 # 质量管理-质量策划模块需求提案
 
+## 1.5 本轮内部改进要求和重点工作增量基线（2026-11-07，优先于后文）
+
+本轮采用 Standard 模式，交付 Step1 策划导入-质量策划导入-内部改进要求和重点工作的完整表格后端接口，关联 Issue #328。
+
+1. 以 `V20261104__product_quality_planning.sql` 当前 `pq_internal_improvement` DDL 为准，记录归属里程碑，项目 ID 和里程碑名称由服务端根据里程碑生成。
+2. 基础路径为 `/projects/product-quality/internal-improvements`，提供新增、分页查询、单条详情、修改、单条逻辑删除和批量逻辑删除接口；业务参数沿用 Query 参数风格，不引入 `planId`。
+3. 新增 `pq_internal_improvement_log`，字段参照 `pq_version_summary_log`：`id/internal_improvement_id/old_data/new_data/update_by/update_time`。修改保存旧、新完整 JSON 快照，删除保存旧快照且新数据为 `NULL`，创建不写独立日志。
+4. 修改、单条删除和批量删除均在事务内完成业务写入及日志写入；任一日志写入失败或批量记录归属校验失败必须回滚整次操作。
+5. 读写权限复用 `ProductQualityPermissionService.canRead/canWrite` 白名单和 token-only 用户身份。改进目标、落地措施、责任人和计划完成时间必填，措施进展范围为 0～100。
+6. 分页默认 `page=1`、`pageSize=20`，单页最大 200；批量 ID 去重后数量为 1～200，任一记录不存在、已删除或不属于当前里程碑时整批拒绝。
+7. 本轮完成后使用中文提交信息提交代码和文档，并推送两个仓库的当前远程分支；不创建 PR，不进入 Phase 5 归档。
+
+### 本轮验收标准
+
+- [x] 六类接口均使用强类型请求/响应和统一 `Result` 返回，分页使用 `PageResult`。
+- [x] 查询仅返回当前里程碑的未删除数据，修改和删除不能跨里程碑操作。
+- [x] 新增从里程碑补齐项目 ID 和名称，修改保留主键、归属及创建审计字段。
+- [x] 修改和删除日志快照正确，批量删除逐条记录旧快照，日志失败可回滚。
+- [x] 字段校验、分页边界、批量去重及归属校验有测试覆盖，productquality 回归通过。
+- [ ] API 联调文档与实际代码一致，代码和文档以中文提交并推送。
+
 ## 1. 需求来源
 
 - 业务仓库：`openlibing/openlibing-ops`
@@ -41,9 +62,30 @@
 - [ ] Mapper SQL、应用服务组树和 Controller 契约测试通过，既有 productquality 测试无本轮回归。
 - [ ] 所有代码和文档修改仅保留在工作区，未 commit、push 或创建 PR。
 
-## 1.3 本轮版本摘要增量基线（2026-11-07，优先于后文）
+## 1.4 本轮质量策划思路增量基线（2026-11-07，优先于后文）
 
-本轮只交付 Step1 策划导入的版本摘要查询和保存，不交付其他 Step1 业务模块、删除或日志查询接口。经用户确认，本轮规则如下：
+本轮只交付 Step1 策划导入的质量策划思路查询和保存，不交付其他 Step1 业务模块、删除或日志查询接口。经用户确认，本轮规则如下：
+
+1. 以 `V20261104__product_quality_planning.sql` 当前 `pq_quality_roadmap` DDL 为准：按 `milestone_id` 每个里程碑保存一条有效 JSON 文档，`project_id` 为 `INT`，并包含 `milestone_name`、审计字段和 `deleted`。
+2. 新增 `GET /projects/product-quality/roadmap/detail?milestoneId=` 和 `POST /projects/product-quality/roadmap/update?milestoneId=`。请求体仅包含 `roadmapJson`，项目 ID 和里程碑名称由服务端根据里程碑生成。
+3. 查询无记录返回 `data=null`；首次保存自动创建且不写独立修改日志；后续保存全量更新 JSON 并记录修改日志。
+4. 新增 `pq_quality_roadmap_log`，字段参照 `pq_version_summary_log`：`id/roadmap_id/old_data/new_data/update_by/update_time`。更新保存旧、新完整 JSON 快照，业务更新与日志插入在同一事务。
+5. 读写权限复用当前 `ProductQualityPermissionService.canRead/canWrite` 全局白名单和 token-only 用户身份。
+6. `roadmapJson` 为 JSON 格式字符串，最大 200,000 字符，允许清空。
+7. 在 `api/controller/` 下新建 `productquality` 包，将 `ProductQualityCatalogController`、`ProductQualityMilestoneController`、`ProductQualityVersionSummaryController` 迁移到该包，与 `external` 包平级。
+8. 本轮完成后提交代码并推送至远程仓库。
+
+### 本轮验收标准
+
+- [ ] 查询严格按 `milestoneId + deleted=0` 返回单条质量策划思路，无记录返回成功空数据。
+- [ ] 首次保存从里程碑补齐项目 ID 和里程碑名称，后续保存不覆盖主键及创建审计字段。
+- [ ] 后续更新写入正确的新旧完整 JSON 快照，日志失败可回滚业务更新；创建不写独立日志。
+- [ ] 无效里程碑、超长 JSON、无权限请求按既有异常语义处理。
+- [ ] 产品质量相关 Controller 迁移到 `api.controller.productquality` 包，原有接口路径不变。
+- [ ] SQL/Mapper、Domain、App、Controller 契约测试及 productquality 回归通过。
+- [ ] 代码提交并推送至远程仓库。
+
+## 1.3 本轮版本摘要增量基线（2026-11-07，优先于后文）
 
 1. 以 `V20261104__product_quality_planning.sql` 当前 `pq_version_summary` DDL 为准：按 `milestone_id` 每个里程碑保存一条有效富文本，`project_id` 为 `INT`，并包含 `milestone_name`、审计字段和 `deleted`。
 2. 新增 `GET /projects/product-quality/version-summary/detail?milestoneId=` 和 `POST /projects/product-quality/version-summary/update?milestoneId=`。请求体仅包含 `summaryHtml`，项目 ID 和里程碑名称由服务端根据里程碑生成。

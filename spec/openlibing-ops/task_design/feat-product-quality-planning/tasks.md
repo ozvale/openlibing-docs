@@ -1,4 +1,94 @@
-# 质量策划版本摘要实施计划（2026-11-07 当前增量）
+# 内部改进要求和重点工作实施计划（2026-11-07 当前增量）
+
+> 执行要求：Standard 模式，按任务顺序使用 TDD；本轮完成后使用中文提交信息提交代码并推送至远程仓库。
+
+**目标：** 基于 `pq_internal_improvement` 提供新增、分页、详情、修改、单条逻辑删除和批量逻辑删除能力，并以独立日志表强一致记录修改和删除快照。
+
+**架构：** 沿用 `Controller → App Service → Domain Service → Mapper/MySQL`。App Service 负责权限、身份、DTO、事务和公共审计快照；Domain Service 负责归属校验、持久化和独立日志。
+
+**技术栈：** Java 21、Spring Boot、MyBatis、MySQL 8.0、JUnit 5、Mockito、AssertJ、standalone MockMvc。
+
+### Task 1：DDL、模型与 Mapper 契约
+
+- [x] RED：扩展 SQL/Mapper 契约测试，覆盖日志表、业务字段、分页、归属条件、逻辑删除和显式参数绑定。
+- [x] 新增 `pq_internal_improvement_log` DDL、`PqInternalImprovement`、`PqInternalImprovementLog`、两个 Mapper 接口及 XML。
+- [x] 重跑 `ProductQualityPlanningSqlTest` 和 `ProductQualityCoreMapperXmlTest`。
+
+### Task 2：Domain Service CRUD 与事务日志
+
+- [x] RED：新增领域测试，覆盖新增、分页、详情、跨里程碑拒绝、修改新旧快照、单条/批量删除旧快照、影响行数和日志异常传播。
+- [x] 实现 `ProductQualityInternalImprovementDomainService`。
+- [x] 重跑领域测试并确认通过。
+
+### Task 3：App Service 权限、DTO 与事务
+
+- [x] RED：新增应用服务测试，覆盖读写权限、里程碑归属数据生成、审计字段保留、分页映射、批量去重和事务注解。
+- [x] 新增 `InternalImprovementSaveReq`、`InternalImprovementResp`、`BatchDeleteReq` 和 `ProductQualityInternalImprovementService`。
+- [x] 重跑应用服务测试并确认通过。
+
+### Task 4：Controller 契约与 API 文档
+
+- [x] RED：新增 Controller 测试，覆盖六个路由、统一响应、分页参数、批量 ID、字段必填和进展范围。
+- [x] 实现 `ProductQualityInternalImprovementController`。
+- [x] 新增 `internal-improvement-api.md`，确保请求、响应和错误语义与代码一致。
+
+### Task 5：回归验证与中文交付
+
+- [x] 运行 productquality 定向及回归测试：新增 43 个测试通过，productquality 回归 135 个测试通过，均无失败、错误或跳过。
+- [x] 运行格式化、checkstyle、SpotBugs、PMD、全量测试和编译验证：全量 1086 个测试通过，静态检查无违规；JaCoCo 门禁通过，整体行覆盖率 70.11%，新增实现类行覆盖率均不低于 95.56%。
+- [x] 执行 `git diff --check`、核对变更范围及每次提交不超过 1000 行；业务提交分别为 372、347、1000 行，文档提交为 295 行。
+- [ ] 使用中文标题和描述提交业务仓与文档仓，并在推送前再次获得用户确认。
+
+> 验证边界：已执行 SQL/Mapper 契约测试和分层单元测试，未连接真实 MySQL 执行 DDL、事务回滚或数据库集成测试。
+
+---
+
+# 历史计划：质量策划思路实施计划（2026-11-07）
+
+> 执行要求：按任务顺序使用 TDD；本轮完成后提交代码并推送至远程仓库。
+
+**目标：** 基于 `pq_quality_roadmap` 提供按里程碑查询和首次创建/后续更新能力，并以独立日志表强一致记录修改快照。同时完成产品质量 Controller 包结构重构。
+
+**架构：** 沿用 `Controller → App Service → Domain Service → Mapper/MySQL`。App Service 负责权限、身份、DTO、事务和公共审计快照；Domain Service 负责持久化和独立修改日志。
+
+**技术栈：** Java 21、Spring Boot、MyBatis、MySQL 8.0、JUnit 5、Mockito、AssertJ、standalone MockMvc。
+
+### Task 1：Controller 包重构
+
+- [ ] 新建 `api.controller.productquality` 包
+- [ ] 将 `ProductQualityCatalogController`、`ProductQualityMilestoneController`、`ProductQualityVersionSummaryController` 迁移到该包
+- [ ] 更新所有引用这些 Controller 的 import 路径
+- [ ] 更新对应测试文件的包路径
+
+### Task 2：DDL、模型与 Mapper 契约
+
+- [ ] 新增 `pq_quality_roadmap_log` DDL
+- [ ] 新增 `PqQualityRoadmap`、`PqQualityRoadmapLog` 领域模型
+- [ ] 新增 `PqQualityRoadmapMapper`、`PqQualityRoadmapLogMapper` 接口及 XML
+- [ ] 更新 `ProductQualityPlanningSqlTest` 和 `ProductQualityCoreMapperXmlTest` 契约测试
+
+### Task 3：Domain Service 保存与事务日志
+
+- [ ] 新增 `ProductQualityRoadmapDomainServiceTest`
+- [ ] 实现 `ProductQualityRoadmapDomainService`
+
+### Task 4：App Service 权限、DTO 与事务
+
+- [ ] 新增 `RoadmapSaveReq`、`RoadmapResp`
+- [ ] 新增 `ProductQualityRoadmapServiceTest`
+- [ ] 实现 `ProductQualityRoadmapService`
+
+### Task 5：Controller 契约与回归交付
+
+- [ ] 新增 `ProductQualityRoadmapControllerTest`
+- [ ] 实现 `ProductQualityRoadmapController`
+- [ ] 运行 productquality 回归测试
+- [ ] 运行格式化、checkstyle、编译验证
+- [ ] 提交 commit 并推送
+
+---
+
+# 历史计划：质量策划版本摘要实施计划（2026-11-07）
 
 > 执行要求：按任务顺序使用 TDD；用户明确要求开发完成后不要提交代码，因此不执行 commit、push、PR 或归档操作。
 
