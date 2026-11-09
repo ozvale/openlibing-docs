@@ -4,7 +4,7 @@
 
 ### 背景
 
-流水线详情页三个 tab（流水线详情/执行历史/排队列表）在 [index.vue](file:///d:/openlibing/openlibing-cicd-web/src/views/pipeline/PipelineDetail/index.vue) 中以 `v-if` 互斥渲染，切 tab 即销毁重建「执行历史」组件实例，查询条件全部回到默认值。
+流水线详情页三个 tab（流水线详情/执行历史/排队列表）在 [openlibing-cicd-web 仓 src/views/pipeline/PipelineDetail/index.vue](https://gitcode.com/openlibing/openlibing-cicd-web/blob/master/src/views/pipeline/PipelineDetail/index.vue) 中以 `v-if` 互斥渲染，切 tab 即销毁重建「执行历史」组件实例，查询条件全部回到默认值。
 
 ### 候选方案对比
 
@@ -47,7 +47,20 @@
 
 1. `getItem` + `JSON.parse`，整体 try/catch，解析失败回落默认值。
 2. owner 归属校验：owner 与当前 userId 双方齐全且不匹配 → 删除缓存并放弃恢复；缺失一方跳过校验（兼容旧缓存，口径同 pipeline.vue）。
-3. 逐字段合法性校验，非法字段保持默认值：searchDateValue 必须为二元数组；pageSize 必须在 pageSizes 内；sortType 仅允许 `ASC` / `DESC` / 空串；pageNum > 0。
+3. 逐字段合法性校验，非法字段保留组件默认值，各字段校验口径与回落默认值如下：
+
+   | 字段               | 合法条件                                                                                                                       | 非法时回落默认值           |
+   | ------------------ | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------- |
+   | searchDateValue    | 长度为 2 的数组，两个元素均为 `YYYY-MM-DD` 字符串                                                                              | 最近一个月（组件初始化值） |
+   | searchStatusValue  | 数组，且每个元素均属于 `statusList` 枚举（`COMPLETED` / `RUNNING` / `FAILED` / `CANCELED` / `PAUSED` / `SUSPEND` / `IGNORED`） | `[]`                       |
+   | searchMergeIdValue | 字符串                                                                                                                         | `''`                       |
+   | pageNum            | 大于 0 的整数                                                                                                                  | `1`                        |
+   | pageSize           | 属于 `pageSizes`（`10` / `20` / `50` / `100`）                                                                                 | `10`                       |
+   | sortField          | 字符串，且属于支持排序的列（当前仅 `runTime`）                                                                                 | `''`                       |
+   | sortType           | `ASC` / `DESC` / 空串                                                                                                          | `DESC`                     |
+
+   状态多选中出现非法枚举元素时，整组回落 `[]`，不逐元素保留，避免非法枚举值进入查询入参。
+
 4. 去重守卫：restoredCacheKey 与当前 pipelineId 相同则直接返回，防止深度 watch 重复触发时覆盖用户已修改的条件。
 
 ### 初始加载分支（projectInfo watch immediate）
