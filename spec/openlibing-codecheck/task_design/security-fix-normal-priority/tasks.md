@@ -90,8 +90,8 @@
   - 入参加 `@Valid`
 
 - [x] 20. #373 修改 `FullSummaryOperation.java`
-  - skip 使用 long 计算
-  - 分页参数非法、`skip < 0` 或 `skip > Integer.MAX_VALUE` 抛 `PageSkipException`
+  - skip 统一使用 `PageParams.resolveSkip` 计算（long，避免整型溢出）
+  - 超过 `MAX_SKIP`（1,000,000）时静默截断，不抛 `PageSkipException`
   - 分页参数缺失时限制最多返回 1000 条，走 #365 统一上限策略
 
 - [x] 21. #373 补 `StaticAlarmServiceImpl.searchRepos` 回归测试

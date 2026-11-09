@@ -83,9 +83,8 @@
   - `@AssertTrue` 校验 pageNum/pageSize 同时为 null 或同时非 null
 - 两个入口 Controller 增加 `@Valid`。
 - `FullSummaryOperation`：
-  - skip 使用 `long` 计算，避免整型溢出；
-  - 分页参数非法、`skip < 0` 或 `skip > Integer.MAX_VALUE` 抛 `PageSkipException`；
-  - 上述校验在最终实现中保留（机机/APIG summary 与 `queryFullSummaryList`），不随批次 5 改用 `PageParams.resolveSkip` 的静默截断；`PageParams.MAX_SKIP`（1,000,000）截断仅作用于其他分页链路；
+  - 分页参数范围（`pageNum >= 1`、`1 <= pageSize <= 100`）与“同时存在或同时为空”由 `QueryTaskSummaryMachineApiModel` + 入口 `@Valid` 校验，非法入参返回 `4010103`；
+  - skip 统一使用 `PageParams.resolveSkip` 计算（内部用 long 避免整型溢出），超过 `MAX_SKIP`（1,000,000）时静默截断到上限，不抛 `PageSkipException`，也不产生负 skip 或 500；
   - 分页参数缺失时不再进入全量查询，先限制最多返回 1000 条（批次 5 统一收敛到 `PageParams.MAX_UNPAGED_SIZE`）。
 - `StaticAlarmServiceImpl.searchRepos`：当前代码已将 `limit` 裁剪到 `[1, 50]`（`Math.max(1, Math.min(limit, 50))`），本次不重复改造，仅补回归测试；当前 Controller 未暴露 `limit` 入参，若后续暴露需同步加 `@Min(1) @Max(50)`。
 
@@ -106,7 +105,7 @@ public final class PageParams {
 }
 ```
 
-- `resolveSkip` 对超过 `MAX_SKIP` 的 skip 静默截断，作为通用分页链路的深分页兜底；#373 涉及的机机/APIG summary 与 `queryFullSummaryList` 不适用该兜底，仍按上文抛 `PageSkipException`。
+- `resolveSkip` 对超过 `MAX_SKIP` 的 skip 静默截断，#373 的机机/APIG summary 与 `queryFullSummaryList` 同样适用；入口参数范围由 Bean Validation 拒绝。
 
 各链路统一接入（共 **10 个端点**，对应原 Issue 11 条链路中剔除已下线 Webhook 接口后的 10 条）：
 
@@ -266,7 +265,7 @@ public final class PageParams {
 
 1. 模型层补约束注解。
 2. Controller 入参加 `@Valid`。
-3. `FullSummaryOperation` 改造 skip 计算与异常抛出。
+3. `FullSummaryOperation` 改造 skip 计算（统一使用 `PageParams.resolveSkip`）。
 4. Controller 测试补充非法入参用例，断言 `4010103`（复用 `GlobalExceptionHandler` 现有参数错误码）。
 
 ### 2.3 批次 3

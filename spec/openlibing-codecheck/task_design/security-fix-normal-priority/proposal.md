@@ -36,7 +36,7 @@
 
 2. **批次 2（输入校验）**
    - #385：`shieldSubmit` / `shieldReferral` / `shieldRevoke`、`updateRule`、`exportBoardByFile` 增加 `@Valid`；`UpdateRuleModel` 补 `taskId` / `projectId` / `repoName` / `ruleSets` 约束；`ShieldModel` / `IdArray` 对可选字段补长度上限。
-   - #373：`QueryTaskSummaryMachineApiModel` 补 `pageNum` / `pageSize` 范围约束与“同时存在或同时为空”校验；Controller 加 `@Valid`；`FullSummaryOperation` 使用 long 计算 skip，负值抛 `PageSkipException`；`StaticAlarmServiceImpl.searchRepos` 现有 `[1, 50]` limit 裁剪补回归测试。
+   - #373：`QueryTaskSummaryMachineApiModel` 补 `pageNum` / `pageSize` 范围约束与“同时存在或同时为空”校验；Controller 加 `@Valid`；`FullSummaryOperation` 改用 `PageParams.resolveSkip` 计算 skip（超限静默截断到 1,000,000）；`StaticAlarmServiceImpl.searchRepos` 现有 `[1, 50]` limit 裁剪补回归测试。
 
 3. **批次 3（配置化）**
    - #202：新增 `CodePlatformProperties`，将 `gitcode.com` / `gitee.com` / `api.gitcode.com` / 通知邮箱改为配置项；动态拼接 `api.<repoType>.com` 改为白名单查表。
@@ -80,7 +80,7 @@
 - [ ] #385：`shieldReferral` / `shieldRevoke` 缺失 `notifyType`、`updateRule` 缺失 `taskId`、`exportBoardByFile` 缺失必填字段均被拒绝。
 - [ ] #385：合法请求行为不变，现有 Controller 测试通过。
 - [ ] #373：机机接口 `pageNum=0`、`pageSize=101`、仅传一个分页参数均返回参数错误。
-- [ ] #373：`pageNum=Integer.MAX_VALUE` 返回分页参数错误（`PageSkipException`，错误码 51123），不产生负 skip 或 500。最终实现保留该链路（机机/APIG summary、`queryFullSummaryList`）的分页参数校验，不使用 `PageParams.MAX_SKIP` 的静默截断。
+- [ ] #373：分页参数非法（`pageNum=0`、`pageSize=101`、仅传一个分页参数）由入口校验返回参数错误；`pageNum=Integer.MAX_VALUE` 时 skip 由 `PageParams.resolveSkip` 静默截断到 `MAX_SKIP`（1,000,000），不产生负 skip 或 500，不返回 51123。
 - [ ] #373：合法分页查询结果与修改前一致。
 
 ### 批次 3
