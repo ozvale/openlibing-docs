@@ -56,7 +56,7 @@ GithubBranchClient.listBranches(owner, repo, accessToken)
 **刷新侧**（存量 webhook，XXL-Job `refreshWebhookHandler` → `ensureCoderepoWebhookPushEventSubscribed`）：
 
 - GitHub 判定扩展：`isPushEventSubscribed` 由"含 push"改为"push/create/delete 齐备"，任一缺失即 PATCH；
-- `buildGithubPushEventUpdateBody`：PATCH events 为全量覆盖语义，body 以**平台列表响应中该 webhook 的现有 events 全集为基线**，在其上补齐缺失的 `push`/`create`/`delete`（即"既有全集 ∪ {push, create, delete}"），不硬编码白名单重建——人工或其它链路勾选的其他事件（release、workflow_run 等）全部保留；
+- `buildGithubPushEventUpdateBody`：PATCH events 为全量覆盖语义，body 以**平台列表响应中该 webhook 的现有 events 全集为基线**，在其上补齐缺失的 `push`/`create`/`delete`（即"既有全集 ∪ {push, create, delete}"），不硬编码白名单重建——人工或其它链路勾选的其他事件（release、workflow_run 等）全部保留。与 branch-query-by-url 需求「更新侧保留存量订阅」口径一致：评论订阅 `issue_comment` 已随该需求在创建侧下线，但更新侧不主动移除存量残留（若有则随全集基线保留，残留投递因 `PrSyncCommentEventHandler` 已删除而被分发器安全跳过）；
 - gitee/gitcode 判定不变。
 
 ### 2.3 需求 3：GitCode PATCH body 修复
@@ -128,3 +128,4 @@ updateRepoWebhookForPushEvent
 
 1. 单测：`GithubBranchClient`（回标/降级）、`GithubBranchChangeEventHandler`（create/delete/tag 忽略/未注册仓/多仓/异常隔离）、`RepoServiceImpl` webhook 创建/刷新 body 断言（三平台）；
 2. beta：部署修改后服务 → XXL-Job 手动触发 `refreshWebhookHandler`（可先传 projectId/repoId 小范围）→ 平台侧确认 GitCode「推送事件」勾选、GitHub events 含 create/delete → GitHub 平台建删分支验证列表自动增删 → 录入 GitHub 公共仓验证默认分支回填与机机接口标记 → gitee/gitcode 回归。
+   - 环境跳过边界（beta 验证可执行性依据）：webhook 订阅检测与 PATCH 仅在 local 环境跳过（`ensureCoderepoWebhookPushEventSubscribed` / `autoSetCoderepoWebHook` 的 `isLocalEnv()` 分支）；beta 与生产共用 `setupWebhookForProductionEnv` 主流程（其 javadoc 明确 beta 存量 webhook 需被 PATCH 迁移、"便于在 beta 验证迁移逻辑"），beta 环境无需任何临时配置即可执行本验收。`spec/openlibing-coderepo/ai_memory.md`「既有 webhook 配置补齐」一节"本地/beta 环境跳过"的记载已过时（该跳过仅适用于 local），本 PR 一并修正该条目。
