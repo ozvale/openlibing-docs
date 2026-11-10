@@ -58,14 +58,10 @@ StaticAlarmEventConsumer
 | 配置项                                     | 默认值                                               | 解析规则                                                                                          |
 | ------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `obs.action.buckets`                       | `openlibing-gitcode-action,openlibing-github-action` | 共享配置（`application` data-id），逗号分隔，trim + 转小写，空项忽略                              |
-| `codecheck.alarm.obs.allowed-key-patterns` | `^[a-z0-9][a-z0-9._-]*-results/`                     | 逗号分隔正则，`Pattern.compile` 失败时告警并丢弃该条；花括号量词内的逗号（如 `a{2,3}`）不参与拆分 |
-| `obs.download.max-size-mb`                 | `500`                                                | 沿用 coderepo 同名配置，正数，≤0 时使用默认上限                                                   |
-| `codecheck.alarm.sarif.max-urls`           | `50`                                                 | 单批次 obsUrls 数量上限，超出整批拒绝                                                             |
-| `codecheck.alarm.sarif.max-file-bytes`     | `52428800`（50MB）                                   | 单个 SARIF 文件大小上限，超出该 URL 失败                                                          |
-| `codecheck.alarm.sarif.max-runs`           | `20`                                                 | 单个 SARIF 文件 runs 数量上限，超出该 URL 失败                                                    |
-| `codecheck.alarm.sarif.max-results`        | `100000`                                             | 整批 results 累计上限，超出该 URL 失败                                                            |
+| `codecheck.alarm.obs.allowed-key-patterns` | `(?i)^[a-z0-9][a-z0-9._-]*-results/`                 | 逗号分隔正则，`Pattern.compile` 失败时告警并丢弃该条；花括号量词内的逗号（如 `a{2,3}`）不参与拆分 |
+| `codecheck.alarm.obs.max-file-size-mb`     | `500`                                                | 服务私有配置，正数，≤0 时使用默认上限                                                             |
 
-`@PostConstruct` 中解析并缓存；类上标注 `@RefreshScope`，Nacos 变更后重建 Bean 重新解析。配置全部无效或为空时回落到代码默认值，服务不因配置错误启动失败。默认值统一放在代码常量中，`@Value` 的默认部分留空，避免正则里可能出现的花括号被 Spring 占位符解析提前截断。
+`@PostConstruct` 中解析并缓存；类上标注 `@RefreshScope`，Nacos 变更后重建 Bean 重新解析。单条正则非法只丢弃该条、不影响其余条目；配置整体为空或全部条目非法时回落到代码默认值，服务不因配置错误启动失败。默认值统一放在代码常量中，`@Value` 的默认部分留空，避免正则里可能出现的花括号被 Spring 占位符解析提前截断。
 
 默认目录正则与插件实际生成规则对齐：插件 `buildToolPrefix` 对工具名做 `toLowerCase()` + 非 `[a-z0-9]` 转 `-` + 去首尾 `-`，**无长度截断**，因此默认正则只约束首字符与 `-results/` 结尾（字符集 `[a-z0-9._-]` 为插件实际字符集的超集，兼容兜底前缀 `code-arts-check-results` 与 `pre-commit-results`），不设长度上限。
 
@@ -97,14 +93,14 @@ StaticAlarmEventConsumer
 
 ## 3. 类设计
 
-| 类                                                          | 变更                                                                                                                                                                |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `business/service/ObsBucketService`                         | 新增 `Path downloadToTempFile(String obsUrl, String expectedRepo) throws IOException`                                                                               |
-| `business/service/impl/ObsBucketServiceImpl`                | 新增白名单配置字段、`@PostConstruct` 解析、`downloadToTempFile`、`copyWithLimit`、`deleteQuietly`、`extractBucket`、`isAllowedKey` 等私有方法；类加 `@RefreshScope` |
-| `business/service/impl/alarm/SarifParseServiceImpl`         | `downloadAndParse` 改为临时文件 + 凭证读取；删除匿名 HTTP 下载与 host 白名单相关代码                                                                                |
-| `business/service/impl/alarm/StaticAlarmReceiveServiceImpl` | `buildScanRunEntity` 增加 obsUrl 仓库段校验，拒绝 `unknown-repo` 入库                                                                                               |
-| `business/service/impl/ObsBucketServiceImplTest`            | 新增访问策略与大小上限用例                                                                                                                                          |
-| `business/service/impl/alarm/SarifParseServiceImplTest`     | 下载源改为 mock `ObsBucketService`，新增单 URL 失败隔离用例                                                                                                         |
+| 类                                                          | 变更                                                                                                                                                                                                                                                   |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `business/service/ObsBucketService`                         | 新增 `Path downloadToTempFile(String obsUrl, String expectedRepo) throws IOException`                                                                                                                                                                  |
+| `business/service/impl/ObsBucketServiceImpl`                | 新增白名单配置字段、`@PostConstruct` 解析、`downloadToTempFile`、`copyWithLimit`、`deleteQuietly`、`extractBucket`、`validateAccessPolicy`、`isValidObjectKey` 等私有方法；类加 `@RefreshScope`，并以 `@PreDestroy destroy()` 关闭懒加载的 `ObsClient` |
+| `business/service/impl/alarm/SarifParseServiceImpl`         | `downloadAndParse` 改为临时文件 + 凭证读取；删除匿名 HTTP 下载与 host 白名单相关代码                                                                                                                                                                   |
+| `business/service/impl/alarm/StaticAlarmReceiveServiceImpl` | `buildScanRunEntity` 增加 obsUrl 仓库段校验，拒绝 `unknown-repo` 入库                                                                                                                                                                                  |
+| `business/service/impl/ObsBucketServiceImplTest`            | 新增访问策略与大小上限用例                                                                                                                                                                                                                             |
+| `business/service/impl/alarm/SarifParseServiceImplTest`     | 下载源改为 mock `ObsBucketService`，新增单 URL 失败隔离用例                                                                                                                                                                                            |
 
 ## 4. 数据模型设计
 
@@ -115,20 +111,15 @@ StaticAlarmEventConsumer
 ```properties
 # application data-id：共享的 Action 上报桶位置，后续其他服务接入同类扫描结果时复用
 obs.action.buckets=openlibing-gitcode-action,openlibing-github-action
-# codecheck data-id：本服务读取侧的目录白名单（大小上限沿用 obs.download.max-size-mb，默认 500MB，无需配置）
-codecheck.alarm.obs.allowed-key-patterns=^[a-z0-9][a-z0-9._-]*-results/
-# codecheck data-id：SARIF 解析侧资源上限（Security 整改引入，默认值即可）
-codecheck.alarm.sarif.max-urls=50
-codecheck.alarm.sarif.max-file-bytes=52428800
-codecheck.alarm.sarif.max-runs=20
-codecheck.alarm.sarif.max-results=100000
+# codecheck data-id：本服务读取侧的目录白名单（大小上限见 codecheck.alarm.obs.max-file-size-mb，默认 500MB，无需配置）
+codecheck.alarm.obs.allowed-key-patterns=(?i)^[a-z0-9][a-z0-9._-]*-results/
 ```
 
 ## 5. 性能设计
 
 - 下载为流式写临时文件，内存占用与文件大小无关；单文件上限 500MB。
 - 访问策略校验均为字符串/正则匹配，单次开销可忽略；正则列表在 `@PostConstruct` 预编译，不在每次调用时重复编译。
-- OBS 客户端沿用既有懒加载单例，不额外创建连接。
+- OBS 客户端沿用既有懒加载单例，不额外创建连接；`@RefreshScope` 触发 Bean 重建时由 `@PreDestroy destroy()` 关闭旧客户端，避免连接池与后台线程泄漏。
 - 与现状相比仅多一次本地临时文件写盘；解析从临时文件流读取，避免原有匿名 HTTP 连接的不稳定性。
 
 ## 6. API接口设计
