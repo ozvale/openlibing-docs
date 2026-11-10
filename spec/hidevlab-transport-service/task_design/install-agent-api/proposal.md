@@ -25,7 +25,7 @@
 
 - [ ] `POST /install/agent` 接口框架就绪：路由注册、参数校验、鉴权、异常处理生效；核心逻辑以 TODO 占位。
 - [ ] 鉴权：无 token 或 token 非法时返回 401。
-- [ ] 参数校验：缺参时返回 `{"code": 500, "msg": "invalid parameters", "data": ""}`。
+- [ ] 参数校验：缺参时返回 `{"code": 400, "msg": "invalid parameters", "data": ""}`。
 - [ ] 代码风格与现有 `/VM/obs/set` 路由一致（`Ssh` 构造、`install_agent` 返回 `(flag, msg)` 元组、dict 响应）。
 - [ ] 通过本地语法校验（`python -m py_compile`）。
 
