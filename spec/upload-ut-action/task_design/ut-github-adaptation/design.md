@@ -133,6 +133,7 @@ ut-coverage-action/{repoName}/{yyyyMMdd}.{HH}/{pipelineRunId|manual}/ut-coverage
 | `upload-ut-action/README.md`                            | 用户文档                                   | 补充 GitHub 使用方式、`id-token: write`、输入参数表补齐 `obs_acl`                                             |
 | `upload-ut-action/test/platform-context.test.js`        | 单测                                       | 新增双平台上下文解析用例                                                                                      |
 | `upload-ut-action/test/obs-uploader.test.js`            | 单测                                       | 新增 `selectObsBucket` 用例                                                                                   |
+| `upload-ut-action/.gitleaks.toml`                       | gitleaks 误报白名单                        | 新增 `^dist/`：ncc 产物内联第三方依赖会带入示例密钥/许可证邮箱误报，源码文件仍独立扫描                        |
 | `upload-ut-action/dist/index.js`                        | ncc 打包产物                               | 由源码重新构建                                                                                                |
 | `openlibing-coderepo/.../ObsBucketServiceImpl.java`     | OBS 下载白名单                             | 单桶 → 双桶集合                                                                                               |
 | `openlibing-coderepo/.../ObsBucketService.java`         | 接口契约注释                               | 注释同步双桶                                                                                                  |
