@@ -10,21 +10,22 @@
 ## 2. 需求 2：GitHub 分支增删 webhook 同步
 
 - [ ] `RepoServiceImpl#buildWebhookCreateBody` GitHub 分支 events 补齐为 `["pull_request", "push", "create", "delete"]`
-- [ ] `RepoServiceImpl#buildGithubPushEventUpdateBody` events 补齐 create/delete（保留 pull_request / issue_comment / push），更新 javadoc
+- [ ] `RepoServiceImpl#buildGithubPushEventUpdateBody` 改为以 webhook 现有 events 全集为基线做并集补齐（既有全集 ∪ {push, create, delete}，弃硬编码白名单重建），更新 javadoc
 - [ ] `RepoServiceImpl#isPushEventSubscribed` GitHub 分支扩展为 push/create/delete 三事件齐备判定（gitee/gitcode 不变）
 - [ ] 新增 `business/handler/GithubBranchChangeEventHandler`：`supportedEventTypes={"create","delete"}`；`ref_type=branch` 判定（tag 忽略）；`ref` 纯分支名解析；clone_url→html_url 候选反查（对齐 PushEventHandler 模式，按 repoId 去重）；逐行 `syncSingleBranch`，单仓失败隔离
 - [ ] `updateDefaultBranchInfo` 相关 javadoc 补充 GitHub 回标来源说明（如有必要）
 
 ## 3. 需求 3：GitCode PATCH body 修复
 
-- [ ] `RepoServiceImpl` 新增 `buildGitcodePushEventUpdateBody(RepoWebhook webhook)`：返回 `{"url": <webhook.getUrl()>, "push_events": true}`
+- [ ] `RepoServiceImpl` 新增 `buildGitcodePushEventUpdateBody(RepoWebhook webhook)`：返回 `{"url": <webhook.getUrl()>, "push_events": true}`；url 为 null/空白时跳过 PATCH 并 warn 计入跳过统计（脏数据不再每轮 400）
 - [ ] `RepoServiceImpl#updateRepoWebhookForPushEvent` gitcode 分支改调新方法；gitee 分支沿用 `buildGiteeGitcodePushEventUpdateBody` 不变
 
 ## 4. 单元测试
 
 - [ ] `GithubBranchClient` 测试：仓库详情成功回标 / 详情失败降级（isDefault 保持空且不抛异常）/ 空分支列表短路 / 分支名未匹配保持原样
 - [ ] `GithubBranchChangeEventHandler` 测试：create 建分支 / delete 删分支 / tag 事件忽略 / 未注册仓跳过 / 多项目录入全同步 / 单仓失败不中断 / payload 缺字段防御
-- [ ] `RepoServiceImpl` 测试更新：GitHub webhook 创建 body 与刷新 PATCH body 含 create/delete 且保留原订阅；GitCode PATCH body 含 url + push_events；gitee PATCH body 保持 `{"push_events": true}`
+- [ ] `RepoServiceImpl` 测试更新：GitHub webhook 创建 body 与刷新 PATCH body 含 create/delete；刷新 PATCH 在既有额外事件（如 release/workflow_run）基础上做并集、原事件全部保留；GitCode PATCH body 含 url + push_events；GitCode url 为空白时跳过 PATCH 不发请求；gitee PATCH body 保持 `{"push_events": true}`
+- [ ] `GithubBranchChangeEventHandler` 实现注释中写明 create/delete 跨事件乱序的已知边界与全量同步自愈语义（见 design.md 2.2，不为乱序引入平台比对/软删）
 
 ## 5. 本地验证与 pre-commit
 

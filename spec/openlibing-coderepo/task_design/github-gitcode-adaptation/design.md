@@ -51,10 +51,12 @@ GithubBranchClient.listBranches(owner, repo, accessToken)
 
 边界：`ping` 事件无 handler 匹配安全跳过；payload 缺字段跳过并 warn；单仓失败不中断其余；平台重试由投递 ID 去重 + 消费幂等 + 业务幂等三层兜底。
 
+**跨事件乱序风险与最终一致语义**：GitHub webhook 投递不保证 create/delete 事件顺序，MQ 多实例消费与重试也会打乱顺序。同名分支"删除后重建"的极端场景下，迟到的 delete 事件会无条件按 `repoId+branchName` 删行，误删已重建分支的记录（反向乱序则残留脏行）。本设计接受该窗口并依赖全量同步自愈（下次「同步仓库」/录入同步整仓校正），不在 delete 路径引入平台分支列表比对或软删机制——分支删除频率下每次删除追加一次平台 API 调用的成本高于收益，且比对仍存在竞态窗口；同名分支反复删建属极低频操作。该行为作为已知边界写入实现注释。
+
 **刷新侧**（存量 webhook，XXL-Job `refreshWebhookHandler` → `ensureCoderepoWebhookPushEventSubscribed`）：
 
 - GitHub 判定扩展：`isPushEventSubscribed` 由"含 push"改为"push/create/delete 齐备"，任一缺失即 PATCH；
-- `buildGithubPushEventUpdateBody`：events 保留 pull_request / issue_comment / push 并补齐 create/delete（PATCH events 为全量覆盖，必须保留原订阅）；
+- `buildGithubPushEventUpdateBody`：PATCH events 为全量覆盖语义，body 以**平台列表响应中该 webhook 的现有 events 全集为基线**，在其上补齐缺失的 `push`/`create`/`delete`（即"既有全集 ∪ {push, create, delete}"），不硬编码白名单重建——人工或其它链路勾选的其他事件（release、workflow_run 等）全部保留；
 - gitee/gitcode 判定不变。
 
 ### 2.3 需求 3：GitCode PATCH body 修复
@@ -63,19 +65,22 @@ GithubBranchClient.listBranches(owner, repo, accessToken)
 updateRepoWebhookForPushEvent
   ├─ gitee   → {"push_events": true}                            // 不变
   └─ gitcode → {"url": webhook.getUrl(), "push_events": true}   // 修复点
+       └─ webhook.getUrl() 为 null/空白 → 跳过 PATCH，warn 日志 + 计入跳过统计
+          （回调地址缺失的脏数据无法通过平台校验，继续 PATCH 只会每轮 400，
+            跳过可消除无意义重试；该 webhook 需重建后才能恢复订阅）
 ```
 
-实测依据：PATCH 缺 url → 400；携带 url + push_events → 200 生效；未传 password 平台保留原签名密钥；url 取列表响应顶层 url 回传原值幂等。
+实测依据：PATCH 缺 url → 400；携带 url + push_events → 200 生效；未传 password 平台保留原签名密钥；url 取列表响应顶层 url 回传原值幂等；url 为空的存量脏数据按上述边界跳过，不再产生每轮重复 400。
 
 ## 3. 类设计
 
 ### 3.1 修改的类
 
-| 类                                            | 修改                                                                                                                                                                                                                                                           |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `common/utils/Github`                         | 新增 `getGithubRepoDefaultBranch(owner, repo, accessToken)`：GET /repos/{owner}/{repo} 解析 `default_branch`；失败 warn + null                                                                                                                                 |
-| `business/platform/branch/GithubBranchClient` | `listBranches()` 尾部回标逻辑（空列表短路 + 匹配置 isDefault）                                                                                                                                                                                                 |
-| `business/service/impl/RepoServiceImpl`       | ① `buildWebhookCreateBody` GitHub events 补 create/delete；② `buildGithubPushEventUpdateBody` 补齐并更新 javadoc；③ `isPushEventSubscribed` GitHub 三事件齐备判定；④ 新增 `buildGitcodePushEventUpdateBody(RepoWebhook)`，gitcode 分支改调（gitee 沿用原方法） |
+| 类                                            | 修改                                                                                                                                                                                                                                                                                                                                                           |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `common/utils/Github`                         | 新增 `getGithubRepoDefaultBranch(owner, repo, accessToken)`：GET /repos/{owner}/{repo} 解析 `default_branch`；失败 warn + null                                                                                                                                                                                                                                 |
+| `business/platform/branch/GithubBranchClient` | `listBranches()` 尾部回标逻辑（空列表短路 + 匹配置 isDefault）                                                                                                                                                                                                                                                                                                 |
+| `business/service/impl/RepoServiceImpl`       | ① `buildWebhookCreateBody` GitHub events 补 create/delete；② `buildGithubPushEventUpdateBody` 改为以 webhook 现有 events 全集为基线做并集补齐（弃硬编码白名单）并更新 javadoc；③ `isPushEventSubscribed` GitHub 三事件齐备判定；④ 新增 `buildGitcodePushEventUpdateBody(RepoWebhook)`，gitcode 分支改调（url 空白时跳过 PATCH 并 warn 计数；gitee 沿用原方法） |
 
 ### 3.2 新增的类
 
