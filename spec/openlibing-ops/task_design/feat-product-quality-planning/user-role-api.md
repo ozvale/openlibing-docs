@@ -10,7 +10,7 @@
 
 | 功能 | 请求方式 | 相对路径 | 成功时 `data` 类型 |
 |---|---|---|---|
-| 查询人员角色信息 | POST | `/query` | `PageResult<UserRoleResp>` |
+| 查询人员角色信息 | POST | `/query` | `PageResult<UserRoleResp>`（`records` 为全量数据） |
 
 本地服务端口为 `8098`，`context-path` 为 `/`。其他环境的域名、端口及网关前缀以部署配置为准。
 
@@ -36,14 +36,16 @@
 | `messageEn` | String | 英文消息，成功为 `success` |
 | `data` | T/null | 业务数据；异常响应通常为 `null` |
 
-分页数据使用 `PageResult<T>`：
+响应数据沿用 `PageResult<T>` 结构：
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `records` | Array<UserRoleResp> | 当前页人员角色列表 |
+| `records` | Array<UserRoleResp> | 全量人员角色列表 |
 | `total` | Integer | 满足条件的记录总数 |
-| `pageSize` | Integer | 本次查询每页条数 |
-| `page` | Integer | 本次查询页码 |
+| `pageSize` | Integer | 本次返回的记录条数，等于 `total` |
+| `page` | Integer | 固定为 `1` |
+
+> 接口不再接收前端分页参数，服务端汇总全部数据后一次性返回，`records` 即为全量结果。
 
 前端应根据响应体中的 `code` 判断业务是否成功，不要只依赖 HTTP 状态码。
 
@@ -82,8 +84,6 @@ Content-Type: application/json
 | `projectId` | Integer | 否 | 正整数 | 归属项目 ID |
 | `repoId` | Integer | 否 | 正整数 | 归属仓库 ID |
 | `userRoles` | Array<String> | 否 | 最多 20 项，每项非空且最长 64 字符 | 角色列表；为空时查询全部角色 |
-| `pageNum` | Integer | 否 | 最小 1，默认 `1` | 页码 |
-| `pageSize` | Integer | 否 | `10～100`，默认 `20` | 每页条数 |
 
 请求示例：
 
@@ -91,9 +91,7 @@ Content-Type: application/json
 {
   "userId": "user01",
   "projectId": 100,
-  "userRoles": ["admin"],
-  "pageNum": 1,
-  "pageSize": 20
+  "userRoles": ["admin"]
 }
 ```
 
@@ -101,18 +99,17 @@ Content-Type: application/json
 
 ```json
 {
-  "projectId": 100,
-  "pageNum": 1,
-  "pageSize": 20
+  "projectId": 100
 }
 ```
 
 ### 3.2 查询逻辑
 
 - 服务端先校验当前请求的产品质量策划读权限，再调用 openlibing-framework 的 `POST /internal-server/get-user-role`。
-- 请求参数原样透传 `productId`、`projectId`、`repoId`、`userRoles` 及分页参数。
+- 请求参数透传 `productId`、`projectId`、`repoId`、`userRoles`；分页参数由服务端固定控制。
 - `userId` 为空时使用 token 中的当前用户 ID。
-- framework 返回的 `data` 与 `total` 转换为统一 `PageResult`。
+- 服务端从第 1 页开始循环调用 framework（每页固定 100 条），直到累计条数达到 `total` 或返回空数据为止，汇总全部记录后一次性返回。
+- 返回的 `PageResult` 中 `records` 为全量数据，`total` 为实际返回条数，`page` 固定为 `1`，`pageSize` 等于实际返回条数。
 - framework 返回无数据时，`records` 为空数组、`total` 为 `0`。
 
 ### 3.3 成功响应
@@ -140,7 +137,7 @@ Content-Type: application/json
       }
     ],
     "total": 1,
-    "pageSize": 20,
+    "pageSize": 1,
     "page": 1
   }
 }
@@ -150,7 +147,7 @@ Content-Type: application/json
 
 | `code` | `messageCn` | 触发场景 |
 |---|---|---|
-| `40001` | `请求参数异常` | `userId` 格式非法、分页越界、角色数量或长度超限等参数校验失败 |
+| `40001` | `请求参数异常` | `userId` 格式非法、角色数量或长度超限等参数校验失败 |
 | `403` | `没有权限` | token Cookie 缺失、无效或未包含有效用户 ID |
 | `50001` | `查询异常` | framework 返回非成功响应 |
 | `500` | `系统异常` | framework 不可用或被其他未捕获异常中断 |
@@ -204,7 +201,5 @@ interface UserRoleQueryReq {
   projectId?: number | null;
   repoId?: number | null;
   userRoles?: string[] | null;
-  pageNum?: number;
-  pageSize?: number;
 }
 ```
