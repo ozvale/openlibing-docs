@@ -48,11 +48,14 @@ StaticAlarmReceiveController
 - 平台值仅支持 `gitcode` / `gitee` / `github` / `codehub`（大小写不敏感，统一转小写）；配置其它值时该项被忽略并记 WARN，该 host 回退到内置关键字匹配，仍无法识别则 `repoUrl` 解析失败、上报被拒绝（fail-closed）。
 - 同一关键字重复配置时后者覆盖前者，并记 WARN；配置关键字优先级高于内置关键字，不校验与内置关键字的冲突；误配（如 `gitcode:github`）会把对应平台判错，配置后需按域名逐一验证。
 
+仓库身份口径（已知前提）：仓库身份由「平台类型 + owner + repo」决定（`repo_key` 域名无关），自定义域名实例与内置域名、不同自定义域名实例之间，只要平台类型与 owner/repo 相同即视为同一仓库，`repo_info` 坐标兜底与 `project_ids` 对账均按该口径匹配。因此使用 `codecheck.repo-host-keywords` 接入 GitHub Enterprise 等私有实例时，需保证实例上的 owner/repo 不与公共 GitHub 及其他实例重名；如需支持多实例同名隔离，需将 host 纳入仓库身份（调整 `repo_key` 结构并迁移存量数据），不在本次范围。
+
 ### 2.3 兼容性
 
 - 显式传 source 的上报方（CICD 传 `HUAWEI_PIPELINE`、GitCode Action 传 `GITCODE_ACTION`）行为不变；已核验 CICD 侧 DTO 默认值即为 `HUAWEI_PIPELINE`，仓内不存在依赖缺省 source 的调用方。`source` 表示上报载体，与仓库托管平台无强绑定关系，因此不做交叉校验。
 - 未传 source 且平台无对应来源枚举（如 codehub）的上报，由改动前的"入库为 `GITCODE_ACTION`"变为拒绝入库；该类上报方接入前必须显式传 source。
 - 存量 `repoType=gitcode/gitee` 数据不受影响。
+- 显式 `repoType` 一致性校验按平台别名归一后比较（`atomgit` 归一为 `gitcode`），上报方按自身域名传 `repoType=atomgit` 不会被误拒绝。
 - 新增枚举值不会改变已有数据的读写口径。
 
 ### 2.4 配置项与兜底值
