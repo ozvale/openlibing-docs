@@ -59,7 +59,11 @@ StaticAlarmEventConsumer
 | ------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `obs.action.buckets`                       | `openlibing-gitcode-action,openlibing-github-action` | 共享配置（`application` data-id），逗号分隔，trim + 转小写，空项忽略                              |
 | `codecheck.alarm.obs.allowed-key-patterns` | `^[a-z0-9][a-z0-9._-]*-results/`                     | 逗号分隔正则，`Pattern.compile` 失败时告警并丢弃该条；花括号量词内的逗号（如 `a{2,3}`）不参与拆分 |
-| `codecheck.alarm.obs.max-file-size-mb`     | `500`                                                | 正数，≤0 时使用默认上限                                                                           |
+| `obs.download.max-size-mb`                 | `500`                                                | 沿用 coderepo 同名配置，正数，≤0 时使用默认上限                                                   |
+| `codecheck.alarm.sarif.max-urls`           | `50`                                                 | 单批次 obsUrls 数量上限，超出整批拒绝                                                             |
+| `codecheck.alarm.sarif.max-file-bytes`     | `52428800`（50MB）                                   | 单个 SARIF 文件大小上限，超出该 URL 失败                                                          |
+| `codecheck.alarm.sarif.max-runs`           | `20`                                                 | 单个 SARIF 文件 runs 数量上限，超出该 URL 失败                                                    |
+| `codecheck.alarm.sarif.max-results`        | `100000`                                             | 整批 results 累计上限，超出该 URL 失败                                                            |
 
 `@PostConstruct` 中解析并缓存；类上标注 `@RefreshScope`，Nacos 变更后重建 Bean 重新解析。配置全部无效或为空时回落到代码默认值，服务不因配置错误启动失败。默认值统一放在代码常量中，`@Value` 的默认部分留空，避免正则里可能出现的花括号被 Spring 占位符解析提前截断。
 
@@ -111,9 +115,13 @@ StaticAlarmEventConsumer
 ```properties
 # application data-id：共享的 Action 上报桶位置，后续其他服务接入同类扫描结果时复用
 obs.action.buckets=openlibing-gitcode-action,openlibing-github-action
-# codecheck data-id：本服务读取侧的目录白名单与单文件大小上限
+# codecheck data-id：本服务读取侧的目录白名单（大小上限沿用 obs.download.max-size-mb，默认 500MB，无需配置）
 codecheck.alarm.obs.allowed-key-patterns=^[a-z0-9][a-z0-9._-]*-results/
-codecheck.alarm.obs.max-file-size-mb=500
+# codecheck data-id：SARIF 解析侧资源上限（Security 整改引入，默认值即可）
+codecheck.alarm.sarif.max-urls=50
+codecheck.alarm.sarif.max-file-bytes=52428800
+codecheck.alarm.sarif.max-runs=20
+codecheck.alarm.sarif.max-results=100000
 ```
 
 ## 5. 性能设计
