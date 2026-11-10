@@ -23,7 +23,7 @@
 
 - [x] 新增 `test/platform-context.test.js`：GitHub push/PR、GitCode push/MR、双标志冲突、PR `base.sha` 上下文映射
 - [x] `test/obs-uploader.test.js` 新增 `selectObsBucket` 用例
-- [x] `npm test` 全部通过（62/62）
+- [x] `npm test` 全部通过（63/63）
 - [x] `npm run package` 重建 `dist/index.js`；grep 校验 `detectPlatform`、`openlibing-github-action`、`GitHubActions` 已内联；`action.yml` 与 `package.json` 均为 `1.0.2`
 - [x] `node --check dist/index.js` 语法校验通过（仅作兜底，不作为重建依据）
 - [x] `pre-commit run --files` 全部 Passed
