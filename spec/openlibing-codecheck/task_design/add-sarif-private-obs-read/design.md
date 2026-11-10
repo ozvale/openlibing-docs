@@ -48,7 +48,7 @@ StaticAlarmEventConsumer
    - `bucketName` 命中桶白名单（忽略大小写）；
    - `objectKey` 命中目录白名单任一条正则（`lookingAt`）；
    - `objectKey` 以 `.sarif` 结尾（忽略大小写）；
-   - 路径按 `/` 分段 ≥ 5 段，第二段为仓库名：等于 `unknown-repo` 或与 `expectedRepo` 忽略大小写相等。
+   - 路径按 `/` 分段 ≥ 5 段，第二段为仓库名，必须与 `expectedRepo` 忽略大小写相等；`unknown-repo` 无归属信息，读取时直接拒绝。
 6. `getObject(bucketName, objectKey)`，先看 `ObjectMetadata.contentLength` 是否超上限，超限直接拒绝不落盘。
 7. 创建临时文件，`copyWithLimit` 流式写入并计数，实际流量超限立即中止。
 8. 任何失败路径删除可能已创建的临时文件；成功返回 `Path`，调用方负责删除。
@@ -77,26 +77,30 @@ StaticAlarmEventConsumer
 
 ### 2.4 边界与失败语义
 
-| 场景                                      | 行为                                                         |
-| ----------------------------------------- | ------------------------------------------------------------ |
-| 单个 URL 不在白名单 / 归属不符 / 下载失败 | 记入 `ParseResult.errors`，其他 URL 继续                     |
-| 全部 URL 失败                             | scanRun 置 FAILED，错误信息聚合所有 URL 原因（现状不变）     |
-| 部分 URL 失败                             | scanRun 置 PARTIAL_SUCCESS（现状不变，本次不改消失清理语义） |
-| 临时文件删除失败                          | 仅告警日志，不影响解析结果                                   |
-| 配置文件单条正则非法                      | 丢弃该条并告警，其余条目继续生效                             |
-| 配置文件为空或全部非法                    | 回退默认值并告警                                             |
+| 场景                                      | 行为                                                                        |
+| ----------------------------------------- | --------------------------------------------------------------------------- |
+| 上报 obsUrl 仓库段为 `unknown-repo`       | 接收阶段拒绝入库，返回「参数错误：obsUrl 中的仓库名为占位值 unknown-repo…」 |
+| 单个 URL 不在白名单 / 归属不符 / 下载失败 | 记入 `ParseResult.errors`，其他 URL 继续                                    |
+| 全部 URL 失败                             | scanRun 置 FAILED，错误信息聚合所有 URL 原因（现状不变）                    |
+| 部分 URL 失败                             | scanRun 置 PARTIAL_SUCCESS（现状不变，本次不改消失清理语义）                |
+| 临时文件删除失败                          | 仅告警日志，不影响解析结果                                                  |
+| 配置文件单条正则非法                      | 丢弃该条并告警，其余条目继续生效                                            |
+| 配置文件为空或全部非法                    | 回退默认值并告警                                                            |
 
-消失清理（`StaticAlarmOperation.resolveDisappearedIssues`）按本次成功解析的 tool 与 language 过滤：整个工具下载失败时该工具不在清理范围内，告警不会被误判为消失；仅当同一工具有多个 URL、部分 URL 被拒时，被拒 URL 的告警存在被清理的可能，需通过存量兼容性验证排除。
+消失清理（`StaticAlarmOperation.resolveDisappearedIssues`）按本次成功解析的 tool 与 language 过滤：整个工具下载失败时该工具不在清理范围内，告警不会被误判为消失；仅当同一工具有多个 URL、部分 URL 被拒时，被拒 URL 的告警存在被清理的可能。
+
+存量兼容性首轮验证（生产只读核查 3842 条 scanRun / 4335 个 obsUrl）：`unknown-repo` 命中 0 条；路径仓库段与 `scanRun.repo` 不一致的仅 1 组共 1325 条（`CI_gitcode` ↔ `gitcode`），来自华为云 CodeHub/DevMind 旧流水线，其 host 在改造前的 host 白名单中已被拒绝，不经过本链路；其余 49 组一致。`*-results/` 前缀、≥5 段、`.sarif` 后缀的全量覆盖率仍由 Task 6.1 跟进。
 
 ## 3. 类设计
 
-| 类                                                      | 变更                                                                                                                                                                |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `business/service/ObsBucketService`                     | 新增 `Path downloadToTempFile(String obsUrl, String expectedRepo) throws IOException`                                                                               |
-| `business/service/impl/ObsBucketServiceImpl`            | 新增白名单配置字段、`@PostConstruct` 解析、`downloadToTempFile`、`copyWithLimit`、`deleteQuietly`、`extractBucket`、`isAllowedKey` 等私有方法；类加 `@RefreshScope` |
-| `business/service/impl/alarm/SarifParseServiceImpl`     | `downloadAndParse` 改为临时文件 + 凭证读取；删除匿名 HTTP 下载与 host 白名单相关代码                                                                                |
-| `business/service/impl/ObsBucketServiceImplTest`        | 新增访问策略与大小上限用例                                                                                                                                          |
-| `business/service/impl/alarm/SarifParseServiceImplTest` | 下载源改为 mock `ObsBucketService`，新增单 URL 失败隔离用例                                                                                                         |
+| 类                                                          | 变更                                                                                                                                                                |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `business/service/ObsBucketService`                         | 新增 `Path downloadToTempFile(String obsUrl, String expectedRepo) throws IOException`                                                                               |
+| `business/service/impl/ObsBucketServiceImpl`                | 新增白名单配置字段、`@PostConstruct` 解析、`downloadToTempFile`、`copyWithLimit`、`deleteQuietly`、`extractBucket`、`isAllowedKey` 等私有方法；类加 `@RefreshScope` |
+| `business/service/impl/alarm/SarifParseServiceImpl`         | `downloadAndParse` 改为临时文件 + 凭证读取；删除匿名 HTTP 下载与 host 白名单相关代码                                                                                |
+| `business/service/impl/alarm/StaticAlarmReceiveServiceImpl` | `buildScanRunEntity` 增加 obsUrl 仓库段校验，拒绝 `unknown-repo` 入库                                                                                               |
+| `business/service/impl/ObsBucketServiceImplTest`            | 新增访问策略与大小上限用例                                                                                                                                          |
+| `business/service/impl/alarm/SarifParseServiceImplTest`     | 下载源改为 mock `ObsBucketService`，新增单 URL 失败隔离用例                                                                                                         |
 
 ## 4. 数据模型设计
 
@@ -123,12 +127,24 @@ codecheck.alarm.obs.max-file-size-mb=500
 
 ## 7. 安全设计
 
-| 风险                               | 控制                                                                                                                                           |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| 凭证被当作任意对象读取器（越权读） | 桶白名单 + 目录白名单 + `.sarif` 后缀 + 归属仓库校验，四者全部命中才读取                                                                       |
-| 跨仓库读取他人扫描结果             | objectKey 第二段必须与 `repoUrl` 解析出的 `scanRun.repo` 一致；`unknown-repo` 为插件兜底共享目录，路径不可枚举且无归属信息，放行以保兜底可用性 |
-| SSRF / 本地文件读取                | 不再对 `obsUrl` 发起 HTTP 请求；仅解析 host 首段作为桶名、path 作为 key，`file://` 等协议直接拒绝                                              |
-| 路径穿越                           | 拒绝含 `..`、`\`、前导 `/` 的 key；对象只读不写，临时文件名由 `createTempFile` 生成                                                            |
-| 超大对象 DoS                       | 元数据预检 + 流式计数兜底，超限中止并清理临时文件                                                                                              |
-| 敏感信息落日志                     | 日志只打印 `obsUrl` 与错误原因，不打印 AK/SK 与对象内容                                                                                        |
-| 存量公开对象                       | 本次不迁移、不删除，由插件侧治理；后端读取私有/公开对象均走凭证，公有读属性不影响鉴权读取                                                      |
+| 风险                               | 控制                                                                                                       |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 凭证被当作任意对象读取器（越权读） | 桶白名单 + 目录白名单 + `.sarif` 后缀 + 归属仓库校验，四者全部命中才读取                                   |
+| 跨仓库读取他人扫描结果             | objectKey 第二段必须与 `repoUrl` 解析出的 `scanRun.repo` 一致；`unknown-repo` 无归属信息，接收与读取均拒绝 |
+| SSRF / 本地文件读取                | 不再对 `obsUrl` 发起 HTTP 请求；仅解析 host 首段作为桶名、path 作为 key，`file://` 等协议直接拒绝          |
+| 路径穿越                           | 拒绝含 `..`、`\`、前导 `/` 的 key；对象只读不写，临时文件名由 `createTempFile` 生成                        |
+| 超大对象 DoS                       | 元数据预检 + 流式计数兜底，超限中止并清理临时文件                                                          |
+| 敏感信息落日志                     | 日志只打印 `obsUrl` 与错误原因，不打印 AK/SK 与对象内容                                                    |
+| 存量公开对象                       | 本次不迁移、不删除，由插件侧治理；后端读取私有/公开对象均走凭证，公有读属性不影响鉴权读取                  |
+
+### 7.1 unknown-repo 目录的处理
+
+插件仅在 `GITHUB_REPOSITORY` / `ATOMGIT_REPOSITORY` / `GIT_REPOSITORY` 全部缺失时使用 `unknown-repo` 兜底，实际 key 结构为：
+
+```text
+{tool}-results/unknown-repo/{yyyyMMdd.HH}/{runId|manual}/{basename}.sarif
+```
+
+其中第 4 段为时间批次、第 5 段为流水线运行 ID 或字面量 `manual`，文件名由调用方指定，均不具备不可猜测性。`obsUrl` 经上报接口进入后端，属外部可控输入，若读取阶段放行，调用方可构造 `{tool}-results/unknown-repo/<他人批次>/<固定文件名>.sarif` 绕过仓库归属校验，以平台凭证读取他人扫描结果。
+
+因此改为接收阶段直接拒绝：`StaticAlarmReceiveServiceImpl` 对每条 obsUrl 解析路径，仓库段为 `unknown-repo` 即抛参数错误并返回明确提示；读取链路同步取消放行，按归属不一致拒绝。生产与 BETA 存量 `unknown-repo` 命中均为 0，改动无存量影响。

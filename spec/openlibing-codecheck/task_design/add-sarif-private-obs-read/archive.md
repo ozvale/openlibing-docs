@@ -22,7 +22,7 @@
 
 - 业务 PR 起初以 `release_20261116_iter1` 为 base，为避免 diff 混入上游分支改动，后将 `add-static-alarm-github-adapt` 推送至主仓，并改以该分支为 base 重新提交 PR。
 - 目录白名单默认正则去掉长度上限，对齐插件 `buildToolPrefix` 的实际规则（小写、仅 `[a-z0-9-]`、不截断）。
-- `unknown-repo` 目录放行：页面展示的平台与仓库来自上报 `repoUrl` 解析，不读取对象路径，因此不影响展示。
+- `unknown-repo` 目录改为拒绝：插件 key 结构为 `{tool}-results/unknown-repo/{yyyyMMdd.HH}/{runId|manual}/{basename}`，第 4、5 段可预测，放行可被构造路径绕过归属校验；改为接收阶段拒绝入库、读取阶段拒绝读取。生产与 BETA 存量命中均为 0，无兼容影响；页面展示来自上报 `repoUrl` 解析，不读取对象路径。
 - 存量公开对象不迁移、disappeared 清理语义不变；存量治理由插件侧另行改造。
 
 ## 可复用经验
