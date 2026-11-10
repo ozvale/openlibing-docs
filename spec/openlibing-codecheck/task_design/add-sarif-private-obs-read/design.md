@@ -57,7 +57,7 @@ StaticAlarmEventConsumer
 
 | 配置项                                     | 默认值                                               | 解析规则                                                                                          |
 | ------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `codecheck.alarm.obs.allowed-buckets`      | `openlibing-gitcode-action,openlibing-github-action` | 逗号分隔，trim + 转小写，空项忽略                                                                 |
+| `obs.sarif.buckets`                        | `openlibing-gitcode-action,openlibing-github-action` | 共享配置（`application` data-id），逗号分隔，trim + 转小写，空项忽略                              |
 | `codecheck.alarm.obs.allowed-key-patterns` | `^[a-z0-9][a-z0-9._-]*-results/`                     | 逗号分隔正则，`Pattern.compile` 失败时告警并丢弃该条；花括号量词内的逗号（如 `a{2,3}`）不参与拆分 |
 | `codecheck.alarm.obs.max-file-size-mb`     | `500`                                                | 正数，≤0 时使用默认上限                                                                           |
 
@@ -106,10 +106,12 @@ StaticAlarmEventConsumer
 
 无 schema 变更、无 liquibase changeSet。`StaticAlarmScanRunEntity.obsUrl` 字段语义不变，仍为插件上报的 OBS 访问 URL 列表。
 
-配置项（Nacos `OPENLIBING` / 对应 namespace 的 `codecheck` 配置文件）：
+配置项（Nacos `OPENLIBING` / 对应 namespace）：
 
 ```properties
-codecheck.alarm.obs.allowed-buckets=openlibing-gitcode-action,openlibing-github-action
+# application data-id：共享的 SARIF 桶位置，后续其他服务接入同类扫描结果时复用
+obs.sarif.buckets=openlibing-gitcode-action,openlibing-github-action
+# codecheck data-id：本服务读取侧的目录白名单与单文件大小上限
 codecheck.alarm.obs.allowed-key-patterns=^[a-z0-9][a-z0-9._-]*-results/
 codecheck.alarm.obs.max-file-size-mb=500
 ```

@@ -22,7 +22,7 @@
 
 1. 删除基于 `obsUrl` 的匿名 HTTP 下载路径，不再对 `obsUrl` 发起任何出站 HTTP 请求。
 2. SARIF 通过平台 OBS 客户端读取：AK/SK 经 `SecurityUtil.decrypt(x, security.part1)` 解密，与现有 Excel 导出共用同一套 `obs.*` 配置。
-3. 桶白名单支持 Nacos 覆盖 `codecheck.alarm.obs.allowed-buckets`，未配置时默认 `openlibing-gitcode-action,openlibing-github-action`。
+3. 桶白名单读取共享配置 `obs.sarif.buckets`（由 Nacos `application` 下发，描述 SARIF 文件所在桶，供多服务复用），未配置时默认 `openlibing-gitcode-action,openlibing-github-action`。
 4. 目录白名单支持 Nacos 覆盖 `codecheck.alarm.obs.allowed-key-patterns`（逗号分隔正则，匹配对象 key 开头），未配置时默认 `^[a-z0-9][a-z0-9._-]*-results/`，覆盖 `{toolName}-results/`、`pre-commit-results/`、`code-arts-check-results/`。
 5. 白名单配置逐条解析：单条正则编译失败时丢弃该条并告警；配置整体为空或全部非法时回落默认值，不阻断服务启动。
 6. 只允许读取以 `.sarif` 结尾的对象（忽略大小写），其余后缀（如 `build-result.json`）拒绝。
