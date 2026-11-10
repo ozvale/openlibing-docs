@@ -60,7 +60,13 @@ GET /projects/product-quality/version-summary/detail?milestoneId=7
 | `projectId` | Integer | 否 | 项目 ID，首次保存时由服务端根据里程碑生成 |
 | `milestoneId` | Long | 否 | 里程碑 ID |
 | `milestoneName` | String | 是 | 里程碑名称，首次保存时由服务端根据里程碑生成 |
-| `summaryHtml` | String | 是 | 版本摘要富文本（HTML 片段），已在服务端按白名单清理 |
+| `targetMarketRegionHtml` | String | 是 | 目标市场和重点目标区域（HTML 片段），已在服务端按白名单清理 |
+| `customerIndustryValueHtml` | String | 是 | 客户价值和产业价值（HTML 片段），已在服务端按白名单清理 |
+| `huaweiValueHtml` | String | 是 | 华为价值（HTML 片段），已在服务端按白名单清理 |
+| `projectControlHtml` | String | 是 | 项目控制（HTML 片段），已在服务端按白名单清理 |
+| `supportingProductHtml` | String | 是 | 配套产品（HTML 片段），已在服务端按白名单清理 |
+| `projectInvestmentHtml` | String | 是 | 项目投资（HTML 片段），已在服务端按白名单清理 |
+| `otherHtml` | String | 是 | 其他（HTML 片段），已在服务端按白名单清理 |
 | `createBy` | String | 否 | 创建人用户 ID |
 | `createTime` | String | 否 | 创建时间，格式 `yyyy-MM-dd HH:mm:ss` |
 | `updateBy` | String | 是 | 最后修改人用户 ID |
@@ -114,7 +120,13 @@ GET /projects/product-quality/version-summary/detail?milestoneId=7
     "projectId": 100,
     "milestoneId": 7,
     "milestoneName": "TR1",
-    "summaryHtml": "<h2>版本摘要</h2><p>本版本聚焦质量目标收敛。</p>",
+    "targetMarketRegionHtml": "<p>聚焦国内运营商市场。</p>",
+    "customerIndustryValueHtml": "<p>提升客户运维效率。</p>",
+    "huaweiValueHtml": "<p>增强产品竞争力。</p>",
+    "projectControlHtml": "<p>按里程碑管控。</p>",
+    "supportingProductHtml": "<p>配套网管产品。</p>",
+    "projectInvestmentHtml": "<p>投入 20 人月。</p>",
+    "otherHtml": "<p>无。</p>",
     "createBy": "user-1",
     "createTime": "2026-11-07 10:00:00",
     "updateBy": "user-1",
@@ -151,13 +163,25 @@ Content-Type: application/json
 
 | 字段 | 类型 | 必填 | 校验规则 | 说明 |
 |---|---|---|---|---|
-| `summaryHtml` | String | 否 | 最大 100,000 字符 | 版本摘要富文本；允许传 `null` 或空字符串表示清空内容 |
+| `targetMarketRegionHtml` | String | 否 | 最大 100,000 字符 | 目标市场和重点目标区域；允许传 `null` 或空字符串表示清空内容 |
+| `customerIndustryValueHtml` | String | 否 | 最大 100,000 字符 | 客户价值和产业价值；允许传 `null` 或空字符串表示清空内容 |
+| `huaweiValueHtml` | String | 否 | 最大 100,000 字符 | 华为价值；允许传 `null` 或空字符串表示清空内容 |
+| `projectControlHtml` | String | 否 | 最大 100,000 字符 | 项目控制；允许传 `null` 或空字符串表示清空内容 |
+| `supportingProductHtml` | String | 否 | 最大 100,000 字符 | 配套产品；允许传 `null` 或空字符串表示清空内容 |
+| `projectInvestmentHtml` | String | 否 | 最大 100,000 字符 | 项目投资；允许传 `null` 或空字符串表示清空内容 |
+| `otherHtml` | String | 否 | 最大 100,000 字符 | 其他；允许传 `null` 或空字符串表示清空内容 |
 
 请求示例：
 
 ```json
 {
-  "summaryHtml": "<h2>版本摘要</h2><p>本版本聚焦质量目标收敛。</p>"
+  "targetMarketRegionHtml": "<p>聚焦国内运营商市场。</p>",
+  "customerIndustryValueHtml": "<p>提升客户运维效率。</p>",
+  "huaweiValueHtml": "<p>增强产品竞争力。</p>",
+  "projectControlHtml": "<p>按里程碑管控。</p>",
+  "supportingProductHtml": "<p>配套网管产品。</p>",
+  "projectInvestmentHtml": "<p>投入 20 人月。</p>",
+  "otherHtml": "<p>无。</p>"
 }
 ```
 
@@ -165,9 +189,9 @@ Content-Type: application/json
 
 - 首次保存：服务端校验里程碑存在后，从里程碑获取项目 ID 和里程碑名称，创建新记录。创建操作不写独立修改日志。
   - 里程碑 ID 为字符串，服务端会将其转换为 `Integer` 写入 `project_id`；非数字时返回 `40001`。
-- 后续保存：保留主键、项目 ID、里程碑 ID/名称、创建人、创建时间不变，仅更新 `summaryHtml`、更新人和更新时间。更新操作在同一事务内写入 `pq_version_summary_log` 日志表，记录新旧完整 JSON 快照。
-- `summaryHtml` 会经过服务端 OWASP HTML 白名单清理后再落库：保留常见块级与行内排版元素，以及 `table`、`thead`、`tbody`、`tfoot`、`tr`、`th`、`td`、`caption`、`hr`、`a`；`a` 仅保留 `href`，`th`/`td` 仅保留 `colspan`、`rowspan`；链接仅允许 `http`、`https` 协议并自动追加 `rel="nofollow"`。`script`、`style`、`iframe`、事件属性及危险协议会被移除。
-- 清理后长度仍受请求校验上限约束，前端应在提交前自行限制富文本长度。
+- 后续保存：保留主键、项目 ID、里程碑 ID/名称、创建人、创建时间不变，仅更新 7 个摘要字段、更新人和更新时间。更新操作在同一事务内写入 `pq_version_summary_log` 日志表，记录新旧完整 JSON 快照。
+- 7 个摘要字段（`targetMarketRegionHtml`、`customerIndustryValueHtml`、`huaweiValueHtml`、`projectControlHtml`、`supportingProductHtml`、`projectInvestmentHtml`、`otherHtml`）均会经过服务端 OWASP HTML 白名单清理后再落库：保留常见块级与行内排版元素，以及 `table`、`thead`、`tbody`、`tfoot`、`tr`、`th`、`td`、`caption`、`hr`、`a`；`a` 仅保留 `href`，`th`/`td` 仅保留 `colspan`、`rowspan`；链接仅允许 `http`、`https` 协议并自动追加 `rel="nofollow"`。`script`、`style`、`iframe`、事件属性及危险协议会被移除。
+- 清理后每个字段长度仍受请求校验上限约束，前端应在提交前自行限制各富文本字段长度。
 - 同一里程碑同时只存在一条有效记录（`milestone_id + deleted` 唯一约束）。
 
 ### 4.3 成功响应
@@ -182,7 +206,13 @@ Content-Type: application/json
     "projectId": 100,
     "milestoneId": 7,
     "milestoneName": "TR1",
-    "summaryHtml": "<h2>版本摘要</h2><p>本版本聚焦质量目标收敛。</p>",
+    "targetMarketRegionHtml": "<p>聚焦国内运营商市场。</p>",
+    "customerIndustryValueHtml": "<p>提升客户运维效率。</p>",
+    "huaweiValueHtml": "<p>增强产品竞争力。</p>",
+    "projectControlHtml": "<p>按里程碑管控。</p>",
+    "supportingProductHtml": "<p>配套网管产品。</p>",
+    "projectInvestmentHtml": "<p>投入 20 人月。</p>",
+    "otherHtml": "<p>无。</p>",
     "createBy": "user-1",
     "createTime": "2026-11-07 10:00:00",
     "updateBy": "user-2",
@@ -206,7 +236,13 @@ interface VersionSummaryResp {
   projectId: number;
   milestoneId: number;
   milestoneName: string | null;
-  summaryHtml: string | null;
+  targetMarketRegionHtml: string | null;
+  customerIndustryValueHtml: string | null;
+  huaweiValueHtml: string | null;
+  projectControlHtml: string | null;
+  supportingProductHtml: string | null;
+  projectInvestmentHtml: string | null;
+  otherHtml: string | null;
   createBy: string;
   createTime: string;
   updateBy: string | null;
@@ -214,7 +250,13 @@ interface VersionSummaryResp {
 }
 
 interface VersionSummarySaveReq {
-  summaryHtml: string | null;
+  targetMarketRegionHtml: string | null;
+  customerIndustryValueHtml: string | null;
+  huaweiValueHtml: string | null;
+  projectControlHtml: string | null;
+  supportingProductHtml: string | null;
+  projectInvestmentHtml: string | null;
+  otherHtml: string | null;
 }
 ```
 
