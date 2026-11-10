@@ -19,9 +19,9 @@
 1. GitHub 仓录入后（含保存触发的自动同步），列表「默认分支」列与编辑弹窗正确显示平台真实默认分支；机机接口 `query-repo-branch-by-url` 返回的分支列表中默认分支 `isDefault=true`。
 2. GitHub 平台侧新建分支后，openLiBing 分支管理列表自动出现该分支；删除分支后自动移除；tag 的创建/删除不产生分支记录；同仓多项目录入全部同步。
 3. 存量 GitHub webhook 经刷新调度任务 PATCH 后 events 在平台返回的既有 events 全集基础上包含 `push`/`create`/`delete`（全集基线并集补齐，不丢失人工勾选的其他事件，也不主动移除评论订阅下线前存量仓可能残留的 `issue_comment`）；新录入 GitHub 仓的 webhook 创建即携带正确事件集。
-4. 存量 GitCode webhook 经刷新调度任务 PATCH 后「推送事件」勾选成功，任务日志无 400；已订阅齐全的 webhook 自动跳过。
+4. 存量 GitCode webhook 经刷新调度任务 PATCH 后「推送事件」勾选成功，任务日志无 400；已订阅齐全的 webhook 自动跳过。回调地址（url）为 null/空白的存量脏数据 webhook 不发 PATCH，计入跳过统计（不计 failed）且 warn 日志可区分「有意跳过」与「正常成功」；此类仓无法通过刷新恢复订阅，需在验收阶段依据跳过统计与 warn 日志识别后重建 webhook。
 5. gitee/gitcode 平台既有录入、同步、分支管理、webhook 刷新行为回归不变。
-6. 降级语义：GitHub 仓库详情接口失败时，分支列表返回不受阻断（默认分支保持空，与现状一致）；GitCode PATCH 仍失败时保留 failed 计数与失败日志。
+6. 降级语义（三态可区分）：GitHub 仓库详情接口失败时，分支列表返回不受阻断（默认分支保持空，与现状一致）；GitCode webhook 刷新结果在任务日志中按「成功 / 有意跳过（已订阅齐全或 url 为空的脏数据，计入跳过统计）/ 失败（failed 计数 + 失败日志）」三态区分，不存在静默吞没。
 7. 存量空数据回填：修复部署后，存量 GitHub 仓默认分支由下一次全量分支同步（含手动「同步仓库」）自然回填，无需数据迁移脚本。
 
 ## 涉及服务
