@@ -25,15 +25,15 @@ StaticAlarmEventConsumer
 
 ### 1.2 方案取舍
 
-| 决策           | 选择                                                 | 原因                                                                                            |
-| -------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| 读取方式       | esdk-obs-java（`ObsUtil.createObsClient`）           | 与存量 Excel 导出、coderepo 参考实现一致，复用平台静态 AK/SK 解密链路                           |
-| 白名单可配置   | `@Value` + 默认值 + `@RefreshScope`                  | 与 `RepoHostKeywordSettings` 等本仓既有配置风格一致，Nacos properties 可直接覆盖并热生效        |
-| 目录白名单形式 | 逗号分隔正则，`Matcher.lookingAt()` 前缀匹配         | 动态 `{toolName}-results/` 无法用固定前缀枚举；`lookingAt()` 同时兼容字面前缀与 `^...` 正则写法 |
-| 归属校验位置   | `ObsBucketServiceImpl` 内，随 URL 解析一次完成       | 访问策略集中在一处，避免与 `SarifParseServiceImpl` 重复解析 URL 导致口径分叉                    |
-| 拒绝的异常类型 | 统一 `IOException`                                   | 复用 `parseAllUrls` 既有的按 URL 隔离逻辑，单个 URL 失败不影响同批其他 URL                      |
-| 临时文件       | `Files.createTempFile("sarif-", ".sarif")`，用后删除 | 避免大文件整体读入内存，且不改变解析链路入参类型                                                |
-| 存量数据       | 不迁移 ACL、不清理既有对象                           | 用户确认：存量公开文件由插件侧治理，后端只做读取适配                                            |
+| 决策           | 选择                                                     | 原因                                                                                              |
+| -------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 读取方式       | esdk-obs-java（`ObsUtil.createObsClient`）               | 与存量 Excel 导出、coderepo 参考实现一致，复用平台静态 AK/SK 解密链路                             |
+| 白名单可配置   | 独立 `@RefreshScope` 配置 Bean（`SarifObsAccessPolicy`） | 与 `RepoHostKeywordSettings` 等本仓既有配置风格一致，Nacos properties 可热生效且不重建 OBS 客户端 |
+| 目录白名单形式 | 逗号分隔正则，`Matcher.lookingAt()` 前缀匹配             | 动态 `{toolName}-results/` 无法用固定前缀枚举；`lookingAt()` 同时兼容字面前缀与 `^...` 正则写法   |
+| 归属校验位置   | `ObsBucketServiceImpl` 内，随 URL 解析一次完成           | 访问策略集中在一处，避免与 `SarifParseServiceImpl` 重复解析 URL 导致口径分叉                      |
+| 拒绝的异常类型 | 统一 `IOException`                                       | 复用 `parseAllUrls` 既有的按 URL 隔离逻辑，单个 URL 失败不影响同批其他 URL                        |
+| 临时文件       | `Files.createTempFile("sarif-", ".sarif")`，用后删除     | 避免大文件整体读入内存，且不改变解析链路入参类型                                                  |
+| 存量数据       | 不迁移 ACL、不清理既有对象                               | 用户确认：存量公开文件由插件侧治理，后端只做读取适配                                              |
 
 ## 2. 实现逻辑设计
 
@@ -61,7 +61,7 @@ StaticAlarmEventConsumer
 | `codecheck.alarm.obs.allowed-key-patterns` | `(?i)^[a-z0-9][a-z0-9._-]*-results/`                 | 逗号分隔正则，`Pattern.compile` 失败时告警并丢弃该条；花括号量词内的逗号（如 `a{2,3}`）不参与拆分 |
 | `codecheck.alarm.obs.max-file-size-mb`     | `500`                                                | 服务私有配置，正数，≤0 时使用默认上限；约束的是**单文件**大小，不是并发总量（见 5. 性能设计）     |
 
-`@PostConstruct` 中解析并缓存；类上标注 `@RefreshScope`，Nacos 变更后重建 Bean 重新解析。单条正则非法只丢弃该条、不影响其余条目；配置整体为空或全部条目非法时回落到代码默认值，服务不因配置错误启动失败。默认值统一放在代码常量中，`@Value` 的默认部分留空，避免正则里可能出现的花括号被 Spring 占位符解析提前截断。
+`SarifObsAccessPolicy`（`common/config`，`@Component` + `@RefreshScope`）在 `@PostConstruct` 中解析并缓存；Nacos 变更后只重建该配置 Bean，`ObsBucketServiceImpl` 与懒加载的 `ObsClient` 生命周期跟随应用，在途下载不会被关闭客户端中断。单条正则非法只丢弃该条、不影响其余条目；配置整体为空或全部条目非法时回落到代码默认值，服务不因配置错误启动失败。默认值统一放在代码常量中，`@Value` 的默认部分留空，避免正则里可能出现的花括号被 Spring 占位符解析提前截断。
 
 默认目录正则与插件实际生成规则对齐：插件 `buildToolPrefix` 对工具名做 `toLowerCase()` + 非 `[a-z0-9]` 转 `-` + 去首尾 `-`，**无长度截断**，因此默认正则只约束首字符与 `-results/` 结尾（字符集 `[a-z0-9._-]` 为插件实际字符集的超集，兼容兜底前缀 `code-arts-check-results` 与 `pre-commit-results`），不设长度上限。
 
@@ -94,14 +94,15 @@ StaticAlarmEventConsumer
 
 ## 3. 类设计
 
-| 类                                                          | 变更                                                                                                                                                                                                                                                   |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `business/service/ObsBucketService`                         | 新增 `Path downloadToTempFile(String obsUrl, String expectedRepo) throws IOException`                                                                                                                                                                  |
-| `business/service/impl/ObsBucketServiceImpl`                | 新增白名单配置字段、`@PostConstruct` 解析、`downloadToTempFile`、`copyWithLimit`、`deleteQuietly`、`extractBucket`、`validateAccessPolicy`、`isValidObjectKey` 等私有方法；类加 `@RefreshScope`，并以 `@PreDestroy destroy()` 关闭懒加载的 `ObsClient` |
-| `business/service/impl/alarm/SarifParseServiceImpl`         | `downloadAndParse` 改为临时文件 + 凭证读取；删除匿名 HTTP 下载与 host 白名单相关代码                                                                                                                                                                   |
-| `business/service/impl/alarm/StaticAlarmReceiveServiceImpl` | `buildScanRunEntity` 增加 obsUrl 仓库段校验，拒绝 `unknown-repo` 入库                                                                                                                                                                                  |
-| `business/service/impl/ObsBucketServiceImplTest`            | 新增访问策略与大小上限用例                                                                                                                                                                                                                             |
-| `business/service/impl/alarm/SarifParseServiceImplTest`     | 下载源改为 mock `ObsBucketService`，新增单 URL 失败隔离用例                                                                                                                                                                                            |
+| 类                                                          | 变更                                                                                                                                                                                                                                                 |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `business/service/ObsBucketService`                         | 新增 `Path downloadToTempFile(String obsUrl, String expectedRepo) throws IOException`                                                                                                                                                                |
+| `business/service/impl/ObsBucketServiceImpl`                | 注入 `SarifObsAccessPolicy` 取白名单与大小上限；新增 `downloadToTempFile`、`copyWithLimit`、`deleteQuietly`、`extractBucket`、`validateAccessPolicy`、`isValidObjectKey` 等私有方法；以 `@PreDestroy destroy()` 在应用关闭时关闭懒加载的 `ObsClient` |
+| `common/config/SarifObsAccessPolicy`                        | 承载 `obs.action.buckets` / `allowed-key-patterns` / `max-file-size-mb` 三项配置，`@RefreshScope` + `@PostConstruct` 解析，配置刷新只重建本 Bean                                                                                                     |
+| `business/service/impl/alarm/SarifParseServiceImpl`         | `downloadAndParse` 改为临时文件 + 凭证读取；删除匿名 HTTP 下载与 host 白名单相关代码                                                                                                                                                                 |
+| `business/service/impl/alarm/StaticAlarmReceiveServiceImpl` | `buildScanRunEntity` 增加 obsUrl 仓库段校验，拒绝 `unknown-repo` 入库                                                                                                                                                                                |
+| `business/service/impl/ObsBucketServiceImplTest`            | 新增访问策略与大小上限用例                                                                                                                                                                                                                           |
+| `business/service/impl/alarm/SarifParseServiceImplTest`     | 下载源改为 mock `ObsBucketService`，新增单 URL 失败隔离用例                                                                                                                                                                                          |
 
 ## 4. 数据模型设计
 
@@ -121,7 +122,7 @@ codecheck.alarm.obs.allowed-key-patterns=(?i)^[a-z0-9][a-z0-9._-]*-results/
 - 下载为流式写临时文件，内存占用与文件大小无关；单文件上限 500MB。
 - 本地磁盘占用为「并发下载数 × 单文件上限」量级：临时文件写入 `java.io.tmpdir`，一次上报可携带多个 `obsUrl`，临时目录容量需按业务峰值并发评估。磁盘写满时 `createTempFile`/写入抛 `IOException`，该 URL 按失败隔离（不影响同批其他 URL），不会清理任何存量告警。当前未做下载并发数限制，如需硬性上限应在解析消费侧增加并发度控制（本次未实施）。
 - 访问策略校验均为字符串/正则匹配，单次开销可忽略；正则列表在 `@PostConstruct` 预编译，不在每次调用时重复编译。
-- OBS 客户端沿用既有懒加载单例，不额外创建连接；`@RefreshScope` 触发 Bean 重建时由 `@PreDestroy destroy()` 关闭旧客户端，避免连接池与后台线程泄漏。
+- OBS 客户端沿用既有懒加载单例，不额外创建连接；配置刷新只重建 `SarifObsAccessPolicy`，客户端不重建，`@PreDestroy destroy()` 仅在应用关闭时执行，不会打断在途下载。
 - 与现状相比仅多一次本地临时文件写盘；解析从临时文件流读取，避免原有匿名 HTTP 连接的不稳定性。
 
 ## 6. API接口设计

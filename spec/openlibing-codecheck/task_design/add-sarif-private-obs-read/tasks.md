@@ -7,7 +7,7 @@
 ## Task 2 ObsBucketServiceImpl 私有对象读取
 
 - [x] 2.1 新增配置项 `obs.action.buckets`（共享，`application` data-id）与 `codecheck.alarm.obs.allowed-key-patterns`（服务私有），大小上限沿用 `codecheck.alarm.obs.max-file-size-mb`，均带代码默认值
-- [x] 2.2 `@PostConstruct` 解析并预编译白名单，非法配置告警后回落默认值，类加 `@RefreshScope`
+- [x] 2.2 `SarifObsAccessPolicy` 以 `@PostConstruct` 解析并预编译白名单，非法配置告警后回落默认值；该 Bean 加 `@RefreshScope`，`ObsBucketServiceImpl` 不加，避免配置刷新关闭 `ObsClient`
 - [x] 2.3 实现 URL 解析：协议校验、host 首段取桶、path 取 objectKey
 - [x] 2.4 实现访问策略：桶白名单、目录白名单（正则 `lookingAt`）、`.sarif` 后缀、key 合法性（`..`/`\`/前导 `/`/长度）
 - [x] 2.5 实现归属校验：key 分段 ≥ 5，第二段与 `expectedRepo` 忽略大小写相等，`unknown-repo` 不放行

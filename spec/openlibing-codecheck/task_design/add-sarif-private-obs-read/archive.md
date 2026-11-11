@@ -15,6 +15,7 @@
 - commit `aa87eb17`: 损坏 SARIF 按 URL 隔离，工具目录匹配放宽大小写
 - commit `37342e2e`: 桶白名单改用共享配置 `obs.action.buckets`
 - commit `93a41355`: 按业务 PR 检视意见修复——删除不可达的前导斜杠校验、统一按 URL 隔离解析异常、补齐仓库目录大小写与路径段数用例
+- commit `8b8c818b`: 拆分 `SarifObsAccessPolicy` 配置 Bean，`ObsBucketServiceImpl` 去掉 `@RefreshScope`，避免配置刷新关闭 `ObsClient`
 
 ## 最终验证
 
@@ -34,7 +35,7 @@
 
 ## 可复用经验
 
-- Nacos 下发的白名单配置配合 `@RefreshScope` + `@PostConstruct` 可在不重启的情况下重新解析。
+- 白名单与大小上限拆到独立 `SarifObsAccessPolicy`（`@RefreshScope` + `@PostConstruct`），Nacos 变更只重建该 Bean，OBS 客户端生命周期跟随应用，不打断在途下载。
 - Spring 占位符 `${key:默认值}` 的默认值中若含 `}`（如正则量词）会被提前截断，默认值应放代码常量，`@Value` 默认部分留空。
 - 逗号分隔的正则配置拆分需感知花括号，否则量词内的逗号会被误拆。
 
