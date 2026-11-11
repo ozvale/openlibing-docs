@@ -36,6 +36,8 @@
 - [ ] 6.1 抽样线上 `static_alarm_scan_run.obs_url`，逐条校验桶名、目录前缀、`.sarif` 后缀、段数、仓库段，确认存量对象均能命中新访问策略
 - [ ] 6.2 若发现不满足策略的存量对象，评估其工具维度是否同时存在其他可用 URL，避免消失清理误判
 
+> 6.1 / 6.2 尚未执行：存量 URL 对新访问策略的全量覆盖率**未验证**。已完成的只是首轮只读核查（3842 条 scanRun / 4335 个 obsUrl，`unknown-repo` 命中 0，仓库段不一致仅 1 组 1325 条且来自改造前已被 host 白名单拒绝的旧流水线），不含目录前缀 / 段数 / `.sarif` 后缀的全量校验。残余风险：若存量 URL 不命中新策略，读取阶段会被拒并计入 `ParseResult.errors`；当同一工具还有其他可用 URL 时 scanRun 为 PARTIAL_SUCCESS，被拒 URL 上的告警可能被消失清理，属不可逆数据丢失。
+
 ## Task 7 接收阶段拒绝 unknown-repo
 
 - [x] 7.1 `StaticAlarmReceiveServiceImpl.buildScanRunEntity` 校验每条 obsUrl 的仓库段，`unknown-repo` 抛 `IllegalArgumentException` 并返回参数错误

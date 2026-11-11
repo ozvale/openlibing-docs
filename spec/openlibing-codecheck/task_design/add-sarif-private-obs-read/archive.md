@@ -14,6 +14,7 @@
 - commit `046194cc`: 补充仓库名含加号的字面路径用例
 - commit `aa87eb17`: 损坏 SARIF 按 URL 隔离，工具目录匹配放宽大小写
 - commit `37342e2e`: 桶白名单改用共享配置 `obs.action.buckets`
+- commit `93a41355`: 按业务 PR 检视意见修复——删除不可达的前导斜杠校验、统一按 URL 隔离解析异常、补齐仓库目录大小写与路径段数用例
 
 ## 最终验证
 
@@ -21,6 +22,8 @@
 - `mvn spotless:check`：通过
 - `ObsBucketServiceImplTest` / `SarifParseServiceImplTest`：通过
 - pre-commit（trailing-whitespace、gitleaks、spotless、checkstyle、spotbugs、pmd）：通过
+
+> 存量兼容性全量验证（Task 6.1 / 6.2）**尚未执行**，本归档不代表存量 URL 对新访问策略的覆盖率已验证；首轮只读核查结论与残余风险见 tasks.md Task 6 备注。
 
 ## 设计偏差与取舍
 

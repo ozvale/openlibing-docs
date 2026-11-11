@@ -26,8 +26,8 @@
 4. 目录白名单支持 Nacos 覆盖 `codecheck.alarm.obs.allowed-key-patterns`（逗号分隔正则，匹配对象 key 开头），未配置时默认 `(?i)^[a-z0-9][a-z0-9._-]*-results/`，覆盖 `{toolName}-results/`、`pre-commit-results/`、`code-arts-check-results/`。
 5. 白名单配置逐条解析：单条正则编译失败时丢弃该条并告警；配置整体为空或全部非法时回落默认值，不阻断服务启动。
 6. 只允许读取以 `.sarif` 结尾的对象（忽略大小写），其余后缀（如 `build-result.json`）拒绝。
-7. 归属校验：objectKey 第二段仓库名需与 `scanRun.repo` 忽略大小写相等；`unknown-repo`（插件取不到仓库名的兜底目录）无归属信息，接收阶段拒绝入库、读取阶段拒绝读取；路径段数不足约定结构时拒绝。
-8. 单文件大小上限默认 500MB，可通过 `codecheck.alarm.obs.max-file-size-mb` 调整；元数据预检 + 流式计数双保险，超限中止并删除临时文件。
+7. 归属校验：objectKey 第二段仓库名需与 `scanRun.repo` 忽略大小写相等；`unknown-repo`（插件取不到仓库名的兜底目录）无归属信息，接收阶段拒绝入库、读取阶段拒绝读取；路径段数不足约定结构时拒绝。该一致性只降低误读面，不等价于调用方授权，残余风险见 design.md 7.2。
+8. 单文件大小上限默认 500MB，可通过 `codecheck.alarm.obs.max-file-size-mb` 调整；元数据预检 + 流式计数双保险，超限中止并删除临时文件。上限为单文件维度，不含并发下载总量与本地临时目录容量。
 9. 单个 URL 被拒或下载失败只记录该 URL 的错误，不影响同批其他 URL；全部失败时 scanRun 置 FAILED（保持现有语义）。
 10. 下载产生的临时文件在解析成功、解析失败、下载失败三种路径下均被删除。
 11. 首页/告警列表展示的平台与仓库仍来自 `repoUrl` 解析结果；`unknown-repo` 目录不再被接收，展示逻辑不依赖 OBS 路径。
