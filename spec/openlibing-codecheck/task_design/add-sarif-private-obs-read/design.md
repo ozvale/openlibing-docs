@@ -71,7 +71,7 @@ StaticAlarmEventConsumer
   - 调 `obsBucketService.downloadToTempFile(obsUrl, scanRun.getRepo())`；
   - `Files.newInputStream(tempFile)` 交给 Jackson 解析，日志记录 `Files.size(tempFile)` 与 runs 数；
   - `finally` 删除临时文件；
-  - Jackson 3 的解析异常为非受检异常，保留 `catch (RuntimeException)` 记录日志后原样抛出（与现状一致）。
+  - 解析异常与 obsUrl 拒绝统一转为 `IOException`（`SARIF 解析失败` / `obsUrl 不在允许范围`），由 `parseAllUrls` 按 URL 隔离，单个损坏文件不会把整批置为失败。
 - 删除：`HttpURLConnection` 下载、`CountingInputStream`、`validateObsUrl`、`isHostAllowed`、`obsHostWhitelist` 配置、连接/读取超时常量及相关 import。
 - 其余链路（多 URL 分组、工具识别、指纹、消失清理、快照、推送）不变。
 
@@ -81,6 +81,7 @@ StaticAlarmEventConsumer
 | ----------------------------------------- | --------------------------------------------------------------------------- |
 | 上报 obsUrl 仓库段为 `unknown-repo`       | 接收阶段拒绝入库，返回「参数错误：obsUrl 中的仓库名为占位值 unknown-repo…」 |
 | 单个 URL 不在白名单 / 归属不符 / 下载失败 | 记入 `ParseResult.errors`，其他 URL 继续                                    |
+| 单个 SARIF 损坏或格式异常                 | 记入 `ParseResult.errors`，其他 URL 继续，结束时 PARTIAL_SUCCESS            |
 | 全部 URL 失败                             | scanRun 置 FAILED，错误信息聚合所有 URL 原因（现状不变）                    |
 | 部分 URL 失败                             | scanRun 置 PARTIAL_SUCCESS（现状不变，本次不改消失清理语义）                |
 | 临时文件删除失败                          | 仅告警日志，不影响解析结果                                                  |
