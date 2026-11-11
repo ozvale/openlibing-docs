@@ -71,7 +71,7 @@ StaticAlarmEventConsumer
   - 调 `obsBucketService.downloadToTempFile(obsUrl, scanRun.getRepo())`；
   - `Files.newInputStream(tempFile)` 交给 Jackson 解析，日志记录 `Files.size(tempFile)` 与 runs 数；
   - `finally` 删除临时文件；
-  - 解析异常与 obsUrl 拒绝统一转为 `IOException`（`SARIF 解析失败` / `obsUrl 不在允许范围`），由 `parseAllUrls` 按 URL 隔离，单个损坏文件不会把整批置为失败。
+  - 解析异常与访问策略拒绝统一转为 `IOException`，由 `parseAllUrls` 按 URL 隔离，单个损坏文件不会把整批置为失败。拒绝原因保留具体提示以便定位：`obsUrl 非法`、`obsUrl 协议仅支持 http/https`、`obsUrl 缺少主机名`、`OBS 对象 key 非法`、`OBS 桶不在白名单`、`OBS 对象目录不在白名单`、`仅允许读取 SARIF 文件`、`OBS 对象路径不符合上报约定`、`OBS 对象归属仓库与上报仓库不一致`、`SARIF 文件超过大小上限`、`OBS 下载失败`；解析失败为 `SARIF 解析失败：<url>`。
 - 删除：`HttpURLConnection` 下载、`CountingInputStream`、`validateObsUrl`、`isHostAllowed`、`obsHostWhitelist` 配置、连接/读取超时常量及相关 import。
 - 其余链路（多 URL 分组、工具识别、指纹、消失清理、快照、推送）不变。
 
