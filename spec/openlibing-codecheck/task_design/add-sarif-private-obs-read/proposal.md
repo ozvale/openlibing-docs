@@ -2,13 +2,13 @@
 
 ## 基本信息
 
-| 项          | 值                                                                        |
-| ----------- | ------------------------------------------------------------------------- |
-| FE 需求名称 | upload-sarif-action插件上传OBS对象私有化适配及存量数据治理-后端           |
-| 目标仓      | openlibing-codecheck                                                      |
-| 业务分支    | add-sarif-private-obs-read（base: upstream/release_20261116_iter1）       |
-| 关联 Issue  | openlibing/openlibing-codecheck#402（业务 issue；伞形安全 issue 见 #401） |
-| 流程模式    | Standard                                                                  |
+| 项          | 值                                                                          |
+| ----------- | --------------------------------------------------------------------------- |
+| FE 需求名称 | upload-sarif-action插件上传OBS对象私有化适配及存量数据治理-后端             |
+| 目标仓      | openlibing-codecheck                                                        |
+| 业务分支    | add-sarif-private-obs-read-release（base: upstream/release_20261116_iter1） |
+| 关联 Issue  | openlibing/openlibing-codecheck#402（业务 issue；伞形安全 issue 见 #401）   |
+| 流程模式    | Standard                                                                    |
 
 ## 需求背景
 
