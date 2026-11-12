@@ -14,23 +14,23 @@
 
 ## 交付历程
 
-| commit | 说明 |
-|---|---|
-| `2269e5c..4bca5c6`（8 个） | 蓝区并发优化主体：目录隔离、锁、清理校验、changeset、单测适配 |
-| `78b71fc` | 修复分支既有单测漂移（427 用例全绿） |
-| `f149a92` | 安装脚本源路径 `gamma` → `prod` |
-| `5ce6c82` | 新增 121 个单测，diff-cover 26% → 91% |
-| `31163f8` | nightly pre-commit 修复（gitleaks allowlist + spotless 格式化，cherry-pick 到新分支） |
-| docs `7fac66de` / `a84a29ec` | proposal / design / tasks 与进度更新 |
+| commit                       | 说明                                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------------------- |
+| `2269e5c..4bca5c6`（8 个）   | 蓝区并发优化主体：目录隔离、锁、清理校验、changeset、单测适配                         |
+| `78b71fc`                    | 修复分支既有单测漂移（427 用例全绿）                                                  |
+| `f149a92`                    | 安装脚本源路径 `gamma` → `prod`                                                       |
+| `5ce6c82`                    | 新增 121 个单测，diff-cover 26% → 91%                                                 |
+| `31163f8`                    | nightly pre-commit 修复（gitleaks allowlist + spotless 格式化，cherry-pick 到新分支） |
+| docs `7fac66de` / `a84a29ec` | proposal / design / tasks 与进度更新                                                  |
 
 ## 用户自测反馈
 
-| 反馈 | 处理 |
-|---|---|
-| `install_ub_simulate.sh` 的 flock 改造 | 由用户线下上传脚本，不纳入仓库与验收 |
-| 安装脚本源目录需为 prod | `Constans.INSTALL_SCRIPT_PATH` 改为 `/home/openlibing-manager/prod/install/script/`（`f149a92`） |
-| CI 增量覆盖率门禁 26% 未达标 | 补 121 个单测至 91%（`5ce6c82`） |
-| nightly pre-commit gitleaks / spotless 失败 | allowlist 排除 `.gitleaksignore`，提交 spotless 格式化结果（`31163f8`） |
+| 反馈                                        | 处理                                                                                             |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `install_ub_simulate.sh` 的 flock 改造      | 由用户线下上传脚本，不纳入仓库与验收                                                             |
+| 安装脚本源目录需为 prod                     | `Constans.INSTALL_SCRIPT_PATH` 改为 `/home/openlibing-manager/prod/install/script/`（`f149a92`） |
+| CI 增量覆盖率门禁 26% 未达标                | 补 121 个单测至 91%（`5ce6c82`）                                                                 |
+| nightly pre-commit gitleaks / spotless 失败 | allowlist 排除 `.gitleaksignore`，提交 spotless 格式化结果（`31163f8`）                          |
 
 ## 最终验证
 
