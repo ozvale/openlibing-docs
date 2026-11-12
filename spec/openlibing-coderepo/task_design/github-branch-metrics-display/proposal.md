@@ -31,13 +31,13 @@ openlibing-coderepo 侧接收链路未同步适配：`ObsBucketService#downloadT
 
 ## 影响范围
 
-| 项   | 内容                                                                                       |
-| ---- | ------------------------------------------------------------------------------------------ |
-| 仓   | `openlibing/openlibing-coderepo`                                                           |
-| 类   | `ObsBucketServiceImpl`、`ObsBucketService`（契约注释）、`ObsBucketServiceImplTest`         |
-| 配置 | `obs.action.buckets`（Nacos，当前值 `openlibing-gitcode-action,openlibing-github-action`） |
-| 数据 | 无 DDL、无表结构与索引变更                                                                 |
-| 接口 | 无新增/变更；`POST /metrics/code/report` 的 `obsUrl` 允许 GitHub 平台桶                    |
+| 项   | 内容                                                                                                                                                                   |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 仓   | `openlibing/openlibing-coderepo`                                                                                                                                       |
+| 类   | `ObsBucketServiceImpl`、`ObsBucketService`（契约注释）、`ObsBucketServiceImplTest`；`CodeMetricsReportDTO`、`UtCoverageReportDTO`、`XxlJobHandler`（桶名表述注释同步） |
+| 配置 | `obs.action.buckets`（Nacos，当前值 `openlibing-gitcode-action,openlibing-github-action`）                                                                             |
+| 数据 | 无 DDL、无表结构与索引变更                                                                                                                                             |
+| 接口 | 无新增/变更；`POST /metrics/code/report` 的 `obsUrl` 允许 GitHub 平台桶                                                                                                |
 
 ## 关联
 
