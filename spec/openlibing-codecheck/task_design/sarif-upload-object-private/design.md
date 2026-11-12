@@ -1,13 +1,13 @@
 # SARIF 安全扫描上报对象私有化改造 — 详细设计
 
-| 项          | 内容                                                                                                                |
-| ----------- | ------------------------------------------------------------------------------------------------------------------- |
-| 需求名称    | upload-sarif-action 插件上传对象私有化                                                                              |
-| FE 需求名称 | 待定（创建 Issue 时补充，全链路命名以此为准）                                                                       |
-| 改动范围    | upload-sarif-action 插件（发新版）+ openlibing-codecheck 后端（Sarif 解析凭证化）+ 存量治理（复用 cicd 治理流水线） |
-| 复用/依赖   | codecheck 既有平台凭证下载能力（`ObsBucketService#downloadFileContent`）；cicd 仓 obs-acl-governance 治理流水线     |
-| 设计日期    | 2026-11-05                                                                                                          |
-| 关联背景    | [UT 覆盖率上报对象私有化](../ut-upload-object-private/design.md)（同桶先例，治理流水线已落地）                      |
+| 项          | 内容                                                                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 需求名称    | upload-sarif-action 插件上传对象私有化                                                                                               |
+| FE 需求名称 | 待定（创建 Issue 时补充，全链路命名以此为准）                                                                                        |
+| 改动范围    | upload-sarif-action 插件（发新版）+ openlibing-codecheck 后端（Sarif 解析凭证化）+ 存量治理（复用 cicd 治理流水线）                  |
+| 复用/依赖   | codecheck 既有平台凭证下载能力（`ObsBucketService#downloadFileContent`）；cicd 仓 obs-acl-governance 治理流水线                      |
+| 设计日期    | 2026-11-05                                                                                                                           |
+| 关联背景    | [UT 覆盖率上报对象私有化](../../../openlibing-coderepo/task_design/ut-upload-object-private/design.md)（同桶先例，治理流水线已落地） |
 
 ---
 

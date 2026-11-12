@@ -143,7 +143,7 @@ sequenceDiagram
 | 5   | `package.json`           | `version`                        | `1.0.1` → `1.0.2`                                                                                                                |
 | 6   | `dist/index.js`          | 构建产物                         | `npm run build`（ncc build + zip）重新生成并随版本发布                                                                           |
 
-**认证模式说明（重要澄清）**：插件上传 OBS **仅有 OIDC 联邦认证一条链路**——流水线声明 `id-token: write` → SDK 申请 OIDC ID Token → 华为云 STS `AssumeAgencyWithOIDC` 换 1 小时临时 AK/SK/SecurityToken → putObject；SDK（`@openlibing/huaweicloud-oidc-client`）本身是**免 AK/SK 设计**，不存在静态凭证分支。因此需求中「验证 AK/SK 认证模式」需评审澄清具体所指：若指插件上传侧，需新增静态凭证分支（读环境变量构造 ObsClient，改动小）；若指治理脚本 / 平台服务侧的 AK/SK 消费，则与插件无关、属 IAM 授权配置。临时凭证的权限边界由 OIDC 委托（agency）策略决定——§7 的「仅 PutObject」最小权限即配在该委托上。
+**认证模式说明（重要澄清）**：插件上传 OBS **仅有 OIDC 联邦认证一条链路**——流水线声明 `id-token: write` → SDK 申请 OIDC ID Token → 华为云 STS `AssumeAgencyWithOIDC` 换 1 小时临时 AK/SK/SecurityToken → putObject；SDK（`@openlibing/huaweicloud-oidc-client`）本身是**免 AK/SK 设计**，不存在静态凭证分支。因此需求中「验证 AK/SK 认证模式」结论已随评审敲定：**AK/SK 消费仅限治理脚本 / 平台侧**（IAM 授权配置，与插件无关，见 2.2 验证矩阵），插件上传侧无静态凭证分支、暂不开发——若未来流水线环境不支持 OIDC，再评估新增静态凭证分支（读环境变量构造 ObsClient，改动小），移入评审文档 §8 待确认项 Q5。临时凭证的权限边界由 OIDC 委托（agency）策略决定——§7 的「仅 PutObject」最小权限即配在该委托上。
 
 **存量治理流水线（openlibing-cicd 侧）**：
 
