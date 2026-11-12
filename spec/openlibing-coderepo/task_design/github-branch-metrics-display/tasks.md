@@ -1,6 +1,6 @@
 # 分支管理页 GitHub 度量结果展示适配 — 实现任务
 
-## 进度: 10/12 complete
+## 进度: 10/13 complete
 
 ## 1. 下载白名单扩桶
 
@@ -20,5 +20,6 @@
 ## 3. 端到端与回归
 
 - [x] 前端零改动确认：分支管理页读取统一 `BranchMetricsVO`，按值判空展示 `--`
+- [ ] 各环境（develop/测试/生产）Nacos 已配置 `obs.action.buckets`，并完成首次上报验证
 - [ ] GitHub 工作流上报后台成功入库、`repo_branch` 快照刷新、页面展示正常（依赖插件侧 OIDC 信任策略修复与 PR #304 合入）
 - [ ] GitCode 存量上报、展示与 UT 覆盖率链路回归

@@ -23,7 +23,8 @@
 
 ## 最终验证
 
-- 单测：`mvn -Dtest=ObsBucketServiceImplTest -DfailIfNoTests=false test`，10 个用例全部通过
+- 单测：`mvn -Dtest=ObsBucketServiceImplTest test`，surefire 报告 10 个用例全部通过（已移除 `-DfailIfNoTests=false`，避免测试类失配时静默通过）
+- 配置上线：`obs.action.buckets` 需在 develop/测试/生产 Nacos 逐环境确认，并验证首次上报成功（当前仅确认配置值，各环境就绪状态待发布前逐项确认）
 - 静态检查：pre-commit 全量通过（spotless、checkstyle、spotbugs、pmd、gitleaks）
 - develop 环境：白名单扩桶已合入并可正常解析 GitHub 桶 `obsUrl`
 - GitHub 上报端到端：待插件侧 OIDC 信任策略修复复验、PR #304 合入并部署后验证
@@ -33,7 +34,7 @@
 
 - 设计 §1.4 / §2.2 选择「桶名固定常量、不做配置化」；实现后续按项目规范化要求改为 Nacos 配置项 `obs.action.buckets`。白名单收敛语义不变：仅允许平台约定桶，对象前缀（`code-metrics-action/`、`ut-coverage-action/`）与下载大小上限继续生效，配置缺失时首次调用 fail-fast
 - 本归档在业务 PR #304 合入前完成，端到端与回归结论待合入部署后补充更新
-- 安全边界与设计 §7 一致：下载校验仅约束「桶名 + 对象前缀」，不校验 objectKey 中 `{owner}/{repo}` 与上报 `gitUrl` 的归属一致性，该加固项另行推进
+- 安全边界与设计 §7 一致：下载校验仅约束「桶名 + 对象前缀」，不校验 objectKey 中 `{owner}/{repo}` 与上报 `gitUrl` 的归属一致性。跟进方式：由 coderepo 模块维护人在下一迭代（2026-12）评估，复评前按「可读对象集合扩大」评估风险；暂无独立跟踪单，跟踪入口为本归档，避免该加固项在后续迭代中丢失
 
 ## 可复用经验
 
