@@ -147,12 +147,12 @@ Content-Type: application/json
 
 | `code` | `messageCn` | 触发场景 |
 |---|---|---|
-| `40001` | `请求参数异常` | `userId` 格式非法、角色数量或长度超限等参数校验失败 |
+| `40001` | 具体校验提示 | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
 | `403` | `没有权限` | token Cookie 缺失、无效或未包含有效用户 ID |
-| `500` | `查询人员角色信息失败，请稍后重试` | framework 返回非成功响应 |
+| `50001` | `查询人员角色信息失败，请稍后重试` | framework 返回非成功响应 |
 | `500` | `系统异常` | framework 不可用或被其他未捕获异常中断 |
 
-业务异常响应中 `messageEn` 为 `null`、`data` 为 `null`，前端可直接展示 `messageCn`。
+业务异常响应中 `messageEn` 为 `params invalid`、`data` 为 `null`，前端可直接展示 `messageCn`。
 
 错误响应示例：
 
