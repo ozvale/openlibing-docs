@@ -27,7 +27,7 @@
 
 ## Task 5 验证
 
-- [x] 5.1 `mvn -Dtest=ObsBucketServiceImplTest,SarifParseServiceImplTest,StaticAlarmReceiveServiceImplTest test` 通过（48 条：ObsBucketServiceImplTest 25、SarifParseServiceImplTest 9、StaticAlarmReceiveServiceImplTest 14）；最终 head `7836fb86` 执行 `mvn clean test` 全量 1612 条通过；增量行覆盖率 87.9%（门禁 80%）
+- [x] 5.1 `mvn -Dtest=ObsBucketServiceImplTest,SarifParseServiceImplTest,StaticAlarmReceiveServiceImplTest test` 通过（48 条：ObsBucketServiceImplTest 25、SarifParseServiceImplTest 9、StaticAlarmReceiveServiceImplTest 14）；最终 head `7836fb86` 执行 `mvn clean test` 全量 1616 条通过；增量行覆盖率 87.9%（门禁 80%）
 - [x] 5.2 `mvn spotless:check` 通过
 - [x] 5.3 确认未提交本地调试文件（`MongoConfig.java`、`RedisConfig.java`、`.codegraph/`、`.serena/`、`docs/`、`src/main/resources/cacerts`）
 

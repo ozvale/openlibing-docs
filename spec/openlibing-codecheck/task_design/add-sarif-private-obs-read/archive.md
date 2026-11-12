@@ -20,7 +20,7 @@
 
 ## 最终验证
 
-- `mvn clean test`（commit `7836fb86`）：全量 1612 条通过，0 失败
+- `mvn clean test`（commit `7836fb86`）：全量 1616 条通过，0 失败（新增 4 个用例后相比 `8b8c818b` 的 1612 条增加 4 条）
 - `mvn spotless:check`：通过
 - 受影响测试类共 48 条通过：`ObsBucketServiceImplTest` 25、`SarifParseServiceImplTest` 9、`StaticAlarmReceiveServiceImplTest` 14
 - pre-commit（trailing-whitespace、gitleaks、spotless、checkstyle、spotbugs、pmd）：通过
