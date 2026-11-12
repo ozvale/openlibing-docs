@@ -134,12 +134,13 @@ XxlJob `codeMetricsObsImportHandler` 通过入参 `obsUrl` 调用 `importMetrics
 
 ## 3. 类设计
 
-| 类                                                                         | 变更                                                                                                                                                                                |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ObsBucketServiceImpl`                                                     | 新增 `GITHUB_METRICS_OBS_BUCKET` 常量与 `ALLOWED_METRICS_OBS_BUCKETS` 集合；`downloadToTempFile` 桶名校验改为集合包含判断；URL 解析、前缀校验、大小限制、流式复制、临时文件清理不变 |
-| `ObsBucketService`                                                         | 接口签名不变；`downloadToTempFile` 契约注释需同步为双平台桶（原描述“仅允许 openlibing-gitcode-action”），属注释一致性修正                                                           |
-| `ObsBucketServiceImplTest`                                                 | 新增 `downloadToTempFile_GithubBucket_Success`；既有用例保持不变                                                                                                                    |
-| `CodeMetricsServiceImpl` / `CodeMetricsImportConsumer` / `RepoServiceImpl` | 无改动                                                                                                                                                                              |
+| 类                                                                         | 变更                                                                                                                                                                                                            |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ObsBucketServiceImpl`                                                     | 移除单桶常量白名单判断，桶集合改为 Nacos 配置项 `obs.action.buckets`（`@Value` + `@RefreshScope`）；`downloadToTempFile` 桶名校验改为配置集合包含判断；URL 解析、前缀校验、大小限制、流式复制、临时文件清理不变 |
+| `ObsBucketService`                                                         | 接口签名不变；`downloadToTempFile` 契约注释同步为桶名由 `obs.action.buckets` 配置决定（当前含 GitCode 与 GitHub 两个平台桶）                                                                                    |
+| `ObsBucketServiceImplTest`                                                 | 新增 `downloadToTempFile_GithubBucket_Success`；单测注入两个平台桶，既有用例保持不变                                                                                                                            |
+| `CodeMetricsReportDTO` / `UtCoverageReportDTO` / `XxlJobHandler`           | 桶名表述注释同步为配置化口径（commit `df377791`），无逻辑变更                                                                                                                                                   |
+| `CodeMetricsServiceImpl` / `CodeMetricsImportConsumer` / `RepoServiceImpl` | 无改动                                                                                                                                                                                                          |
 
 ## 4. 数据模型设计
 
@@ -166,7 +167,7 @@ XxlJob `codeMetricsObsImportHandler` 通过入参 `obsUrl` 调用 `importMetrics
 
 ## 5. 性能设计
 
-- 桶名校验由一次字符串相等判断变为最多两次集合比较，耗时可忽略；
+- 桶名校验由一次字符串相等判断变为按配置集合做包含判断（当前集合两个元素），耗时可忽略；
 - 不新增数据库查询、不新增 OBS 请求；下载仍为单次 `getObject` + 8KB 缓冲流式复制，不整体读入内存；
 - 下载上限沿用 `obs.download.max-size-mb`（默认 500MB），配置中心可调，`@RefreshScope` 生效；
 - GitHub 上报复用现有 MQ 队列与 2~4 并发消费，不新增线程池与队列；
