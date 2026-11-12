@@ -189,8 +189,8 @@
         <div class="what">上传对象时显式 <code>ACL=private</code>——上报契约零变更，现有流水线无感知</div>
       </div></div>
       <div class="step"><div class="n alt">2</div><div class="b">
-        <div class="who gray">双认证验证</div>
-        <div class="what">OIDC 与 AK/SK 两条流水线各跑一轮：上传成功 + 匿名 GET 403 + 解析入库正常</div>
+        <div class="who gray">认证模式验证</div>
+        <div class="what">OIDC 模式流水线上报验证（上传成功 + 匿名 GET 403 + 解析入库正常）；AK/SK 链路仅限治理脚本 / 平台侧（见 4.2）</div>
       </div></div>
       <div class="step"><div class="n sys">3</div><div class="b">
         <div class="who gray">治理前置审计（必做）</div>
@@ -238,7 +238,7 @@
       <div class="card dec">
         <h4><span class="pill dec">D4</span>发布顺序：先插件后治理</h4>
         <table>
-          <tr><td><strong>方案</strong></td><td>插件发版 → 双认证验证 → 审计 → 存量治理 → 观测</td></tr>
+          <tr><td><strong>方案</strong></td><td>插件发版 → OIDC 模式验证（AK/SK 仅限治理脚本 / 平台侧）→ 审计 → 存量治理 → 观测</td></tr>
           <tr><td><strong>理由</strong></td><td>先止住新增暴露面；顺序颠倒会让治理后继续产生新公开对象</td></tr>
         </table>
       </div>
@@ -263,18 +263,18 @@
     </div>
     <p class="muted">上报 JSON 内容、<code>/ut/coverage/report</code> 回调地址与报文、objectKey 命名规则全部不变。存量流水线显式配置的 <code>obs_acl</code> 升级后失效、一律私有（发布说明声明）。</p>
 
-    <h3>4.2 双认证验证矩阵</h3>
+    <h3>4.2 认证模式验证矩阵</h3>
     <div class="table-wrap">
     <table>
       <tr><th style="width:16%">认证模式</th><th style="width:30%">上传凭证来源</th><th>验证点</th></tr>
       <tr><td><strong>OIDC</strong></td><td>流水线 OIDC 临时凭证</td><td>① 上传成功 ② 匿名 GET 403（对象私有）③ coderepo 解析入库成功、明细页正常</td></tr>
       <tr><td><strong>AK/SK</strong></td><td>治理脚本 / 平台侧 IAM 静态 AK/SK（<strong>插件上传侧无此链路</strong>，仅 OIDC，见补充行澄清）</td><td>治理脚本按最小权限 IAM 策略（List / GetObjectAcl / PutObjectAcl）完成统计与修复；平台侧服务凭证读取正常</td></tr>
-      <tr><td><strong>补充</strong></td><td>—</td><td>私有对象下历史下钻 /（已上线的）原始报告下载均正常——均走平台凭证读取，实测收口。<strong>AK/SK 模式澄清（评审确认）</strong>：插件当前<strong>仅实现 OIDC 链路</strong>且 SDK 为免 AK/SK 设计（OIDC ID Token → STS AssumeAgencyWithOIDC → 1 小时临时凭证），无静态凭证分支——「验证 AK/SK 模式」需澄清所指：插件上传侧需新增静态凭证分支（改动小），治理脚本 / 平台服务侧则属 IAM 授权配置、与插件无关</td></tr>
+      <tr><td><strong>补充</strong></td><td>—</td><td>私有对象下历史下钻 /（已上线的）原始报告下载均正常——均走平台凭证读取，实测收口。<strong>AK/SK 模式结论（评审已敲定）</strong>：插件当前<strong>仅实现 OIDC 链路</strong>且 SDK 为免 AK/SK 设计（OIDC ID Token → STS AssumeAgencyWithOIDC → 1 小时临时凭证），无静态凭证分支——AK/SK 消费<strong>仅限治理脚本 / 平台侧</strong>（IAM 授权配置，与插件无关，见本矩阵 AK/SK 行）；插件上传侧静态凭证分支暂不开发，后续迭代评估见 §8 待确认项 Q5</td></tr>
     </table>
     </div>
     <div class="callout warn">
       <div class="t">凭证最小权限口径（回答"拿到 AK/SK 是否能下载所有对象"）</div>
-      不一定——取决于凭证所属 IAM 策略。私有化后匿名读全部 403，读面收敛到<strong>持有效读凭证</strong>的调用方。配套硬要求：<strong>插件 AK/SK 的 IAM 策略收敛为「仅对 <code>ut-coverage-action/</code> 前缀 PutObject」</strong>——上传不需要读权限，收敛后即使 AK/SK 泄露也无法下载任何对象；读能力只存在于 coderepo 服务端凭证。OIDC 临时凭证短效（小时级），泄露窗口天然有限。
+      不一定——取决于凭证所属 IAM 策略。私有化后匿名读全部 403，读面收敛到<strong>持有效读凭证</strong>的调用方。配套硬要求：<strong>OIDC 委托（agency）策略收敛为「仅对 <code>ut-coverage-action/</code> 前缀 PutObject」</strong>——上传不需要读权限，收敛后即使临时凭证泄露也无法下载任何对象；读能力只存在于 coderepo 服务端凭证。OIDC 临时凭证短效（小时级），泄露窗口天然有限；治理脚本 AK/SK 的最小权限（List / GetObjectAcl / PutObjectAcl，不给 GetObject）见 5.3 运维项。
     </div>
 
     <h3>4.3 coderepo 后端零改动的依据</h3>
