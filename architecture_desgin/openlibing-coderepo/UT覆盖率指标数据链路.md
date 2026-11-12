@@ -8,22 +8,22 @@
 
 ## 1. 指标是什么
 
-| 项 | 说明 |
-| --- | --- |
-| 指标名 | UT 覆盖率（行覆盖率，%） |
-| 页面位置 | 代码仓管理 → 分支管理 tab（项目维度跨仓分支列表） |
+| 项       | 说明                                                                                         |
+| -------- | -------------------------------------------------------------------------------------------- |
+| 指标名   | UT 覆盖率（行覆盖率，%）                                                                     |
+| 页面位置 | 代码仓管理 → 分支管理 tab（项目维度跨仓分支列表）                                            |
 | 查询接口 | `POST /gateway/openlibing-coderepo/repo/branch/list` → `BranchController#queryProjectBranch` |
-| 返回字段 | `data.list[].utCoverage = { lineCoverage, pipelineRunId, detectionTime }` |
-| 空值语义 | 三个底层字段全为 NULL 时 `utCoverage = null`（该分支从未收到成功上报，前端展示 `--`） |
-| 口径 | **最近一次成功上报**的行覆盖率快照（非平均值、非累计） |
+| 返回字段 | `data.list[].utCoverage = { lineCoverage, pipelineRunId, detectionTime }`                    |
+| 空值语义 | 三个底层字段全为 NULL 时 `utCoverage = null`（该分支从未收到成功上报，前端展示 `--`）        |
+| 口径     | **最近一次成功上报**的行覆盖率快照（非平均值、非累计）                                       |
 
 `BranchUtCoverageVO`（`business/vo/BranchUtCoverageVO.java`）：
 
-| 字段 | 类型 | 含义 |
-| --- | --- | --- |
-| `lineCoverage` | BigDecimal | 行覆盖率（%），DECIMAL(5,2) |
-| `pipelineRunId` | String | 最近一次上报的流水线执行 ID（下钻定位用） |
-| `detectionTime` | Date | 最近一次 UT 检测完成时间（来自上报文件的 `detectionCompletedAt`，非服务器落库时间） |
+| 字段            | 类型       | 含义                                                                                |
+| --------------- | ---------- | ----------------------------------------------------------------------------------- |
+| `lineCoverage`  | BigDecimal | 行覆盖率（%），DECIMAL(5,2)                                                         |
+| `pipelineRunId` | String     | 最近一次上报的流水线执行 ID（下钻定位用）                                           |
+| `detectionTime` | Date       | 最近一次 UT 检测完成时间（来自上报文件的 `detectionCompletedAt`，非服务器落库时间） |
 
 ---
 
@@ -111,12 +111,12 @@ sequenceDiagram
 - Controller：`business/controller/UtCoverageController.java`（`@RequestMapping("/ut/coverage")`），注释标明为 **apig 机机接口**。
 - 入参 `UtCoverageReportDTO`（`business/dto/ut/UtCoverageReportDTO.java`）：
 
-| 字段 | 必填 | 说明 |
-| --- | --- | --- |
-| `gitUrl` | 是 | 仓库 URL，归属唯一标识 |
-| `branchName` | 是 | 分支名称 |
-| `pipelineRunId` | 否 | 流水线执行 ID（幂等去重 + 下钻定位） |
-| `obsUrl` | 是 | OBS 标准 JSON 下载链接（唯一数据来源） |
+| 字段            | 必填 | 说明                                   |
+| --------------- | ---- | -------------------------------------- |
+| `gitUrl`        | 是   | 仓库 URL，归属唯一标识                 |
+| `branchName`    | 是   | 分支名称                               |
+| `pipelineRunId` | 否   | 流水线执行 ID（幂等去重 + 下钻定位）   |
+| `obsUrl`        | 是   | OBS 标准 JSON 下载链接（唯一数据来源） |
 
 - **异步受理模式**：Controller 只做参数校验，把请求序列化为持久化消息投递到 `ut_coverage_import_queue`（默认交换机，routing key = 队列名），立即返回「上报已受理，正在异步导入」。OBS 下载与解析重活从 HTTP 线程池解耦，返回成功**仅代表受理，不代表入库完成**——页面数据可见性存在秒级延迟。
 
@@ -175,10 +175,10 @@ sequenceDiagram
 
 ## 4. 存储设计（双写模型）
 
-| 表 | 角色 | 关键列 | 建表/加列位置 |
-| --- | --- | --- | --- |
-| `repo_branch` | **最新快照**（页面查询源，每分支一行） | `ut_line_coverage DECIMAL(5,2)`、`ut_pipeline_run_id VARCHAR(512)`、`ut_detection_time DATETIME`（均可空） | `db/changelog/db.changelog.xml` changeSet `20260917_add_ut_coverage_to_repo_branch` |
-| `code_ut_record` | **历史全量**（含失败记录，下钻数据源） | `id`（雪花）、`git_url`、`branch_name`、`pipeline_run_id`、`run_number`、`commit_id`、`line_coverage`、`coverage_file_detail_json LONGTEXT`、`detection_completed_at`、`status`（0 成功 / 1 失败）、`error_message`、`create_time`；索引 `idx_git_branch(git_url(255), branch_name, detection_completed_at)` | 同文件 changeSet `20260917_create_table_code_ut_record` |
+| 表               | 角色                                   | 关键列                                                                                                                                                                                                                                                                                                       | 建表/加列位置                                                                       |
+| ---------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `repo_branch`    | **最新快照**（页面查询源，每分支一行） | `ut_line_coverage DECIMAL(5,2)`、`ut_pipeline_run_id VARCHAR(512)`、`ut_detection_time DATETIME`（均可空）                                                                                                                                                                                                   | `db/changelog/db.changelog.xml` changeSet `20260917_add_ut_coverage_to_repo_branch` |
+| `code_ut_record` | **历史全量**（含失败记录，下钻数据源） | `id`（雪花）、`git_url`、`branch_name`、`pipeline_run_id`、`run_number`、`commit_id`、`line_coverage`、`coverage_file_detail_json LONGTEXT`、`detection_completed_at`、`status`（0 成功 / 1 失败）、`error_message`、`create_time`；索引 `idx_git_branch(git_url(255), branch_name, detection_completed_at)` | 同文件 changeSet `20260917_create_table_code_ut_record`                             |
 
 设计动机与分支表其它指标（`code_scale` 等度量快照、`static_alert_count`）一致：**指标直落分支表，列表查询零拼接、排序下推 SQL**；历史与文件明细因体积大走独立表，仅下钻时访问。
 
@@ -225,16 +225,16 @@ sequenceDiagram
 
 ## 7. 参考代码索引
 
-| 环节 | 位置（openlibing-coderepo） |
-| --- | --- |
-| 列表接口 | `business/controller/BranchController.java`（`/repo/branch/list`） |
-| 列表实现 | `business/service/impl/RepoServiceImpl.java`：`queryProjectBranch` / `buildProjectBranchInfoList` / `buildBranchUtCoverage` |
-| 列表 SQL | `resources/mapper/RepoBranchInfoMapper.xml`：`queryProjectBranchByLimit`（select 含 3 个 ut 列） |
-| 上报接口 | `business/controller/UtCoverageController.java`（`/ut/coverage/report`、`/ut/coverage/file-detail`） |
-| MQ 消费者 | `business/service/UtCoverageImportConsumer.java` |
-| 入库服务 | `business/service/impl/UtCoverageServiceImpl.java`：`reportUtCoverage` / `persistUtCoverage` / `upsertBranchLatest` / `saveFailureRecord` / `getFileDetail` / `locateRecord` |
-| OBS 下载与白名单 | `business/service/impl/ObsBucketServiceImpl.java`（`downloadToTempFile`、`UT_COVERAGE_OBS_OBJECT_PREFIX`） |
-| 坐标反查 | `business/service/impl/RepoCoordinateResolverImpl.java`：`resolveByCoordinate` / `resolveEquivalentGitUrls` |
-| 快照 upsert SQL | `resources/mapper/RepoBranchInfoMapper.xml`：`upsertUtCoverage` |
-| 建表/加列 | `resources/db/changelog/db.changelog.xml`：changeSet `20260917_add_ut_coverage_to_repo_branch`、`20260917_create_table_code_ut_record` |
-| 上报生产端 | CI 流水线 UT 覆盖率收集插件（upload-ut-action / ut-coverage-action，独立插件仓，OBS 桶 `openlibing-gitcode-action`、前缀 `ut-coverage-action/`） |
+| 环节             | 位置（openlibing-coderepo）                                                                                                                                                  |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 列表接口         | `business/controller/BranchController.java`（`/repo/branch/list`）                                                                                                           |
+| 列表实现         | `business/service/impl/RepoServiceImpl.java`：`queryProjectBranch` / `buildProjectBranchInfoList` / `buildBranchUtCoverage`                                                  |
+| 列表 SQL         | `resources/mapper/RepoBranchInfoMapper.xml`：`queryProjectBranchByLimit`（select 含 3 个 ut 列）                                                                             |
+| 上报接口         | `business/controller/UtCoverageController.java`（`/ut/coverage/report`、`/ut/coverage/file-detail`）                                                                         |
+| MQ 消费者        | `business/service/UtCoverageImportConsumer.java`                                                                                                                             |
+| 入库服务         | `business/service/impl/UtCoverageServiceImpl.java`：`reportUtCoverage` / `persistUtCoverage` / `upsertBranchLatest` / `saveFailureRecord` / `getFileDetail` / `locateRecord` |
+| OBS 下载与白名单 | `business/service/impl/ObsBucketServiceImpl.java`（`downloadToTempFile`、`UT_COVERAGE_OBS_OBJECT_PREFIX`）                                                                   |
+| 坐标反查         | `business/service/impl/RepoCoordinateResolverImpl.java`：`resolveByCoordinate` / `resolveEquivalentGitUrls`                                                                  |
+| 快照 upsert SQL  | `resources/mapper/RepoBranchInfoMapper.xml`：`upsertUtCoverage`                                                                                                              |
+| 建表/加列        | `resources/db/changelog/db.changelog.xml`：changeSet `20260917_add_ut_coverage_to_repo_branch`、`20260917_create_table_code_ut_record`                                       |
+| 上报生产端       | CI 流水线 UT 覆盖率收集插件（upload-ut-action / ut-coverage-action，独立插件仓，OBS 桶 `openlibing-gitcode-action`、前缀 `ut-coverage-action/`）                             |
