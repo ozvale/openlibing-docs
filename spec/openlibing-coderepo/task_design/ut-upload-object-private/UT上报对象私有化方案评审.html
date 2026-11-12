@@ -298,7 +298,7 @@
       </div></div>
       <div class="step"><div class="n alt">3</div><div class="b">
         <div class="who gray">判定 + 修复（单次遍历）</div>
-        <div class="what">逐对象 GetObjectAcl → AllUsers+READ 即公开可读 → 计数；COUNT_AND_REPAIR 模式下立即 SetObjectAcl(private)（幂等，失败只计数不中断）</div>
+        <div class="what">逐对象 GetObjectAcl → AllUsers+READ/FULL_CONTROL 即公开可读 → 计数；COUNT_AND_REPAIR 模式下立即 SetObjectAcl(private)（幂等，失败只计数不中断）</div>
       </div></div>
       <div class="step"><div class="n">4</div><div class="b">
         <div class="who">摘要输出</div>

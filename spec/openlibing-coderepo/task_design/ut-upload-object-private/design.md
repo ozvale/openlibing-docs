@@ -93,31 +93,31 @@ sequenceDiagram
 ```
 运维手动触发流水线（workflow_dispatch），inputs:
   bucket=openlibing-gitcode-action（可选桶，下拉/手输）
+  region=cn-southwest-2（桶所属区域，OBS 端点 obs.{region}.myhuaweicloud.com；华北桶为 cn-east-3）
   prefix=ut-coverage-action/（桶内前缀，可留空=整个桶）
   mode=COUNT_ONLY（只统计不刷新）| COUNT_AND_REPAIR（统计并刷新）
-  batchIntervalMs=200   marker=(可选，断点续跑)
+  batchIntervalMs=200（限流，可选）
   凭证：AK/SK 以私密参数传入（平台脱敏，不落 yml/代码/日志明文）——非敏感入参（bucket/prefix/mode 等）走 inputs，凭证与普通入参分离
   1. 流水线 job 拉起治理脚本（Node + esdk-obs-nodejs，凭证从 env 读取）
   2. ListObjects 分页枚举（每批 1000，marker 翻页）遍历目标桶/前缀下全部对象
-  3. 逐对象 GetObjectAcl → 判定 AllUsers + READ（即公开可读）
+  3. 逐对象 GetObjectAcl → 判定 AllUsers + READ/FULL_CONTROL（即公开可读，FULL_CONTROL 包含 READ 权限）
        ├─ COUNT_ONLY：仅计数（摸底报告：总数 / 公开读数 / 私有数 / 失败数）
        └─ COUNT_AND_REPAIR：立即 SetObjectAcl(private)（幂等，失败只计数不中断）
   4. 限流：每批间隔 batchIntervalMs，避免触发 OBS 限频
-  5. 输出治理摘要（流水线日志留痕）：total / publicRead / repaired / failed / costMs / nextMarker
+  5. 输出治理摘要（流水线日志留痕）：pages / total / publicRead / repaired / failed / costMs / failedKeys
 ```
 
 **设计要点**：
 
 1. **两段式执行**：先 `COUNT_ONLY` 摸底拿到公开读数量（对齐 D3 审计精神——先看数字再动手），确认无匿名消费方后改 `COUNT_AND_REPAIR` 执行修复；修复幂等可重跑。
 2. **治理逻辑形态**：Node 治理脚本放 cicd 仓 `scripts/obs-acl-governance/`（与插件同生态复用 `esdk-obs-nodejs`），workflow 仅做拉起与凭证注入——cicd 服务端 Java 零改动。
-3. **断点续跑**：治理可能超 workflow job 时长上限，脚本支持 `marker` 入参续跑（每次输出 nextMarker），按前缀/日期分段多次触发直到遍历完成。
-4. **精确修复而非全量覆盖**：逐对象 GetObjectAcl 判定后仅对公开读对象 SetAcl，统计数字与修复动作同源，可留下"治理前有多少公开读"的审计数字。
-5. **凭证权限**：治理凭证需 `ListBucket` + `GetObjectAcl` + `PutObjectAcl` 三个权限；**不需要 GetObject**（治理只碰 ACL 元数据，不读对象内容）——与 §7 最小权限口径一致。凭证来源**已敲定为流水线私密参数传入静态 AK/SK**（需配套最小权限 IAM 策略）；workflow 声明 `id-token: write` 复用 OIDC 临时凭证可作为后续演进方向（短效免静态密钥，需委托策略扩展 ACL 权限）。
+3. **精确修复而非全量覆盖**：逐对象 GetObjectAcl 判定后仅对公开读对象 SetAcl，统计数字与修复动作同源，可留下"治理前有多少公开读"的审计数字。
+4. **凭证权限**：治理凭证需 `ListBucket` + `GetObjectAcl` + `PutObjectAcl` 三个权限；**不需要 GetObject**（治理只碰 ACL 元数据，不读对象内容）——与 §7 最小权限口径一致。凭证来源**已敲定为流水线私密参数传入静态 AK/SK**（需配套最小权限 IAM 策略）；workflow 声明 `id-token: write` 复用 OIDC 临时凭证可作为后续演进方向（短效免静态密钥，需委托策略扩展 ACL 权限）。
    - **私密参数传递方式（已敲定）**：AK/SK 通过流水线**私密参数**传入（平台自动脱敏，运行日志打码 `***`，不落 yml/代码/日志明文）→ workflow step `env` 注入 `OBS_ACCESS_KEY_ID: ${{ secrets.OBS_GOVERNANCE_AK }}` → 脚本从环境变量读取构造 ObsClient。**已查证 GitCode 官方文档（syntax-reference/variables）**：私密参数（secrets）在平台设置页配置（组织级 / 项目级，项目级覆盖组织级）、日志自动脱敏 `***`；`workflow_dispatch` 手动触发支持 `inputs`（`string / boolean / choice / number` 类型——`bucket` 手输、`mode` 可用 `choice` 下拉防呆）；引用语法 `${{ secrets.X }}` / `${{ inputs.X }}`。**入参分离原则**：桶、前缀、模式等非敏感参数走 inputs（可回显、可复用），AK/SK 只走私密参数通道（不进 inputs——inputs 值界面可见不加密）。
-6. **范围可配置**：inputs 的 `bucket` 支持选择桶（不传默认主桶 `openlibing-gitcode-action`），`prefix` 默认 `ut-coverage-action/`（可留空=整个桶）；桶级阻断（D1 备选兜底）仍是运维控制台操作，本流水线做桶/前缀级统计与修复。
+5. **范围可配置**：inputs 的 `bucket` 支持选择桶（不传默认主桶 `openlibing-gitcode-action`），`prefix` 默认 `ut-coverage-action/`（可留空=整个桶）；桶级阻断（D1 备选兜底）仍是运维控制台操作，本流水线做桶/前缀级统计与修复。
 
-7. **审计（前置必做，与治理流水线互补）**：COUNT_ONLY 给出存量数字，OBS 访问日志审计回答"有没有匿名消费方"——两者都清零/确认后才执行 COUNT_AND_REPAIR。
-8. **验证**：治理后抽样历史 objectKey 匿名 GET → 403；coderepo 历史记录下钻 / 原始报告下载正常（平台凭证读取不受影响）。
+6. **审计（前置必做，与治理流水线互补）**：COUNT_ONLY 给出存量数字，OBS 访问日志审计回答"有没有匿名消费方"——两者都清零/确认后才执行 COUNT_AND_REPAIR。
+7. **验证**：治理后抽样历史 objectKey 匿名 GET → 403；coderepo 历史记录下钻 / 原始报告下载正常（平台凭证读取不受影响）。
 
 ### 2.4 coderepo 后端零改动的依据
 
@@ -147,11 +147,11 @@ sequenceDiagram
 
 **存量治理流水线（openlibing-cicd 侧）**：
 
-| 位置                                        | 类型 | 职责                                                                                                                                                           |
-| ------------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.gitcode/workflows/obs-acl-governance.yml` | 新增 | 治理流水线：手动触发（workflow_dispatch），inputs 声明 bucket / prefix / mode / batchIntervalMs / marker，AK/SK 以私密参数传入；拉起治理脚本并注入凭证         |
-| `scripts/obs-acl-governance/index.js`       | 新增 | Node 治理脚本（复用 `esdk-obs-nodejs`）：ListObjects 分页枚举 → GetObjectAcl 判定 AllUsers+READ → SetObjectAcl(private)，限流、进度与摘要输出、marker 断点续跑 |
-| 治理脚本单测                                | 新增 | 凭证 mock：判定逻辑（AllUsers+READ）、mode 分支、marker 续跑                                                                                                   |
+| 位置                                        | 类型 | 职责                                                                                                                                                       |
+| ------------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.gitcode/workflows/obs-acl-governance.yml` | 新增 | 治理流水线：手动触发（workflow_dispatch），inputs 声明 bucket / region / prefix / mode / batchIntervalMs，AK/SK 以私密参数传入；拉起治理脚本并注入凭证     |
+| `scripts/obs-acl-governance/index.js`       | 新增 | Node 治理脚本（复用 `esdk-obs-nodejs`）：ListObjects 分页枚举 → GetObjectAcl 判定 AllUsers+READ/FULL_CONTROL → SetObjectAcl(private)，限流、进度与摘要输出 |
+| 治理脚本单测                                | 新增 | 凭证 mock：判定逻辑（AllUsers+READ/FULL_CONTROL）、mode 分支、分页遍历                                                                                     |
 
 openlibing-cicd 服务端 Java / openlibing-coderepo：**无代码改动**；仅按需在观测期关注 `downloadToTempFile` 失败日志（私有化误伤的信号）。
 
@@ -165,13 +165,13 @@ openlibing-cicd 服务端 Java / openlibing-coderepo：**无代码改动**；仅
 
 ## 5. 性能设计
 
-| 关注点        | 设计                                                                                                                         |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| 上报链路      | 上传路径仅增加一个 ACL 参数，无性能影响；读取路径（平台凭证 getObject）与公开读性能一致                                      |
-| 治理任务吞吐  | 逐对象 2 次 ACL API（Get [+ Put]）：按 1 万对象、限流 200ms 估算，总耗时约 30-60 分钟（OBS API 通常几十 ms/次 + 批间 sleep） |
-| workflow 时长 | 治理可能超 job 时长上限——脚本支持 `marker` 断点续跑，分段多次触发直到遍历完成；进度与 nextMarker 随日志输出                  |
-| 治理限流      | 批间间隔 inputs 可调（默认 200ms），避免触发 OBS 限频；失败对象只计数不中断，摘要中体现                                      |
-| 重复执行      | 流水线可重复触发，SetAcl 幂等；COUNT_ONLY 无副作用，可随时重跑摸底                                                           |
+| 关注点        | 设计                                                                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 上报链路      | 上传路径仅增加一个 ACL 参数，无性能影响；读取路径（平台凭证 getObject）与公开读性能一致                                                     |
+| 治理任务吞吐  | 逐对象 2 次 ACL API（Get [+ Put]）：按 1 万对象、限流 200ms 估算，总耗时约 30-60 分钟（OBS API 通常几十 ms/次 + 批间 sleep）                |
+| workflow 时长 | 整桶 6470 对象实测约 2.5 分钟（COUNT_ONLY），远低于 job 时长上限；超大桶（数十万对象）治理耗时线性增长，届时可按前缀分桶/分批触发流水线覆盖 |
+| 治理限流      | 批间间隔 inputs 可调（默认 200ms），避免触发 OBS 限频；失败对象只计数不中断，摘要中体现                                                     |
+| 重复执行      | 流水线可重复触发，SetAcl 幂等；COUNT_ONLY 无副作用，可随时重跑摸底                                                                          |
 
 ---
 
@@ -199,7 +199,7 @@ openlibing-cicd 服务端 Java / openlibing-coderepo：**无代码改动**；仅
 1. 插件改造 + 新版本发布；
 2. cicd 治理流水线开发（workflow yml + Node 治理脚本 + 单测）；
 3. OIDC / AK-SK 两条流水线验证矩阵（2.2）；
-4. 存量治理执行：治理流水线 `COUNT_ONLY` 摸底拿到公开读数字 → 访问日志审计确认无匿名消费方（D3）→ `COUNT_AND_REPAIR` 修复（超长分段续跑）→ 治理后验证（抽样 403 / 下钻正常）；
+4. 存量治理执行：治理流水线 `COUNT_ONLY` 摸底拿到公开读数字 → 访问日志审计确认无匿名消费方（D3）→ `COUNT_AND_REPAIR` 修复 → 治理后验证（抽样 403 / 下钻正常）；
 5. 观测期（解析成功率 / 读取失败日志）。
 
 ### 验收标准
