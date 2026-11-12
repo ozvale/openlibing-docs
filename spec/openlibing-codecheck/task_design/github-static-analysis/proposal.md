@@ -18,15 +18,15 @@ openLiBing 的代码检查链路此前主要面向 GitCode Actions：各静态�
 
 ### 涉及仓库 / 模块
 
-| 仓库 / 模块                 | 涉及内容                                                             |
-| --------------------------- | -------------------------------------------------------------------- |
-| `upload-sarif-action`       | 平台识别、OIDC 提供商切换、OBS 桶选择、来源标记、移除 AK/SK 输入     |
-| `pre-commit-action`         | GitHub 上下文适配（`GITHUB_*`、`GITHUB_OUTPUT`）与 README 接入说明   |
-| `clang-tidy-full-scan-demo` | `.github/workflows/` 两套 GitHub 工作流、预置二进制与示例代码        |
-| `openlibing-codecheck`      | `StaticAlarmSourceEnum` 新增 `GITHUB_ACTION`（由 #397 跟踪）         |
-| `openlibing-web`            | 来源选项/标签、列表页 GitHub 平台展示、详情页两处 GitHub Action 标签 |
-| `openlibing-docs`           | 设计文档、需求原型与交付归档                                         |
-| `docs`                      | full-analysis 方案内补充 GitHub 接入用户文档                         |
+| 仓库 / 模块                 | 涉及内容                                                                                  |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| `upload-sarif-action`       | 平台识别、OIDC 提供商切换、OBS 桶选择、来源标记、移除 AK/SK 输入                          |
+| `pre-commit-action`         | GitHub 上下文适配（`GITHUB_*`、`GITHUB_OUTPUT`）与 README 接入说明                        |
+| `clang-tidy-full-scan-demo` | `.github/workflows/` 两套 GitHub 工作流、预置二进制与示例代码                             |
+| `openlibing-codecheck`      | 后端来源枚举已支持 `GITHUB_ACTION`（#391，已合入 `release_20261116_iter1`，待随版本发布） |
+| `openlibing-web`            | 来源选项/标签、列表页 GitHub 平台展示、详情页两处 GitHub Action 标签（前端适配仍未完成）  |
+| `openlibing-docs`           | 设计文档、需求原型与交付归档                                                              |
+| `docs`                      | full-analysis 方案内补充 GitHub 接入用户文档                                              |
 
 ### 包含
 
@@ -56,7 +56,8 @@ openLiBing 的代码检查链路此前主要面向 GitCode Actions：各静态�
 ## 关联 Issue
 
 - FE 唯一 Issue：https://gitcode.com/openlibing/code-metrics-action/issues/74
-- 后端来源枚举与前端展示适配：openlibing/openlibing-codecheck#397
+- 后端来源枚举：openlibing/openlibing-codecheck#391（已合入 `release_20261116_iter1`，待随版本发布）
+- 前端展示适配：openlibing-web 尚未提交对应 PR，需补充实现并建单跟踪
 
 ## 交付物
 

@@ -49,6 +49,7 @@
 - [x] OBS 对象写入 `openlibing-github-action`，key 含 `{owner}/{repo}/{runId}`
 - [x] APIG 回调返回 `{"code":200,"msg":"success"}`
 - [x] beta `static_alarm_scan_run` 落库（`category=business` / `pre-commit-report`）
+- [x] `pre-commit-action` 无独立单测，通过 `clang-tidy-precommit` demo 工作流（run 41803725788）验证 `GITHUB_*` 上下文映射、`GITHUB_OUTPUT` 与 SARIF 收集
 
 ## 文档交付
 
@@ -56,12 +57,13 @@
 - [x] `openlibing-docs` 补齐 `proposal.md` / `tasks.md` / `archive.md`
 - [x] `docs` 仓 clang-tidy README 新增 `3.6` / `4.7` GitHub Actions 配置
 - [x] `docs` 仓新增 `demos/github/clang-tidy-scan.yml`、`clang-tidy-precommit.yml`
-- [x] `docs` 仓 full-analysis README 拆分 GitCode / GitHub 双平台样例（`4.2.2/4.2.3`、`4.3.1/4.3.2/4.3.3`），PR #59
+- [x] `docs` 仓 full-analysis README 拆分 GitCode / GitHub 双平台样例（`4.2.2/4.2.3`、`4.3.1/4.3.2/4.3.3`），PR #59（待合入 `main`）
 
 ## 待办与关联事项
 
-- [ ] 后端 `StaticAlarmSourceEnum` 新增 `GITHUB_ACTION` 并发布（openlibing-codecheck#397）
-- [ ] 前端来源选项/标签与列表页 GitHub 平台展示适配（openlibing-codecheck#397）
+- [x] 后端 `StaticAlarmSourceEnum` 新增 `GITHUB_ACTION` / `GITEE_ACTION`、平台推断与 OBS 白名单（openlibing-codecheck#391，已合入 `release_20261116_iter1`，待随版本发布）
+- [ ] 前端来源选项/标签与列表页 GitHub 平台展示适配（openlibing-web 暂无对应 PR，需补充实现并建单跟踪）
+- [ ] 用户文档 PR openlibing/docs#59 合入 `main` 主干
 - [ ] 按发布顺序完成前后端上线后，由测试执行转测验收
 - [ ] 存量 GitCode 工作流移除 `obs-ak` / `obs-sk` / `obs-region` 参数并切换 OIDC 后，补做上传/回调回归验证（本次未执行）
 - [ ] demo 工作流的 action 引用由可变分支改为固定 commit SHA（生产接入要求）
