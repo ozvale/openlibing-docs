@@ -169,7 +169,7 @@ Content-Type: application/json
 ### 4.2 保存逻辑
 
 - 首次保存：服务端校验里程碑存在后，从里程碑获取项目 ID，里程碑名称取自请求体（允许前端修改），创建新记录。创建操作不写独立修改日志。
-- 后续保存：保留主键、项目 ID、里程碑 ID、创建人、创建时间不变，更新 `milestoneName`、`roadmapJson`、更新人和更新时间。更新操作在同一事务内写入 `pq_quality_roadmap_log` 日志表，记录新旧完整 JSON 快照。
+- 后续保存：保留主键、项目 ID、里程碑 ID、创建人、创建时间不变，更新 `milestoneName`（写入 `milestone_name` 列）、`roadmapJson`、更新人和更新时间。更新操作在同一事务内写入 `pq_quality_roadmap_log` 日志表，记录新旧完整 JSON 快照。
 - `roadmapJson` 允许传 `null` 或空字符串，表示清空内容。
 
 ### 4.3 成功响应

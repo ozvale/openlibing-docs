@@ -202,7 +202,7 @@ Content-Type: application/json
 
 - 首次保存：服务端校验里程碑存在后，从里程碑获取项目 ID，里程碑名称取自请求体（允许前端修改），创建新记录。创建操作不写独立修改日志。
   - 里程碑 ID 为字符串，服务端会将其转换为 `Integer` 写入 `project_id`；非数字时返回 `500`（`项目 ID 格式不正确，必须为数字`）。
-- 后续保存：保留主键、项目 ID、里程碑 ID、创建人、创建时间不变，更新 `milestoneName`、9 个摘要字段、更新人和更新时间。更新操作在同一事务内写入 `pq_version_summary_log` 日志表，记录新旧完整 JSON 快照。
+- 后续保存：保留主键、项目 ID、里程碑 ID、创建人、创建时间不变，更新 `milestoneName`（写入 `milestone_name` 列）、9 个摘要字段、更新人和更新时间。更新操作在同一事务内写入 `pq_version_summary_log` 日志表，记录新旧完整 JSON 快照。
 - 9 个摘要字段（`versionPositionBusinessGoalHtml`、`competitivenessGoalHtml`、`targetMarketRegionHtml`、`customerIndustryValueHtml`、`huaweiValueHtml`、`projectControlHtml`、`supportingProductHtml`、`projectInvestmentHtml`、`otherHtml`）均会经过服务端 OWASP HTML 白名单清理后再落库：保留常见块级与行内排版元素，以及 `table`、`thead`、`tbody`、`tfoot`、`tr`、`th`、`td`、`caption`、`hr`、`a`；`a` 仅保留 `href`，`th`/`td` 仅保留 `colspan`、`rowspan`；链接仅允许 `http`、`https` 协议并自动追加 `rel="nofollow"`。`script`、`style`、`iframe`、事件属性及危险协议会被移除。
 - 清理后每个字段长度仍受请求校验上限约束，前端应在提交前自行限制各富文本字段长度。
 - 同一里程碑同时只存在一条有效记录（`milestone_id + deleted` 唯一约束）。

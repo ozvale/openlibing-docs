@@ -152,7 +152,7 @@ POST /projects/product-quality/input-analyses/update?milestoneId=7&id=1
 Content-Type: application/json
 ```
 
-修改采用全字段保存语义，保留主键、项目/里程碑归属和创建审计字段，更新请求字段（含 `milestoneName`）、更新人和更新时间。
+修改采用全字段保存语义，保留主键、项目/里程碑归属和创建审计字段，更新请求字段（含 `milestoneName`，写入 `milestone_name` 列）、更新人和更新时间。
 
 业务修改与 `pq_input_analysis_log` 日志写入处于同一事务：日志保存修改前和修改后的完整 JSON 快照；任一步骤失败均回滚。
 
