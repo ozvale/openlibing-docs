@@ -16,21 +16,22 @@
 - commit `37342e2e`: 桶白名单改用共享配置 `obs.action.buckets`
 - commit `93a41355`: 按业务 PR 检视意见修复——删除不可达的前导斜杠校验、统一按 URL 隔离解析异常、补齐仓库目录大小写与路径段数用例
 - commit `8b8c818b`: 拆分 `SarifObsAccessPolicy` 配置 Bean，`ObsBucketServiceImpl` 去掉 `@RefreshScope`，避免配置刷新关闭 `ObsClient`
+- commit `7836fb86`: 补充下载异常与客户端关闭用例，增量行覆盖率由 78.2% 提升至 87.9%
 
 ## 最终验证
 
-- `mvn clean test`（commit `8b8c818b`）：全量 1612 条通过，0 失败
+- `mvn clean test`（commit `7836fb86`）：全量 1612 条通过，0 失败
 - `mvn spotless:check`：通过
-- 受影响测试类共 44 条通过：`ObsBucketServiceImplTest` 21、`SarifParseServiceImplTest` 9、`StaticAlarmReceiveServiceImplTest` 14
+- 受影响测试类共 48 条通过：`ObsBucketServiceImplTest` 25、`SarifParseServiceImplTest` 9、`StaticAlarmReceiveServiceImplTest` 14
 - pre-commit（trailing-whitespace、gitleaks、spotless、checkstyle、spotbugs、pmd）：通过
 
-> 上述验证在最终 head `8b8c818b` 本地执行。业务 PR 的 ut 流水线早期运行（对应提交 `93a41355` 之前的 head）存在失败记录，未作为归档依据；最终 head 的流水线结果以 PR 页面为准。
+> 业务 PR ut 流水线：提交 `37342e2e`（第 54 次）、`93a41355`（第 55 次）通过；提交 `8b8c818b`（第 56 次）单元测试通过，但卡在 diff coverage check（增量行覆盖率低于 80% 门禁，实测 78.2%）。提交 `7836fb86` 补充下载异常与客户端关闭用例后，增量行覆盖率达到 87.9%，重新触发流水线。
 
 > 存量兼容性全量验证（Task 6.1 / 6.2）**尚未执行**，本归档不代表存量 URL 对新访问策略的覆盖率已验证；首轮只读核查结论与残余风险见 tasks.md Task 6 备注。
 
 ## 设计偏差与取舍
 
-- 业务 PR 最初以依赖分支 `add-static-alarm-github-adapt` 为 base 提交，以免 diff 混入上游分支改动；该依赖分支合入 `release_20261116_iter1` 后，改为以 release 为 base 重放本次提交，PR 最终含 8 个提交、8 个变更文件（5 个主代码 + 3 个测试）。
+- 业务 PR 最初以依赖分支 `add-static-alarm-github-adapt` 为 base 提交，以免 diff 混入上游分支改动；该依赖分支合入 `release_20261116_iter1` 后，改为以 release 为 base 重放本次提交，PR 最终含 9 个提交、8 个变更文件（5 个主代码 + 3 个测试）。
 - 目录白名单默认正则去掉长度上限，对齐插件 `buildToolPrefix` 的实际规则（小写、仅 `[a-z0-9-]`、不截断）。
 - `unknown-repo` 目录改为拒绝：插件 key 结构为 `{tool}-results/unknown-repo/{yyyyMMdd.HH}/{runId|manual}/{basename}`，第 4、5 段可预测，放行可被构造路径绕过归属校验；改为接收阶段拒绝入库、读取阶段拒绝读取。生产与 BETA 存量命中均为 0，无兼容影响；页面展示来自上报 `repoUrl` 解析，不读取对象路径。
 - 存量公开对象不迁移、disappeared 清理语义不变；存量治理由插件侧另行改造。
