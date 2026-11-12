@@ -59,6 +59,7 @@
 
 | 字段 | 类型 | 必填 | 校验规则 | 说明 |
 |---|---|---|---|---|
+| `milestoneName` | String | 否 | 最大 255 字符 | 里程碑名称，由前端传入；修改时允许更新 |
 | `name` | String | 是 | 非空白，最大 255 字符 | 名称 |
 | `inputDescription` | String | 是 | 非空白，最大 65535 字符 | 输入描述 |
 | `featureType` | String | 否 | 最大 64 字符 | 类型 |
@@ -124,7 +125,7 @@ POST /projects/product-quality/value-features/add?milestoneId=7
 Content-Type: application/json
 ```
 
-服务端校验里程碑存在后，从里程碑生成 `projectId`、`milestoneId` 和 `milestoneName`，并写入创建/更新审计字段。新增不写独立操作日志。
+服务端校验里程碑存在后，从里程碑生成 `projectId` 和 `milestoneId`，`milestoneName` 取自请求体（允许前端修改），并写入创建/更新审计字段。新增不写独立操作日志。
 
 ## 4. 分页查询
 
@@ -154,7 +155,7 @@ POST /projects/product-quality/value-features/update?milestoneId=7&id=1
 Content-Type: application/json
 ```
 
-修改采用全字段保存语义，保留主键、项目/里程碑归属和创建审计字段，更新请求字段、更新人和更新时间。
+修改采用全字段保存语义，保留主键、项目/里程碑归属和创建审计字段，更新请求字段（含 `milestoneName`）、更新人和更新时间。
 
 业务修改与 `pq_value_feature_log` 日志写入处于同一事务：日志保存修改前和修改后的完整 JSON 快照；任一步骤失败均回滚。
 

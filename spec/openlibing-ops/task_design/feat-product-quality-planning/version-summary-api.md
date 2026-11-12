@@ -59,7 +59,7 @@ GET /projects/product-quality/version-summary/detail?milestoneId=7
 | `id` | Long | 否 | 版本摘要记录主键，对应 `pq_version_summary.id` |
 | `projectId` | Integer | 否 | 项目 ID，首次保存时由服务端根据里程碑生成 |
 | `milestoneId` | Long | 否 | 里程碑 ID |
-| `milestoneName` | String | 是 | 里程碑名称，首次保存时由服务端根据里程碑生成 |
+| `milestoneName` | String | 是 | 里程碑名称，由前端传入；修改时允许更新 |
 | `versionPositionBusinessGoalHtml` | String | 是 | 版本定位和业务目标（HTML 片段），已在服务端按白名单清理 |
 | `competitivenessGoalHtml` | String | 是 | 竞争力目标（HTML 片段），已在服务端按白名单清理 |
 | `targetMarketRegionHtml` | String | 是 | 目标市场和重点目标区域（HTML 片段），已在服务端按白名单清理 |
@@ -171,6 +171,7 @@ Content-Type: application/json
 
 | 字段 | 类型 | 必填 | 校验规则 | 说明 |
 |---|---|---|---|---|
+| `milestoneName` | String | 否 | 最大 255 字符 | 里程碑名称，由前端传入；修改时允许更新 |
 | `versionPositionBusinessGoalHtml` | String | 否 | 最大 100,000 字符 | 版本定位和业务目标；允许传 `null` 或空字符串表示清空内容 |
 | `competitivenessGoalHtml` | String | 否 | 最大 100,000 字符 | 竞争力目标；允许传 `null` 或空字符串表示清空内容 |
 | `targetMarketRegionHtml` | String | 否 | 最大 100,000 字符 | 目标市场和重点目标区域；允许传 `null` 或空字符串表示清空内容 |
@@ -199,9 +200,9 @@ Content-Type: application/json
 
 ### 4.2 保存逻辑
 
-- 首次保存：服务端校验里程碑存在后，从里程碑获取项目 ID 和里程碑名称，创建新记录。创建操作不写独立修改日志。
+- 首次保存：服务端校验里程碑存在后，从里程碑获取项目 ID，里程碑名称取自请求体（允许前端修改），创建新记录。创建操作不写独立修改日志。
   - 里程碑 ID 为字符串，服务端会将其转换为 `Integer` 写入 `project_id`；非数字时返回 `500`（`项目 ID 格式不正确，必须为数字`）。
-- 后续保存：保留主键、项目 ID、里程碑 ID/名称、创建人、创建时间不变，仅更新 9 个摘要字段、更新人和更新时间。更新操作在同一事务内写入 `pq_version_summary_log` 日志表，记录新旧完整 JSON 快照。
+- 后续保存：保留主键、项目 ID、里程碑 ID、创建人、创建时间不变，更新 `milestoneName`、9 个摘要字段、更新人和更新时间。更新操作在同一事务内写入 `pq_version_summary_log` 日志表，记录新旧完整 JSON 快照。
 - 9 个摘要字段（`versionPositionBusinessGoalHtml`、`competitivenessGoalHtml`、`targetMarketRegionHtml`、`customerIndustryValueHtml`、`huaweiValueHtml`、`projectControlHtml`、`supportingProductHtml`、`projectInvestmentHtml`、`otherHtml`）均会经过服务端 OWASP HTML 白名单清理后再落库：保留常见块级与行内排版元素，以及 `table`、`thead`、`tbody`、`tfoot`、`tr`、`th`、`td`、`caption`、`hr`、`a`；`a` 仅保留 `href`，`th`/`td` 仅保留 `colspan`、`rowspan`；链接仅允许 `http`、`https` 协议并自动追加 `rel="nofollow"`。`script`、`style`、`iframe`、事件属性及危险协议会被移除。
 - 清理后每个字段长度仍受请求校验上限约束，前端应在提交前自行限制各富文本字段长度。
 - 同一里程碑同时只存在一条有效记录（`milestone_id + deleted` 唯一约束）。
