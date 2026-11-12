@@ -109,10 +109,11 @@ sequenceDiagram
   1. verifyPermissionsByProduct(userId, null, null, repoId, UT_COVERAGE_FILE_DETAIL)  ← 复用明细权限点
   2. repo_info 反查 gitUrl → normalizeGitUrl → locateRecord(gitUrls, branch, runId)   ← 复用现有定位逻辑
   3. record.originalReportObsUrl 为空 → DataResult 业务失败「该记录为功能上线前的历史上报，无原始报告可下载」
-  4. identifier = "ut-original-report:" + record.getId()
+  4. identifier = "ut-original-report:" + record.getId() + ":" + userId   ← 用户维度隔离（framework 仅创建人可查看/下载，跨用户复用会被归属鉴权拦截）
      queryExportTask({identifier, type=UT_ORIGINAL_REPORT, limit=1})
-     ├─ 命中且 message ∉ FAILED（进行中或已成功）→ 复用：返回已有 exportRecordId（不重复生成）
-     └─ 未命中 / 最近一条 FAILED → createExportTask(userId, {type=UT_ORIGINAL_REPORT,
+     ├─ 命中且 message ∉ FAILED（进行中或已成功）→ 复用：返回已有 exportRecordId（不重复生成）；
+     │   其中非终态且停滞超 10 分钟（updateTime 判活，消费者进程死亡无人收尾）→ 放行重建
+     └─ 未命中 / 最近一条 FAILED / 非终态停滞超时 → createExportTask(userId, {type=UT_ORIGINAL_REPORT,
              fileName=<规范文件名>, identifier, data=<JSON: recordId/repoId/gitUrl/branchName/pipelineRunId/obsUrl>})
              → 投递 MQ 生成事件（发送失败兜底：回写 FAILED，见 2.3）
 出参: exportRecordId（字符串，前端据此直轮 framework /export/detail）
@@ -130,10 +131,10 @@ sequenceDiagram
 2. **CAS 抢占**：`updateExportTask({id, message=BUILDING.desc, expectedMessages=[INITIALIZED.desc]})`，条件更新失败说明已被其他实例消费或已终态 → ACK 跳过。
 3. **下载转存**：`obsBucketService.downloadToTempFile(data 中的 obsUrl)`（源桶白名单校验天然生效）→ CAS BUILDING → UPLOADING → `obsBucketService.uploadFile(objectKey, tempFile, fileName)`，objectKey = `yyyy-MM-dd/` + UUID。
 4. **CAS 回写成功**：`updateExportTask({id, message=SUCCESS.desc, objectKey, expectedMessages=[UPLOADING.desc]})`。
-5. **失败回写**：任一步失败按异常分类回写 `FAILED.desc + ":" + 截断原因(≤255)`，消息不重投（重试由用户重新点击触发，天然限频）。
+5. **失败回写**：任一步失败按异常分类回写 `FAILED.desc + ":" + 截断原因(≤255)`；CAS / 回写失败场景先回查确认仍处前置中间态才条件回写 FAILED（命中终态说明写入实际生效，保持终态不动），消息不重投（重试由用户重新点击触发，天然限频）。
 6. 消费消息体损坏（JSON 解析失败）：记 error 日志后 ACK 丢弃。
 
-> 状态机：`INITIALIZED → BUILDING → UPLOADING → SUCCESS(+objectKey)`，任一环节可跳 `FAILED`；每步 CAS 均携带 expectedMessages，防止终态被覆盖。失败原因透出约束：framework `message` 上限 255 字符，回写前截断，前端展示原文。
+> 状态机：`INITIALIZED → BUILDING → UPLOADING → SUCCESS(+objectKey)`，任一环节可跳 `FAILED`；每步 CAS 均携带 expectedMessages，防止终态被覆盖。失败原因透出约束：framework `message` 上限 255 字符，回写前截断，前端展示原文。非终态任务停滞超过 10 分钟由提交侧按 updateTime 判活放行重建（消费者进程死亡无人收尾的自愈路径）。
 
 ### 2.4 状态呈现与下载（框架全局「导出任务」浮层统一承担，coderepo 不提供轮询接口）
 
@@ -152,15 +153,15 @@ UT 详情页自身交互保持极简：点击按钮 → 提交成功 toast「已
 
 ### 2.6 边界与异常场景
 
-| 场景                                  | 行为                                                                                                          |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 历史记录（上线前）无原始报告          | 提交接口业务失败 + 明细 VO `originalReportAvailable=false`，按钮置灰                                          |
-| 源桶对象已被清理（OBS 生命周期策略）  | 生成阶段下载失败 → 任务 FAILED，原因「OBS 文件下载失败或不存在」                                              |
-| 导出中心 create/update/query 调用失败 | 提交失败返回明确错误；生成侧 update 失败记 warn 日志不中断转存（objectKey 已上传，可人工补登记）              |
-| 多实例并发消费同一任务                | expectedMessages 条件更新抢占，未抢到直接 ACK                                                                 |
-| 原始文件超过源桶/下载大小上限         | `downloadToTempFile` 现有 500MB 上限兜底，超限任务 FAILED 并透出原因                                          |
-| 重复点击                              | 提交接口幂等：进行中/已完成均复用已有导出记录（返回原 exportRecordId），不重复生成                            |
-| 签名 URL 过期后再次下载               | 重新点击提交 → 命中已有记录返回原 exportRecordId → 前端直轮 framework detail 重新拿签名 URL（不重新生成文件） |
+| 场景                                  | 行为                                                                                                                                                             |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 历史记录（上线前）无原始报告          | 提交接口业务失败 + 明细 VO `originalReportAvailable=false`，按钮置灰                                                                                             |
+| 源桶对象已被清理（OBS 生命周期策略）  | 生成阶段下载失败 → 任务 FAILED，原因「OBS 文件下载失败或不存在」                                                                                                 |
+| 导出中心 create/update/query 调用失败 | 提交失败返回明确错误；生成侧 CAS/回写失败先回查确认仍处前置中间态才条件回写 FAILED（命中终态保持不动）；非终态停滞超 10 分钟由提交侧判活放行重建，无永久卡死窗口 |
+| 多实例并发消费同一任务                | expectedMessages 条件更新抢占，未抢到直接 ACK                                                                                                                    |
+| 原始文件超过源桶/下载大小上限         | `downloadToTempFile` 现有 500MB 上限兜底，超限任务 FAILED 并透出原因                                                                                             |
+| 重复点击                              | 提交接口幂等：进行中/已完成均复用已有导出记录（返回原 exportRecordId），不重复生成                                                                               |
+| 签名 URL 过期后再次下载               | 重新点击提交 → 命中已有记录返回原 exportRecordId → 前端直轮 framework detail 重新拿签名 URL（不重新生成文件）                                                    |
 
 ---
 

@@ -268,7 +268,7 @@
     <table>
       <tr><th style="width:16%">认证模式</th><th style="width:30%">上传凭证来源</th><th>验证点</th></tr>
       <tr><td><strong>OIDC</strong></td><td>流水线 OIDC 临时凭证</td><td>① 上传成功 ② 匿名 GET 403（对象私有）③ coderepo 解析入库成功、明细页正常</td></tr>
-      <tr><td><strong>AK/SK</strong></td><td>插件配置静态 AK/SK</td><td>同上三项</td></tr>
+      <tr><td><strong>AK/SK</strong></td><td>治理脚本 / 平台侧 IAM 静态 AK/SK（<strong>插件上传侧无此链路</strong>，仅 OIDC，见补充行澄清）</td><td>治理脚本按最小权限 IAM 策略（List / GetObjectAcl / PutObjectAcl）完成统计与修复；平台侧服务凭证读取正常</td></tr>
       <tr><td><strong>补充</strong></td><td>—</td><td>私有对象下历史下钻 /（已上线的）原始报告下载均正常——均走平台凭证读取，实测收口。<strong>AK/SK 模式澄清（评审确认）</strong>：插件当前<strong>仅实现 OIDC 链路</strong>且 SDK 为免 AK/SK 设计（OIDC ID Token → STS AssumeAgencyWithOIDC → 1 小时临时凭证），无静态凭证分支——「验证 AK/SK 模式」需澄清所指：插件上传侧需新增静态凭证分支（改动小），治理脚本 / 平台服务侧则属 IAM 授权配置、与插件无关</td></tr>
     </table>
     </div>
@@ -342,7 +342,7 @@
     <div class="table-wrap">
     <table>
       <tr><th style="width:26%">范围</th><th>改动</th></tr>
-      <tr><td><strong>upload-ut-action</strong></td><td><strong>移除 <code>obs_acl</code> 配置项</strong>，代码固定 ACL=private（6 文件：action.yml / index.js / ObsUploader.js / 测试 / 版本 / dist 重建，详见 4.1）；<span class="muted">AK/SK 认证模式兼容性开发阶段确认（见 4.2）</span></td></tr>
+      <tr><td><strong>upload-ut-action</strong></td><td><strong>移除 <code>obs_acl</code> 配置项</strong>，代码固定 ACL=private（6 文件：action.yml / index.js / ObsUploader.js / 测试 / 版本 / dist 重建，详见 4.1）；<span class="muted">插件静态 AK/SK 分支暂不开发（仅 OIDC，见 4.2 澄清与待确认项 Q5）</span></td></tr>
       <tr><td><strong>openlibing-cicd</strong></td><td>新增治理流水线 <code>.gitcode/workflows/obs-acl-governance.yml</code>（手动触发，inputs：bucket/prefix/mode/batchIntervalMs/marker，AK/SK 以私密参数传入）+ Node 治理脚本 <code>scripts/obs-acl-governance/index.js</code>（枚举 → 判定 → 修复 → 摘要，marker 断点续跑）+ 脚本单测；<strong>服务端 Java 零改动</strong></td></tr>
       <tr><td><strong>运维</strong></td><td>创建治理凭证（最小权限 List/GetAcl/PutAcl）并配置流水线私密参数（<code>OBS_GOVERNANCE_AK/SK</code>）；手动触发治理流水线（两段式：COUNT_ONLY 摸底 → COUNT_AND_REPAIR 修复）+ 访问日志匿名消费审计</td></tr>
       <tr><td><strong>openlibing-coderepo</strong></td><td><strong>无代码改动</strong>；观测期关注下载失败日志</td></tr>
@@ -356,7 +356,7 @@
     <h2><span class="no">7</span>验收标准</h2>
     <ul class="check">
       <li>新版本插件上传的对象：匿名 GET 返回 403，平台凭证读取正常。</li>
-      <li>OIDC 与 AK/SK 两种模式流水线均完成上报并解析入库成功。</li>
+      <li>OIDC 模式流水线完成上报并解析入库成功；AK/SK 链路仅限治理脚本 / 平台侧（插件上传侧无静态凭证分支，见 4.2 澄清）。</li>
       <li>存量治理后抽样历史对象：匿名 GET 403。</li>
       <li>历史记录下钻、（已上线的）原始报告下载功能不受影响。</li>
       <li>观测期 UT 上报解析成功率无劣化。</li>
@@ -382,6 +382,10 @@
       <div class="card">
         <h4><span class="pill dec">Q4</span>插件发版节奏</h4>
         <p class="muted">新版本插件是否强制升级？旧版本插件在治理后上传的公开对象会被桶级阻断兜住（批量 ACL 方案则有窗口期）。</p>
+      </div>
+      <div class="card">
+        <h4><span class="pill dec">Q5</span>插件静态 AK/SK 分支是否需要开发</h4>
+        <p class="muted">插件当前仅实现 OIDC 链路（SDK 免 AK/SK 设计），无静态凭证分支；若未来流水线环境不支持 OIDC，需新增静态凭证分支（改动小、仅 PutObject 最小权限），列入后续迭代评估。</p>
       </div>
     </div>
   </section>

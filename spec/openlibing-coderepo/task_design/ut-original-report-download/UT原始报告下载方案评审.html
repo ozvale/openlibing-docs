@@ -428,9 +428,9 @@ ALTER TABLE code_ut_record
 
     <h3>5.3 幂等与任务锁</h3>
     <ul class="check" style="list-style:none">
-      <li><strong>提交幂等</strong>：identifier 查最新一条任务——进行中复用、SUCCESS 复用签名 URL，不重复生成。</li>
-      <li><strong>生成互斥</strong>：<code>updateExportTask({id, message=BUILDING, expectedMessages=[INITIALIZED, THROTTLED]})</code> 条件更新 0 行 = 已被其他实例接管，ACK 跳过。</li>
-      <li><strong>失败重试</strong>：仅 FAILED 时点击会重建新任务（导出中心按 identifier 查最新一条天然支持）。</li>
+      <li><strong>提交幂等</strong>：identifier = <code>ut-original-report:{recordId}:{userId}</code> 查最新一条任务——进行中复用、SUCCESS 复用签名 URL，不重复生成（framework 导出记录仅创建人可查看/下载，用户维度隔离）。</li>
+      <li><strong>生成互斥</strong>：<code>updateExportTask({id, message=BUILDING, expectedMessages=[INITIALIZED]})</code> 条件更新 0 行 = 已被其他实例接管，ACK 跳过。</li>
+      <li><strong>失败重试</strong>：仅最近一条 FAILED 时点击会重建新任务；非终态任务停滞超过 10 分钟（消费者进程死亡无人收尾）按 updateTime 判活同样放行重建（导出中心按 identifier 查最新一条天然支持）。</li>
       <li><strong>URL 失效</strong>：签名 URL 过期后重新点击提交 → 命中已有记录返回原 exportRecordId → 直轮 detail 重新拿签名 URL（不重新生成）。</li>
     </ul>
 
@@ -440,7 +440,7 @@ ALTER TABLE code_ut_record
       <tr><th style="width:42%">场景</th><th>行为</th></tr>
       <tr><td>历史记录无原始报告（列为 NULL）</td><td>按钮置灰 + 提示；接口提交返回明确失败文案</td></tr>
       <tr><td>源桶对象已被生命周期策略清理</td><td>生成阶段下载失败 → FAILED「OBS 文件下载失败或不存在」</td></tr>
-      <tr><td>导出中心 create / update / query 失败</td><td>提交侧返回明确错误；生成侧 update 失败记 warn 不中断转存（objectKey 已上传，可人工补登记）</td></tr>
+      <tr><td>导出中心 create / update / query 失败</td><td>提交侧返回明确错误；生成侧 CAS / 回写失败先回查确认仍处前置中间态才条件回写 FAILED（命中终态说明写入实际生效，保持终态不动）；非终态任务停滞超 10 分钟由提交侧判活放行重建，无永久卡死窗口</td></tr>
       <tr><td>多实例并发消费同一任务</td><td>expectedMessages 条件更新抢占，未抢到 ACK 跳过</td></tr>
       <tr><td>原始文件超大</td><td>downloadToTempFile 现有 500MB 上限 + 流式下载兜底，超限 FAILED 透出原因</td></tr>
       <tr><td>消息体损坏</td><td>JSON 解析失败记 error 后 ACK 丢弃</td></tr>
@@ -449,8 +449,8 @@ ALTER TABLE code_ut_record
 
     <h3>5.5 安全设计</h3>
     <ul class="check">
-      <li><strong>权限不新增</strong>：两个新接口复用 <code>verifyPermissionsByProduct(userId, null, null, repoId, UT_COVERAGE_FILE_DETAIL)</code>，与查看明细同一权限项。</li>
-      <li><strong>任务越权防护</strong>：status 查询校验导出中心记录 <code>creator = 当前用户</code> 或 identifier 归属该 repoId 的 record，防枚举他人任务。</li>
+      <li><strong>权限不新增</strong>：唯一新增提交接口复用 <code>verifyPermissionsByProduct(userId, null, null, repoId, UT_COVERAGE_FILE_DETAIL)</code>，与查看明细同一权限项。</li>
+      <li><strong>任务越权防护</strong>：提交接口以本次请求已通过权限校验的 repoId / branchName / pipelineRunId 定位 record，identifier 追加 userId 维度隔离——幂等复用仅命中本人任务，防枚举他人任务；状态轮询直连 framework <code>/export/detail</code>，其 creator 归属校验沿用 framework 既有鉴权（非本次改动范围，见待确认项 Q5）。</li>
       <li><strong>源站白名单</strong>：生成侧复用既有桶名 + <code>ut-coverage-action/</code> 前缀白名单；URL 通过白名单校验后才落库。</li>
       <li><strong>下载安全</strong>：前端仅接触导出桶短时效签名 URL；文件名服务端规范化（清洗路径分隔符等），防文件名注入。</li>
       <li><strong>信息收敛</strong>：message 入库前按 255 截断，不透出 OBS endpoint / 凭证。</li>
@@ -480,7 +480,7 @@ ALTER TABLE code_ut_record
     <h3>6.5 详情页交互效果（高保真 mockup，供与领导对齐）</h3>
     <p><strong>按钮位置</strong>：放在页头信息条（代码仓 / 分支 / 流水线）同一行的<strong>右侧</strong>——语义上对应"这条上报记录"整体（与来源信息同级），不与表格数据导出混淆，也是管理后台页面级操作的惯用位置。样式采用<strong>次要按钮</strong>（白底描边 + 下载图标），不抢行覆盖率主指标的视觉焦点。</p>
 
-    <div class="mu" role="img" aria-label="UT 覆盖率详情页效果：页头右侧新增下载原始报告按钮">
+    <div class="mu" role="group" aria-label="UT 覆盖率详情页效果：页头右侧新增下载原始报告按钮">
       <div class="mu-crumb">仓库管理&ensp;/&ensp;分支管理&ensp;/&ensp;<b>代码度量</b></div>
       <div class="mu-head">
         <div>
@@ -596,6 +596,10 @@ ALTER TABLE code_ut_record
       <div class="card">
         <h4><span class="pill dec">Q4</span>导出中心统一列表</h4>
         <p class="muted">本类型任务是否需要出现在平台既有导出任务列表页（type=UT_ORIGINAL_REPORT）？</p>
+      </div>
+      <div class="card">
+        <h4><span class="pill dec">Q5</span>framework /export/detail 越权校验归属</h4>
+        <p class="muted">状态轮询直连 framework /export/detail，鉴权沿用其既有逻辑（非本次改动范围）；需 framework 侧确认 creator 归属校验已覆盖「遍历 exportRecordId 读取他人任务状态 / 签名 URL」的枚举场景。</p>
       </div>
     </div>
   </section>
