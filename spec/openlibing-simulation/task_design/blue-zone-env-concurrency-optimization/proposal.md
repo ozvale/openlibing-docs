@@ -26,7 +26,6 @@
 
 不做什么：
 
-- **不交付子需求 2（AOM 运维指标上报）**：经确认，本次**回退** `micrometer-registry-prometheus` 依赖与 `management` 相关配置。原因是当前 `/actuator/**` 被 `InternalSimulationAuthFilter` 拦截（仅放行 `/simulation/health-check`），抓取必然 401，且 `OperationLogFilter` 会为每次抓取写审计日志；指标方案（独立管理端口 / 认证放行 / 指标定义）需与 SRE 对齐后另行落地。
 - 不改远端目标机脚本 `install_ub_simulate.sh`（含 `flock` 串行化的操作命令）——该脚本由线下交付并上传，不在本仓源码范围。
 - 不改变对外 REST 接口契约、不新增管理端点、不调整认证与审计过滤器行为。
 
@@ -45,4 +44,3 @@
 - 仓：`openlibing-simulation`（单仓）。
 - 模块：Qemu 任务编排（`QemuTaskServiceImpl`）、Qemu 任务 Mapper、Liquibase changelog、单测。
 - 部署侧：蓝区物理机上的 deployPath 目录结构由 `{engineId}/` 变为 `{engineId}/{taskId}/`；存量任务目录不做迁移。
-- 依赖侧：移除 `micrometer-registry-prometheus`，不再暴露 `/actuator/prometheus`（actuator 基础能力仍由 `openlibing-common` 传递引入）。

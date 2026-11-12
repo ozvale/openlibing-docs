@@ -6,24 +6,19 @@
 - 业务 PR：
   - [#200](https://gitcode.com/openlibing/openlibing-simulation/merge_requests/200)（已合并，merge commit `47296c1`）：Issue 65 主体交付
   - [#201](https://gitcode.com/openlibing/openlibing-simulation/merge_requests/201)（已合并，merge commit `0153270`）：nightly pre-commit 修复
-- docs PR：本分支 `spec-openlibing-simulation-blue-zone-env-concurrency` 发起
+- docs PR：[#1331](https://gitcode.com/openlibing/openlibing-docs/merge_requests/1331)（分支 `spec-openlibing-simulation-blue-zone-env-concurrency`）
 
 ## 交付范围
 
-| 子需求 | 结论 |
-|---|---|
-| 1. 蓝区环境创建耗时优化 | 已交付：taskId 目录隔离、按物理机 IP 维度分布式锁、清理路径三重校验、`t_server_using.config_path` |
-| 2. 业务层运维指标上报 | 本次不交付：回退 `micrometer-registry-prometheus` 与 `management.*`，待与 SRE 对齐抓取方案后另行落地 |
+- 蓝区环境创建耗时优化：taskId 目录隔离、按物理机 IP 维度分布式锁、清理路径三重校验、`t_server_using.config_path`。
 
 ## 交付历程
 
 | commit | 说明 |
 |---|---|
 | `2269e5c..4bca5c6`（8 个） | 蓝区并发优化主体：目录隔离、锁、清理校验、changeset、单测适配 |
-| `9682507` / `921a7e9` | 曾接入 Prometheus 指标依赖与配置（后续被回退） |
 | `78b71fc` | 修复分支既有单测漂移（427 用例全绿） |
 | `f149a92` | 安装脚本源路径 `gamma` → `prod` |
-| `4fe40f5` | 回退 metrics 依赖与 `management.*`，同步 `AGENTS.md` |
 | `5ce6c82` | 新增 121 个单测，diff-cover 26% → 91% |
 | `31163f8` | nightly pre-commit 修复（gitleaks allowlist + spotless 格式化，cherry-pick 到新分支） |
 | docs `7fac66de` / `a84a29ec` | proposal / design / tasks 与进度更新 |
@@ -32,7 +27,6 @@
 
 | 反馈 | 处理 |
 |---|---|
-| `/actuator/prometheus` 被认证过滤器拦截，指标不可抓取 | 确认子需求 2 本次不交付，回退依赖与配置（`4fe40f5`） |
 | `install_ub_simulate.sh` 的 flock 改造 | 由用户线下上传脚本，不纳入仓库与验收 |
 | 安装脚本源目录需为 prod | `Constans.INSTALL_SCRIPT_PATH` 改为 `/home/openlibing-manager/prod/install/script/`（`f149a92`） |
 | CI 增量覆盖率门禁 26% 未达标 | 补 121 个单测至 91%（`5ce6c82`） |
@@ -47,7 +41,6 @@
 
 ## 设计偏差与取舍
 
-- 子需求 2 未交付：指标端点受内部认证与审计过滤器影响，且指标定义需 SRE 确认；留待后续需求。
 - 移除 43 个指向已删除私有方法的失效用例（`setSharePath`/`replaceImage`/`updateYmlContent` 等），未保留空壳测试。
 - PR #200 采用「全量 `fork_1106`」方式提交，混入静态检查插件、gitleaks、优雅停机等非 Issue 65 改动，已在 PR 描述中披露。
 - 仍有 78 行增量代码未覆盖：真实 SSH 握手/端口转发、`ssh-keyscan`、5 分钟/20~50 分钟超时分支，属单测不可达路径。
