@@ -142,7 +142,7 @@
 **统一校验入口**
 
 - `RepoUrlUtil.isLegalCoordinate(owner, repo)`：owner 走 `isLegalOwner`（允许 `group/sub`），repo 走 `isLegalSegment`；
-- `RepoUrlUtil.isLegalSegment`：复用 `SigInfoClient.isLegalSegment`，并显式拒绝单点段 `.`；
+- `RepoUrlUtil.isLegalSegment`：最终设计为直接委托 `SigInfoClient.isLegalSegment`（`.`/`..` 已在委托实现中拒绝）；!311 分支落地时基线尚未包含 !306 的单点拒绝，故分支内保留了一层临时判断，两者合并后移除，避免长期重复校验。
 - 拒绝空值、空白、`..`、`.`、`?`、`#`、空格及白名单外字符。
 
 **处理链路**
@@ -172,7 +172,8 @@
 
 - 保留既有 `springdoc.swagger-ui.url` / `oauth2RedirectUrl` 配置文本（仅作为非生产环境参考），生产环境因开关关闭不再注册 `/v3/api-docs`、`/swagger-ui/**`；
 - `pom.xml` 依赖、Controller `@Operation` 注解、beta/gama/本地配置全部保留；
-- 部署验收：生产环境访问 `/v3/api-docs`、`/swagger-ui/index.html` 返回 404；beta 环境 Swagger UI 仍可访问；网关 `/manage` 路由策略由环境侧复核。
+- 部署验收：生产环境访问 `/v3/api-docs`、`/swagger-ui/index.html` 返回 404；beta 环境 Swagger UI 仍可访问；网关 `/manage` 路由策略由环境侧复核；
+- 配置中心核对：生产配置可能经 Nacos/Apollo 下发，需确认配置中心不存在同名 `springdoc.*.enabled` 覆盖项；生产是否真正关闭以部署后 404 实测为准。
 
 ## 3. 类设计
 
@@ -198,19 +199,19 @@
 - `ApiUrlUtilTest`、`SigInfoClientTest`、`SigDefaultParamBuilderTest`、`TokenPermissionEvaluatorTest`、`MergeRequestEventHandlerTest`（!306）；
 - `SqlLikeUtilTest`、`RepoServiceImplLikeEscapeTest`（!309）；
 - `MergeRequestEventHandlerGraphqlTest`（!310）；
-- `RepoUrlUtilTest`、`PrSyncEventHandlerTest`（!311）。
+- `RepoUrlUtilTest`、`PrSyncEventHandlerTest`、`NotifyConfigEventHandlerTest`（!311）。
 
 ## 4. 数据模型设计
 
 本次整改无新增表、无表结构变更、无数据迁移。
 
-| 项         | 变更                                                                     | 备注                                                            |
-| ---------- | ------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| 数据库表   | 无                                                                       | 不新增字段、不改索引                                            |
-| 查询实体   | `RepoInfoEntity` / `ProjectBranchQueryEntity` 的 LIKE 字段在内存中先转义 | 仅影响 SQL 参数值，不改变持久化数据                             |
-| 配置项     | `application-prod.yaml` 新增两个 springdoc 开关                          | 无新增配置 key、无配置中心变更                                  |
-| 存量数据   | 无需清洗                                                                 | `repo_info.repo_url` 已由历史整改校验；新增入口继续拦截非法坐标 |
-| Redis / MQ | 无变更                                                                   | 本次不新增缓存键、不改消息结构                                  |
+| 项         | 变更                                                                     | 备注                                                                                  |
+| ---------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| 数据库表   | 无                                                                       | 不新增字段、不改索引                                                                  |
+| 查询实体   | `RepoInfoEntity` / `ProjectBranchQueryEntity` 的 LIKE 字段在内存中先转义 | 仅影响 SQL 参数值，不改变持久化数据                                                   |
+| 配置项     | `application-prod.yaml` 新增两个 springdoc 开关                          | 新增 2 个 springdoc 开关；需核对配置中心同名覆盖项，生产生效性以部署验收 404 实测为准 |
+| 存量数据   | 无需清洗                                                                 | `repo_info.repo_url` 已由历史整改校验；新增入口继续拦截非法坐标                       |
+| Redis / MQ | 无变更                                                                   | 本次不新增缓存键、不改消息结构                                                        |
 
 ## 5. 性能设计
 
@@ -256,8 +257,8 @@
 
 - **残余风险**：
   - Webhook 报文本身经过 HMAC 验签，坐标校验为纵深防御；平台命名规则与 token 反查仍是一层约束；
-  - `RepoUrlUtil.isLegalOwner` 与 `SigInfoClient.isLegalOwner` 存在短期重复实现，合并后收敛；
-  - #225 的实际可达性还取决于网关 `/manage` 路由，需环境侧确认生产 404。
+  - `RepoUrlUtil.isLegalOwner` 与 `SigInfoClient.isLegalOwner` 存在短期重复实现；`RepoUrlUtil.isLegalSegment` 的临时单点判断在 !306/!311 合并后移除，最终统一委托 `SigInfoClient`；
+  - #225 生产配置可能被配置中心同名 key 覆盖，需在部署验收时核对有效配置并实测 404。
 - **验收标准**：
   1. 5 个子 Issue 对应的 PR 均合入 `release_20261116_iter1`；
   2. 路径段/坐标非法时无平台请求、无 MQ 发送；
