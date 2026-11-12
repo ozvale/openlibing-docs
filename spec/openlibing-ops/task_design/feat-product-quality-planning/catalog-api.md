@@ -78,12 +78,12 @@ GET /projects/product-quality/catalogs/basic?milestoneId=7
 
 ### 2.5 通用错误响应
 
-失败时 `code` 为 `40001`/`403`/`500`，`messageCn` 会按具体场景返回不同提示，前端可直接展示：
+产品质量业务异常统一返回 `code = 500`，`messageCn` 为场景化中文提示、`messageEn` 为 `null`；参数校验失败返回 `code = 40001`，具体校验原因见 `data`。前端可直接展示 `messageCn`：
 
 | `code` | `messageCn` | 触发场景 |
 |---|---|---|
-| `40001` | `里程碑不存在或已被删除，无法初始化目录` | 初始化目录时里程碑不存在 |
-| `40001` | `参数校验失败` | 请求参数不满足接口约束 |
+| `500` | `里程碑不存在或已被删除，无法初始化目录` | 初始化目录时里程碑不存在 |
+| `40001` | `请求参数异常` | 请求参数不满足接口约束 |
 | `403` | `没有权限` | token Cookie 缺失、无效，或用户无对应读写权限 |
 | `500` | `系统异常` | 未被其他处理器捕获的系统异常 |
 
@@ -231,7 +231,7 @@ POST /projects/product-quality/catalogs/init?milestoneId=7
 | 首次初始化且基础目录非空 | 返回实际新增目录数量，例如 `42` |
 | 指定里程碑已存在任意目录记录 | 跳过初始化，返回 `0` |
 | 基础目录表为空 | 不插入数据，返回 `0` |
-| 里程碑不存在 | 返回业务状态码 `40001` |
+| 里程碑不存在 | 返回业务失败提示（`code = 500`） |
 
 因此，`data = 0` 不一定表示失败，前端应结合 `code = 200` 判断请求成功，并按需重新查询左右侧目录。
 
@@ -263,9 +263,9 @@ POST /projects/product-quality/catalogs/init?milestoneId=7
 
 ```json
 {
-  "code": 40001,
-  "messageCn": "请求参数异常",
-  "messageEn": "params invalid",
+  "code": 500,
+  "messageCn": "里程碑不存在或已被删除，无法初始化目录",
+  "messageEn": null,
   "data": null
 }
 ```

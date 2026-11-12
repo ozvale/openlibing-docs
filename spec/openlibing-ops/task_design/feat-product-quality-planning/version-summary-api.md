@@ -78,14 +78,15 @@ GET /projects/product-quality/version-summary/detail?milestoneId=7
 
 ### 2.5 通用错误响应
 
-失败时 `code` 为 `40001`/`403`/`500`，`messageCn` 会按具体场景返回不同提示，前端可直接展示：
+产品质量业务异常统一返回 `code = 500`，`messageCn` 为场景化中文提示、`messageEn` 为 `null`；参数校验失败返回 `code = 40001`，具体校验原因见 `data`。前端可直接展示 `messageCn`：
 
 | `code` | `messageCn` | 触发场景 |
 |---|---|---|
-| `40001` | `新增版本摘要失败` | 新增数据落库失败 |
-| `40001` | `修改版本摘要失败，记录不存在或已被删除` | 修改时记录不存在或已被逻辑删除 |
-| `40001` | `记录版本摘要操作日志失败` | 修改操作日志落库失败 |
-| `40001` | `项目 ID 格式不正确，必须为数字` | `projectId` 查询参数不是合法数字 |
+| `500` | `新增版本摘要失败` | 新增数据落库失败 |
+| `500` | `修改版本摘要失败，记录不存在或已被删除` | 修改时记录不存在或已被逻辑删除 |
+| `500` | `记录版本摘要操作日志失败` | 修改操作日志落库失败 |
+| `500` | `项目 ID 格式不正确，必须为数字` | 里程碑关联的项目 ID 不是合法数字 |
+| `40001` | `请求参数异常` | 请求参数未通过校验，具体原因见 `data` |
 | `403` | `没有权限` | token Cookie 缺失、无效，或用户无对应读写权限 |
 | `500` | `系统异常` | 未被其他处理器捕获的系统异常 |
 
@@ -199,7 +200,7 @@ Content-Type: application/json
 ### 4.2 保存逻辑
 
 - 首次保存：服务端校验里程碑存在后，从里程碑获取项目 ID 和里程碑名称，创建新记录。创建操作不写独立修改日志。
-  - 里程碑 ID 为字符串，服务端会将其转换为 `Integer` 写入 `project_id`；非数字时返回 `40001`。
+  - 里程碑 ID 为字符串，服务端会将其转换为 `Integer` 写入 `project_id`；非数字时返回 `500`（`项目 ID 格式不正确，必须为数字`）。
 - 后续保存：保留主键、项目 ID、里程碑 ID/名称、创建人、创建时间不变，仅更新 9 个摘要字段、更新人和更新时间。更新操作在同一事务内写入 `pq_version_summary_log` 日志表，记录新旧完整 JSON 快照。
 - 9 个摘要字段（`versionPositionBusinessGoalHtml`、`competitivenessGoalHtml`、`targetMarketRegionHtml`、`customerIndustryValueHtml`、`huaweiValueHtml`、`projectControlHtml`、`supportingProductHtml`、`projectInvestmentHtml`、`otherHtml`）均会经过服务端 OWASP HTML 白名单清理后再落库：保留常见块级与行内排版元素，以及 `table`、`thead`、`tbody`、`tfoot`、`tr`、`th`、`td`、`caption`、`hr`、`a`；`a` 仅保留 `href`，`th`/`td` 仅保留 `colspan`、`rowspan`；链接仅允许 `http`、`https` 协议并自动追加 `rel="nofollow"`。`script`、`style`、`iframe`、事件属性及危险协议会被移除。
 - 清理后每个字段长度仍受请求校验上限约束，前端应在提交前自行限制各富文本字段长度。
