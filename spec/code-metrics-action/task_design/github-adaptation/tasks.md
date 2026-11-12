@@ -5,7 +5,7 @@
 ## 1. 平台上下文适配
 
 - [x] 新增 `GITHUB_ACTIONS` 平台判定，判定后只读取对应平台变量，不跨平台混用
-- [x] 移除 `PIPELINE_RUN_ID` / `PIPELINE_RUN_NUMBER` 旧兼容，运行信息统一取平台标准变量
+- [x] 移除 `PIPELINE_RUN_ID` / `PIPELINE_RUN_NUMBER` 旧兼容，运行信息统一取平台标准变量（`PIPELINE_*` 原为 workflow 手动注入的回退；标准 GitCode/GitHub 流水线由平台自动注入运行 ID/编号，无需修改；手工注入场景需迁移至平台标准变量）
 - [x] PR 事件按目标分支归属（`GITHUB_BASE_REF` / `ATOMGIT_BASE_REF`，不混用 `HEAD_REF`）
 - [x] 仓库地址优先取本地 git，失败时用 `GITHUB_SERVER_URL + GITHUB_REPOSITORY` 兜底
 - [x] 运行 ID / 编号 / 提交 SHA / 工作流名称按平台取值

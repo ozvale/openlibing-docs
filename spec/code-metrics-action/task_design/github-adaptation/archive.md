@@ -34,7 +34,7 @@
 
 ## 设计偏差与取舍
 
-- `action.yml` 保持 `runs.using: node16`：GitCode runner 仅支持 node16，GitHub 会强制按 node20 运行并给出弃用告警；Node 16 已停止安全支持，纳入 runner 升级跟踪，不作为长期配置
+- `action.yml` 保持 `runs.using: node16`：GitCode runner 仅支持 node16；GitHub 会将 node16 动作强制按 node20 运行，因此 GitHub 侧实际运行时不处于 EOL 状态，GitCode 侧仍运行 node16。Node 16 已停止安全支持，本项作为已知风险由插件维护人跟踪：GitCode runner 支持 node20 后立即切换 `runs.using: node20` 并重建 `dist`，目标为 GitCode runner 升级后的首个插件版本；暂未单独立项，跟踪入口为本归档与插件仓后续版本计划
 - 设计未包含的测试与覆盖率治理（`.c8rc.json`、64 个用例）为评审阶段补充，不改变运行时行为
 - IAM 信任策略需同时覆盖 GitHub 旧格式与不可变 ID 新格式 `sub`，该要求已写入设计 §7 安全设计
 
