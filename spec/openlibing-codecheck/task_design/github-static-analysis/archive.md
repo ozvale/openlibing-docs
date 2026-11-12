@@ -39,7 +39,7 @@
 
 - `.github/workflows/clang-tidy-scan.yml`：workflow 全量扫描；
 - `.github/workflows/clang-tidy-precommit.yml`：pre-commit 集成；
-- 两者均声明 `permissions.id-token: write`，引用 `openlibing-test/upload-sarif-action@source-platform-detection`（提交 `7dd349f`）。
+- 两者均声明 `permissions.id-token: write`，验证时引用 `openlibing-test/upload-sarif-action@source-platform-detection`（验证版本 `05d5ea9e9f9a76497022ccab322f6dc22d827820`）；demo 仓提交 `7dd349f` 完成该引用更新。生产接入应固定到上述 SHA，避免可变分支在持有 `id-token: write` 时执行未评审代码。
 
 ### 文档
 
@@ -48,16 +48,17 @@
 
 ## 验证证据
 
-| 验证项            | 结果                                                                                                             |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
-| 全量扫描工作流    | [run 41803721358](https://github.com/openlibing-test/clang-tidy-full-scan-demo/actions/runs/41803721358) success |
-| pre-commit 工作流 | [run 41803725788](https://github.com/openlibing-test/clang-tidy-full-scan-demo/actions/runs/41803725788) success |
-| 来源标记          | 日志输出 `[INFO] 来源标记: GITHUB_ACTION`                                                                        |
-| OIDC 换证         | 提供商 `GitHubActions`、委托 `github-actions`，STS 换证成功                                                      |
-| OBS 上传          | 桶 `openlibing-github-action`，key 含 `{owner}/{repo}/{runId}`                                                   |
-| 平台回调          | APIG 返回 `{"code":200,"msg":"success"}`                                                                         |
-| 结果入库          | beta `static_alarm_scan_run` 存在 `category=business` / `pre-commit-report` 记录                                 |
-| 质量门禁          | `npm test` 79 项通过；`pre-commit` 全绿；`dist` 已重建并提交                                                     |
+| 验证项            | 结果                                                                                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 全量扫描工作流    | [run 41803721358](https://github.com/openlibing-test/clang-tidy-full-scan-demo/actions/runs/41803721358) success                                        |
+| pre-commit 工作流 | [run 41803725788](https://github.com/openlibing-test/clang-tidy-full-scan-demo/actions/runs/41803725788) success                                        |
+| 来源标记          | 日志输出 `[INFO] 来源标记: GITHUB_ACTION`                                                                                                               |
+| OIDC 换证         | 提供商 `GitHubActions`、委托 `github-actions`，STS 换证成功                                                                                             |
+| OBS 上传          | 桶 `openlibing-github-action`，key 含 `{owner}/{repo}/{runId}`                                                                                          |
+| 平台回调          | APIG 返回 `{"code":200,"msg":"success"}`（验证环境 beta，后端版本与来源枚举支持情况未在本次核对范围）                                                   |
+| 结果入库          | beta `static_alarm_scan_run` 存在 `category=business` / `pre-commit-report` 记录；`source` 字段的展示依赖后端 `GITHUB_ACTION` 枚举发布（见遗留项 #397） |
+| GitCode 链路回归  | 本次未执行（改造后未运行 GitCode 工作流），列为发布前待验证项                                                                                           |
+| 质量门禁          | `npm test` 79 项通过；`pre-commit` 全绿；`dist` 已重建并提交                                                                                            |
 
 ## 关键技术决策
 
@@ -72,11 +73,12 @@
 
 ## 遗留与后续
 
-1. **前后端展示适配**：后端 `StaticAlarmSourceEnum` 新增 `GITHUB_ACTION`、前端来源选项/标签与列表页 GitHub 平台展示，由 openlibing-codecheck#397 跟踪；需按「先前后端、后插件上报」顺序发布，避免来源被拒绝。
-2. **转测**：完成上述适配并部署 beta 后，按验收标准执行测试流程。
-3. **其他工具接入**：Bandit、ESLint、gosec、SpotBugs、cargo-clippy、gitleaks 等按各自 US 复用本范式，用户文档已在 `docs` 仓提供对应 GitHub 章节。
-4. **api.md 不适用**：本需求无新增/变更对外 HTTP 接口，结果回传复用 `/action-api/codescan/v1/result/receive`，前端复用现有查询接口。
+1. **GitCode 侧回归与 AK/SK 迁移**：本次验证仅覆盖 GitHub 侧；`upload-sarif-action` 已移除 `obs-ak` / `obs-sk` / `obs-region` 输入，存量 GitCode 工作流需删除对应参数并依赖 OIDC 换证，发布前需补做 GitCode 上传/回调回归验证。
+2. **前后端展示适配**：后端 `StaticAlarmSourceEnum` 新增 `GITHUB_ACTION`、前端来源选项/标签与列表页 GitHub 平台展示，由 openlibing-codecheck#397 跟踪；需按「先前后端、后插件上报」顺序发布，避免来源被拒绝。
+3. **转测**：完成上述适配并部署 beta 后，按验收标准执行测试流程。
+4. **其他工具接入**：Bandit、ESLint、gosec、SpotBugs、cargo-clippy、gitleaks 等按各自 US 复用本范式，用户文档已在 `docs` 仓提供对应 GitHub 章节。
+5. **api.md 不适用**：本需求无新增/变更对外 HTTP 接口，结果回传复用 `/action-api/codescan/v1/result/receive`，前端复用现有查询接口。
 
 ## 结论
 
-clang-tidy 的 GitHub Actions 接入链路已在 `openlibing-test` 组织内完成端到端验证，插件改造、工作流样例与用户文档均已交付；剩余前端/后端展示适配与转测由 openlibing-codecheck#397 和测试流程承接。
+GitHub 侧 clang-tidy 接入链路已在 `openlibing-test` 组织内完成端到端验证，插件改造、工作流样例与用户文档均已交付；GitCode 侧回归、前后端展示适配与转测仍待完成，分别由本节遗留项与 openlibing-codecheck#397 承接。

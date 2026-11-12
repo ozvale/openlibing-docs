@@ -31,6 +31,7 @@ openLiBing 的代码检查链路此前主要面向 GitCode Actions：各静态�
 ### 包含
 
 - GitHub OIDC 免密换证（`GitHubActions` 身份提供商）与 OBS 桶按平台隔离；
+- GitCode 与 GitHub 均使用 OIDC 免密换证；`upload-sarif-action` 不再声明 `obs-ak` / `obs-sk` / `obs-region` 输入，存量工作流需删除对应 `with` 参数，由 OIDC 自动获取凭证；
 - `upload-sarif-action` / `pre-commit-action` 单份代码运行时识别平台，不维护独立分支；
 - clang-tidy 全量扫描与 pre-commit 集成两套 GitHub workflow 示例；
 - GitHub 接入用户文档（工具配置、平台差异、字段映射与排错）；
@@ -48,8 +49,9 @@ openLiBing 的代码检查链路此前主要面向 GitCode Actions：各静态�
 2. 运行日志显示来源标记为 `GITHUB_ACTION`，OBS 对象写入 `openlibing-github-action` 桶；
 3. APIG 回调 beta 返回 `{"code":200,"msg":"success"}`，扫描记录正常入库；
 4. 「代码检查」页面筛选 GitHub 平台后可见结果，列表与详情来源展示 GitHub Action；
-5. GitCode 原有扫描、上报与展示链路回归不受影响；
-6. 用户文档与设计/交付归档分别合入 `docs` 仓与 `openlibing-docs` 仓主干。
+5. 存量 GitCode 工作流在移除 `obs-ak` / `obs-sk` 入参并切换 OIDC 后仍可正常上传；
+6. GitCode 原有扫描、上报与展示链路回归不受影响；
+7. 用户文档与设计/交付归档分别合入 `docs` 仓与 `openlibing-docs` 仓主干。
 
 ## 关联 Issue
 

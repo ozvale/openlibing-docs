@@ -12,7 +12,7 @@
 - [x] 创建 `openlibing-test/clang-tidy-full-scan-demo`（示例仓，含被扫代码与 `.github/workflows/`）
 - [x] 创建 `openlibing-test/pre-commit-action`（GitHub 适配版 pre-commit 插件）
 - [x] 创建 `openlibing-test/upload-sarif-action`（GitHub 适配版 SARIF 上传插件）
-- [x] 三个仓统一为私有，保证 action 可被引用
+- [x] 三个仓设为私有：仅 `openlibing-test` 组织内可引用，跨组织复用需调整可见性或采用模板/复制策略
 
 ## upload-sarif-action 改造
 
@@ -24,7 +24,7 @@
 - [x] 依赖升级到 `@openlibing/huaweicloud-oidc-client` v0.0.7，`package-lock.json` 同步锁定
 - [x] 适配 GitHub 输出机制（`GITHUB_OUTPUT`）与运行环境检测
 - [x] `npm test`（79 项）与 `pre-commit` 全绿，`ncc` 重建 `dist/index.js`
-- [x] 提交并推送 `source-platform-detection` 分支（`05d5ea9`）
+- [x] 提交并推送 `source-platform-detection` 分支（`05d5ea9e9f9a76497022ccab322f6dc22d827820`）
 
 ## pre-commit-action 改造
 
@@ -38,7 +38,7 @@
 - [x] `.github/workflows/clang-tidy-scan.yml`：workflow 全量扫描，`permissions.id-token: write`
 - [x] `.github/workflows/clang-tidy-precommit.yml`：pre-commit 集成，`pre-commit-action` + `upload-sarif-action`
 - [x] 预置 `clang-tidy-sarif` 二进制到 `.github/bin/`，执行机不访问外网
-- [x] 工作流引用 `openlibing-test/upload-sarif-action@source-platform-detection`
+- [x] 工作流引用 `openlibing-test/upload-sarif-action@source-platform-detection`（验证版本 `05d5ea9e9f9a76497022ccab322f6dc22d827820`；生产接入应固定该 SHA）
 
 ## 运行验证
 
@@ -63,4 +63,6 @@
 - [ ] 后端 `StaticAlarmSourceEnum` 新增 `GITHUB_ACTION` 并发布（openlibing-codecheck#397）
 - [ ] 前端来源选项/标签与列表页 GitHub 平台展示适配（openlibing-codecheck#397）
 - [ ] 按发布顺序完成前后端上线后，由测试执行转测验收
+- [ ] 存量 GitCode 工作流移除 `obs-ak` / `obs-sk` / `obs-region` 参数并切换 OIDC 后，补做上传/回调回归验证（本次未执行）
+- [ ] demo 工作流的 action 引用由可变分支改为固定 commit SHA（生产接入要求）
 - [ ] `api.md` 不适用：本需求无新增/变更对外 HTTP 接口，结果回传复用现有回调接口
