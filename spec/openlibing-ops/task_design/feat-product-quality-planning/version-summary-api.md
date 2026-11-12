@@ -41,7 +41,7 @@ GET /projects/product-quality/version-summary/detail?milestoneId=7
 
 ### 2.3 统一响应结构
 
-所有业务响应使用 `Result<T>`：
+所有业务响应使用产品质量模块专用 `Result<T>`，与通用 `Result` 字段结构一致：
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
