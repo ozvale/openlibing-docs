@@ -78,7 +78,7 @@ GET /projects/product-quality/catalogs/basic?milestoneId=7
 
 ### 2.5 通用错误响应
 
-产品质量业务异常统一返回 `code = 500`，`messageCn` 为场景化中文提示、`messageEn` 为 `null`；参数校验失败返回 `code = 40001`，具体校验原因见 `data`。前端可直接展示 `messageCn`：
+业务失败统一返回 `code = 500`，`messageCn` 为场景化中文提示、`messageEn` 为 `null`；参数校验失败返回 `code = 40001`，具体校验原因见 `data`。前端可直接展示 `messageCn`：
 
 | `code` | `messageCn` | 触发场景 |
 |---|---|---|
