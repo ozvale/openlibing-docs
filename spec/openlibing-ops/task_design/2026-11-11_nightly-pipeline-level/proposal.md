@@ -6,7 +6,7 @@
 
 ## 功能描述
 
-- 默认统计版本级流水线：名称以 `Nightly-Version-Pipeline` 开头；
+- 默认统计版本级流水线：名称以 `Nightly-Version-Pipeline` 开头（现网命名 `Nightly-CI-Version-pipeline` 一并兼容）；
 - 项目无版本级流水线时回退统计组件级流水线：其余全部（即非版本级）；
 - GitHub 平台不参与版本级/组件级判定，始终保留；
 - 回退判定采用配置口径：relation 中存在非 GitHub 版本级流水线即只统计版本级，不按时间窗内是否有运行数据回退；

@@ -6,13 +6,13 @@
 
 ## 口径定义
 
-| 项        | 定义                                                                                          |
-| --------- | --------------------------------------------------------------------------------------------- |
-| Base 集合 | 项目下 `dm_rd_efc_project_pipeline_relation.pipeline_type='NIGHTLY'` 的流水线                 |
-| 版本级    | 仅非 GitHub：`LOWER(pipeline_name) LIKE 'nightly-version-pipeline%'`                          |
-| 组件级    | 仅非 GitHub：其余全部（= 非版本级）                                                           |
-| GitHub    | 不判定级别，始终保留                                                                          |
-| 回退      | 配置口径：项目存在非 GitHub 版本级 → 非 GitHub 只留版本级；否则留全部非 GitHub；GitHub 恒保留 |
+| 项        | 定义                                                                                                                                          |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Base 集合 | 项目下 `dm_rd_efc_project_pipeline_relation.pipeline_type='NIGHTLY'` 的流水线                                                                 |
+| 版本级    | 仅非 GitHub：`LOWER(pipeline_name) LIKE 'nightly-version-pipeline%'` 或 `'nightly-ci-version-pipeline%'`（现网命名，2026-11-12 数据核对补充） |
+| 组件级    | 仅非 GitHub：其余全部（= 非版本级）                                                                                                           |
+| GitHub    | 不判定级别，始终保留                                                                                                                          |
+| 回退      | 配置口径：项目存在非 GitHub 版本级 → 非 GitHub 只留版本级；否则留全部非 GitHub；GitHub 恒保留                                                 |
 
 集合表达式：`is_github = 1 OR is_version_level = has_version_level`。
 
@@ -22,7 +22,7 @@
 
 - ETL 加 `pipeline_level` 字段需要跨团队排期，本仓无法闭环；
 - Java 层过滤需要额外查询并把 pipelineId 列表下发，分页/计数复杂度上升；
-- 当前两种命名前缀都落在 `pipeline_type='NIGHTLY'`（上游 ETL 按 `LOWER(pipeline_name) LIKE 'nightly%'` 推导），消费侧做一次二分即可，零 schema 变更。
+- 当前所有 Nightly 命名前缀都落在 `pipeline_type='NIGHTLY'`（上游 ETL 按 `LOWER(pipeline_name) LIKE 'nightly%'` 推导），消费侧做一次二分即可，零 schema 变更。
 
 ### 决策 2：GitHub 不参与版本级/组件级约束
 
@@ -47,7 +47,8 @@ nightly_pipelines_all AS (
     SELECT r.project_id, r.pipeline_id, MAX(r.pipeline_name) AS name,
            MAX(CASE WHEN r.platform = 'github' THEN 1 ELSE 0 END) AS is_github,
            MAX(CASE WHEN r.platform <> 'github'
-                     AND LOWER(r.pipeline_name) LIKE 'nightly-version-pipeline%'
+                     AND (LOWER(r.pipeline_name) LIKE 'nightly-version-pipeline%'
+                          OR LOWER(r.pipeline_name) LIKE 'nightly-ci-version-pipeline%')
                     THEN 1 ELSE 0 END) AS is_version_level
     FROM dm_rd_efc_project_pipeline_relation r
     WHERE r.pipeline_type = 'NIGHTLY'
@@ -81,7 +82,8 @@ nightly_pipelines_all AS (
            MAX(r.pipeline_name) AS pipeline_name,
            MAX(CASE WHEN r.platform = 'github' THEN 1 ELSE 0 END) AS is_github,
            MAX(CASE WHEN r.platform <> 'github'
-                     AND LOWER(r.pipeline_name) LIKE 'nightly-version-pipeline%'
+                     AND (LOWER(r.pipeline_name) LIKE 'nightly-version-pipeline%'
+                          OR LOWER(r.pipeline_name) LIKE 'nightly-ci-version-pipeline%')
                     THEN 1 ELSE 0 END) AS is_version_level
     FROM dm_rd_efc_project_pipeline_relation r
     WHERE r.pipeline_type = 'NIGHTLY' AND r.project_id = #{req.projectId}
@@ -107,6 +109,7 @@ GitHub 版本可用度分支保持原样。
 - 必须使用**正向 CASE** 打标；`pipeline_name` 为 NULL/空串时落组件级，禁止 `NOT LIKE`（NULL 会丢行）。
 - 统一 `LOWER()` 比较，Doris `LIKE` 区分大小写。
 - 平台标记用聚合前 `CASE`：任一平台命中 GitHub 即视为 GitHub 行（保守保留）。
+- 版本级前缀同时兼容现网 `Nightly-CI-Version-pipeline` 与目标 `Nightly-Version-Pipeline`，避免命名切换期分类落空。
 
 ## 行为变化矩阵
 
@@ -119,6 +122,13 @@ GitHub 版本可用度分支保持原样。
 | GitHub + 组件级       | 全部        | 全部                 | 不变 |
 | GitHub + 版本级       | 全部        | 版本级 + 全部 GitHub | 变化 |
 | 无 NIGHTLY            | 空          | 空                   | 不变 |
+
+## 本地数据验证（2026-11-12，localhost:8098）
+
+- 接口一致性：14 个项目，主表 `nightlyVersionAvailabilityRate`/`nightlyBuildSuccessRate` 与下钻 `/ops-overview/nightly-summary` 完全一致（0 处差异）；明细列表 total = 卡片参与平均的流水线条数。
+- GitHub 不约束：vllm-ascend（2 条 GitHub workflow）、SgLang（1 条）均保留在明细与统计集合内，数值与改造前一致；GitHub-only 项目编译成功率为空（无 GitHub 编译数据）。
+- 数据命名核对：现网版本级流水线实际命名为 `Nightly-CI-Version-pipeline_*`（如 Ascend-CANN、openUBMC、AscendForPyTorch、Triton_Ascend），组件级为 `Nightly-CI-Component-pipeline_*`；原前缀 `Nightly-Version-Pipeline` 在本地数据中 0 命中，故补充 `nightly-ci-version-pipeline%` 兼容。
+- 预期生效（重启服务后）：仅混合项目 Ascend-CANN(300057) 变化——版本可用度 0.8148 → 0.9444、编译成功率 0.9642 → 1.0；其余 13 个项目（纯版本级/纯组件级/GitHub-only/无流水线）数值不变。
 
 ## 涉及文件
 
