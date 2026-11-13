@@ -74,7 +74,7 @@
 | `priority` | String | 否 | 最大 64 字符 | 优先级 |
 | `status` | String | 否 | 最大 64 字符 | 状态 |
 | `acceptanceMethod` | String | 否 | 最大 65535 字符 | 赋能效果验收方式 |
-| `resourceLink` | String | 否 | 最大 1024 字符 | 知识资源链接 |
+| `resourceLink` | String | 否 | 最大 65535 字符 | 知识资源链接 |
 
 ### 2.5 响应对象 `KnowledgeInputResp`
 

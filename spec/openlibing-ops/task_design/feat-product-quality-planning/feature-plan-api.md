@@ -65,7 +65,7 @@
 | `category` | String | 否 | 最大 64 字符 | 类别 |
 | `requirementDescription` | String | 否 | 最大 65535 字符 | 需求描述 |
 | `requirementName` | String | 否 | 最大 65535 字符 | 需求 |
-| `requirementSource` | String | 否 | 最大 255 字符 | 需求来源 |
+| `requirementSource` | String | 否 | 最大 65535 字符 | 需求来源 |
 | `plannedMetric` | String | 否 | 最大 65535 字符 | 规划指标 |
 | `achievedMetric` | String | 否 | 最大 65535 字符 | 达成指标 |
 | `implementationStatus` | String | 否 | 最大 65535 字符 | 落地情况 |

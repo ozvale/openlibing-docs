@@ -437,7 +437,7 @@ Controller
 | 优先级 | `priority` | 字符串 |
 | 状态 | `status` | 字符串 |
 | 赋能效果验收方式 | `acceptance_method TEXT` | 可空 |
-| 链接 | `resource_link VARCHAR(1024)` | 仅允许 http/https，避免 javascript 等伪协议 |
+| 链接 | `resource_link TEXT` | 仅允许 http/https，避免 javascript 等伪协议 |
 
 #### `pq_knowledge_output`
 

@@ -77,8 +77,8 @@
 | `plannedFinishTime` | String | 否 | 最大 20 字符 | 计划完成时间，建议 `yyyy-MM-dd` |
 | `ownerRole` | String | 否 | 最大 128 字符 | 责任角色 |
 | `writerName` | String | 否 | 最大 128 字符 | 写作人 |
-| `completionStatus` | String | 否 | 最大 64 字符 | 交付件完成情况 |
-| `detailUrl` | String | 否 | 最大 1024 字符 | 详情地址 |
+| `completionStatus` | String | 否 | 最大 65535 字符 | 交付件完成情况 |
+| `detailUrl` | String | 否 | 最大 65535 字符 | 详情地址 |
 
 请求体示例：
 
