@@ -65,7 +65,7 @@ ut-coverage-action/{repoName}/{yyyyMMdd}.{HH}/{pipelineRunId|manual}/ut-coverage
 
 - GitCode 场景只读取 `ATOMGIT_*`，OBS 桶、上报报文与既有工作流行为不变；
 - `action.yml` 保持 `runs.using: node16`：GitCode runner 仅支持 node16；GitHub 会将 node16 动作强制按 node20 运行（已知告警，纳入后续升级跟踪）；
-- `report_path` / `region` / `env_type` / `obs_acl` 输入参数不变；
+- `report_path` / `region` / `env_type` 输入参数不变；
 - 上报报文（`gitUrl` / `branchName` / `pipelineRunId` / `commitId` / `obsUrl`）结构不变；
 - GitHub 生效前置：华为云 IAM 已注册 `GitHubActions` 提供商与 `github-actions` 委托；Workflow 声明 `permissions: id-token: write`。
 
@@ -74,7 +74,7 @@ ut-coverage-action/{repoName}/{yyyyMMdd}.{HH}/{pipelineRunId|manual}/ut-coverage
 ### 2.1 upload-ut-action 主流程
 
 1. `run()` 调用 `resolvePlatformContext(process.env)` 一次性解析平台上下文（仓库、分支、运行 ID、提交 SHA、仓库名、工作区）；
-2. 解析输入参数并校验 `obs_acl` 白名单；
+2. 解析输入参数；
 3. 扫描 `report_path` 并解析覆盖率报告，组装标准 JSON；
 4. `ObsUploader.uploadAndNotify` 执行 OIDC 换证 → OBS 上传 → APIG 回调；
 5. `setOutput('result', ...)` 写 step 输出（GitHub 优先 `GITHUB_OUTPUT`，GitCode 使用 `STEP_OUTPUT`）。
@@ -144,7 +144,7 @@ ut-coverage-action/{repoName}/{yyyyMMdd}.{HH}/{pipelineRunId|manual}/ut-coverage
 | `upload-ut-action/src/obs/ObsUploader.js`               | OIDC 换证、OBS 上传、APIG 回调             | 新增 `selectObsBucket`，桶与读地址按 `detectPlatform` 选择；双标志冲突时覆盖 SDK OIDC 提供商为 GitCode                                  |
 | `upload-ut-action/package.json` + `package-lock.json`   | 依赖与版本                                 | OIDC SDK 升级 `0.0.7`；版本号与 `action.yml` 对齐                                                                                       |
 | `upload-ut-action/action.yml`                           | Action 元数据                              | 描述补充双平台；版本随打包自增                                                                                                          |
-| `upload-ut-action/README.md`                            | 用户文档                                   | 补充 GitHub 使用方式、`id-token: write`、输入参数表补齐 `obs_acl`                                                                       |
+| `upload-ut-action/README.md`                            | 用户文档                                   | 补充 GitHub 使用方式、`id-token: write`                                                                                                 |
 | `upload-ut-action/test/platform-context.test.js`        | 单测                                       | 新增双平台上下文解析用例                                                                                                                |
 | `upload-ut-action/test/obs-uploader.test.js`            | 单测                                       | 新增 `selectObsBucket` 用例                                                                                                             |
 | `upload-ut-action/.gitleaks.toml`                       | gitleaks 误报白名单                        | 新增 `^dist/`：ncc 产物内联第三方依赖会带入示例密钥/许可证邮箱误报，源码文件仍独立扫描                                                  |
@@ -174,10 +174,10 @@ ut-coverage-action/{repoName}/{yyyyMMdd}.{HH}/{pipelineRunId|manual}/ut-coverage
 
 ### 4.3 OBS 对象模型
 
-| 平台    | 桶                          | 对象 key                                              |
-| ------- | --------------------------- | ----------------------------------------------------- |
-| GitCode | `openlibing-gitcode-action` | `ut-coverage-action/{repoName}/{yyyyMMdd}.{HH}/{runId | manual}/ut-coverage.json` |
-| GitHub  | `openlibing-github-action`  | 同上（结构完全一致）                                  |
+| 平台    | 桶                          | 对象 key                                                                           |
+| ------- | --------------------------- | ---------------------------------------------------------------------------------- |
+| GitCode | `openlibing-gitcode-action` | `ut-coverage-action/{repoName}/{yyyyMMdd}.{HH}/{runId \| manual}/ut-coverage.json` |
+| GitHub  | `openlibing-github-action`  | 同上（结构完全一致）                                                               |
 
 ## 5. 性能设计
 
@@ -202,7 +202,7 @@ ut-coverage-action/{repoName}/{yyyyMMdd}.{HH}/{pipelineRunId|manual}/ut-coverage
 3. **平台变量隔离**：GitHub 只读 `GITHUB_*`、GitCode 只读 `ATOMGIT_*`，不做跨平台“取首个非空”兜底；双平台标志同时存在时以 GitCode 为准并告警，避免存量 GitCode 上报被误切桶/提供商；
 4. **双桶白名单（可读集合由单桶扩展为双桶）**：后端只允许 `openlibing-gitcode-action`、`openlibing-github-action` 两个固定平台桶与两个固定对象前缀，桶名/前缀为代码常量，不可通过配置扩大；桶名取自 URL host、objectKey 取自 URL path，白名单外一律拒绝；本次改动**扩大了可读桶集合**，不是收敛；
 5. **凭证传递**：OBS 临时凭证仅在进程内存中传递，不经命令行参数、不写入日志；
-6. **输入边界**：`obs_acl` 仍做白名单校验；`report_path` 路径处理与命令注入防护逻辑不变；
+6. **输入边界**：`report_path` 路径处理与命令注入防护逻辑不变；
 7. **日志**：不打印 AK/SK/SecurityToken；日志包含平台、桶名、对象 key 等可追溯信息；
 8. **前端/展示**：无接口与页面变更，前端零改动；
 9. **已知边界（风险等级：Medium）**：UT 覆盖率对象 key 仅含 `{repoName}`、不含 owner，无法直接校验 objectKey 与上报 `gitUrl` 的仓库归属一致性。缓解措施：`/ut/coverage/report` 为 APIG 机机接口需通过 IAM 签名认证；IAM 信任策略 `sub` 限定来源仓库；失败请求落失败记录并审计。彻底加固需在 OBS key 中加入 `{owner}/{repo}` 并做归属比对，属于破坏性 key 结构变更，列为后续独立需求，不在本次范围（与 `github-branch-metrics-display` 设计文档的已知边界一致）；

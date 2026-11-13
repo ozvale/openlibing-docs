@@ -16,14 +16,14 @@
 - [x] `src/obs/ObsUploader.js` 双标志冲突时显式覆盖 OIDC 提供商为 `GitCodeActions` / `gitcode-actions`
 - [x] `package.json` OIDC SDK 升级到 `0.0.7`，同步 `package-lock.json`
 - [x] `action.yml` 描述补充双平台支持，版本与 `package.json` 保持一致
-- [x] `README.md` 补充 GitHub 使用方式、`id-token: write` 前置条件、输入参数表补齐 `obs_acl`、PR 分支/提交口径
+- [x] `README.md` 补充 GitHub 使用方式、`id-token: write` 前置条件、PR 分支/提交口径
 - [x] `.gitleaks.toml` 新增 `^dist/` 误报白名单（ncc 产物内联第三方依赖，源码仍独立扫描）
 
 ## upload-ut-action 测试与构建
 
 - [x] 新增 `test/platform-context.test.js`：GitHub push/PR、GitCode push/MR、双标志冲突、PR `base.sha` 上下文映射
 - [x] `test/obs-uploader.test.js` 新增 `selectObsBucket` 用例
-- [x] `npm test` 全部通过（63/63）
+- [x] `npm test` 全部通过（60/60）
 - [x] `npm run package` 重建 `dist/index.js`；grep 校验 `detectPlatform`、`openlibing-github-action`、`GitHubActions` 已内联；`action.yml` 与 `package.json` 均为 `1.0.2`
 - [x] `node --check dist/index.js` 语法校验通过（仅作兜底，不作为重建依据）
 - [x] `pre-commit run --files` 全部 Passed
