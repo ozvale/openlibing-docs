@@ -37,3 +37,4 @@
 - 新增依赖：`com.github.ben-manes.caffeine`（由 Spring Boot BOM 管理，3.2.4）
 - 下游服务需关注行为变化：新增必配项 `external.default.image.url`、Cookie 增加 SameSite、搜索路径 env 收紧、InternalAuth token 未配置即 401、密钥派生 fail-closed（详见 design.md 风险小节）
 - #72 新增可选配置 `internal.auth.inject.*`（有默认值，不配置即严格模式）；若存在非标准内部域名需补充 `allow-hosts`
+- #72 Nacos 变更：**无需新增配置即可生效**；仅当内部目标使用自定义内网域名时补 `internal.auth.inject.allow-hosts`；上线前需核对 `gitcode.api.address`、`gitee.api.address` 及 6 个 `*.direct-url` 的实际取值形态

@@ -64,11 +64,12 @@
 ### Issue #72 Feign 内部鉴权 Token 外泄修复（方案已确认，待实施）
 
 - [ ] `InternalAuthRequestInterceptor` 改为基于 `RequestTemplate.feignTarget()` 判定目标
-- [ ] 内部目标判定：服务发现（无 url）/ 无点号主机 / localhost / `.svc.cluster.local` 等内网后缀 / `allow-hosts` 白名单
+- [ ] 内部目标判定：服务发现（无 url）/ 无点号主机 / localhost / 私有 IPv4（10/8、172.16/12、192.168/16、127/8、169.254/16）/ `.svc.cluster.local` 等内网后缀 / `allow-hosts` 白名单
 - [ ] 新增配置 `internal.auth.inject.enabled`（默认 true）、`internal.auth.inject.strict`（默认 true）、`internal.auth.inject.allow-hosts`
 - [ ] 外部目标跳过注入并记录 debug 日志
-- [ ] 新增 `InternalAuthRequestInterceptorTest`：外部 URL 跳过、服务名/内网域名注入、allow-hosts 命中、strict=false 回退、enabled=false 全跳过
+- [ ] 新增 `InternalAuthRequestInterceptorTest`：外部 URL 跳过、服务名/内网域名/私有 IP 注入、allow-hosts 命中、strict=false 回退、enabled=false 全跳过
 - [ ] 下游验证：openlibing-ops / openlibing-sync 外部客户端（github/gitcode/gitee）不再携带 `X-Internal-Token`，内部客户端仍正常
+- [ ] 上线前核对 Nacos：`gitcode.api.address`、`gitee.api.address`、`sca.to.sbom.url`、`openlibing-framework.url`、`design-api-management.service.direct-url`、`argus.service.direct-url`、`argus.callback.url`、`openlibing.framework.direct-url` 的取值形态，非标准内网域名补 `allow-hosts`
 - [ ] 全量测试与静态检查通过
 
 ## 验证记录

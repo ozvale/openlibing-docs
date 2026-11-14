@@ -89,13 +89,19 @@
   1. `feignTarget().url()` 为空（服务发现）
   2. host 无点号（如 `openlibing-framework`）
   3. host 为 `localhost` / `127.0.0.1` / `::1`
-  4. host 以 `.svc.cluster.local` / `.cluster.local` / `.internal` 结尾
-  5. host 命中 `internal.auth.inject.allow-hosts` 配置
-- **配置项**（均有默认值）：
-  - `internal.auth.inject.enabled`：注入总开关，默认 `true`
-  - `internal.auth.inject.strict`：默认 `true`；`false` 回退旧行为（全部注入），用于灰度回退
-  - `internal.auth.inject.allow-hosts`：逗号分隔的额外内部主机（后缀匹配）
-- **测试**：外部 URL（api.github.com）跳过注入、服务名注入、`localhost`/`*.svc.cluster.local` 注入、allow-hosts 命中、strict=false 回退、enabled=false 全跳过。
+  4. host 为私有/回环 IPv4（`10.0.0.0/8`、`172.16.0.0/12`、`192.168.0.0/16`、`127.0.0.0/8`、`169.254.0.0/16`）
+  5. host 以 `.svc.cluster.local` / `.cluster.local` / `.internal` 结尾
+  6. host 命中 `internal.auth.inject.allow-hosts` 配置
+- **Nacos 配置**：三项均有默认值，**升级后无需新增配置**。仅在以下场景显式配置：
+  - 内部目标使用自定义内网域名 → `internal.auth.inject.allow-hosts`
+  - 灰度期需要回退旧行为 → `internal.auth.inject.strict=false`
+  - 需完全关闭注入 → `internal.auth.inject.enabled=false`
+- **下游影响评估（已实测工作区全部 Feign 客户端）**：
+  - 不受影响：无 `url` 的服务发现客户端（`@FeignClient(name="openlibing-xxx")`）、空默认值 `direct-url` 客户端（sca/framework/vulnerability/vulnerability-hunting/computing-resource-workspace 共 6 处）、集群内域名客户端
+  - 按预期改变：ops `GitcodeFeignClient`、sync `GithubFeignClient`/`GitcodeFeignClient`/`GiteeFeignClient` 不再带 Token（第三方不识别该头，功能无影响）
+  - 需上线前核对（Nacos 值不在代码仓）：`gitcode.api.address`、`gitee.api.address` 及 6 个 `*.direct-url` 的实际形态；非标准内网域名需补 `allow-hosts`
+  - 已知缺口修正：私有 IPv4 曾未覆盖（如 `http://10.1.2.3:8080` 会被误判为外部导致 401），已纳入判定规则第 4 条
+- **测试**：外部 URL（api.github.com）跳过注入、服务名注入、`localhost`/`*.svc.cluster.local` 注入、私有 IP 注入、allow-hosts 命中、strict=false 回退、enabled=false 全跳过。
 - **影响**：下游零代码改动；非标准内部域名需按需补 `allow-hosts`（否则内部调用 401）。
 
 ## 明确不做的项（团队裁定）
