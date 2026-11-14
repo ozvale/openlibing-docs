@@ -1,6 +1,6 @@
 # 2026-11 安全漏洞修复 — 实现任务
 
-## 进度: 10/10 complete
+## 进度: 10/11 complete（#72 方案已确认，待实施）
 
 ### Issue #51 AESCipher.toXor fail-open → fail-closed
 
@@ -61,9 +61,19 @@
 
 - [x] pom 版本 1.0.21.2 → 1.0.21.5-SNAPSHOT；tomcat.embed 11.0.26 → 11.0.27
 
+### Issue #72 Feign 内部鉴权 Token 外泄修复（方案已确认，待实施）
+
+- [ ] `InternalAuthRequestInterceptor` 改为基于 `RequestTemplate.feignTarget()` 判定目标
+- [ ] 内部目标判定：服务发现（无 url）/ 无点号主机 / localhost / `.svc.cluster.local` 等内网后缀 / `allow-hosts` 白名单
+- [ ] 新增配置 `internal.auth.inject.enabled`（默认 true）、`internal.auth.inject.strict`（默认 true）、`internal.auth.inject.allow-hosts`
+- [ ] 外部目标跳过注入并记录 debug 日志
+- [ ] 新增 `InternalAuthRequestInterceptorTest`：外部 URL 跳过、服务名/内网域名注入、allow-hosts 命中、strict=false 回退、enabled=false 全跳过
+- [ ] 下游验证：openlibing-ops / openlibing-sync 外部客户端（github/gitcode/gitee）不再携带 `X-Internal-Token`，内部客户端仍正常
+- [ ] 全量测试与静态检查通过
+
 ## 验证记录
 
-- [x] 全量测试 430 个全部通过
+- [x] 全量测试 430 个全部通过（#72 实施前基线）
 - [x] Spotless / CheckStyle / SpotBugs / PMD 全部通过（pre-commit 逐 commit 验证）
 - [x] 每个修复独立 commit，均含 `Refs #<n>` + AI attribution footer
 - [x] 工作区无未提交业务改动（spec 归档走 docs 仓 PR）

@@ -78,6 +78,26 @@
 
 - `pom.xml` 版本 `1.0.21.2` → `1.0.21.5-SNAPSHOT`；`tomcat.embed` `11.0.26` → `11.0.27`。
 
+### 决策 10：Feign 内部鉴权 Token 仅注入内部目标（#72）
+
+- **问题**：`InternalAuthRequestInterceptor` 是全局 `@Component`，`apply()` 无目的地判断，对所有 Feign 出站请求注入 `X-Internal-Token`；下游 ops/sync 的 `@ComponentScan` 覆盖 `com.openlibing.common`，其指向 GitHub/GitCode/Gitee 的外部 Feign 客户端会携带该静态 Token 明文出网，可被第三方或链路中间人截获并重放访问全部 `/internal-server/**`。
+- **方案选型**：
+  - 方案一（issue）：`template.url()` 前缀白名单 —— **不可用**。`template.url()` 返回请求相对路径（如 `/users/x`），不含域名，`http://openlibing-` 永不命中；内部调用也未必走 `/internal-server` 路径，会漏注入导致 401。
+  - 方案二（issue）：取消全局注册、按客户端显式启用 —— 需改造所有下游仓的内部 Feign 客户端，漏改即内部调用 401，跨仓成本与风险过高。
+  - **采用方案三（方案一的修正增强版）**：基于 `RequestTemplate.feignTarget()` 的目标判定，SDK 内修复，下游零改动。
+- **判定规则**（满足任一即内部，注入）：
+  1. `feignTarget().url()` 为空（服务发现）
+  2. host 无点号（如 `openlibing-framework`）
+  3. host 为 `localhost` / `127.0.0.1` / `::1`
+  4. host 以 `.svc.cluster.local` / `.cluster.local` / `.internal` 结尾
+  5. host 命中 `internal.auth.inject.allow-hosts` 配置
+- **配置项**（均有默认值）：
+  - `internal.auth.inject.enabled`：注入总开关，默认 `true`
+  - `internal.auth.inject.strict`：默认 `true`；`false` 回退旧行为（全部注入），用于灰度回退
+  - `internal.auth.inject.allow-hosts`：逗号分隔的额外内部主机（后缀匹配）
+- **测试**：外部 URL（api.github.com）跳过注入、服务名注入、`localhost`/`*.svc.cluster.local` 注入、allow-hosts 命中、strict=false 回退、enabled=false 全跳过。
+- **影响**：下游零代码改动；非标准内部域名需按需补 `allow-hosts`（否则内部调用 401）。
+
 ## 明确不做的项（团队裁定）
 
 | 项                             | 裁定来源                                                              |
@@ -109,6 +129,8 @@
 | src/test/java/com/openlibing/common/security/cipher/WorkKeyCacheTest.java                 | 新增 | #49 缓存行为用例                                       |
 | src/main/java/com/openlibing/common/security/security/AESUtil.java                        | 修改 | #52-4 密钥入参约束 Javadoc                             |
 | src/main/java/com/openlibing/common/security/security/HmacUtil.java                       | 修改 | #52-4 密钥入参约束 Javadoc                             |
+| src/main/java/com/openlibing/common/interceptor/InternalAuthRequestInterceptor.java       | 修改 | #72 仅向内部目标注入 X-Internal-Token                  |
+| src/test/java/com/openlibing/common/interceptor/InternalAuthRequestInterceptorTest.java   | 新增 | #72 目标判定与外泄防护用例                             |
 | pom.xml                                                                                   | 修改 | #52-3 okio 3.18.2；#49 Caffeine 依赖；版本/tomcat bump |
 
 ## 风险 & 缓解
@@ -118,6 +140,7 @@
 3. **Windows 路径校验**：`checkParams` 的 REGEX 拦截 `\`，Windows 绝对路径需以 `/` 形式传入（测试已处理），文档需说明。
 4. **新增依赖 Caffeine**：走供应链合规流程；版本由 Spring Boot BOM 管理（3.2.4），避免自定义版本漂移。
 5. **缓存与密钥轮换**：缓存 1800s 到期后自然重算（软轮换感知）；`clearWorkKeyCache()` 提供显式失效入口。
+6. **#72 内部目标误判**：升级后若内部 Feign 目标使用非标准域名（不在默认规则与 allow-hosts 内）会漏注入导致内部 401；通过 `internal.auth.inject.allow-hosts` 补充，紧急时可 `internal.auth.inject.strict=false` 回退旧行为。
 
 ## 跨仓影响
 
