@@ -1,0 +1,21 @@
+# tasks：pre-commit-action 去掉 gc_token 输入
+
+- [x] 基于 `origin/master` 新建 `feat-drop-gc-token` 分支（base `2057773`）
+- [x] 创建业务 Issue `openlibing/pre-commit-action#52`
+- [x] `action.yml` 删除 `gc_token` 输入
+- [x] `index.js` 删除 `os` 依赖与 GIT_ASKPASS 全套逻辑
+- [x] `index.js` 新增 `resolveBaseRef()`（复用 `origin/<baseRef>` / 回退 fetch / 失败退出）
+- [x] `index.js` `buildAutoArgs()` 接入 `resolveBaseRef()`，日志走 `sanitizeLogValue()`
+- [x] `README.md` 更新工作模式、输入参数、`fetch-depth: 0` 前提
+- [x] 新增 `test/resolve-base-ref.test.js`（三条路径，本地 bare 仓离线执行）
+- [x] `npm run package` 重建 `dist/index.js`
+- [x] `npm test` 通过（4 个用例）
+- [x] `npx eslint index.js test/` 无 error（3 个既有 warning）
+- [x] `npx prettier@3.9.5 --write` 格式化改动文件
+- [x] 提交 commit（含 `Refs #52`）
+- [x] 推送分支并创建 PR #29（打 `ai-assisted` 标签，关联 Issue #52）
+- [x] PR 描述补充下游迁移说明（去 `gc_token`、建议 `fetch-depth: 0`）
+- [x] 回退 `.gitcode/workflows/nightly-schedule-scan.yml` 改动（用户要求 workflows 暂不修改，统一整改）
+- [ ] 用户自测确认后合入 `master`
+- [ ] 同步合入 `fix-security-remediation` 统一测试分支（如仍需统一自测）
+- [x] docs 仓 spec 归档（Phase 5，用户触发）
