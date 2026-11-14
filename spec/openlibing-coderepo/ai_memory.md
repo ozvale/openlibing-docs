@@ -25,7 +25,7 @@
 ### 既有 webhook 配置补齐
 
 - 新增 webhook 事件订阅（如 push）时，除了在新建仓库自动配置时启用，还需在 `XxlJobHandler#refreshWebhookHandler` 中检测既有 webhook 并用 **PATCH 原地更新**，避免删除重建影响其他订阅。
-- 本地 / beta 环境跳过 webhook 订阅检查（环境无外网回调或仓库未注册）。
+- 仅本地（local profile）环境跳过 webhook 订阅检查（开发机无公网回调入口）；beta 与生产共用 `setupWebhookForProductionEnv` 主流程参与订阅检测与 PATCH 迁移（webhook-apig-migration 需求起 beta 即参与验证，早期"本地/beta 均跳过"的记载已过时，2026-11-10 以 `RepoServiceImpl#ensureCoderepoWebhookPushEventSubscribed` 现行代码核实修正）。
 - gitcode / gitee 用 `RepoWebhook.setIsPushEvents(true)`；github 用 `events` 数组追加 `push`。
 
 ## Webhook 入口 MQ 异步化
