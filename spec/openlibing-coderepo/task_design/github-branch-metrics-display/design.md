@@ -38,22 +38,22 @@ openlibing-coderepo 侧接收链路未同步适配：
 
 保持“OBS 桶按 CI 平台隔离”的既有方案，仅将后端下载白名单由单桶扩展为双桶：
 
-- 允许桶：`openlibing-gitcode-action`、`openlibing-github-action`；
+- 允许桶：由 Nacos 配置项 `obs.action.buckets` 决定，当前值为 `openlibing-gitcode-action`、`openlibing-github-action`；
 - 允许对象前缀保持不变：`code-metrics-action/`、`ut-coverage-action/`；
 - 下载大小上限保持不变：`obs.download.max-size-mb`（默认 500MB）；
-- 校验方式由“单桶等值判断”改为“固定集合包含判断”，其余 URL 解析、流式下载、临时文件清理逻辑不变；
+- 校验方式由“单桶等值判断”改为“配置集合包含判断”，其余 URL 解析、流式下载、临时文件清理逻辑不变；
 - 不新增平台字段、不新增平台判断、不新增接口、不改表结构。
 
 ### 1.4 设计取舍
 
-| 议题                                        | 选择             | 理由                                                                                                                   |
-| ------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| 是否将 GitHub 对象并入 GitCode 桶           | 否，保持双桶隔离 | 桶隔离是插件侧既定方案，GitHub 与 GitCode 的 OIDC 委托、桶策略、配额相互独立；后端兼容成本仅为一个白名单集合           |
-| 是否把桶名改为配置项                        | 否，固定常量     | 上报桶是平台约定值，配置化会引入配置漂移并扩大可读桶范围；固定常量便于安全评审                                         |
-| 是否新增平台字段或按平台走不同下载逻辑      | 否               | 桶名即平台边界，下载/解析/入库链路无需感知平台                                                                         |
-| 是否放宽前缀或大小限制                      | 否               | 本次只扩桶，不改变既有校验规则（桶 + 前缀 + 大小上限）；可读对象集合随桶扩展而扩大，跨仓库读取边界见 §7                |
-| 是否新增 objectKey 与 gitUrl 的归属绑定校验 | 本次不新增       | 改动范围限定为白名单扩桶；现有链路不解析 objectKey 中的 `{owner}/{repo}`，该暴露面作为已知边界在 §7 说明，后续单独加固 |
-| 是否新增独立 MQ 队列                        | 否               | GitHub 上报复用 `code_metrics_import_queue`，消费并发与重试策略不变                                                    |
+| 议题                                        | 选择               | 理由                                                                                                                                                                |
+| ------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 是否将 GitHub 对象并入 GitCode 桶           | 否，保持双桶隔离   | 桶隔离是插件侧既定方案，GitHub 与 GitCode 的 OIDC 委托、桶策略、配额相互独立；后端兼容成本仅为一个白名单集合                                                        |
+| 是否把桶名改为配置项                        | 是（实现阶段调整） | 原设计为固定常量，考虑配置漂移与可读桶范围扩大风险；按项目规范化要求改为 Nacos 配置项 `obs.action.buckets`，配置变更需走发布/安全评审并留审计，对象前缀仍为代码常量 |
+| 是否新增平台字段或按平台走不同下载逻辑      | 否                 | 桶名即平台边界，下载/解析/入库链路无需感知平台                                                                                                                      |
+| 是否放宽前缀或大小限制                      | 否                 | 本次只扩桶，不改变既有校验规则（桶 + 前缀 + 大小上限）；可读对象集合随桶扩展而扩大，跨仓库读取边界见 §7                                                             |
+| 是否新增 objectKey 与 gitUrl 的归属绑定校验 | 本次不新增         | 改动范围限定为白名单扩桶；现有链路不解析 objectKey 中的 `{owner}/{repo}`，该暴露面作为已知边界在 §7 说明，后续单独加固                                              |
+| 是否新增独立 MQ 队列                        | 否                 | GitHub 上报复用 `code_metrics_import_queue`，消费并发与重试策略不变                                                                                                 |
 
 ### 1.5 兼容性与前置依赖
 
@@ -82,24 +82,23 @@ openlibing-coderepo 侧接收链路未同步适配：
 `downloadToTempFile` 处理流程：
 
 1. 解析 `obsUrl`，取 host 首个 label 作为桶名（`{bucket}.obs.{region}.myhuaweicloud.com`），取 URL path 去掉首个 `/` 作为 objectKey；
-2. 桶名校验：`ALLOWED_METRICS_OBS_BUCKETS.contains(bucketName)`，允许 GitCode 与 GitHub 两个平台桶；
+2. 桶名校验：`allowedMetricsObsBuckets.contains(bucketName)`，集合来自 Nacos 配置项 `obs.action.buckets`（当前包含 GitCode 与 GitHub 两个平台桶）；
 3. 对象前缀校验：objectKey 必须以 `code-metrics-action/` 或 `ut-coverage-action/` 开头；
 4. 通过后使用服务端凭证 `getObject(bucketName, objectKey)`；
 5. 元数据标称大小超过上限时直接拒绝、不落盘；
 6. 流式复制（8KB 缓冲）并按实际字节数计数，超过上限立即中止并清理临时文件；
 7. 返回临时文件路径，调用方用后删除。
 
-核心常量：
+核心配置：
 
 ```java
-// 插件上报桶按 CI 平台隔离：GitCode 为 openlibing-gitcode-action，GitHub 为 openlibing-github-action
-private static final String GITCODE_METRICS_OBS_BUCKET = "openlibing-gitcode-action";
-private static final String GITHUB_METRICS_OBS_BUCKET = "openlibing-github-action";
-private static final List<String> ALLOWED_METRICS_OBS_BUCKETS =
-    Arrays.asList(GITCODE_METRICS_OBS_BUCKET, GITHUB_METRICS_OBS_BUCKET);
+// 代码度量 OBS 下载桶白名单：由 Nacos 配置项 obs.action.buckets 决定（逗号分隔），
+// 当前值 openlibing-gitcode-action,openlibing-github-action；类上 @RefreshScope 支持热刷新
+@Value("${obs.action.buckets}")
+private List<String> allowedMetricsObsBuckets;
 ```
 
-校验条件由单桶等值判断改为集合包含判断，其余逻辑不变。
+校验条件由单桶等值判断改为配置集合包含判断；配置缺失时首次调用 fail-fast，对象前缀与下载大小上限校验不变。
 
 注意：上述校验只约束“桶名 + 对象前缀”，不校验 objectKey 中的 `{owner}/{repo}` 与本次上报 `gitUrl` 的仓库归属是否一致；该边界与加固建议见 §7。
 
@@ -135,12 +134,13 @@ XxlJob `codeMetricsObsImportHandler` 通过入参 `obsUrl` 调用 `importMetrics
 
 ## 3. 类设计
 
-| 类                                                                         | 变更                                                                                                                                                                                |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ObsBucketServiceImpl`                                                     | 新增 `GITHUB_METRICS_OBS_BUCKET` 常量与 `ALLOWED_METRICS_OBS_BUCKETS` 集合；`downloadToTempFile` 桶名校验改为集合包含判断；URL 解析、前缀校验、大小限制、流式复制、临时文件清理不变 |
-| `ObsBucketService`                                                         | 接口签名不变；`downloadToTempFile` 契约注释需同步为双平台桶（原描述“仅允许 openlibing-gitcode-action”），属注释一致性修正                                                           |
-| `ObsBucketServiceImplTest`                                                 | 新增 `downloadToTempFile_GithubBucket_Success`；既有用例保持不变                                                                                                                    |
-| `CodeMetricsServiceImpl` / `CodeMetricsImportConsumer` / `RepoServiceImpl` | 无改动                                                                                                                                                                              |
+| 类                                                                         | 变更                                                                                                                                                                                                            |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ObsBucketServiceImpl`                                                     | 移除单桶常量白名单判断，桶集合改为 Nacos 配置项 `obs.action.buckets`（`@Value` + `@RefreshScope`）；`downloadToTempFile` 桶名校验改为配置集合包含判断；URL 解析、前缀校验、大小限制、流式复制、临时文件清理不变 |
+| `ObsBucketService`                                                         | 接口签名不变；`downloadToTempFile` 契约注释同步为桶名由 `obs.action.buckets` 配置决定（当前含 GitCode 与 GitHub 两个平台桶）                                                                                    |
+| `ObsBucketServiceImplTest`                                                 | 新增 `downloadToTempFile_GithubBucket_Success`；单测注入两个平台桶，既有用例保持不变                                                                                                                            |
+| `CodeMetricsReportDTO` / `UtCoverageReportDTO` / `XxlJobHandler`           | 桶名表述注释同步为配置化口径（commit `df377791`），无逻辑变更                                                                                                                                                   |
+| `CodeMetricsServiceImpl` / `CodeMetricsImportConsumer` / `RepoServiceImpl` | 无改动                                                                                                                                                                                                          |
 
 ## 4. 数据模型设计
 
@@ -167,7 +167,7 @@ XxlJob `codeMetricsObsImportHandler` 通过入参 `obsUrl` 调用 `importMetrics
 
 ## 5. 性能设计
 
-- 桶名校验由一次字符串相等判断变为最多两次集合比较，耗时可忽略；
+- 桶名校验由一次字符串相等判断变为按配置集合做包含判断（当前集合两个元素），耗时可忽略；
 - 不新增数据库查询、不新增 OBS 请求；下载仍为单次 `getObject` + 8KB 缓冲流式复制，不整体读入内存；
 - 下载上限沿用 `obs.download.max-size-mb`（默认 500MB），配置中心可调，`@RefreshScope` 生效；
 - GitHub 上报复用现有 MQ 队列与 2~4 并发消费，不新增线程池与队列；
@@ -188,12 +188,12 @@ XxlJob `codeMetricsObsImportHandler` 通过入参 `obsUrl` 调用 `importMetrics
 
 ## 7. 安全设计
 
-- **白名单收敛**：仍只允许两个固定平台桶与两个固定对象前缀，不接受任意桶或任意对象；桶名与前缀为代码常量，不可通过配置扩大；
-- **读取范围约束**：桶名取自 URL host、objectKey 取自 URL path，仅允许两个固定桶与两个固定前缀，白名单之外一律拒绝。该校验只能约束“桶 + 前缀”，不能证明 objectKey 的 `{owner}/{repo}` 与本次上报 `gitUrl` 属于同一仓库；
+- **白名单收敛**：允许桶由 Nacos 配置项 `obs.action.buckets` 决定（当前仅两个平台桶），对象前缀仍为代码常量；配置变更需走发布/安全评审并留审计，不接受任意桶或任意对象；
+- **读取范围约束**：桶名取自 URL host、objectKey 取自 URL path，仅允许配置集合内的桶与两个固定前缀，白名单之外一律拒绝。该校验只能约束“桶 + 前缀”，不能证明 objectKey 的 `{owner}/{repo}` 与本次上报 `gitUrl` 属于同一仓库；
 - **已知边界（本次扩桶带来的暴露面）**：`/metrics/code/report` 与 XxlJob `codeMetricsObsImportHandler` 当前均未校验 objectKey 的 `{owner}/{repo}` 与 `gitUrl` 的仓库归属一致性。白名单由单桶扩为双桶后，GitHub 桶内符合前缀的对象由此前不可读变为可读；能够调用上报接口的调用方，理论上可提交“自己的 `gitUrl` + 他人仓库的 `obsUrl`”下载他人仓库的度量明细（含重复代码片段）并入库。`/metrics/code/report` 为机机接口、需通过 APIG 认证，但认证不等于仓级授权，不能消除该风险；`codeMetricsObsImportHandler` 为内部运维任务，不作为对外接口；
 - **后续加固建议**：在下载前解析 objectKey 的 `{owner}/{repo}`，与上报 `gitUrl` 的平台坐标比对，不一致直接拒绝；补导入任务限定内部运维使用。该归属绑定校验不在本次改动范围，落地前安全评审应按“可读对象集合扩大”评估，不能认为越权面未变化；
 - **大小上限**：元数据预检 + 实际流量计数双重限制，超限中止并清理临时文件，防止磁盘/内存耗尽；
 - **凭证安全**：AK/SK 为加密配置，运行时经 `SecurityUtil` 解密，不写入日志；错误日志只包含 `obsUrl`、桶名与异常信息；
 - **临时文件**：系统临时目录、唯一前缀 `code-metrics-`，调用方用后删除，异常路径同样清理；
 - **最小权限**：后端 OBS 凭证对两个桶仅需 GetObject 权限，不需要 List/Put/Delete；
-- **变更控制**：后续如需新增桶或对象前缀，必须走安全评审并同步更新白名单常量，禁止在运行时动态放行。
+- **变更控制**：新增桶需走安全评审并更新 `obs.action.buckets` 配置（当前支持双平台桶）；对象前缀变更需走代码评审；配置变更应纳入审计与最小权限控制，禁止在运行时无评审放行。
