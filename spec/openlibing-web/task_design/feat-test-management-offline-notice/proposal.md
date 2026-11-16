@@ -26,6 +26,10 @@ openlibing-web 主应用侧边栏菜单（`apps/web-openlibing/src/router/routes
 1. `OfflineNotice` 复用既有通用组件，不新增重复实现。
 2. 通过 Prettier / ESLint / pre-commit 检查。
 
+## 关联 Issue
+
+[openlibing/openlibing-web#418](https://gitcode.com/openlibing/openlibing-web/issues/418)（测试管理菜单的增加下线提示）
+
 ## 关联分支
 
 openlibing-web `feat-test-management-offline-notice`（commit edba53991）

@@ -28,6 +28,10 @@ openlibing-web 管理中心（manageCenter）聚合漏洞挖掘（argus）子应
 1. 路由配置与同组 argus 路由（dashboard/projects/schedules/system）风格一致。
 2. 通过 Prettier / ESLint / pre-commit 检查。
 
+## 关联 Issue
+
+[openlibing/openlibing-vulnerability-hunting#85](https://gitcode.com/openlibing/openlibing-vulnerability-hunting/issues/85)（Argus 使用体验优化：增加用户白名单功能）
+
 ## 关联分支
 
 openlibing-web `feat_argus_add_menu`（commit 955523787）

@@ -28,6 +28,10 @@ openlibing-web beta / gamma 两套测试环境的部署访问。测试环境临�
 1. 生产环境（`.env.production`）与 nginx 生产配置不受影响。
 2. 仅替换域名/cookie 改写目标，不调整代理路由结构、limit 配置与缓存策略。
 
+## 关联 Issue
+
+[openlibing/openlibing-web#419](https://gitcode.com/openlibing/openlibing-web/issues/419)（beta、gamma 环境域名切换为内网 ip）
+
 ## 关联分支
 
 openlibing-web `text-gamma`（commits d89afeecb gamma、5b57d54c2 beta）
