@@ -25,19 +25,19 @@
 
 ## 最终验证
 
-| 验证项 | 结果 |
-|---|---|
-| 定向单元测试 | 22/22 通过（XML 6 + Service 16，含检视修复新增用例） |
-| spotless / checkstyle / pmd / spotbugs | 全部通过（checkstyle 0 违规、spotbugs 0 bug） |
-| 行数/分页不变式 | codearts run `08f6a78d747947cba4164cff51a87887`：total=12，pageSize=5 三页 5/5/2，三页 total 恒为 12，12 个不同 jobId |
-| jobType 过滤 | BUILD=4、DT=1，与明细行一致 |
-| 空 run / 缺 pipelineRunId | total=0、records=[] / code=40001 |
-| codearts 机器数据 | 仅 NPU 任务 `presmoke` 返回 `172.16.0.121 → Ascend统一资源池-贵阳`；纯 CPU 构建/检查任务返回 `[]` |
-| gitcode 多机数据 | run `96a99591e34c4c54a3c31560c13da660`：15 个任务 × 2 台机器 = 30 条成对数据；与数仓 SQL 逐条对照 0 差异、0 排序违例 |
-| 重复请求确定性 | 两次请求 machines 序列完全一致 |
-| 接口耗时 | 313–397ms（首请求冷启动 710ms），无 N+1 |
-| 全量测试基线 | `mvn clean test`：1418 个用例，仅 `ProductQualityCoreMapperXmlTest` 2 个用例失败；已在无本改动的 `upstream/dev`（`f497a7c9`）基线上复现，属 dev 基线问题，非本需求引入 |
-| 前端 | 未验证：当前工作区 `openlibing-ops-web` 快照早于 #294，缺少任务明细组件 |
+| 验证项                                 | 结果                                                                                                                                                                   |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 定向单元测试                           | 22/22 通过（XML 6 + Service 16，含检视修复新增用例）                                                                                                                   |
+| spotless / checkstyle / pmd / spotbugs | 全部通过（checkstyle 0 违规、spotbugs 0 bug）                                                                                                                          |
+| 行数/分页不变式                        | codearts run `08f6a78d747947cba4164cff51a87887`：total=12，pageSize=5 三页 5/5/2，三页 total 恒为 12，12 个不同 jobId                                                  |
+| jobType 过滤                           | BUILD=4、DT=1，与明细行一致                                                                                                                                            |
+| 空 run / 缺 pipelineRunId              | total=0、records=[] / code=40001                                                                                                                                       |
+| codearts 机器数据                      | 仅 NPU 任务 `presmoke` 返回 `172.16.0.121 → Ascend统一资源池-贵阳`；纯 CPU 构建/检查任务返回 `[]`                                                                      |
+| gitcode 多机数据                       | run `96a99591e34c4c54a3c31560c13da660`：15 个任务 × 2 台机器 = 30 条成对数据；与数仓 SQL 逐条对照 0 差异、0 排序违例                                                   |
+| 重复请求确定性                         | 两次请求 machines 序列完全一致                                                                                                                                         |
+| 接口耗时                               | 313–397ms（首请求冷启动 710ms），无 N+1                                                                                                                                |
+| 全量测试基线                           | `mvn clean test`：1418 个用例，仅 `ProductQualityCoreMapperXmlTest` 2 个用例失败；已在无本改动的 `upstream/dev`（`f497a7c9`）基线上复现，属 dev 基线问题，非本需求引入 |
+| 前端                                   | 未验证：当前工作区 `openlibing-ops-web` 快照早于 #294，缺少任务明细组件                                                                                                |
 
 ## 合并状态（归档时）
 
