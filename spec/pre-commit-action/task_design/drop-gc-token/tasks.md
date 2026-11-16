@@ -17,7 +17,7 @@
 - [x] 推送分支并创建业务 PR #30（打 `ai-assisted` 标签，关联 Issue #52）
 - [x] 关闭早期不兼容方案 PR #29
 - [x] 回退 `.gitcode/workflows/nightly-schedule-scan.yml` 改动（workflows 暂不修改，统一整改）
-- [ ] 业务 PR #30 评审通过并合入 `master`
+- [x] 业务 PR #30 评审通过并合入 `master`（2026-11-16）
 - [ ] 发布插件新版本（打 tag）
 - [ ] 下游 workflow 迁移：checkout 配置 `fetch-depth: 0` 并删除 `gc_token` 传参
 - [ ] 下游迁移完成后，另起变更删除 `gc_token` 输入

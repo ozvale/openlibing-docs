@@ -4,7 +4,7 @@
 
 `pre-commit-action` 的 PR 增量基线已改为**优先复用 checkout（`fetch-depth: 0`）生成的 `origin/<baseRef>`**，命中时插件零 fetch、零凭证。`gc_token` 保留为可选兼容输入并标注已废弃，仅在基线 ref 缺失且存量调用方仍传参时走原 GIT_ASKPASS 认证 fetch。
 
-本变更仍处于 **PR 阶段（`openlibing/pre-commit-action#30`，待合入 `master`）**，尚未发布版本；文中「已实现」均指 PR 分支上的代码状态。
+业务 PR `openlibing/pre-commit-action#30` 已于 2026-11-16 合入 `master`（`action.yml` / `package.json` 版本 1.1.0，尚未打 tag 发布）；文中「已实现」指该分支合入时的代码状态，与 `master` 一致。
 
 检查范围语义与改造前一致：PR 事件仍只检查变更文件，非 PR 事件仍为 `--all-files`。但**基线获取的前置条件有变化**：推荐路径要求 checkout 配置 `fetch-depth: 0`；未配置时若凭证不可用（GitCode 托管 checkout 默认不持久化凭证）会 fail-closed，不等价于改造前的隐式成功。
 
@@ -38,7 +38,6 @@
 
 ## 遗留事项
 
-1. **未合入**：业务 PR #30 待评审与测试人 `/lgtm` 后合入 `master`。
-2. **未打 tag**：插件版本发布与下游版本引用统一整改待维护者触发。
-3. **workflow 未改动**：本次不修改任何 `.gitcode/workflows/` 文件（含插件仓 `nightly-schedule-scan.yml` 与下游 `openlibing-cicd` 的 `pre-commit.yml`），统一整改后续单独进行。
-4. **`gc_token` 下线顺序**：先发布新版本 → 下游补 `fetch-depth: 0` 并删除传参 → 再另起变更删除输入；顺序颠倒会导致未迁移的存量 workflow 直接失败。
+1. **未打 tag**：版本 1.1.0 已合入 `master` 但未发布 tag，插件版本发布与下游版本引用统一整改待维护者触发。
+2. **workflow 未改动**：本次不修改任何 `.gitcode/workflows/` 文件（含插件仓 `nightly-schedule-scan.yml` 与下游 `openlibing-cicd` 的 `pre-commit.yml`），统一整改后续单独进行。
+3. **`gc_token` 下线顺序**：先发布新版本 → 下游补 `fetch-depth: 0` 并删除传参 → 再另起变更删除输入；顺序颠倒会导致未迁移的存量 workflow 直接失败。

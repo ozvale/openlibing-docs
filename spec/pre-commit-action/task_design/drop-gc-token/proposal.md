@@ -3,7 +3,7 @@
 - 仓库：`openlibing/pre-commit-action`
 - 关联 Issue：`openlibing/pre-commit-action#52`
 - 变更分支：`feat-drop-gc-token`
-- 业务 PR：`openlibing/pre-commit-action#30`（兼容实现，待合入 `master`；此前的不兼容方案 #29 已关闭）
+- 业务 PR：`openlibing/pre-commit-action#30`（兼容实现，已于 2026-11-16 合入 `master`，版本 1.1.0；此前的不兼容方案 #29 已关闭）
 - docs PR：`openlibing/openlibing-docs#1334`
 - 流程模式：Standard
 
