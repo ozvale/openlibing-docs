@@ -207,6 +207,20 @@ ResponseEntity(code, message, data, total)  // 分页场景
 - 平台 SCA 版本扫描以 `unconfirmedFileNum` 判定，非 0 时输出 `Access control check failed` 并以 255 退出，
   需先在平台确认/豁免文件再重扫。
 
+### nightly pre-commit 与增量覆盖率踩坑（2026-11-12 验证，Issue #65）
+
+- PR 场景的 `.pre-commit-config.yaml` 只含基础 hooks + gitleaks + ruff；`.pre-commit-nightly-config.yaml`
+  额外含 `spotless:apply` / checkstyle / spotbugs / pmd。提交前必须先执行 `mvn compile spotless:apply`，
+  否则 nightly 会因 “files were modified by this hook” 失败。
+- gitleaks 会扫描 `.gitleaksignore` 本身，注释中的 `password` DDL 示例、`hmac-sha2-256-etm@openssh.com`
+  会被 `explicit-password` / `email-address` 误命中；需在 `.gitleaks.toml` 的 allowlist paths 增加
+  `^\.gitleaksignore$`。
+- `ut.yml` 的 diff-cover 增量行覆盖率门禁默认 80%（可由仓库变量 `UT_INCREMENTAL_LINE_COVERAGE_THRESHOLD`
+  覆盖），对比 `origin/<base>`；新增主代码必须配套单测，本地可用
+  `python -c "from diff_cover.diff_cover_tool import main; ..." --compare-branch upstream/master` 复核。
+- 锁等待类方法（如 `acquireLockWithWait`，120/300 次 × 10s）在单测中会真实 `sleep` 导致挂起，
+  覆盖失败分支应通过线程中断触发，并在 `finally` 清理中断标记。
+
 ## 提交前检查清单
 
 1. `mvn clean test` 通过，并核对 `target/surefire-reports/`（不要只看 BUILD 结果）。
