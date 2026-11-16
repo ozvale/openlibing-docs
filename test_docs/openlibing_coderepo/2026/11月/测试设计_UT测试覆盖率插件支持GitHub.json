@@ -1,0 +1,216 @@
+{
+  "l": "UT测试覆盖率插件支持GitHub · 测试设计",
+  "t": "用例 [12]（new 12 + reuse 0）｜测试点 [14]｜场景 [3]｜主线：端到端集成优先 → 分段功能（换证/上传/入库）→ 平台展示核对｜团队 软件实现&持续集成工具链团队｜月度 202611｜版本发布 20261116｜安全 6 维度：已覆盖 3/6 · 豁免 3（纵向越权/传输安全/CSRF）",
+  "c": "#0f172a",
+  "k": [
+    {
+      "l": "端到端集成",
+      "t": "需求来源 FP-01, FP-02, FP-03, FP-05, FP-06, FP-07, FP-10, BR-01, BR-02, BR-03, BR-04, BR-05, BR-06, BR-07, BR-08, BR-13, EX-01, EX-02, EX-03, EX-04, EX-10",
+      "c": "#0284c7",
+      "k": [
+        {
+          "l": "TP-01 push 全链路端到端",
+          "t": "场景法（端到端） · 用例 1",
+          "k": [
+            {
+              "l": "端到端集成 - GitHub push 一次运行即完成换证、上传 GitHub 桶、回调入库与平台可见",
+              "t": "TC-ISSUE280-UTCOV-001 · P0",
+              "k": [
+                {"l": "前置步骤", "k": [{"l": "1. theWoodlc/ldf 已加入 ut-coverage.yml 与 Python 示例项目（coverage.json）"}, {"l": "2. 工作流声明 permissions: id-token: write"}, {"l": "3. BETA 已部署 coderepo PR#301，IAM 已配置 GitHubActions 提供商与 github-actions 委托"}]},
+                {"l": "测试步骤", "k": [{"l": "1. 向 main 推送一次提交触发 workflow，等待运行结束"}, {"l": "2. 读运行日志：平台标识、OIDC 提供商与委托、OBS 桶、obsUrl、回调结果"}, {"l": "3. 校验对象 key 结构 ut-coverage-action/ldf/{yyyyMMdd}.{HH}/{GITHUB_RUN_ID}/ut-coverage.json"}, {"l": "4. 打开 开发管理 > 代码仓管理 > 分支管理，筛选代码仓=ldf，查看 main 分支 UT行覆盖率"}]},
+                {"l": "预期结果", "k": [{"l": "1. 运行成功，step 输出 result=success"}, {"l": "2. 日志显示 GitHub Actions + openlibing-github-action + 提供商 GitHubActions/github-actions"}, {"l": "3. 对象 key 结构合规，obsUrl 指向 GitHub 桶"}, {"l": "4. 回调成功入库，分支管理页 main 行 UT行覆盖率显示数值且与上报 lineCoverage 一致"}]}
+              ]
+            }
+          ]
+        },
+        {
+          "l": "TP-02 PR 事件端到端",
+          "t": "场景法（端到端） · 用例 1",
+          "k": [
+            {
+              "l": "端到端集成 - GitHub PR 事件一次运行完成上报并归属目标分支 main",
+              "t": "TC-ISSUE280-UTCOV-002 · P0",
+              "k": [
+                {"l": "前置步骤", "k": [{"l": "1. 已建测试分支并发起到 main 的 PR"}, {"l": "2. 其余前置同 TP-01"}]},
+                {"l": "测试步骤", "k": [{"l": "1. 打开 PR 触发运行并等待结束"}, {"l": "2. 读日志与上报报文：branchName、commitId、桶、obsUrl"}, {"l": "3. 查看平台中该覆盖率数据的归属分支"}]},
+                {"l": "预期结果", "k": [{"l": "1. 运行成功，result=success"}, {"l": "2. branchName=main（GITHUB_BASE_REF），commitId=pull_request.base.sha"}, {"l": "3. 上传桶为 openlibing-github-action，数据归属 main 分支并可在平台查看"}]}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "l": "分段功能补充",
+      "t": "需求来源 FP-04, FP-08, FP-11, FP-12, BR-12, BR-14, BR-15, EX-11, EX-12",
+      "c": "#059669",
+      "k": [
+        {
+          "l": "TP-03 授权缺失时换证失败",
+          "t": "错误猜测 · 用例 1",
+          "k": [
+            {
+              "l": "分段功能补充 - 工作流未声明 id-token: write 时换证失败且步骤失败",
+              "t": "TC-ISSUE280-UTCOV-003 · P1",
+              "k": [
+                {"l": "前置步骤", "k": [{"l": "1. 准备仅声明 contents: read 的临时工作流"}]},
+                {"l": "测试步骤", "k": [{"l": "1. 在 ldf 上触发该工作流"}, {"l": "2. 查看插件步骤结论与错误日志"}]},
+                {"l": "预期结果", "k": [{"l": "1. OIDC 换证失败并返回明确错误"}, {"l": "2. step 结论 failure，不回退长期凭证、不产生 OBS 上传"}]}
+              ]
+            }
+          ]
+        },
+        {
+          "l": "TP-04 产物版本与输出兼容",
+          "t": "检查项 · 用例 1",
+          "k": [
+            {
+              "l": "分段功能补充 - 产物版本一致且 dist 已内联新逻辑，运行无输出文件告警",
+              "t": "TC-ISSUE280-UTCOV-004 · P1",
+              "k": [
+                {"l": "前置步骤", "k": [{"l": "1. 已获取 feat-github-support 分支源码与 dist/index.js"}, {"l": "2. ldf 已有一份成功运行日志"}]},
+                {"l": "测试步骤", "k": [{"l": "1. 读取 action.yml 与 package.json 版本"}, {"l": "2. 检索 dist 中的 detectPlatform、openlibing-github-action、GitHubActions"}, {"l": "3. 检索日志中的「GITHUB_OUTPUT/STEP_OUTPUT env not set」"}]},
+                {"l": "预期结果", "k": [{"l": "1. 两处版本均为 1.0.2，SDK 为 0.0.7"}, {"l": "2. 三个关键标识均命中"}, {"l": "3. 日志无输出文件缺失告警"}]}
+              ]
+            }
+          ]
+        },
+        {
+          "l": "TP-05 日志与报文不泄露凭证",
+          "t": "sensitive_data_check · 用例 1",
+          "k": [
+            {
+              "l": "分段功能补充 - 运行日志与上报报文不含 AK/SK/SecurityToken",
+              "t": "TC-ISSUE280-UTCOV-005 · P1",
+              "k": [
+                {"l": "前置步骤", "k": [{"l": "1. ldf 已完成一次成功上报"}, {"l": "2. 可从 OBS 取回 ut-coverage.json"}]},
+                {"l": "测试步骤", "k": [{"l": "1. 全文检索日志中的 AK、SK、SecurityToken、access_key"}, {"l": "2. 检查 ut-coverage.json 与回调报文字段集合"}]},
+                {"l": "预期结果", "k": [{"l": "1. 日志无临时凭证明文"}, {"l": "2. 报文仅含 gitUrl/branchName/pipelineRunId/commitId/lineCoverage/fileDetails 等业务字段"}]}
+              ]
+            }
+          ]
+        },
+        {
+          "l": "TP-06 未识别报告时的降级",
+          "t": "边界值 · 用例 1",
+          "k": [
+            {
+              "l": "分段功能补充 - 未识别到覆盖率报告时告警并保持步骤成功",
+              "t": "TC-ISSUE280-UTCOV-006 · P2",
+              "k": [
+                {"l": "前置步骤", "k": [{"l": "1. 可临时把 report_path 指向无报告目录"}]},
+                {"l": "测试步骤", "k": [{"l": "1. 触发一次运行"}, {"l": "2. 查看步骤结论与日志"}]},
+                {"l": "预期结果", "k": [{"l": "1. 打印未识别报告告警"}, {"l": "2. step 结论 success，不阻断流水线"}]}
+              ]
+            }
+          ]
+        },
+        {
+          "l": "TP-07 进程内分支（双标志冲突/事件文件缺失/GitCode 存量）",
+          "t": "豁免：双标志冲突按 GitCode、ATOMGIT_* 映射、PR base.sha 回退、事件文件缺失/非法、SERVER_URL 尾斜杠、unknown-repo/manual 兜底、selectObsBucket 属插件进程内分支，由开发单测 test/platform-context.test.js、test/obs-uploader.test.js 覆盖（引用 PR#10 npm test 63/63）；GitCode 存量回归按用户决定不做（Q-11、Q-16）（待评审确认）"
+        }
+      ]
+    },
+    {
+      "l": "后端放行与展示核对",
+      "t": "需求来源 FP-09, BR-09, BR-10, BR-11, EX-05, EX-06, EX-07, EX-08, EX-09",
+      "c": "#d97706",
+      "k": [
+        {
+          "l": "TP-08 GitHub 桶单段放行入库",
+          "t": "场景法（分段） · 用例 1",
+          "k": [
+            {
+              "l": "后端放行与展示核对 - obsUrl 指向 GitHub 平台桶时下载并入库成功",
+              "t": "TC-ISSUE280-UTCOV-007 · P1",
+              "k": [
+                {"l": "前置步骤", "k": [{"l": "1. ldf 已向 openlibing-github-action 上传 ut-coverage.json"}, {"l": "2. BETA 已部署 coderepo PR#301"}]},
+                {"l": "测试步骤", "k": [{"l": "1. 触发插件回调 /action-api/ut/coverage/report，obsUrl 指向 GitHub 桶"}, {"l": "2. 查看回调响应与入库记录"}]},
+                {"l": "预期结果", "k": [{"l": "1. 回调返回成功，未被白名单拒绝"}, {"l": "2. ut_coverage 数据落库，obsUrl 为 GitHub 桶地址"}]}
+              ]
+            }
+          ]
+        },
+        {
+          "l": "TP-09 非白名单桶拒绝",
+          "t": "错误猜测 · 用例 1",
+          "k": [
+            {
+              "l": "后端放行与展示核对 - obsUrl 指向非白名单桶时拒绝下载",
+              "t": "TC-ISSUE280-UTCOV-008 · P1",
+              "k": [
+                {"l": "前置步骤", "k": [{"l": "1. 已获取可构造 obsUrl 的调用入口"}]},
+                {"l": "测试步骤", "k": [{"l": "1. 构造 obsUrl=https://openlibing-other-action.obs.cn-southwest-2.myhuaweicloud.com/ut-coverage-action/x.json"}, {"l": "2. 调用入库链路"}]},
+                {"l": "预期结果", "k": [{"l": "1. 抛出 IllegalArgumentException「OBS url not allowed, bucket: ...」"}, {"l": "2. 不下载、不落库"}]}
+              ]
+            }
+          ]
+        },
+        {
+          "l": "TP-10 非白名单对象前缀拒绝",
+          "t": "边界值 · 用例 1",
+          "k": [
+            {
+              "l": "后端放行与展示核对 - objectKey 非约定前缀时拒绝下载",
+              "t": "TC-ISSUE280-UTCOV-009 · P1",
+              "k": [
+                {"l": "前置步骤", "k": [{"l": "1. 已获取可构造 obsUrl 的调用入口"}]},
+                {"l": "测试步骤", "k": [{"l": "1. 构造 GitHub 桶下 objectKey=other-dir/x.json"}, {"l": "2. 调用入库链路"}]},
+                {"l": "预期结果", "k": [{"l": "1. 被拒绝并抛出「OBS url not allowed」"}, {"l": "2. 不下载、不落库"}]}
+              ]
+            }
+          ]
+        },
+        {
+          "l": "TP-11 回调失败时的降级",
+          "t": "错误猜测 · 用例 1",
+          "k": [
+            {
+              "l": "后端放行与展示核对 - 回调失败时仅告警且 OBS 数据已留存",
+              "t": "TC-ISSUE280-UTCOV-010 · P2",
+              "k": [
+                {"l": "前置步骤", "k": [{"l": "1. 可构造回调不可达（如 env_type 指向不可用 base）"}]},
+                {"l": "测试步骤", "k": [{"l": "1. 触发一次运行并观察回调阶段日志"}, {"l": "2. 核对 OBS 对象是否已上传"}]},
+                {"l": "预期结果", "k": [{"l": "1. 日志出现回调失败告警但不阻断"}, {"l": "2. OBS 对象存在，可补导入"}]}
+              ]
+            }
+          ]
+        },
+        {
+          "l": "TP-12 对象归属校验（已知边界）",
+          "t": "错误猜测 · 用例 1",
+          "k": [
+            {
+              "l": "后端放行与展示核对 - 用他人仓库同名对象 key 的 obsUrl 可被下载，记录为已知边界",
+              "t": "TC-ISSUE280-UTCOV-011 · P2",
+              "k": [
+                {"l": "前置步骤", "k": [{"l": "1. GitHub 桶存在 ut-coverage-action/ldf/... 对象"}]},
+                {"l": "测试步骤", "k": [{"l": "1. 构造 obsUrl 指向该对象"}, {"l": "2. 以另一仓库身份提交上报报文（gitUrl 不同、obsUrl 相同）"}]},
+                {"l": "预期结果", "k": [{"l": "1. 后端只校验桶与前缀，不校验 objectKey 与 gitUrl 归属，下载可成功"}, {"l": "2. 按设计 7-9 记录为已知边界，不报缺陷"}]}
+              ]
+            }
+          ]
+        },
+        {
+          "l": "TP-13 覆盖率明细可查看",
+          "t": "场景法 · 用例 1",
+          "k": [
+            {
+              "l": "后端放行与展示核对 - 点击 UT行覆盖率可查看文件级明细",
+              "t": "TC-ISSUE280-UTCOV-012 · P2",
+              "k": [
+                {"l": "前置步骤", "k": [{"l": "1. TP-01 中 UT行覆盖率已显示数值"}]},
+                {"l": "测试步骤", "k": [{"l": "1. 点击 main 分支的 UT行覆盖率数值"}, {"l": "2. 查看弹出的明细内容"}]},
+                {"l": "预期结果", "k": [{"l": "1. 弹出明细弹窗，展示文件级覆盖率"}, {"l": "2. 若当前账号无仓库级角色导致弹窗不可用，则记录为限制并以上一项数值为准"}]}
+              ]
+            }
+          ]
+        },
+        {
+          "l": "TP-14 下载大小上限",
+          "t": "豁免：需构造超过 500MB 的 OBS 对象，成本高且属既有逻辑（本次未改动），由配置约束与既有单测覆盖（待评审确认）"
+        }
+      ]
+    }
+  ]
+}
