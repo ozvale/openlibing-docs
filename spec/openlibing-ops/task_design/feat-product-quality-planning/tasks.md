@@ -179,7 +179,7 @@
 
 - [ ] RED：覆盖两个 GET 路由、`Result<List<CatalogResp>>`、嵌套 `children` JSON、右接口必填正整数 `milestoneId` 参数及无写操作日志。
 - [ ] 运行 Controller 测试并确认失败。
-- [ ]  GREEN：实现 `/projects/product-quality/catalogs/basic` 和 `/projects/product-quality/catalogs/milestone`，无效参数不调用 Service。
+- [ ] GREEN：实现 `/projects/product-quality/catalogs/basic` 和 `/projects/product-quality/catalogs/milestone`，无效参数不调用 Service。
 - [ ] 重跑同一测试并确认通过。
 
 ### Task 4：回归验证与本地交付

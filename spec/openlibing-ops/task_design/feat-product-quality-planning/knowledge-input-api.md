@@ -8,14 +8,14 @@
 
 统一基础路径：`/projects/product-quality/knowledge-inputs`
 
-| 功能 | 请求方式 | 相对路径 | 成功时 `data` 类型 |
-|---|---|---|---|
-| 新增 | POST | `/add` | `KnowledgeInputResp` |
-| 分页查询 | GET | `/getPage` | `PageResult<KnowledgeInputResp>` |
-| 单条详情 | GET | `/detail` | `KnowledgeInputResp` |
-| 修改 | POST | `/update` | `KnowledgeInputResp` |
-| 单条逻辑删除 | GET | `/delete` | `null` |
-| 批量逻辑删除 | POST | `/batch-delete` | `null` |
+| 功能         | 请求方式 | 相对路径        | 成功时 `data` 类型               |
+| ------------ | -------- | --------------- | -------------------------------- |
+| 新增         | POST     | `/add`          | `KnowledgeInputResp`             |
+| 分页查询     | GET      | `/getPage`      | `PageResult<KnowledgeInputResp>` |
+| 单条详情     | GET      | `/detail`       | `KnowledgeInputResp`             |
+| 修改         | POST     | `/update`       | `KnowledgeInputResp`             |
+| 单条逻辑删除 | GET      | `/delete`       | `null`                           |
+| 批量逻辑删除 | POST     | `/batch-delete` | `null`                           |
 
 ## 2. 通用约定
 
@@ -25,9 +25,9 @@
 
 ### 2.2 公共 Query 参数
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|---|---|---|---|---|
-| `milestoneId` | Query | Long | 是 | 里程碑 ID，对应 `pq_milestone.id`，必须为正整数 |
+| 参数          | 位置  | 类型 | 必填 | 说明                                            |
+| ------------- | ----- | ---- | ---- | ----------------------------------------------- |
+| `milestoneId` | Query | Long | 是   | 里程碑 ID，对应 `pq_milestone.id`，必须为正整数 |
 
 数据查询、修改和删除均限定在该里程碑内；记录不存在、已删除或不属于该里程碑时，返回业务失败提示。
 
@@ -35,72 +35,72 @@
 
 所有业务响应使用产品质量模块专用 `Result<T>`，与通用 `Result` 字段结构一致：
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `code` | Integer | 业务状态码，成功固定为 `200` |
-| `messageCn` | String | 中文消息，成功为 `成功` |
-| `messageEn` | String | 英文消息，成功为 `success` |
-| `data` | T/null | 业务数据；删除成功或异常时通常为 `null` |
+| 字段        | 类型    | 说明                                    |
+| ----------- | ------- | --------------------------------------- |
+| `code`      | Integer | 业务状态码，成功固定为 `200`            |
+| `messageCn` | String  | 中文消息，成功为 `成功`                 |
+| `messageEn` | String  | 英文消息，成功为 `success`              |
+| `data`      | T/null  | 业务数据；删除成功或异常时通常为 `null` |
 
 产品质量业务异常与参数校验失败统一返回 `code = 40001`，`messageCn` 为具体场景提示、`messageEn` 为 `params invalid`；参数校验失败时具体原因同时写入 `data`。前端可直接展示 `messageCn`：
 
-| `code` | `messageCn` | 触发场景 |
-|---|---|---|
-| `40001` | `知识输入数据不存在或已被删除` | 查询、修改或删除时记录不存在或已被逻辑删除 |
-| `40001` | `新增知识输入数据失败` | 新增数据落库失败 |
-| `40001` | `修改知识输入数据失败，记录不存在或已被删除` | 修改时记录不存在或已被逻辑删除 |
-| `40001` | `删除知识输入数据失败，记录不存在或已被删除` | 删除时记录不存在或已被逻辑删除 |
-| `40001` | `批量删除失败，部分知识输入数据不存在或已被删除` | 批量删除时存在无效 ID |
-| `40001` | `记录知识输入数据操作日志失败` | 修改或删除操作日志落库失败 |
-| `40001` | `项目 ID 格式不正确，必须为数字` | 里程碑关联的项目 ID 不是合法数字 |
-| `40001` | 具体校验提示 | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
-| `403` | `没有权限` | token Cookie 缺失、无效，或用户无对应读写权限 |
-| `500` | `系统异常` | 未被其他处理器捕获的系统异常 |
+| `code`  | `messageCn`                                      | 触发场景                                                   |
+| ------- | ------------------------------------------------ | ---------------------------------------------------------- |
+| `40001` | `知识输入数据不存在或已被删除`                   | 查询、修改或删除时记录不存在或已被逻辑删除                 |
+| `40001` | `新增知识输入数据失败`                           | 新增数据落库失败                                           |
+| `40001` | `修改知识输入数据失败，记录不存在或已被删除`     | 修改时记录不存在或已被逻辑删除                             |
+| `40001` | `删除知识输入数据失败，记录不存在或已被删除`     | 删除时记录不存在或已被逻辑删除                             |
+| `40001` | `批量删除失败，部分知识输入数据不存在或已被删除` | 批量删除时存在无效 ID                                      |
+| `40001` | `记录知识输入数据操作日志失败`                   | 修改或删除操作日志落库失败                                 |
+| `40001` | `项目 ID 格式不正确，必须为数字`                 | 里程碑关联的项目 ID 不是合法数字                           |
+| `40001` | 具体校验提示                                     | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
+| `403`   | `没有权限`                                       | token Cookie 缺失、无效，或用户无对应读写权限              |
+| `500`   | `系统异常`                                       | 未被其他处理器捕获的系统异常                               |
 
 ### 2.4 保存请求对象 `KnowledgeInputSaveReq`
 
-| 字段 | 类型 | 必填 | 校验规则 | 说明 |
-|---|---|---|---|---|
-| `milestoneName` | String | 否 | 最大 255 字符 | 里程碑名称，由前端传入；修改时允许更新 |
-| `knowledgeDomain` | String | 是 | 非空白，最大 255 字符 | 关键知识领域 |
-| `painPointAnalysis` | String | 否 | 最大 65535 字符 | 短板和痛点分析 |
-| `missingKnowledge` | String | 是 | 非空白，最大 65535 字符 | 缺少的知识和待回答问题 |
-| `empowermentTarget` | String | 是 | 非空白，最大 65535 字符 | 赋能对象 |
-| `acquisitionAction` | String | 是 | 非空白，最大 65535 字符 | 知识获取行动和赋能方式 |
-| `knowledgeResource` | String | 是 | 非空白，最大 65535 字符 | 知识资源位置 |
-| `actionOwner` | String | 是 | 非空白，最大 255 字符 | 行动责任人姓名和工号 |
-| `executionStage` | String | 否 | 最大 128 字符 | 开展阶段 |
-| `requiredFinishTime` | String | 是 | 非空白，最大 20 字符 | 需要完成行动日期 |
-| `priority` | String | 否 | 最大 64 字符 | 优先级 |
-| `status` | String | 否 | 最大 64 字符 | 状态 |
-| `acceptanceMethod` | String | 否 | 最大 65535 字符 | 赋能效果验收方式 |
-| `resourceLink` | String | 否 | 最大 65535 字符 | 知识资源链接 |
+| 字段                 | 类型   | 必填 | 校验规则                | 说明                                   |
+| -------------------- | ------ | ---- | ----------------------- | -------------------------------------- |
+| `milestoneName`      | String | 否   | 最大 255 字符           | 里程碑名称，由前端传入；修改时允许更新 |
+| `knowledgeDomain`    | String | 是   | 非空白，最大 255 字符   | 关键知识领域                           |
+| `painPointAnalysis`  | String | 否   | 最大 65535 字符         | 短板和痛点分析                         |
+| `missingKnowledge`   | String | 是   | 非空白，最大 65535 字符 | 缺少的知识和待回答问题                 |
+| `empowermentTarget`  | String | 是   | 非空白，最大 65535 字符 | 赋能对象                               |
+| `acquisitionAction`  | String | 是   | 非空白，最大 65535 字符 | 知识获取行动和赋能方式                 |
+| `knowledgeResource`  | String | 是   | 非空白，最大 65535 字符 | 知识资源位置                           |
+| `actionOwner`        | String | 是   | 非空白，最大 255 字符   | 行动责任人姓名和工号                   |
+| `executionStage`     | String | 否   | 最大 128 字符           | 开展阶段                               |
+| `requiredFinishTime` | String | 是   | 非空白，最大 20 字符    | 需要完成行动日期                       |
+| `priority`           | String | 否   | 最大 64 字符            | 优先级                                 |
+| `status`             | String | 否   | 最大 64 字符            | 状态                                   |
+| `acceptanceMethod`   | String | 否   | 最大 65535 字符         | 赋能效果验收方式                       |
+| `resourceLink`       | String | 否   | 最大 65535 字符         | 知识资源链接                           |
 
 ### 2.5 响应对象 `KnowledgeInputResp`
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `id` | Long | 记录主键 |
-| `projectId` | Integer | 项目 ID，由里程碑归属生成 |
-| `milestoneId` | Long | 里程碑 ID |
-| `milestoneName` | String/null | 里程碑名称 |
-| `knowledgeDomain` | String | 关键知识领域 |
-| `painPointAnalysis` | String/null | 短板和痛点分析 |
-| `missingKnowledge` | String | 缺少的知识和待回答问题 |
-| `empowermentTarget` | String | 赋能对象 |
-| `acquisitionAction` | String | 知识获取行动和赋能方式 |
-| `knowledgeResource` | String | 知识资源位置 |
-| `actionOwner` | String | 行动责任人姓名和工号 |
-| `executionStage` | String/null | 开展阶段 |
-| `requiredFinishTime` | String | 需要完成行动日期 |
-| `priority` | String/null | 优先级 |
-| `status` | String/null | 状态 |
-| `acceptanceMethod` | String/null | 赋能效果验收方式 |
-| `resourceLink` | String/null | 知识资源链接 |
-| `createBy` | String | 创建人用户 ID |
-| `createTime` | String | 创建时间，格式 `yyyy-MM-dd HH:mm:ss` |
-| `updateBy` | String/null | 最后修改人用户 ID |
-| `updateTime` | String/null | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss` |
+| 字段                 | 类型        | 说明                                     |
+| -------------------- | ----------- | ---------------------------------------- |
+| `id`                 | Long        | 记录主键                                 |
+| `projectId`          | Integer     | 项目 ID，由里程碑归属生成                |
+| `milestoneId`        | Long        | 里程碑 ID                                |
+| `milestoneName`      | String/null | 里程碑名称                               |
+| `knowledgeDomain`    | String      | 关键知识领域                             |
+| `painPointAnalysis`  | String/null | 短板和痛点分析                           |
+| `missingKnowledge`   | String      | 缺少的知识和待回答问题                   |
+| `empowermentTarget`  | String      | 赋能对象                                 |
+| `acquisitionAction`  | String      | 知识获取行动和赋能方式                   |
+| `knowledgeResource`  | String      | 知识资源位置                             |
+| `actionOwner`        | String      | 行动责任人姓名和工号                     |
+| `executionStage`     | String/null | 开展阶段                                 |
+| `requiredFinishTime` | String      | 需要完成行动日期                         |
+| `priority`           | String/null | 优先级                                   |
+| `status`             | String/null | 状态                                     |
+| `acceptanceMethod`   | String/null | 赋能效果验收方式                         |
+| `resourceLink`       | String/null | 知识资源链接                             |
+| `createBy`           | String      | 创建人用户 ID                            |
+| `createTime`         | String      | 创建时间，格式 `yyyy-MM-dd HH:mm:ss`     |
+| `updateBy`           | String/null | 最后修改人用户 ID                        |
+| `updateTime`         | String/null | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss` |
 
 单条成功响应示例：
 
@@ -150,10 +150,10 @@ Content-Type: application/json
 GET /projects/product-quality/knowledge-inputs/getPage?milestoneId=7&page=1&pageSize=20
 ```
 
-| 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-|---|---|---|---|---|---|
-| `page` | Query | Integer | 否 | `1` | 页码，必须大于 0 |
-| `pageSize` | Query | Integer | 否 | `20` | 每页条数，1～200 |
+| 参数       | 位置  | 类型    | 必填 | 默认值 | 说明             |
+| ---------- | ----- | ------- | ---- | ------ | ---------------- |
+| `page`     | Query | Integer | 否   | `1`    | 页码，必须大于 0 |
+| `pageSize` | Query | Integer | 否   | `20`   | 每页条数，1～200 |
 
 仅查询 `deleted=0` 数据，按 `id DESC` 排序，由数据库分页。
 
@@ -203,13 +203,13 @@ Content-Type: application/json
 
 日志表：`pq_knowledge_input_log`。
 
-| 字段 | 说明 |
-|---|---|
-| `id` | 日志主键 |
-| `knowledge_input_id` | 业务记录主键 |
-| `old_data` | 修改或删除前完整 JSON，非空 |
-| `new_data` | 修改后完整 JSON；删除时为 `null` |
-| `update_by` | 操作人用户 ID |
-| `update_time` | 操作时间 |
+| 字段                 | 说明                             |
+| -------------------- | -------------------------------- |
+| `id`                 | 日志主键                         |
+| `knowledge_input_id` | 业务记录主键                     |
+| `old_data`           | 修改或删除前完整 JSON，非空      |
+| `new_data`           | 修改后完整 JSON；删除时为 `null` |
+| `update_by`          | 操作人用户 ID                    |
+| `update_time`        | 操作时间                         |
 
 新增和查询不写该日志表；修改、单条删除和批量删除会写入。

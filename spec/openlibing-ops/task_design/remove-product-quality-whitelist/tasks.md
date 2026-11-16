@@ -15,6 +15,7 @@
 ### Task 1：用失败测试锁定新权限行为
 
 **Files:**
+
 - Modify: `openlibing-ops/src/test/java/com/openlibing/ops/app/service/productquality/ProductQualityPermissionServiceTest.java`
 
 - [x] 将“非白名单用户无权限”测试改为“已认证用户不依赖白名单即可获得读、写、维护权限”，保持匿名及 query 伪造身份拒绝测试不变。
@@ -24,6 +25,7 @@
 ### Task 2：移除白名单实现并保留 token 校验
 
 **Files:**
+
 - Modify: `openlibing-ops/src/main/java/com/openlibing/ops/app/service/productquality/ProductQualityPermissionService.java`
 - Modify: `openlibing-ops/src/test/java/com/openlibing/ops/app/service/productquality/ProductQualityPermissionServiceTest.java`
 - Delete: `openlibing-ops/src/main/java/com/openlibing/ops/domain/mapper/productquality/ProductQualityPermissionMapper.java`
@@ -39,6 +41,7 @@
 ### Task 3：运行相关验证
 
 **Files:**
+
 - Verify: `openlibing-ops/src/test/java/com/openlibing/ops/app/service/productquality/ProductQualityPermissionServiceTest.java`
 - Verify: `openlibing-ops/src/test/java/com/openlibing/ops/app/service/productquality/ProductQualityMilestoneServiceTest.java`
 - Verify: `openlibing-ops/src/test/java/com/openlibing/ops/api/controller/ProductQualityMilestoneControllerTest.java`
@@ -51,6 +54,7 @@
 ### Task 4：交付前自检
 
 **Files:**
+
 - Review: `openlibing-ops` 工作区差异
 - Review: `openlibing-docs/spec/openlibing-ops/task_design/remove-product-quality-whitelist/`
 

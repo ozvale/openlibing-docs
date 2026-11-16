@@ -13,15 +13,15 @@
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|---|---|---|
-| `ProductQualityMilestoneController.java` | 修改 | 删除 page，get 改为项目列表 |
-| `ProductQualityMilestoneService.java` | 修改 | 删除分页转换，返回响应列表 |
-| `ProductQualityMilestoneDomainService.java` | 修改 | 删除分页领域查询，新增项目列表查询 |
-| `PqMilestoneMapper.java` / `PqMilestoneMapper.xml` | 修改 | 分页 SQL 改为项目列表 SQL |
-| `ProductQualityMilestone*Test.java` / Mapper XML 测试 | 修改 | 覆盖列表、空结果、项目隔离和代码移除 |
-| `ProductQualityCatalog*Test.java` | 修改 | 对齐当前目录根/非根查询链路 |
-| `ProductQualityCatalogController.java` | 不修改 | 保持当前接口参数约束，仅对齐失效测试 |
+| 文件                                                  | 操作   | 说明                                 |
+| ----------------------------------------------------- | ------ | ------------------------------------ |
+| `ProductQualityMilestoneController.java`              | 修改   | 删除 page，get 改为项目列表          |
+| `ProductQualityMilestoneService.java`                 | 修改   | 删除分页转换，返回响应列表           |
+| `ProductQualityMilestoneDomainService.java`           | 修改   | 删除分页领域查询，新增项目列表查询   |
+| `PqMilestoneMapper.java` / `PqMilestoneMapper.xml`    | 修改   | 分页 SQL 改为项目列表 SQL            |
+| `ProductQualityMilestone*Test.java` / Mapper XML 测试 | 修改   | 覆盖列表、空结果、项目隔离和代码移除 |
+| `ProductQualityCatalog*Test.java`                     | 修改   | 对齐当前目录根/非根查询链路          |
+| `ProductQualityCatalogController.java`                | 不修改 | 保持当前接口参数约束，仅对齐失效测试 |
 
 ## 风险与验证
 

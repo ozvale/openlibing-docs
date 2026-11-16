@@ -8,11 +8,11 @@
 
 统一基础路径：`/projects/product-quality/catalogs`
 
-| 功能 | 请求方式 | 相对路径 | 成功时 `data` 类型 |
-|---|---|---|---|
-| 查询左侧根目录列表 | GET | `/basic` | `CatalogResp[]` |
-| 查询右侧目录树 | GET | `/milestone` | `CatalogResp[]` |
-| 初始化里程碑目录 | POST | `/init` | `Integer`，实际新增目录数量 |
+| 功能               | 请求方式 | 相对路径     | 成功时 `data` 类型          |
+| ------------------ | -------- | ------------ | --------------------------- |
+| 查询左侧根目录列表 | GET      | `/basic`     | `CatalogResp[]`             |
+| 查询右侧目录树     | GET      | `/milestone` | `CatalogResp[]`             |
+| 初始化里程碑目录   | POST     | `/init`      | `Integer`，实际新增目录数量 |
 
 本地服务端口为 `8098`，`context-path` 为 `/`。其他环境的域名、端口及网关前缀以部署配置为准。
 
@@ -30,9 +30,9 @@
 
 三个接口均必须传入以下参数，均无请求体：
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|---|---|---|---|---|
-| `milestoneId` | Query | Long | 是 | 里程碑 ID，对应 `pq_milestone.id`；前端应传整数并在发起请求前校验非空和格式 |
+| 参数          | 位置  | 类型 | 必填 | 说明                                                                        |
+| ------------- | ----- | ---- | ---- | --------------------------------------------------------------------------- |
+| `milestoneId` | Query | Long | 是   | 里程碑 ID，对应 `pq_milestone.id`；前端应传整数并在发起请求前校验非空和格式 |
 
 请求示例：
 
@@ -44,33 +44,33 @@ GET /projects/product-quality/catalogs/basic?milestoneId=7
 
 所有业务响应使用产品质量模块专用 `Result<T>`，与通用 `Result` 字段结构一致：
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `code` | Integer | 业务状态码，成功固定为 `200` |
-| `messageCn` | String | 中文消息，成功为 `成功` |
-| `messageEn` | String | 英文消息，成功为 `success` |
-| `data` | T/null | 业务数据；异常响应通常为 `null` |
+| 字段        | 类型    | 说明                            |
+| ----------- | ------- | ------------------------------- |
+| `code`      | Integer | 业务状态码，成功固定为 `200`    |
+| `messageCn` | String  | 中文消息，成功为 `成功`         |
+| `messageEn` | String  | 英文消息，成功为 `success`      |
+| `data`      | T/null  | 业务数据；异常响应通常为 `null` |
 
 前端应根据响应体中的 `code` 判断业务是否成功，不要只依赖 HTTP 状态码。
 
 ### 2.4 目录对象 `CatalogResp`
 
-| 字段 | 类型 | 是否可能为 null | 说明 |
-|---|---|---|---|
-| `id` | Long | 否 | 里程碑目录记录主键，对应 `pq_milestone_catalog.id` |
-| `milestoneId` | Long | 否 | 当前节点所属里程碑 ID |
-| `catalogId` | Long | 否 | 目录 ID；初始化时复制自基础目录 `pq_basic_catalog.id` |
-| `parentId` | Long/null | 是 | 父目录 ID，指向父节点的 `catalogId`，不是父节点的记录主键 `id` |
-| `catalogEnName` | String | 否 | 目录英文名称，数据库最大长度 64 |
-| `catalogCnName` | String | 否 | 目录中文名称，数据库最大长度 255 |
-| `catalogLevel` | Integer | 否 | 目录层级：`0` 为左侧根目录；右侧目录为 `1`～`3` |
-| `sortNo` | Integer | 否 | 同级排序号，由基础目录复制 |
-| `optionalFlag` | Integer | 否 | 是否可选目录：`0` 否，`1` 是 |
-| `createBy` | String | 是 | 创建人用户 ID |
-| `createTime` | String | 是 | 创建时间，格式 `yyyy-MM-dd HH:mm:ss` |
-| `updateBy` | String | 是 | 最后修改人用户 ID |
-| `updateTime` | String | 是 | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss` |
-| `children` | `CatalogResp[]` | 否 | 子目录数组；无子目录时为 `[]`，不会返回 `null` |
+| 字段            | 类型            | 是否可能为 null | 说明                                                           |
+| --------------- | --------------- | --------------- | -------------------------------------------------------------- |
+| `id`            | Long            | 否              | 里程碑目录记录主键，对应 `pq_milestone_catalog.id`             |
+| `milestoneId`   | Long            | 否              | 当前节点所属里程碑 ID                                          |
+| `catalogId`     | Long            | 否              | 目录 ID；初始化时复制自基础目录 `pq_basic_catalog.id`          |
+| `parentId`      | Long/null       | 是              | 父目录 ID，指向父节点的 `catalogId`，不是父节点的记录主键 `id` |
+| `catalogEnName` | String          | 否              | 目录英文名称，数据库最大长度 64                                |
+| `catalogCnName` | String          | 否              | 目录中文名称，数据库最大长度 255                               |
+| `catalogLevel`  | Integer         | 否              | 目录层级：`0` 为左侧根目录；右侧目录为 `1`～`3`                |
+| `sortNo`        | Integer         | 否              | 同级排序号，由基础目录复制                                     |
+| `optionalFlag`  | Integer         | 否              | 是否可选目录：`0` 否，`1` 是                                   |
+| `createBy`      | String          | 是              | 创建人用户 ID                                                  |
+| `createTime`    | String          | 是              | 创建时间，格式 `yyyy-MM-dd HH:mm:ss`                           |
+| `updateBy`      | String          | 是              | 最后修改人用户 ID                                              |
+| `updateTime`    | String          | 是              | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss`                       |
+| `children`      | `CatalogResp[]` | 否              | 子目录数组；无子目录时为 `[]`，不会返回 `null`                 |
 
 前端组树或处理节点关系时，应使用 `catalogId` 与 `parentId`，不要使用 `id` 与 `parentId` 配对。
 
@@ -80,12 +80,12 @@ GET /projects/product-quality/catalogs/basic?milestoneId=7
 
 业务失败统一返回 `code = 40001`，`messageCn` 为具体场景提示、`messageEn` 为 `params invalid`；参数校验失败时具体原因同时写入 `data`。前端可直接展示 `messageCn`：
 
-| `code` | `messageCn` | 触发场景 |
-|---|---|---|
-| `40001` | `里程碑不存在或已被删除，无法初始化目录` | 初始化目录时里程碑不存在 |
-| `40001` | 具体校验提示 | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
-| `403` | `没有权限` | token Cookie 缺失、无效，或用户无对应读写权限 |
-| `500` | `系统异常` | 未被其他处理器捕获的系统异常 |
+| `code`  | `messageCn`                              | 触发场景                                                   |
+| ------- | ---------------------------------------- | ---------------------------------------------------------- |
+| `40001` | `里程碑不存在或已被删除，无法初始化目录` | 初始化目录时里程碑不存在                                   |
+| `40001` | 具体校验提示                             | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
+| `403`   | `没有权限`                               | token Cookie 缺失、无效，或用户无对应读写权限              |
+| `500`   | `系统异常`                               | 未被其他处理器捕获的系统异常                               |
 
 `milestoneId` 缺失或格式非法时不会进入目录业务逻辑；右侧目录树接口新增的 `catalogId` 同样必填。前端必须将各接口的必填参数作为整数处理，不应依赖错误响应补救。
 
@@ -157,10 +157,10 @@ GET /projects/product-quality/catalogs/basic?milestoneId=7
 GET /projects/product-quality/catalogs/milestone?milestoneId=7&catalogId=1
 ```
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|---|---|---|---|---|
-| `milestoneId` | Query | Long | 是 | 公共参数，里程碑 ID |
-| `catalogId` | Query | Long | 是 | 左侧根目录的目录 ID，取左侧接口返回节点的 `catalogId`，不是记录主键 `id` |
+| 参数          | 位置  | 类型 | 必填 | 说明                                                                     |
+| ------------- | ----- | ---- | ---- | ------------------------------------------------------------------------ |
+| `milestoneId` | Query | Long | 是   | 公共参数，里程碑 ID                                                      |
+| `catalogId`   | Query | Long | 是   | 左侧根目录的目录 ID，取左侧接口返回节点的 `catalogId`，不是记录主键 `id` |
 
 - 无请求体。
 - 查询指定里程碑的 `catalog_level > 0` 记录，即 1～3 级目录，在服务端组装为树后，仅返回属于 `catalogId` 指定左侧根目录的右侧子树。
@@ -226,12 +226,12 @@ POST /projects/product-quality/catalogs/init?milestoneId=7
 
 `data` 为本次实际插入的目录记录数量，不是里程碑 ID，也不是目录对象。
 
-| 场景 | 结果 |
-|---|---|
-| 首次初始化且基础目录非空 | 返回实际新增目录数量，例如 `42` |
-| 指定里程碑已存在任意目录记录 | 跳过初始化，返回 `0` |
-| 基础目录表为空 | 不插入数据，返回 `0` |
-| 里程碑不存在 | 返回业务失败提示（`code = 40001`） |
+| 场景                         | 结果                               |
+| ---------------------------- | ---------------------------------- |
+| 首次初始化且基础目录非空     | 返回实际新增目录数量，例如 `42`    |
+| 指定里程碑已存在任意目录记录 | 跳过初始化，返回 `0`               |
+| 基础目录表为空               | 不插入数据，返回 `0`               |
+| 里程碑不存在                 | 返回业务失败提示（`code = 40001`） |
 
 因此，`data = 0` 不一定表示失败，前端应结合 `code = 200` 判断请求成功，并按需重新查询左右侧目录。
 

@@ -13,13 +13,13 @@
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|---|---|---|
-| `ProductQualityPermissionService.java` | 修改 | 仅保留 token 校验，移除白名单查询并增加后续权限 TODO |
-| `ProductQualityPermissionServiceTest.java` | 修改 | 验证已认证用户放行、匿名及 query 伪造身份仍拒绝 |
-| `ProductQualityPermissionMapper.java` | 删除 | 移除白名单查询接口 |
-| `ProductQualityPermissionMapper.xml` | 删除 | 移除 `pq_project_quality_owner` 白名单查询 SQL |
-| `ProductQualityPermissionMapperXmlTest.java` | 删除 | 随白名单 Mapper XML 一并移除 |
+| 文件                                         | 操作 | 说明                                                 |
+| -------------------------------------------- | ---- | ---------------------------------------------------- |
+| `ProductQualityPermissionService.java`       | 修改 | 仅保留 token 校验，移除白名单查询并增加后续权限 TODO |
+| `ProductQualityPermissionServiceTest.java`   | 修改 | 验证已认证用户放行、匿名及 query 伪造身份仍拒绝      |
+| `ProductQualityPermissionMapper.java`        | 删除 | 移除白名单查询接口                                   |
+| `ProductQualityPermissionMapper.xml`         | 删除 | 移除 `pq_project_quality_owner` 白名单查询 SQL       |
+| `ProductQualityPermissionMapperXmlTest.java` | 删除 | 随白名单 Mapper XML 一并移除                         |
 
 ## 风险与验证
 

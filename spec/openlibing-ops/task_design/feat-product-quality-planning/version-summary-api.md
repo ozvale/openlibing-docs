@@ -8,10 +8,10 @@
 
 统一基础路径：`/projects/product-quality/version-summary`
 
-| 功能 | 请求方式 | 相对路径 | 成功时 `data` 类型 |
-|---|---|---|---|
-| 查询版本摘要 | GET | `/detail` | `VersionSummaryResp`，无记录时为 `null` |
-| 保存版本摘要 | POST | `/update` | `VersionSummaryResp` |
+| 功能         | 请求方式 | 相对路径  | 成功时 `data` 类型                      |
+| ------------ | -------- | --------- | --------------------------------------- |
+| 查询版本摘要 | GET      | `/detail` | `VersionSummaryResp`，无记录时为 `null` |
+| 保存版本摘要 | POST     | `/update` | `VersionSummaryResp`                    |
 
 本地服务端口为 `8098`，`context-path` 为 `/`。其他环境的域名、端口及网关前缀以部署配置为准。
 
@@ -29,9 +29,9 @@
 
 两个接口均必须传入以下参数：
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|---|---|---|---|---|
-| `milestoneId` | Query | Long | 是 | 里程碑 ID，对应 `pq_milestone.id`；必须为大于 0 的整数，前端应在发起请求前校验非空和格式 |
+| 参数          | 位置  | 类型 | 必填 | 说明                                                                                     |
+| ------------- | ----- | ---- | ---- | ---------------------------------------------------------------------------------------- |
+| `milestoneId` | Query | Long | 是   | 里程碑 ID，对应 `pq_milestone.id`；必须为大于 0 的整数，前端应在发起请求前校验非空和格式 |
 
 请求示例：
 
@@ -43,36 +43,36 @@ GET /projects/product-quality/version-summary/detail?milestoneId=7
 
 所有业务响应使用产品质量模块专用 `Result<T>`，与通用 `Result` 字段结构一致：
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `code` | Integer | 业务状态码，成功固定为 `200` |
-| `messageCn` | String | 中文消息，成功为 `成功` |
-| `messageEn` | String | 英文消息，成功为 `success` |
-| `data` | T/null | 业务数据；异常响应通常为 `null` |
+| 字段        | 类型    | 说明                            |
+| ----------- | ------- | ------------------------------- |
+| `code`      | Integer | 业务状态码，成功固定为 `200`    |
+| `messageCn` | String  | 中文消息，成功为 `成功`         |
+| `messageEn` | String  | 英文消息，成功为 `success`      |
+| `data`      | T/null  | 业务数据；异常响应通常为 `null` |
 
 前端应根据响应体中的 `code` 判断业务是否成功，不要只依赖 HTTP 状态码。
 
 ### 2.4 版本摘要对象 `VersionSummaryResp`
 
-| 字段 | 类型 | 是否可能为 null | 说明 |
-|---|---|---|---|
-| `id` | Long | 否 | 版本摘要记录主键，对应 `pq_version_summary.id` |
-| `projectId` | Integer | 否 | 项目 ID，首次保存时由服务端根据里程碑生成 |
-| `milestoneId` | Long | 否 | 里程碑 ID |
-| `milestoneName` | String | 是 | 里程碑名称，由前端传入；修改时允许更新 |
-| `versionPositionBusinessGoalHtml` | String | 是 | 版本定位和业务目标（HTML 片段），已在服务端按白名单清理 |
-| `competitivenessGoalHtml` | String | 是 | 竞争力目标（HTML 片段），已在服务端按白名单清理 |
-| `targetMarketRegionHtml` | String | 是 | 目标市场和重点目标区域（HTML 片段），已在服务端按白名单清理 |
-| `customerIndustryValueHtml` | String | 是 | 客户价值和产业价值（HTML 片段），已在服务端按白名单清理 |
-| `huaweiValueHtml` | String | 是 | 华为价值（HTML 片段），已在服务端按白名单清理 |
-| `projectControlHtml` | String | 是 | 项目控制（HTML 片段），已在服务端按白名单清理 |
-| `supportingProductHtml` | String | 是 | 配套产品（HTML 片段），已在服务端按白名单清理 |
-| `projectInvestmentHtml` | String | 是 | 项目投资（HTML 片段），已在服务端按白名单清理 |
-| `otherHtml` | String | 是 | 其他（HTML 片段），已在服务端按白名单清理 |
-| `createBy` | String | 否 | 创建人用户 ID |
-| `createTime` | String | 否 | 创建时间，格式 `yyyy-MM-dd HH:mm:ss` |
-| `updateBy` | String | 是 | 最后修改人用户 ID |
-| `updateTime` | String | 是 | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss` |
+| 字段                              | 类型    | 是否可能为 null | 说明                                                        |
+| --------------------------------- | ------- | --------------- | ----------------------------------------------------------- |
+| `id`                              | Long    | 否              | 版本摘要记录主键，对应 `pq_version_summary.id`              |
+| `projectId`                       | Integer | 否              | 项目 ID，首次保存时由服务端根据里程碑生成                   |
+| `milestoneId`                     | Long    | 否              | 里程碑 ID                                                   |
+| `milestoneName`                   | String  | 是              | 里程碑名称，由前端传入；修改时允许更新                      |
+| `versionPositionBusinessGoalHtml` | String  | 是              | 版本定位和业务目标（HTML 片段），已在服务端按白名单清理     |
+| `competitivenessGoalHtml`         | String  | 是              | 竞争力目标（HTML 片段），已在服务端按白名单清理             |
+| `targetMarketRegionHtml`          | String  | 是              | 目标市场和重点目标区域（HTML 片段），已在服务端按白名单清理 |
+| `customerIndustryValueHtml`       | String  | 是              | 客户价值和产业价值（HTML 片段），已在服务端按白名单清理     |
+| `huaweiValueHtml`                 | String  | 是              | 华为价值（HTML 片段），已在服务端按白名单清理               |
+| `projectControlHtml`              | String  | 是              | 项目控制（HTML 片段），已在服务端按白名单清理               |
+| `supportingProductHtml`           | String  | 是              | 配套产品（HTML 片段），已在服务端按白名单清理               |
+| `projectInvestmentHtml`           | String  | 是              | 项目投资（HTML 片段），已在服务端按白名单清理               |
+| `otherHtml`                       | String  | 是              | 其他（HTML 片段），已在服务端按白名单清理                   |
+| `createBy`                        | String  | 否              | 创建人用户 ID                                               |
+| `createTime`                      | String  | 否              | 创建时间，格式 `yyyy-MM-dd HH:mm:ss`                        |
+| `updateBy`                        | String  | 是              | 最后修改人用户 ID                                           |
+| `updateTime`                      | String  | 是              | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss`                    |
 
 所有时间字段统一返回 `yyyy-MM-dd HH:mm:ss` 格式字符串，不返回 ISO 8601 的 `T` 分隔格式，也不返回时间戳。
 
@@ -80,15 +80,15 @@ GET /projects/product-quality/version-summary/detail?milestoneId=7
 
 业务失败统一返回 `code = 40001`，`messageCn` 为具体场景提示、`messageEn` 为 `params invalid`；参数校验失败时具体原因同时写入 `data`。前端可直接展示 `messageCn`：
 
-| `code` | `messageCn` | 触发场景 |
-|---|---|---|
-| `40001` | `新增版本摘要失败` | 新增数据落库失败 |
-| `40001` | `修改版本摘要失败，记录不存在或已被删除` | 修改时记录不存在或已被逻辑删除 |
-| `40001` | `记录版本摘要操作日志失败` | 修改操作日志落库失败 |
-| `40001` | `项目 ID 格式不正确，必须为数字` | 里程碑关联的项目 ID 不是合法数字 |
-| `40001` | 具体校验提示 | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
-| `403` | `没有权限` | token Cookie 缺失、无效，或用户无对应读写权限 |
-| `500` | `系统异常` | 未被其他处理器捕获的系统异常 |
+| `code`  | `messageCn`                              | 触发场景                                                   |
+| ------- | ---------------------------------------- | ---------------------------------------------------------- |
+| `40001` | `新增版本摘要失败`                       | 新增数据落库失败                                           |
+| `40001` | `修改版本摘要失败，记录不存在或已被删除` | 修改时记录不存在或已被逻辑删除                             |
+| `40001` | `记录版本摘要操作日志失败`               | 修改操作日志落库失败                                       |
+| `40001` | `项目 ID 格式不正确，必须为数字`         | 里程碑关联的项目 ID 不是合法数字                           |
+| `40001` | 具体校验提示                             | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
+| `403`   | `没有权限`                               | token Cookie 缺失、无效，或用户无对应读写权限              |
+| `500`   | `系统异常`                               | 未被其他处理器捕获的系统异常                               |
 
 错误响应示例：
 
@@ -163,24 +163,24 @@ POST /projects/product-quality/version-summary/update?milestoneId=7
 Content-Type: application/json
 ```
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|---|---|---|---|---|
-| `milestoneId` | Query | Long | 是 | 里程碑 ID，必须为大于 0 的整数 |
+| 参数          | 位置  | 类型 | 必填 | 说明                           |
+| ------------- | ----- | ---- | ---- | ------------------------------ |
+| `milestoneId` | Query | Long | 是   | 里程碑 ID，必须为大于 0 的整数 |
 
 请求体 `VersionSummarySaveReq`：
 
-| 字段 | 类型 | 必填 | 校验规则 | 说明 |
-|---|---|---|---|---|
-| `milestoneName` | String | 否 | 最大 255 字符 | 里程碑名称，由前端传入；修改时允许更新 |
-| `versionPositionBusinessGoalHtml` | String | 否 | 最大 100,000 字符 | 版本定位和业务目标；允许传 `null` 或空字符串表示清空内容 |
-| `competitivenessGoalHtml` | String | 否 | 最大 100,000 字符 | 竞争力目标；允许传 `null` 或空字符串表示清空内容 |
-| `targetMarketRegionHtml` | String | 否 | 最大 100,000 字符 | 目标市场和重点目标区域；允许传 `null` 或空字符串表示清空内容 |
-| `customerIndustryValueHtml` | String | 否 | 最大 100,000 字符 | 客户价值和产业价值；允许传 `null` 或空字符串表示清空内容 |
-| `huaweiValueHtml` | String | 否 | 最大 100,000 字符 | 华为价值；允许传 `null` 或空字符串表示清空内容 |
-| `projectControlHtml` | String | 否 | 最大 100,000 字符 | 项目控制；允许传 `null` 或空字符串表示清空内容 |
-| `supportingProductHtml` | String | 否 | 最大 100,000 字符 | 配套产品；允许传 `null` 或空字符串表示清空内容 |
-| `projectInvestmentHtml` | String | 否 | 最大 100,000 字符 | 项目投资；允许传 `null` 或空字符串表示清空内容 |
-| `otherHtml` | String | 否 | 最大 100,000 字符 | 其他；允许传 `null` 或空字符串表示清空内容 |
+| 字段                              | 类型   | 必填 | 校验规则          | 说明                                                         |
+| --------------------------------- | ------ | ---- | ----------------- | ------------------------------------------------------------ |
+| `milestoneName`                   | String | 否   | 最大 255 字符     | 里程碑名称，由前端传入；修改时允许更新                       |
+| `versionPositionBusinessGoalHtml` | String | 否   | 最大 100,000 字符 | 版本定位和业务目标；允许传 `null` 或空字符串表示清空内容     |
+| `competitivenessGoalHtml`         | String | 否   | 最大 100,000 字符 | 竞争力目标；允许传 `null` 或空字符串表示清空内容             |
+| `targetMarketRegionHtml`          | String | 否   | 最大 100,000 字符 | 目标市场和重点目标区域；允许传 `null` 或空字符串表示清空内容 |
+| `customerIndustryValueHtml`       | String | 否   | 最大 100,000 字符 | 客户价值和产业价值；允许传 `null` 或空字符串表示清空内容     |
+| `huaweiValueHtml`                 | String | 否   | 最大 100,000 字符 | 华为价值；允许传 `null` 或空字符串表示清空内容               |
+| `projectControlHtml`              | String | 否   | 最大 100,000 字符 | 项目控制；允许传 `null` 或空字符串表示清空内容               |
+| `supportingProductHtml`           | String | 否   | 最大 100,000 字符 | 配套产品；允许传 `null` 或空字符串表示清空内容               |
+| `projectInvestmentHtml`           | String | 否   | 最大 100,000 字符 | 项目投资；允许传 `null` 或空字符串表示清空内容               |
+| `otherHtml`                       | String | 否   | 最大 100,000 字符 | 其他；允许传 `null` 或空字符串表示清空内容                   |
 
 请求示例：
 

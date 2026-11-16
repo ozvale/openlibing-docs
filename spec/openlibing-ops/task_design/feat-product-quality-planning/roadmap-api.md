@@ -8,10 +8,10 @@
 
 统一基础路径：`/projects/product-quality/roadmap`
 
-| 功能 | 请求方式 | 相对路径 | 成功时 `data` 类型 |
-|---|---|---|---|
-| 查询质量策划思路 | GET | `/detail` | `RoadmapResp`，无记录时为 `null` |
-| 保存质量策划思路 | POST | `/update` | `RoadmapResp` |
+| 功能             | 请求方式 | 相对路径  | 成功时 `data` 类型               |
+| ---------------- | -------- | --------- | -------------------------------- |
+| 查询质量策划思路 | GET      | `/detail` | `RoadmapResp`，无记录时为 `null` |
+| 保存质量策划思路 | POST     | `/update` | `RoadmapResp`                    |
 
 本地服务端口为 `8098`，`context-path` 为 `/`。其他环境的域名、端口及网关前缀以部署配置为准。
 
@@ -29,9 +29,9 @@
 
 两个接口均必须传入以下参数：
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|---|---|---|---|---|
-| `milestoneId` | Query | Long | 是 | 里程碑 ID，对应 `pq_milestone.id`；前端应传正整数并在发起请求前校验非空和格式 |
+| 参数          | 位置  | 类型 | 必填 | 说明                                                                          |
+| ------------- | ----- | ---- | ---- | ----------------------------------------------------------------------------- |
+| `milestoneId` | Query | Long | 是   | 里程碑 ID，对应 `pq_milestone.id`；前端应传正整数并在发起请求前校验非空和格式 |
 
 请求示例：
 
@@ -43,42 +43,42 @@ GET /projects/product-quality/roadmap/detail?milestoneId=7
 
 所有业务响应使用产品质量模块专用 `Result<T>`，与通用 `Result` 字段结构一致：
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `code` | Integer | 业务状态码，成功固定为 `200` |
-| `messageCn` | String | 中文消息，成功为 `成功` |
-| `messageEn` | String | 英文消息，成功为 `success` |
-| `data` | T/null | 业务数据；异常响应通常为 `null` |
+| 字段        | 类型    | 说明                            |
+| ----------- | ------- | ------------------------------- |
+| `code`      | Integer | 业务状态码，成功固定为 `200`    |
+| `messageCn` | String  | 中文消息，成功为 `成功`         |
+| `messageEn` | String  | 英文消息，成功为 `success`      |
+| `data`      | T/null  | 业务数据；异常响应通常为 `null` |
 
 前端应根据响应体中的 `code` 判断业务是否成功，不要只依赖 HTTP 状态码。
 
 ### 2.4 质量策划思路对象 `RoadmapResp`
 
-| 字段 | 类型 | 是否可能为 null | 说明 |
-|---|---|---|---|
-| `id` | Long | 否 | 质量策划思路记录主键，对应 `pq_quality_roadmap.id` |
-| `projectId` | Integer | 否 | 项目 ID |
-| `milestoneId` | Long | 否 | 里程碑 ID |
-| `milestoneName` | String | 是 | 里程碑名称 |
-| `roadmapJson` | String | 是 | 质量策划思路文档，JSON 格式字符串 |
-| `createBy` | String | 否 | 创建人用户 ID |
-| `createTime` | String | 否 | 创建时间，格式 `yyyy-MM-dd HH:mm:ss` |
-| `updateBy` | String | 是 | 最后修改人用户 ID |
-| `updateTime` | String | 是 | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss` |
+| 字段            | 类型    | 是否可能为 null | 说明                                               |
+| --------------- | ------- | --------------- | -------------------------------------------------- |
+| `id`            | Long    | 否              | 质量策划思路记录主键，对应 `pq_quality_roadmap.id` |
+| `projectId`     | Integer | 否              | 项目 ID                                            |
+| `milestoneId`   | Long    | 否              | 里程碑 ID                                          |
+| `milestoneName` | String  | 是              | 里程碑名称                                         |
+| `roadmapJson`   | String  | 是              | 质量策划思路文档，JSON 格式字符串                  |
+| `createBy`      | String  | 否              | 创建人用户 ID                                      |
+| `createTime`    | String  | 否              | 创建时间，格式 `yyyy-MM-dd HH:mm:ss`               |
+| `updateBy`      | String  | 是              | 最后修改人用户 ID                                  |
+| `updateTime`    | String  | 是              | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss`           |
 
 ### 2.5 通用错误响应
 
 产品质量业务异常与参数校验失败统一返回 `code = 40001`，`messageCn` 为具体场景提示、`messageEn` 为 `params invalid`；参数校验失败时具体原因同时写入 `data`。前端可直接展示 `messageCn`：
 
-| `code` | `messageCn` | 触发场景 |
-|---|---|---|
-| `40001` | `新增质量策划思路失败` | 新增数据落库失败 |
-| `40001` | `修改质量策划思路失败，记录不存在或已被删除` | 修改时记录不存在或已被逻辑删除 |
-| `40001` | `记录质量策划思路操作日志失败` | 修改操作日志落库失败 |
-| `40001` | `项目 ID 格式不正确，必须为数字` | 里程碑关联的项目 ID 不是合法数字 |
-| `40001` | 具体校验提示 | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
-| `403` | `没有权限` | token Cookie 缺失、无效，或用户无对应读写权限 |
-| `500` | `系统异常` | 未被其他处理器捕获的系统异常 |
+| `code`  | `messageCn`                                  | 触发场景                                                   |
+| ------- | -------------------------------------------- | ---------------------------------------------------------- |
+| `40001` | `新增质量策划思路失败`                       | 新增数据落库失败                                           |
+| `40001` | `修改质量策划思路失败，记录不存在或已被删除` | 修改时记录不存在或已被逻辑删除                             |
+| `40001` | `记录质量策划思路操作日志失败`               | 修改操作日志落库失败                                       |
+| `40001` | `项目 ID 格式不正确，必须为数字`             | 里程碑关联的项目 ID 不是合法数字                           |
+| `40001` | 具体校验提示                                 | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
+| `403`   | `没有权限`                                   | token Cookie 缺失、无效，或用户无对应读写权限              |
+| `500`   | `系统异常`                                   | 未被其他处理器捕获的系统异常                               |
 
 错误响应示例：
 
@@ -147,16 +147,16 @@ POST /projects/product-quality/roadmap/update?milestoneId=7
 Content-Type: application/json
 ```
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|---|---|---|---|---|
-| `milestoneId` | Query | Long | 是 | 里程碑 ID |
+| 参数          | 位置  | 类型 | 必填 | 说明      |
+| ------------- | ----- | ---- | ---- | --------- |
+| `milestoneId` | Query | Long | 是   | 里程碑 ID |
 
 请求体 `RoadmapSaveReq`：
 
-| 字段 | 类型 | 必填 | 校验规则 | 说明 |
-|---|---|---|---|---|
-| `milestoneName` | String | 否 | 最大 255 字符 | 里程碑名称，由前端传入；修改时允许更新 |
-| `roadmapJson` | String | 否 | 最大 200,000 字符 | 质量策划思路文档，JSON 格式字符串；允许清空 |
+| 字段            | 类型   | 必填 | 校验规则          | 说明                                        |
+| --------------- | ------ | ---- | ----------------- | ------------------------------------------- |
+| `milestoneName` | String | 否   | 最大 255 字符     | 里程碑名称，由前端传入；修改时允许更新      |
+| `roadmapJson`   | String | 否   | 最大 200,000 字符 | 质量策划思路文档，JSON 格式字符串；允许清空 |
 
 请求示例：
 

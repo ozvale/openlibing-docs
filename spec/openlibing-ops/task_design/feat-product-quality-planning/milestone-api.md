@@ -8,12 +8,12 @@
 
 统一基础路径：`/projects/product-quality/milestones`
 
-| 功能 | 请求方式 | 相对路径 | 成功时 `data` 类型 |
-|---|---|---|---|
-| 创建里程碑 | POST | `/add` | `MilestoneResp` |
-| 查询项目里程碑列表 | GET | `/detail` | `List<MilestoneResp>` |
-| 修改里程碑 | POST | `/update` | `MilestoneResp` |
-| 删除里程碑 | GET | `/delete` | `null` |
+| 功能               | 请求方式 | 相对路径  | 成功时 `data` 类型    |
+| ------------------ | -------- | --------- | --------------------- |
+| 创建里程碑         | POST     | `/add`    | `MilestoneResp`       |
+| 查询项目里程碑列表 | GET      | `/detail` | `List<MilestoneResp>` |
+| 修改里程碑         | POST     | `/update` | `MilestoneResp`       |
+| 删除里程碑         | GET      | `/delete` | `null`                |
 
 本地服务端口为 `8098`，`context-path` 为 `/`。其他环境的域名、端口及网关前缀以部署配置为准。
 
@@ -29,38 +29,38 @@
 
 ### 2.2 公共 Query 参数
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|---|---|---|---|---|
-| `projectId` | Query | String | 是 | 项目 ID，最长 64 字符，不可为空白 |
-| `id` | Query | Long | 视接口 | 里程碑 ID，正整数；修改、删除接口必填 |
+| 参数        | 位置  | 类型   | 必填   | 说明                                  |
+| ----------- | ----- | ------ | ------ | ------------------------------------- |
+| `projectId` | Query | String | 是     | 项目 ID，最长 64 字符，不可为空白     |
+| `id`        | Query | Long   | 视接口 | 里程碑 ID，正整数；修改、删除接口必填 |
 
 ### 2.3 统一响应结构
 
 所有业务响应使用产品质量模块专用 `Result<T>`，与通用 `Result` 字段结构一致：
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `code` | Integer | 业务状态码，成功固定为 `200` |
-| `messageCn` | String | 中文消息，成功为 `成功` |
-| `messageEn` | String | 英文消息，成功为 `success` |
-| `data` | T/null | 业务数据；删除成功时为 `null` |
+| 字段        | 类型    | 说明                          |
+| ----------- | ------- | ----------------------------- |
+| `code`      | Integer | 业务状态码，成功固定为 `200`  |
+| `messageCn` | String  | 中文消息，成功为 `成功`       |
+| `messageEn` | String  | 英文消息，成功为 `success`    |
+| `data`      | T/null  | 业务数据；删除成功时为 `null` |
 
 前端应根据响应体中的 `code` 判断业务是否成功，不要只依赖 HTTP 状态码。
 
 ### 2.4 里程碑对象 `MilestoneResp`
 
-| 字段 | 类型 | 是否可能为 null | 说明 |
-|---|---|---|---|
-| `id` | Long | 否 | 里程碑 ID，对应 `pq_milestone.id` |
-| `projectId` | String | 否 | 项目 ID |
-| `projectName` | String | 是 | 项目名称 |
-| `milestoneName` | String | 否 | 里程碑名称，同一项目内唯一 |
-| `plannedTime` | String | 否 | 计划时间，格式 `yyyy-MM-dd HH:mm:ss` |
-| `actualTime` | String | 是 | 实际时间，格式 `yyyy-MM-dd HH:mm:ss`；未发生时为空 |
-| `createBy` | String | 否 | 创建人用户 ID |
-| `createTime` | String | 否 | 创建时间，格式 `yyyy-MM-dd HH:mm:ss` |
-| `updateBy` | String | 是 | 最后修改人用户 ID |
-| `updateTime` | String | 是 | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss` |
+| 字段            | 类型   | 是否可能为 null | 说明                                               |
+| --------------- | ------ | --------------- | -------------------------------------------------- |
+| `id`            | Long   | 否              | 里程碑 ID，对应 `pq_milestone.id`                  |
+| `projectId`     | String | 否              | 项目 ID                                            |
+| `projectName`   | String | 是              | 项目名称                                           |
+| `milestoneName` | String | 否              | 里程碑名称，同一项目内唯一                         |
+| `plannedTime`   | String | 否              | 计划时间，格式 `yyyy-MM-dd HH:mm:ss`               |
+| `actualTime`    | String | 是              | 实际时间，格式 `yyyy-MM-dd HH:mm:ss`；未发生时为空 |
+| `createBy`      | String | 否              | 创建人用户 ID                                      |
+| `createTime`    | String | 否              | 创建时间，格式 `yyyy-MM-dd HH:mm:ss`               |
+| `updateBy`      | String | 是              | 最后修改人用户 ID                                  |
+| `updateTime`    | String | 是              | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss`           |
 
 所有时间字段统一返回 `yyyy-MM-dd HH:mm:ss` 格式字符串，不返回 ISO 8601 的 `T` 分隔格式，也不返回时间戳。
 
@@ -68,17 +68,17 @@
 
 产品质量业务异常与参数校验失败统一返回 `code = 40001`，`messageCn` 为具体场景提示、`messageEn` 为 `params invalid`；参数校验失败时具体原因同时写入 `data`。前端可直接展示 `messageCn`：
 
-| `code` | `messageCn` | 触发场景 |
-|---|---|---|
-| `40001` | `创建里程碑失败，已存在该里程碑名称` | 新增时同项目下里程碑名称重复 |
-| `40001` | `修改里程碑失败，已存在该里程碑名称` | 修改后名称与同项目其他里程碑重复 |
-| `40001` | `里程碑不存在或已被删除` | 按里程碑 ID 查询或修改时记录不存在 |
-| `40001` | `里程碑不存在或不属于当前项目` | 按项目查询或删除时记录不存在、跨项目访问 |
-| `40001` | `修改里程碑失败，记录不存在或已被删除` | 修改时记录不存在或已被逻辑删除 |
-| `40001` | `删除里程碑失败，记录不存在或已被删除` | 删除时记录不存在或已被逻辑删除 |
-| `40001` | 具体校验提示 | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
-| `403` | `没有权限` | token Cookie 缺失、无效，或用户无对应读写权限 |
-| `500` | `系统异常` | 未被其他处理器捕获的系统异常 |
+| `code`  | `messageCn`                            | 触发场景                                                   |
+| ------- | -------------------------------------- | ---------------------------------------------------------- |
+| `40001` | `创建里程碑失败，已存在该里程碑名称`   | 新增时同项目下里程碑名称重复                               |
+| `40001` | `修改里程碑失败，已存在该里程碑名称`   | 修改后名称与同项目其他里程碑重复                           |
+| `40001` | `里程碑不存在或已被删除`               | 按里程碑 ID 查询或修改时记录不存在                         |
+| `40001` | `里程碑不存在或不属于当前项目`         | 按项目查询或删除时记录不存在、跨项目访问                   |
+| `40001` | `修改里程碑失败，记录不存在或已被删除` | 修改时记录不存在或已被逻辑删除                             |
+| `40001` | `删除里程碑失败，记录不存在或已被删除` | 删除时记录不存在或已被逻辑删除                             |
+| `40001` | 具体校验提示                           | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
+| `403`   | `没有权限`                             | token Cookie 缺失、无效，或用户无对应读写权限              |
+| `500`   | `系统异常`                             | 未被其他处理器捕获的系统异常                               |
 
 错误响应示例：
 
@@ -100,18 +100,18 @@ POST /projects/product-quality/milestones/add?projectId=project-1
 Content-Type: application/json
 ```
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|---|---|---|---|---|
-| `projectId` | Query | String | 是 | 项目 ID |
+| 参数        | 位置  | 类型   | 必填 | 说明    |
+| ----------- | ----- | ------ | ---- | ------- |
+| `projectId` | Query | String | 是   | 项目 ID |
 
 请求体 `MilestoneSaveReq`：
 
-| 字段 | 类型 | 必填 | 校验规则 | 说明 |
-|---|---|---|---|---|
-| `projectName` | String | 否 | 最长 255 字符 | 项目名称；服务端最终以 `project_info` 中的项目名称为准 |
-| `milestoneName` | String | 是 | 非空白，最长 255 字符 | 里程碑名称，同一项目内唯一 |
-| `plannedTime` | String | 是 | `yyyy-MM-dd HH:mm:ss` | 计划时间 |
-| `actualTime` | String | 否 | `yyyy-MM-dd HH:mm:ss` | 实际时间；未发生时可不传或传 `null` |
+| 字段            | 类型   | 必填 | 校验规则              | 说明                                                   |
+| --------------- | ------ | ---- | --------------------- | ------------------------------------------------------ |
+| `projectName`   | String | 否   | 最长 255 字符         | 项目名称；服务端最终以 `project_info` 中的项目名称为准 |
+| `milestoneName` | String | 是   | 非空白，最长 255 字符 | 里程碑名称，同一项目内唯一                             |
+| `plannedTime`   | String | 是   | `yyyy-MM-dd HH:mm:ss` | 计划时间                                               |
+| `actualTime`    | String | 否   | `yyyy-MM-dd HH:mm:ss` | 实际时间；未发生时可不传或传 `null`                    |
 
 请求示例：
 
@@ -201,10 +201,10 @@ POST /projects/product-quality/milestones/update?projectId=project-1&id=1
 Content-Type: application/json
 ```
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|---|---|---|---|---|
-| `projectId` | Query | String | 是 | 项目 ID |
-| `id` | Query | Long | 是 | 里程碑 ID |
+| 参数        | 位置  | 类型   | 必填 | 说明      |
+| ----------- | ----- | ------ | ---- | --------- |
+| `projectId` | Query | String | 是   | 项目 ID   |
+| `id`        | Query | Long   | 是   | 里程碑 ID |
 
 请求体 `MilestoneSaveReq` 与创建接口一致：
 

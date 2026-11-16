@@ -10,14 +10,14 @@
 - 新增 `pq_internal_improvement_log`：`id/internal_improvement_id/old_data/new_data/update_by/update_time`，索引 `(internal_improvement_id, update_time)`。业务表与日志表均使用 `openlibing_quality` 库名前缀，Mapper SQL 显式声明且仅使用参数绑定。
 - `InternalImprovementSaveReq` 仅接收业务字段；`InternalImprovementResp` 返回完整业务字段和审计字段；`BatchDeleteReq` 接收非空、最多 200 项的 ID 列表。
 
-| 方法 | 相对路径 | Query 参数 | 成功响应 |
-|---|---|---|---|
-| POST | `/add` | `milestoneId` | `Result<InternalImprovementResp>` |
-| GET | `/getPage` | `milestoneId/page/pageSize` | `Result<PageResult<InternalImprovementResp>>` |
-| GET | `/detail` | `milestoneId/id` | `Result<InternalImprovementResp>` |
-| POST | `/update` | `milestoneId/id` | `Result<InternalImprovementResp>` |
-| GET | `/delete` | `milestoneId/id` | `Result<Void>` |
-| POST | `/batch-delete` | `milestoneId` | `Result<Void>`，body 为 ID 列表 |
+| 方法 | 相对路径        | Query 参数                  | 成功响应                                      |
+| ---- | --------------- | --------------------------- | --------------------------------------------- |
+| POST | `/add`          | `milestoneId`               | `Result<InternalImprovementResp>`             |
+| GET  | `/getPage`      | `milestoneId/page/pageSize` | `Result<PageResult<InternalImprovementResp>>` |
+| GET  | `/detail`       | `milestoneId/id`            | `Result<InternalImprovementResp>`             |
+| POST | `/update`       | `milestoneId/id`            | `Result<InternalImprovementResp>`             |
+| GET  | `/delete`       | `milestoneId/id`            | `Result<Void>`                                |
+| POST | `/batch-delete` | `milestoneId`               | `Result<Void>`，body 为 ID 列表               |
 
 统一基础路径为 `/projects/product-quality/internal-improvements`。分页默认 `1/20`，`pageSize<=200`，列表固定 `id DESC`。新增时校验里程碑存在并生成项目归属；详情、修改和删除均固定 `milestone_id + id + deleted=0` 条件。修改为全量覆盖可编辑字段，保留归属和创建审计字段。
 
@@ -81,10 +81,10 @@ App Service 负责权限、token 用户、DTO、事务和公共审计快照；Do
 
 ### API 与分层
 
-| 方法 | 路径 | 参数 | 响应 |
-|---|---|---|---|
-| GET | `/projects/product-quality/catalogs/basic` | 无 | `Result<List<CatalogResp>>` |
-| GET | `/projects/product-quality/catalogs/milestone` | 必填正整数 `milestoneId` | `Result<List<CatalogResp>>` |
+| 方法 | 路径                                           | 参数                     | 响应                        |
+| ---- | ---------------------------------------------- | ------------------------ | --------------------------- |
+| GET  | `/projects/product-quality/catalogs/basic`     | 无                       | `Result<List<CatalogResp>>` |
+| GET  | `/projects/product-quality/catalogs/milestone` | 必填正整数 `milestoneId` | `Result<List<CatalogResp>>` |
 
 - `CatalogResp` 包含 `id/milestoneId/catalogId/parentId/catalogEnName/catalogCnName/catalogLevel/sortNo/optionalFlag/children`；基础目录的 `milestoneId/catalogId` 为 `null`，所有节点的 `children` 初始化为空数组。
 - `ProductQualityCatalogController` 仅负责参数校验和统一响应；`ProductQualityCatalogService` 负责 `canRead`、DTO 转换和内存组树；`ProductQualityCatalogDomainService` 委托两个 Mapper 查询。
@@ -107,10 +107,10 @@ App Service 负责权限、token 用户、DTO、事务和公共审计快照；Do
 
 ### API 与保存流程
 
-| 方法 | 路径 | 参数 | 响应 |
-|---|---|---|---|
-| GET | `/projects/product-quality/version-summary/detail` | 必填正整数 `milestoneId` | `Result<VersionSummaryResp>`，无记录时 `data=null` |
-| POST | `/projects/product-quality/version-summary/update` | Query `milestoneId`；body `VersionSummarySaveReq` | `Result<VersionSummaryResp>` |
+| 方法 | 路径                                               | 参数                                              | 响应                                               |
+| ---- | -------------------------------------------------- | ------------------------------------------------- | -------------------------------------------------- |
+| GET  | `/projects/product-quality/version-summary/detail` | 必填正整数 `milestoneId`                          | `Result<VersionSummaryResp>`，无记录时 `data=null` |
+| POST | `/projects/product-quality/version-summary/update` | Query `milestoneId`；body `VersionSummarySaveReq` | `Result<VersionSummaryResp>`                       |
 
 `VersionSummarySaveReq` 仅包含可空的 `summaryHtml`，最大 100,000 字符。响应包含摘要主键、项目 ID、里程碑 ID/名称、富文本和完整审计字段。
 
@@ -168,15 +168,15 @@ Controller
 
 ### 3.1 Controller 分组
 
-| 类 | 职责 |
-|---|---|
-| `ProductQualityMilestoneController` | 里程碑 CRUD、按里程碑查询策划 |
-| `ProductQualityPlanController` | 幂等初始化、目录、当前用户权限、质量负责人维护 |
-| `ProductQualityStepOneController` | 版本摘要、思维导图及 Step1 四个表格 |
-| `ProductQualityStepTwoController` | 目标策划、风险策划 |
-| `ProductQualityStepThreeController` | 度量指标、评估策划 |
-| `ProductQualityStepFourController` | 会议、状态报告、知识输入、知识输出 |
-| `ProductQualitySpecialPlanController` | 特性专项、工程能力阶段表和检查项表 |
+| 类                                    | 职责                                           |
+| ------------------------------------- | ---------------------------------------------- |
+| `ProductQualityMilestoneController`   | 里程碑 CRUD、按里程碑查询策划                  |
+| `ProductQualityPlanController`        | 幂等初始化、目录、当前用户权限、质量负责人维护 |
+| `ProductQualityStepOneController`     | 版本摘要、思维导图及 Step1 四个表格            |
+| `ProductQualityStepTwoController`     | 目标策划、风险策划                             |
+| `ProductQualityStepThreeController`   | 度量指标、评估策划                             |
+| `ProductQualityStepFourController`    | 会议、状态报告、知识输入、知识输出             |
+| `ProductQualitySpecialPlanController` | 特性专项、工程能力阶段表和检查项表             |
 
 每个叶子资源使用独立 `XxxSaveReq` / `XxxResp`，不暴露持久化实体。批量删除共用 `BatchDeleteReq`，分页参数使用统一 `PageQueryReq` 或等价校验对象。
 
@@ -218,12 +218,12 @@ Controller
 
 ### 4.2 核心表（4 张）
 
-| 表 | 关键字段与约束 | 说明 |
-|---|---|---|
-| `pq_milestone` | `project_id`、`milestone_name VARCHAR(255)`、`planned_time DATETIME`、`actual_time DATETIME NULL`；索引 `(project_id, deleted, id)` | 项目里程碑主数据；名称必填，实际时间可空 |
-| `pq_quality_plan` | `project_id`、`milestone_id`；唯一键 `(milestone_id, deleted)`，索引 `(project_id, deleted)` | 一个里程碑一份有效策划；不提供策划删除接口 |
-| `pq_plan_catalog` | `project_id`、`plan_id`、`parent_id NULL`、`template_code`、`catalog_name`、`catalog_level`、`sort_no`、`content_type`、`table_key NULL`、`optional_flag`；唯一键 `(plan_id, template_code, deleted)` | 初始化时复制 Java 固定目录模板；`catalog_level <= 3` |
-| `pq_project_quality_owner` | `project_id`、`user_id VARCHAR(64)`、`user_name VARCHAR(128) NULL`；唯一键 `(project_id, user_id, deleted)` | 项目级质量负责人；重新添加已删除用户时恢复原记录，避免唯一键冲突 |
+| 表                         | 关键字段与约束                                                                                                                                                                                        | 说明                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `pq_milestone`             | `project_id`、`milestone_name VARCHAR(255)`、`planned_time DATETIME`、`actual_time DATETIME NULL`；索引 `(project_id, deleted, id)`                                                                   | 项目里程碑主数据；名称必填，实际时间可空                         |
+| `pq_quality_plan`          | `project_id`、`milestone_id`；唯一键 `(milestone_id, deleted)`，索引 `(project_id, deleted)`                                                                                                          | 一个里程碑一份有效策划；不提供策划删除接口                       |
+| `pq_plan_catalog`          | `project_id`、`plan_id`、`parent_id NULL`、`template_code`、`catalog_name`、`catalog_level`、`sort_no`、`content_type`、`table_key NULL`、`optional_flag`；唯一键 `(plan_id, template_code, deleted)` | 初始化时复制 Java 固定目录模板；`catalog_level <= 3`             |
+| `pq_project_quality_owner` | `project_id`、`user_id VARCHAR(64)`、`user_name VARCHAR(128) NULL`；唯一键 `(project_id, user_id, deleted)`                                                                                           | 项目级质量负责人；重新添加已删除用户时恢复原记录，避免唯一键冲突 |
 
 `content_type` 只使用系统固定值：`DIRECTORY`、`RICH_TEXT`、`MINDMAP`、`TABLE`。它是技术渲染类型，不是 Issue 未定义的业务字典。
 
@@ -233,131 +233,131 @@ Controller
 
 #### `pq_version_summary`
 
-| Issue 字段 | 列 | 规则 |
-|---|---|---|
-| 版本摘要 | `summary_html MEDIUMTEXT` | 单条富文本；服务端白名单清理，防止存储型 XSS |
+| Issue 字段 | 列                        | 规则                                         |
+| ---------- | ------------------------- | -------------------------------------------- |
+| 版本摘要   | `summary_html MEDIUMTEXT` | 单条富文本；服务端白名单清理，防止存储型 XSS |
 
 约束：`(plan_id, deleted)` 唯一；保存采用“存在则更新、不存在则新增”。
 
 #### `pq_quality_mindmap`
 
-| Issue 字段 | 列 | 规则 |
-|---|---|---|
+| Issue 字段   | 列                  | 规则                                                        |
+| ------------ | ------------------- | ----------------------------------------------------------- |
 | 质量策划思路 | `mindmap_json JSON` | 单条思维导图文档；合法 JSON、大小受限、结构只读为数据不执行 |
 
 约束：`(plan_id, deleted)` 唯一。
 
 #### `pq_internal_improvement`
 
-| Issue 字段 | 列 | 规则 |
-|---|---|---|
-| 类别 | `category` | 字符串 |
-| 名称 | `name` | 字符串 |
-| *本版本改进目标 | `improvement_target TEXT` | 必填 |
-| *本版本落地措施 | `implementation_measure TEXT` | 必填 |
-| *责任人 | `owner_name` | 必填 |
-| *计划完成时间 | `planned_finish_time DATETIME` | 必填 |
-| 里程碑 | `milestone_id BIGINT` | 可空；非空时须属于同项目 |
-| 状态 | `status` | 字符串 |
-| 措施进展(%) | `progress DECIMAL(5,2)` | 0–100，可空 |
-| 进展说明 | `progress_description TEXT` | 可空 |
+| Issue 字段      | 列                             | 规则                     |
+| --------------- | ------------------------------ | ------------------------ |
+| 类别            | `category`                     | 字符串                   |
+| 名称            | `name`                         | 字符串                   |
+| *本版本改进目标 | `improvement_target TEXT`      | 必填                     |
+| *本版本落地措施 | `implementation_measure TEXT`  | 必填                     |
+| *责任人         | `owner_name`                   | 必填                     |
+| *计划完成时间   | `planned_finish_time DATETIME` | 必填                     |
+| 里程碑          | `milestone_id BIGINT`          | 可空；非空时须属于同项目 |
+| 状态            | `status`                       | 字符串                   |
+| 措施进展(%)     | `progress DECIMAL(5,2)`        | 0–100，可空              |
+| 进展说明        | `progress_description TEXT`    | 可空                     |
 
 #### `pq_historical_experience`
 
-| Issue 字段 | 列 | 规则 |
-|---|---|---|
-| 经验名称 | `experience_name` | 字符串 |
-| 摘要 | `summary TEXT` | 可空 |
-| 问题发生时间 | `problem_occurred_time DATETIME` | 可空 |
-| *本版本落地措施 | `implementation_measure TEXT` | 必填 |
-| *责任人 | `owner_name` | 必填 |
-| *计划完成时间 | `planned_finish_time DATETIME` | 必填 |
-| 里程碑 | `milestone_id BIGINT` | 同项目校验 |
-| 状态 | `status` | 字符串 |
-| 措施进展(%) | `progress DECIMAL(5,2)` | 0–100 |
-| 进展说明 | `progress_description TEXT` | 可空 |
+| Issue 字段      | 列                               | 规则       |
+| --------------- | -------------------------------- | ---------- |
+| 经验名称        | `experience_name`                | 字符串     |
+| 摘要            | `summary TEXT`                   | 可空       |
+| 问题发生时间    | `problem_occurred_time DATETIME` | 可空       |
+| *本版本落地措施 | `implementation_measure TEXT`    | 必填       |
+| *责任人         | `owner_name`                     | 必填       |
+| *计划完成时间   | `planned_finish_time DATETIME`   | 必填       |
+| 里程碑          | `milestone_id BIGINT`            | 同项目校验 |
+| 状态            | `status`                         | 字符串     |
+| 措施进展(%)     | `progress DECIMAL(5,2)`          | 0–100      |
+| 进展说明        | `progress_description TEXT`      | 可空       |
 
 #### `pq_value_feature`
 
-| Issue 字段 | 列 | 规则 |
-|---|---|---|
-| *名称 | `name` | 必填 |
-| *输入描述 | `input_description TEXT` | 必填 |
-| 类型 | `feature_type` | 字符串 |
-| 编码 | `feature_code` | 字符串 |
-| 是否策划 | `planned_flag TINYINT` | 可空布尔 |
-| 来源 | `source` | 字符串 |
-| 里程碑 | `milestone_id BIGINT` | 同项目校验 |
-| 是否价值特性 | `value_feature_flag TINYINT` | 可空布尔 |
-| PI | `pi` | 字符串，不调用外部 PI 系统 |
+| Issue 字段   | 列                           | 规则                       |
+| ------------ | ---------------------------- | -------------------------- |
+| *名称        | `name`                       | 必填                       |
+| *输入描述    | `input_description TEXT`     | 必填                       |
+| 类型         | `feature_type`               | 字符串                     |
+| 编码         | `feature_code`               | 字符串                     |
+| 是否策划     | `planned_flag TINYINT`       | 可空布尔                   |
+| 来源         | `source`                     | 字符串                     |
+| 里程碑       | `milestone_id BIGINT`        | 同项目校验                 |
+| 是否价值特性 | `value_feature_flag TINYINT` | 可空布尔                   |
+| PI           | `pi`                         | 字符串，不调用外部 PI 系统 |
 
 #### `pq_input_analysis`
 
-| Issue 字段 | 列 | 规则 |
-|---|---|---|
-| *视角分类 | `perspective_category` | 必填字符串 |
-| *小类 | `sub_category` | 必填字符串 |
-| *输入描述 | `input_description TEXT` | 必填 |
-| 机会/优势（strengths/opportunities） | `strengths_opportunities TEXT` | 可空 |
-| 危险/劣势（weaknesses/threats） | `weaknesses_threats TEXT` | 可空 |
-| *本版本质量策略 | `quality_strategy TEXT` | 必填 |
-| 里程碑 | `milestone_id BIGINT` | 同项目校验 |
-| 是否分解质量目标 | `objective_decomposed_flag TINYINT` | 可空布尔 |
+| Issue 字段                           | 列                                  | 规则       |
+| ------------------------------------ | ----------------------------------- | ---------- |
+| *视角分类                            | `perspective_category`              | 必填字符串 |
+| *小类                                | `sub_category`                      | 必填字符串 |
+| *输入描述                            | `input_description TEXT`            | 必填       |
+| 机会/优势（strengths/opportunities） | `strengths_opportunities TEXT`      | 可空       |
+| 危险/劣势（weaknesses/threats）      | `weaknesses_threats TEXT`           | 可空       |
+| *本版本质量策略                      | `quality_strategy TEXT`             | 必填       |
+| 里程碑                               | `milestone_id BIGINT`               | 同项目校验 |
+| 是否分解质量目标                     | `objective_decomposed_flag TINYINT` | 可空布尔   |
 
 ### 4.4 Step2 业务表（2 张）
 
 #### `pq_quality_objective`
 
-| Issue 字段 | 列 |
-|---|---|
-| 视角分类 | `perspective_category` |
-| 小类 | `sub_category` |
-| 一级分类(QFD展开) | `qfd_primary_category` |
-| 二级分类(QFD展开) | `qfd_secondary_category` |
-| *本版本质量策略 | `quality_strategy TEXT` |
-| 策划类别 | `planning_category` |
-| 策划项子模块 | `planning_submodule` |
-| 责任角色 | `owner_role` |
-| 子模块责任人 | `submodule_owner` |
-| 策划完成时间 | `planning_finish_time DATETIME` |
-| *质量目标 | `quality_objective TEXT` |
-| *差距&风险分析 | `gap_risk_analysis TEXT` |
-| 策划要点 | `planning_key_points TEXT` |
-| *关键措施 | `key_measure TEXT` |
-| *措施实施责任人 | `measure_owner` |
-| *计划完成时间 | `planned_finish_time DATETIME` |
-| 措施进展说明 | `progress_description TEXT` |
-| 措施进展（%） | `progress DECIMAL(5,2)` |
-| 措施完成状态 | `completion_status` |
-| 验收标准 | `acceptance_criteria TEXT` |
-| 度量指标 | `metric_name` |
-| 里程碑 | `milestone_id BIGINT` |
-| 目标值 | `target_value` |
-| 实际值 | `actual_value` |
-| 目标达成结果 | `achievement_result` |
-| 目标达成情况说明 | `achievement_description TEXT` |
+| Issue 字段        | 列                              |
+| ----------------- | ------------------------------- |
+| 视角分类          | `perspective_category`          |
+| 小类              | `sub_category`                  |
+| 一级分类(QFD展开) | `qfd_primary_category`          |
+| 二级分类(QFD展开) | `qfd_secondary_category`        |
+| *本版本质量策略   | `quality_strategy TEXT`         |
+| 策划类别          | `planning_category`             |
+| 策划项子模块      | `planning_submodule`            |
+| 责任角色          | `owner_role`                    |
+| 子模块责任人      | `submodule_owner`               |
+| 策划完成时间      | `planning_finish_time DATETIME` |
+| *质量目标         | `quality_objective TEXT`        |
+| *差距&风险分析    | `gap_risk_analysis TEXT`        |
+| 策划要点          | `planning_key_points TEXT`      |
+| *关键措施         | `key_measure TEXT`              |
+| *措施实施责任人   | `measure_owner`                 |
+| *计划完成时间     | `planned_finish_time DATETIME`  |
+| 措施进展说明      | `progress_description TEXT`     |
+| 措施进展（%）     | `progress DECIMAL(5,2)`         |
+| 措施完成状态      | `completion_status`             |
+| 验收标准          | `acceptance_criteria TEXT`      |
+| 度量指标          | `metric_name`                   |
+| 里程碑            | `milestone_id BIGINT`           |
+| 目标值            | `target_value`                  |
+| 实际值            | `actual_value`                  |
+| 目标达成结果      | `achievement_result`            |
+| 目标达成情况说明  | `achievement_description TEXT`  |
 
 `*` 字段必填，进展 0–100，里程碑同项目；目标达成结果由用户填写，本期不自动计算。
 
 #### `pq_quality_risk`
 
-| Issue 字段 | 列 | 规则 |
-|---|---|---|
-| *WHY（目标） | `why_objective TEXT` | 必填 |
-| *WHO（谁参与实现目标） | `who_participants TEXT` | 必填 |
-| *HOW（为了实现目标，需要做什么事情/活动？） | `how_activity TEXT` | 必填 |
-| *WHAT（做的过程有什么问题/风险？依此制定质量保障措施） | `what_risk TEXT` | 必填 |
-| 发生概率 | `occurrence_probability` | 字符串，不虚构等级 |
-| 影响程度 | `impact_degree` | 字符串 |
-| 风险等级 | `risk_level` | 字符串，不自动计算 |
-| *应对措施 | `response_measure TEXT` | 必填 |
-| 责任人 | `owner_name` | 字符串 |
-| 提出人 | `proposer_name` | 字符串 |
-| 计划解决时间 | `planned_resolve_time DATETIME` | 可空 |
-| 状态 | `status` | 字符串 |
-| 措施进展(%) | `progress DECIMAL(5,2)` | 0–100 |
-| 进展 | `progress_description TEXT` | 可空 |
-| 是否QCC备选主题 | `qcc_candidate_flag TINYINT` | 可空布尔 |
+| Issue 字段                                             | 列                              | 规则               |
+| ------------------------------------------------------ | ------------------------------- | ------------------ |
+| *WHY（目标）                                           | `why_objective TEXT`            | 必填               |
+| *WHO（谁参与实现目标）                                 | `who_participants TEXT`         | 必填               |
+| *HOW（为了实现目标，需要做什么事情/活动？）            | `how_activity TEXT`             | 必填               |
+| *WHAT（做的过程有什么问题/风险？依此制定质量保障措施） | `what_risk TEXT`                | 必填               |
+| 发生概率                                               | `occurrence_probability`        | 字符串，不虚构等级 |
+| 影响程度                                               | `impact_degree`                 | 字符串             |
+| 风险等级                                               | `risk_level`                    | 字符串，不自动计算 |
+| *应对措施                                              | `response_measure TEXT`         | 必填               |
+| 责任人                                                 | `owner_name`                    | 字符串             |
+| 提出人                                                 | `proposer_name`                 | 字符串             |
+| 计划解决时间                                           | `planned_resolve_time DATETIME` | 可空               |
+| 状态                                                   | `status`                        | 字符串             |
+| 措施进展(%)                                            | `progress DECIMAL(5,2)`         | 0–100              |
+| 进展                                                   | `progress_description TEXT`     | 可空               |
+| 是否QCC备选主题                                        | `qcc_candidate_flag TINYINT`    | 可空布尔           |
 
 ### 4.5 Step3 业务表（2 张）
 
@@ -365,131 +365,131 @@ Controller
 
 #### `pq_metric_plan`
 
-| Issue 字段 | 列 | 规则 |
-|---|---|---|
-| 指标名称 | `metric_name` | 字符串 |
-| 指标评估项 | `evaluation_item` | 字符串 |
-| 指标定义 | `metric_definition TEXT` | 可空 |
-| 指标属性 | `metric_attribute` | 字符串 |
-| 指标算法 | `metric_algorithm TEXT` | 可空，不执行公式 |
-| 里程碑 | `milestone_id BIGINT` | 同项目校验 |
-| 责任人 | `owner_name` | 字符串 |
-| 版本级目标值 | `version_target_value` | 字符串 |
-| IT实际值 | `it_actual_value` | 字符串 |
-| 实际值 | `actual_value` | 字符串 |
-| 状态 | `status` | 字符串 |
+| Issue 字段   | 列                       | 规则             |
+| ------------ | ------------------------ | ---------------- |
+| 指标名称     | `metric_name`            | 字符串           |
+| 指标评估项   | `evaluation_item`        | 字符串           |
+| 指标定义     | `metric_definition TEXT` | 可空             |
+| 指标属性     | `metric_attribute`       | 字符串           |
+| 指标算法     | `metric_algorithm TEXT`  | 可空，不执行公式 |
+| 里程碑       | `milestone_id BIGINT`    | 同项目校验       |
+| 责任人       | `owner_name`             | 字符串           |
+| 版本级目标值 | `version_target_value`   | 字符串           |
+| IT实际值     | `it_actual_value`        | 字符串           |
+| 实际值       | `actual_value`           | 字符串           |
+| 状态         | `status`                 | 字符串           |
 
 #### `pq_evaluation_plan`
 
-| Issue 字段 | 列 | 规则 |
-|---|---|---|
-| *质量评估点 | `quality_evaluation_point` | 必填 |
-| *最新计划时间 | `latest_planned_time DATETIME` | 必填 |
-| *SUB子领域 | `sub_domain` | 必填 |
-| *评审组织 | `review_organization` | 必填 |
-| *评估要点 | `evaluation_key_points TEXT` | 必填 |
-| *领域代表 | `domain_representative` | 必填 |
-| *SUB结论承载的作业平台 | `conclusion_platform` | 必填字符串，不做外部调用 |
-| 评估结论 | `evaluation_conclusion TEXT` | 可空 |
-| 评估意见 | `evaluation_opinion TEXT` | 可空 |
-| 实际时间 | `actual_time DATETIME` | 可空 |
+| Issue 字段             | 列                             | 规则                     |
+| ---------------------- | ------------------------------ | ------------------------ |
+| *质量评估点            | `quality_evaluation_point`     | 必填                     |
+| *最新计划时间          | `latest_planned_time DATETIME` | 必填                     |
+| *SUB子领域             | `sub_domain`                   | 必填                     |
+| *评审组织              | `review_organization`          | 必填                     |
+| *评估要点              | `evaluation_key_points TEXT`   | 必填                     |
+| *领域代表              | `domain_representative`        | 必填                     |
+| *SUB结论承载的作业平台 | `conclusion_platform`          | 必填字符串，不做外部调用 |
+| 评估结论               | `evaluation_conclusion TEXT`   | 可空                     |
+| 评估意见               | `evaluation_opinion TEXT`      | 可空                     |
+| 实际时间               | `actual_time DATETIME`         | 可空                     |
 
 ### 4.6 Step4 业务表（4 张）
 
 #### `pq_meeting_operation`
 
-| Issue 字段 | 列 |
-|---|---|
-| 会议 | `meeting_name` |
-| 责任人 | `owner_name` |
-| 类别 | `category` |
-| 频度 | `frequency` |
-| 参加人 | `participants TEXT` |
-| 议题 | `topics TEXT` |
-| 里程碑 | `milestone_id BIGINT` |
-| 责任角色 | `owner_role` |
+| Issue 字段 | 列                    |
+| ---------- | --------------------- |
+| 会议       | `meeting_name`        |
+| 责任人     | `owner_name`          |
+| 类别       | `category`            |
+| 频度       | `frequency`           |
+| 参加人     | `participants TEXT`   |
+| 议题       | `topics TEXT`         |
+| 里程碑     | `milestone_id BIGINT` |
+| 责任角色   | `owner_role`          |
 
 #### `pq_status_report`
 
-| Issue 字段 | 列 |
-|---|---|
-| 报告 | `report_name` |
-| 频度 | `frequency` |
-| 发送人 | `sender_name` |
-| 主送人员 | `primary_recipients TEXT` |
-| 抄送人员 | `cc_recipients TEXT` |
-| 里程碑 | `milestone_id BIGINT` |
-| 责任角色 | `owner_role` |
+| Issue 字段 | 列                        |
+| ---------- | ------------------------- |
+| 报告       | `report_name`             |
+| 频度       | `frequency`               |
+| 发送人     | `sender_name`             |
+| 主送人员   | `primary_recipients TEXT` |
+| 抄送人员   | `cc_recipients TEXT`      |
+| 里程碑     | `milestone_id BIGINT`     |
+| 责任角色   | `owner_role`              |
 
 #### `pq_knowledge_input`
 
-| Issue 字段 | 列 | 规则 |
-|---|---|---|
-| *关键知识领域 | `knowledge_domain` | 必填 |
-| 短板/痛点分析 | `pain_point_analysis TEXT` | 可空 |
-| *我们缺哪些知识？（要回答的问题） | `missing_knowledge TEXT` | 必填 |
-| *谁需要获取知识（赋能对象） | `empowerment_target TEXT` | 必填 |
-| *获取知识采用行动（赋能方式） | `acquisition_action TEXT` | 必填 |
-| *知识资源在哪里？ | `knowledge_resource TEXT` | 必填 |
-| *谁负责采取行动（姓名+工号） | `action_owner TEXT` | 必填，不拆分未验证的人员字段 |
-| 开展阶段 | `execution_stage` | 字符串 |
-| *需要完成行动日期 | `required_finish_time DATETIME` | 必填 |
-| 优先级 | `priority` | 字符串 |
-| 状态 | `status` | 字符串 |
-| 赋能效果验收方式 | `acceptance_method TEXT` | 可空 |
-| 链接 | `resource_link TEXT` | 仅允许 http/https，避免 javascript 等伪协议 |
+| Issue 字段                        | 列                              | 规则                                        |
+| --------------------------------- | ------------------------------- | ------------------------------------------- |
+| *关键知识领域                     | `knowledge_domain`              | 必填                                        |
+| 短板/痛点分析                     | `pain_point_analysis TEXT`      | 可空                                        |
+| *我们缺哪些知识？（要回答的问题） | `missing_knowledge TEXT`        | 必填                                        |
+| *谁需要获取知识（赋能对象）       | `empowerment_target TEXT`       | 必填                                        |
+| *获取知识采用行动（赋能方式）     | `acquisition_action TEXT`       | 必填                                        |
+| *知识资源在哪里？                 | `knowledge_resource TEXT`       | 必填                                        |
+| *谁负责采取行动（姓名+工号）      | `action_owner TEXT`             | 必填，不拆分未验证的人员字段                |
+| 开展阶段                          | `execution_stage`               | 字符串                                      |
+| *需要完成行动日期                 | `required_finish_time DATETIME` | 必填                                        |
+| 优先级                            | `priority`                      | 字符串                                      |
+| 状态                              | `status`                        | 字符串                                      |
+| 赋能效果验收方式                  | `acceptance_method TEXT`        | 可空                                        |
+| 链接                              | `resource_link TEXT`            | 仅允许 http/https，避免 javascript 等伪协议 |
 
 #### `pq_knowledge_output`
 
-| Issue 字段 | 列 | 规则 |
-|---|---|---|
-| *阶段点 | `stage_point` | 必填 |
-| *时间点 | `time_point DATETIME` | 必填 |
-| *捕获哪些知识 | `captured_knowledge TEXT` | 必填 |
-| *捕获知识采取的行动 | `capture_action TEXT` | 必填 |
-| 输出交付件 | `output_deliverable TEXT` | 可空 |
-| 存放或分享的位置 | `storage_location TEXT` | 可空 |
-| *谁负责采取行动（姓名+工号） | `action_owner` | 必填 |
-| *计划完成时间 | `planned_finish_time DATETIME` | 必填 |
-| 状态 | `status` | 字符串 |
-| 优先级 | `priority` | 字符串 |
+| Issue 字段                   | 列                             | 规则   |
+| ---------------------------- | ------------------------------ | ------ |
+| *阶段点                      | `stage_point`                  | 必填   |
+| *时间点                      | `time_point DATETIME`          | 必填   |
+| *捕获哪些知识                | `captured_knowledge TEXT`      | 必填   |
+| *捕获知识采取的行动          | `capture_action TEXT`          | 必填   |
+| 输出交付件                   | `output_deliverable TEXT`      | 可空   |
+| 存放或分享的位置             | `storage_location TEXT`        | 可空   |
+| *谁负责采取行动（姓名+工号） | `action_owner`                 | 必填   |
+| *计划完成时间                | `planned_finish_time DATETIME` | 必填   |
+| 状态                         | `status`                       | 字符串 |
+| 优先级                       | `priority`                     | 字符串 |
 
 ### 4.7 可选专项业务表（3 张）
 
 #### `pq_feature_plan`
 
-| Issue 字段 | 列 |
-|---|---|
-| 类别 | `category` |
-| 需求描述 | `requirement_description TEXT` |
-| 需求 | `requirement_name TEXT` |
-| 需求来源 | `requirement_source` |
-| 规划指标 | `planned_metric TEXT` |
-| 达成指标 | `achieved_metric TEXT` |
-| 落地情况 | `implementation_status TEXT` |
+| Issue 字段 | 列                             |
+| ---------- | ------------------------------ |
+| 类别       | `category`                     |
+| 需求描述   | `requirement_description TEXT` |
+| 需求       | `requirement_name TEXT`        |
+| 需求来源   | `requirement_source`           |
+| 规划指标   | `planned_metric TEXT`          |
+| 达成指标   | `achieved_metric TEXT`         |
+| 落地情况   | `implementation_status TEXT`   |
 
 #### `pq_engineering_stage`
 
-| Issue 字段 | 列 |
-|---|---|
-| 阶段 | `stage_name` |
-| 版本子阶段 | `version_substage` |
-| 基础设施 | `infrastructure TEXT` |
-| 工具 | `tool_name TEXT` |
-| 质量要求 | `quality_requirement TEXT` |
-| 问题点 | `problem_points TEXT` |
-| 涉及SIG | `involved_sig` |
-| IT化进展 | `it_progress TEXT` |
+| Issue 字段 | 列                         |
+| ---------- | -------------------------- |
+| 阶段       | `stage_name`               |
+| 版本子阶段 | `version_substage`         |
+| 基础设施   | `infrastructure TEXT`      |
+| 工具       | `tool_name TEXT`           |
+| 质量要求   | `quality_requirement TEXT` |
+| 问题点     | `problem_points TEXT`      |
+| 涉及SIG    | `involved_sig`             |
+| IT化进展   | `it_progress TEXT`         |
 
 #### `pq_engineering_check`
 
-| Issue 字段 | 列 |
-|---|---|
-| 领域 | `domain_name` |
-| 检查项 | `check_item TEXT` |
-| 责任团队 | `responsible_team` |
-| β（全部新特转测第一个版本） | `beta_value TEXT` |
-| Final | `final_value TEXT` |
+| Issue 字段                        | 列                           |
+| --------------------------------- | ---------------------------- |
+| 领域                              | `domain_name`                |
+| 检查项                            | `check_item TEXT`            |
+| 责任团队                          | `responsible_team`           |
+| β（全部新特转测第一个版本）       | `beta_value TEXT`            |
+| Final                             | `final_value TEXT`           |
 | 落地majun平台情况（最终发布版本） | `majun_platform_status TEXT` |
 
 其他专项只有目录，无业务表。`majun` 保留 Issue 原始命名，不在本期更名或集成。
@@ -498,30 +498,30 @@ Controller
 
 初始化由 `ProductQualityCatalogTemplate` 生成以下节点。`sort_no` 按表中顺序递增，`template_code` 是稳定英文标识；后续模板新增节点可做增量初始化，但不允许改变历史节点含义。
 
-| 一级 | 二级 | 三级 | 内容类型 / `table_key` |
-|---|---|---|---|
-| Step1 策划导入 | 版本摘要 | — | `RICH_TEXT / version-summary` |
-| Step1 策划导入 | 质量策划思路 | — | `MINDMAP / quality-mindmap` |
-| Step1 策划导入 | 质量策划导入 | 内部改进要求/重点工作 | `TABLE / internal-improvements` |
-| 同上 | 同上 | 历史经验导入 | `TABLE / historical-experiences` |
-| 同上 | 同上 | 价值特性 | `TABLE / value-features` |
-| 同上 | 同上 | 策划输入分析 | `TABLE / input-analyses` |
-| Step2 目标与风险策划 | 目标策划 | 目标差距分析及分解 | `TABLE / quality-objectives` |
-| 同上 | 风险策划 | — | `TABLE / quality-risks` |
-| Step3 过程与控制策划 | 质量要求策划 | 版本级要求 | `DIRECTORY` |
-| 同上 | 交付件策划 | 版本级文档 | `DIRECTORY` |
-| 同上 | 同上 | 研发内部设计文档 | `DIRECTORY` |
-| 同上 | 同上 | 营销资料以及生态发展相关发布件 | `DIRECTORY` |
-| 同上 | 度量指标策划 | — | `TABLE / metric-plans` |
-| 同上 | 评估策划 | 转测试评估和版本出口评估 | `TABLE / evaluation-plans` |
-| Step4 项目运作与人力资源策划 | 组织运作策划（可选） | 会议运作制度 | `TABLE / meeting-operations` |
-| 同上 | 同上 | 状态报告制度 | `TABLE / status-reports` |
-| 同上 | 知识管理策划（可选） | 知识输入 | `TABLE / knowledge-inputs` |
-| 同上 | 同上 | 知识输出 | `TABLE / knowledge-outputs` |
-| 特性级策划（可选） | 专项策划 | — | `TABLE / feature-plans` |
-| 领域专项策划（可选） | 工程能力专项 | 阶段规划 | `TABLE / engineering-stages` |
-| 同上 | 同上 | 领域检查项 | `TABLE / engineering-checks` |
-| 其他专项策划（可选） | 专项策划 | — | `DIRECTORY` |
+| 一级                         | 二级                 | 三级                           | 内容类型 / `table_key`           |
+| ---------------------------- | -------------------- | ------------------------------ | -------------------------------- |
+| Step1 策划导入               | 版本摘要             | —                              | `RICH_TEXT / version-summary`    |
+| Step1 策划导入               | 质量策划思路         | —                              | `MINDMAP / quality-mindmap`      |
+| Step1 策划导入               | 质量策划导入         | 内部改进要求/重点工作          | `TABLE / internal-improvements`  |
+| 同上                         | 同上                 | 历史经验导入                   | `TABLE / historical-experiences` |
+| 同上                         | 同上                 | 价值特性                       | `TABLE / value-features`         |
+| 同上                         | 同上                 | 策划输入分析                   | `TABLE / input-analyses`         |
+| Step2 目标与风险策划         | 目标策划             | 目标差距分析及分解             | `TABLE / quality-objectives`     |
+| 同上                         | 风险策划             | —                              | `TABLE / quality-risks`          |
+| Step3 过程与控制策划         | 质量要求策划         | 版本级要求                     | `DIRECTORY`                      |
+| 同上                         | 交付件策划           | 版本级文档                     | `DIRECTORY`                      |
+| 同上                         | 同上                 | 研发内部设计文档               | `DIRECTORY`                      |
+| 同上                         | 同上                 | 营销资料以及生态发展相关发布件 | `DIRECTORY`                      |
+| 同上                         | 度量指标策划         | —                              | `TABLE / metric-plans`           |
+| 同上                         | 评估策划             | 转测试评估和版本出口评估       | `TABLE / evaluation-plans`       |
+| Step4 项目运作与人力资源策划 | 组织运作策划（可选） | 会议运作制度                   | `TABLE / meeting-operations`     |
+| 同上                         | 同上                 | 状态报告制度                   | `TABLE / status-reports`         |
+| 同上                         | 知识管理策划（可选） | 知识输入                       | `TABLE / knowledge-inputs`       |
+| 同上                         | 同上                 | 知识输出                       | `TABLE / knowledge-outputs`      |
+| 特性级策划（可选）           | 专项策划             | —                              | `TABLE / feature-plans`          |
+| 领域专项策划（可选）         | 工程能力专项         | 阶段规划                       | `TABLE / engineering-stages`     |
+| 同上                         | 同上                 | 领域检查项                     | `TABLE / engineering-checks`     |
+| 其他专项策划（可选）         | 专项策划             | —                              | `DIRECTORY`                      |
 
 “知识管理计划”不再单独占一层，以保证整个目录最大层级不超过三级。该调整只影响导航映射，不减少知识输入/输出功能。
 
@@ -541,21 +541,21 @@ Controller
 
 当前已实现的里程碑接口见 `milestone-api.md`；以下仅为后续策划与权限接口规划：
 
-| 方法 | 路径 | 权限 | 说明 |
-|---|---|---|---|
-| POST | `/plans/initialize` | 写权限 | body 为 `milestoneId`；显式、幂等创建策划及目录 |
-| GET | `/plans/{planId}/catalog` | 项目成员 | 返回树形目录，最多三级 |
-| GET | `/permissions` | 项目成员 | 返回 `canRead/canWrite/canManageOwners` |
-| GET | `/quality-owners` | 项目成员 | 查询本项目质量负责人 |
-| PUT | `/quality-owners` | 项目管理员 | 整体替换质量负责人列表；事务内校验、增删和恢复 |
+| 方法 | 路径                      | 权限       | 说明                                            |
+| ---- | ------------------------- | ---------- | ----------------------------------------------- |
+| POST | `/plans/initialize`       | 写权限     | body 为 `milestoneId`；显式、幂等创建策划及目录 |
+| GET  | `/plans/{planId}/catalog` | 项目成员   | 返回树形目录，最多三级                          |
+| GET  | `/permissions`            | 项目成员   | 返回 `canRead/canWrite/canManageOwners`         |
+| GET  | `/quality-owners`         | 项目成员   | 查询本项目质量负责人                            |
+| PUT  | `/quality-owners`         | 项目管理员 | 整体替换质量负责人列表；事务内校验、增删和恢复  |
 
 质量负责人整体替换使用用户 ID 列表，服务端去重并逐个验证其项目成员资格。任何用户不合法则整次不修改。项目管理员身份不能通过该接口由质量负责人自我提升。
 
 ### 6.2 单条内容资源
 
-| 资源路径 | 方法 | 说明 |
-|---|---|---|
-| `/plans/{planId}/version-summary` | GET / PUT | 查询或保存版本摘要 |
+| 资源路径                          | 方法      | 说明                   |
+| --------------------------------- | --------- | ---------------------- |
+| `/plans/{planId}/version-summary` | GET / PUT | 查询或保存版本摘要     |
 | `/plans/{planId}/quality-mindmap` | GET / PUT | 查询或保存质量策划思路 |
 
 空内容从未保存时，GET 返回 `data = null`，不伪造空记录。PUT 幂等保存并返回最新内容。
@@ -564,61 +564,61 @@ Controller
 
 以下 15 个 `resource` 均提供独立强类型端点：
 
-| `resource` | 业务模块 |
-|---|---|
-| `internal-improvements` | 内部改进要求/重点工作 |
-| `historical-experiences` | 历史经验导入 |
-| `value-features` | 价值特性 |
-| `input-analyses` | 策划输入分析 |
-| `quality-objectives` | 目标差距分析及分解 |
-| `quality-risks` | 风险策划 |
-| `metric-plans` | 度量指标策划 |
-| `evaluation-plans` | 转测试评估和版本出口评估 |
-| `meeting-operations` | 会议运作制度 |
-| `status-reports` | 状态报告制度 |
-| `knowledge-inputs` | 知识输入 |
-| `knowledge-outputs` | 知识输出 |
-| `feature-plans` | 特性级专项策划 |
-| `engineering-stages` | 工程能力阶段规划表 |
-| `engineering-checks` | 工程能力领域检查项表 |
+| `resource`               | 业务模块                 |
+| ------------------------ | ------------------------ |
+| `internal-improvements`  | 内部改进要求/重点工作    |
+| `historical-experiences` | 历史经验导入             |
+| `value-features`         | 价值特性                 |
+| `input-analyses`         | 策划输入分析             |
+| `quality-objectives`     | 目标差距分析及分解       |
+| `quality-risks`          | 风险策划                 |
+| `metric-plans`           | 度量指标策划             |
+| `evaluation-plans`       | 转测试评估和版本出口评估 |
+| `meeting-operations`     | 会议运作制度             |
+| `status-reports`         | 状态报告制度             |
+| `knowledge-inputs`       | 知识输入                 |
+| `knowledge-outputs`      | 知识输出                 |
+| `feature-plans`          | 特性级专项策划           |
+| `engineering-stages`     | 工程能力阶段规划表       |
+| `engineering-checks`     | 工程能力领域检查项表     |
 
 每个资源的路径模板如下；实现时映射到对应强类型 Controller 方法，而不是运行时接收任意 `resource` 字符串：
 
-| 方法 | 路径模板 | 说明 |
-|---|---|---|
-| GET | `/plans/{planId}/{resource}?page=&pageSize=&milestoneId=` | 分页列表；`milestoneId` 可选，用于筛选执行关联里程碑 |
-| POST | `/plans/{planId}/{resource}` | 新增，返回保存后的强类型响应 |
-| GET | `/plans/{planId}/{resource}/{id}` | 单条详情 |
-| PUT | `/plans/{planId}/{resource}/{id}` | 修改，返回保存后的强类型响应 |
-| DELETE | `/plans/{planId}/{resource}/{id}` | 单条逻辑删除 |
-| POST | `/plans/{planId}/{resource}/batch-delete` | body 为去重前非空的 ID 列表，整批原子删除 |
+| 方法   | 路径模板                                                  | 说明                                                 |
+| ------ | --------------------------------------------------------- | ---------------------------------------------------- |
+| GET    | `/plans/{planId}/{resource}?page=&pageSize=&milestoneId=` | 分页列表；`milestoneId` 可选，用于筛选执行关联里程碑 |
+| POST   | `/plans/{planId}/{resource}`                              | 新增，返回保存后的强类型响应                         |
+| GET    | `/plans/{planId}/{resource}/{id}`                         | 单条详情                                             |
+| PUT    | `/plans/{planId}/{resource}/{id}`                         | 修改，返回保存后的强类型响应                         |
+| DELETE | `/plans/{planId}/{resource}/{id}`                         | 单条逻辑删除                                         |
+| POST   | `/plans/{planId}/{resource}/batch-delete`                 | body 为去重前非空的 ID 列表，整批原子删除            |
 
 分页默认 `page=1`、`pageSize=20`，`pageSize <= 200`；批量 ID 数量 `1..200`。列表不开放任意排序字段。目录中 `DIRECTORY` 类型节点没有对应 CRUD 路由。
 
 ### 6.4 错误语义
 
-| 场景 | 处理 |
-|---|---|
-| 未认证、非项目成员、只读成员写数据、质量负责人维护负责人 | 现有权限异常，返回 403，不泄露目标资源内容 |
-| 必填字段缺失、进展越界、分页或批量大小非法、URL 非 http/https | 参数异常，返回 400 |
-| 策划、里程碑或记录不属于路径项目，记录不存在或已删除 | 按现有业务异常语义返回资源不存在或无权限；查询条件始终包含归属字段 |
-| 已初始化里程碑被删除 | 业务冲突，提示先保留策划数据，不做级联删除 |
-| 重复初始化 | 返回已有策划，不报错、不复制目录 |
-| 批量删除任一 ID 校验失败 | 整批回滚，任何记录都不删除 |
-| 数据库唯一键冲突发生在并发初始化 | 事务内重新查询已有策划并返回；其他唯一键异常不得一律当作幂等成功 |
+| 场景                                                          | 处理                                                               |
+| ------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 未认证、非项目成员、只读成员写数据、质量负责人维护负责人      | 现有权限异常，返回 403，不泄露目标资源内容                         |
+| 必填字段缺失、进展越界、分页或批量大小非法、URL 非 http/https | 参数异常，返回 400                                                 |
+| 策划、里程碑或记录不属于路径项目，记录不存在或已删除          | 按现有业务异常语义返回资源不存在或无权限；查询条件始终包含归属字段 |
+| 已初始化里程碑被删除                                          | 业务冲突，提示先保留策划数据，不做级联删除                         |
+| 重复初始化                                                    | 返回已有策划，不报错、不复制目录                                   |
+| 批量删除任一 ID 校验失败                                      | 整批回滚，任何记录都不删除                                         |
+| 数据库唯一键冲突发生在并发初始化                              | 事务内重新查询已有策划并返回；其他唯一键异常不得一律当作幂等成功   |
 
 ## 7. 权限与身份设计
 
 ### 7.1 决策矩阵
 
-| 用户类型 | 读 | 里程碑/策划/业务写 | 维护质量负责人 |
-|---|---:|---:|---:|
-| 无有效身份 | 拒绝 | 拒绝 | 拒绝 |
-| 非项目成员 | 拒绝 | 拒绝 | 拒绝 |
-| 项目普通成员 | 允许 | 拒绝 | 拒绝 |
-| 项目质量负责人 | 允许 | 允许 | 拒绝 |
-| 项目管理员 | 允许 | 允许 | 允许 |
-| OPS 全局管理角色 | 允许 | 允许 | 允许 |
+| 用户类型         |   读 | 里程碑/策划/业务写 | 维护质量负责人 |
+| ---------------- | ---: | -----------------: | -------------: |
+| 无有效身份       | 拒绝 |               拒绝 |           拒绝 |
+| 非项目成员       | 拒绝 |               拒绝 |           拒绝 |
+| 项目普通成员     | 允许 |               拒绝 |           拒绝 |
+| 项目质量负责人   | 允许 |               允许 |           拒绝 |
+| 项目管理员       | 允许 |               允许 |           允许 |
+| OPS 全局管理角色 | 允许 |               允许 |           允许 |
 
 判定顺序固定为：有效 token 身份 → 项目归属 → 是否管理员 → 是否质量负责人。任何查询异常或空结果都按拒绝处理。
 

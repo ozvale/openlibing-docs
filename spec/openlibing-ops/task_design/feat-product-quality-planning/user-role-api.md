@@ -8,9 +8,9 @@
 
 统一基础路径：`/projects/product-quality/user-roles`
 
-| 功能 | 请求方式 | 相对路径 | 成功时 `data` 类型 |
-|---|---|---|---|
-| 查询人员角色信息 | POST | `/query` | `PageResult<UserRoleResp>`（`records` 为全量数据） |
+| 功能             | 请求方式 | 相对路径 | 成功时 `data` 类型                                 |
+| ---------------- | -------- | -------- | -------------------------------------------------- |
+| 查询人员角色信息 | POST     | `/query` | `PageResult<UserRoleResp>`（`records` 为全量数据） |
 
 本地服务端口为 `8098`，`context-path` 为 `/`。其他环境的域名、端口及网关前缀以部署配置为准。
 
@@ -29,21 +29,21 @@
 
 所有业务响应使用产品质量模块专用 `Result<T>`，与通用 `Result` 字段结构一致：
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `code` | Integer | 业务状态码，成功固定为 `200` |
-| `messageCn` | String | 中文消息，成功为 `成功` |
-| `messageEn` | String | 英文消息，成功为 `success` |
-| `data` | T/null | 业务数据；异常响应通常为 `null` |
+| 字段        | 类型    | 说明                            |
+| ----------- | ------- | ------------------------------- |
+| `code`      | Integer | 业务状态码，成功固定为 `200`    |
+| `messageCn` | String  | 中文消息，成功为 `成功`         |
+| `messageEn` | String  | 英文消息，成功为 `success`      |
+| `data`      | T/null  | 业务数据；异常响应通常为 `null` |
 
 响应数据沿用 `PageResult<T>` 结构：
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `records` | Array<UserRoleResp> | 全量人员角色列表 |
-| `total` | Integer | 满足条件的记录总数 |
-| `pageSize` | Integer | 本次返回的记录条数，等于 `total` |
-| `page` | Integer | 固定为 `1` |
+| 字段       | 类型                | 说明                             |
+| ---------- | ------------------- | -------------------------------- |
+| `records`  | Array<UserRoleResp> | 全量人员角色列表                 |
+| `total`    | Integer             | 满足条件的记录总数               |
+| `pageSize` | Integer             | 本次返回的记录条数，等于 `total` |
+| `page`     | Integer             | 固定为 `1`                       |
 
 > 接口不再接收前端分页参数，服务端汇总全部数据后一次性返回，`records` 即为全量结果。
 
@@ -51,20 +51,20 @@
 
 ### 2.3 人员角色对象 `UserRoleResp`
 
-| 字段 | 类型 | 是否可能为 null | 说明 |
-|---|---|---|---|
-| `id` | Integer | 否 | 人员角色记录主键 |
-| `userId` | String | 否 | 用户 ID |
-| `userName` | String | 是 | 用户名 |
-| `userEmail` | String | 是 | 用户邮箱 |
-| `role` | String | 是 | 角色标识，如 `admin`、`TEST`、`PM` |
-| `productId` | Integer | 是 | 归属产业 ID |
-| `projectId` | Integer | 是 | 归属项目 ID |
-| `repoId` | Integer | 是 | 归属仓库 ID |
-| `permGroupId` | Long | 是 | 权限组 ID，`0` 表示默认权限组 |
-| `createTime` | String | 是 | 创建时间 |
-| `updateTime` | String | 是 | 更新时间 |
-| `syncFlag` | String | 是 | 数据同步标识：`1` 来自 ubmc，`2` 来自 majun，`3` 来自 gitee，`4` 来自 gitcode |
+| 字段          | 类型    | 是否可能为 null | 说明                                                                          |
+| ------------- | ------- | --------------- | ----------------------------------------------------------------------------- |
+| `id`          | Integer | 否              | 人员角色记录主键                                                              |
+| `userId`      | String  | 否              | 用户 ID                                                                       |
+| `userName`    | String  | 是              | 用户名                                                                        |
+| `userEmail`   | String  | 是              | 用户邮箱                                                                      |
+| `role`        | String  | 是              | 角色标识，如 `admin`、`TEST`、`PM`                                            |
+| `productId`   | Integer | 是              | 归属产业 ID                                                                   |
+| `projectId`   | Integer | 是              | 归属项目 ID                                                                   |
+| `repoId`      | Integer | 是              | 归属仓库 ID                                                                   |
+| `permGroupId` | Long    | 是              | 权限组 ID，`0` 表示默认权限组                                                 |
+| `createTime`  | String  | 是              | 创建时间                                                                      |
+| `updateTime`  | String  | 是              | 更新时间                                                                      |
+| `syncFlag`    | String  | 是              | 数据同步标识：`1` 来自 ubmc，`2` 来自 majun，`3` 来自 gitee，`4` 来自 gitcode |
 
 ## 3. 查询人员角色信息
 
@@ -77,13 +77,13 @@ Content-Type: application/json
 
 请求体 `UserRoleQueryReq`：
 
-| 字段 | 类型 | 必填 | 校验规则 | 说明 |
-|---|---|---|---|---|
-| `userId` | String | 否 | 最长 32 字符，仅允许字母和数字 | 目标用户 ID；为空时使用当前 token 用户 |
-| `productId` | Integer | 否 | 正整数 | 归属产业 ID |
-| `projectId` | Integer | 否 | 正整数 | 归属项目 ID |
-| `repoId` | Integer | 否 | 正整数 | 归属仓库 ID |
-| `userRoles` | Array<String> | 否 | 最多 20 项，每项非空且最长 64 字符 | 角色列表；为空时查询全部角色 |
+| 字段        | 类型          | 必填 | 校验规则                           | 说明                                   |
+| ----------- | ------------- | ---- | ---------------------------------- | -------------------------------------- |
+| `userId`    | String        | 否   | 最长 32 字符，仅允许字母和数字     | 目标用户 ID；为空时使用当前 token 用户 |
+| `productId` | Integer       | 否   | 正整数                             | 归属产业 ID                            |
+| `projectId` | Integer       | 否   | 正整数                             | 归属项目 ID                            |
+| `repoId`    | Integer       | 否   | 正整数                             | 归属仓库 ID                            |
+| `userRoles` | Array<String> | 否   | 最多 20 项，每项非空且最长 64 字符 | 角色列表；为空时查询全部角色           |
 
 请求示例：
 
@@ -145,12 +145,12 @@ Content-Type: application/json
 
 ### 3.4 错误响应
 
-| `code` | `messageCn` | 触发场景 |
-|---|---|---|
-| `40001` | 具体校验提示 | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
-| `403` | `没有权限` | token Cookie 缺失、无效或未包含有效用户 ID |
-| `50001` | `查询人员角色信息失败，请稍后重试` | framework 返回非成功响应 |
-| `500` | `系统异常` | framework 不可用或被其他未捕获异常中断 |
+| `code`  | `messageCn`                        | 触发场景                                                   |
+| ------- | ---------------------------------- | ---------------------------------------------------------- |
+| `40001` | 具体校验提示                       | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
+| `403`   | `没有权限`                         | token Cookie 缺失、无效或未包含有效用户 ID                 |
+| `50001` | `查询人员角色信息失败，请稍后重试` | framework 返回非成功响应                                   |
+| `500`   | `系统异常`                         | framework 不可用或被其他未捕获异常中断                     |
 
 业务异常响应中 `messageEn` 为 `params invalid`、`data` 为 `null`，前端可直接展示 `messageCn`。
 

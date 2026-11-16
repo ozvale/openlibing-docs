@@ -8,14 +8,14 @@
 
 统一基础路径：`/projects/product-quality/quality-risks`
 
-| 功能 | 请求方式 | 相对路径 | 成功时 `data` 类型 |
-|---|---|---|---|
-| 新增 | POST | `/add` | `QualityRiskResp` |
-| 分页查询 | GET | `/getPage` | `PageResult<QualityRiskResp>` |
-| 单条详情 | GET | `/detail` | `QualityRiskResp` |
-| 修改 | POST | `/update` | `QualityRiskResp` |
-| 单条逻辑删除 | GET | `/delete` | `null` |
-| 批量逻辑删除 | POST | `/batch-delete` | `null` |
+| 功能         | 请求方式 | 相对路径        | 成功时 `data` 类型            |
+| ------------ | -------- | --------------- | ----------------------------- |
+| 新增         | POST     | `/add`          | `QualityRiskResp`             |
+| 分页查询     | GET      | `/getPage`      | `PageResult<QualityRiskResp>` |
+| 单条详情     | GET      | `/detail`       | `QualityRiskResp`             |
+| 修改         | POST     | `/update`       | `QualityRiskResp`             |
+| 单条逻辑删除 | GET      | `/delete`       | `null`                        |
+| 批量逻辑删除 | POST     | `/batch-delete` | `null`                        |
 
 ## 2. 通用约定
 
@@ -25,9 +25,9 @@
 
 ### 2.2 公共 Query 参数
 
-| 参数 | 位置 | 类型 | 必填 | 说明 |
-|---|---|---|---|---|
-| `milestoneId` | Query | Long | 是 | 里程碑 ID，对应 `pq_milestone.id`，必须为正整数 |
+| 参数          | 位置  | 类型 | 必填 | 说明                                            |
+| ------------- | ----- | ---- | ---- | ----------------------------------------------- |
+| `milestoneId` | Query | Long | 是   | 里程碑 ID，对应 `pq_milestone.id`，必须为正整数 |
 
 数据查询、修改和删除均限定在该里程碑内；记录不存在、已删除或不属于该里程碑时，返回业务失败提示。
 
@@ -35,76 +35,76 @@
 
 所有业务响应使用产品质量模块专用 `Result<T>`，与通用 `Result` 字段结构一致：
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `code` | Integer | 业务状态码，成功固定为 `200` |
-| `messageCn` | String | 中文消息，成功为 `成功` |
-| `messageEn` | String | 英文消息，成功为 `success` |
-| `data` | T/null | 业务数据；删除成功或异常时通常为 `null` |
+| 字段        | 类型    | 说明                                    |
+| ----------- | ------- | --------------------------------------- |
+| `code`      | Integer | 业务状态码，成功固定为 `200`            |
+| `messageCn` | String  | 中文消息，成功为 `成功`                 |
+| `messageEn` | String  | 英文消息，成功为 `success`              |
+| `data`      | T/null  | 业务数据；删除成功或异常时通常为 `null` |
 
 产品质量业务异常与参数校验失败统一返回 `code = 40001`，`messageCn` 为具体场景提示、`messageEn` 为 `params invalid`；参数校验失败时具体原因同时写入 `data`。前端可直接展示 `messageCn`：
 
-| `code` | `messageCn` | 触发场景 |
-|---|---|---|
-| `40001` | `质量风险策划数据不存在或已被删除` | 查询、修改或删除时记录不存在或已被逻辑删除 |
-| `40001` | `新增质量风险策划数据失败` | 新增数据落库失败 |
-| `40001` | `修改质量风险策划数据失败，记录不存在或已被删除` | 修改时记录不存在或已被逻辑删除 |
-| `40001` | `删除质量风险策划数据失败，记录不存在或已被删除` | 删除时记录不存在或已被逻辑删除 |
-| `40001` | `批量删除失败，部分质量风险策划数据不存在或已被删除` | 批量删除时存在无效 ID |
-| `40001` | `记录质量风险策划数据操作日志失败` | 修改或删除操作日志落库失败 |
-| `40001` | `项目 ID 格式不正确，必须为数字` | 里程碑关联的项目 ID 不是合法数字 |
-| `40001` | 具体校验提示 | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
-| `403` | `没有权限` | token Cookie 缺失、无效，或用户无对应读写权限 |
-| `500` | `系统异常` | 未被其他处理器捕获的系统异常 |
+| `code`  | `messageCn`                                          | 触发场景                                                   |
+| ------- | ---------------------------------------------------- | ---------------------------------------------------------- |
+| `40001` | `质量风险策划数据不存在或已被删除`                   | 查询、修改或删除时记录不存在或已被逻辑删除                 |
+| `40001` | `新增质量风险策划数据失败`                           | 新增数据落库失败                                           |
+| `40001` | `修改质量风险策划数据失败，记录不存在或已被删除`     | 修改时记录不存在或已被逻辑删除                             |
+| `40001` | `删除质量风险策划数据失败，记录不存在或已被删除`     | 删除时记录不存在或已被逻辑删除                             |
+| `40001` | `批量删除失败，部分质量风险策划数据不存在或已被删除` | 批量删除时存在无效 ID                                      |
+| `40001` | `记录质量风险策划数据操作日志失败`                   | 修改或删除操作日志落库失败                                 |
+| `40001` | `项目 ID 格式不正确，必须为数字`                     | 里程碑关联的项目 ID 不是合法数字                           |
+| `40001` | 具体校验提示                                         | 请求参数未通过校验，`messageCn` 与 `data` 均为具体校验原因 |
+| `403`   | `没有权限`                                           | token Cookie 缺失、无效，或用户无对应读写权限              |
+| `500`   | `系统异常`                                           | 未被其他处理器捕获的系统异常                               |
 
 ### 2.4 保存请求对象 `QualityRiskSaveReq`
 
-| 字段 | 类型 | 必填 | 校验规则 | 说明 |
-|---|---|---|---|---|
-| `milestoneName` | String | 否 | 最大 255 字符 | 里程碑名称，由前端传入；修改时允许更新 |
-| `whyObjective` | String | 是 | 非空白，最大 65535 字符 | WHY目标 |
-| `whoParticipants` | String | 是 | 非空白，最大 65535 字符 | WHO参与人 |
-| `howActivity` | String | 是 | 非空白，最大 65535 字符 | HOW活动 |
-| `whatRisk` | String | 是 | 非空白，最大 65535 字符 | WHAT问题和风险 |
-| `occurrenceProbability` | String | 否 | 最大 64 字符 | 发生概率 |
-| `impactDegree` | String | 否 | 最大 64 字符 | 影响程度 |
-| `riskLevel` | String | 否 | 最大 64 字符 | 风险等级 |
-| `responseMeasure` | String | 是 | 非空白，最大 65535 字符 | 应对措施 |
-| `ownerName` | String | 否 | 最大 128 字符 | 责任人 |
-| `proposerName` | String | 否 | 最大 128 字符 | 提出人 |
-| `plannedResolveTime` | String | 否 | 最大 20 字符 | 计划解决时间 |
-| `status` | String | 否 | 最大 64 字符 | 状态 |
-| `progress` | Decimal | 否 | 0～100，最多 2 位小数 | 措施进展百分比 |
-| `progressDescription` | String | 否 | 最大 65535 字符 | 进展说明 |
-| `qccCandidateFlag` | Integer | 否 | 0 或 1 | 是否QCC备选主题：0否，1是 |
+| 字段                    | 类型    | 必填 | 校验规则                | 说明                                   |
+| ----------------------- | ------- | ---- | ----------------------- | -------------------------------------- |
+| `milestoneName`         | String  | 否   | 最大 255 字符           | 里程碑名称，由前端传入；修改时允许更新 |
+| `whyObjective`          | String  | 是   | 非空白，最大 65535 字符 | WHY目标                                |
+| `whoParticipants`       | String  | 是   | 非空白，最大 65535 字符 | WHO参与人                              |
+| `howActivity`           | String  | 是   | 非空白，最大 65535 字符 | HOW活动                                |
+| `whatRisk`              | String  | 是   | 非空白，最大 65535 字符 | WHAT问题和风险                         |
+| `occurrenceProbability` | String  | 否   | 最大 64 字符            | 发生概率                               |
+| `impactDegree`          | String  | 否   | 最大 64 字符            | 影响程度                               |
+| `riskLevel`             | String  | 否   | 最大 64 字符            | 风险等级                               |
+| `responseMeasure`       | String  | 是   | 非空白，最大 65535 字符 | 应对措施                               |
+| `ownerName`             | String  | 否   | 最大 128 字符           | 责任人                                 |
+| `proposerName`          | String  | 否   | 最大 128 字符           | 提出人                                 |
+| `plannedResolveTime`    | String  | 否   | 最大 20 字符            | 计划解决时间                           |
+| `status`                | String  | 否   | 最大 64 字符            | 状态                                   |
+| `progress`              | Decimal | 否   | 0～100，最多 2 位小数   | 措施进展百分比                         |
+| `progressDescription`   | String  | 否   | 最大 65535 字符         | 进展说明                               |
+| `qccCandidateFlag`      | Integer | 否   | 0 或 1                  | 是否QCC备选主题：0否，1是              |
 
 ### 2.5 响应对象 `QualityRiskResp`
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `id` | Long | 记录主键 |
-| `projectId` | Integer | 项目 ID，由里程碑归属生成 |
-| `milestoneId` | Long | 里程碑 ID |
-| `milestoneName` | String/null | 里程碑名称 |
-| `whyObjective` | String | WHY目标 |
-| `whoParticipants` | String | WHO参与人 |
-| `howActivity` | String | HOW活动 |
-| `whatRisk` | String | WHAT问题和风险 |
-| `occurrenceProbability` | String/null | 发生概率 |
-| `impactDegree` | String/null | 影响程度 |
-| `riskLevel` | String/null | 风险等级 |
-| `responseMeasure` | String | 应对措施 |
-| `ownerName` | String/null | 责任人 |
-| `proposerName` | String/null | 提出人 |
-| `plannedResolveTime` | String/null | 计划解决时间 |
-| `status` | String/null | 状态 |
-| `progress` | Decimal/null | 措施进展百分比 |
-| `progressDescription` | String/null | 进展说明 |
-| `qccCandidateFlag` | Integer/null | 是否QCC备选主题：0否，1是 |
-| `createBy` | String | 创建人用户 ID |
-| `createTime` | String | 创建时间，格式 `yyyy-MM-dd HH:mm:ss` |
-| `updateBy` | String/null | 最后修改人用户 ID |
-| `updateTime` | String/null | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss` |
+| 字段                    | 类型         | 说明                                     |
+| ----------------------- | ------------ | ---------------------------------------- |
+| `id`                    | Long         | 记录主键                                 |
+| `projectId`             | Integer      | 项目 ID，由里程碑归属生成                |
+| `milestoneId`           | Long         | 里程碑 ID                                |
+| `milestoneName`         | String/null  | 里程碑名称                               |
+| `whyObjective`          | String       | WHY目标                                  |
+| `whoParticipants`       | String       | WHO参与人                                |
+| `howActivity`           | String       | HOW活动                                  |
+| `whatRisk`              | String       | WHAT问题和风险                           |
+| `occurrenceProbability` | String/null  | 发生概率                                 |
+| `impactDegree`          | String/null  | 影响程度                                 |
+| `riskLevel`             | String/null  | 风险等级                                 |
+| `responseMeasure`       | String       | 应对措施                                 |
+| `ownerName`             | String/null  | 责任人                                   |
+| `proposerName`          | String/null  | 提出人                                   |
+| `plannedResolveTime`    | String/null  | 计划解决时间                             |
+| `status`                | String/null  | 状态                                     |
+| `progress`              | Decimal/null | 措施进展百分比                           |
+| `progressDescription`   | String/null  | 进展说明                                 |
+| `qccCandidateFlag`      | Integer/null | 是否QCC备选主题：0否，1是                |
+| `createBy`              | String       | 创建人用户 ID                            |
+| `createTime`            | String       | 创建时间，格式 `yyyy-MM-dd HH:mm:ss`     |
+| `updateBy`              | String/null  | 最后修改人用户 ID                        |
+| `updateTime`            | String/null  | 最后修改时间，格式 `yyyy-MM-dd HH:mm:ss` |
 
 单条成功响应示例：
 
@@ -130,7 +130,7 @@
     "proposerName": "示例",
     "plannedResolveTime": "示例",
     "status": "示例",
-    "progress": 25.50,
+    "progress": 25.5,
     "progressDescription": "示例",
     "qccCandidateFlag": 0,
     "createBy": "user-1",
@@ -156,10 +156,10 @@ Content-Type: application/json
 GET /projects/product-quality/quality-risks/getPage?milestoneId=7&page=1&pageSize=20
 ```
 
-| 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-|---|---|---|---|---|---|
-| `page` | Query | Integer | 否 | `1` | 页码，必须大于 0 |
-| `pageSize` | Query | Integer | 否 | `20` | 每页条数，1～200 |
+| 参数       | 位置  | 类型    | 必填 | 默认值 | 说明             |
+| ---------- | ----- | ------- | ---- | ------ | ---------------- |
+| `page`     | Query | Integer | 否   | `1`    | 页码，必须大于 0 |
+| `pageSize` | Query | Integer | 否   | `20`   | 每页条数，1～200 |
 
 仅查询 `deleted=0` 数据，按 `id DESC` 排序，由数据库分页。
 
@@ -209,13 +209,13 @@ Content-Type: application/json
 
 日志表：`pq_quality_risk_log`。
 
-| 字段 | 说明 |
-|---|---|
-| `id` | 日志主键 |
-| `quality_risk_id` | 业务记录主键 |
-| `old_data` | 修改或删除前完整 JSON，非空 |
-| `new_data` | 修改后完整 JSON；删除时为 `null` |
-| `update_by` | 操作人用户 ID |
-| `update_time` | 操作时间 |
+| 字段              | 说明                             |
+| ----------------- | -------------------------------- |
+| `id`              | 日志主键                         |
+| `quality_risk_id` | 业务记录主键                     |
+| `old_data`        | 修改或删除前完整 JSON，非空      |
+| `new_data`        | 修改后完整 JSON；删除时为 `null` |
+| `update_by`       | 操作人用户 ID                    |
+| `update_time`     | 操作时间                         |
 
 新增和查询不写该日志表；修改、单条删除和批量删除会写入。
