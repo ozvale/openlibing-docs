@@ -30,6 +30,8 @@ yum/dnf 增量更新消费。该文件由 Jenkins 任务
 
 - Jenkins 任务执行内容本身（repodata 生成逻辑在 Jenkins 侧）
 - updateinfo 的对外发布（属于后续正式发布环节）
+- token 从 URL query 迁移到请求头（沿用既有 Jenkins 触发模式，风险与豁免评估
+  见 `202611-sync-build-result` 的 design.md 风险说明，与该需求表述对齐）
 
 ## 验收标准
 

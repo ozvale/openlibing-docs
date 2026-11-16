@@ -25,8 +25,19 @@
 → startStep > 1：startUpdateAutomation(reviewId, userId, startStep-1)
     指针指向最后一个已成功步骤，由定时任务下一轮触发待执行步骤
 → startStep == 1：startUpdateAutomation(reviewId, userId, 1) + 直接触发步骤 1
-→ 步骤 1 触发失败：整体置 EXECUTE_FAILED
+→ 步骤 1 触发抛 BusinessException：整体置 EXECUTE_FAILED
 ```
+
+**步骤 1 触发的三分支语义**（`firstPendingAutomationStep` 返回 1 时，步骤 1
+接口的返回有三种情形，编排对其处理各不相同）：
+
+1. **抛 BusinessException**（Jenkins 触发失败）→ 整体置 EXECUTE_FAILED；
+2. **幂等防重命中**（`syncBuildResult` 已为 EXECUTING，如用户此前手动触发过、
+   或上一轮编排的阻塞/自愈场景）→ 接口正常返回当前状态、不抛异常，编排
+   **不视为失败**，保持整体 EXECUTING，交由定时任务的
+   `advanceSyncBuildResultIfTimeout` 在等待时长届满后推进；
+3. **上次状态为 EXECUTE_FAILED** → 幂等防重只拦截 EXECUTING，不拦截 FAILED，
+   会重新触发 Jenkins（允许失败重试）。
 
 `firstPendingAutomationStep` 按
 syncBuildResult → startModule → collectBugfixResult → checkBaseline →
@@ -66,6 +77,16 @@ Redis setIfAbsent(锁, 300s) 抢锁
 ```
 
 单条 process 异常仅记日志，不影响其余记录处理（循环内 try-catch）。
+
+**续跑场景下的重复接纳（已知行为差异）**：断点续跑时指针被置为最后一个已成功
+步骤，若步骤 3 已成功、后续步骤（4-7）失败后重启，指针回到 3——定时任务在
+指针为 3 且 `collectBugfixResult` 已为 SUCCESS 时会**再次执行**
+`acceptAllCveAndBugfix`，即对一批已被接纳过的 cve/bugfix 重复执行全量 accept
+批改。该行为与 proposal 验收标准"已成功步骤不重复执行"存在字面差异；若
+`batchModifyCveOrBugfixOperations` 对已 accept 记录不幂等（返回错误或抛异常），
+会导致"重启即失败"、编排卡在步骤 3。accept 批改对已接纳记录的幂等性属待验证
+项（见 tasks.md 待验证清单），实现上未做"仅在首次 SUCCESS 那轮执行接纳"的
+防重护栏。
 
 ### 4. 编排状态存储（MongoDB jenkins_job_exec_status）
 
