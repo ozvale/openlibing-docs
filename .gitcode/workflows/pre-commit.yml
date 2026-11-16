@@ -21,7 +21,7 @@ stages:
     jobs:
       pr-label-running:
         name: pr-label-running
-        runs-on: ["self-hosted", "region=cn"]
+        runs-on: ["self-hosted", "default"]
         steps:
           - name: pr-label-running
             uses: openlibing/pr-label-action@v1.0.0
@@ -35,14 +35,21 @@ stages:
     jobs:
       pre-commit:
         name: pre-commit
-        runs-on: ["self-hosted", "region=overseas"]
+        runs-on: ["self-hosted", "default"]
         steps:
           - name: Checkout repository
             uses: checkout
             with:
               token: ${{ secrets.ROBOT_TOKEN }}
               ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.event.pull_request.head.sha }} # 使用预合并后的 commit SHA 进行检出，确保 CI 检查的是 PR 与目标分支合并后的最终代码状态
-              allow-unsafe-pr-checkout: true  ## pull_request_target 下检出预合并分支（含 PR 代码）默认被安全策略拦截，显式声明允许检出，确保 pre-commit 校验 PR 与目标分支合并后的代码
+              allow-unsafe-pr-checkout: true
+
+          - name: bootstrap tool cache dir
+            run: |
+              if [ ! -d /opt/tools/cache ] || [ ! -w /opt/tools/cache ]; then
+                sudo mkdir -p /opt/tools/cache
+                sudo chown -R "$(id -u):$(id -g)" /opt/tools
+              fi
 
           - name: setup-node
             uses: setup-node
@@ -72,7 +79,7 @@ post:
   jobs:
     label-pr:
       name: pr-label-complete
-      runs-on: ["self-hosted", "region=cn"]
+      runs-on: ["self-hosted", "default"]
       steps:
         - name: set pr label complete
           uses: openlibing/pr-label-action@v1.0.0

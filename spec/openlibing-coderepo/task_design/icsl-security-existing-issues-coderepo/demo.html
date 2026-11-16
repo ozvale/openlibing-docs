@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>【openLiBing】ICSL安全送检存量issue整改-coderepo · 需求演示</title>
+    <style>
+      :root {
+        --bg: #f5f7fa;
+        --card: #ffffff;
+        --text: #1f2933;
+        --muted: #5f6b7a;
+        --line: #e4e9f0;
+        --accent: #1f6feb;
+        --danger: #c0392b;
+        --ok: #1e8449;
+        --warn: #b7791f;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+        line-height: 1.65;
+      }
+      header {
+        background: linear-gradient(120deg, #0b2545, #1f6feb);
+        color: #fff;
+        padding: 40px 32px 32px;
+      }
+      header h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        font-weight: 600;
+      }
+      header p {
+        margin: 4px 0;
+        color: #d7e4ff;
+        font-size: 14px;
+      }
+      header a {
+        color: #fff;
+        text-decoration: underline;
+      }
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 28px 20px 60px;
+      }
+      section {
+        margin-bottom: 32px;
+      }
+      h2 {
+        font-size: 19px;
+        margin: 0 0 14px;
+        padding-left: 10px;
+        border-left: 4px solid var(--accent);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 18px 20px;
+      }
+      .card h3 {
+        margin: 0 0 6px;
+        font-size: 16px;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+      .badge {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 12px;
+        margin-right: 6px;
+        border: 1px solid transparent;
+      }
+      .badge.ok {
+        color: var(--ok);
+        border-color: #bfe3cd;
+        background: #eefaf2;
+      }
+      .badge.off {
+        color: var(--muted);
+        border-color: #d8dee7;
+        background: #f2f4f7;
+      }
+      .badge.warn {
+        color: var(--warn);
+        border-color: #f0dfb8;
+        background: #fdf7e8;
+      }
+      .badge.danger {
+        color: var(--danger);
+        border-color: #f2c6c0;
+        background: #fdf0ee;
+      }
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+      }
+      .step {
+        background: #eef4ff;
+        border: 1px solid #cfe0ff;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 13px;
+        text-align: center;
+      }
+      .step strong {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card);
+        font-size: 13px;
+      }
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f0f4f9;
+        font-weight: 600;
+      }
+      code {
+        background: #f1f3f7;
+        border-radius: 4px;
+        padding: 0 4px;
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 12.5px;
+      }
+      .diff {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 10px;
+      }
+      .diff pre {
+        margin: 0;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        overflow-x: auto;
+        line-height: 1.5;
+      }
+      .before {
+        background: #fdf0ee;
+        border: 1px solid #f2c6c0;
+      }
+      .after {
+        background: #eefaf2;
+        border: 1px solid #bfe3cd;
+      }
+      .diff-title {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      footer {
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+        padding-bottom: 30px;
+      }
+      @media (max-width: 720px) {
+        .diff {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>【openLiBing】ICSL安全送检存量issue整改-coderepo</h1>
+      <p>
+        需求锚点：
+        <a
+          href="https://gitcode.com/openlibing/openlibing-codecheck/issues/401"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          openlibing/openlibing-codecheck#401
+        </a>
+      </p>
+      <p>目标分支：release_20261116_iter1 ｜ 代码基线：master（ac7ea8c5）｜ 交付状态：4 个修复已合入，1 项改配置中心闭环</p>
+    </header>
+
+    <main>
+      <section>
+        <h2>一、治理思路：按链路分层收口</h2>
+        <div class="flow">
+          <div class="step"><strong>L1 出站 URL 公共出口</strong>ApiUrlUtil 分段编码 + 拒绝 . / ..</div>
+          <div class="step"><strong>L2 入口坐标校验</strong>Webhook / SIG / token 探测入口白名单</div>
+          <div class="step"><strong>L3 查询语义收敛</strong>LIKE 转义 + GraphQL variables</div>
+          <div class="step"><strong>L4 暴露面收敛</strong>关闭 Swagger 调试端点（配置中心）</div>
+        </div>
+      </section>
+
+      <section>
+        <h2>二、5 个存量问题与整改</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>#282 三方 API 出站路径段注入</h3>
+            <div class="meta">
+              <span class="badge danger">CWE-22</span><span class="badge ok">!306 已合入</span>
+            </div>
+            <div class="diff-title">修复前：不可信 owner/repo 直接进入平台 URL</div>
+            <pre class="before">GET /api/v5/orgs/../repos  → 路径被规范化，请求偏移到非预期端点</pre>
+            <div class="diff-title">修复后：公共出口 + 入口双重防线</div>
+            <pre class="after">ApiUrlUtil 拒绝 . / ..；入口 isLegalSegment 白名单，非法 fail-closed</pre>
+          </div>
+
+          <div class="card">
+            <h3>#286 仓库/分支列表 LIKE 通配符未转义</h3>
+            <div class="meta">
+              <span class="badge danger">CWE-20</span><span class="badge ok">!309 已合入</span>
+            </div>
+            <div class="diff-title">修复前：用户输入 % / _ 被当作通配符</div>
+            <pre class="before">where repo_name like concat('%', #{name}, '%')
+输入 repo_% → 匹配范围被放大</pre>
+            <div class="diff-title">修复后：统一 SqlLikeUtil 转义 + 显式 ESCAPE</div>
+            <pre class="after">SqlLikeUtil.escape(name)
+... like concat('%', #{name}, '%') ESCAPE '\\'</pre>
+          </div>
+
+          <div class="card">
+            <h3>#287 GitHub GraphQL 查询字符串拼接</h3>
+            <div class="meta">
+              <span class="badge danger">CWE-943</span><span class="badge ok">!310 已合入</span>
+            </div>
+            <div class="diff-title">修复前：外部取值拼进查询语句</div>
+            <pre class="before">query { repository(owner: "&lt;owner&gt;", name: "&lt;repo&gt;") { ... } }</pre>
+            <div class="diff-title">修复后：固定语句 + variables</div>
+            <pre class="after">query($owner:String!, $repo:String!, $after:String) { ... }
+variables: { owner, repo, prNumber, pageSize, after }</pre>
+          </div>
+
+          <div class="card">
+            <h3>#288 Webhook 入口仓库坐标未校验</h3>
+            <div class="meta">
+              <span class="badge danger">CWE-22</span><span class="badge ok">!311 已合入</span>
+            </div>
+            <div class="diff-title">修复前：报文 owner/repo 未经校验进入下游</div>
+            <pre class="before">payload.namespace / owner.login 直接写 MQ、反查 token</pre>
+            <div class="diff-title">修复后：三个入口统一校验</div>
+            <pre class="after">PrSync / Notify / PrSyncPush：
+if (!RepoUrlUtil.isLegalCoordinate(owner, repo)) 记录 [SECURITY] 并丢弃</pre>
+          </div>
+
+          <div class="card">
+            <h3>#225 生产 Swagger 调试端点暴露</h3>
+            <div class="meta">
+              <span class="badge warn">CWE-489 / CWE-215</span><span class="badge off">!303 已关闭</span>
+            </div>
+            <div class="diff-title">方案调整：代码仓开关改为配置中心统一关闭</div>
+            <pre class="after">Nacos application 配置集统一关闭 springdoc 端点
+部署验收：/v3/api-docs、/swagger-ui/** 返回 404</pre>
+            <div class="meta" style="margin-top: 10px">Issue #225 以配置中心方案闭环，代码仓不保留开关改动。</div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>三、交付清单</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>序号</th>
+              <th>问题</th>
+              <th>子 Issue</th>
+              <th>修复 PR</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>三方 API 出站路径段注入</td>
+              <td>coderepo#282</td>
+              <td>!306</td>
+              <td>已合入 release_20261116_iter1</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>LIKE 通配符未转义</td>
+              <td>coderepo#286</td>
+              <td>!309</td>
+              <td>已合入 release_20261116_iter1</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>GitHub GraphQL 字符串拼接</td>
+              <td>coderepo#287</td>
+              <td>!310</td>
+              <td>已合入 release_20261116_iter1</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td>Webhook 坐标未校验</td>
+              <td>coderepo#288</td>
+              <td>!311</td>
+              <td>已合入 release_20261116_iter1</td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td>Swagger 调试端点暴露</td>
+              <td>coderepo#225</td>
+              <td>!303</td>
+              <td>已关闭，改配置中心方案闭环</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>四、验收要点</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>验收项</th>
+              <th>结论</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>非法路径段/坐标无平台请求、无 MQ 发送</td>
+              <td>达成，入口 fail-closed，单测覆盖</td>
+            </tr>
+            <tr>
+              <td>LIKE 普通关键字结果不变，通配符按字面量匹配</td>
+              <td>达成，20 处 LIKE 补 ESCAPE，回归通过</td>
+            </tr>
+            <tr>
+              <td>GraphQL 语句不含外部取值</td>
+              <td>达成，全部走 variables</td>
+            </tr>
+            <tr>
+              <td>调试端点不可达</td>
+              <td>配置中心统一关闭，部署后实测 404</td>
+            </tr>
+            <tr>
+              <td>对外 HTTP 契约无变化</td>
+              <td>达成，无新增接口、无响应结构变化</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <footer>openlibing-docs ｜ spec/openlibing-coderepo/task_design/icsl-security-existing-issues-coderepo ｜ 2026-11-16</footer>
+  </body>
+</html>
