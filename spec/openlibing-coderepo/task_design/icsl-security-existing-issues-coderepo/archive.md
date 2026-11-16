@@ -32,7 +32,7 @@
 
 - 4 个代码修复同时已合入 `develop_202611_iter1`，便于 BETA 环境提前验证；
 - 5 个子 Issue 均已关闭；
-- #225 最终未在代码仓保留开关改动，改为在配置中心（Nacos）`application` 配置集统一关闭接口文档，Issue #225 以该方案闭环。
+- #225 最终未在代码仓保留开关改动，改为在配置中心（Nacos）`application` 配置集统一关闭接口文档，Issue #225 以该方案闭环；该问题在上一轮 ICSL 整改归档（`spec/openlibing-coderepo/task_design/it-icsl-security-remediation`，FE 需求 codecheck#372）中登记为加固项，本轮补充配置中心闭环说明，两处结论不冲突。
 
 ## 3. 验收口径与实际结论
 
@@ -51,10 +51,11 @@
 - **!309**：`SqlLikeUtilTest`（3 例）+ `RepoServiceImplLikeEscapeTest`（5 例）通过；RepoServiceImpl / Mapper 回归 312 例通过
 - **!310**：`MergeRequestEventHandlerGraphqlTest` 3 例通过（变量传参 / endCursor 翻页 / mutation threadId）
 - **!311**：`RepoUrlUtilTest`、`PrSyncEventHandlerTest`、`NotifyConfigEventHandlerTest`、`PrSyncPushEventHandlerTest` 等 19 例通过；相关入口回归 325 例通过
+- **#225**：配置中心统一关闭接口文档后，各环境重启后实测 `/v3/api-docs`、`/swagger-ui/index.html` 返回 404（验证记录见 Issue #225 处理结果评论）
 - 各 PR pre-commit（Spotless / CheckStyle / SpotBugs / PMD / Gitleaks 等）全部 Passed
 
-## 5. 遗留与待回填
+## 5. 遗留与说明
 
-- **#225 部署验收**：配置中心统一关闭后需在目标环境实测调试端点返回 404，并在 Issue #225 补充实测结论；
 - **统一入口收敛已落地**：`RepoUrlUtil.isLegalSegment` / `isLegalOwner` 已直接委托 `SigInfoClient`，`WebhookUrlUtil`、`RepoServiceImpl` 复用 `RepoUrlUtil`，路径段白名单为单一实现；
+- **#225 验证出处**：部署验收结论以 Issue #225 处理结果中的各环境实测记录为准，本归档不再列为待回填项；
 - 其他仓库（codecheck / cicd / sbom 等）的同类存量问题由各自需求跟踪，不在本需求范围。

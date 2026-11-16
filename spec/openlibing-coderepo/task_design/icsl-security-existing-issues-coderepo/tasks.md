@@ -11,7 +11,7 @@
 - [x] 核对 5 个问题在 `master` 上的实际状态与影响面，确认修复必要性
 - [x] 确认代码基线 `master`（`ac7ea8c5`）与目标分支 `release_20261116_iter1`
 - [x] 为每个问题创建独立修复分支与子 Issue，标题统一为「【安全】【参数注入问题】具体问题」
-- [x] 5 个 PR 均关联子 Issue 与需求锚点 `openlibing-codecheck#401`
+- [x] 4 个修复 PR（!306 / !309 / !310 / !311）关联各自子 Issue 与需求锚点 `openlibing-codecheck#401`；#225 对应的 !303 关联 `openlibing-codecheck#372`（上一轮 ICSL 整改需求），后以配置中心方案闭环
 
 ## 2. #282 三方 API 出站路径段注入（!306）
 
@@ -56,7 +56,7 @@
 - [x] 评估代码仓关闭方案（所有环境 `springdoc` 开关置 false），提交 PR !303
 - [x] 方案调整：改为在配置中心（Nacos）`application` 配置集统一关闭接口文档，代码仓不保留开关改动
 - [x] PR !303 关闭，Issue #225 以配置中心方案闭环
-- [x] 部署验收项：目标环境 `/v3/api-docs`、`/swagger-ui/**` 返回 404（环境侧实测）
+- [x] 部署验收项：各环境重启后 `/v3/api-docs`、`/swagger-ui/index.html` 返回 404（实测记录见 Issue #225 处理结果评论）
 
 ## 7. 文档与归档
 
