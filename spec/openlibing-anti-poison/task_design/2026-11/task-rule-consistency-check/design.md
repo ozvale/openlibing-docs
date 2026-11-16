@@ -13,10 +13,10 @@
 
 ## 涉及文件
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| src/main/java/com/openlibing/antipoison/business/service/impl/CheckRuleServiceImpl.java | 修改 | updateTaskRule 增加归属一致性校验 |
-| src/test/java/com/openlibing/antipoison/business/service/impl/CheckRuleServiceImplTest.java | 修改 | 补充正反场景单测 |
+| 文件                                                                                        | 操作 | 说明                              |
+| ------------------------------------------------------------------------------------------- | ---- | --------------------------------- |
+| src/main/java/com/openlibing/antipoison/business/service/impl/CheckRuleServiceImpl.java     | 修改 | updateTaskRule 增加归属一致性校验 |
+| src/test/java/com/openlibing/antipoison/business/service/impl/CheckRuleServiceImplTest.java | 修改 | 补充正反场景单测                  |
 
 ## 风险 & 缓解
 
