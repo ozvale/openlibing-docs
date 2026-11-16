@@ -24,5 +24,3 @@
 | #519    | 【安全】【参数注入问题】CICD 接口外部可控 ID 未编码/未白名单拼接 CloudPipeline 内部请求               | 谢志强 | 通过     |
 | #523    | 【安全】【参数注入问题】Redis 序列化启用默认类型信息，缓存写入源被污染时存在反序列化 RCE 面           | 杨宇萌 | 通过     |
 | #526    | 【安全】仓库触发模板接口越权读取他人仓库组织标签与成员（/repo/event-trigger/template）                | 杨宇萌 | 通过     |
-
-说明：本表仅统计本仓（openlibing-cicd）issue。PR #659 关联的是跨仓 openlibing-common#67（操作日志记录新增请求路径字段），PR #664 仅关联跨仓总 issue openlibing-codecheck#401（ICSL 安全送检整改），均未纳入。
