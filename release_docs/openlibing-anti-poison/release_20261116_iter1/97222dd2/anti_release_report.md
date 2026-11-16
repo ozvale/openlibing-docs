@@ -1,7 +1,7 @@
 # openlibing-anti-poison release_20261116_iter1 发布报告
 
 - **发布分支**：release_20261116_iter1
-- **合入 commit**：97222dd（!139 merge safe_202611 into release_20261116_iter1）
+- **合入 commit**：97222dd2（!139 merge safe_202611 into release_20261116_iter1）
 - **业务 PR**：openlibing/openlibing-anti-poison#139（safe_202611 → release_20261116_iter1，49 files，+5605/−988）
 - **发布日期**：2026-11-16
 - **提交规模**：73 commits（Richard-bean 71、zhaoyanzhen 1、openLiBingCI 1）
