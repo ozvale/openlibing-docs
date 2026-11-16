@@ -59,7 +59,7 @@
 
 ## 发布报告
 
-- [release_20261116 发布报告](../../../release_docs/openlibing-gateway/release_20261116/3e5defae/gateway_release_report.md)
+- [release_20261116 发布报告](../../../release_docs/openlibing-gateway/release_20261116/7a0d84e7/gateway_release_report.md)
 
 ## 配套安全设计文档
 
