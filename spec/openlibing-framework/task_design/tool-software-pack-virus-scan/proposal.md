@@ -30,12 +30,12 @@
 
 ## 3. 核心设计决策（用户已确认）
 
-| 决策 | 结论 |
-|------|------|
-| 扫描模型 | **异步闭环**：上传接口提交任务即返回 taskId；申请提交时落库并启动后台轮询；终态后回填 tool_apply 并驱动邮件/状态流转 |
-| OBS 凭证 | **传三件套**（framework 自有 obs.access-key-id/secret-access-key/endpoint，指向 tool-bucket），不依赖发布服务 hw_project 表 |
-| 开发分支 | ZZT_202611_iter1_safe（与安全整改同分支） |
-| 流程模式 | Full |
+| 决策     | 结论                                                                                                                                                                                                                             |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 扫描模型 | **异步闭环**：上传接口提交任务即返回 taskId；申请提交时落库并启动后台轮询；终态后回填 tool_apply 并驱动邮件/状态流转                                                                                                             |
+| OBS 凭证 | **传三件套**（framework 自有 obs.access-key-id/secret-access-key/endpoint，指向 tool-bucket），不依赖发布服务 hw_project 表；ak/sk 为 AES 密文 Environment 配置，请求体透传密文，全链路零日志（详见 design.md 2.7 安全自检映射） |
+| 开发分支 | ZZT_202611_iter1_safe（与安全整改同分支）                                                                                                                                                                                        |
+| 流程模式 | Full                                                                                                                                                                                                                             |
 
 ### 3.1 异步闭环时序
 
@@ -46,7 +46,7 @@ saveToolSoftwarePack(整片/最后一片)
   → 返回 VO: {obsPath, scanTaskId, scanResult="scanning", scanTime, uploadId}
 
 saveToolApply(前端传 virusScanTaskId)
-  → 落库 tool_apply: virus_scan_task_id + virus_scan_status(1) 
+  → 落库 tool_apply: virus_scan_task_id + virus_scan_status(1)
   → 启动后台轮询(5s间隔, 超时上限30分钟)
       ├─ 终态 success: 回填 result/status/details/fileName/last_scan_time=completeTime
       │    → 发审核人邮件(applyToolContent)
