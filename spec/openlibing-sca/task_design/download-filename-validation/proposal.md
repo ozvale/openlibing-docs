@@ -42,7 +42,10 @@ Issue：https://gitcode.com/openlibing/openlibing-sca/issues/92
 - [ ] OBS 下载强制服务端键前缀，越界键访问被拒绝（本轮未覆盖：仍以校验后的 fileName 作为对象键）
 - [ ] 接口具有限流/并发控制（本轮未覆盖）
 - [ ] 下载操作有审计日志（本轮未覆盖 / 未验证）
-- [x] 文件归属校验：他人导出文件不可下载（`b48b09d6`，`FileControllerTest#testDownloadFile_shouldRejectFileOwnedByAnotherUser`）
+- [ ] 文件归属校验：他人导出文件不可下载（部分满足）：`b48b09d6` 已按 `fileName + userId` 绑定查询
+      （`FileControllerTest#testDownloadFile_shouldRejectFileOwnedByAnotherUser`），但 `userId` 由调用方
+      传入、可伪造，传入受害者 `userId` 仍可取回他人导出；真实归属校验属 #156 授权体系范围
+      （与 design.md 风险表一致）
 - [ ] 相关单元测试通过、覆盖率达标（本次回溯未重新执行 `mvn test`）
 
 ## 影响范围

@@ -23,6 +23,8 @@
 1. committer 权限门禁：按 `scanId → repo_id → project_id → product_id` 链路取齐参数，调用
    openlibing-framework `POST /select/get-committer`，校验评论人登录名在返回的 `gitcodeName` 集合中；
    非 committer、入参缺失、framework 返回异常或调用异常一律 403（fail-closed，不降级放行）。
+   已知错配：gitee 平台反查出的是 gitee 登录名，与本轮仅比对的 `gitcodeName` 集合不同命名空间
+   （见 design.md D6 与风险表）。
 2. 门禁下沉到服务层：`ConfirmReviewServceImpl#checkCommitterPermission(repoId, commentLogin)`
    在 `robotAutoConfirm` 内执行，复用已查询的 `repo_id`，Controller 只保留入参校验，403 语义经
    `ScaException(403, ...)` 透传。
@@ -40,18 +42,23 @@
 
 ## 验收标准
 
-- [x] 匿名/无凭据调用被拒绝：请求体缺失 `commentId` 直接 403（`commentId不能为空`）；
+- [ ] 匿名/无凭据调用被拒绝（部分满足）：请求体缺失 `commentId` 直接 403（`commentId不能为空`）；
       `commentId` 无法反查到有效评论作者时 403，不产生审核数据变更（`PlatformCommentUtil.resolveCommentLogin`
-      fail-closed，`OpenConfirmReviewControllerTest#testRobotAutoConfirmBlankCommentId`）
+      fail-closed，`OpenConfirmReviewControllerTest#testRobotAutoConfirmBlankCommentId`）。但门禁不校验
+      调用方身份、无防重放：`commentId` 为平台可枚举整数，任何匿名可达方取得某条 committer 评论的
+      `commentId` 即可重放触发（见 design.md 风险表）；issue #146 P0 的机机认证（签名/token + 时间戳
+      防重放）诉求未达成
 - [x] 非仓库 committer 的评论作者被拒绝：`checkCommitterPermission` 未命中 `gitcodeName` 集合抛
       `ScaException(403, "当前用户无权触发自动确认，仅仓库committer可操作", ...)`
-      （`ConfirmReviewServceImplTest#testRobotAutoConfirm_NotCommitter_ThrowsForbidden`）
+      （`ConfirmReviewServceImplTest#testRobotAutoConfirm_NotCommitter_ThrowsForbidden`）；
+      注：门禁仅比对 `gitcodeName`，gitee 场景命名空间错配为遗留项（见 design.md D6）
 - [x] 权限校验服务异常时拒绝而非放行：framework 响应非法 / 调用抛异常 / 仓库项目信息缺失均 403
       （`testRobotAutoConfirm_FrameworkInvalidResponse_ThrowsForbidden`、
       `testRobotAutoConfirm_FrameworkError_ThrowsForbidden`、
       `testRobotAutoConfirm_RepoInfoMissing_ThrowsForbidden`）
 - [x] 评论人身份不可由调用方伪造：入参不再接收 `commentLogin`，身份以平台评论 API 返回的
-      `user.login` 为准（`AutoConfirmPo#commentId`；`PlatformCommentUtilTest` 覆盖 gitcode/gitee 反查与失败分支）
+      `user.login` 为准（`AutoConfirmPo#commentId`；`PlatformCommentUtilTest` 覆盖 gitcode/gitee 反查与失败分支）。
+      注：评论作者身份不可伪造 ≠ 调用方身份已认证，无凭据重放仍可借 committer 评论触发（见上一条）
 - [ ] 同一 `prUrl` 重复触发被拦截或幂等去重；批量条数超限被拒绝（本轮未覆盖，无对应实现）
 - [ ] 批复留痕含触发人身份（部分满足）：`robotAutoConfirm` 以 INFO 记录反查后的 `commentLogin`；
       审核流转日志仍记录服务端机器人操作人，未落"触发人"字段（本轮未覆盖）

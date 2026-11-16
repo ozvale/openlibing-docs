@@ -39,7 +39,8 @@ Issue：https://gitcode.com/openlibing/openlibing-sca/issues/86
 - [x] 导出链路对 `community` / `version` 非法字符校验生效，恶意输入抛 `ScaException(500, ... param error, ...)`（`OpenScanServiceImpl#exportToFile` / `#exportDocx` / `#saveCommunityCountExport`、`LicenseServiceImpl#writeWorkbookToFile`）；单测仅覆盖 `isValidFileNamePart` 本身，链路级异常未单独建用例
 - [ ] 镜像构建后 `find / -perm /6000 -type f` 无输出：本轮未覆盖。`68d3f885` 撤回镜像全量 `chmod a-s`，改为 `rasp.tgz` 条目级拒绝 SUID/SGID；基础镜像自带 setuid 程序（`passwd`/`su`/`mount` 等）保留
 - [x] rasp.tgz 与 JRE 解压步骤均带 `--no-same-owner --no-same-permissions`，并先做条目校验；rasp 解压后校验软链接不逃逸 `$PROJECT_HOME`；JRE 软链接按官方包信任（未校验，属本轮明确的取舍）
-- [x] PR 扫描含断链软链接、祖先目录软链接、`..`、绝对路径、最终组件为目录时均跳过该文件，其余文件正常扫描，`DownLoadFilesUtilsTest` 新增 6 个 `copySingleFile_*` 用例
+- [x] PR 扫描跳过策略用例已补充：断链软链接、祖先目录软链接、`..`、绝对路径、最终组件为目录共 6 个 `copySingleFile_*` 用例（`DownLoadFilesUtilsTest`）
+- [ ] PR 扫描跳过行为经测试验证：未执行 `mvn test`，行为未验证（与 tasks.md"未验证"声明一致）
 
 ## 影响范围
 

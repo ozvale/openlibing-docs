@@ -7,7 +7,7 @@
 - **入口层**：`FileController` 在查库与下载前用 `FileUtils#isValidDownloadFileName` 做严格白名单判定，非法即拒，不做任何规范化改写（避免"校验值 ≠ 使用值"）。
 - **输出层**：`ExportUtils` 的 `Content-Disposition` 改为 `filename`（ASCII 回退）+ `filename*`（UTF-8 percent）双写，CR/LF 无法进入响应头，中文名可正常显示。
 
-第二提交 `b48b09d6` 在同一链路上把存在性查询绑定到 `userId`，关闭"按文件名下载他人导出"的横向越权（其 message 关联 #156）。
+第二提交 `b48b09d6` 在同一链路上把存在性查询绑定到 `userId`，在「传入 `userId` 可信」的前提下阻断按文件名枚举他人导出；但 `userId` 由调用方传入、未与服务端登录态绑定，可伪造，传入受害者 `userId` 仍可取回他人导出，真实归属校验仍属 #156 授权体系范围（见风险表；其 message 关联 #156）。
 
 ## 架构决策
 

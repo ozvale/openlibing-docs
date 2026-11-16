@@ -40,6 +40,10 @@ OpenLibing 经过扫描的任意代码仓代码（包括私仓））。
 
 ## 验收标准
 
+> 口径说明：`[x]` 项描述"已实现并经代码核实"的行为；其中以 `userId` 为鉴权依据的项，`userId` 来自
+> 调用方请求参数、可伪造（见设计文档信任边界与风险表），不代表 issue #156「伪造 userId 无法绕过」
+> 已闭环，对应残余项单列在未勾选项中。
+
 - [x] `/open/scan/find/committer`、`/open/scan/find/repoCommitter` 已删除（Controller/Service/Impl/Test 共 -194 行，`85b0706e`）
 - [x] `/open/scan/getReposContents`：私仓未传 userId → 4001；userId 非仓库成员 → 403（`f6c677ca`）
 - [x] `/open/scan/putExportXLS`：私仓未传 userId → 4001；userId 非仓库成员 → 403（`07b063af`）
@@ -53,7 +57,12 @@ OpenLibing 经过扫描的任意代码仓代码（包括私仓））。
       项目成员校验失败 → 403；批量接口任一记录越权整批拒绝（`53c32a60`，提交标注 `Refs #160`）
 - [x] `/project/notice/scan/clear`：复用 `verifyCommunityPermission`（admin / platform_operater 或指定项目
       project_manager），越权 → 403（`449cc555`，提交标注 `Refs #160`）
-- [x] 单测覆盖主要拒绝/放行路径（新增用例见 tasks.md）
+- [ ] `userId` 由可信认证层（网关/SDK 从登录票据解析并强制覆盖客户端同名参数）注入：本轮实现直接信任
+      请求参数 `userId`，服务端未解析登录态，伪造他人 `userId` 可绕过仓库/项目成员与文件归属校验
+      （与 `shield-role-api-authz` 遗留风险口径一致，明确遗留）
+- [ ] 单测覆盖主要拒绝/放行路径（部分满足）：analysis/dm 多数接口已补拒绝/放行用例（新增用例见 tasks.md）；
+      但 `6b300c27`、`76f4733a` 对应的 open 列表接口（`/open/person/repos`、`/open/scan/repos`、
+      `/open/scan/community`、`/open/scan/community/branch`）未新增拒绝路径用例，与 tasks.md 记录一致
 - [ ] 全量回归：仅 `53c32a60` 在 commit message 中记录 `mvn test 70/70 通过`，其余 commit 未记录整体测试结果，**未验证**
 - [ ] 前端 / 网关适配新增必填 `userId`：跨仓，**未验证**
 - [ ] 其它 `/open/**` 接口的认证矩阵全量复核（issue 修复建议第 1 条）：本轮仅覆盖上述接口，**未覆盖**

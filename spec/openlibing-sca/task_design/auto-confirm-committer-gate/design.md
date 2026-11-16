@@ -37,15 +37,15 @@ POST /open/review/auto-confirm { prUrl, commentId }
 
 ## 架构决策
 
-| 决策                                                                      | 理由                                                                                                                            |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| D1 以"评论人身份 + 仓库 committer 授权"替代机机签名                       | 不引入密钥分发与时间戳窗口，直接复用平台已有的评论归属与 framework committer 数据；调用方无需持凭据                             |
-| D2 身份从平台评论 API 反查，而非信任请求体 `commentLogin`                 | 修复伪造：`commentLogin` 完全由调用方控制，任何校验都建立在不可信输入上；`commentId` 绑定在 PR 评论路径下，作者由平台返回       |
-| D3 门禁下沉 Service（`ConfirmReviewServceImpl#checkCommitterPermission`） | Controller 不感知仓库/项目/framework 细节；复用 `robotAutoConfirm` 已查 `repo_id`，避免重复查询；403 经 `ScaException` 统一透传 |
-| D4 fail-closed：任何取参/Feign/评论反查异常均 403                         | 权限服务不可用时宁可拒绝，不可降级放行，避免"异常即绕过"                                                                        |
-| D5 `/select/get-committer` 的 `userId` 传评论人登录名                     | 与 framework 侧"排除操作人"逻辑解耦：该参数与平台 userId 不同空间，不会被误移除 committer                                       |
-| D6 只校验 `gitcodeName` 集合                                              | 与 PR 评论触发场景的实际身份命名空间一致；`giteeName` 不参与判断                                                                |
-| D7 Controller 保留 `FORBIDDEN_CODE = 403` 常量与 `ScaException` 三参透传  | 保持既有 `ResponseEntity.failure(code, msg, data)` 语义，前端/调用方可区分 403 与业务失败                                       |
+| 决策                                                                      | 理由                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| D1 以"评论人身份 + 仓库 committer 授权"替代机机签名                       | 不引入密钥分发与时间戳窗口，直接复用平台已有的评论归属与 framework committer 数据；调用方无需持凭据                                                                                                                                                                                                                                                                                                    |
+| D2 身份从平台评论 API 反查，而非信任请求体 `commentLogin`                 | 修复伪造：`commentLogin` 完全由调用方控制，任何校验都建立在不可信输入上；`commentId` 绑定在 PR 评论路径下，作者由平台返回                                                                                                                                                                                                                                                                              |
+| D3 门禁下沉 Service（`ConfirmReviewServceImpl#checkCommitterPermission`） | Controller 不感知仓库/项目/framework 细节；复用 `robotAutoConfirm` 已查 `repo_id`，避免重复查询；403 经 `ScaException` 统一透传                                                                                                                                                                                                                                                                        |
+| D4 fail-closed：任何取参/Feign/评论反查异常均 403                         | 权限服务不可用时宁可拒绝，不可降级放行，避免"异常即绕过"                                                                                                                                                                                                                                                                                                                                               |
+| D5 `/select/get-committer` 的 `userId` 传评论人登录名                     | 与 framework 侧"排除操作人"逻辑解耦：该参数与平台 userId 不同空间，不会被误移除 committer                                                                                                                                                                                                                                                                                                              |
+| D6 只校验 `gitcodeName` 集合                                              | 本轮实现仅将反查登录名与 framework 返回的 `gitcodeName` 集合比对。**已知命名空间错配**：gitee 平台反查出的是 gitee 登录名（`CommitterUserInfoDto` 同时含 `giteeName`/`gitcodeName` 两个命名空间字段），gitee 合法 committer 可能恒 403（fail-closed 打穿可用性），跨平台同名账号可能被误认（安全绕过）；本轮未按平台绑定比对字段（gitee 场景比对 `giteeName`）或做跨平台用户映射，属遗留项（见风险表） |
+| D7 Controller 保留 `FORBIDDEN_CODE = 403` 常量与 `ScaException` 三参透传  | 保持既有 `ResponseEntity.failure(code, msg, data)` 语义，前端/调用方可区分 403 与业务失败                                                                                                                                                                                                                                                                                                              |
 
 ## 涉及文件
 
@@ -65,14 +65,16 @@ POST /open/review/auto-confirm { prUrl, commentId }
 
 ## 风险 & 缓解
 
-| 风险                                                                            | 缓解                                                                                                        |
-| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| 平台评论 API 或 framework 不可用导致自动确认整体不可用                          | fail-closed 是安全取向；接口返回 403 + "权限校验服务异常，请稍后重试"，调用方可重试                         |
-| `commentId` 本身不是调用方凭据：知道某条 committer 评论 ID 的第三方仍可重放触发 | 本轮未做频控/幂等（Issue P1 未覆盖）；实际暴露面受内网可达性约束，需后续补频控                              |
-| 请求体字段改名导致存量调用方 400/拒绝                                           | 契约变更需调用方同步；本仓无法验证 sca-action 是否已改造（未验证）                                          |
-| 仓库/项目元数据缺失（`projectId`/`productId` 为空）误伤合法请求                 | 403 文案明确"仓库或项目信息缺失"并记 ERROR 日志，便于运维定位                                               |
-| 反查依赖 `prUrl` 格式（最后一段必须是 PR 编号）                                 | `parsePrNumber` 失败即 403 并记日志；`parseOwnerAndRepo` 校验 owner/repo 非空                               |
-| gitcode/gitee 双平台 token 读取错误导致反查失败                                 | 平台由 `prUrl` 前缀判定，token 走 `PlatformUtil.getPlatformToken` 按 project 维度取；两平台均有成功用例覆盖 |
+| 风险                                                                                          | 缓解                                                                                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 平台评论 API 或 framework 不可用导致自动确认整体不可用                                        | fail-closed 是安全取向；接口返回 403 + "权限校验服务异常，请稍后重试"，调用方可重试                                                                                                                                   |
+| `commentId` 本身不是调用方凭据：知道某条 committer 评论 ID 的第三方仍可重放触发               | 本轮未做频控/幂等（Issue P1 未覆盖）；实际暴露面受内网可达性约束，需后续补频控                                                                                                                                        |
+| 请求体字段改名导致存量调用方 400/拒绝                                                         | 契约变更需调用方同步；本仓无法验证 sca-action 是否已改造（未验证）                                                                                                                                                    |
+| 仓库/项目元数据缺失（`projectId`/`productId` 为空）误伤合法请求                               | 403 文案明确"仓库或项目信息缺失"并记 ERROR 日志，便于运维定位                                                                                                                                                         |
+| 反查依赖 `prUrl` 格式（最后一段必须是 PR 编号）                                               | `parsePrNumber` 失败即 403 并记日志；`parseOwnerAndRepo` 校验 owner/repo 非空                                                                                                                                         |
+| gitcode/gitee 双平台 token 读取错误导致反查失败                                               | 平台由 `prUrl` 前缀判定，token 走 `PlatformUtil.getPlatformToken` 按 project 维度取；两平台均有评论反查成功用例覆盖（gitee 场景的 committer 门禁通过用例缺失，见下行）                                                |
+| gitee 场景 committer 门禁命名空间错配：反查登录名为 gitee 命名空间，仅比对 `gitcodeName` 集合 | 合法 gitee committer 可能恒 403；跨平台同名账号可能被误认为 committer。需按平台绑定比对字段或做跨平台用户映射（本轮未实现，明确遗留）                                                                                 |
+| 门禁未绑定评论与目标 scan 版本：历史评论的 `commentId` 可重放授权后续新扫描                   | 授权凭据是"该 PR 下某条评论作者是 committer"，评论时间/内容未与 `scanId` 绑定；committer 的旧评论可被重放，用于确认其从未评审的新扫描结果。需评论时间晚于目标 scan 创建时间或显式包含触发语义（本轮未实现，明确遗留） |
 
 ## 跨仓影响
 

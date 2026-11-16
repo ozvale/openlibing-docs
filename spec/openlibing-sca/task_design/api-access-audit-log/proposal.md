@@ -66,7 +66,10 @@ Issue：https://gitcode.com/openlibing/openlibing-sca/issues/138
 
 ## 验收标准
 
-- [x] 状态变更类接口具备访问日志（注解阶段全量覆盖，后由 4 个 Handler 接管；代码证据：`OperationLogHandlerDisjointTest#nonQueryEndpointsMatchExactlyOneHandler`）
+- [ ] 状态变更类接口具备访问日志（部分满足）：注解阶段曾全量覆盖，后由 4 个 Handler 接管；
+      `OperationLogHandlerDisjointTest#nonQueryEndpointsMatchExactlyOneHandler` 仅证明已匹配端点的
+      互斥性；`a7e7bc1b` 移除注解后，未命中任何 Handler 的状态变更端点不再有访问日志，受影响端点
+      清单未逐一核对（与下条及 tasks.md 一致，完整覆盖未达成）
 - [x] 日志 Handler 命中互斥，避免切面因多 Handler 命中而跳过补数（`OperationLogHandlerDisjointTest#nonQueryEndpointsMatchExactlyOneHandler` / `#queryEndpointsMatchNoHandler`）
 - [x] 裸 `List<String>` 与共用 DTO 入口按请求路径区分，不误记查询接口（`NoticeScanLogHandlerTest#matches_startBatchRequiresRequestPath`、`VersionScanLogHandlerTest#matches_deleteRequiresRequestPath`、`EmailReviewLogHandlerTest#matches_deleteRequiresRequestPath`）
 - [x] NOTICE 导出/批量导出/补充、版本扫描新增/启动/批量改定时/删除、邮件审核新增/删除均纳入匹配（`NoticeScanLogHandlerTest#matches_exportBatchAndSupplementDtos`、`VersionScanLogHandlerTest#matches_addStartAndScheduledDtos`、`EmailReviewLogHandlerTest#matches_addDtoInList`）
