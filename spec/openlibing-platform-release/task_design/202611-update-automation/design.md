@@ -38,15 +38,15 @@ checkVersion → createOrUpdateRepo → generateSafeNoticeResult1 顺序找到�
 
 ### 2. 步骤-接口-状态槽映射（UpdateAutomationJobs#triggerStep / stepStatus）
 
-| # | 步骤 | 触发方法 | 编排专属行为 | 状态槽 |
-|---|---|---|---|---|
-| 1 | 同步构建结果到仓库 | `openeulerjenkinsDelegateImpl.syncBuildResultToRepo` | — | syncBuildResult |
-| 2 | 收集 CVE | `platformreleaseDelegateImpl.startModule` | 完成后自动接纳（Jenkins 回调写库） | startModule |
-| 3 | 收集 bugfix | `platformreleaseDelegateImpl.collectBugfix` | **完成后自动接纳全部 cve/bugfix** | collectBugfixResult |
-| 4 | 需求基线 | `openeulerjenkinsDelegateImpl.checkBaseline` | 基于接纳结果冻结 | checkBaseline |
-| 5 | 版本检查 | `openeulerjenkinsDelegateImpl.checkVersions` | 入参=已接纳 ids，空则失败 | checkVersion |
-| 6 | 导入测试 repo | `openeulerjenkinsDelegateImpl.operateTestingRepo` | action 固定 CREATE_OR_UPDATE；入参=已接纳 ids | createOrUpdateRepo |
-| 7 | 生成 CVE 公告 | `platformreleaseDelegateImpl.generateNotice(reviewId, userId, 1)` | 走新按钮链路（flag=1） | generateSafeNoticeResult1 |
+| #   | 步骤               | 触发方法                                                          | 编排专属行为                                  | 状态槽                    |
+| --- | ------------------ | ----------------------------------------------------------------- | --------------------------------------------- | ------------------------- |
+| 1   | 同步构建结果到仓库 | `openeulerjenkinsDelegateImpl.syncBuildResultToRepo`              | —                                             | syncBuildResult           |
+| 2   | 收集 CVE           | `platformreleaseDelegateImpl.startModule`                         | 完成后自动接纳（Jenkins 回调写库）            | startModule               |
+| 3   | 收集 bugfix        | `platformreleaseDelegateImpl.collectBugfix`                       | **完成后自动接纳全部 cve/bugfix**             | collectBugfixResult       |
+| 4   | 需求基线           | `openeulerjenkinsDelegateImpl.checkBaseline`                      | 基于接纳结果冻结                              | checkBaseline             |
+| 5   | 版本检查           | `openeulerjenkinsDelegateImpl.checkVersions`                      | 入参=已接纳 ids，空则失败                     | checkVersion              |
+| 6   | 导入测试 repo      | `openeulerjenkinsDelegateImpl.operateTestingRepo`                 | action 固定 CREATE_OR_UPDATE；入参=已接纳 ids | createOrUpdateRepo        |
+| 7   | 生成 CVE 公告      | `platformreleaseDelegateImpl.generateNotice(reviewId, userId, 1)` | 走新按钮链路（flag=1）                        | generateSafeNoticeResult1 |
 
 步骤 2（startModule）是唯一有 Jenkins 回调的步骤（`saveCveCallbackResult`
 按 jobUuid 匹配写库）；其余步骤为平台主动拉取/阻塞等待/惰性推进后写库。
@@ -69,13 +69,13 @@ Redis setIfAbsent(锁, 300s) 抢锁
 
 ### 4. 编排状态存储（MongoDB jenkins_job_exec_status）
 
-| 字段 | 说明 |
-|---|---|
-| `updateAutomationStatus` | 整体状态（EXECUTING / EXECUTE_SUCCESS / EXECUTE_FAILED） |
-| `updateAutomationStep` | 步骤指针（1-7，指向已触发/已成功的当前步骤） |
-| `updateAutomationStepTime` | 当前步骤开始时间（超时判定基准） |
-| `updateAutomationUserId` | 发起人（续跑时以其身份触发后续步骤） |
-| `updateAutomationStartTime` | 编排整体开始时间 |
+| 字段                        | 说明                                                     |
+| --------------------------- | -------------------------------------------------------- |
+| `updateAutomationStatus`    | 整体状态（EXECUTING / EXECUTE_SUCCESS / EXECUTE_FAILED） |
+| `updateAutomationStep`      | 步骤指针（1-7，指向已触发/已成功的当前步骤）             |
+| `updateAutomationStepTime`  | 当前步骤开始时间（超时判定基准）                         |
+| `updateAutomationUserId`    | 发起人（续跑时以其身份触发后续步骤）                     |
+| `updateAutomationStartTime` | 编排整体开始时间                                         |
 
 写入位置：`OpenEulerJenkinsOperation` 新增
 `startUpdateAutomation`（初始化五字段）、`updateUpdateAutomationStatus`

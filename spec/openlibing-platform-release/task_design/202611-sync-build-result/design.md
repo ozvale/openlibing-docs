@@ -45,10 +45,10 @@
 
 ### 4. 状态存储（MongoDB jenkins_job_exec_status）
 
-| 字段 | 说明 |
-|---|---|
-| `syncBuildResult` | 状态槽（null / EXECUTING / EXECUTE_SUCCESS / EXECUTE_FAILED） |
-| `syncBuildResultTriggerTime` | 触发时间（BSON Date，UTC 存储），等待时长判定基准 |
+| 字段                         | 说明                                                          |
+| ---------------------------- | ------------------------------------------------------------- |
+| `syncBuildResult`            | 状态槽（null / EXECUTING / EXECUTE_SUCCESS / EXECUTE_FAILED） |
+| `syncBuildResultTriggerTime` | 触发时间（BSON Date，UTC 存储），等待时长判定基准             |
 
 写入位置：`OpenEulerJenkinsOperation#updateJenkinsJobExecStatus`
 （`JenkinsJobName.SYNC_BUILD_RESULT` 分支，EXECUTING 时同步写触发时间）。
