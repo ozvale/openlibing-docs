@@ -2,7 +2,7 @@
 
 ## 关联
 
-- 业务 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/109 （fix(auth): token 过期返回 500 而非 401，缺陷类，非【安全】issue）
+- 业务 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/110 （fix(auth): token 过期返回 500 而非 401，缺陷类，非【安全】issue）
 - 业务 PR: https://gitcode.com/openlibing/openlibing-gateway/merge_requests/232 （fix(auth): harden token, whitelist and csrf handling on release_20261116，已合入）
 - 批次总览: [security-remediation-202611/archive.md](../security-remediation-202611/archive.md)
 

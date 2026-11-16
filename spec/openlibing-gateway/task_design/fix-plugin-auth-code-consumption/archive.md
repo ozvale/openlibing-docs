@@ -3,7 +3,7 @@
 ## 关联
 
 - 业务 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/165 （【安全】M-0005 插件一次性 auth code Redis key 命名空间不一致 + 非原子双消费竞态）
-- 关联 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/143 （【安全】插件取 token 接口未认证 Redis Key 遍历探测，裸 code 预检缺陷的同源问题）
+- 关联 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/144 （【安全】插件取 token 接口未认证 Redis Key 遍历探测，裸 code 预检缺陷的同源问题）
 - 业务 PR: https://gitcode.com/openlibing/openlibing-gateway/merge_requests/235 （fix(security): harden auth, oauth and redis handling，待合入）
 - 批次总览: [security-remediation-202611/archive.md](../security-remediation-202611/archive.md)
 

@@ -3,7 +3,7 @@
 ## 关联
 
 - 业务 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/170 （【安全】网关纵向权限校验存在请求方法与动态参数校验盲区，可导致低权限用户越权访问管理接口；修复方式为 `/openlibing-cicd/` 纵向权限校验体系下线）
-- 关联 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/100 （【缺陷】cicd 拦截器拦截了其他模块请求）
+- 关联 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/101 （【缺陷】cicd 拦截器拦截了其他模块请求）
 - 业务 PR: https://gitcode.com/openlibing/openlibing-gateway/merge_requests/232 （fix(auth): harden token, whitelist and csrf handling on release_20261116，已合入）
 - 批次总览: [security-remediation-202611/archive.md](../security-remediation-202611/archive.md)
 

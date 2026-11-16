@@ -2,7 +2,7 @@
 
 ## 关联
 
-- 业务 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/150 （【安全】auth-session-gray-release H-0002 水平越权 IDOR：GET /platform/query/already/bind/accounts 可查询任意用户已绑定三方账号）
+- 业务 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/151 （【安全】auth-session-gray-release H-0002 水平越权 IDOR：GET /platform/query/already/bind/accounts 可查询任意用户已绑定三方账号）
 - 关联 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/163 （【安全】M-0003 POST /user/set-check-platform 水平越权 IDOR，Task 6 同型修复）
 - 业务 PR: https://gitcode.com/openlibing/openlibing-gateway/merge_requests/232 （已合入，commit 9e14a5ec）+ https://gitcode.com/openlibing/openlibing-gateway/merge_requests/235 （待合入，commit e55584ba）
 - 批次总览: [security-remediation-202611/archive.md](../security-remediation-202611/archive.md)

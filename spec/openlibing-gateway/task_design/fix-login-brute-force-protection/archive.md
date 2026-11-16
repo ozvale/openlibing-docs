@@ -3,7 +3,7 @@
 ## 关联
 
 - 业务 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/158 （【安全】gateway-auth-whitelist-range L-0011 凭证类登录端点缺少暴力破解与速率限制防护）
-- 关联 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/147 （同 L-0011 重复单，已关闭）
+- 关联 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/148 （同 L-0011 双录单，已关闭）
 - 业务 PR: https://gitcode.com/openlibing/openlibing-gateway/merge_requests/235 （fix(security): harden auth, oauth and redis handling，待合入）
 - 批次总览: [security-remediation-202611/archive.md](../security-remediation-202611/archive.md)
 

@@ -2,7 +2,7 @@
 
 ## 关联
 
-- 业务 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/148 （【安全】gateway-auth-whitelist-range L-0013 登录接口刷新令牌 Redis key 不一致，PAT/密码登录 refreshToken 永远无法刷新）
+- 业务 Issue: https://gitcode.com/openlibing/openlibing-gateway/issues/149 （【安全】gateway-auth-whitelist-range L-0013 登录接口刷新令牌 Redis key 不一致，PAT/密码登录 refreshToken 永远无法刷新）
 - 业务 PR: https://gitcode.com/openlibing/openlibing-gateway/merge_requests/235 （fix(security): harden auth, oauth and redis handling，待合入）
 - 批次总览: [security-remediation-202611/archive.md](../security-remediation-202611/archive.md)
 
