@@ -198,7 +198,7 @@
   }
   .el-field-item input { width: 14px; height: 14px; accent-color: #409eff; }
   .el-text-btn { border: 0; background: transparent; color: #409eff; font-size: 13px; padding: 0; cursor: pointer; }
-  .el-form-item-wrap { margin-bottom: 24px; }
+  .form-item-wrap { margin-bottom: 24px; }
   .el-form-item { display: flex; align-items: flex-start; gap: 14px; }
   .el-form-label { flex: 0 0 130px; width: 130px; padding-right: 12px; text-align: left; font-size: 14px; color: #606266; line-height: 32px; }
   .el-form-control { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 8px; }
@@ -778,7 +778,7 @@
       if (key === 'isParticipateOperation') {
         rows += batchRemarkRowHtml();
       }
-      return '<div class="el-form-item-wrap">' + rows + '</div>';
+      return '<div class="form-item-wrap">' + rows + '</div>';
     }).join('');
   }
 

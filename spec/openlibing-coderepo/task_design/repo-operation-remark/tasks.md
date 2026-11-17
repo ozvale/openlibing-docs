@@ -2,7 +2,7 @@
 
 > FE 需求名称：【openLiBing-coderepo】代码仓不参与运营时增加备注能力
 
-## 进度: 0/19 complete
+## 进度: 1/20 complete
 
 ## 后端（openlibing-coderepo / master）
 
@@ -25,7 +25,8 @@
 - [ ] Task 14: `apps/web-openlibing/src/views/Repos/index.vue`：`FORM_FIELD_KEYS` 与新增表单默认值加入 `operationRemark`。
 - [ ] Task 15: 列表在「是否参与运营」列后新增「不参与运营备注」列：`allColumns` 增加 `operationRemark` 配置，表格列使用 `show-overflow-tooltip`、空值显示 `--`；确认老用户新列默认勾选且列顺序位于「是否参与运营」之后。
 - [ ] Task 16: 新增/编辑弹窗增加不参与运营备注项：仅开关为「否」展示、`maxlength=200`、必填校验、输入框占位统一「请输入不参与运营备注」、开关切「是」时清空并清除校验。
-- [ ] Task 17: `apps/web-openlibing/src/views/Repos/dialog/batchEditDialog.vue` 将「是否参与运营」默认值调整为「是」，并在该表单项内条件渲染不参与运营备注行（选择否才展示；标签左对齐），不新增独立备注字段或勾选项。
+- [x] Task 17a: 批量「是否参与运营」默认「是」（基线 `beta_gamma` 已具备：`defaultValue: true`，commit 1e973a4e2a，2026-11-16，无需改动）。
+- [ ] Task 17b: 在现有 `form-item-wrap` 容器内为该字段渲染开关行与条件备注行（选择「否」才展示；两行使用相同 `label-width` 固定值以保证标签左对齐；占位「请输入不参与运营备注」），不新增独立备注字段或勾选项。
 - [ ] Task 18: 批量弹窗实现联动与守卫：默认「是」不展示不参与运营备注、选择否时同项展示并必填、选择是时隐藏并清空、未勾选开关且所选仓库存在「否且无不参与运营备注」时拦截；「全选」只包含现有字段。
 - [ ] Task 19: 执行前端验证：`pnpm check:type`、`pnpm lint`（或仓库约定命令），并手工覆盖列表不参与运营备注列、新增/编辑/批量编辑/存量否仓补备注/切换是清空主链路。
 

@@ -190,11 +190,11 @@ private DataResult<Void> validateOperationRemark(
 
 文件：`apps/web-openlibing/src/views/Repos/dialog/batchEditDialog.vue`
 
-1. `schema` 不新增独立备注字段，左侧字段列表仍只有「是否参与运营」；同时将现有 `isParticipateOperation` 的 `defaultValue` 由 `false` 调整为 `true`，与单个新增保持一致；右侧对 `key === 'isParticipateOperation'` 使用自定义渲染。
+1. `schema` 不新增独立备注字段，左侧字段列表仍只有「是否参与运营」；`isParticipateOperation` 在基线 `beta_gamma` 上已为 `defaultValue: true`（commit 1e973a4e2a，2026-11-16），本需求保持该默认值不变；右侧对 `key === 'isParticipateOperation'` 使用自定义渲染。
 2. `formValues` 增加 `operationRemark: ''`（仅作为开关的附属值，不进入 `schema`、不进入 `selectedKeys`）。
 3. 交互与布局规则：
-   - 勾选「是否参与运营」后，在同一个 `el-form-item-wrap` 内展示开关行，默认选中「是」；
-   - 选择「否」：在同一 wrap 下展示「不参与运营备注」行，两行标签共用同一左对齐的 label 列，保证「是否参与运营」与「不参与运营备注」左边缘对齐；备注必填，最多 200 字；
+   - 勾选「是否参与运营」后，在现有 `form-item-wrap` 容器（`<div class="form-item-wrap">`）内展示开关行，默认选中「是」；
+   - 选择「否」：在同一个 `form-item-wrap` 容器内追加「不参与运营备注」行（同为 `<el-form-item>`），两行使用相同的 `label-width` 固定值（替换基线的 `auto`），保证「是否参与运营」与「不参与运营备注」标签左边缘对齐；备注必填，最多 200 字；
    - 输入框占位统一为「请输入不参与运营备注」；
    - 选择「是」：不展示备注行，并清空备注值；
    - 未勾选「是否参与运营」：不展示开关与备注。
