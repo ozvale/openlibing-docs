@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>代码仓不参与运营备注能力 — 需求演示</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --danger: #dc2626;
+    --success: #15803d;
+    --warning: #b45309;
+    --border: #e5e7eb;
+    --muted: #6b7280;
+    --bg: #f5f7fb;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: #111827;
+    line-height: 1.6;
+  }
+  header {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff;
+    padding: 28px 32px;
+  }
+  header h1 { margin: 0 0 6px; font-size: 22px; }
+  header p { margin: 0; opacity: .9; font-size: 14px; }
+  .meta { margin-top: 10px; font-size: 13px; opacity: .85; }
+  nav {
+    display: flex;
+    gap: 8px;
+    padding: 16px 32px 0;
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+  nav button {
+    border: 1px solid var(--border);
+    background: #fff;
+    padding: 9px 18px;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    font-size: 14px;
+    color: #374151;
+  }
+  nav button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    font-weight: 600;
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 20px 32px 48px; }
+  section[hidden] { display: none; }
+  .grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, .04);
+  }
+  .card h2 { margin: 0 0 4px; font-size: 17px; }
+  .card .hint { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+  .field { margin-bottom: 18px; }
+  .field > label.title { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .required { color: var(--danger); }
+  input[type="text"] {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    font-family: inherit;
+  }
+  input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+  .radio-line { display: flex; gap: 20px; align-items: center; }
+  .radio-line label { font-size: 14px; cursor: pointer; }
+  .counter { text-align: right; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .btn {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    padding: 9px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .btn:hover { border-color: #9ca3af; }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+  .btn.primary:hover { background: var(--primary-dark); }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .scenario-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .scenario-bar .btn { padding: 7px 12px; font-size: 13px; }
+  .msg { margin-top: 16px; padding: 11px 14px; border-radius: 8px; font-size: 14px; display: none; }
+  .msg.error { display: block; background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+  .msg.success { display: block; background: #f0fdf4; color: var(--success); border: 1px solid #bbf7d0; }
+  .msg.warning { display: block; background: #fffbeb; color: var(--warning); border: 1px solid #fde68a; }
+  .payload {
+    margin: 16px 0 0;
+    background: #0f172a;
+    color: #d1fae5;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 12px;
+    line-height: 1.55;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .rule-list { margin: 0; padding-left: 20px; font-size: 14px; }
+  .rule-list li { margin-bottom: 8px; }
+  .tag {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: #eff6ff;
+    color: var(--primary);
+    margin-left: 6px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: #f9fafb; font-weight: 600; color: #374151; }
+  .repo-list { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+  .repo-row { display: flex; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .repo-row:last-child { border-bottom: none; }
+  .repo-row .state-no { color: var(--danger); font-weight: 600; }
+  .repo-row .state-yes { color: var(--success); font-weight: 600; }
+  .repo-check { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+  .repo-check input { width: 15px; height: 15px; }
+  /* ---- 列表页面 ---- */
+  .list-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+  .list-table { table-layout: fixed; font-size: 14px; }
+  .remark-cell { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .remark-empty { color: #c0c4cc; }
+  .list-note { margin: 12px 0 0; font-size: 12px; color: #909399; }
+  .state-no { color: #f56c6c; font-weight: 600; }
+  .state-yes { color: #67c23a; font-weight: 600; }
+  /* ---- 批量编辑弹窗（仿 Element Plus 现有批量编辑属性弹窗） ---- */
+  .batch-demo-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+  @media (max-width: 1000px) { .batch-demo-grid { grid-template-columns: 1fr; } }
+  .el-dialog-mock {
+    background: #fff;
+    border: 1px solid #ebeef5;
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .12);
+    overflow: hidden;
+  }
+  .el-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+  }
+  .el-dialog-close { color: #909399; font-size: 18px; cursor: default; }
+  .el-dialog-body { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; padding: 0 20px 20px; }
+  @media (max-width: 760px) { .el-dialog-body { grid-template-columns: 1fr; } }
+  .el-dialog-col {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #dcdfe6;
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 380px;
+    max-height: 460px;
+  }
+  .el-dialog-col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 24px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #303133;
+  }
+  .el-dialog-scroll { flex: 1; min-height: 0; overflow: visible; padding: 4px 8px; }
+  .el-field-list { display: flex; flex-direction: column; gap: 6px; }
+  .el-field-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 14px;
+    color: #606266;
+    cursor: pointer;
+  }
+  .el-field-item input { width: 14px; height: 14px; accent-color: #409eff; }
+  .el-text-btn { border: 0; background: transparent; color: #409eff; font-size: 13px; padding: 0; cursor: pointer; }
+  .form-item-wrap { margin-bottom: 24px; }
+  .el-form-item { display: flex; align-items: flex-start; gap: 14px; }
+  .el-form-label { flex: 0 0 130px; width: 130px; padding-right: 12px; text-align: left; font-size: 14px; color: #606266; line-height: 32px; }
+  .el-form-control { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 8px; }
+  .el-control-body { flex: 1; min-width: 0; }
+  .el-input, .el-select {
+    width: 100%;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #606266;
+    background: #fff;
+    outline: none;
+    font-family: inherit;
+  }
+  .el-select { cursor: pointer; }
+  .el-input:focus, .el-select:focus { border-color: #409eff; box-shadow: 0 0 0 2px rgba(64, 158, 255, .18); }
+  .el-radio-group { display: flex; align-items: center; gap: 24px; height: 32px; }
+  .el-radio { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: #606266; cursor: pointer; }
+  .el-radio input { width: 14px; height: 14px; accent-color: #409eff; }
+  .el-remove-icon { border: 0; background: transparent; padding: 0; font-family: inherit; color: #909399; font-size: 16px; line-height: 32px; cursor: pointer; }
+  .el-remove-icon:hover { color: #f56c6c; }
+  .el-remark-row { margin-top: 12px; }
+  .el-help {
+    position: relative;
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    line-height: 14px;
+    border-radius: 50%;
+    background: #e4e7ed;
+    color: #909399;
+    font-size: 11px;
+    text-align: center;
+    vertical-align: 1px;
+    cursor: help;
+  }
+  .el-help:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 12px);
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 260px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    background: #303133;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 18px;
+    text-align: left;
+    white-space: normal;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
+    z-index: 20;
+    pointer-events: none;
+  }
+  .el-help:hover::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 2px);
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #303133;
+    z-index: 20;
+    pointer-events: none;
+  }
+  .el-empty { color: #909399; text-align: center; padding: 60px 0; font-size: 14px; }
+  .el-dialog-footer { display: flex; justify-content: flex-end; gap: 12px; padding: 16px 20px; border-top: 1px solid #ebeef5; }
+  .el-button {
+    padding: 9px 20px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    background: #fff;
+    color: #606266;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .el-button:hover { color: #409eff; border-color: #c6e2ff; background: #ecf5ff; }
+  .el-button-primary { background: #409eff; border-color: #409eff; color: #fff; }
+  .el-button-primary:hover { background: #66b1ff; border-color: #66b1ff; color: #fff; }
+  .demo-context-card .repo-list { margin-bottom: 0; }
+  .footer-note { margin-top: 18px; font-size: 12px; color: var(--muted); }
+  .kpi { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .kpi div { background: #eff6ff; color: #1e40af; border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+  code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>代码仓不参与运营备注能力</h1>
+  <p>FE 需求名称：【openLiBing-coderepo】代码仓不参与运营时增加备注能力</p>
+  <div class="meta">演示范围：列表 / 新增 / 编辑 / 批量编辑 / 验收口径 · 纯前端模拟，不调用真实接口</div>
+</header>
+
+<nav>
+  <button class="active" data-tab="list" onclick="switchTab('list')">列表页面</button>
+  <button data-tab="single" onclick="switchTab('single')">单个新增 / 编辑</button>
+  <button data-tab="batch" onclick="switchTab('batch')">批量编辑</button>
+  <button data-tab="accept" onclick="switchTab('accept')">验收清单与规则</button>
+</nav>
+
+<main>
+  <!-- ===== 列表页面 ===== -->
+  <section id="tab-list">
+    <div class="card">
+      <div class="list-toolbar">
+        <div>
+          <h2 style="margin:0">代码仓列表</h2>
+          <p class="hint" style="margin:4px 0 0">不参与运营备注列位于「是否参与运营」之后，空值显示 --，超长内容省略并可悬浮查看。</p>
+        </div>
+        <div class="btn-row" style="margin:0">
+          <button class="el-button">列设置</button>
+          <button class="el-button el-button-primary">导出</button>
+        </div>
+      </div>
+      <table class="list-table">
+        <colgroup>
+          <col style="width:18%">
+          <col style="width:12%">
+          <col style="width:28%">
+          <col style="width:14%">
+          <col style="width:10%">
+          <col style="width:18%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>代码仓别名</th>
+            <th>是否参与运营</th>
+            <th>不参与运营备注</th>
+            <th>仓库责任人</th>
+            <th>状态</th>
+            <th>最后更新时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>repo-a</td>
+            <td><span class="state-no">否</span></td>
+            <td><span class="remark-cell" title="外部仓库，仅保留历史归档">外部仓库，仅保留历史归档</span></td>
+            <td>张三</td>
+            <td>正常</td>
+            <td>2026-11-16 10:20:00</td>
+          </tr>
+          <tr>
+            <td>repo-b</td>
+            <td><span class="state-no">否</span></td>
+            <td><span class="remark-cell" title="已停止维护，仅保留历史归档；后续不再纳入运营统计与周报范围，恢复需经运营负责人确认">已停止维护，仅保留历史归档；后续不再纳入运营统计与周报范围，恢复需经运营负责人确认</span></td>
+            <td>李四</td>
+            <td>正常</td>
+            <td>2026-11-15 18:05:00</td>
+          </tr>
+          <tr>
+            <td>repo-c</td>
+            <td><span class="state-yes">是</span></td>
+            <td><span class="remark-empty">--</span></td>
+            <td>王五</td>
+            <td>正常</td>
+            <td>2026-11-14 09:30:00</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="list-note">列设置中「不参与运营备注」默认勾选；不参与运营备注列不参与筛选、排序。导出 Excel 的最后一列同样包含「不参与运营备注」。</p>
+    </div>
+  </section>
+
+  <!-- ===== 单个新增 / 编辑 ===== -->
+  <section id="tab-single" hidden>
+    <div class="grid">
+      <div class="card">
+        <h2>新增 / 编辑代码仓</h2>
+        <p class="hint">不参与运营备注仅在「是否参与运营」为「否」时展示，且为必填；切换为「是」后清空并隐藏。</p>
+
+        <div class="scenario-bar">
+          <button class="btn" onclick="loadExistingNoRemark()">载入存量仓：不参与运营、无备注</button>
+          <button class="btn" onclick="loadExistingWithRemark()">载入存量仓：不参与运营、已有备注</button>
+          <button class="btn" onclick="resetSingle()">重置为新增仓</button>
+        </div>
+
+        <div class="field">
+          <label class="title" for="repoName">代码仓别名</label>
+          <input type="text" id="repoName" value="demo-repo" maxlength="50">
+        </div>
+
+        <div class="field">
+          <label class="title">是否参与运营 <span class="required">*</span></label>
+          <div class="radio-line">
+            <label><input type="radio" name="participate" value="true" checked onchange="syncSingle()"> 是</label>
+            <label><input type="radio" name="participate" value="false" onchange="syncSingle()"> 否</label>
+          </div>
+        </div>
+
+        <div class="field" id="singleRemarkWrap" hidden>
+          <label class="title" for="singleRemark">不参与运营备注 <span class="required">*</span></label>
+          <input type="text" id="singleRemark" maxlength="200" placeholder="请输入不参与运营备注" oninput="syncSingleCounter()">
+          <div class="counter"><span id="singleRemarkCount">0</span>/200</div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn primary" onclick="saveSingle()">保存</button>
+          <button class="btn" onclick="resetSingle()">重置</button>
+        </div>
+        <div id="singleMsg" class="msg"></div>
+        <pre id="singlePayload" class="payload">等待保存...</pre>
+      </div>
+
+      <div class="card">
+        <h2>交互规则</h2>
+        <p class="hint">与设计文档 2.2 / 2.3 / 2.6 一致</p>
+        <ul class="rule-list">
+          <li>选择「否」：展示不参与运营备注输入框，必填，最多 200 字。</li>
+          <li>选择「是」：不展示不参与运营备注，保存时置空，不保留历史值。</li>
+          <li>存量仓当前为「否」但无不参与运营备注：编辑任意字段保存时，必须先补充。</li>
+          <li>存量仓当前为「是」：编辑保存不要求不参与运营备注。</li>
+          <li>后端以「本次提交的开关值」判定；未提交开关时取数据库现值。</li>
+          <li>未被编辑的存量仓不触发任何强制与提示。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 批量编辑 ===== -->
+  <section id="tab-batch" hidden>
+    <div class="batch-demo-grid">
+      <div>
+        <div class="el-dialog-mock">
+          <div class="el-dialog-header">
+            <span>批量编辑属性</span>
+            <span class="el-dialog-close">×</span>
+          </div>
+          <div class="el-dialog-body">
+            <div class="el-dialog-col left">
+              <div class="el-dialog-col-header">
+                <span>可选字段</span>
+                <button class="el-text-btn" id="selectAllBtn" onclick="toggleSelectAll()">全选</button>
+              </div>
+              <div class="el-dialog-scroll">
+                <div class="el-field-list" id="batchFieldList"></div>
+              </div>
+            </div>
+            <div class="el-dialog-col right">
+              <div class="el-dialog-col-header">
+                <span>已选字段</span>
+              </div>
+              <div class="el-dialog-scroll">
+                <div id="selectedFields"></div>
+              </div>
+            </div>
+          </div>
+          <div class="el-dialog-footer">
+            <button class="el-button" onclick="resetBatch()">取消</button>
+            <button class="el-button el-button-primary" onclick="saveBatch()">保存</button>
+          </div>
+        </div>
+        <div id="batchMsg" class="msg"></div>
+        <pre id="batchPayload" class="payload">等待保存...</pre>
+      </div>
+
+      <div class="card demo-context-card">
+        <h2>演示上下文</h2>
+        <p class="hint">模拟列表页已选仓库；可勾选/取消以验证拦截规则。</p>
+
+        <div class="kpi">
+          <div>已选：<span id="kpiSelected">3</span></div>
+          <div>否：<span id="kpiNo">2</span></div>
+          <div>是：<span id="kpiYes">1</span></div>
+        </div>
+
+        <div class="repo-list">
+          <div class="repo-row">
+            <label class="repo-check"><input type="checkbox" class="batchRepo" data-name="repo-a" checked onchange="syncBatchStats()"> repo-a</label>
+            <span class="state-no">否 · 无备注</span>
+          </div>
+          <div class="repo-row">
+            <label class="repo-check"><input type="checkbox" class="batchRepo" data-name="repo-b" checked onchange="syncBatchStats()"> repo-b</label>
+            <span class="state-no">否 · 已有备注</span>
+          </div>
+          <div class="repo-row">
+            <label class="repo-check"><input type="checkbox" class="batchRepo" data-name="repo-c" checked onchange="syncBatchStats()"> repo-c</label>
+            <span class="state-yes">是</span>
+          </div>
+        </div>
+
+        <h2 style="margin-top:22px">联动规则</h2>
+        <ul class="rule-list">
+          <li>左侧字段列表只有「是否参与运营」，不再单独放不参与运营备注项。</li>
+          <li>勾选「是否参与运营」后默认「是」，与单个新增一致；选择「否」时才展示不参与运营备注并必填。</li>
+          <li>选择「是」时不参与运营备注行隐藏并清空，与单个新增一致。</li>
+          <li>批量编辑其他属性时，若所选仓库存在「否」且无不参与运营备注，会被拦截，需勾选开关设为「否」补充不参与运营备注。</li>
+          <li>「全选」只包含左侧现有字段。</li>
+          <li>批量保存仍为单条 SQL 更新，不产生 N 次请求。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 验收清单 ===== -->
+  <section id="tab-accept" hidden>
+    <div class="card">
+      <h2>验收清单</h2>
+      <p class="hint">逐条对应 proposal.md 的验收标准。</p>
+      <table>
+        <thead>
+          <tr><th style="width:22%">场景</th><th style="width:38%">操作</th><th>预期结果</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>新增仓</td><td>选择「否」，不参与运营备注为空，保存</td><td>保存失败，提示「选择不参与运营时，请填写不参与运营备注」</td></tr>
+          <tr><td>新增仓</td><td>选择「否」，填写不参与运营备注，保存</td><td>保存成功，编辑弹窗可查看不参与运营备注</td></tr>
+          <tr><td>新增仓</td><td>选择「是」，保存</td><td>不展示不参与运营备注，保存成功</td></tr>
+          <tr><td>存量仓</td><td>当前为「否」且无不参与运营备注，编辑任意信息保存</td><td>保存失败并提示补充不参与运营备注；补充后成功</td></tr>
+          <tr><td>存量仓</td><td>当前为「否」且已有不参与运营备注，修改后保存</td><td>保存成功，不参与运营备注更新</td></tr>
+          <tr><td>存量仓</td><td>当前为「是」，编辑保存</td><td>不展示不参与运营备注，保存成功</td></tr>
+          <tr><td>开关切换</td><td>由「否」改为「是」，保存</td><td>不参与运营备注项消失，原内容不再保留</td></tr>
+          <tr><td>批量编辑</td><td>设为「否」，不填不参与运营备注，提交</td><td>不允许提交并提示</td></tr>
+          <tr><td>批量编辑</td><td>设为「否」，填写不参与运营备注，提交</td><td>所选仓库不参与运营备注一致</td></tr>
+          <tr><td>批量编辑</td><td>设为「是」，提交</td><td>所选仓库不参与运营备注全部清空</td></tr>
+          <tr><td>批量编辑</td><td>未勾选开关，批量修改其他属性；所选含「否且无不参与运营备注」</td><td>拦截并提示勾选「是否参与运营」设为「否」补充不参与运营备注</td></tr>
+          <tr><td>列表</td><td>查看代码仓列表</td><td>「不参与运营备注」列位于「是否参与运营」之后；有值展示内容，空值显示 <code>--</code>，超长省略并可悬浮查看</td></tr>
+          <tr><td>导出</td><td>导出代码仓列表</td><td>Excel 最后一列包含「不参与运营备注」，空值显示 <code>--</code>，既有列顺序不变</td></tr>
+          <tr><td>存量保护</td><td>不编辑存量仓</td><td>不做任何强制与提示</td></tr>
+        </tbody>
+      </table>
+
+      <h2 style="margin-top:26px">设计要点</h2>
+      <ul class="rule-list">
+        <li>新增列 <code>repo_info.operation_remark VARCHAR(200) NULL</code>，不建索引、不做存量回填。</li>
+        <li>复用现有新增 / 编辑 / 批量编辑 / 列表查询接口，不新增 HTTP 接口与权限锚点。</li>
+        <li>后端为最终校验闸门；前端负责联动展示与即时提示。</li>
+        <li>开关为「是」时备注统一落库为 <code>NULL</code>，避免残留脏数据。</li>
+        <li>列表接口返回 <code>operationRemark</code>；列表在「是否参与运营」列后新增「不参与运营备注」列；导出 Excel 最后一列同样包含「不参与运营备注」，既有导出列顺序不变。</li>
+      </ul>
+      <p class="footer-note">SPEC 目录：openlibing-docs/spec/openlibing-coderepo/task_design/repo-operation-remark/</p>
+    </div>
+  </section>
+</main>
+
+<script>
+  function switchTab(name) {
+    ['list', 'single', 'batch', 'accept'].forEach(function (key) {
+      document.getElementById('tab-' + key).hidden = key !== name;
+    });
+    document.querySelectorAll('nav button').forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.tab === name);
+    });
+  }
+
+  function setMsg(id, type, text) {
+    var el = document.getElementById(id);
+    el.className = 'msg ' + type;
+    el.textContent = text;
+  }
+
+  function clearMsg(id) {
+    var el = document.getElementById(id);
+    el.className = 'msg';
+    el.textContent = '';
+  }
+
+  /* ---------- 单个新增 / 编辑 ---------- */
+  function getParticipate() {
+    return document.querySelector('input[name="participate"]:checked').value === 'true';
+  }
+
+  function setParticipate(value) {
+    document.querySelectorAll('input[name="participate"]').forEach(function (radio) {
+      radio.checked = String(value) === radio.value;
+    });
+    syncSingle();
+  }
+
+  function syncSingle() {
+    var participate = getParticipate();
+    var wrap = document.getElementById('singleRemarkWrap');
+    wrap.hidden = participate;
+    if (participate) {
+      document.getElementById('singleRemark').value = '';
+      syncSingleCounter();
+    }
+    clearMsg('singleMsg');
+  }
+
+  function syncSingleCounter() {
+    document.getElementById('singleRemarkCount').textContent =
+      document.getElementById('singleRemark').value.length;
+  }
+
+  function loadExistingNoRemark() {
+    document.getElementById('repoName').value = 'legacy-repo';
+    setParticipate(false);
+    document.getElementById('singleRemark').value = '';
+    syncSingleCounter();
+    setMsg('singleMsg', 'warning', '存量仓：当前为「否」且无备注。编辑任意信息并保存时，必须先补充备注。');
+    document.getElementById('singlePayload').textContent = '等待保存...';
+  }
+
+  function loadExistingWithRemark() {
+    document.getElementById('repoName').value = 'legacy-repo';
+    setParticipate(false);
+    document.getElementById('singleRemark').value = '外部仓库，仅保留历史归档，不纳入运营统计';
+    syncSingleCounter();
+    setMsg('singleMsg', 'success', '存量仓：当前为「否」且已有备注，可正常编辑保存。');
+    document.getElementById('singlePayload').textContent = '等待保存...';
+  }
+
+  function resetSingle() {
+    document.getElementById('repoName').value = 'demo-repo';
+    document.getElementById('singleRemark').value = '';
+    setParticipate(true);
+    syncSingleCounter();
+    clearMsg('singleMsg');
+    document.getElementById('singlePayload').textContent = '等待保存...';
+  }
+
+  function saveSingle() {
+    var participate = getParticipate();
+    var remark = document.getElementById('singleRemark').value.trim();
+    if (!participate && !remark) {
+      setMsg('singleMsg', 'error', '保存失败：选择不参与运营时，请填写不参与运营备注。');
+      document.getElementById('singlePayload').textContent = '请求未发送（前端校验未通过）';
+      return;
+    }
+    // 开关为「是」时上送空串，由后端统一落库为 NULL，与批量编辑口径保持一致
+    var payload = {
+      repoName: document.getElementById('repoName').value,
+      isParticipateOperation: participate,
+      operationRemark: participate ? '' : remark
+    };
+    setMsg('singleMsg', 'success', participate
+      ? '保存成功：参与运营，备注已清空。'
+      : '保存成功：不参与运营，备注已保存。');
+    document.getElementById('singlePayload').textContent =
+      'POST /project-repo/' + (document.getElementById('repoName').value === 'legacy-repo' ? 'update-repo' : 'add-repo') +
+      '\n' + JSON.stringify(payload, null, 2);
+  }
+
+  /* ---------- 批量编辑（仿现有「批量编辑属性」弹窗） ---------- */
+  var batchFields = [
+    { key: 'purpose', label: '用途', type: 'select', options: ['工程&配置文件', '文档', '构建', '测试', '自研源码'] },
+    {
+      key: 'isAutoFormat',
+      label: '代码风格自动修复',
+      type: 'radio',
+      desc: '开启后，PR 创建和代码推送会尝试进行风格类问题修复。'
+    },
+    {
+      key: 'isSuppressionEnabled',
+      label: '告警抑制自动检视',
+      type: 'radio',
+      desc: '开启后，系统将对 PR 变更中的告警抑制注释/注解进行自动扫描与检视。'
+    },
+    {
+      key: 'isParticipateOperation',
+      label: '是否参与运营',
+      type: 'radio',
+      desc: '标记该代码仓是否参与运营统计；关闭后不参与运营相关统计。'
+    }
+  ];
+
+  var batchRepos = [
+    { id: 101, name: 'repo-a', participate: false, remark: '' },
+    { id: 102, name: 'repo-b', participate: false, remark: '已停止维护，仅保留历史归档' },
+    { id: 103, name: 'repo-c', participate: true, remark: null }
+  ];
+
+  var batchFieldMap = {};
+  batchFields.forEach(function (field) { batchFieldMap[field.key] = field; });
+
+  var selectedFieldKeys = [];
+  var batchValues = {
+    purpose: '自研源码',
+    isAutoFormat: true,
+    isSuppressionEnabled: true,
+    isParticipateOperation: true,
+    operationRemark: ''
+  };
+
+  function escapeAttr(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function selectedBatchRepos() {
+    var names = Array.prototype.slice.call(document.querySelectorAll('.batchRepo:checked'))
+      .map(function (el) { return el.dataset.name; });
+    return batchRepos.filter(function (repo) { return names.indexOf(repo.name) >= 0; });
+  }
+
+  function syncBatchStats() {
+    var selected = selectedBatchRepos();
+    document.getElementById('kpiSelected').textContent = selected.length;
+    document.getElementById('kpiNo').textContent =
+      selected.filter(function (repo) { return !repo.participate; }).length;
+    document.getElementById('kpiYes').textContent =
+      selected.filter(function (repo) { return repo.participate; }).length;
+    clearMsg('batchMsg');
+  }
+
+  function renderBatchFields() {
+    var list = document.getElementById('batchFieldList');
+    list.innerHTML = batchFields.map(function (field) {
+      var checked = selectedFieldKeys.indexOf(field.key) >= 0 ? ' checked' : '';
+      return '<label class="el-field-item">' +
+        '<input type="checkbox" value="' + field.key + '"' + checked +
+        ' onchange="toggleBatchField(this.value, this.checked)">' +
+        '<span>' + field.label + '</span>' +
+        '</label>';
+    }).join('');
+    document.getElementById('selectAllBtn').textContent =
+      selectedFieldKeys.length === batchFields.length ? '取消全选' : '全选';
+  }
+
+  function batchRadioHtml(field) {
+    var value = batchValues[field.key];
+    return '<div class="el-radio-group">' +
+      '<label class="el-radio"><input type="radio" name="batch_' + field.key + '" value="true"' +
+      (value === true ? ' checked' : '') +
+      ' onchange="updateBatchRadio(\'' + field.key + '\', true)"> 是</label>' +
+      '<label class="el-radio"><input type="radio" name="batch_' + field.key + '" value="false"' +
+      (value === false ? ' checked' : '') +
+      ' onchange="updateBatchRadio(\'' + field.key + '\', false)"> 否</label>' +
+      '</div>';
+  }
+
+  function batchRemarkInputHtml() {
+    return '<input type="text" class="el-input" id="batchRemarkInput" aria-label="不参与运营备注" maxlength="200" value="' +
+      escapeAttr(batchValues.operationRemark) +
+      '" placeholder="请输入不参与运营备注" oninput="syncBatchCounter()">' +
+      '<div class="counter"><span id="batchRemarkCount">' + batchValues.operationRemark.length + '</span>/200</div>';
+  }
+
+  function batchRemarkRowHtml() {
+    var hidden = batchValues.isParticipateOperation === false ? '' : ' hidden';
+    return '<div class="el-form-item el-remark-row"' + hidden + '>' +
+      '<div class="el-form-label">不参与运营备注 <span class="required">*</span></div>' +
+      '<div class="el-form-control">' +
+      '<div class="el-control-body">' + batchRemarkInputHtml() + '</div>' +
+      '</div>' +
+      '</div>';
+  }
+
+  function batchControlHtml(field) {
+    if (field.type === 'select') {
+      return '<select class="el-select" aria-label="' + escapeAttr(field.label) + '" onchange="updateBatchValue(\'' + field.key + '\', this.value)">' +
+        field.options.map(function (option) {
+          return '<option value="' + escapeAttr(option) + '"' +
+            (batchValues[field.key] === option ? ' selected' : '') + '>' + option + '</option>';
+        }).join('') +
+        '</select>';
+    }
+    return batchRadioHtml(field);
+  }
+
+  function renderSelectedFields() {
+    var container = document.getElementById('selectedFields');
+    if (!selectedFieldKeys.length) {
+      container.innerHTML = '<div class="el-empty">请选择左侧字段进行编辑</div>';
+      return;
+    }
+    container.innerHTML = selectedFieldKeys.map(function (key) {
+      var field = batchFieldMap[key];
+      var help = field.desc ? ' <span class="el-help" data-tip="' + escapeAttr(field.desc) + '">?</span>' : '';
+      var rows = '<div class="el-form-item">' +
+        '<div class="el-form-label">' + field.label + help + '</div>' +
+        '<div class="el-form-control">' +
+        '<div class="el-control-body">' + batchControlHtml(field) + '</div>' +
+        '<button type="button" class="el-remove-icon" title="移除" aria-label="移除字段：' + escapeAttr(field.label) + '" onclick="removeBatchField(\'' + key + '\')">✕</button>' +
+        '</div>' +
+        '</div>';
+      if (key === 'isParticipateOperation') {
+        rows += batchRemarkRowHtml();
+      }
+      return '<div class="form-item-wrap">' + rows + '</div>';
+    }).join('');
+  }
+
+  function renderBatch() {
+    renderBatchFields();
+    renderSelectedFields();
+    clearMsg('batchMsg');
+  }
+
+  function toggleBatchField(key, checked) {
+    if (!checked) {
+      removeBatchField(key);
+      return;
+    }
+    if (selectedFieldKeys.indexOf(key) < 0) {
+      selectedFieldKeys.push(key);
+    }
+    // 与单个新增保持一致：勾选「是否参与运营」时默认「是」
+    if (key === 'isParticipateOperation') {
+      batchValues.isParticipateOperation = true;
+    }
+    renderBatch();
+  }
+
+  function removeBatchField(key) {
+    selectedFieldKeys = selectedFieldKeys.filter(function (item) { return item !== key; });
+    if (key === 'isParticipateOperation') {
+      batchValues.operationRemark = '';
+    }
+    renderBatch();
+  }
+
+  function updateBatchRadio(key, value) {
+    batchValues[key] = value;
+    if (key === 'isParticipateOperation' && value === true) {
+      batchValues.operationRemark = '';
+    }
+    renderSelectedFields();
+    clearMsg('batchMsg');
+  }
+
+  function updateBatchValue(key, value) {
+    batchValues[key] = value;
+    clearMsg('batchMsg');
+  }
+
+  function toggleSelectAll() {
+    if (selectedFieldKeys.length === batchFields.length) {
+      selectedFieldKeys = [];
+      batchValues.operationRemark = '';
+    } else {
+      selectedFieldKeys = batchFields.map(function (field) { return field.key; });
+      batchValues.isParticipateOperation = true;
+    }
+    renderBatch();
+  }
+
+  function syncBatchCounter() {
+    var input = document.getElementById('batchRemarkInput');
+    if (!input) return;
+    batchValues.operationRemark = input.value;
+    document.getElementById('batchRemarkCount').textContent = input.value.length;
+  }
+
+  function resetBatch() {
+    selectedFieldKeys = [];
+    batchValues = {
+      purpose: '自研源码',
+      isAutoFormat: true,
+      isSuppressionEnabled: true,
+      isParticipateOperation: true,
+      operationRemark: ''
+    };
+    Array.prototype.forEach.call(document.querySelectorAll('.batchRepo'), function (el) { el.checked = true; });
+    syncBatchStats();
+    renderBatch();
+    document.getElementById('batchPayload').textContent = '等待保存...';
+    clearMsg('batchMsg');
+  }
+
+  function saveBatch() {
+    var selectedRepos = selectedBatchRepos();
+    if (!selectedRepos.length) {
+      setMsg('batchMsg', 'error', '请先选择需要批量编辑的仓库。');
+      document.getElementById('batchPayload').textContent = '请求未发送（未选择仓库）';
+      return;
+    }
+    if (!selectedFieldKeys.length) {
+      setMsg('batchMsg', 'error', '请先选择需要编辑的字段。');
+      document.getElementById('batchPayload').textContent = '请求未发送（未选择字段）';
+      return;
+    }
+
+    var switchSelected = selectedFieldKeys.indexOf('isParticipateOperation') >= 0;
+    var participate = batchValues.isParticipateOperation;
+    var remark = (batchValues.operationRemark || '').trim();
+
+    if (switchSelected && !participate && !remark) {
+      setMsg('batchMsg', 'error', '提交失败：选择不参与运营时，请填写不参与运营备注！');
+      document.getElementById('batchPayload').textContent = '请求未发送（前端校验未通过）';
+      return;
+    }
+
+    // 本次未把开关改为「是」，且不会统一写入备注时，所选仓库中不能存在「否且无备注」
+    var switchToYes = switchSelected && participate;
+    var writesRemark = switchSelected && !participate && !!remark;
+    if (!switchToYes && !writesRemark) {
+      var missing = selectedRepos.filter(function (repo) {
+        return !repo.participate && !(repo.remark || '').trim();
+      });
+      if (missing.length) {
+        setMsg('batchMsg', 'error',
+          '提交失败：所选仓库中存在不参与运营但未填写备注的仓库（' +
+          missing.map(function (repo) { return repo.name; }).join('、') +
+          '），请先勾选「是否参与运营」并选择「否」补充备注。');
+        document.getElementById('batchPayload').textContent = '请求未发送（前后端双重拦截）';
+        return;
+      }
+    }
+
+    var repoDTO = {};
+    var flags = {};
+    selectedFieldKeys.forEach(function (key) {
+      if (key === 'isParticipateOperation') {
+        repoDTO.isParticipateOperation = participate;
+        repoDTO.operationRemark = participate ? '' : remark;
+        flags.isEditIsParticipateOperation = true;
+      } else if (key === 'purpose') {
+        repoDTO.purpose = batchValues.purpose;
+        flags.isEditPurpose = true;
+      } else if (key === 'isAutoFormat') {
+        repoDTO.isAutoFormat = batchValues.isAutoFormat;
+        flags.isEditIsAutoFormat = true;
+      } else if (key === 'isSuppressionEnabled') {
+        repoDTO.isSuppressionEnabled = batchValues.isSuppressionEnabled;
+        flags.isEditIsSuppressionEnabled = true;
+      }
+    });
+
+    var payload = {
+      repoIds: selectedRepos.map(function (repo) { return repo.id; }),
+      repoDTO: repoDTO
+    };
+    Object.keys(flags).forEach(function (key) { payload[key] = flags[key]; });
+
+    var summary;
+    if (switchSelected && participate) {
+      summary = '批量保存成功：所选仓库已设为参与运营，不参与运营备注全部清空。';
+    } else if (switchSelected && !participate) {
+      summary = '批量保存成功：所选仓库已设为不参与运营，不参与运营备注统一写入。';
+    } else {
+      summary = '批量保存成功：所选字段已批量更新，开关与不参与运营备注保持不变。';
+    }
+    setMsg('batchMsg', 'success', summary);
+    document.getElementById('batchPayload').textContent =
+      'POST /project-repo/batch-update-repo\n' + JSON.stringify(payload, null, 2);
+  }
+
+  // 初始化
+  syncSingle();
+  syncSingleCounter();
+  syncBatchStats();
+  renderBatchFields();
+  renderSelectedFields();
+</script>
+</body>
+</html>
