@@ -3,6 +3,7 @@
 ## 关联
 
 - 业务 PR: https://gitcode.com/openlibing/pr-sync-action/merge_requests/9（已合入）
+- 上游批次归档：[pipeline-plugins-security-remediation 批次归档](../../../../security-remediation/task_design/pipeline-plugins-security-remediation/archive.md)。注：该批次归档成文早于本批次，其中对 pr-sync-action #10（AppCode 静态凭证回退"暂缓"）、#20（chmod 0666"暂缓"）等条的"暂缓/须评审"结论已由本批次推进——#10 已根治（禁用 AppCode 回退，仅保留 OIDC）、#20 已收敛（构建后 chmod 0666→0755），业务仓 master 现状（`action.yml` 无 `openlibing_apig_code` 输入、`src/apig-client.ts` 仅 OIDC 路径、`scripts/fix-bundle-chmod.js` 已挂打包链）可复核；该归档中相应过时状态待另行修订
 - 业务 Issue（修复完成后由责任人验证关闭）：
   - https://gitcode.com/openlibing/pr-sync-action/issues/5
   - https://gitcode.com/openlibing/pr-sync-action/issues/6
@@ -26,7 +27,7 @@
 
 - commit `a77820e`: APIG 请求体日志脱敏 accessToken（#5/#7/#11/#16/#21/#22）
 - commit `1439098`: Gitee 令牌改为 Authorization Bearer 头传输，不再拼 URL（#6/#17）
-- commit `a90dfd7`: /pr-sync/trigger 触发请求停止下发 accessToken（#9，cicd 侧配套变更见 openlibing-cicd `feat/pr-sync-trigger-update-type` 分支）
+- commit `a90dfd7`: /pr-sync/trigger 触发请求停止下发 accessToken（#9，cicd 侧配套变更已随 openlibing-cicd `!641` 合入 `release_20261029_iter2`（merge commit `e40ca11f3`）并已在 master：`d5f042ebf` 触发器支持 update req_type、`dda33c155` MQS 消息移除 access_token、`ce6d5b199` PrSyncTriggerReqDTO 删除 accessToken 字段；原开发分支 `feat/pr-sync-trigger-update-type` 合入后已删除）
 - commit `06314f1`: 批量加固——轮询间隔 30s 下限（#12）、标签操作失败强警告（#13）、出站仅 HTTPS（#18）、pre-commit-action 升级 v1.0.3；新增 scripts/fix-bundle-chmod.js 构建后收敛 bundle 内 chmod 0666→0755（#20）；平台 API 基址支持 GITCODE_API_BASE_URL / GITEE_API_BASE_URL 环境变量覆盖（#8）
 - commit `cf34545`: 按评审意见恢复 openlibing_apig_url 默认值与 required:false（#8 只要求可覆盖）
 - commit `00d409e`: 按评审意见回滚 Action SHA 钉死，恢复 tag 引用（#15 确认非问题）
@@ -44,7 +45,7 @@
 
 ## 最终验证
 
-- 单元测试：jest 18 套件 / 145 用例全部通过
+- 单元测试：业务仓 master（commit `4c43f62`，!14 合入后）于 2026-11-17 复测 `npx jest --config jest.config.cjs`：Test Suites: 8 passed, 8 total；Tests: 90 passed, 90 total。交付时（2026-10-29）口径为 18 套件 / 145 用例，与当前 master 测试清单（8 个测试文件）已不可复现，以本次实测为准
 - 构建：npm run all 成功；ncc 打包后 fix-bundle-chmod 脚本收敛生效，dist/index.js 无 0666 残留
 - 安全收敛：dist/index.js 无 AppCode（X-Apig-AppCode）代码路径残留；日志脱敏正则覆盖 accessToken 字段
 - 流程验证：AppCode 回退禁用后，未声明 id-token 的工作流将**跳过执行并输出迁移指引**。退出状态说明：跳过路径经 `writeSkipped()` 设置输出后正常 return，**以成功态（exit 0）结束**，仅打印指引日志；因此将本插件 job 配置为必需门禁（required status check）的接入仓会出现"绿色通过但实际未执行"的情况——此类接入仓应以任务结果页的三态标签（SC-RUNNING/SC-SUCC/SC-FAIL）而非 job 状态作为同步是否执行的判定依据，并在接入时确认已声明 `id-token: write`（预期行为变化，已在 PR 描述告知各接入仓检查）
