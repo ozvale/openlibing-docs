@@ -85,6 +85,7 @@ workflow on 监听配置（唯一事件开关）
 ### 6.2 MQS 消息契约（黄区消费端）
 
 - req_type 取值（实现版词汇）：open / reopen / update / merge / comment，与 triggerEvent 全链路一致、原样透传。
+- **与 coderepo 现行 req_type 枚举（open / merge / close / compile / push）的差异**：本模型新增 reopen / update / comment 三个消费端从未定义的枚举值，且不再使用 compile（旧版 PR 同步主动触发走 `req_type=compile`）。tasks.md 的「契约确认」仅指消息结构定义完成，**不等于黄区消费端已支持新词汇**——消费端必须同步支持 reopen / update / comment 并对旧 open / compile 保持兼容，否则 update / comment 事件会落入未处理分支被丢弃或抛异常、PR 同步静默失败（违反下方「每条消息必有回执」铁律）。消费端支持落地见 tasks.md「黄区消费端」未勾选项。
 - 其余字段不变：org_name、repo_name、repo_type、br_name=目标分支、tgt_branch=源分支、pr_id、commit_id、account、timestamp、params；不携带 access_token。
 - 黄区语义（状态机解释，可重放）：
   - 对账类（open / reopen / update / comment）：三级对账——① 目标仓临时分支 HEAD == commit_id？② MR 是否存在？③ 门禁流水线在跑/有结果？缺哪补哪；全满足标记 SKIPPED 并立即回执真实状态。

@@ -25,7 +25,7 @@
 
 ## 黄区消费端（契约约定，另行排期）
 
-- [x] MQS 消息契约确认（req_type 五词 + commit_id）
+- [x] MQS 消息契约确认（req_type 五词 + commit_id）——仅指契约结构定义完成；黄区消费端尚未支持新增的 reopen / update / comment 词汇，须对旧 open / compile 兼容，落地见下方未勾选项
 - [ ] 黄区状态机三级对账实现（分支 HEAD == commit_id → MR 存在 → 门禁流水线在跑，缺哪补哪，SKIPPED 回执）
 - [ ] 标记类（merge）目标 MR 状态置「已合入」幂等实现
 - [ ] 存量服务端 webhook 自动触发链路清理下线

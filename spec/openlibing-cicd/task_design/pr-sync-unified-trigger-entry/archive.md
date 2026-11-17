@@ -34,4 +34,4 @@ PR 同步触发入口插件化：事件触发与否由流水线 workflow 的 `on
 
 - 黄区状态机三级对账与标记类幂等实现（tasks.md 中未勾选项），由黄区消费端仓另行排期。
 - 存量服务端 webhook 自动触发链路的清理下线需与黄区/流水线平台协同发布，注意发布顺序（先确认无在途 webhook 触发后再下线）。
-- 本机 gitcode CLI 存在企业代理自签名证书导致的 TLS 校验失败问题，临时以 `NODE_TLS_REJECT_UNAUTHORIZED=0` 规避，长期建议配置 `NODE_EXTRA_CA_CERTS` 指向公司根证书。
+- 本机 gitcode CLI 存在企业代理自签名证书导致的 TLS 校验失败问题。唯一推荐方案：配置 `NODE_EXTRA_CA_CERTS` 指向公司根证书（与本仓 security-remediation spec「禁止回退关闭 TLS 校验」基线对齐）。`NODE_TLS_REJECT_UNAUTHORIZED=0` 会在进程内关闭证书链与主机名校验、形成可被中间人攻击的明文通道，**严禁用于 CI/流水线及任何携带凭据的调用**；即使本机一次性排查也应即用即删，不得写入脚本或长期配置（交付过程中曾以该变量临时规避，仅限当时本机环境，此处明确废止该做法）。

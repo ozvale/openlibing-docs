@@ -17,7 +17,8 @@
 - 事件入口唯一开关 = 流水线 workflow 的 `on` 监听配置；监听了什么事件，什么事件就触发同步。
 - action 插件与 openlibing-cicd **零事件语义**：不关注事件类型，收到即透传（`triggerEvent` 统一词汇：open / reopen / update / merge / comment）。
 - 黄区用状态机解释类型并保证可重放（对账类三级对账 / 标记类改 MR 状态）。
-- 清理存量服务端 webhook 自动触发链路（创建 PR / 推提交直发）；push webhook 直发链路保留，与插件触发在黄区幂等共存。
+- 下线清单：存量服务端 webhook 自动触发 PR 同步的旧服务端入口（创建 PR / 推提交事件直发 PR 同步）。
+- 保留清单：coderepo push 流水线直发链路保持现状，与插件触发在黄区幂等共存（下线的仅是其触发 PR 同步的旧服务端入口，不是 push 直发流水线本身）。
 
 ## 验收标准
 
