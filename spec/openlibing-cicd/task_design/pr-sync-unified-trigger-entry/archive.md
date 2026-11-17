@@ -5,7 +5,7 @@
 - 关联 Issue：
   - openlibing/openlibing-cicd#517：https://gitcode.com/openlibing/openlibing-cicd/issues/517
   - openlibing/pr-sync-action#29：https://gitcode.com/openlibing/pr-sync-action/issues/29
-- 开发分支：两仓 `feat-pr-sync-trigger-events`（action HEAD: d7feb27）
+- 合入记录：`openlibing/openlibing-cicd!671`（head `af4f6c12`，合入 `release_20261116_iter1`）、`openlibing/openlibing-coderepo!318`（head `28ab6c04`，合入 `release_20261116_iter1`）、插件仓（openlibing/pr-sync-action）提交 `d7feb27`；原开发分支 `feat-pr-sync-trigger-events` 合入后已删除
 - 本目录文档：[proposal.md](proposal.md) · [design.md](design.md) · [tasks.md](tasks.md)
 
 ## 需求回顾

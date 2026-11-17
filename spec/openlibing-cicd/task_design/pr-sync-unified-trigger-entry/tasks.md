@@ -1,6 +1,6 @@
 # Tasks · 黄蓝协同触发入口插件化改造及存量webhook功能清理
 
-实现分支：`openlibing/openlibing-cicd`、`openlibing/pr-sync-action` 均为 `feat-pr-sync-trigger-events`
+合入记录：`openlibing/openlibing-cicd!671`（head `af4f6c12`，合入 `release_20261116_iter1`）、`openlibing/openlibing-coderepo!318`（head `28ab6c04`，合入 `release_20261116_iter1`）、插件仓（openlibing/pr-sync-action）提交 `d7feb27`；开发分支已随合入删除，分支名不再作为追溯锚点
 
 ## openlibing-cicd（蓝区触发接口）
 
@@ -23,12 +23,16 @@
 - [x] 统一链路：触发 → Poller 轮询（首延 2 秒）→ running/终态标签回写（去重）→ 终态输出
 - [x] 失败输出恢复与 commitId 反查修复（d7feb27）
 
+## openlibing/openlibing-coderepo（蓝区 coderepo 服务端）
+
+- [x] 存量服务端 webhook 自动触发 PR 同步链路清理（openlibing/openlibing-coderepo!318，head `28ab6c04`，已合入 `release_20261116_iter1`）：删除 `PrSyncPushEventHandler`、`PrLabelService` / `PrAccessTokenService`（含实现类与 `CooperateLabel`）；`PrSyncEventHandler#resolveReqType` 收窄为只映射 merge / close，open / 源分支更新等其余事件不再发送 MQS
+- [ ] 平台侧 webhook 配置停用与发布顺序协同（运营动作，须与黄区/流水线平台协同发布；先确认无在途 webhook 触发后再下线）
+
 ## 黄区消费端（契约约定，另行排期）
 
-- [x] MQS 消息契约确认（req_type 五词 + commit_id）——仅指契约结构定义完成；黄区消费端尚未支持新增的 reopen / update / comment 词汇，须对旧 open / compile 兼容，落地见下方未勾选项
+- [x] MQS 消息契约确认（req_type 五词 + commit_id）——仅指契约结构定义完成；黄区消费端尚未支持新增的 reopen / update / comment 词汇，须对旧 open / compile 兼容、并保留 merge / close 旧路径（见 design.md 6.2），落地见下方未勾选项
 - [ ] 黄区状态机三级对账实现（分支 HEAD == commit_id → MR 存在 → 门禁流水线在跑，缺哪补哪，SKIPPED 回执）
 - [ ] 标记类（merge）目标 MR 状态置「已合入」幂等实现
-- [ ] 存量服务端 webhook 自动触发链路清理下线
 
 ## 归档
 

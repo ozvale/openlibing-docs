@@ -32,7 +32,7 @@ workflow on 监听配置（唯一事件开关）
 
 ## 2. 实现逻辑设计
 
-### 2.1 action 插件（openlibing/pr-sync-action，分支 feat-pr-sync-trigger-events）
+### 2.1 action 插件（openlibing/pr-sync-action，已随 openlibing-cicd!671 批次交付，见 tasks.md 合入记录）
 
 - 事件归一化：`src/platform/event-normalizer.ts`，各平台 payload action → CanonicalEvent；GitHub `closed && merged===true` 特判为 MERGED。
 - triggerEvent 映射：`src/main.ts` `CANONICAL_TO_TRIGGER_EVENT`：OPENED→open、REOPENED→reopen、SYNCHRONIZE→update、MERGED→merge、COMMENTED→comment；CLOSED 不映射，走 skipped 输出。
@@ -40,14 +40,14 @@ workflow on 监听配置（唯一事件开关）
 - 统一链路：`main.ts` → `PrSyncService.run`：触发 POST `cross-region/pr-sync/trigger` → 首次轮询延迟 2 秒进入 Poller 统一轮询 `getPipelineInfo` → 回写 running/终态标签（`lastWrittenLabel` 去重，`pr-sync-service.ts`）→ 终态输出。无任何 SEND_OK 短路分支。
 - 工作流输入（action.yml）：无 `trigger_events` 过滤输入；保留 openlibing_apig_url / debug / poll_* / ignore_failure / trigger_enabled / git_token / platform / label_* 等既有输入。
 
-### 2.2 openlibing-cicd（分支 feat-pr-sync-trigger-events）
+### 2.2 openlibing-cicd（已合入 !671，head `af4f6c12`）
 
 - 接口入口：`CrossRegionController#prSyncTrigger`（POST `/pr-sync/trigger`，APIG 等价 `/apig/v1/cross-region/pr-sync/trigger`），入参 `PrSyncTriggerReqDTO`（accessToken 已按安全要求 #335 移除）。
 - `resolveTriggerEvent`（`CrossRegionServiceImpl`）：仅做空白→缺省 comment、trim/lowercase、白名单校验（open/reopen/update/merge/comment）；不解释语义、不映射 req_type。
 - req_type 透传：`reqType = triggerEvent`，经 `sendPrSyncMessage` 原样写入 MQS，commit_id 随消息下发。
 - 全 action 统一插记录：插 `YellowRegionPipelineEntity`，status=START、pipelineStatus=WAIT_START；MQS SEND_OK 后 `updateById` 绑定 msgId 落库；发送失败置 FAILURE、释放限流占位、返回 failureMessage。
-- 幂等窗口（先于限流判定）：`queryLatestNonTerminalPipeline`，窗口内（默认 10 分钟）且记录带 msgId 的非终态记录 → 返回 `{msgId: 既有 msgId, sendStatus: SEND_OK}`；超窗或无 msgId 放行打断重建（`interruptNonTerminalPipeline`）。
-- PR 维度限流：Redis key `cross-region:pr-sync:ratelimit:{org}:{repo}:{prNumber}`，`setIfAbsent` 60 秒（SET NX EX），窗口可配 `cross-region.pr-sync.rate-limit-window-seconds`；Redis 异常 fail-open。
+- 幂等窗口（先于限流判定）：`queryLatestNonTerminalPipeline`，窗口内（默认 10 分钟）且记录带 msgId 的非终态记录 → 返回 `{msgId: 既有 msgId, sendStatus: SEND_OK}`；超窗或无 msgId 放行打断重建（`interruptNonTerminalPipeline`）。**merge 事件不做幂等复用**（特判 `!"merge".equals(triggerEvent)`）：merge 属终结语义，与在途对账类记录不同，复用既有 msgId 会吞掉合并闭环，故直接打断重建。
+- PR 维度限流：Redis key `cross-region:pr-sync:ratelimit:{org}:{repo}:{prNumber}`，`setIfAbsent` 60 秒（SET NX EX），窗口可配 `cross-region.pr-sync.rate-limit-window-seconds`；Redis 异常 fail-open。**merge 事件不参与限流**（特判同上）：merge 被限流拒绝会直接丢失合并闭环，故跳过限流判断。
 - PR 元数据补全：`upsertTriggerPrInfo`。
 
 ## 3. 类设计
@@ -75,17 +75,19 @@ workflow on 监听配置（唯一事件开关）
 
 ### 6.1 触发接口
 
-| 项   | 说明                                                                                                                                                                                                                      |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 路径 | POST `/pr-sync/trigger`（APIG 等价：POST `/apig/v1/cross-region/pr-sync/trigger`）                                                                                                                                        |
-| 入参 | orgName、repoName、prNumber、prId、platform（gitcode/gitee/github，蓝区默认 gitcode）、sourceBranch、targetBranch、gitUrl、account、commitId、triggerEvent（可选，缺省 comment，合法值 open/reopen/update/merge/comment） |
-| 校验 | orgName/repoName/prNumber/prId 必填；platform 白名单；triggerEvent 白名单（仅校验，不决策）                                                                                                                               |
-| 响应 | 成功：DataResult 成功 + MqsResponseDTO（msgId、sendStatus=SEND_OK）；幂等命中：返回在途 msgId；失败：failureMessage（参数错误 / platform 非法 / 限流拒绝 / 发送失败）                                                     |
+| 项   | 说明                                                                                                                                                                                                                                                                                                                     |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 路径 | POST `/pr-sync/trigger`（APIG 等价：POST `/apig/v1/cross-region/pr-sync/trigger`）                                                                                                                                                                                                                                       |
+| 入参 | orgName、repoName、prNumber、prId、platform（gitcode/gitee/github，蓝区默认 gitcode）、sourceBranch、targetBranch、account、commitId、triggerEvent（可选，缺省 comment，合法值 open/reopen/update/merge/comment）。注：DTO 实际字段以上述十个为准，插件 `buildTriggerRequest` 附带的 `gitUrl` 后端反序列化时忽略、不生效 |
+| 校验 | orgName/repoName/prNumber/prId 必填；platform 白名单；triggerEvent 白名单（仅校验，不决策）                                                                                                                                                                                                                              |
+| 响应 | 成功：DataResult 成功 + MqsResponseDTO（msgId、sendStatus=SEND_OK）；幂等命中：返回在途 msgId；失败：failureMessage（参数错误 / platform 非法 / 限流拒绝 / 发送失败）                                                                                                                                                    |
 
 ### 6.2 MQS 消息契约（黄区消费端）
 
-- req_type 取值（实现版词汇）：open / reopen / update / merge / comment，与 triggerEvent 全链路一致、原样透传。
-- **与 coderepo 现行 req_type 枚举（open / merge / close / compile / push）的差异**：本模型新增 reopen / update / comment 三个消费端从未定义的枚举值，且不再使用 compile（旧版 PR 同步主动触发走 `req_type=compile`）。tasks.md 的「契约确认」仅指消息结构定义完成，**不等于黄区消费端已支持新词汇**——消费端必须同步支持 reopen / update / comment 并对旧 open / compile 保持兼容，否则 update / comment 事件会落入未处理分支被丢弃或抛异常、PR 同步静默失败（违反下方「每条消息必有回执」铁律）。消费端支持落地见 tasks.md「黄区消费端」未勾选项。
+- req_type 取值（两条来源）：
+  - action 插件经 cicd 触发链路：实现版五词 open / reopen / update / merge / comment，与 triggerEvent 全链路一致、原样透传。
+  - coderepo webhook 链路（存量保留）：`PrSyncEventHandler` 实际只发 merge / close（`resolveReqType` 经 `!318` 收窄，open / 源分支更新等其余事件不再发送 MQS）。
+- 与 coderepo 侧枚举的关系及消费端兼容要求：coderepo `CooperateAction` 常量现为 open / merge / close / compile / comment / push（`!318` 后新增 COMMENT；其中 open / compile / comment / push 保留仅作与 cicd 的消息契约说明，coderepo 侧不再发送）。黄区消费端必须：① 支持插件链路的新五词（reopen / update / comment 为消费端从未定义的新枚举）；② 保留 merge / close 两条旧路径（coderepo webhook 仍会发送，缺失将导致 PR 关闭事件同步丢失）。tasks.md 的「契约确认」仅指消息结构定义完成，**不等于黄区消费端已支持**；旧 open / compile 兼容落地见 tasks.md「黄区消费端」未勾选项。
 - 其余字段不变：org_name、repo_name、repo_type、br_name=目标分支、tgt_branch=源分支、pr_id、commit_id、account、timestamp、params；不携带 access_token。
 - 黄区语义（状态机解释，可重放）：
   - 对账类（open / reopen / update / comment）：三级对账——① 目标仓临时分支 HEAD == commit_id？② MR 是否存在？③ 门禁流水线在跑/有结果？缺哪补哪；全满足标记 SKIPPED 并立即回执真实状态。

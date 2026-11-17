@@ -2,11 +2,11 @@
 
 - FE 需求名称：【黄蓝协同】黄蓝协同触发入口插件化改造及存量webhook功能清理
 - 日期：2026-11-10（归档 2026-11-11）
-- 涉及仓库：`openlibing/openlibing-cicd`（Java，蓝区触发接口）、`openlibing/pr-sync-action`（TypeScript，蓝区 action 插件）、黄区 MQS 消费端（契约约定）
+- 涉及仓库：`openlibing/openlibing-cicd`（Java，蓝区触发接口）、`openlibing/pr-sync-action`（TypeScript，蓝区 action 插件）、`openlibing/openlibing-coderepo`（存量服务端 webhook 自动触发链路清理所在仓）、黄区 MQS 消费端（契约约定）
 - 关联 Issue：
   - https://gitcode.com/openlibing/openlibing-cicd/issues/517
   - https://gitcode.com/openlibing/pr-sync-action/issues/29
-- 开发分支：两仓 `feat-pr-sync-trigger-events`（action HEAD: d7feb27）
+- 合入记录：`openlibing/openlibing-cicd!671`（head `af4f6c12`）、`openlibing/openlibing-coderepo!318`（head `28ab6c04`）、插件仓提交 `d7feb27`；原开发分支 `feat-pr-sync-trigger-events` 合入后已删除
 
 ## 需求背景
 
