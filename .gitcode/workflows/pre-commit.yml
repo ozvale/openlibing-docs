@@ -2,7 +2,7 @@ name: pre-commit
 
 on:
   workflow_dispatch:
-  pull_request_target: # 使用 pull_request_target 确保 PR 流水线始终读取默认分支（master）的最新配置文件
+  pull_request: # 配置中无密钥引用，使用 pull_request 触发
     branches:
       - "*"
   pull_request_comment: # PR 评论事件：当用户在 PR 中发表评论时触发
@@ -22,7 +22,6 @@ jobs:
       - name: Checkout repository
         uses: checkout
         with:
-          token: ${{ secrets.ROBOT_TOKEN }}
           ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.event.pull_request.head.sha }} # 使用预合并后的 commit SHA 进行检出，确保 CI 检查的是 PR 与目标分支合并后的最终代码状态
           allow-unsafe-pr-checkout: true
 
