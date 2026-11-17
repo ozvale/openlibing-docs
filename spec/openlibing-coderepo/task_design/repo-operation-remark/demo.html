@@ -220,7 +220,7 @@
   .el-radio-group { display: flex; align-items: center; gap: 24px; height: 32px; }
   .el-radio { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: #606266; cursor: pointer; }
   .el-radio input { width: 14px; height: 14px; accent-color: #409eff; }
-  .el-remove-icon { color: #909399; font-size: 16px; line-height: 32px; cursor: pointer; }
+  .el-remove-icon { border: 0; background: transparent; padding: 0; font-family: inherit; color: #909399; font-size: 16px; line-height: 32px; cursor: pointer; }
   .el-remove-icon:hover { color: #f56c6c; }
   .el-remark-row { margin-top: 12px; }
   .el-help {
@@ -624,10 +624,11 @@
       document.getElementById('singlePayload').textContent = '请求未发送（前端校验未通过）';
       return;
     }
+    // 开关为「是」时上送空串，由后端统一落库为 NULL，与批量编辑口径保持一致
     var payload = {
       repoName: document.getElementById('repoName').value,
       isParticipateOperation: participate,
-      operationRemark: participate ? null : remark
+      operationRemark: participate ? '' : remark
     };
     setMsg('singleMsg', 'success', participate
       ? '保存成功：参与运营，备注已清空。'
@@ -730,7 +731,7 @@
   }
 
   function batchRemarkInputHtml() {
-    return '<input type="text" class="el-input" id="batchRemarkInput" maxlength="200" value="' +
+    return '<input type="text" class="el-input" id="batchRemarkInput" aria-label="不参与运营备注" maxlength="200" value="' +
       escapeAttr(batchValues.operationRemark) +
       '" placeholder="请输入不参与运营备注" oninput="syncBatchCounter()">' +
       '<div class="counter"><span id="batchRemarkCount">' + batchValues.operationRemark.length + '</span>/200</div>';
@@ -748,7 +749,7 @@
 
   function batchControlHtml(field) {
     if (field.type === 'select') {
-      return '<select class="el-select" onchange="updateBatchValue(\'' + field.key + '\', this.value)">' +
+      return '<select class="el-select" aria-label="' + escapeAttr(field.label) + '" onchange="updateBatchValue(\'' + field.key + '\', this.value)">' +
         field.options.map(function (option) {
           return '<option value="' + escapeAttr(option) + '"' +
             (batchValues[field.key] === option ? ' selected' : '') + '>' + option + '</option>';
@@ -771,7 +772,7 @@
         '<div class="el-form-label">' + field.label + help + '</div>' +
         '<div class="el-form-control">' +
         '<div class="el-control-body">' + batchControlHtml(field) + '</div>' +
-        '<span class="el-remove-icon" title="移除" onclick="removeBatchField(\'' + key + '\')">✕</span>' +
+        '<button type="button" class="el-remove-icon" title="移除" aria-label="移除字段：' + escapeAttr(field.label) + '" onclick="removeBatchField(\'' + key + '\')">✕</button>' +
         '</div>' +
         '</div>';
       if (key === 'isParticipateOperation') {
