@@ -1,0 +1,24 @@
+# tasks：pre-commit-action 免凭证接入（复用 checkout 基线 ref）
+
+- [x] 基于 `origin/master` 新建 `feat-drop-gc-token` 分支（base `2057773`）
+- [x] 创建业务 Issue `openlibing/pre-commit-action#52`
+- [x] `action.yml` 将 `gc_token` 改为可选并标注「已废弃，仅兼容」；版本升至 `1.1.0`
+- [x] `index.js` 新增 `resolveBaseRef()`（`origin/<baseRef>` → `gc_token` 兼容 fetch → 无凭证 fetch，三级解析）
+- [x] `index.js` 恢复 `createGitAskpass` / `removeGitAskpass` 与 `execFile` 的 `env` 覆盖能力，仅供兼容路径使用
+- [x] `index.js` 新增 `warnIfShallowClone()` 浅克隆自检与 `printBaseRefFixHint()` 修复指引
+- [x] `index.js` `buildAutoArgs()` 接入 `resolveBaseRef()`，日志走 `sanitizeLogValue()`
+- [x] `README.md` 更新三级解析说明、`gc_token` 废弃与迁移建议、`fetch-depth: 0` 示例
+- [x] 新增 `test/resolve-base-ref.test.js`（五条路径，本地 bare 仓离线执行）
+- [x] `npm run package` 重建 `dist/index.js`
+- [x] `npm test` 通过（7 个用例）
+- [x] `npx eslint index.js test/` 无 error
+- [x] `npx prettier@3.9.5 --write` 格式化改动文件
+- [x] 提交 commit（含 `Refs #52`）
+- [x] 推送分支并创建业务 PR #30（打 `ai-assisted` 标签，关联 Issue #52）
+- [x] 关闭早期不兼容方案 PR #29
+- [x] 回退 `.gitcode/workflows/nightly-schedule-scan.yml` 改动（workflows 暂不修改，统一整改）
+- [x] 业务 PR #30 评审通过并合入 `master`（2026-11-16）
+- [ ] 发布插件新版本（打 tag）
+- [ ] 下游 workflow 迁移：checkout 配置 `fetch-depth: 0` 并删除 `gc_token` 传参
+- [ ] 下游迁移完成后，另起变更删除 `gc_token` 输入
+- [x] docs 仓 spec 归档（Phase 5，用户触发）
