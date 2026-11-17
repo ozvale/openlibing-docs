@@ -1,7 +1,7 @@
 # 版本可用度备案（process-exception）— 实现任务
 
 > 模块根：`openlibing-ops-web/src/views/process-exception/`
-> 进度：17/17 complete
+> 进度：17/17 代码交付完成（开放风险与联调项见 design §18）
 > 说明：任务按前端依赖顺序拆分，每项包含目标、涉及文件、实现要点、依赖、验收与自测点。复选框表示代码已交付，验证记录见文末。
 
 ## 任务地图
@@ -18,9 +18,9 @@
 依赖约束：
 
 - T1 是所有任务的类型与接口前提；T2/T3 依赖 T1。
-- T4 → T5 → T6 为串行依赖；T7~T10 依赖 T5 + T6。
+- T5 依赖 T4；T6 依赖 T2、T4（与 T5 并行）；T7~T10 依赖 T5 + T6。
 - T11 依赖 T1/T3；T12 依赖 T11 的 `detail` 数据结构约定；T13 依赖 T12。
-- T14 依赖 T2/T4（字典、路径匹配）；T15 依赖 T14 的候选人搜索与节点校验写法。
+- T14 依赖 T2/T4/T6（字典、路径匹配、搜索表单）；T15 依赖 T1/T2/T3（类型、字典、常量）。
 - T16 依赖 T7~T15 全部页面组件；T17 最后执行，不改业务语义。
 
 ---
@@ -35,11 +35,11 @@
   - 请求/响应类型：`ExceptionApplicationPageReq`、`ExceptionPathPageReq`、`ExceptionApplicationPayload`、`ExceptionNodeAssignee`、`ExceptionActions`、`ExceptionDeleteResult`、`ExceptionTransferReq`、`ExceptionUserSearchItem`。
   - 分页统一使用 `PagerData<T>`，响应统一 `ResultData<T>`；`actions` 字段声明为可选，避免列表/详情缺失时报类型错。
   - 接口函数统一 `baseURL = apiConfig.ops + '/filing'`，函数名以 `Exception` 命名空间前缀，避免与其他模块冲突。
-  - 覆盖 22 个函数：字典 6、路径 3、申请单 8、列表 4、详情/轨迹/用户搜索各 1。
+  - 覆盖 23 个函数：字典 6（含用户搜索）、路径 3、申请单 8、详情 1、轨迹 1、列表 4。
 - **依赖**：无
 - **验收**：
   - 所有页面需要的字段都有类型声明，无 `any` 兜底。
-  - 接口路径与后端契约一致，分页接口统一 `POST`。
+  - 接口路径与后端契约一致，分页接口统一 `POST`；待办 `platform`、新建提交语义等待联调项见 design §18。
 - **自测点**：`TS` 编译通过；控制台无类型告警。
 
 ---
@@ -63,7 +63,7 @@
 ## T3 常量、工具、详情上下文与路由
 
 - [x] **目标**：提供模块级枚举映射、展示工具、容器上下文契约和路由入口。
-- **涉及文件**：`src/constants/exception.ts`（或模块内 `constants.ts`）、`src/views/process-exception/utils.ts`、`src/views/process-exception/detail-context.ts`、`src/router/routes/modules/process-exception.ts`
+- **涉及文件**：`src/views/process-exception/constants.ts`、`src/views/process-exception/utils.ts`、`src/views/process-exception/detail-context.ts`、`src/router/routes/modules/process-exception.ts`
 - **实现要点**：
   - 枚举映射：状态（default/running/success/failed/canceled）、归属类型、分配方式、动作、我的审批结果、节点状态、平台。
   - 流程视觉：`EXCEPTION_FLOW_NODE_STYLE` / `EXCEPTION_FLOW_LABEL_STYLE` 统一维护 passed/current/rejected/pending 的边框、背景、文字、连接线。
@@ -257,7 +257,7 @@
   - 路径匹配：`productId` 按 ALL=0、PROJECT=项目、PRODUCT=组织；请求 `paths/page` `pageSize=100` 后前端精确匹配 `productId/projectId/scene/subScene/!isDelete`；未命中提示并禁用提交。
   - 节点：single 默认唯一候选人且禁用；multi 下拉；roleOnly 平台 + 远程搜索，平台切换清空。
   - 校验：流水线/场景/子场景必填；标题 ≤100；日期必填、结束≥开始、跨度≤365 天、上限今天+365；说明纯文本必填且 ≤20000；提交前校验所有节点审批人。
-  - 保存：草稿不校验直接存；新建用 `create` 的 `draft` 语义；编辑先 `update`，再按需 `submit`；成功关闭并 `emit('success')`。
+  - 保存：草稿不校验直接存；新建用 `create` 的 `draft` 语义；编辑先 `update`，再按需 `submit`；已撤回/已退回单据在 `actions` 允许时复用同一流程；成功关闭并 `emit('success')`。
   - TinyMCE 异步加载，含 loading 与失败占位。
 - **依赖**：T2、T4、T6
 - **验收**：草稿、提交、编辑、回填、路径未配置、日期越界六类场景均符合预期。
@@ -329,8 +329,8 @@
 
 以下为交付时记录的历史验证结果：
 
-- `pnpm type-check`：通过（exit 0）。
-- `pnpm lint`：通过（0 warnings / 0 errors，范围为本模块改动文件）。
+- `npm run type-check`：通过（exit 0）。
+- `npm run lint`：通过（0 warnings / 0 errors，范围为本模块改动文件）。
 - 单文件行数：模块内 `.vue` 文件均 ≤400 行。
 - 手工自测：页签切换、筛选与重置、详情打开、审批动作、路径编辑抽屉、KeepAlive 激活刷新。
 

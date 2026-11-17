@@ -17,7 +17,7 @@
 
 ```text
 src/
-├── api/exception.ts                          # 22 个 /filing 接口函数
+├── api/exception.ts                          # 23 个 /filing 接口函数
 ├── types/exception.ts                        # 平台/状态/路径/申请单/列表/actions 类型
 ├── stores/exception-store.ts                 # 待办总数 + 组织/项目/流水线/场景缓存
 ├── router/routes/modules/process-exception.ts
@@ -95,6 +95,8 @@ src/
 - 默认页签 `my-applications`。
 - 权限过滤：`userStore.user.permissions` 不含 `ops_filing_path` 时，`pattern-config` 不进入 `tabList`。
 - 若 `route.query.tab` 指向无权限页签，`activeTab` 回退到默认页签；权限异步变化时 `watch(tabList)` 再兜底一次。
+
+> `pattern-config` 为历史命名的页签值与页面文件名；接口与抽屉统一使用 path 语义（`paths/page`、`path-edit-drawer.vue`）。
 
 ### 3.3 容器状态与生命周期
 
@@ -568,6 +570,7 @@ buildPayload(draft) => {
 - 编辑：
   - 先 `updateExceptionApplication(payload)`；
   - 若为提交，再调用 `submitExceptionApplication(id, { nodeAssignees })`。
+- 已撤回、已退回单据在 `actions.canEdit` / `actions.canSubmit` 允许时复用同一 `update + submit` 流程，不额外限制状态。
 - 成功：提示「草稿保存成功 / 提交成功」→ 关闭抽屉 → `emit('success')`。
 
 ### 11.8 富文本编辑器
@@ -657,7 +660,7 @@ payload = {
 - 全部函数返回 `Promise<ResultData<T>>`，分页返回 `ResultData<PagerData<T>>`。
 - 页面使用 `to()` 解包：`const [err, res] = await to(api(...))`；`err` 存在直接返回，不重复提示。
 - 成功提示保留在业务侧；错误提示由 HTTP 拦截器统一处理。
-- 分页列表请求参数统一由 `ExceptionApplicationPageReq` 描述；`includeDeleted` 预留但列表页未显式使用。
+- 申请类分页列表（我的申请 / 待我审批 / 历史审批 / 例外查询）请求参数由 `ExceptionApplicationPageReq` 描述；路径分页使用 `ExceptionPathPageReq`。`includeDeleted` 预留但列表页未显式使用。
 
 关键响应字段：
 
@@ -743,7 +746,7 @@ useExceptionStore() => {
 | ------------------------ | --------------------------------- | -------------------------------- |
 | 主色                     | `#2563eb`                         | 激活页签、当前节点、链接、主按钮 |
 | 主色浅底                 | `#eff6ff`                         | 当前节点卡片、提示条             |
-| 成功                     | `#059669`                         | 已通过节点、成功标签             |
+| 成功                     | `#059669`                         | 已同意节点、成功标签             |
 | 危险                     | `#dc2626`                         | 拒绝节点、待办角标、删除         |
 | 警告                     | `#d97706`                         | 未配置路径提示                   |
 | 页面底色                 | `#f2f3f5`                         | 模块背景                         |
