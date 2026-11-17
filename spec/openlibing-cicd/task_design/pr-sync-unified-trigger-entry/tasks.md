@@ -1,0 +1,40 @@
+# Tasks · 黄蓝协同触发入口插件化改造及存量webhook功能清理
+
+合入记录：`openlibing/openlibing-cicd!671`（head `af4f6c12`，合入 `release_20261116_iter1`）、`openlibing/openlibing-coderepo!318`（head `28ab6c04`，合入 `release_20261116_iter1`）、插件仓（openlibing/pr-sync-action）提交 `d7feb27`；开发分支已随合入删除，分支名不再作为追溯锚点
+
+## openlibing-cicd（蓝区触发接口）
+
+- [x] `PrSyncTriggerReqDTO` 增加 `triggerEvent` 可选字段，移除 accessToken（安全要求 #335）
+- [x] `resolveTriggerEvent`：空白缺省 comment + trim/lowercase + 白名单校验（open/reopen/update/merge/comment），不做语义决策
+- [x] req_type 原样透传进 MQS（`sendPrSyncMessage`），commit_id 随消息下发
+- [x] 全 action 统一插 `YellowRegionPipelineEntity` 记录（START/WAIT_START）+ msgId 落库绑定
+- [x] 幂等窗口（10 分钟带 msgId 非终态记录返回既有 msgId），判定先于限流
+- [x] PR 维度限流（Redis SETNX 60 秒，fail-open，发送失败释放占位）
+- [x] 发送失败记录置 FAILURE、返回 failureMessage
+- [x] `upsertTriggerPrInfo` PR 元数据补全、`interruptNonTerminalPipeline` 打断旧非终态记录
+- [x] 单元测试：v2 透传模型用例（CrossRegionServiceImplTest）、敏感字段用例（SensitiveFieldToStringTest）
+
+## openlibing/pr-sync-action（蓝区 action 插件）
+
+- [x] 删除生命周期旁路（CLOSED/MERGED SEND_OK 即成功）、触发即成功不轮询、trigger_events 过滤输入
+- [x] `CANONICAL_TO_TRIGGER_EVENT` 统一词汇映射；CLOSED 事件 skipped 输出
+- [x] `buildTriggerRequest`：payload 优先 + PR 详情反查补齐（comment 无 sha 场景）
+- [x] commitId 来源接入（ATOMGIT_SHA / GITHUB_SHA / GITEE_COMMIT / payload head sha）
+- [x] 统一链路：触发 → Poller 轮询（首延 2 秒）→ running/终态标签回写（去重）→ 终态输出
+- [x] 失败输出恢复与 commitId 反查修复（d7feb27）
+
+## openlibing/openlibing-coderepo（蓝区 coderepo 服务端）
+
+- [x] 存量服务端 webhook 自动触发 PR 同步链路清理（openlibing/openlibing-coderepo!318，head `28ab6c04`，已合入 `release_20261116_iter1`）：删除 `PrSyncPushEventHandler`、`PrLabelService` / `PrAccessTokenService`（含实现类与 `CooperateLabel`）；`PrSyncEventHandler#resolveReqType` 收窄为只映射 merge / close，open / 源分支更新等其余事件不再发送 MQS
+- [ ] 平台侧 webhook 配置停用与发布顺序协同（运营动作，须与黄区/流水线平台协同发布；先确认无在途 webhook 触发后再下线）
+
+## 黄区消费端（契约约定，另行排期）
+
+- [x] MQS 消息契约确认（req_type 五词 + commit_id）——仅指契约结构定义完成；黄区消费端尚未支持新增的 reopen / update / comment 词汇，须对旧 open / compile 兼容、并保留 merge / close 旧路径（见 design.md 6.2），落地见下方未勾选项
+- [ ] 黄区状态机三级对账实现（分支 HEAD == commit_id → MR 存在 → 门禁流水线在跑，缺哪补哪，SKIPPED 回执）
+- [ ] 标记类（merge）目标 MR 状态置「已合入」幂等实现
+
+## 归档
+
+- [x] spec artifact 落盘（proposal.md / design.md / tasks.md / archive.md）
+- [x] docs 仓 PR 归档（关联 openlibing/openlibing-cicd#517）
