@@ -176,7 +176,7 @@ flowchart TD
 
 # 4.数据模型设计
 
-**数据库表：不新增表、不新增字段，但新增 2 个索引（DDL 见下方「索引 DDL（本次变更）」，属于本次交付的 DDL 变更）。**`code_metrics_record` 现有字段完整覆盖历史记录展示所需数据；`code_metrics_file_detail`、`code_metrics_duplication_block` 通过既有 `record_id` 关联。OBS 对象按 `code-metrics-action/{owner}/{repo}/{pipelineRunId}/` 前缀规则推导，记录表无需新增 obs_url 字段。
+**数据库表：不新增表、不新增字段，但新增 2 个索引（以 Liquibase changeset 随发布自动应用，DDL 见下方「索引变更（本次交付）」，属于本次交付的 DDL 变更）。**`code_metrics_record` 现有字段完整覆盖历史记录展示所需数据；`code_metrics_file_detail`、`code_metrics_duplication_block` 通过既有 `record_id` 关联。OBS 对象按 `code-metrics-action/{owner}/{repo}/{pipelineRunId}/` 前缀规则推导，记录表无需新增 obs_url 字段。
 
 **OBS 对象（存量资产管理）**：桶集合 `obs.action.buckets`（当前为 `openlibing-gitcode-action` 与 `openlibing-github-action`，GitCode/GitHub 来源分别落桶，对象 key 结构一致），前缀 `code-metrics-action/`；清理任务按桶集合逐桶前缀删除，孤儿对象逐桶兜底回收。
 
@@ -190,21 +190,38 @@ flowchart TD
 
 **存量数据处理：** 现有历史记录在功能上线后即自然可见；上线时若存在超出保留周期的存量记录，在发布步骤中先核对 `code-metrics.retention-days` 配置无误，再由清理任务以 dry-run 模式预跑（只统计命中量、不删除），人工核对量级后开启真实删除统一回收（DB + OBS 逐桶），每个分支最新一条记录始终保留。
 
-**索引 DDL（本次变更）：** 为 `code_metrics_record` 新增 2 个索引（既有唯一键 `uk_git_branch_run(git_url, branch_name, pipeline_run_id)` 无法覆盖新查询的访问路径）：
+**索引变更（本次交付，随 Liquibase 自动执行）：** 为 `code_metrics_record` 新增 2 个索引（既有唯一键 `uk_git_branch_run(git_url, branch_name, pipeline_run_id)` 无法覆盖新查询的访问路径）。**不采用手工 DDL**——openlibing-coderepo 使用 Liquibase 管理库表结构（master changelog：`src/main/resources/db/changelog/db.changelog.xml`），索引以 changeset 形式追加到该文件，随服务发布自动应用：
 
-```sql
--- ① 历史记录分页：git_url + branch_name 过滤 + detection_completed_at 倒序
-ALTER TABLE code_metrics_record
-    ADD INDEX idx_git_branch_detect (git_url, branch_name, detection_completed_at);
-
--- ② 清理任务过期扫描：按 detection_completed_at 前导列分批定位候选
---    （清理查询不带 git_url/branch_name 前导条件，组合索引无法命中；
---    过期谓词拆为两条查询避免 OR 跨列导致索引退化，见第 5 节性能设计）
-ALTER TABLE code_metrics_record
-    ADD INDEX idx_detection_completed (detection_completed_at);
+```xml
+<changeSet id="20261118_add_code_metrics_indexes" author="ai-assisted">
+    <preConditions onFail="MARK_RAN">
+        <sqlCheck expectedResult="0">SELECT COUNT(*) FROM information_schema.statistics
+            WHERE table_name = 'code_metrics_record' AND index_name = 'idx_git_branch_detect'</sqlCheck>
+    </preConditions>
+    <sql>
+        -- ① 历史记录分页：git_url + branch_name 过滤 + detection_completed_at 倒序
+        CREATE INDEX idx_git_branch_detect
+            ON code_metrics_record (git_url, branch_name, detection_completed_at);
+    </sql>
+    <rollback>DROP INDEX idx_git_branch_detect ON code_metrics_record;</rollback>
+</changeSet>
+<changeSet id="20261118_add_code_metrics_detect_index" author="ai-assisted">
+    <preConditions onFail="MARK_RAN">
+        <sqlCheck expectedResult="0">SELECT COUNT(*) FROM information_schema.statistics
+            WHERE table_name = 'code_metrics_record' AND index_name = 'idx_detection_completed'</sqlCheck>
+    </preConditions>
+    <sql>
+        -- ② 清理任务过期扫描：按 detection_completed_at 前导列分批定位候选
+        --    （清理查询不带 git_url/branch_name 前导条件，组合索引无法命中；
+        --    过期谓词拆为两条查询避免 OR 跨列导致索引退化，见第 5 节性能设计）
+        CREATE INDEX idx_detection_completed
+            ON code_metrics_record (detection_completed_at);
+    </sql>
+    <rollback>DROP INDEX idx_detection_completed ON code_metrics_record;</rollback>
+</changeSet>
 ```
 
-上线前核对线上是否已存在等价索引（`SHOW INDEX FROM code_metrics_record`），已存在则复用、不重复创建（与第 5 节性能设计口径一致）。
+changeset 风格（id 格式 `yyyyMMdd_描述`、原生 `<sql>` + `<rollback>`、`preConditions onFail="MARK_RAN"` 幂等防护）与仓内既有 changeset 一致；preConditions 同时承担"线上已存在等价索引则跳过"的复用语义（与第 5 节性能设计口径一致）。大表建索引如担忧锁表，执行窗口随发布低峰进行（MySQL 8.0 `CREATE INDEX` 默认 online DDL，不阻塞读写）。
 
 ---
 
