@@ -116,14 +116,14 @@ flowchart TD
 flowchart TD
     A[XXL-JOB 触发<br/>codeMetricsRecordCleanHandler<br/>每日低峰执行] --> B[Redisson 分布式锁]
     B --> C[读取保留天数配置 retentionDays]
-    C --> D[查询过期记录, 按批读取:<br/>detection_completed_at 早于当前时间-N天<br/>或 为空失败记录按 create_time 早于 N天<br/>并排除每个(git_url,branch_name)最新一条]
+    C --> D[查询过期记录, 按批读取:<br/>idx_detection_completed 索引取 detection_completed_at 过期<br/>+ 失败记录单独按 create_time 过期(拆两条避免 OR 退化)<br/>排除每分支最新一条在内存过滤, 不进 SQL]
     D --> E[按 record_id 分批删除<br/>code_metrics_duplication_block]
     E --> F[按 record_id 分批删除<br/>code_metrics_file_detail]
     F --> G[分批删除 code_metrics_record]
     G --> H[按记录 git_url 解析 owner/repo<br/>+ pipelineRunId 推导前缀, 按桶集合逐桶<br/>(obs.action.buckets: gitcode+github)<br/>DB 确认该(git_url,pipeline_run_id)<br/>无共存记录后分批删除前缀<br/>code-metrics-action/owner/repo/pipelineRunId/ 下对象<br/>存在共存记录则本批仅删 DB、跳过 OBS]
     H --> I{仍有过期记录?}
     I -->|是| D
-    I -->|否| J[孤儿兜底: 按桶集合逐桶前缀列举<br/>code-metrics-action/ 下超过保留期的对象<br/>按 key 解析(owner/repo段+runId)三元组<br/>DB 确认无对应记录(兼容 unknown 等<br/>key 历史变体)后删除, 解析失败跳过并告警]
+    I -->|否| J[孤儿兜底(独立低频 @XxlJob, 如每周):<br/>按桶集合逐桶前缀列举 code-metrics-action/<br/>下超过保留期的对象, 按 key 解析(owner/repo段+runId)<br/>三元组批量 IN 核对 DB(兼容 unknown 等 key 变体)<br/>后删除, 解析失败跳过并告警, 单次扫描设上限]
     J --> K[记录清理执行日志并释放锁<br/>首次上线先 dry-run 预跑核对量级<br/>单次删除超阈值中止并告警]
 ```
 
@@ -133,7 +133,7 @@ flowchart TD
 
 **删除顺序**：先删 DB、后删 OBS——DB 删除后页面即刻查询不到过期数据（页面明细数据在 DB，不依赖 OBS 对象）；OBS 残留对象不影响页面展示，由同任务后续批次或孤儿兜底回收，中途失败不产生脏数据。
 
-清理以 `detection_completed_at` 为周期基准（与页面展示的扫描时间语义一致）；`detection_completed_at` 为空的失败记录（上报失败落库，无扫描完成时间）按 `create_time` 判定过期，同样纳入清理，避免无限累积。过期查询始终排除每个（`git_url`、`branch_name`）最新一条记录（保留记录同样按上述基准取 `COALESCE(detection_completed_at, create_time)`）。单批规模控制，循环执行直至无过期数据，避免单次任务产生大事务与长锁。
+清理以 `detection_completed_at` 为周期基准（与页面展示的扫描时间语义一致）；`detection_completed_at` 为空的失败记录（上报失败落库，无扫描完成时间）按 `create_time` 判定过期，同样纳入清理，避免无限累积。过期候选始终排除每个（`git_url`、`branch_name`）最新一条记录（保留记录同样按上述基准取 `COALESCE(detection_completed_at, create_time)`）——排除逻辑在任务内存中过滤、不进 SQL 谓词（见第 5 节性能设计）。单批规模控制，循环执行直至无过期数据，避免单次任务产生大事务与长锁。
 
 ---
 
@@ -150,9 +150,10 @@ flowchart TD
 | `CodeMetricsReportVO`                                               | 上报响应         | 新增 `recordId` 字段；`detailLink` 值在原 query 参数基础上追加 recordId                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `ScanRecordPageDTO`                                                 | 列表查询入参     | 新增。字段：`repoId`、`branchName`、`pageNum`、`pageSize`。`repoId` 必传——同一 `git_url` 可归属多个项目，仅凭 `gitUrl` 无法唯一确定应校验的项目，`repoId` 与现有详情接口参数风格一致，作为鉴权与查询的唯一定位锚点                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `ScanRecordPageVO` / `ScanRecordItemVO`                             | 列表响应         | 新增。含 `total`、`retentionDays`、记录项（`recordId`、扫描时间、`pipelineName`、`runNumber`、`pipelineRunId`、`commitId`、五项核心指标、`status`）                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `CodeMetricsRecordMapper`                                           | 记录表访问       | 新增 `selectPageByRepoAndBranch`（按 repoId 反查 git_url 后倒序分页）、`selectExpiredRecordIds`（`detection_completed_at < cutoff OR (detection_completed_at IS NULL AND create_time < cutoff)`，并排除每个 `git_url`+`branch_name` 最新一条）、`selectByGitBranchAndRun`（三条件查询，供 recordId 复用判定与删旧定位）、`deleteByIds`                                                                                                                                                                                                                                                                                     |
+| `CodeMetricsRecordMapper`                                           | 记录表访问       | 新增 `selectPageByRepoAndBranch`（按 repoId 反查 git_url 后倒序分页）、`selectExpiredByDetectTime`（走 `idx_detection_completed` 索引分批取过期候选）与 `selectExpiredFailureByCreateTime`（失败记录单独查询；拆两条避免 OR 跨列退化，最新一条排除由任务内存过滤）、`selectByGitBranchAndRun`（三条件查询，供 recordId 复用判定与删旧定位）、`selectCoLocatedIds`（按 git_url + pipeline_run_id 批量 IN 查共存记录，供 OBS 删除前共存校验）、`deleteByIds`                                                                                                                                                                 |
 | `CodeMetricsFileDetailMapper` / `CodeMetricsDuplicationBlockMapper` | 明细表访问       | 新增按 `recordIds` 批量删除方法                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `CodeMetricsRecordCleanHandler`                                     | 定时清理任务     | 新增。`@XxlJob("codeMetricsRecordCleanHandler")`，Redisson 分布式锁 + 分批删除 DB 三表 + 按前缀删除 OBS 对象 + 孤儿兜底，实现模式参照 `branchMetricsSyncHandler`                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `CodeMetricsRecordCleanHandler`                                     | 定时清理任务     | 新增。`@XxlJob("codeMetricsRecordCleanHandler")`，Redisson 分布式锁 + 分批删除 DB 三表 + 按（ownerRepo、runId）去重聚合后的前缀删除 OBS 对象（共存校验合并为批内一次 IN 查询），实现模式参照 `branchMetricsSyncHandler`                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `CodeMetricsOrphanCleanHandler`                                     | 孤儿兜底任务     | 新增。`@XxlJob("codeMetricsOrphanCleanHandler")` 独立低频调度（如每周）——全前缀列举随桶内对象总量线性放大、不并入每日任务；按 key 解析三元组批量 IN 核对 DB（兼容多级 group / `unknown` 等 key 历史变体），单次扫描设分页推进与总对象数上限，超限中止告警、下轮续扫                                                                                                                                                                                                                                                                                                                                                        |
 | `ObsBucketService`                                                  | OBS 访问         | 新增 `listObjectsByPrefix`（按前缀列举对象）与 `deleteObjects`（批量删除），按 `obs.action.buckets` 配置的桶集合逐桶操作，仅允许操作桶集合内桶的 `code-metrics-action/` 前缀（桶 + 前缀双重白名单校验）；新增对象 key 解析工具（以插件 `extractOwnerRepo` 为参照实现，兼容多级 group / `unknown` 兜底等历史变体），供前缀共存校验与孤儿三元组判定复用                                                                                                                                                                                                                                                                      |
 | `CodeMetricsProperties`                                             | 配置载体         | 新增。`@ConfigurationProperties(prefix = "code-metrics")`，含 `retentionDays`（各环境 application yaml 配置）与 `pendingMarkTtlMinutes`（pending 标记 TTL，默认 10 分钟）                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
@@ -175,7 +176,7 @@ flowchart TD
 
 # 4.数据模型设计
 
-**数据库表：不新增表、不新增字段，但新增 1 个组合索引（DDL 见下方「索引 DDL（本次变更）」，属于本次交付的 DDL 变更）。**`code_metrics_record` 现有字段完整覆盖历史记录展示所需数据；`code_metrics_file_detail`、`code_metrics_duplication_block` 通过既有 `record_id` 关联。OBS 对象按 `code-metrics-action/{owner}/{repo}/{pipelineRunId}/` 前缀规则推导，记录表无需新增 obs_url 字段。
+**数据库表：不新增表、不新增字段，但新增 2 个索引（DDL 见下方「索引 DDL（本次变更）」，属于本次交付的 DDL 变更）。**`code_metrics_record` 现有字段完整覆盖历史记录展示所需数据；`code_metrics_file_detail`、`code_metrics_duplication_block` 通过既有 `record_id` 关联。OBS 对象按 `code-metrics-action/{owner}/{repo}/{pipelineRunId}/` 前缀规则推导，记录表无需新增 obs_url 字段。
 
 **OBS 对象（存量资产管理）**：桶集合 `obs.action.buckets`（当前为 `openlibing-gitcode-action` 与 `openlibing-github-action`，GitCode/GitHub 来源分别落桶，对象 key 结构一致），前缀 `code-metrics-action/`；清理任务按桶集合逐桶前缀删除，孤儿对象逐桶兜底回收。
 
@@ -189,11 +190,18 @@ flowchart TD
 
 **存量数据处理：** 现有历史记录在功能上线后即自然可见；上线时若存在超出保留周期的存量记录，在发布步骤中先核对 `code-metrics.retention-days` 配置无误，再由清理任务以 dry-run 模式预跑（只统计命中量、不删除），人工核对量级后开启真实删除统一回收（DB + OBS 逐桶），每个分支最新一条记录始终保留。
 
-**索引 DDL（本次变更）：** 为 `code_metrics_record` 新增组合索引，支撑历史记录分页查询（既有唯一键 `uk_git_branch_run(git_url, branch_name, pipeline_run_id)` 仅能前缀命中 `git_url`+`branch_name`，无法覆盖 `detection_completed_at` 倒序，新索引为必需项）：
+**索引 DDL（本次变更）：** 为 `code_metrics_record` 新增 2 个索引（既有唯一键 `uk_git_branch_run(git_url, branch_name, pipeline_run_id)` 无法覆盖新查询的访问路径）：
 
 ```sql
+-- ① 历史记录分页：git_url + branch_name 过滤 + detection_completed_at 倒序
 ALTER TABLE code_metrics_record
     ADD INDEX idx_git_branch_detect (git_url, branch_name, detection_completed_at);
+
+-- ② 清理任务过期扫描：按 detection_completed_at 前导列分批定位候选
+--    （清理查询不带 git_url/branch_name 前导条件，组合索引无法命中；
+--    过期谓词拆为两条查询避免 OR 跨列导致索引退化，见第 5 节性能设计）
+ALTER TABLE code_metrics_record
+    ADD INDEX idx_detection_completed (detection_completed_at);
 ```
 
 上线前核对线上是否已存在等价索引（`SHOW INDEX FROM code_metrics_record`），已存在则复用、不重复创建（与第 5 节性能设计口径一致）。
@@ -206,7 +214,11 @@ ALTER TABLE code_metrics_record
 
 **详情查询：** 复用现有三个详情接口，文件明细与重复代码块表已有 `record_id` 关联索引，`recordId` 定位为主键查询，无额外开销。recordId 模式下按记录反查仓库为单次索引查询。
 
-**清理任务：** 过期记录按批（固定批次大小）读取 id 后分批删除，明细表按 `record_id` 走索引删除；OBS 按桶集合逐桶前缀列举 + 批量删除（单批对象数受 OBS API 限制约束，按 1000/批分页推进）；单批规模小、循环推进，避免长事务与主从延迟。任务安排在每日低峰执行。
+**清理任务（DB 侧）：** 过期扫描**不使用 OR 跨列谓词**（`detection_completed_at < cutoff OR create_time < cutoff` 会使优化器退化为全表扫描，且新组合索引以 `git_url`/`branch_name` 为前导列无法命中）——拆为两条查询：① 按 `idx_detection_completed` 索引分批取 `detection_completed_at < cutoff` 的候选；② 失败记录（`detection_completed_at IS NULL`）单独按 `create_time < cutoff` 查询（该类记录占比极小，可接受次优路径）。「排除每个（`git_url`、`branch_name`）最新一条」**不进 SQL 谓词**（`NOT IN (SELECT MAX(id) ... GROUP BY git_url, branch_name)` 会对全表反复聚合）——候选按批读入内存后过滤（对照各分支当前最新记录 id，随批次缓存增量维护）。按批（固定批次大小）取 id 后分批删除，明细表按 `record_id` 走索引删除；单批规模小、循环推进，避免长事务与主从延迟。任务安排在每日低峰执行。
+
+**清理任务（OBS 侧，聚合降调用）：** 按（ownerRepo、pipelineRunId）**对前缀去重聚合后**再逐桶列举删除——共存记录本就共享同一前缀，避免逐记录重复列举；单批对象数受 OBS API 限制约束（按 1000/批分页推进）；同批次记录的共存校验合并为一次 `IN` 查询，不逐记录单查。大规模首次清理时 OBS API 调用量降低一个量级。
+
+**孤儿兜底（独立低频任务）：** 全前缀列举随桶内对象总量线性放大（OBS 列举按字典序分页、无法按时间裁剪，保留期内对象量可达百万级），**不并入每日清理任务**——拆为独立 `@XxlJob`（如每周执行一次），DB 核对按 distinct（ownerRepo、runId）对批量 `IN` 查询（非逐对象单查），单次扫描设分页推进上限与总对象数上限，超限中止并告警、下轮续扫。
 
 **缓存：** 历史记录列表为低频回溯场景，无高频访问需求，无需新增缓存。
 
