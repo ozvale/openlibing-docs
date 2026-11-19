@@ -2,7 +2,8 @@
 
 ## 业务 Issue
 
-- 待创建（业务 issue 建在 openlibing-sbom 源仓，docs PR 建立后创建并回填双向关联）
+- openlibing/openlibing-sbom#187（https://gitcode.com/openlibing/openlibing-sbom/issues/187）
+- docs PR：https://gitcode.com/openlibing/openlibing-docs/merge_requests/1405
 
 ## 需求背景
 

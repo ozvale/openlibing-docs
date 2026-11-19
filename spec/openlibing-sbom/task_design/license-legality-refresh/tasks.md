@@ -37,5 +37,5 @@
 
 ## 关联
 
-- 业务 Issue：待创建后回填
-- docs PR：待创建后回填
+- 业务 Issue：openlibing/openlibing-sbom#187（https://gitcode.com/openlibing/openlibing-sbom/issues/187）
+- docs PR：https://gitcode.com/openlibing/openlibing-docs/merge_requests/1405（分支 spec-openlibing-sbom-license-legality-refresh）
