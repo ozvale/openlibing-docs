@@ -206,6 +206,8 @@
 - 文件名、文件路径、产物名称、流水线名称等自由文本列写入 Excel 前，统一做公式注入防护：以 `=`、`+`、`-`、`@` 开头的值前置单引号 `'`（或强制文本单元格格式），防止单元格被 Excel 解析为公式执行；
 - 该处理在 Excel 行模型装配处（`SecOptionOptionExcelRow` / `SecOptionFileResultExcelRow` 字段赋值）统一实现，禁止在各写入调用点分散处理，避免个别列遗漏。
 
+> **勘误（2026-11-19）**：上述"前置单引号"口径已被后续实现取代，现行方案为 `quotePrefix` 单元格样式标记（用户可见文本不变），且因该链路存在自定义 `CellWriteHandler` 覆盖样式，需在处理器内重新施加标记。详见 [sec-option-export-formula-escape](../sec-option-export-formula-escape/design.md)。
+
 ## 鉴权
 
 - 继承文件详情查询接口的既有鉴权逻辑：gateway 纵向鉴权 + 服务层项目成员横向校验，另校验 recordId 与 projectId 的归属关系，导出数据范围与详情页可见范围严格一致，不支持导出无权查看的数据；

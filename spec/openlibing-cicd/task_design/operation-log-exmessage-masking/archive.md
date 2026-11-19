@@ -27,6 +27,8 @@
 - P1（JSON 分支绕过）：`mask()` 在 JSON 路径只按"键名"判敏感，`{"msg":"password=hunter2"}` 这类非敏感键值可绕过全部规则。**确认为真问题**，commit `cf2cc4021` 修复并补 3 条用例
 - "写入侧明文落库"：确认为既有架构问题（落库前不做掩码），不属于查询出参链路，已回复认可并建议单独立项，本 PR 不改
 - "不补尾引号"：与当前实现不符（`maskKeyValues` 已用 `first + MASK + first` 保留两侧引号），已指出并关闭
+- "`maskRow` 仍只处理 `oldData/newData/params`、`exMessage` 未处理"：与 master 实现不符，`LoggingServiceImpl` 第 517 行已对 `exMessage` 调用 `maskText`；但"落库前掩码""异常信息截断""`openlibing-coderepo` 跨仓同步"三项确未覆盖，已补入 `proposal.md` 范围边界与 `tasks.md` 待办
+- "键名形态写成下划线、验收却断言 camelCase"：两个形态确实都命中。最终正则带 `(?i)` 且 `[_-]?` 分隔符可选，`accessKeyId` 与 `access_key_id` 等价，`proposal.md` 已补充说明
 
 ## 设计偏差与取舍
 

@@ -16,7 +16,7 @@
   1. URL userinfo：`scheme://user:password@host` → 口令段替换为 `***`（用户名可缺省，覆盖 Redis / AMQP 的"仅口令"写法）
   2. 认证方案头：`Bearer` / `Basic` 后的凭据掩码；凭据需长度 ≥6 且含数字/大写/符号，避免误伤 `bearer token` 之类的普通英文
   3. 裸认证头与会话头：`Authorization` / `Proxy-Authorization` / `Cookie` / `Set-Cookie` 整行掩码（已由第 2 条处理的不重复处理）
-  4. 键值形态：`password|passwd|pwd|secret|token|access_token|private_key|app_secret|api_key|access_key(_id/_secret)` 等键名后的值掩码，兼容引号/JSON 包裹，排除 `yes|no|true|false` 等布尔诊断值
+  4. 键值形态：键名大小写不敏感，`_` / `-` 分隔符可选（`access_token`、`accessToken`、`access-token` 等价命中），覆盖 `password|passwd|pwd|secret|token|private_key|app_secret|api_key|access_key(_id/_secret)` 等；值段兼容引号/JSON 包裹，排除 `yes|no|true|false` 等布尔诊断值
 - `mask()` 行为对齐：非 JSON 输入回退到 `maskText`；JSON 中非敏感键的字符串值同样过一次 `maskText`；数组内的字符串元素同样处理
 - `LoggingServiceImpl` 查询出参组装处补一行 `row.setExMessage(OperationLogSensitiveMasker.maskText(row.getExMessage()))`
 
@@ -45,3 +45,10 @@
 | `src/test/java/com/openlibing/cicd/common/operationlog/OperationLogSensitiveMaskerTest.java` | 修改 | 新增 20 条用例覆盖文本掩码与 JSON 回退                                          |
 
 无 pom 变更、无新增依赖。
+
+## 范围边界（本次未覆盖）
+
+- **仅读侧**：在操作日志查询出参组装处掩码，数据库中的 `ex_message` 落库内容仍为原文，未做落库前掩码
+- **未做长度截断**：Issue 中"异常信息落库前截断长度"的子要求未在本次实现，超长异常栈仍会完整返回
+- **未跨仓**：`openlibing-coderepo` 的同类 `maskRow` 未同步修复，属独立仓库整改
+- 以上三项已列入待办，后续单独跟踪

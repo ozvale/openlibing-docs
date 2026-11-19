@@ -22,9 +22,11 @@ if (operate && StringUtils.hasText(pipelineId)) { 查绑定权限组 → 组校�
 
 1. `bisectLocate` 的 `@CheckPermission` 改为 `@CheckPermission(operate = true)`
 2. 请求进入 `AuthInterceptor` 后：
-   - 匿名 + 已绑定权限组 → 401 `LOGIN_REQUIRED_BY_GROUP`
-   - 已登录 + 已绑定权限组：先做存量公开仓判断；公开仓直接放行；私有仓进入组校验，组内放行，组外 403（业务码 `4030001`）；组拒绝且 `defaultGroupFallback = true` 时回退存量 `hasPermission`
+   - 匿名 + 已绑定权限组 → 401 `LOGIN_REQUIRED_BY_GROUP`，与仓库是否公开无关
+   - 已登录 + 公开仓 + 已绑定权限组 → 仍进入组校验：组内放行，组外 403（业务码 `4030001`）；组校验不通过时，仅当端点声明 `defaultGroupFallback = true` 才回退默认组菜单权限
+   - 已登录 + 私有仓 + 已绑定权限组 → 同样进入组校验，规则与公开仓一致
    - 流水线未绑定权限组 → 回落存量判定，行为与改造前完全一致
+   - `defaultGroupFallback` 是 `@CheckPermission` 的显式属性，默认 `false`，当前仅单条同步端点使用；`bisectLocate` 未声明，即组校验拒绝时不回退
 3. `/bisect/reset` 不改：其入参为 `projectId` / `userId` / `id`，不含 `pipelineId`，`extractPipelineIds` 得到空值，组校验分支恒不触发，加 `operate = true` 是空操作；该端点已有服务层 `requireOwnershipOrThrow` + `requireProjectMemberOrThrow` 兜底
 4. 补充 Javadoc 说明按操作类语义校验的原因，便于后续维护者理解为何不是遗漏
 
@@ -59,6 +61,6 @@ if (operate && StringUtils.hasText(pipelineId)) { 查绑定权限组 → 组校�
 - 覆盖威胁：CWE-862（Missing Authorization）
 - 缓解点：写操作纳入权限组管控，与同类操作端点语义一致
 - 边界：仅对"已绑定权限组"的流水线生效；未绑定资源的管控仍依赖存量菜单权限模型
-- 残余风险：存量绑定关系需要运维补齐（BETA 已发现 5 条绑定流水线组成员为 0，且 admin 缺 `100842` 菜单），代码不做默认放行兜底
+- 残余风险：管控只覆盖"已绑定权限组"的流水线；BETA 实测绑定流水线 5 条、组成员 0，需运维补齐成员后管控才真正生效。admin 角色已确认持有 `100842`（当前 493 条菜单权限、130 个 admin 用户），代码不做默认放行兜底
 - 回归关注：前端「PR问题定位 - 查看详情」入口在正常权限下可正常触发，不应出现误 403
 - 测试覆盖：`AuthInterceptorTest` 新增 4 条用例，全部以真实 `bisectLocate` 方法注解驱动——断言注解 `operate` 为 `true`（防回退）、匿名 + 已绑定组返回 401、组内成员放行、组外用户返回 403（业务码 `4030001`）
