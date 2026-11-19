@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>开源代码检查支持统计安全静态告警 · 设计评审</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f0f2f5; color: #333; padding: 24px; }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: #888; font-size: 13px; margin-bottom: 24px; }
+  .card { background: #fff; border-radius: 8px; padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .card h2 { font-size: 16px; border-left: 4px solid #2563eb; padding-left: 10px; margin-bottom: 16px; }
+  .card h3 { font-size: 14px; margin: 14px 0 10px; color: #444; }
+
+  /* 页面 mock */
+  .page-mock { border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+  .mock-topbar { background: #f8fafc; border-bottom: 1px solid #e5e7eb; padding: 8px 16px; font-size: 12px; color: #666; display: flex; justify-content: space-between; }
+  .mock-title-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+  .mock-title-row .t { font-size: 14px; font-weight: bold; }
+  .mini-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .mini-table th, .mini-table td { border: 1px solid #eee; padding: 5px 10px; text-align: left; }
+  .mini-table th { background: #f8fafc; }
+  .new-col { background: #eff6ff !important; }
+  .new-col-h { background: #dbeafe !important; color: #1d4ed8; }
+  .arrow-new { color: #dc2626; font-size: 11px; margin-left: 4px; }
+
+  /* 流程 */
+  .flow { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; }
+  .flow .step { flex: 1; min-width: 170px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; margin: 0 6px; }
+  .flow .step b { display: block; font-size: 12px; color: #2563eb; margin-bottom: 4px; }
+  .flow .step span { font-size: 12px; color: #555; line-height: 1.5; }
+
+  /* 通用表格 */
+  table.t { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0; }
+  table.t th, table.t td { border: 1px solid #e5e7eb; padding: 6px 10px; text-align: left; vertical-align: top; line-height: 1.6; }
+  table.t th { background: #f8fafc; font-weight: bold; white-space: nowrap; }
+  code { background: #f1f5f9; border-radius: 3px; padding: 1px 5px; font-family: Consolas, monospace; font-size: 11.5px; color: #0f172a; }
+  .note { font-size: 12px; color: #666; margin-top: 8px; line-height: 1.7; }
+  .note b { color: #333; }
+  .pill { display: inline-block; background: #eff6ff; color: #2563eb; border-radius: 10px; padding: 1px 10px; font-size: 12px; margin-right: 8px; }
+  .pill.o { background: #fff7ed; color: #ea580c; }
+  .pill.p { background: #faf5ff; color: #9333ea; }
+  .pill.l1 { background: #f0fdf4; color: #16a34a; }
+  .pill.l2 { background: #fff7ed; color: #ea580c; }
+  .pill.l3 { background: #ecfeff; color: #0891b2; }
+  .sec { color: #cf222e; } .bugc { color: #bc4c00; } .smellc { color: #8250df; }
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 6px; padding: 12px 16px; font-size: 12px; line-height: 1.6; overflow-x: auto; font-family: Consolas, monospace; }
+  pre .cm { color: #94a3b8; }
+  /* README 未覆盖、本方案新增内容的标记 */
+  .mark-add { background:#fff7ed; color:#c2410c; border:1px dashed #fb923c; border-radius:4px; padding:0 6px; font-size:12px; font-weight:600; }
+  tr.mark-add-row td { background:#fffbf5 !important; }
+  tr.mark-add-row td:first-child { border-left:3px solid #fb923c; }
+  .legend-add { font-size:12px; color:#c2410c; background:#fff7ed; border:1px dashed #fb923c; border-radius:6px; padding:6px 12px; margin-bottom:14px; display:inline-block; }
+  /* 口径相对 backup 原版有变更的工具标记 */
+  .tag-adjust { display:inline-block; background:#eff6ff; color:#1d4ed8; border:1px solid #93c5fd; border-radius:10px; padding:0 8px; font-size:11px; font-weight:600; margin-left:6px; vertical-align:1px; white-space:nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>开源代码检查支持统计安全静态告警 · 设计评审</h1>
+  <div class="sub">权威基准：README.md（v1.0） ｜ 三分类（security / bug / code_smell，三值 MECE，兜底 code_smell） ｜ 分类引擎 L1→L2→L3（docs 仓 tools.yml / mappings/*.yml 口径承载，进程内缓存 + @Scheduled 轮询刷新） ｜ 数据面：alerts 表仅新增 <code>alert_type</code> 一个字段 ｜ 落地详设：<code>问题分类-设计文档.md</code></div>
+  <div class="legend-add">◉ 标记说明：页面中所有橙色虚线框标注（mark-add）内容 = README 未覆盖、本方案新增的工程补充提案，评审时逐项拍板；其余内容均为 README 原文引用或照录。</div>
+
+  <!-- ===================== 一、目标与总体链路 ===================== -->
+  <div class="card">
+    <h2>一、目标与总体链路（README 1.1.1 / 1.2.1）</h2>
+    <div class="flow">
+      <div class="step"><b>① 目标 1 · 统一口径</b><span>告警三分类可执行定义，所有项目、所有工具共用一套判别标准，统计结果不因项目漂移</span></div>
+      <div class="step"><b>② 目标 2 · 自动分类</b><span>告警入库时自动完成分类，不依赖人工打标；每条告警的分类依据可随时反推验证</span></div>
+      <div class="step"><b>③ 目标 3 · 可统计</b><span>看板统计安全静态告警（<code>alert_type = 'security' AND status = 'open'</code>），支撑项目 / 语言 / 工具 / 规则 / CWE / 类型 / 时间维度报表</span></div>
+      <div class="step"><b>④ 目标 4 · 可扩展</b><span>新工具接入仅注册工具 +（必要时）补规则映射（docs 仓 MR），不改分类引擎代码</span></div>
+    </div>
+    <div class="note"><b>分层职责（README 1.2.1.1）：</b>采集层（CI 产出 SARIF 上报，分类逻辑全在平台侧）→ 接入层（唯一入口，解析归一化按指纹去重）→ <b>分类引擎</b>（三层判别流水线输出 alert_type，纯查表 + 元数据判断，无机器学习重依赖）→ 存储层（告警库仅存事实数据，口径定义由 docs 仓承载）→ 统计层（口径以 README 定义为准）。</div>
+  </div>
+
+  <!-- ===================== 二、列表页 UI ===================== -->
+  <div class="card">
+    <h2>二、静态告警列表 · 告警类型维度（目标 1 前端落地）</h2>
+
+    <div class="page-mock" style="text-align:center;background:#fff">
+      <div class="mock-topbar"><span>代码检查 ｜ 静态告警列表</span><span>仓库：openlibing-cms/static-scan ｜ 分支：master</span></div>
+      <div class="mock-title-row"><span class="t">静态代码告警</span><span style="font-size:12px;color:#888">筛选：语言 ▾ ｜ 责任人 ▾ ｜ <b style="color:#1d4ed8">告警类型 ▾（新增）</b> ｜ 问题级别 ▾ ｜ 检测工具 ▾</span></div>
+      <table class="mini-table">
+        <tr><th>规则标题</th><th>扫描类别</th><th class="new-col-h">告警类型 <span class="arrow-new">●新增</span></th><th>问题级别</th><th>检测工具</th><th>文件 / 位置</th></tr>
+        <tr><td>use-after-move 后再次使用被移动对象</td><td>business</td><td class="new-col"><b class="bugc">缺陷</b></td><td>High</td><td>Clang-Tidy</td><td>src/core/move.cpp:120</td></tr>
+        <tr><td>检测到硬编码 AWS 访问密钥</td><td>business, test</td><td class="new-col"><b class="sec">安全</b></td><td>Critical</td><td>Gitleaks</td><td>deploy/creds.tf:18</td></tr>
+        <tr><td>文件缺少版权许可头注释</td><td>business</td><td class="new-col"><b class="smellc">坏味道</b></td><td>Minor</td><td>CodeArtsCheck</td><td>src/util/Log.java:1</td></tr>
+      </table>
+    </div>
+    <table class="t">
+      <tr><th style="width:130px">位置</th><th>规则</th></tr>
+      <tr><td>表头筛选</td><td>「责任人」与「问题级别」之间插入「告警类型」多选筛选（三项：安全 / 缺陷 / 坏味道），交互同现有 <code>GithubHeaderFilter</code>（多选、可勾选）；顺序：…语言 → 责任人 → <b>告警类型</b> → 问题级别 → 检测工具…；选中写入查询条件 <code>alertTypes</code> 刷新列表</td></tr>
+      <tr><td>行内标签</td><td>规则标题右侧同一行，顺序固定：扫描类别（<code>displayCategories</code>，现有灰色样式）→ <b>告警类型（新增，三分类均展示标签）</b> → 问题级别（现有，pinned 最右）；点击类型标签按该类型筛选列表</td></tr>
+      <tr><td>标签颜色</td><td>与问题级别同形态（圆角描边、透明底）：security <b class="sec">#cf222e</b>（红）｜ bug <b class="bugc">#bc4c00</b>（橙）｜ code_smell <b class="smellc">#8250df</b>（紫）；样式类随行内标签组件统一定义，避免页面级 scoped 覆盖不生效</td></tr>
+      <tr><td>前端枚举</td><td>集中维护枚举模块：<code>AlertType = 'security' | 'bug' | 'code_smell'</code> + 常量表（code / label / cssClass / dotColor）+ 工具方法；禁止页面写死文案分支，接口有 <code>alert_type</code> 即展示</td></tr>
+    </table>
+  </div>
+
+  <!-- ===================== 三、三分类语义与统计口径 ===================== -->
+  <div class="card">
+    <h2>三、三分类语义与统计口径（README 1.1.2）</h2>
+    <table class="t">
+      <tr><th style="width:150px">alert_type</th><th>语义定义（判别问题）</th></tr>
+      <tr><td><span class="pill sec">security 安全</span></td><td>可能被攻击者利用的安全风险（注入、密钥泄露、弱加密、不安全反序列化等）—— <b>代码可能被利用吗？</b></td></tr>
+      <tr><td><span class="pill o bugc">bug 缺陷</span></td><td>运行时大概率出错的正确性 / 可靠性问题 —— <b>代码确凿或大概率有错吗？</b></td></tr>
+      <tr><td><span class="pill p smellc">code_smell 坏味道</span></td><td>功能正常但有改进空间：格式、命名、复杂度、重复、性能、拼写、文档等 —— <b>其余全部（兜底）</b></td></tr>
+    </table>
+    <div class="note"><b>三分类对齐 SonarQube 质量模型三值简化版</b>（Vulnerability 与 Security Hotspot 统一归 security）。<b>MECE 设计要点：</b>① 互斥单值——一条告警只有一个 alert_type，统计占比之和恒 100%，<code>GROUP BY alert_type</code> 直接可用；② 完备无兜底桶——三类覆盖全部告警空间，拼写 / 文档 / 格式类告警均属典型 code_smell，纯度量类输出（圈复杂度数值等）不属于告警不进表；③ 冲突裁决——规则同时命中多类信号按 <code>security &gt; bug &gt; code_smell</code> 优先级取主类型。</div>
+    <h3>判别决策树（README 1.1.2.2，映射表编写与评审统一依据）</h3>
+    <pre>1. 运行时确凿/大概率出错？  ──►  bug
+2. 存在安全风险？            ──►  security      <span class="cm">// 多信号命中按 security &gt; bug &gt; code_smell 裁决</span>
+3. 其余                      ──►  code_smell   <span class="cm">// 完备兜底</span></pre>
+    <h3>边界规则（README 1.1.2.2，写入映射评审基准防歧义）</h3>
+    <table class="t">
+      <tr><th style="width:300px">场景</th><th style="width:120px">归类</th><th>说明</th></tr>
+      <tr><td>Mypy 类型错误</td><td><span class="pill o">bug</span></td><td>类型错误预测运行时错误</td></tr>
+      <tr><td>Clippy <code>perf*</code>、Cppcheck performance</td><td><span class="pill p">code_smell</span></td><td>性能不影响正确性（SonarQube 亦归 maintainability 域）</td></tr>
+      <tr><td>ShellCheck 告警</td><td>按 severity 拆</td><td>error 级规则 → bug，style 级规则 → code_smell</td></tr>
+      <tr><td>拼写（Codespell/Typos）、Markdown/XML 格式</td><td><span class="pill p">code_smell</span></td><td>不影响安全与运行，属改进项</td></tr>
+      <tr><td>密钥泄露（Gitleaks 等）</td><td><span class="pill sec">security</span></td><td>含工具级白名单短路</td></tr>
+    </table>
+    <h3>统计口径与指标（README 1.1.2.3 / 1.1.2.4）</h3>
+    <table class="t">
+      <tr><th style="width:180px">指标</th><th>定义</th></tr>
+      <tr><td>总告警数</td><td><code>count(status = 'open')</code> 的存量告警</td></tr>
+      <tr><td>安全静态告警数</td><td><code>count(alert_type = 'security' AND status = 'open')</code></td></tr>
+      <tr><td>口径一致性</td><td>安全统计直接以 <code>alert_type = 'security'</code> 判定，所有报表（安全与非安全）共用同一 alert_type 字段，口径天然一致</td></tr>
+    </table>
+  </div>
+
+  <!-- ===================== 四、分类引擎 ===================== -->
+  <div class="card">
+    <h2>四、分类引擎设计（README 1.2.2）</h2>
+
+    <h3>1. 口径数据与引擎架构（README 1.2.2.4）</h3>
+    <pre>docs 仓 static-code-analysis/solutions/full-analysis/alert-type/
+├── README.md          <span class="cm"># 目录说明：口径定义、判别决策树、治理流程、文件规范</span>
+├── tools.yml          <span class="cm"># 工具注册数据（tool / default_alert_type / enabled）</span>
+└── mappings/          <span class="cm"># 规则映射，按工具一文件（rule_pattern / level_pattern / ruleset_pattern → alert_type）</span>
+    ├── ruff.yml  ├── eslint.yml  ├── clang-tidy.yml  └── ...
+    │  @Scheduled 每 5 分钟轮询（每实例独立执行）
+    ▼
+比对 alert-type 目录 commit SHA ──► 不一致则拉取 / 校验 ──► 进程内缓存 volatile（L1 注册 + L3 映射）
+    │                                                  │
+    ▼                                                  ▼
+分类引擎（策略接口 + 工厂）◄──── L1 工具级短路 / L2 元数据（仅判安全）/ L3 规则映射直查本地内存 → 兜底 code_smell
+    ▼
+alerts 告警表（仅存告警事实数据）新增字段 <b>alert_type</b>   <span class="cm"># 口径定义不落 Mongo，由 docs 仓唯一承载</span></pre>
+    <div class="note"><b>口径数据两类：</b>① 工具注册数据 <code>tools.yml</code>（供 L1 判别，default_alert_type 决定短路或走 L2/L3）；② 规则映射数据 <code>mappings/*.yml</code>（供 L3 判别，<code>(tool, rule_pattern)</code> 唯一，禁止同一规则双类型）。映射 schema 仅承载分类口径——CWE、autofix 等规则级属性由引擎运行时从 SARIF 规则元数据提取。代码仓承载优势：<b>可追溯</b>（每次口径变更即一次 MR，评审 / diff / 回滚由 git 天然提供）+ <b>开放透明</b>（口径对所有项目可见可复用，避免各团队私有维护导致统计对不上）。</div>
+
+    <h3>2. 口径缓存与刷新</h3>
+    <div class="note mark-add">本节将缓存形态调整为<b>单机进程内缓存（volatile 引用）</b>、刷新机制明确为 <b>@Scheduled 每 5 分钟轮询（不依赖 Redis / webhook / MQ）</b>——口径常驻 JVM，基础设施故障不影响判定主链路；多实例各刷各的，≤5 分钟版本偏斜可接受。限流评估：每实例 288 次/天轻量 GET（3 实例约 864 次/天），远低于 GitCode 阈值 50 次/分钟、4000 次/小时。</div>
+    <table class="t">
+      <tr><th style="width:150px">环节</th><th>设计</th></tr>
+      <tr><td><b>缓存：进程内直查</b></td><td>口径数据（L1 工具注册 + L3 规则映射，构建为前缀树 / 哈希结构）整体存进程内存，volatile 引用持有，刷新时<b>整体替换引用</b>（读侧无锁，原子可见）；引擎每次判定直查本地内存：零网络 RTT（微秒级），且口径常驻 JVM——Redis / MQ / webhook 任一基础设施故障都不影响判定主链路（最多用旧口径，符合「存量定型、新告警按新口径」的宽容语义）；无实例间共享：各实例独立加载独立刷新，实例间存在 ≤5 分钟的口径版本偏斜窗口，结合「存量告警保持入库时值、仅新告警按当前口径定型」语义偏斜影响可忽略（同一次扫描任务内口径一致）；启动兜底：进程内无口径数据时从随构建打包的 yml 加载，首个轮询周期到达后自动对齐最新口径</td></tr>
+      <tr><td><b>刷新：定时轮询</b></td><td>每实例 @Scheduled 每 5 分钟调 1 次目录级 API 取 docs 仓 alert-type 目录最新 commit SHA，与进程内已加载 SHA 比对：一致 → 跳过（绝大多数轮询命中此分支，仅 1 个轻量 GET，288 次/天/实例）；不一致 → 从 docs 仓 raw 地址拉取 yml 全量 → 解析校验（tool 唯一性、(tool, rule_pattern) 唯一、tags_pattern 合法性）→ <b>校验失败拒绝刷新、保留旧口径并告警</b>（口径错误比口径过期危害大）；校验通过后 volatile 原子替换缓存引用 + 更新已加载 SHA → 下次扫描起对新告警生效（存量不变）</td></tr>
+      <tr><td><b>口径版本：目录 commit SHA</b></td><td>不设 version 字段，口径版本由 <b>alert-type 目录 git commit SHA</b> 承担：进程内记录已加载 SHA，每 5 分钟轮询时与目录最新 SHA 比对决定是否刷新；构建打包 yml 时注入打包时点 SHA，供启动兜底加载后参与比对；SHA 取目录最后一次变更的 commit（docs 仓其他目录变更不影响比对结果，SHA 不变则不刷新，天然按路径免疫）</td></tr>
+    </table>
+
+    <h3>3. 三层判别流水线（README 1.2.2.1 ~ 1.2.2.3）</h3>
+    <pre><span class="cm"># 分类伪代码（README 1.2.2.3）</span>
+def classify(alert, tool_registry, rule_mapping):
+    tool = tool_registry[alert.tool]
+
+    <span class="cm"># L1: 工具级定型（固定类型工具全量同型，短路后续层级）</span>
+    if tool.default_alert_type != "mixed":
+        return tool.default_alert_type
+
+    <span class="cm"># L2: SARIF 元数据（仅判安全；非安全定型一律下沉 L3）</span>
+    meta = alert.rule_properties            <span class="cm"># 来自 SARIF rules[].properties</span>
+    tags = [t.lower() for t in meta.get("tags", [])]
+    if "security" in tags or "security-severity" in meta or extract_cwe(tags):
+        return "security"                    <span class="cm"># CWE 编号同步提取入库 cwe-?(\d+) 不区分大小写</span>
+
+    <span class="cm"># L3: 规则映射表（rule_pattern 正则，多条命中按 security &gt; bug &gt; code_smell 取序；</span>
+    <span class="cm">#     severity / category / tags 维度工具按 level_pattern / ruleset_pattern / tags_pattern</span>
+    <span class="cm">#     匹配 SARIF 元数据；CodeQL correctness → bug 见 mappings/codeql.yml）</span>
+    hit = rule_mapping.lookup(alert.tool, alert.rule_id)
+    if hit:
+        return hit.alert_type
+
+    <span class="cm"># 兜底</span>
+    return "code_smell"</pre>
+    <table class="t">
+      <tr><th style="width:80px">层</th><th style="width:340px">判别内容（README 1.2.2.2）</th><th>说明</th></tr>
+      <tr><td><span class="pill l1">L1</span></td><td><b>工具级（固定类型短路）</b>：注册数据 default_alert_type 为固定值的工具全部告警直接定型</td><td>security：安全专用工具；bug：缺陷检测专用；code_smell：格式化 / 拼写 / 风格类（落位见第五章）</td></tr>
+      <tr><td><span class="pill l2">L2</span></td><td><b>元数据级（仅判安全）</b>：检查 SARIF <code>rules[].properties</code>（ruleId 关联），满足任一即归 security——tags 含 <code>security</code> ｜ 存在 <code>security-severity</code> 键 ｜ tags 含 <code>cwe-*</code> / <code>external/cwe/cwe-*</code></td><td>CWE 编号同步提取入库；非安全元数据（如 CodeQL 的 maintainability / correctness 标签）一律不参与本层判别，统一落入 L3；CodeQL <code>correctness → bug</code> 定型规则已外置至 <code>mappings/codeql.yml</code>（<mark>调整</mark>），L2 保持纯「仅判安全」语义</td></tr>
+      <tr><td><span class="pill l3">L3</span></td><td><b>规则级</b>：以 (tool, rule_id) 查规则映射表，rule_pattern 为正则（前缀写 <code>^S</code>、精确写 <code>^S608$</code>）；severity / category / tags 维度工具（ShellCheck / Cppcheck / PMD / CodeQL）按 <code>level_pattern</code> / <code>ruleset_pattern</code> / <code>tags_pattern</code> 匹配 SARIF 元数据字段（README 1.2.2.4 schema），命中即取映射的 alert_type</td><td>多条同时命中按 security &gt; bug &gt; code_smell 优先级取序（CodeQL 查询同时带 security 与 correctness 标签时，L2 已先行判 security，L3 仅处理非安全部分）</td></tr>
+      <tr><td><span class="pill">兜底</span></td><td>全部未命中 → <b>code_smell</b></td><td>完备性保证：alert_type 永不为空（验收 #1）</td></tr>
+    </table>
+
+    <h3>3. SARIF 解析入库（存量稳定语义，README 1.2.2.6）</h3>
+    <div class="flow">
+      <div class="step"><b>入库</b><span>解析 result → tool + ruleId → 引擎 classify（口径直查进程内存）→ 写 alerts 表 alert_type；不阻塞入库，增量成本 &lt; 1%</span></div>
+      <div class="step"><b>存量稳定</b><span>口径变更仅对新告警生效：存量告警的 alert_type 保持入库时的值不变，指纹与状态不受影响——已修复的历史告警不会因口径变化被重新拉回，统计趋势稳定</span></div>
+      <div class="step"><b>新规则兜底</b><span>映射未覆盖的新 ruleId → 兜底 code_smell 入库；工具版本入库，升级时比对规则集差异并补映射（MR），下次扫描起生效</span></div>
+    </div>
+
+    <h3>4. <span class="mark-add">存量数据初始化</span></h3>
+    <table class="t">
+      <tr><th style="width:110px">项</th><th>设计（一次性回填）</th></tr>
+      <tr><td>触发</td><td>XXL-Job 手动触发一次；幂等可重跑（已回填不再命中扫描条件，二次执行空跑）</td></tr>
+      <tr><td>流程</td><td>alert_type 空值扫描（_id 游标分页，低峰）→ 内存 DISTINCT (tool, rule_id) 聚合 → 逐组合调用<b>与入库同源</b>的分类引擎判定（L1 短路 → L2 已落库 security_severity / cwe_tags 判据 → L3 正则查表 → 兜底）→ 按组合批量 UPDATE 只写空值、不覆盖任何已有值</td></tr>
+      <tr><td>失败处理</td><td>单组合失败记录日志跳过继续；依赖幂等重跑恢复，不做断点续传</td></tr>
+      <tr><td>前置</td><td><b>映射初始整理</b>（一次性，先于回填）：按 README 落位表 + 各工具官方归组生成 mappings/*.yml 提 MR——Ruff 61 官方前缀分组（README 1.2.2.5.0）、Pylint 前缀、ESLint 核心白名单（1.2.2.5.1）+ 官方规则集物料全量 727 行、TypeScript-ESLint 裸名穷举 194 行（1.2.2.5.4）、SpotBugs FindSecBugs 全量 144 条（1.2.2.5.2）、Clippy 全量穷举 872 行（1.2.2.5.3，<code>^clippy::&lt;lint&gt;$</code>）、Cppcheck（含 <code>^cert-</code>）与 ShellCheck 按 severity 批量（error / warning → bug）、PMD 按 category、golangci <code>^G[1-6]\d{2}$</code> + 安全 linter 名、Clang-Tidy 模块前缀、CodeQL <code>tags_pattern</code>（correctness → bug + catch-all → code_smell）</td></tr>
+    </table>
+  </div>
+
+  <!-- ===================== 五、工具落位表 ===================== -->
+  <div class="card">
+    <h2>五、工具落位表（README 1.2.2.5，34 工具）</h2>
+
+    <h3><span class="pill l1">L1</span>固定类型（全量定型，21 工具）</h3>
+    <table class="t">
+      <tr><th style="width:140px">default_alert_type</th><th>工具</th></tr>
+      <tr><td><span class="pill sec">security</span></td><td>Bandit、Gosec、Gitleaks、Detect-Secrets</td></tr>
+      <tr><td><span class="pill o">bug</span></td><td>Mypy（类型错误预测运行时错误）、ErrorProne</td></tr>
+      <tr><td><span class="pill p">code_smell</span></td><td>Prettier、ClangFormat、Google-Java-Format、Scalafmt、Rustfmt、Shfmt、StyLua、Spotless、Checkstyle、Markdownlint、Xmllint、Codespell、Typos、Luacheck、Scalafix</td></tr>
+    </table>
+    <div class="note">code_smell 组内 8 个格式化器 / 调度框架（Prettier、ClangFormat、Google-Java-Format、Scalafmt、Rustfmt、Shfmt、StyLua、Spotless）不产生 SARIF 静态告警，注册仅保持口径完备。</div>
+
+    <h3><span class="pill l2">L2/L3</span>混合工具（default_alert_type = mixed，12 工具）</h3>
+    <table class="t">
+      <tr><th style="width:150px">工具</th><th style="width:260px">rule_pattern（正则）</th><th style="width:120px">alert_type</th><th>说明</th></tr>
+      <tr><td>CodeQL<span class="tag-adjust">已调整</span></td><td><code>tags_pattern: ^correctness$</code> ｜ 其余非安全标签及无 tags catch-all</td><td>bug ｜ code_smell</td><td>官方 query-metadata-style-guide：correctness = detect incorrect program behavior（语义对齐 bug，与 Clippy correctness 组同口径）；经 <code>mappings/codeql.yml</code> <code>tags_pattern</code> 维度定型，承接 L2 放行的非安全告警；安全查询已在 L2 判 security 不进本表</td></tr>
+      <tr><td>Ruff<span class="tag-adjust">已调整</span></td><td>61 个官方前缀逐行穷尽（见 README 1.2.2.5.0 官方前缀分组穷尽方案）</td><td>混合</td><td>每前缀一行按官方 group 多数派定型：security 2 前缀（<code>S</code> / <code>DJ</code>，80 条）｜ bug 16 前缀（suspicious 多数，308 条）｜ code_smell 43 前缀（497 条），覆盖全部 885 条官方规则</td></tr>
+      <tr><td>Pylint<span class="tag-adjust">已调整</span></td><td><code>^E</code> ｜ <code>^F</code> ｜ <code>^(C|W|R|I)</code></td><td>bug ｜ bug ｜ code_smell</td><td>错误类消息 ｜ fatal 致命类消息（解析失败等） ｜ 规范 / 警告 / 重构 / 信息类消息</td></tr>
+      <tr><td>ESLint<span class="tag-adjust">已调整</span></td><td><code>^security/</code> ｜ 核心安全白名单（见 README 1.2.2.5.1 穷举清单）｜ <code>meta.type = problem</code> 类</td><td>security ｜ security ｜ bug</td><td>eslint-plugin-security 全量 15 条 ｜ 核心白名单穷举自 ESLint core 199 条中安全语义规则（no-eval / no-implied-eval / no-new-func / no-script-url / no-prototype-builtins / no-extend-native 等，完整清单见 README 1.2.2.5.1）｜ 核心规则按 meta.type 导入（problem = 逻辑错误）。yml 落盘以官方规则集物料 eslint.xlsx 全量 726 行为覆盖基准（含 react / jest / import / jsx-a11y / @typescript-eslint 等 12 个插件规则，按物料三分类落型，README 标准优先于物料分类），合计 727 行</td></tr>
+      <tr><td>TypeScript-ESLint<span class="tag-adjust">已调整</span></td><td>裸名（不带 <code>@typescript-eslint/</code> 前缀）逐规则穷举 194 行（见 README 1.2.2.5.4）</td><td>security ｜ bug ｜ code_smell</td><td>物料实测 SARIF ruleId 为裸名；v8.73.0 活跃 128 条（no-implied-eval / no-empty-function 镜像核心白名单 → security 2 条，meta.type problem → bug 53 条，suggestion 其余 → code_smell 73 条）+ 物料补充 66 条（ESLint core 同名 59 + legacy 7，按 eslint meta.type 实测），合计 194 行逐条 <code>^&lt;规则名&gt;$</code> 精确匹配</td></tr>
+      <tr><td>Clang-Tidy<span class="tag-adjust">已调整</span></td><td><code>^cert-</code> ｜ <code>^clang-analyzer-security\.</code> ｜ <code>^(bugprone-|concurrency-)</code> ｜ <code>^(clang-analyzer-|clang-diagnostic)</code> ｜ <code>^(readability-|modernize-|performance-)</code> ｜ 其余 18 模块前缀（abseil- / altera- / android- / boost- / cppcoreguidelines- / darwin- / fuchsia- / google- / hicpp- / linuxkernel- / llvm- / llvmlibc- / misc- / mpi- / objc- / openmp- / portability- / zircon-）</td><td>security ｜ security ｜ bug ｜ bug ｜ code_smell ｜ code_smell</td><td>CERT C/C++ 安全编码 ｜ clang static analyzer 安全子模块 ｜ 易错模式 / 并发正确性 ｜ clang static analyzer 非安全检查器 / 编译器诊断 ｜ 可读性 / 现代化 / 性能 ｜ 官方模块全集 27 组坏味道兜底；cppcoreguidelines 个别内存安全语义规则走人工例外行升级</td></tr>
+      <tr><td>Cppcheck<span class="tag-adjust">已调整</span></td><td><code>^cert-</code> ｜ error 级 ｜ warning 级 ｜ style / performance / portability / information / debug 级</td><td>security ｜ bug ｜ bug ｜ code_smell</td><td>按 <code>results[].ruleId</code> 前缀筛选 ｜ 按 <code>results[].level</code> 筛选 ｜ 按 <code>results[].level</code> 筛选（危险用法警告，如疑似空指针解引用） ｜ 按 <code>results[].level</code> 筛选，severity 全集穷尽</td></tr>
+      <tr><td>ShellCheck<span class="tag-adjust">已调整</span></td><td>error 级规则 ｜ warning 级规则 ｜ style / info 级规则</td><td>bug ｜ bug ｜ code_smell</td><td>按 <code>results[].level</code> 筛选 ｜ 按 <code>results[].level</code> 筛选（如 SC2086 变量未加引号） ｜ 按 <code>results[].level</code> 筛选，severity 全集穷尽</td></tr>
+      <tr><td>Clippy<span class="tag-adjust">已调整</span></td><td>correctness / suspicious 组全量清单（154 条，见 README 1.2.2.5.3） ｜ 其余 7 组 + legacy 全量清单（718 条，见 README 1.2.2.5.3）</td><td>bug ｜ code_smell</td><td>物料实测 SARIF ruleId 带 <code>clippy::</code> 前缀，逐规则 <code>^clippy::&lt;lint&gt;$</code> 精确匹配（官方活跃 842 条 = 154 bug + 688 code_smell + 物料补充 legacy 30 条，合计 872 行） ｜ style / complexity / perf / pedantic / nursery / restriction / cargo，穷举见 1.2.2.5.3</td></tr>
+      <tr><td>Golangci-Lint<span class="tag-adjust">已调整</span></td><td><code>^G[1-6]\d{2}$</code> ｜ <code>^gosec$</code> / <code>^(gas|gitleaks|detect-secrets)$</code> ｜ <code>^(nosec|password|credential|secret)[a-z-]*$</code> ｜ 其余 linter</td><td>security ｜ security ｜ security ｜ code_smell</td><td>物料实测 ruleId 双形态：启用 gosec 时按 Gxxx 编码上报（README 口径）｜ 安全 linter 名 ｜ 凭据 / 密钥类规则名前缀防御 ｜ 其余 linter 暂不细分落兜底，按 linter 分组逐步细化</td></tr>
+      <tr><td>SpotBugs<span class="tag-adjust">已调整</span></td><td>FindSecBugs bug pattern 全量清单（144 条精确正则，见 README 1.2.2.5.2） ｜ 其余 bug pattern</td><td>security ｜ bug</td><td>源自 FindSecBugs 官方 findbugs.xml 全部 category="SECURITY" pattern，逐条 <code>^&lt;pattern&gt;$</code> 精确匹配，初始化时全量导入 ｜ SpotBugs 本身为缺陷检测器</td></tr>
+      <tr><td>PMD<span class="tag-adjust">已调整</span></td><td>security category ｜ errorprone / multithreading category ｜ 其余 category</td><td>security ｜ bug ｜ code_smell</td><td>按 <code>rules[].properties.ruleset</code> 筛选 ｜ 按 <code>rules[].properties.ruleset</code> 筛选 ｜ 按 <code>rules[].properties.ruleset</code> 筛选</td></tr>
+    </table>
+
+    <h3>口径数据变更治理（README 1.2.2.6）</h3>
+    <div class="flow">
+      <div class="step"><b>① 提案</b><span>新工具接入或口径调整 → docs 仓 alert-type 目录提 MR（工具、规则、alert_type、依据）</span></div>
+      <div class="step"><b>② 评审</b><span>安全团队确认 security 归类（重点核验「误判为安全」）；工程团队确认 bug / code_smell 边界（依据决策树与边界规则）；CI 自动校验格式与唯一性约束</span></div>
+      <div class="step"><b>③ 生效</b><span>MR 合并后随平台发布（或热加载）刷新引擎缓存，下次扫描起对新告警生效——<b>存量告警 alert_type 保持入库时值不变</b>，指纹与状态不受影响，统计趋势稳定</span></div>
+      <div class="step"><b>④ 审计</b><span>变更历史即 git 历史，报表可按 yml 文件版本（commit/tag）追溯口径</span></div>
+    </div>
+  </div>
+
+  <!-- ===================== 六、数据模型 ===================== -->
+  <div class="card">
+    <h2>六、数据模型（README 1.2.3：仅新增一个字段）</h2>
+    <table class="t">
+      <tr><th style="width:250px">变更</th><th>说明</th></tr>
+      <tr><td>告警表（alerts，codecheck 对应 <code>static_alarm_issue</code>）新增 <code>alert_type</code></td><td>ENUM NOT NULL，<code>security / bug / code_smell</code>（互斥单值，分类引擎写入，兜底保证非空）</td></tr>
+      <tr><td>不新增口径存储</td><td>tools.yml / mappings/*.yml 由 docs 仓唯一承载，数据库仅存告警事实数据</td></tr>
+      <tr><td>索引</td><td>alert_type 基数为 3 不单独建索引，<code>$in</code> 过滤复用现有索引结果集</td></tr>
+      <tr><td>与指纹 / 去重键关系</td><td>纯新增展示 / 筛选字段，不参与 fingerprint_key 计算与 upsert 匹配</td></tr>
+    </table>
+  </div>
+
+  <!-- ===================== 七、API 接口 ===================== -->
+  <div class="card">
+    <h2>七、API 接口（沿用 DataResult 包装 + 菜单横向鉴权）</h2>
+    <h3>1. 现有接口扩展（/static-alarm/v1，无新增接口）</h3>
+    <table class="t">
+      <tr><th style="width:300px">接口</th><th>变更</th></tr>
+      <tr><td><code>POST /static-alarm/v1/list</code></td><td>入参 <code>StaticAlarmQueryDTO</code> 新增 <code>alertTypes: List&lt;String&gt;</code>（三值 $in 多选，空不过滤）；出参 <code>StaticAlarmIssueListVO</code> 每行新增 <code>alertType</code></td></tr>
+      <tr><td><code>POST /static-alarm/v1/issue/count</code>（及批量计数）</td><td>入参同步新增 <code>alertTypes</code>，计数口径与列表一致</td></tr>
+      <tr><td><code>POST /static-alarm/v1/list/export</code></td><td>入参同步新增 <code>alertTypes</code>（导出遵循同一过滤语义）</td></tr>
+      <tr><td><code>POST /static-alarm/v1/issue/filter-options</code></td><td>出参新增告警类型候选：固定三项 <code>{value: security/bug/code_smell, label: 安全/缺陷/坏味道}</code></td></tr>
+      <tr><td>ops 看板统计接口（openlibing-ops 仓，iframe <code>/ops/dashboard/code-check</code>）</td><td><b>ops 侧改造</b>：安全静态告警 = <code>alert_type = 'security' AND status = 'open'</code>；总告警数 = <code>count(status='open')</code>；分类分布 GROUP BY alert_type（占比恒 100%）；本仓配合项：提供分类数据源（共享字段或接口，随看板详细设计确定）</td></tr>
+    </table>
+    <div class="note"><b>错误码约定：</b>403 横向鉴权失败 / 400 参数校验（alertTypes 非法值等）——沿用现有 <code>DataResult.build</code> 风格。本需求无新增写接口，攻击面不扩大。</div>
+  </div>
+
+  <!-- ===================== 八、性能与安全 ===================== -->
+  <div class="card">
+    <h2>八、性能与安全</h2>
+    <table class="t">
+      <tr><th style="width:200px">项</th><th>评估</th></tr>
+      <tr class="mark-add-row"><td>引擎判定 <span class="mark-add">◉ 补充</span></td><td>口径直查进程内存：零网络 RTT + 前缀树 / 正则匹配微秒级；相对 SARIF 解析、指纹计算、Mongo upsert 现有成本，增量 &lt; 1%（缓存形态调整说明见第四章第 2 节）</td></tr>
+      <tr class="mark-add-row"><td>缓存刷新 <span class="mark-add">◉ 补充</span></td><td>@Scheduled 每 5 分钟比对 alert-type 目录 commit SHA（见第四章第 2 节），每实例 288 次/天轻量 GET（3 实例约 864 次/天），无限流风险；启动兜底：进程内无口径数据时从随构建打包的 yml（构建时注入打包时点 SHA）加载</td></tr>
+      <tr><td>列表 / 计数 / 导出</td><td><code>alertTypes</code> 为 $in 等值条件追加现有查询，基数 3 复用现有索引结果集，单次增量 &lt; 10ms</td></tr>
+      <tr><td>看板聚合</td><td><code>GROUP BY alert_type</code> 与现有按 severity 聚合同构，复用现有统计链路</td></tr>
+      <tr class="mark-add-row"><td>存量回填 <span class="mark-add">◉ 补充</span></td><td>游标全量扫描 + 万级组合批量 UPDATE，低峰执行，幂等可重跑（见第四章第 4 节）</td></tr>
+      <tr><td>安全</td><td>分类数据非敏感；不打印 SARIF 原文与源码片段日志；无新增凭证依赖；口径审计由 git 历史天然承担，报表页脚注明口径版本（README 1.2.4）</td></tr>
+    </table>
+  </div>
+
+  <!-- ===================== 九、风险与验收 ===================== -->
+  <div class="card">
+    <h2>九、风险与验收（README 1.2.4 / 1.2.5）</h2>
+    <h3>风险与应对</h3>
+    <table class="t">
+      <tr><th style="width:250px">风险</th><th style="width:170px">影响</th><th>应对</th></tr>
+      <tr><td>映射表误判（规则错标类型，或漏标）</td><td>统计口径失真</td><td>映射变更走评审（安全团队 + 工程团队），下次扫描起自动修正</td></tr>
+      <tr><td>bug 与 code_smell 边界争议</td><td>映射评审反复</td><td>决策树与边界规则为裁决基准，争议案例沉淀进边界规则表</td></tr>
+      <tr><td>工具升级新增 / 更名规则</td><td>新规则落入兜底（code_smell）</td><td>工具版本入库；升级时比对规则集差异并补映射</td></tr>
+      <tr><td>SARIF 质量参差（无元数据、无指纹）</td><td>L2 判别失效、去重漂移</td><td>转换器统一补齐指纹；L3 映射兜底</td></tr>
+      <tr><td>海量告警性能</td><td>入库与查询变慢</td><td>批量 upsert、分区表、聚合预计算</td></tr>
+      <tr><td>口径理解不一致</td><td>各团队统计对不上</td><td>README 为唯一口径来源，报表页脚注明口径版本</td></tr>
+    </table>
+    <h3>验收标准</h3>
+    <table class="t">
+      <tr><th style="width:56px">#</th><th>标准</th></tr>
+      <tr><td>1</td><td><b>分类覆盖率</b>：入库告警 alert_type 非空比例 = 100%</td></tr>
+      <tr><td>2</td><td><b>工具级正确性</b>：Bandit、Gosec、Gitleaks、Detect-Secrets 告警 100% 归为 security；Mypy、ErrorProne 告警 100% 归为 bug</td></tr>
+      <tr><td>3</td><td><b>抽样准确率</b>：人工抽查 200 条分类结果，三类型合计准确率 ≥ 95%（每类不少于 50 条）</td></tr>
+      <tr><td>4</td><td><b>口径一致性</b>：报表数值与统计口径 SQL 完全一致</td></tr>
+      <tr><td>5</td><td><b>存量稳定性</b>：映射表变更后，存量告警的 alert_type 与状态（open/fixed）不受影响，新扫描告警按新映射分类</td></tr>
+    </table>
+  </div>
+
+  <div class="sub" style="text-align:center;margin-top:24px">openlibing-codecheck · 设计评审 · 2026-11-18 · 权威基准：原设计方案/README.md ｜ 落地详设：问题分类-设计文档.md</div>
+</div>
+</body>
+</html>
