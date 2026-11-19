@@ -12,3 +12,4 @@
 | #423                            | 【漏洞修复】start.sh 添加 -XX:-UseBASE64Intrinsics JVM 启动参数                                                                                        | taohuoquan | 通过     |
 | #425                            | [Bug] 全量代码检查任务日志下载报错 task does not belong to project                                                                                     | taohuoquan | 通过     |
 | #427                            | [缺陷]: mrRules 规则集免登录导出公仓校验导致无权限                                                                                                     | taohuoquan | 通过     |
+| #428                            | build(deps): upgrade xxl-job-core to 3.5.0                                                                                                             | taohuoquan | 通过     |
