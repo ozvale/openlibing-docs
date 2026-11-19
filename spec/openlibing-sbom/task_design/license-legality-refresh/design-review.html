@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>License 合规性数据自动刷新 — 交互原型</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: #f5f7fa; color: #24292f; line-height: 1.6; padding-bottom: 60px;
+  }
+  .header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: #fff; padding: 32px 40px;
+  }
+  .header h1 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+  .header p { font-size: 14px; opacity: .92; max-width: 900px; }
+  .header .meta { margin-top: 12px; font-size: 12px; opacity: .75; }
+  .container { max-width: 1180px; margin: 0 auto; padding: 24px 40px; }
+  .section { margin-bottom: 28px; }
+  .section-title {
+    font-size: 16px; font-weight: 600; color: #1e3a8a; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::before { content: ""; width: 4px; height: 16px; background: #2563eb; border-radius: 2px; }
+  .section-desc { font-size: 13px; color: #6b7280; margin-bottom: 14px; }
+
+  .card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+
+  /* 筛选 chips */
+  .chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .chip {
+    padding: 5px 14px; border-radius: 16px; font-size: 13px; cursor: pointer;
+    border: 1px solid #d1d5db; background: #fff; color: #374151; user-select: none;
+    transition: all .15s;
+  }
+  .chip:hover { border-color: #2563eb; color: #2563eb; }
+  .chip.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+  .chip .cnt { opacity: .8; font-size: 12px; margin-left: 4px; }
+
+  /* 表格 */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 10px 12px; background: #f9fafb; color: #4b5563;
+    font-weight: 600; border-bottom: 1px solid #e5e7eb; white-space: nowrap;
+  }
+  td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; }
+  tr:hover td { background: #f8faff; }
+  .lic-name { font-family: Consolas, monospace; font-weight: 600; color: #1f2937; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px;
+    border-radius: 12px; font-size: 12px; white-space: nowrap;
+  }
+  .badge.legal { background: #dcfce7; color: #15803d; }
+  .badge.illegal { background: #fee2e2; color: #b91c1c; }
+  .badge.keep { background: #fef3c7; color: #92400e; }
+  .badge.flash { animation: flash .5s ease; }
+  @keyframes flash { 0%{box-shadow:0 0 0 4px rgba(37,99,235,.35);} 100%{box-shadow:0 0 0 0 transparent;} }
+  .src-tag { font-size: 11px; color: #9ca3af; }
+
+  /* 刷新演示 */
+  .refresh-grid { display: grid; grid-template-columns: 1fr 360px; gap: 16px; }
+  @media (max-width: 960px) { .refresh-grid { grid-template-columns: 1fr; } }
+  .mech-card {
+    border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; background: #fafbfc;
+  }
+  .mech-card h4 { font-size: 14px; margin-bottom: 8px; color: #1f2937; }
+  .mech-card p { font-size: 12.5px; color: #6b7280; }
+  .mech-card .time-tag {
+    display: inline-block; background: #ede9fe; color: #6d28d9; font-size: 11px;
+    padding: 1px 8px; border-radius: 10px; margin-bottom: 8px;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px;
+    background: #2563eb; color: #fff; border: none; border-radius: 6px;
+    font-size: 13px; cursor: pointer; transition: background .15s;
+  }
+  .btn:hover { background: #1d4ed8; }
+  .btn:disabled { background: #93c5fd; cursor: not-allowed; }
+  .btn.ghost { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+  .btn.ghost:hover { border-color: #2563eb; color: #2563eb; background: #fff; }
+  .btn-row { margin-top: 14px; display: flex; gap: 10px; }
+
+  .log-panel {
+    background: #0f172a; border-radius: 8px; padding: 14px; font-family: Consolas, monospace;
+    font-size: 12px; color: #94a3b8; height: 300px; overflow-y: auto;
+  }
+  .log-panel .lg-line { margin-bottom: 3px; }
+  .log-panel .lg-time { color: #475569; }
+  .log-panel .lg-ok { color: #4ade80; }
+  .log-panel .lg-bad { color: #f87171; }
+  .log-panel .lg-unk { color: #fbbf24; }
+  .log-panel .lg-info { color: #7dd3fc; }
+  .log-panel .lg-sum { color: #e2e8f0; font-weight: bold; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .stat {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; text-align: center;
+  }
+  .stat .num { font-size: 20px; font-weight: 700; color: #1e3a8a; }
+  .stat .lbl { font-size: 11px; color: #6b7280; }
+
+  .note {
+    background: #eff6ff; border-left: 3px solid #2563eb; padding: 10px 14px;
+    font-size: 12.5px; color: #1e40af; border-radius: 0 6px 6px 0; margin-top: 12px;
+  }
+  .note.warn { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+
+  .flow { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .flow .node {
+    background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 12px;
+    font-size: 12px; color: #374151;
+  }
+  .flow .arrow { color: #9ca3af; font-size: 14px; }
+  .flow .node.hl { border-color: #2563eb; background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>License 合规性数据自动刷新 — 交互原型</h1>
+  <p>页面上的「OSI/FSF 认证 license」「非 OSI/FSF 认证 license」筛选标签读取的是 license 词典表的合规标记（is_legal）。
+     该标记目前只在 SBOM 解析时判定一次，貂蝉平台侧的合规结论变化后页面数据不会跟着更新，导致筛选结果失真。
+     本次改造引入「解析即查询貂蝉 + 每周定时全量校正」两条刷新途径，页面本身无任何改动。</p>
+  <div class="meta">change-name: license-legality-refresh ｜ 环境：gamma ｜ 2026-11</div>
+</div>
+
+<div class="container">
+
+  <!-- Section 1: 页面筛选现状 -->
+  <div class="section">
+    <div class="section-title">① 软件成分 license 列表（页面筛选交互示意）</div>
+    <div class="section-desc">以下模拟 gamma 环境 SBOM 管理页的软件成分数据区：点击筛选标签可按合规性过滤 license 列表。预置了两条"失真"数据（标记与貂蝉最新结论不一致）。</div>
+    <div class="card">
+      <div class="chips" id="chips">
+        <div class="chip active" data-f="all">全部 <span class="cnt" id="c-all"></span></div>
+        <div class="chip" data-f="legal">OSI/FSF认证license <span class="cnt" id="c-legal"></span></div>
+        <div class="chip" data-f="illegal">非OSI/FSF认证license <span class="cnt" id="c-illegal"></span></div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>License (SPDX ID)</th><th>合规标记（is_legal）</th><th>判定来源</th><th>貂蝉最新结论</th><th>数据状态</th></tr>
+        </thead>
+        <tbody id="licBody"></tbody>
+      </table>
+      <div class="note warn" id="staleNote">⚠️ 当前存在 <b>2 条失真数据</b>：JSON（貂蝉已判不合规，但库里仍是"认证"——历史上由兜底路径默认合法）、BSD-4-Clause（貂蝉已判不合规，库里的"认证"是一次性黑名单口径的旧结论）。失真根因：合规结论只在解析时判定一次，之后没有任何刷新途径。</div>
+    </div>
+  </div>
+
+  <!-- Section 2: 刷新机制 -->
+  <div class="section">
+    <div class="section-title">② 数据刷新机制（两条途径）</div>
+    <div class="section-desc">改造后 is_legal 有两个保持新鲜的途径。点击"模拟执行刷新任务"可预演调度任务执行时页面数据的纠正过程与调度日志输出。</div>
+    <div class="card">
+      <div class="refresh-grid">
+        <div>
+          <div class="mech-card" style="margin-bottom:12px;">
+            <span class="time-tag">每周一 02:00 自动触发 ｜ 支持管理台手动触发</span>
+            <h4>途径 A：xxl-job 定时全量校正</h4>
+            <p>对 license 词典表全量记录逐一查询貂蝉合规结论：认证 → 标记合规；不合规 → 标记非认证；
+               <b>未收录（unknown）→ 跳过并保留现值</b>。任务入口先清空貂蝉查询缓存，手动触发也是真实全量刷新。
+               单条查询失败不中断任务，结束时在调度日志输出四项统计。</p>
+          </div>
+          <div class="mech-card">
+            <span class="time-tag">SBOM 导入解析时</span>
+            <h4>途径 B：批处理解析即校正</h4>
+            <p>新导入 SBOM 解析 license 时，优先查询貂蝉得出合规标记；貂蝉未收录或查询失败时，降级沿用现有黑名单口径（兜底新建场景降级为默认合法）。新数据从入库起就是准的。</p>
+          </div>
+          <div class="flow">
+            <div class="node">license 词典表</div><div class="arrow">→</div>
+            <div class="node hl">调度任务 / 解析流程</div><div class="arrow">→</div>
+            <div class="node">貂蝉 /check 接口</div><div class="arrow">→</div>
+            <div class="node hl">is_legal 更新</div><div class="arrow">→</div>
+            <div class="node">页面筛选结果实时反映</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" id="btnRun" onclick="runRefresh()">▶ 模拟执行刷新任务</button>
+            <button class="btn ghost" onclick="resetDemo()">↺ 重置失真数据</button>
+          </div>
+        </div>
+        <div>
+          <div class="log-panel" id="logPanel">
+            <div class="lg-line lg-info">// 调度日志（xxl-job 调度中心可见）</div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="num" id="s-total">-</div><div class="lbl">查询总数</div></div>
+            <div class="stat"><div class="num" id="s-legal" style="color:#15803d">-</div><div class="lbl">合规总数</div></div>
+            <div class="stat"><div class="num" id="s-illegal" style="color:#b91c1c">-</div><div class="lbl">不合规总数</div></div>
+            <div class="stat"><div class="num" id="s-unknown" style="color:#92400e">-</div><div class="lbl">未知总数</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="note">💡 演示数据中 VendorSpecific-1.0 为貂蝉未收录 license：刷新时跳过、保留现值，计入"未知总数"——对应验收标准里 unknown 不改变库内值的行为。</div>
+    </div>
+  </div>
+
+  <!-- Section 3: 改动边界 -->
+  <div class="section">
+    <div class="section-title">③ 本次改动边界</div>
+    <div class="card">
+      <table>
+        <thead><tr><th>范围</th><th>是否涉及</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>前端页面</td><td>否</td><td>筛选标签、列表、接口均不改动，仅数据正确性提升</td></tr>
+          <tr><td>SBOM 后端服务（openlibing-sbom）</td><td>是</td><td>新增貂蝉查询客户端、查询缓存、xxl-job 周任务；批处理两条 license 写入路径口径调整</td></tr>
+          <tr><td>数据库表结构</td><td>否</td><td>仅 license 表 is_legal 字段值的刷新机制变化</td></tr>
+          <tr><td>对外接口契约</td><td>否</td><td>无接口增删改</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // demo 数据：diaochan = 貂蝉最新结论（ALLOW/NOT_ALLOW/UNKNOW）；isLegal = 库内当前值
+  const licenses = [
+    { name: "MIT",               isLegal: true,  diaochan: "ALLOW",     src: "批处理·黑名单口径", stale: false },
+    { name: "Apache-2.0",        isLegal: true,  diaochan: "ALLOW",     src: "批处理·黑名单口径", stale: false },
+    { name: "BSD-3-Clause",      isLegal: true,  diaochan: "ALLOW",     src: "批处理·黑名单口径", stale: false },
+    { name: "JSON",              isLegal: true,  diaochan: "NOT_ALLOW", src: "兜底·默认合法",     stale: true  },
+    { name: "BSD-4-Clause",      isLegal: true,  diaochan: "NOT_ALLOW", src: "批处理·黑名单口径", stale: true  },
+    { name: "AGPL-3.0",          isLegal: true,  diaochan: "ALLOW",     src: "批处理·黑名单口径", stale: false },
+    { name: "Beerware",          isLegal: false, diaochan: "NOT_ALLOW", src: "批处理·repo_meta",  stale: false },
+    { name: "VendorSpecific-1.0",isLegal: true,  diaochan: "UNKNOW",    src: "兜底·默认合法",     stale: false },
+  ];
+  let filter = "all";
+  let running = false;
+
+  const DIAOCHAN_TXT = { ALLOW: "ALLOW（认证）", NOT_ALLOW: "NOT_ALLOW（不合规）", UNKNOW: "UNKNOW（未收录）" };
+
+  function render() {
+    const tbody = document.getElementById("licBody");
+    tbody.innerHTML = "";
+    const rows = licenses.filter(l =>
+      filter === "all" ? true : filter === "legal" ? l.isLegal : !l.isLegal);
+    rows.forEach(l => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="lic-name">${l.name}</td>
+        <td><span class="badge ${l.isLegal ? "legal" : "illegal"}" id="b-${l.name}">${l.isLegal ? "✓ OSI/FSF认证" : "✗ 非OSI/FSF认证"}</span></td>
+        <td class="src-tag">${l.src}</td>
+        <td class="src-tag">${DIAOCHAN_TXT[l.diaochan]}</td>
+        <td>${l.stale ? '<span class="badge keep">失真待刷新</span>' : '<span class="badge legal" style="background:#f3f4f6;color:#6b7280">一致</span>'}</td>`;
+      tbody.appendChild(tr);
+    });
+    document.getElementById("c-all").textContent = "(" + licenses.length + ")";
+    document.getElementById("c-legal").textContent = "(" + licenses.filter(l => l.isLegal).length + ")";
+    document.getElementById("c-illegal").textContent = "(" + licenses.filter(l => !l.isLegal).length + ")";
+    const staleCnt = licenses.filter(l => l.stale).length;
+    const note = document.getElementById("staleNote");
+    note.style.display = staleCnt > 0 ? "block" : "none";
+  }
+
+  document.getElementById("chips").addEventListener("click", e => {
+    const chip = e.target.closest(".chip");
+    if (!chip) return;
+    document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+    chip.classList.add("active");
+    filter = chip.dataset.f;
+    render();
+  });
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  function log(cls, msg) {
+    const panel = document.getElementById("logPanel");
+    const t = new Date().toTimeString().slice(0, 8);
+    panel.insertAdjacentHTML("beforeend", `<div class="lg-line"><span class="lg-time">[${t}]</span> <span class="${cls}">${msg}</span></div>`);
+    panel.scrollTop = panel.scrollHeight;
+  }
+
+  async function runRefresh() {
+    if (running) return;
+    running = true;
+    document.getElementById("btnRun").disabled = true;
+    const panel = document.getElementById("logPanel");
+    panel.innerHTML = '<div class="lg-line lg-info">// 调度日志（xxl-job 调度中心可见）</div>';
+    ["s-total","s-legal","s-illegal","s-unknown"].forEach(id => document.getElementById(id).textContent = "-");
+
+    log("lg-info", "任务 refreshLicenseLegalityHandler 触发（每周一02:00 / 管理台手动）");
+    await sleep(400);
+    log("lg-info", "步骤1：清空貂蝉查询缓存 → 本次为真实全量查询");
+    await sleep(500);
+
+    const total = licenses.length;
+    let legal = 0, illegal = 0, unknown = 0, updated = 0;
+    log("lg-info", `步骤2：加载 license 词典表，共 ${total} 条记录`);
+    await sleep(400);
+
+    for (const l of licenses) {
+      await sleep(350);
+      log("lg-info", `查询貂蝉 /check?license=${l.name} ...`);
+      await sleep(350);
+      if (l.diaochan === "UNKNOW") {
+        unknown++;
+        log("lg-unk", `  → UNKNOW：貂蝉未收录，跳过，保留现值 ${l.isLegal ? "true" : "false"}`);
+      } else {
+        const newVal = l.diaochan === "ALLOW";
+        if (newVal) legal++; else illegal++;
+        if (newVal !== l.isLegal) {
+          l.isLegal = newVal;
+          l.stale = false;
+          updated++;
+          log(newVal ? "lg-ok" : "lg-bad", `  → ${l.diaochan}：更新 is_legal ${!newVal} → ${newVal}`);
+          const badge = document.getElementById("b-" + l.name);
+          if (badge) {
+            badge.className = "badge flash " + (newVal ? "legal" : "illegal");
+            badge.textContent = newVal ? "✓ OSI/FSF认证" : "✗ 非OSI/FSF认证";
+          }
+        } else {
+          log(newVal ? "lg-ok" : "lg-bad", `  → ${l.diaochan}：与现值一致，无需更新`);
+        }
+      }
+      render();
+    }
+
+    await sleep(400);
+    log("lg-info", `步骤3：仅对值有变化的记录落库，共更新 ${updated} 条`);
+    await sleep(400);
+    log("lg-sum", `任务完成 ✔ 查询总数=${total}，合规总数=${legal}，不合规总数=${illegal}，未知总数=${unknown}（已保留现值）`);
+    document.getElementById("s-total").textContent = total;
+    document.getElementById("s-legal").textContent = legal;
+    document.getElementById("s-illegal").textContent = illegal;
+    document.getElementById("s-unknown").textContent = unknown;
+    running = false;
+    document.getElementById("btnRun").disabled = false;
+  }
+
+  function resetDemo() {
+    if (running) return;
+    licenses[3].isLegal = true; licenses[3].stale = true;   // JSON
+    licenses[4].isLegal = true; licenses[4].stale = true;   // BSD-4-Clause
+    const panel = document.getElementById("logPanel");
+    panel.innerHTML = '<div class="lg-line lg-info">// 调度日志（xxl-job 调度中心可见）</div>';
+    ["s-total","s-legal","s-illegal","s-unknown"].forEach(id => document.getElementById(id).textContent = "-");
+    render();
+  }
+
+  render();
+</script>
+</body>
+</html>
