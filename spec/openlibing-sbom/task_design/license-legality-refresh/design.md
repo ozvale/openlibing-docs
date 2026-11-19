@@ -36,7 +36,7 @@
 
 ### 2.1 貂蝉 /check 接口契约（实测确认）
 
-- 请求：`GET {diaochan.api.url}?license=<spdxLicenseId>`，`diaochan.api.url` 配置为 `https://compliance.openeuler.org/check`；
+- 请求：`GET {diaochan.api.url}?license=<spdxLicenseId>`；`diaochan.api.url` 配置为**完整 endpoint**（含 `/check`，如 `https://compliance.openeuler.org/check`），客户端仅在其后拼接 `?license=`，**不再追加任何路径**（杜绝 `/check/check` 二次拼接）；
 - 响应：HTTP 200，body 为 JSON 字符串文本（带双引号），三值：
   - `"ALLOW"`：OSI/FSF 认证（合规）；
   - `"NOT_ALLOW"`：明确不合规；
@@ -46,7 +46,7 @@
 ### 2.2 调度任务核心流程（refreshLicenseLegalityHandler）
 
 ```text
-1. 清空 LicenseComplianceCache（保证手动触发也是真实全量刷新）
+1. 清空 licenseCompliance 缓存（service 注入 CacheManager 实现，保证手动触发也是真实全量刷新）
 2. licenseRepository.findAll() 加载全量 license（量级：千级）
 3. 逐条 license：
    a. 调 LicenseComplianceCache.getLicenseCompliance(spdxId)（缓存已清，真实调用貂蝉）
@@ -54,16 +54,24 @@
    c. NOT_ALLOW → 目标值 false；与现值不一致才 save
    d. UNKNOW → unknown++，跳过（保留现值）
    e. 调用异常 → failed++，error 日志，继续下一条（单条失败不中断）
-4. 统计冗余同步：对 is_legal 值发生变化的 license 集合，经 pkg_license_relp
-   反查受影响 package，重算 package_statistics.is_legal_license 与受影响
-   product_statistics 的合法/非法 license 包计数（见 2.6）
-5. XxlJobHelper.handleSuccess 输出汇总：
-   查询总数 / 合规总数 / 不合规总数 / 未知总数 / 更新数 / 失败数
-6. needRequest()==false（URL 未配置）或全量失败 → handleFail + error 告警
+   f. 连续失败 ≥ 20 条 → 熔断：提前 handleFail 退出（防止貂蝉持续不可用时
+      重试放大拖垮任务、xxl 超时被杀，见 2.5/5）
+4. 统计冗余同步（对账式自愈，不依赖本次值变化集合）：一条对账查询找出
+   package_statistics.is_legal_license 与其关联 license 实际聚合值
+   （allMatch，含无关联 license → null 边界）不一致的 package 集合，
+   对该集合重算 package_statistics 并联动受影响 product_statistics
+   的合法/非法 license 包计数（见 2.6）——任务中途被杀后，下一轮
+   运行的对账会自动覆盖此前遗漏的重算（自愈）
+5. 结果判定与汇总：
+   - 正常：XxlJobHelper.handleSuccess 输出查询总数 / 合规总数 / 不合规
+     总数 / 未知总数 / 更新数 / 失败数
+   - handleFail（+ error 告警）条件：needRequest()==false（URL 未配置）、
+     触发连续失败熔断、全量失败、unknown 占比 > 80%（防貂蝉协议/网关
+     变化导致全量 UNKNOW 时静默成功、数据陈旧无告警）
 ```
 
 - cron `0 0 6 ? * SAT`（每周六 06:00）在 xxl 管理台配置（代码不写 cron，对齐 pendingVulCleanHandler 注释模式）；路由策略单实例、阻塞策略丢弃后续。
-- 任务幂等：重复执行仅重复查询比对，无副作用累积。
+- 任务可重入：值相同的 license 重跑时跳过 save；统计重算为对账式、与值变化集合解耦，任务中途被杀（xxl 超时/executor 重启）后下一轮运行自动修复遗漏的统计重算。
 
 ### 2.3 批处理主链路口径（ExtractLicensesProcessor）
 
@@ -82,6 +90,7 @@ resolveLicenseLegality(lic, illegalLicenseList):
 ```
 
 - openEuler 产品的 illegalList 来自 repo_meta 缓存，其他产品来自 compliance3 `/lic`，降级链路不变；
+- `resolveLicenseLegality(lic, illegalLicenseList)` **仅用于主链路**（含黑名单降级）；兜底新建使用独立的从严语义方法 `resolveLicenseLegalityStrict(spdxId)`（见 2.4），两者不复用，防止 UNKNOW/异常路径语义串用；
 - `LicenseObjectCache.getLicenseCache` 本身不改动（其缓存 key 含 legality，传入值即新口径结果），覆盖落库行为维持现状。
 
 **主链路缓存逻辑背景（评审确认，固化结论）**：
@@ -94,19 +103,20 @@ resolveLicenseLegality(lic, illegalLicenseList):
 ### 2.4 批处理兜底口径（FillUpLicenseStep.toLicense）
 
 - 仅对 `existLicenses` 中不存在而新建的 license 生效（已有 license 直接返回，不触发貂蝉调用）；
-- 新建时 `setIsLegal(resolveLicenseLegality(spdxId))`，从严控制：**仅 ALLOW→true；NOT_ALLOW / UNKNOW（貂蝉未收录视同非 OSI/FSF 认证）/ 调用异常（无法确认合规）一律 false**，正常新建 license 且默认不合规；
+- 新建时 `setIsLegal(resolveLicenseLegalityStrict(spdxId))`（独立从严语义方法，不复用 2.3 带黑名单降级的 `resolveLicenseLegality`），从严控制：**仅 ALLOW→true；NOT_ALLOW / UNKNOW（貂蝉未收录视同非 OSI/FSF 认证）/ 调用异常（无法确认合规）一律 false**，正常新建 license 且默认不合规；
 - 新建的 license 随 `licenseRepository.saveAll(existLicenses.values())` 统一落库，落库方式不变。
 
 ### 2.5 异常与边界处理
 
-| 场景                        | 处理                                                                                                                           |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| 貂蝉超时 / 5xx / 网络不可达 | WebClient `Retry.backoff(3, 1s)` 耗尽后抛异常；@Cacheable 异常不缓存；主链路降级黑名单、兜底新建从严置 false、调度任务跳过该条 |
-| 响应文本非三态              | 按 UNKNOW 处理 + warn 日志（保留协议演进空间）                                                                                 |
-| 响应带引号 / 纯文本         | 按 JSON 字符串解析，解析失败 fallback 去引号 trim 比对                                                                         |
-| `diaochan.api.url` 未配置   | 客户端 `needRequest()=false`：批处理直接走降级口径；调度任务 handleFail 告警退出                                               |
-| 调度任务与批处理并发        | 共享缓存仅引发回源重查，无正确性影响；DB 层为逐行 update，无锁冲突                                                             |
-| 全部 license 查询失败       | 调度任务 handleFail（updated/failed 比例判断），不误报成功                                                                     |
+| 场景                        | 处理                                                                                                                                                                                                                                                                   |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 貂蝉超时 / 5xx / 网络不可达 | WebClient 配置 connect/response 超时 + `Retry.backoff(3, 1s)`，耗尽后抛异常；@Cacheable 异常不缓存；主链路降级黑名单、兜底新建从严置 false、调度任务跳过该条                                                                                                           |
+| 貂蝉持续不可用（调度任务）  | 连续失败 ≥ 20 条熔断提前 handleFail 退出：最坏耗时上界 ≈ 20 × (单次超时 + 7s 退避) ≈ 10 分钟量级，远低于 60 分钟 xxl 超时，避免任务被杀留下统计不同步                                                                                                                  |
+| 响应文本非三态              | 按 UNKNOW 处理 + warn 日志（保留协议演进空间）                                                                                                                                                                                                                         |
+| 响应带引号 / 纯文本         | 按 JSON 字符串解析，解析失败 fallback 去引号 trim 比对                                                                                                                                                                                                                 |
+| `diaochan.api.url` 未配置   | 客户端 `needRequest()=false`：批处理直接走降级口径；调度任务 handleFail 告警退出                                                                                                                                                                                       |
+| 调度任务与批处理并发        | 缓存层仅引发回源重查；DB 逐行 update 无锁冲突。**已知风险窗口**：批处理 UNKNOW/异常降级写入可能短暂覆盖调度刚刷新的权威值、统计重算与批处理写入交叉产生短暂不一致；收敛机制——批处理下次运行（貂蝉可用时）写回权威值 + 每周对账式统计重算自愈（见 2.6），不引入跨链路锁 |
+| 结果判定阈值                | handleFail 条件：needRequest==false、连续失败熔断、全量失败、unknown 占比 > 80%（防协议/网关变化致全量 UNKNOW 时静默成功、数据陈旧无告警）；其余 handleSuccess 汇总输出                                                                                                |
 
 ### 2.6 页面筛选数据来源分析与统计冗余同步（评审新增）
 
@@ -121,34 +131,34 @@ resolveLicenseLegality(lic, illegalLicenseList):
 
 受影响冗余字段与同步策略（在刷新 service 差异化落库后执行）：
 
-1. **package_statistics.is_legal_license**：收集本次 is_legal 值发生变化的 license 集合 → 经 `pkg_license_relp` 反查受影响 package 集合 → 按现行聚合口径重算（`allMatch(license.isLegal)`，包无关联 license 时为 null），逻辑与 `CollectStatisticsStep.collectPackageLicenseStatistics` 保持一致；
-2. **product_statistics.packageWithLegalLicenseCount / packageWithIllegalLicenseCount**：对受影响 package 所属 sbom（产品）重算合法/非法 license 包计数，语义对齐 CollectStatisticsStep 现有聚合；
+1. **package_statistics.is_legal_license**（对账式自愈）：一条对账查询找出统计字段与其关联 license 实际聚合值不一致的 package 集合（聚合口径 `allMatch(license.isLegal)`，包无关联 license 时为 null，与 `CollectStatisticsStep.collectPackageLicenseStatistics` 一致）→ 对不一致集合重算并批量保存；**不依赖本次值变化集合**——任务中断后下一轮运行的对账自动覆盖遗漏重算；
+2. **product_statistics.packageWithLegalLicenseCount / packageWithIllegalLicenseCount**：对对账出的不一致 package 所属 sbom（产品）重算合法/非法 license 包计数，语义对齐 CollectStatisticsStep 现有聚合；
 3. `license_distribution`、`license_count`、`licenses` 数组不涉及合法性，不做改动。
 
 ## 3. 类设计
 
 ### 3.1 新增类
 
-| 类                              | 模块                                                                                  | 职责与关键签名                                                                                                                                                                                                                                                                                                                                                                     |
-| ------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DiaochanClient`                | interface（`org.opensourceway.sbom.api.license`）                                     | 貂蝉合规查询接口：`DiaochanCheckResult checkLicense(String spdxLicenseId)`、`boolean needRequest()`                                                                                                                                                                                                                                                                                |
-| `DiaochanCheckResult`           | interface（同包枚举）                                                                 | 三态：`ALLOW` / `NOT_ALLOW` / `UNKNOW`                                                                                                                                                                                                                                                                                                                                             |
-| `DiaochanClientImpl`            | clients（`org.opensourceway.sbom.clients.license`）                                   | WebClient GET `/check`；`@Value("${diaochan.api.url:}")`；响应解析三态；`Retry.backoff(3, 1s)`；风格对齐 LicenseClientImpl（复用 WebClientUtil.connector、`spring.codec.max-in-memory-size`）                                                                                                                                                                                      |
-| `LicenseComplianceCache`        | cache（`org.opensourceway.sbom.cache`）                                               | ① `@Bean CacheProperties licenseComplianceCacheProperties()`：cacheName=`licenseCompliance`、maximumSize=5000、expireAfterWrite=12h（43200s）、cacheNullValue=false；② `@Cacheable` 方法 `DiaochanCheckResult getLicenseCompliance(String spdxLicenseId)`（内部委托 DiaochanClient）；③ `void clearCache()`（注入 CacheManager 取对应 CaffeineCache 调 clear，供调度任务入口调用） |
-| `LicenseLegalityRefreshService` | sbom-web（`org.opensourceway.sbom.service.license`，风格对齐 PendingVulCleanService） | `RefreshSummary refreshAllLicenses()`：清缓存→全量查询→差异化落库→统计冗余同步重算（见 2.6）→返回统计；内部记录 total/legal/illegal/unknown/updated/failed                                                                                                                                                                                                                         |
-| `LicenseXxlJobHandler`          | sbom-web（`org.opensourceway.sbom.handler`，与 VulXxlJobHandler 同级）                | `@XxlJob("refreshLicenseLegalityHandler")`：调用刷新 service，`XxlJobHelper.handleSuccess/handleFail` 汇总日志                                                                                                                                                                                                                                                                     |
-| `RefreshSummary`                | sbom-web（service 内部 POJO 或嵌套类）                                                | 刷新统计结果载体                                                                                                                                                                                                                                                                                                                                                                   |
+| 类                              | 模块                                                                                  | 职责与关键签名                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DiaochanClient`                | interface（`org.opensourceway.sbom.api.license`）                                     | 貂蝉合规查询接口：`DiaochanCheckResult checkLicense(String spdxLicenseId)`、`boolean needRequest()`                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `DiaochanCheckResult`           | interface（同包枚举）                                                                 | 三态：`ALLOW` / `NOT_ALLOW` / `UNKNOW`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `DiaochanClientImpl`            | clients（`org.opensourceway.sbom.clients.license`）                                   | WebClient GET `{diaochan.api.url}?license=<spdxId>`（配置值为完整 endpoint 含 `/check`，不再追加路径）；`@Value("${diaochan.api.url:}")`；响应解析三态；connect/response 超时 + `Retry.backoff(3, 1s)`；风格对齐 LicenseClientImpl（复用 WebClientUtil.connector、`spring.codec.max-in-memory-size`）                                                                                                                                                                                                                                          |
+| `LicenseComplianceCache`        | cache（`org.opensourceway.sbom.cache`）                                               | 对齐 LicenseObjectCache 结构（`@Configuration` + `@Bean CacheProperties` + `@Cacheable`），**不注入 CacheManager**（CacheManager 构造需收集 List&lt;CacheProperties&gt;，若缓存类反向注入 CacheManager 会形成循环依赖）：① `@Bean CacheProperties licenseComplianceCacheProperties()`：cacheName=`licenseCompliance`、maximumSize=5000、expireAfterWrite=12h（43200s）、cacheNullValue=false；② `@Cacheable` 方法 `DiaochanCheckResult getLicenseCompliance(String spdxLicenseId)`（内部委托 DiaochanClient）；清缓存职责放 service 侧（见下） |
+| `LicenseLegalityRefreshService` | sbom-web（`org.opensourceway.sbom.service.license`，风格对齐 PendingVulCleanService） | `RefreshSummary refreshAllLicenses()`：注入 CacheManager 清 licenseCompliance 缓存 → 全量查询 → 差异化落库 → 对账式统计冗余重算（见 2.6）→ 结果判定（unknown 占比 >80% / 连续失败 ≥20 条 / 全量失败 → 抛出由 handler handleFail）→ 返回统计；内部记录 total/legal/illegal/unknown/updated/failed、连续失败计数                                                                                                                                                                                                                                 |
+| `LicenseXxlJobHandler`          | sbom-web（`org.opensourceway.sbom.handler`，与 VulXxlJobHandler 同级）                | `@XxlJob("refreshLicenseLegalityHandler")`：调用刷新 service，`XxlJobHelper.handleSuccess/handleFail` 汇总日志                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `RefreshSummary`                | sbom-web（service 内部 POJO 或嵌套类）                                                | 刷新统计结果载体                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 ### 3.2 修改类
 
-| 类                                                                                                      | 模块  | 改动点                                                                                                                                                                                                                      |
-| ------------------------------------------------------------------------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CacheConstants`                                                                                        | cache | 新增 `LICENSE_COMPLIANCE_CACHE_NAME = "licenseCompliance"` 与对应 key 常量（`#spdxLicenseId`）                                                                                                                              |
-| `ExtractLicensesProcessor`                                                                              | batch | 注入 `LicenseComplianceCache`；`setLicenseAndPkgInfo` 中 legality 计算改为 `resolveLicenseLegality(lic, illegalLicenseList)`（貂蝉优先+降级）；新增私有方法 `resolveLicenseLegality`；`getLicenseLegality` 保留作为降级口径 |
-| `FillUpLicenseStep`                                                                                     | batch | 注入 `LicenseComplianceCache`；`toLicense` 新建分支 `setIsLegal` 改为貂蝉从严口径（仅 ALLOW→true，UNKNOW/调用异常→false）                                                                                                   |
-| 相关 Repository（PkgLicenseRelpRepository / PackageStatisticsRepository / ProductStatisticsRepository） | dao   | 新增统计冗余重算所需查询：按变化 license_id 集合反查受影响 pkg_id；加载受影响 PackageStatistics（含 relps）并批量保存；按受影响 sbom 聚合合法/非法 license 包计数                                                           |
+| 类                                                                                                      | 模块  | 改动点                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CacheConstants`                                                                                        | cache | 新增 `LICENSE_COMPLIANCE_CACHE_NAME = "licenseCompliance"` 与对应 key 常量（`#spdxLicenseId`）                                                                                                                                                                              |
+| `ExtractLicensesProcessor`                                                                              | batch | 注入 `LicenseComplianceCache`；`setLicenseAndPkgInfo` 中 legality 计算改为 `resolveLicenseLegality(lic, illegalLicenseList)`（貂蝉优先+降级，**仅用于主链路**）；新增私有方法 `resolveLicenseLegality`；`getLicenseLegality` 保留作为降级口径                               |
+| `FillUpLicenseStep`                                                                                     | batch | 注入 `LicenseComplianceCache`；`toLicense` 新建分支 `setIsLegal` 改为独立从严方法 `resolveLicenseLegalityStrict(spdxId)`（仅 ALLOW→true，UNKNOW/调用异常→false，不复用主链路带黑名单降级的方法）                                                                            |
+| 相关 Repository（PkgLicenseRelpRepository / PackageStatisticsRepository / ProductStatisticsRepository） | dao   | 新增对账查询：聚合 pkg_license_relp + license 实际 is_legal（allMatch，含无关联 → null）与 package_statistics.is_legal_license 比对，返回不一致的 package 集合；加载不一致 PackageStatistics（含 relps）并批量保存；按不一致 package 所属 sbom 聚合合法/非法 license 包计数 |
 
-类间关系：`LicenseXxlJobHandler → LicenseLegalityRefreshService → LicenseComplianceCache → DiaochanClient`；`ExtractLicensesProcessor / FillUpLicenseStep → LicenseComplianceCache`；`LicenseComplianceCache` 同时持有 `CacheManager` 引用用于清空。
+类间关系：`LicenseXxlJobHandler → LicenseLegalityRefreshService → LicenseComplianceCache → DiaochanClient`；`ExtractLicensesProcessor / FillUpLicenseStep → LicenseComplianceCache`；清空缓存由 `LicenseLegalityRefreshService` 注入 `CacheManager` 实现，`LicenseComplianceCache` 不反向持有 `CacheManager`（避免与 CaffeineCacheConfig 收集缓存配置产生循环依赖，对齐 LicenseObjectCache 结构）。
 
 ## 4. 数据模型设计
 
@@ -158,16 +168,17 @@ resolveLicenseLegality(lic, illegalLicenseList):
 
 - **批处理（高频、重复度高）**：同 chunk 与跨 chunk 的重复 license 命中 Caffeine 缓存（5000 条 / 12h），仅 cache miss 时发起 HTTP；貂蝉单次查询为轻量 GET（实测百毫秒级），兜底路径仅对新建 license 触发，增量小。
 - **调度任务（每周一次）**：入口清缓存后全量真实调用，串行执行。按千级 license × 百毫秒级单次耗时估算，整体分钟级，远小于 xxl 超时上限；仅对值变化的记录 save，DB 写量小。一期保持串行（简单可靠），若 license 规模增长到万级再引入受控并发。
+- **服务退化场景耗时上界（Retry 放大效应）**：貂蝉持续不可用且每次调用耗尽重试（Retry.backoff(3, 1s)，3 次重试 + 退避约 7s + 超时）时，连续失败 ≥ 20 条即熔断退出，最坏耗时上界 ≈ 20 × (单次超时 + 重试退避) ≈ 10 分钟量级，仍远低于 60 分钟 xxl 超时上限，任务不会被杀（见 2.5）。
 - **内存**：`findAll()` 全量加载 License 实体（千级、字段少）无内存风险；Caffeine maximumSize 上限防膨胀。
 - **慢查询**：无新增复杂 SQL，主键/唯一键点查点写。
-- **统计冗余同步**：仅对 is_legal 值发生变化的 license 关联包做重算（首轮全量校正后，逐周增量通常为 0 或极小）；重算走唯一键/主键批量读写，不产生全表扫描。
+- **统计冗余同步**：对账式重算（不依赖值变化集合），对账查询以关联聚合一次找出不一致 package 集合（每轮调度执行一次，走关联查询非全表逐行比对，见 2.6）；重算仅对不一致集合执行，走唯一键/主键批量读写，不产生全表扫描。首轮全量校正后对账差异通常为 0 或极小，稳态成本可忽略。
 
 ## 6. API 接口设计
 
 - **对外 HTTP 接口**：不涉及（无新增/变更，前端无感知）。
 - **新增外部依赖调用**：貂蝉 `GET https://compliance.openeuler.org/check?license=<spdxId>`，入参 `license`（SPDX ID），出参 JSON 字符串 `ALLOW | NOT_ALLOW | UNKNOW`，无鉴权，400=缺参，5xx/超时按失败处理。
 - **xxl-job 管理台**：executor=`openlibing-sbom-executor` 注册新任务 handler `refreshLicenseLegalityHandler`；cron `0 0 6 ? * SAT`（每周六 06:00）；路由单实例、阻塞丢弃、超时上限建议 60 分钟。
-- **配置项**（Nacos + 各 profile properties）：`diaochan.api.url`（gamma/beta/prod 同值 `https://compliance.openeuler.org/check`；留空即整体关闭貂蝉链路，自动降级）。
+- **配置项**（Nacos + 各 profile properties）：`diaochan.api.url` 配置为**完整 endpoint**（含 `/check`，gamma/beta/prod 同值 `https://compliance.openeuler.org/check`），客户端直接拼 `?license=<spdxId>`，不再追加任何路径；留空即整体关闭貂蝉链路，自动降级。
 
 ## 7. 安全设计
 
@@ -178,8 +189,9 @@ resolveLicenseLegality(lic, illegalLicenseList):
 
 ## 8. 测试设计（要点）
 
-- `DiaochanClientImplTest`：mock WebClient 响应 — ALLOW/NOT_ALLOW/UNKNOW/带引号文本/未知值/4xx/5xx 重试耗尽/URL 未配置；
-- `LicenseLegalityRefreshServiceTest`：mock client 与 repository — 值变化才 save、UNKNOW 保留现值、单条异常不中断、统计数正确、清缓存先于查询；
-- `ExtractLicensesProcessorTest` / `FillUpLicenseStepTest`（既有测试补充）：貂蝉三态覆盖降级逻辑、client 异常降级、兜底从严口径（仅 ALLOW→true，UNKNOW/异常→false）；
-- 统计冗余同步测试：license 值变化后受影响包 `is_legal_license` 重算正确（含无关联 license → null 边界）、产品级合法/非法包计数重算正确、值无变化时不触发重算；
+- `DiaochanClientImplTest`：mock WebClient 响应 — ALLOW/NOT_ALLOW/UNKNOW/带引号文本/未知值/4xx/5xx 重试耗尽/URL 未配置/URL 为完整 endpoint 时仅拼 `?license=` 不二次拼接/connect 与 response 超时配置生效（超时后触发重试）；
+- `LicenseLegalityRefreshServiceTest`：mock client 与 repository — 值变化才 save、UNKNOW 保留现值、单条异常不中断、连续失败 ≥ 20 条熔断提前退出、unknown 占比 > 80% 触发 handleFail、清缓存先于查询（验证 CacheManager 清缓存被调用）、统计数正确；
+- `ExtractLicensesProcessorTest`（既有测试补充）：貂蝉三态覆盖降级逻辑、client 异常降级（主链路方法仅用于主链路）；
+- `FillUpLicenseStepTest`（既有测试补充）：兜底从严口径走 `resolveLicenseLegalityStrict`（仅 ALLOW→true，UNKNOW/异常→false）；
+- 统计冗余同步测试（对账式）：对账查询返回不一致 package 集合时重算正确（含无关联 license → null 边界）、产品级合法/非法包计数重算正确、对账无差异时不触发重算、任务中断后残留的不一致在下一轮对账中被修复（自愈）；
 - 本地验证：`mvn compile` + 上述单测；gamma 部署后 xxl 管理台手动触发任务，核对 license 表 is_legal 与调度日志统计。
