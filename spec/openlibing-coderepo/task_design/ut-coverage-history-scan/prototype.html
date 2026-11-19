@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT 覆盖率历史扫描记录 — 前端交互原型</title>
+<style>
+  :root {
+    --primary: #1a66ff;
+    --primary-dark: #0e4ecc;
+    --success: #00b578;
+    --danger: #fa5151;
+    --warning: #ff8f1f;
+    --text: #1f2329;
+    --text-sub: #646a73;
+    --border: #e5e6eb;
+    --bg: #f5f6f7;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--text); background: var(--bg); font-size: 13px; }
+
+  /* ===== 顶部导航 ===== */
+  .topbar { height: 44px; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 24px; position: sticky; top: 0; z-index: 100; }
+  .logo { font-weight: 700; color: var(--primary); font-size: 15px; display: flex; align-items: center; gap: 6px; }
+  .nav-item { color: var(--text-sub); cursor: pointer; padding: 4px 2px; font-size: 13px; }
+  .nav-item.active { color: var(--primary); font-weight: 600; }
+
+  /* ===== 侧边栏 ===== */
+  .layout { display: flex; min-height: calc(100vh - 44px); }
+  .sidebar { width: 150px; background: #fff; border-right: 1px solid var(--border); padding: 12px 8px; flex-shrink: 0; }
+  .side-group { color: var(--text-sub); font-size: 12px; padding: 10px 12px 4px; }
+  .side-item { padding: 8px 12px; border-radius: 6px; cursor: pointer; color: var(--text); }
+  .side-item.active { background: #e8efff; color: var(--primary); font-weight: 600; }
+
+  .main { flex: 1; padding: 16px 24px; overflow: auto; }
+
+  /* ===== 面包屑 & 地址栏 ===== */
+  .crumbs { color: var(--text-sub); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .crumbs b { color: var(--text); font-weight: 600; }
+  .urlbar { color: var(--text-sub); font-family: Consolas, monospace; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+  .urlbar .k { color: var(--primary); }
+
+  .panel { background: #fff; border-radius: 8px; padding: 16px; border: 1px solid var(--border); }
+
+  /* ===== 通用表格 ===== */
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f7f8fa; color: var(--text-sub); font-weight: 600; text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tr:hover td { background: #f7f9ff; }
+  .link { color: var(--primary); cursor: pointer; text-decoration: none; }
+  .link:hover { text-decoration: underline; }
+  .metrics-link { color: var(--primary); font-weight: 600; cursor: pointer; border-bottom: 1px dashed var(--primary); }
+  .metrics-link:hover { color: var(--primary-dark); }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; }
+  .tag.ok { background: #e8f7f2; color: var(--success); }
+  .tag.fail { background: #fdecec; color: var(--danger); }
+  .pager { display: flex; align-items: center; gap: 6px; justify-content: flex-end; padding: 12px 4px 0; color: var(--text-sub); }
+  .pager .pg { min-width: 26px; height: 26px; border: 1px solid var(--border); border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; background: #fff; }
+  .pager .pg.cur { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 13px; color: var(--text); }
+  .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn.primary:hover { background: var(--primary-dark); }
+  .btn:hover { border-color: var(--primary); color: var(--primary); }
+  .btn.primary:hover { color: #fff; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .banner { display: flex; align-items: center; gap: 8px; background: #fff7e8; border: 1px solid #ffe1a1; color: #93600a; border-radius: 6px; padding: 9px 14px; margin-bottom: 12px; font-size: 13px; }
+  .banner.info { background: #eaf1ff; border-color: #c3d6ff; color: #1d4bb3; }
+  .banner.danger { background: #fdecec; border-color: #f7c8c8; color: #b32020; }
+
+  /* ===== 详情页 ===== */
+  .detail-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .crumb-text { color: var(--text-sub); font-size: 13px; }
+  .crumb-text b { color: var(--text); }
+  .info-line { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; color: var(--text-sub); font-size: 13px; padding: 0 2px 12px; }
+  .info-line b { color: var(--text); font-weight: 600; }
+  .coverage-center { background: #f7f8fa; border-radius: 8px; text-align: center; padding: 14px 0 18px; margin-bottom: 14px; }
+  .coverage-center .lbl { color: var(--text-sub); font-size: 13px; margin-bottom: 4px; }
+  .coverage-center .num { font-size: 34px; font-weight: 700; color: var(--text); }
+  .section-title { font-weight: 700; font-size: 14px; margin: 16px 0 10px; display: flex; align-items: center; gap: 8px; }
+  .section-title::before { content: ""; width: 3px; height: 14px; background: var(--primary); border-radius: 2px; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); background: #171a23; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 999; display: none; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+  .empty-tip { text-align: center; color: var(--text-sub); padding: 40px 0; }
+
+  .note { font-size: 12px; color: var(--text-sub); margin-top: 10px; line-height: 1.7; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 12px; color: var(--text-sub); }
+  .legend b { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">⌘ openLibing</span>
+  <span class="nav-item active">开发管理</span><span class="nav-item">代码仓管理</span>
+  <span class="nav-item">流水线</span><span class="nav-item">流水线执行记录</span>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="side-group">工作管理</div>
+    <div class="side-item">我的看板</div>
+    <div class="side-group">项目管理</div>
+    <div class="side-item">项目列表</div>
+    <div class="side-group">研发管理</div>
+    <div class="side-item active">分支管理</div>
+    <div class="side-item">版本级任务</div>
+    <div class="side-item">后台观测</div>
+    <div class="side-item">敏感信息</div>
+    <div class="side-group">代码管理</div>
+    <div class="side-item">代码检查</div>
+    <div class="side-item">门禁完整性管理</div>
+    <div class="side-item">检查规则</div>
+  </div>
+
+  <div class="main">
+
+    <!-- ================= 视图1：分支管理列表 ================= -->
+    <div class="view active" id="view-branch">
+      <div class="crumbs">分支管理 <span>/</span> <b>代码检查</b> <span>/</span> 分支管理</div>
+
+      <div class="panel">
+        <div class="legend"><b>演示入口：</b>点击「UT行覆盖率」列的蓝色指标值（如 82.44%、65.53%）→ 直进<b>最新扫描详情</b>（行为不变）；详情页右上角「🕘 历史扫描记录」进入历史列表</div>
+        <table>
+          <thead>
+            <tr>
+              <th>代码平台</th><th>代码仓名</th><th>分支名称</th><th>最近默认分支</th>
+              <th>代码检查告警数 ●</th><th>代码规模 ●</th><th>平均圈复杂度 ●</th>
+              <th>平均重复率 ●</th><th>代码重复率 ●</th><th>总文件重复率 ●</th>
+              <th>UT行覆盖率 ●</th><th>更新人</th><th>更新时间</th>
+            </tr>
+          </thead>
+          <tbody id="branch-tbody"></tbody>
+        </table>
+        <div class="pager">10条/页 共 1087 条 <span class="pg cur">1</span><span class="pg">2</span><span class="pg">3</span><span class="pg">4</span><span class="pg">›</span></div>
+      </div>
+      <div class="note">
+        现状对比：改造前点击指标直接进入<b>最新一次</b>详情；改造后进入<b>最新扫描详情</b>（行为不变），详情页右上角「🕘 历史扫描记录」进入历史列表，可精确回溯任意一次扫描。
+      </div>
+      <div class="urlbar" style="margin-top:12px"><span style="color:var(--text)">页面定位：</span><span>https://www.openlibing.com/apps/repos?<span class="k">projectId</span>=403256</span></div>
+    </div>
+
+    <!-- ================= 视图2：历史扫描记录 ================= -->
+    <div class="view" id="view-history">
+      <div class="crumbs">
+        <span class="link" onclick="showView('branch')">←</span> <span>/</span>
+        <span class="link" onclick="showView('branch')">分支管理</span> <span>/</span>
+        <b>UT行覆盖率扫描记录</b>
+      </div>
+
+      <div class="banner">⏱ 仅保留最近 <b id="hist-retention">90</b> 天的扫描记录，更早的记录由系统定期自动清理。</div>
+
+      <div class="panel">
+        <div class="detail-head">
+          <div class="section-title" style="margin:0">扫描记录 <span id="hist-total" style="color:var(--text-sub);font-weight:400;font-size:12px"></span></div>
+          <button class="btn" onclick="toast('演示：跳转接入指导文档')">接入指导</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>扫描时间</th><th>来源（流水线）</th><th>行覆盖率</th><th>状态</th><th>操作</th></tr>
+          </thead>
+          <tbody id="hist-tbody"></tbody>
+        </table>
+        <div class="pager" id="hist-pager"></div>
+      </div>
+      <div class="note">接口：POST <b>/ut/coverage/history</b>（repoId + branchName 分页），返回 retentionDays 供横幅渲染；记录 ID 全链路 String。</div>
+      <div class="urlbar" style="margin-top:12px"><span style="color:var(--text)">页面定位：</span><span>https://www.openlibing.com/apps/repos?<span class="k">projectId</span>=403256&amp;<span class="k">repoId</span>=823&amp;<span class="k"></span>branchName</span>=develop&amp;<span class="k">utCoverageHistory</span>=1</span></div>
+    </div>
+
+    <!-- ================= 视图3：扫描详情 ================= -->
+    <div class="view" id="view-detail">
+      <div class="crumbs">
+        <span class="link" onclick="openHistory(currentRepo, currentBranch)">←</span> <span>/</span>
+        <span class="link" onclick="showView('branch')">分支管理</span> <span>/</span>
+        <span class="link" onclick="openHistory(currentRepo, currentBranch)">UT行覆盖率扫描记录</span> <span>/</span>
+        <b>扫描详情</b>
+      </div>
+
+      <div class="panel">
+        <div class="info-line" style="align-items:center">
+          <span>代码仓: <b id="detail-repo">openlibing-cicd</b></span>
+          <span>分支: <b id="detail-branch">zw_ut_test</b></span>
+          <span>扫描时间: <b id="detail-time">2026-11-17 03:27:41</b></span>
+          <span>来源: <b class="link" onclick="toast('演示：跳转流水线执行记录 ut-canner #5')">ut-canner #5</b></span>
+          <span>提交: <b id="detail-commit" style="font-family:Consolas,monospace">a3f8c21e</b></span>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button class="btn" onclick="openHistory(currentRepo, currentBranch)">🕘 历史扫描记录</button>
+            <button class="btn primary" onclick="toast('演示：提交原始报告导出任务')">导出</button>
+          </div>
+        </div>
+
+        <div class="coverage-center">
+          <div class="lbl">行覆盖率</div>
+          <div class="num" id="detail-linecov">53.99%</div>
+        </div>
+
+        <table>
+          <thead><tr><th>序号</th><th>文件名称 ⏷</th><th>行覆盖率 ⏷</th><th>覆盖行数</th><th>总行数</th></tr></thead>
+          <tbody id="detail-tbody"></tbody>
+        </table>
+        <div class="pager">10条/页 <span class="pg cur">∨</span> 共 168 条 <span class="pg cur">1</span><span class="pg">2</span><span class="pg">3</span><span class="pg">4</span><span class="pg">5</span><span class="pg">6</span><span class="pg">···</span><span class="pg">17</span><span class="pg">›</span></div>
+      </div>
+      <div class="note">
+        ① 顶部信息区已按需求调整：<s>流水线</s> 更名为 <b>来源</b>，与 扫描时间 交换位置；对齐后新增 <b>提交</b>（commitId 由历史列表挪入），顺序 = 代码仓、分支、扫描时间、来源、提交。<br>
+        ② 详情 URL 携带 <b>recordId</b>（记录唯一定位）；看板组适配期同时保留 <b>pipelineRunId</b> 旧格式解析。<br>
+        ③ 接口：POST <b>/ut/coverage/file-detail</b>（recordId 优先 &gt; pipelineRunId &gt; 最近一条兜底）。
+      </div>
+      <div class="urlbar" style="margin-top:12px"><span style="color:var(--text)">页面定位：</span><span>https://www.openlibing.com/apps/repos?<span class="k">projectId</span>=403256&amp;<span class="k">repoId</span>=823&amp;<span class="k">branchName</span>=develop&amp;<span class="k" id="url-id-key">recordId</span>=<span class="k" id="url-id-val">1926534123456789</span>&amp;<span class="k">utCoverageDetail</span>=1</span><span style="margin-left:auto;color:#8b949e">刷新/分享后仍定位到该记录</span></div>
+    </div>
+
+    <!-- ================= 视图4：已清理提示 ================= -->
+    <div class="view" id="view-expired">
+      <div class="crumbs">
+        <span class="link" onclick="openHistory(currentRepo, currentBranch)">←</span> <span>/</span>
+        <span class="link" onclick="openHistory(currentRepo, currentBranch)">UT行覆盖率扫描记录</span> <span>/</span> <b>扫描详情</b>
+        <span style="margin-left:auto;color:#ff7b72">分享的旧链接，记录已被清理</span>
+      </div>
+
+      <div class="panel" style="text-align:center;padding:60px 20px">
+        <div style="font-size:44px;margin-bottom:14px">🗂️</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:8px">该扫描记录不存在或已超出保留期</div>
+        <div style="color:var(--text-sub);margin-bottom:22px">扫描记录仅保留最近 <b id="exp-retention">90</b> 天，本记录（2026-07-30 扫描）已被定期清理。</div>
+        <button class="btn primary" onclick="openHistory(currentRepo, currentBranch)">返回历史扫描记录</button>
+      </div>
+      <div class="note">终态口径：后端返回文案 <b>「该扫描记录不存在或已超出保留期」</b>（受理后超过 5 分钟仍未入库，或记录已被定期清理），前端据此渲染本页并引导返回历史记录列表；受理后 5 分钟内未入库则返回「处理中」过程态，见下一视图。</div>
+      <div class="urlbar" style="margin-top:12px;color:var(--danger)"><span style="color:var(--text)">页面定位：</span><span>https://www.openlibing.com/apps/repos?<span class="k">projectId</span>=403256&amp;<span class="k">repoId</span>=823&amp;<span class="k">branchName</span>=develop&amp;<span class="k">recordId</span>=1901111222333444&amp;<span class="k">utCoverageDetail</span>=1</span></div>
+    </div>
+
+    <!-- ================= 视图5：处理中提示（评审反馈补充） ================= -->
+    <div class="view" id="view-pending">
+      <div class="crumbs">
+        <span class="link" onclick="openHistory(currentRepo, currentBranch)">←</span> <span>/</span>
+        <span class="link" onclick="openHistory(currentRepo, currentBranch)">UT行覆盖率扫描记录</span> <span>/</span> <b>扫描详情</b>
+        <span style="margin-left:auto;color:#d97706">扫描结果处理中</span>
+      </div>
+
+      <div class="panel" style="text-align:center;padding:60px 20px">
+        <div style="font-size:44px;margin-bottom:14px">⏳</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:8px">该扫描记录正在处理中</div>
+        <div style="color:var(--text-sub);margin-bottom:22px">结果数据入库存在短暂延迟（通常几秒内完成），请稍后<b>刷新本页</b>查看；长时间未更新可返回历史记录列表确认。</div>
+        <button class="btn" onclick="toast('演示：稍后重查，命中后进入详情页')">刷新重试</button>
+        <button class="btn primary" style="margin-left:8px" onclick="openHistory(currentRepo, currentBranch)">返回历史扫描记录</button>
+      </div>
+      <div class="note">过程态口径（评审反馈补充）：插件结果链接在受理响应直返后可能被立即打开，此时 MQ 消费尚未入库——后端按 recordId 雪花时间戳判定，受理后 <b>≤ 5 分钟</b> 未命中返回文案 <b>「该扫描记录正在处理中，请稍后刷新查看结果」</b>，前端据此渲染本页（引导刷新重试，不做自动轮询）；超窗口转终态「记录不存在/已超出保留期」。</div>
+      <div class="urlbar" style="margin-top:12px"><span style="color:var(--text)">页面定位：</span><span>https://www.openlibing.com/apps/repos?<span class="k">projectId</span>=403256&amp;<span class="k">repoId</span>=823&amp;<span class="k">branchName</span>=develop&amp;<span class="k">recordId</span>=1809999999999999&amp;<span class="k">utCoverageDetail</span>=1</span></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 模拟数据 ============ */
+const RETENTION = 90;
+
+const branches = [
+  { platform:'gitcode', repo:'openlibing-test/security-scan-test', branch:'main',   def:true,  alert:0, size:325,   cc:3.63, dup:1.95,  fileDup:'21.05%', totalDup:'100%',  ut:{line:'82.44%', recordId:'1926534123456789'}, user:'--',        time:'2026-10-31 03:27' },
+  { platform:'gitcode', repo:'openlibing-test/sito',               branch:'develop',def:true,  alert:0, size:43843, cc:30.27,dup:9.23,  fileDup:'65.53%', totalDup:'0%',    ut:{line:'65.53%', recordId:'1926534998877665'}, user:'xuxyibing', time:'2026-11-18 03:27' },
+  { platform:'github',  repo:'openlibing-test/cortbuga_demo',      branch:'main',   def:true,  alert:4, size:null,  cc:null, dup:null,  fileDup:null,     totalDup:null,    ut:null, user:'--', time:'2026-11-18 03:27' },
+  { platform:'gitcode', repo:'openlibing-test/codereck_auto_test', branch:'pr-target-1784025545', def:false, alert:null, size:null, cc:null, dup:null, fileDup:null, totalDup:null, ut:null, user:'--', time:'2026-11-18 03:27' },
+  { platform:'gitcode', repo:'openlibing-test/codereck_auto_test', branch:'pr-target-1784025546', def:false, alert:null, size:null, cc:null, dup:null, fileDup:null, totalDup:null, ut:null, user:'--', time:'2026-11-18 03:27' },
+  { platform:'gitcode', repo:'openlibing-test/codereck_auto_test', branch:'pr-target-1784025512', def:false, alert:null, size:null, cc:null, dup:null, fileDup:null, totalDup:null, ut:null, user:'--', time:'2026-11-18 03:27' },
+];
+
+const historyRecords = [
+  { id:'1926534998877665', time:'2026-11-17 03:27:41', src:'ut-coverage-nightly', num:218, link:true,  commit:'a3f8c21e', line:'65.53%', status:0 },
+  { id:'1925987234111002', time:'2026-11-16 03:27:33', src:'ut-coverage-nightly', num:217, link:true,  commit:'7bd92e04', line:'65.48%', status:0 },
+  { id:'1925441900834567', time:'2026-11-15 03:27:45', src:'ut-coverage-nightly', num:216, link:true,  commit:'c91de7aa', line:'65.51%', status:0 },
+  { id:'1924976355220118', time:'2026-11-14 03:27:38', src:'ut-coverage-pr',      num:64,  link:true,  commit:'e20b6f17', line:'64.92%', status:0 },
+  { id:'1924403218776009', time:'2026-11-13 03:27:29', src:'ut-coverage-nightly', num:215, link:true,  commit:'f5a0d83b', line:'64.87%', status:0 },
+  { id:'1923876540112345', time:'2026-11-12 14:02:11', src:'ut-coverage-pr',      num:63,  link:true,  commit:'11cc90ef', line:null,     status:1 },
+  { id:'1923345098765432', time:'2026-11-12 03:27:40', src:'ut-coverage-nightly', num:214, link:true,  commit:'9ab34de0', line:'64.71%', status:0 },
+  { id:'1922908766554433', time:'2026-11-11 03:27:36', src:'ut-coverage-nightly', num:213, link:true,  commit:'d47e21b8', line:'64.66%', status:0 },
+];
+
+const fileDetails = [
+  ['com/openlibing/cicd/common/operationlog/AsyncOperationLogIdentity.java', '100%', 42, 42],
+  ['com/openlibing/cicd/common/operationlog/OperationLogConstants.java', '100%', 4, 4],
+  ['com/openlibing/cicd/common/operationlog/PipelineLogMergeConfig.java', '100%', 17, 17],
+  ['com/openlibing/cicd/common/operationlog/PipelineLogMergeModule.java', '100%', 17, 17],
+  ['com/openlibing/cicd/common/constant/AnalysisStatus.java', '100%', 7, 7],
+  ['com/openlibing/cicd/common/constant/SynObjIdConstants.java', '100%', 34, 34],
+  ['com/openlibing/cicd/common/log/LoggerHelper.java', '100%', 9, 9],
+  ['com/openlibing/cicd/common/exception/IllegalArgumentException.java', '100%', 20, 20],
+  ['com/openlibing/cicd/common/full/exception/ToolAngleException.java', '100%', 2, 2],
+  ['com/openlibing/cicd/business/controller/ImageController.java', '100%', 10, 10],
+];
+
+let currentRepo = 'openlibing-test/sito', currentBranch = 'develop';
+
+/* ============ 视图切换 ============ */
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2200);
+}
+
+/* ============ 视图1：分支列表 ============ */
+function renderBranches() {
+  const tb = document.getElementById('branch-tbody');
+  tb.innerHTML = branches.map(b => {
+    const ut = b.ut
+      ? `<span class="metrics-link" onclick="openLatestDetail()">${b.ut.line}</span>`
+      : '--';
+    const dash = v => v == null ? '--' : v;
+    return `<tr>
+      <td>${b.platform}</td>
+      <td><span class="link">${b.repo}</span></td>
+      <td>${b.branch}</td>
+      <td>${b.def ? '是' : '否'}</td>
+      <td>${dash(b.alert)}</td><td>${dash(b.size)}</td><td>${dash(b.cc)}</td>
+      <td>${dash(b.dup)}</td><td>${dash(b.fileDup)}</td><td>${dash(b.totalDup)}</td>
+      <td>${ut}</td><td>${b.user}</td><td>${b.time}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ============ 视图2：历史记录 ============ */
+function openHistory(repo, branch) {
+  currentRepo = repo; currentBranch = branch;
+  document.getElementById('hist-total').textContent = '共 ' + historyRecords.length + ' 条';
+  const tb = document.getElementById('hist-tbody');
+  tb.innerHTML = historyRecords.map(r => `<tr>
+    <td>${r.time}</td>
+    <td>${r.link ? `<span class="link" onclick="toast('演示：跳转流水线执行记录 ${r.src} #${r.num}')">${r.src} #${r.num} ↗</span>` : '--'}</td>
+    <td>${r.line == null ? '--' : '<b>' + r.line + '</b>'}</td>
+    <td><span class="tag ${r.status === 0 ? 'ok' : 'fail'}">${r.status === 0 ? '成功' : '失败'}</span></td>
+    <td><span class="link" onclick="openDetail('${r.id}','${r.time}',${r.status},'history')">查看详情</span></td>
+  </tr>`).join('');
+  document.getElementById('hist-pager').innerHTML =
+    '10条/页 共 ' + historyRecords.length + ' 条 <span class="pg cur">1</span><span class="pg">2</span>';
+  showView('history');
+}
+
+/* ============ 视图3/4：详情 ============ */
+/* 分支列表指标点击：直进最新一次扫描详情（行为不变） */
+function openLatestDetail() {
+  const latest = historyRecords[0];
+  openDetail(latest.id, latest.time, latest.status, 'branch');
+}
+
+function openDetail(recordId, time, status, source = 'history') {
+  if (recordId === '1901111222333444') { showView('expired'); return; }
+  if (recordId === '1809999999999999') { showView('pending'); return; }
+  const rec = historyRecords.find(r => r.id === recordId);
+  document.getElementById('url-id-val').textContent = recordId;
+  document.getElementById('detail-repo').textContent = currentRepo;
+  document.getElementById('detail-branch').textContent = currentBranch;
+  document.getElementById('detail-time').textContent = time;
+  document.getElementById('detail-commit').textContent = rec && rec.commit ? rec.commit : '--';
+  document.getElementById('detail-linecov').textContent = rec && rec.line != null ? rec.line : '--';
+  const tb = document.getElementById('detail-tbody');
+  tb.innerHTML = fileDetails.map((f, i) => `<tr>
+    <td>${i + 1}</td><td style="font-family:Consolas,monospace">${f[0]}</td>
+    <td><b>${f[1]}</b></td><td>${f[2]}</td><td>${f[3]}</td>
+  </tr>`).join('');
+  showView('detail');
+}
+
+/* 演示：历史页追加两条特殊记录供点击体验——“已被清理”（终态）与“处理中”（过程态，评审反馈补充） */
+setTimeout(() => {
+  historyRecords.push({ id:'1901111222333444', time:'2026-07-30 03:27:12', src:'ut-coverage-nightly', num:102, link:true, commit:'old777cc', line:'61.02%', status:0 });
+  historyRecords.unshift({ id:'1809999999999999', time:'2026-11-18 15:04:11', src:'ut-coverage-pr', num:65, link:true, commit:'e7a9b210', line:null, status:0 });
+}, 0);
+
+renderBranches();
+</script>
+</body>
+</html>

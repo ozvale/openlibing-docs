@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT 覆盖率历史扫描记录 — 设计评审方案</title>
+<style>
+  :root {
+    --primary: #1a66ff; --primary-dark: #0e4ecc; --success: #00b578; --danger: #fa5151;
+    --warn: #ff8f1f; --text: #1f2329; --sub: #646a73; --border: #e5e6eb; --bg: #f5f6f7;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; color:var(--text); background:var(--bg); font-size:14px; line-height:1.7; }
+
+  .hero { background:linear-gradient(135deg,#0e4ecc,#1a66ff 55%,#4d8aff); color:#fff; padding:56px 8% 44px; }
+  .hero h1 { font-size:30px; letter-spacing:1px; margin-bottom:12px; }
+  .hero p { opacity:.92; font-size:15px; max-width:900px; }
+  .hero .meta { display:flex; gap:12px; margin-top:22px; flex-wrap:wrap; }
+  .hero .chip { background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.35); border-radius:20px; padding:4px 16px; font-size:13px; }
+
+  nav.toc { position:sticky; top:0; background:#fff; border-bottom:1px solid var(--border); padding:0 8%; display:flex; gap:28px; z-index:10; }
+  nav.toc a { color:var(--sub); text-decoration:none; padding:12px 0; font-size:13px; border-bottom:2px solid transparent; }
+  nav.toc a:hover { color:var(--primary); border-color:var(--primary); }
+
+  section { padding:44px 8% 10px; }
+  h2 { font-size:22px; margin-bottom:6px; display:flex; align-items:center; gap:10px; }
+  h2 .idx { background:var(--primary); color:#fff; font-size:14px; width:28px; height:28px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; }
+  .sub { color:var(--sub); margin-bottom:22px; }
+
+  .card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:22px 26px; margin-bottom:18px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .pain { border-left:4px solid var(--danger); }
+  .pain h3 { font-size:15px; margin-bottom:8px; }
+  .pain p { color:var(--sub); font-size:13px; }
+  .pain .tag { color:var(--danger); font-weight:700; font-size:12px; }
+
+  .arch { background:#fff; border:1px solid var(--border); border-radius:12px; padding:26px; }
+  .arch .flow { display:flex; align-items:stretch; gap:10px; flex-wrap:wrap; margin:14px 0; }
+  .node { border:1.5px solid var(--primary); border-radius:10px; padding:12px 16px; min-width:150px; background:#f4f8ff; }
+  .node b { color:var(--primary-dark); display:block; margin-bottom:3px; font-size:13px; }
+  .node span { font-size:12px; color:var(--sub); }
+  .node.dark { border-color:#3d465a; background:#eef0f4; } .node.dark b { color:#3d465a; }
+  .arrow { align-self:center; color:var(--primary); font-size:20px; font-weight:700; }
+  .lane { margin-bottom:8px; font-size:12px; color:var(--sub); font-weight:700; }
+
+  table { width:100%; border-collapse:collapse; background:#fff; }
+  th { background:#f7f8fa; text-align:left; padding:10px 14px; border-bottom:1px solid var(--border); font-size:13px; color:var(--sub); }
+  td { padding:10px 14px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  .tbl-card { background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:18px; }
+
+  .decision { border-left:4px solid var(--primary); }
+  .decision h3 { font-size:15px; margin-bottom:6px; }
+  .decision p { color:var(--sub); font-size:13px; }
+  .decision .why { margin-top:8px; background:#f4f8ff; border-radius:8px; padding:8px 14px; font-size:12.5px; color:var(--primary-dark); }
+
+  .pill { display:inline-block; padding:1px 10px; border-radius:12px; font-size:12px; font-weight:600; }
+  .pill.blue { background:#e8efff; color:var(--primary); }
+  .pill.green { background:#e8f7f2; color:var(--success); }
+  .pill.orange { background:#fff3e0; color:var(--warn); }
+  .pill.red { background:#fdecec; color:var(--danger); }
+
+  .check { display:flex; gap:8px; align-items:flex-start; margin-bottom:8px; font-size:13px; }
+  .check::before { content:"✓"; color:var(--success); font-weight:700; }
+
+  footer { padding:30px 8% 60px; color:var(--sub); font-size:12px; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>UT 覆盖率历史扫描记录 — 设计评审方案</h1>
+  <p>分支级 UT 覆盖率从「仅展示最新一次」升级为「历史可回溯、结果可唯一定位、数据有保留边界」：用户可回看分支每次扫描结果，流水线输出链接精确指向当次记录，扫描数据按保留周期自动清理。</p>
+  <div class="meta">
+    <span class="chip">openlibing-coderepo · 后端</span>
+    <span class="chip">openlibing-web · 前端</span>
+    <span class="chip">upload-ut-action · 插件</span>
+    <span class="chip">设计评审稿 v1.0</span>
+  </div>
+</div>
+
+<nav class="toc">
+  <a href="#pain">现状与痛点</a><a href="#arch">方案总览</a><a href="#ability">三大能力</a>
+  <a href="#decision">关键设计决策</a><a href="#scope">交付范围</a><a href="#risk">风险与对策</a><a href="#accept">验收标准</a>
+</nav>
+
+<section id="pain">
+  <h2><span class="idx">1</span>现状与痛点</h2>
+  <div class="sub">扫描数据已逐次入库（code_ut_record），但入口与治理缺失，数据"存了看不见、看不准、存到哪没数"。</div>
+  <div class="grid3">
+    <div class="card pain"><span class="tag">痛点 ①</span><h3>历史数据不可见</h3>
+      <p>分支管理 UT 指标只展示最新一次扫描结果；历史记录虽已入库，用户无法查看，回看历史流水线时指标对不上当次构建。</p></div>
+    <div class="card pain"><span class="tag">痛点 ②</span><h3>结果链接指向不准</h3>
+      <p>插件仅输出 result，无结果链接；且流水线 ID 定位的是"最新记录"，历史流水线的输出链接跳到的是别次数据。</p></div>
+    <div class="card pain"><span class="tag">痛点 ③</span><h3>存储无限增长</h3>
+      <p>扫描记录（含文件明细大字段）持续累积且无清理机制，存储成本不可控，用户对"能追溯多久"没有预期。</p></div>
+  </div>
+</section>
+
+<section id="arch">
+  <h2><span class="idx">2</span>方案总览</h2>
+  <div class="sub">不新建业务表，全部能力基于存量 code_ut_record；上报链路零破坏，兼容旧链接与旧插件版本。</div>
+  <div class="arch">
+    <div class="lane">▎上报与结果链接（openlibing-coderepo + upload-ut-action）</div>
+    <div class="flow">
+      <div class="node dark"><b>upload-ut-action</b><span>覆盖率报告上传</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>/ut/coverage/report</b><span class="pill blue">响应扩展</span><span>MQ 异步入库；响应直接返回 recordId + report_url（recordId 预生成，无查询接口）</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>setOutput report_url</b><span>流水线输出固定指向当次记录</span></div>
+    </div>
+    <div class="lane">▎历史回溯（openlibing-web + openlibing-coderepo）</div>
+    <div class="flow">
+      <div class="node"><b>分支列表 UT 指标</b><span>点击直进最新详情（行为不变）</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>详情页历史入口</b><span class="pill blue">新增</span><span>「查看历史扫描记录」按钮</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>/ut/coverage/history</b><span class="pill blue">新增</span><span>历史记录分页列表（含保留天数提示）</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>/ut/coverage/file-detail + recordId</b><span class="pill blue">扩展</span><span>按记录唯一定位，URL 可分享/刷新</span></div>
+    </div>
+    <div class="lane">▎数据治理（openlibing-coderepo）</div>
+    <div class="flow">
+      <div class="node dark"><b>xxl-job 定时任务</b><span class="pill orange">新增</span><span>utCoverageCleanupHandler</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>按 retention-days 分批删除</b><span>单批 500 条 + 时间索引，夜间低峰执行</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>连带清理 OBS JSON</b><span class="pill orange">新增</span><span>按 original_report_obs_url 批删源桶对象（NULL 跳过 / 失败告警不回滚）</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="ability">
+  <h2><span class="idx">3</span>三大能力</h2>
+  <div class="grid3">
+    <div class="card decision"><h3>① 历史扫描记录查看</h3>
+      <p>UT 指标点击<b>保持直进最新详情</b>（用户高频路径不变）；详情页新增「查看历史扫描记录」入口，进入按扫描时间倒序的历史列表（扫描时间、来源（流水线名 #编号 可跳转）、行覆盖率、状态；commitId 挪至详情页展示），点击记录进入文件级明细详情，URL 携带记录 ID，刷新/分享仍定位同一条记录。</p>
+      <div class="why">默认路径服务高频场景（看最新），历史回溯为详情页内的次级入口——行为零突变。</div></div>
+    <div class="card decision"><h3>② 插件结果链接唯一定位</h3>
+      <p>上报接口响应<b>直接返回</b>指向当次扫描记录的链接（recordId 受理时预生成），插件直接输出 report_url。历史流水线输出从此固定指向当次结果，不再随新扫描漂移。</p>
+      <div class="why">零额外查询、零重试逻辑；MQ 消费延迟仅短暂影响 URL 可用性（消费重试自愈）；拿不到链接仅告警，不影响流水线成败。</div></div>
+    <div class="card decision"><h3>③ 保留周期与自动清理</h3>
+      <p>默认保留 90 天（配置可调，≤0 关闭）；每日低峰定时清理过期记录（含文件明细大字段），并连带清理 OBS 上的原始报告 JSON，分批执行防锁表；分支列表"最新指标"快照不清理，展示不受影响。</p>
+      <div class="why">页面同步提示保留范围；访问已清理记录时明确提示并引导返回历史列表。</div></div>
+  </div>
+</section>
+
+<section id="decision">
+  <h2><span class="idx">4</span>关键设计决策</h2>
+  <div class="sub">6 个决策项（含 2 条评审对齐结论），均以"零破坏 + 低成本"为原则。</div>
+  <div class="tbl-card"><table>
+    <tr><th style="width:220px">决策点</th><th>方案</th><th style="width:330px">理由与备选</th></tr>
+    <tr><td><b>记录唯一定位键</b></td><td>以 <b>记录 ID（雪花 ID，全链路 String）</b> 为唯一定位键；流水线 ID 降级为兼容定位（recordId &gt; pipelineRunId &gt; 最新一条兜底）</td><td>流水线 ID 与记录是 1:N（重跑），只有记录 ID 能唯一定位；String 防前端 JS 精度截断。<b>备选</b>：新造短码——无必要，雪花 ID 已够用</td></tr>
+    <tr><td><b>插件链接生成位置</b></td><td>链接由<b>后端生成</b>（report 响应直接返回完整 URL，recordId 受理时预生成，<b>不新增查询接口</b>），插件只透传输出</td><td>web 域名 / repoId 映射在后端侧，插件免配置域名、双平台一套逻辑；省去查询 RT 与重试复杂度。<b>已裁剪</b>：record-url 查询接口（评审对齐去除）</td></tr>
+    <tr><td><b>清理策略</b></td><td>按 <b>detection_completed_at</b> 统一清理（成功+失败记录），新增单列时间索引，xxl-job 分批删除</td><td>走新索引避免长事务锁表；repo_branch 最新指标快照不清理，分支列表展示不受影响。<b>备选</b>：归档表——当前量级不必要，引入复杂度</td></tr>
+    <tr><td><b>链接格式兼容</b></td><td>前端 URL 由 pipelineRunId 迁移为 recordId，<b>临时保留</b>旧格式解析，待看板组适配新格式后移除</td><td>存量分享链接/看板引用零破坏，双格式过渡期可控。<b>备选</b>：一次性切换——外部引用全部失效，不可接受</td></tr>
+    <tr><td><b>OBS 原始报告文件清理</b> <span class="pill green">已对齐</span></td><td><b>方案 A（已定）</b>：xxl-job 删 DB 记录后按 original_report_obs_url 级联批删源桶对象；防护 = 删除凭证最小化（仅 ut-coverage-action 前缀）+ 删除前二次时间校验；NULL 跳过、失败告警不回滚</td><td>单一配置源（retention-days），DB 与存储同步收敛。<b>备选 B</b>（生命周期规则）曾为倾向项，评审对齐选 A；B 的漂移窗口缺点不复存在，代价是引入受控的删除权限</td></tr>
+    <tr><td><b>commitId 展示位置</b></td><td>历史列表<b>不展示提交列</b>，commitId 挪至详情页顶部信息区展示</td><td>列表保持轻量（时间/来源/覆盖率/状态），完整上下文在详情承载。<b>备选</b>：列表+详情双展示——列数冗余，评审对齐去除</td></tr>
+  </table></div>
+</section>
+
+<section id="scope">
+  <h2><span class="idx">5</span>交付范围与分工</h2>
+  <div class="tbl-card"><table>
+    <tr><th style="width:190px">仓库</th><th>交付项</th><th style="width:120px">类型</th></tr>
+    <tr><td rowspan="4"><b>openlibing-coderepo</b></td><td>db.changelog：detection_completed_at 时间索引</td><td><span class="pill blue">数据</span></td></tr>
+    <tr><td>新增接口：/ut/coverage/history（历史列表）；file-detail 扩展 recordId 定位；/ut/coverage/report 响应扩展（recordId 预生成 + report_url）</td><td><span class="pill blue">接口</span></td></tr>
+    <tr><td>xxl-job：utCoverageCleanupHandler 定时清理（retention-days 配置化，连带清理 OBS 原始报告 JSON）</td><td><span class="pill orange">任务</span></td></tr>
+    <tr><td>单测：定位优先级矩阵 / 清理分批边界（含 OBS 级联 NULL 跳过、失败告警）/ 历史分页</td><td><span class="pill green">测试</span></td></tr>
+    <tr><td rowspan="2"><b>openlibing-web</b></td><td>历史扫描记录页（下钻入口、保留提示、分页）；详情信息区「流水线」更名「来源」并与「扫描时间」换位</td><td><span class="pill blue">页面</span></td></tr>
+    <tr><td>URL 由 recordId 定位（临时保留 pipelineRunId 适配）；过期记录提示页</td><td><span class="pill blue">页面</span></td></tr>
+    <tr><td rowspan="2"><b>upload-ut-action</b></td><td>回调响应直接读取 report_url 并 setOutput（无查询接口、无重试）</td><td><span class="pill blue">插件</span></td></tr>
+    <tr><td>输出单测；链接缺失降级告警（不影响 result）</td><td><span class="pill green">测试</span></td></tr>
+  </table></div>
+</section>
+
+<section id="risk">
+  <h2><span class="idx">6</span>风险与对策</h2>
+  <div class="tbl-card"><table>
+    <tr><th style="width:230px">风险</th><th>影响</th><th>对策</th></tr>
+    <tr><td>MQ 消费延迟/失败窗口内 report_url 短暂不可用</td><td><span class="pill green">低</span></td><td>消费侧 MQ 重试自愈（最终一致）；前端对窗口内未入库 recordId 展示「处理中」过程态（雪花时间戳 ≤5 分钟启发式），超窗口转「不存在/已清理」终态；响应缺失仅告警降级，流水线不失败</td></tr>
+    <tr><td>明细大字段（LONGTEXT）批量删除锁表</td><td><span class="pill orange">中</span></td><td>时间索引 + 单批 500 条 + 低峰执行；删除量摘要日志可观测</td></tr>
+    <tr><td>雪花 ID 前端精度截断</td><td><span class="pill red">高</span></td><td>全链路 String 传递（后端已返回 String，前端禁止 Number 化）</td></tr>
+    <tr><td>看板/外部链接仍用 pipelineRunId</td><td><span class="pill green">低</span></td><td>后端定位优先级兼容三种入参，过渡期零破坏</td></tr>
+    <tr><td>OBS 级联删除误删或失败</td><td><span class="pill orange">中</span></td><td>删除凭证最小化（仅 ut-coverage-action 前缀）+ 删除前二次时间校验；失败仅告警不回滚，不阻塞 DB 清理</td></tr>
+  </table></div>
+</section>
+
+<section id="accept">
+  <h2><span class="idx">7</span>验收标准</h2>
+  <div class="card">
+    <div class="check">分支管理 UT 指标点击保持直进最新详情（行为不变）；详情页历史入口可见该分支全部历史扫描记录（扫描时间倒序，含失败记录标注），保留天数横幅与配置一致；历史列表不展示提交列，commitId 在详情页信息区展示。</div>
+    <div class="check">点击任一记录进入详情，URL 携带记录 ID；刷新、分享、直接粘贴 URL 均定位到同一条记录。</div>
+    <div class="check">插件在每次流水线输出 report_url（上报响应直接返回，无额外查询），打开即当次扫描详情；历史流水线输出可准确回溯当次结果。</div>
+    <div class="check">超过保留期的记录及其 OBS 原始报告 JSON 被自动清理（NULL 跳过、失败告警不阻塞）；访问已清理记录返回明确提示并引导返回历史列表。</div>
+    <div class="check">旧格式链接（pipelineRunId）与旧版插件（无 report_url）在过渡期行为零变化。</div>
+  </div>
+</section>
+
+<footer>
+  设计评审稿 · UT 覆盖率历史扫描记录 · 详见《后端详细设计方案》与《前端交互原型》（同目录 prototype.html）
+</footer>
+
+</body>
+</html>
