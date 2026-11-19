@@ -2,7 +2,8 @@
 
 ## 业务 Issue
 
-- 待创建：docs PR 建立后在 `openlibing/openlibing-sbom` 源仓创建业务 issue 并回填本节（一个 FE 需求全局只对应一条 issue）
+- openlibing/openlibing-sbom#186 — 【openlibing-sbom】制品信息列表新增制品发布时间/任务完成时间列
+- https://gitcode.com/openlibing/openlibing-sbom/issues/186
 
 ## 需求背景
 
