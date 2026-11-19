@@ -1,6 +1,6 @@
 # License 合规性数据自动刷新 — 实现任务
 
-## 进度: 0/16 complete
+## 进度: 0/15 complete
 
 ### openlibing-sbom（分支 feat-license-legality-refresh）
 
@@ -11,10 +11,9 @@
 - [ ] `cache` 新增 `LicenseComplianceCache`：`@Bean CacheProperties`（cacheName=licenseCompliance、maximumSize=5000、expireAfterWrite=12h、cacheNullValue=false）+ `@Cacheable getLicenseCompliance`；结构对齐 LicenseObjectCache，**不注入 CacheManager**（避免与 CaffeineCacheConfig 循环依赖），清空缓存由 service 注入 CacheManager 实现
 - [ ] `CacheConstants` 新增 `LICENSE_COMPLIANCE_CACHE_NAME` 与 key 常量（`#spdxLicenseId`）
 
-#### 批处理双路径接入
+#### 批处理兜底新建接入（主链路 ExtractLicensesProcessor 保持现状不改动）
 
-- [ ] `ExtractLicensesProcessor`：注入 `LicenseComplianceCache`；新增私有方法 `resolveLicenseLegality(lic, illegalLicenseList)`（貂蝉 ALLOW→true / NOT_ALLOW→false / UNKNOW 与异常→降级黑名单，**仅用于主链路**）；`setLicenseAndPkgInfo` legality 计算切换；`getLicenseLegality` 保留为降级口径
-- [ ] `FillUpLicenseStep`：注入 `LicenseComplianceCache`；`toLicense` 新建分支 `setIsLegal` 改为独立从严方法 `resolveLicenseLegalityStrict(spdxId)`（仅 ALLOW→true，NOT_ALLOW / UNKNOW / 调用异常→false，不复用主链路带黑名单降级的方法）
+- [ ] `FillUpLicenseStep`：注入 `LicenseComplianceCache`；`toLicense` 新建分支 `setIsLegal` 改为独立从严方法 `resolveLicenseLegalityStrict(spdxId)`（仅 ALLOW→true，NOT_ALLOW / UNKNOW / 调用异常→false，批处理唯一貂蝉触点）
 
 #### 调度刷新与统计冗余同步
 
@@ -27,7 +26,7 @@
 
 - [ ] `DiaochanClientImplTest`：ALLOW / NOT_ALLOW / UNKNOW / 带引号文本 / 未知值 / 4xx / 5xx 重试耗尽 / URL 未配置 / URL 为完整 endpoint 时仅拼 `?license=` 不二次拼接 / connect 与 response 超时配置生效
 - [ ] `LicenseLegalityRefreshServiceTest`：值变化才 save、UNKNOW 保留现值、单条异常不中断、连续失败 ≥ 20 条熔断提前退出、unknown 占比 > 80% 触发 handleFail、统计数正确、清缓存先于查询（验证 CacheManager 清缓存被调用）
-- [ ] `ExtractLicensesProcessorTest` / `FillUpLicenseStepTest`（既有测试补充）：主链路貂蝉三态覆盖降级逻辑、client 异常降级、兜底从严口径走 `resolveLicenseLegalityStrict`
+- [ ] `FillUpLicenseStepTest`（既有测试补充）：兜底从严口径走 `resolveLicenseLegalityStrict`（仅 ALLOW→true，UNKNOW/异常→false）
 - [ ] 统计冗余同步测试（对账式）：对账查询返回不一致集合时 `is_legal_license` 重算正确（含无关联 license → null 边界）、产品级合法/非法包计数重算正确、对账无差异不触发重算、任务中断后残留不一致下一轮对账自愈
 - [ ] `mvn compile` + 相关单测全部通过
 
