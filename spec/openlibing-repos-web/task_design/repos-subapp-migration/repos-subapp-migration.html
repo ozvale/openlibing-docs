@@ -799,8 +799,9 @@
 <span class="k">const</span> app = useAppStore();
 <span class="k">const</span> useSubapp = computed(() =&gt; {
   <span class="k">if</span> (localStorage.getItem(<span class="s">'reposSubapp'</span>) === <span class="s">'0'</span>) <span class="k">return</span> <span class="k">false</span>;
-  <span class="k">const</span> perms = app.user?.permissions || [];
-  <span class="k">return</span> perms.length === 0 || perms.includes(<span class="s">'repos_subapp'</span>);
+  <span class="k">const</span> perms = app.user?.permissions;
+  <span class="k">if</span> (!Array.isArray(perms)) <span class="k">return</span> <span class="k">false</span>;
+  <span class="k">return</span> perms.includes(<span class="s">'repos_subapp'</span>);
 });
 <span class="k">const</span> target = computed(() =&gt; useSubapp.value ? WujieMiddleware : LegacyRepos);</pre>
 
@@ -811,7 +812,7 @@
         <strong>菜单只做开关：</strong>菜单记录只有名称、标识、类型、父级，没有 path/component，宿主路由与入口是静态的，
         因此仍需由 <code>ReposEntry</code> 选路；用户看到的菜单名称保持不变。<br />
         <strong>局限：</strong>这是按权限生效的开关，不是原子全局开关，生效依赖用户刷新重新拉取权限；
-        <code>permissions</code> 为空（接口未就绪 / 超管）时默认走新实现，此时只能用 localStorage 或发版回滚。
+        <code>permissions</code> 为空或接口未就绪时默认走旧实现，保证取消授权一定能回退。
       </div>
 
       <div class="table-wrap">

@@ -389,11 +389,12 @@ import WujieMiddleware from "@/views/WujieMiddleware.vue";
 import LegacyRepos from "@/views/Repos/index.vue";
 
 const app = useAppStore();
-// 单用户应急覆盖 > 权限标识 > 代码默认值（走新实现）
+// 必须显式授权才走新实现；权限未就绪/接口失败一律回旧实现
 const useSubapp = computed(() => {
   if (localStorage.getItem("reposSubapp") === "0") return false;
-  const perms: string[] = (app.user as any)?.permissions || [];
-  return perms.length === 0 || perms.includes("repos_subapp");
+  const perms = (app.user as any)?.permissions;
+  if (!Array.isArray(perms)) return false;
+  return perms.includes("repos_subapp");
 });
 const target = computed(() =>
   useSubapp.value ? WujieMiddleware : LegacyRepos,
@@ -403,6 +404,7 @@ const target = computed(() =>
 约束：
 
 - **不要复用 `repos` 路由自身的 `meta.auth`（`repo_manage`）做开关**。权限守卫是无权限即拦截路由，取消它会连旧页面一起挡掉。
+- **不要写成 `perms.length === 0 || includes(...)`**。路由守卫的「空即放行」是"没权限数据别挡人"，而开关的语义是"没授权就别上"：一旦权限接口失败或返回空列表，宽松写法会永远停留在新实现，取消授权无法回退。默认值必须是旧实现。
 - 权限标识只用于 `ReposEntry` 内部判定，不写入任何路由的 `meta.auth`。
 - 菜单记录只有 `menuName / identification / menuType / parentId`，没有 path 或 component；宿主路由与入口都是静态的，所以无法靠"新增一条菜单指向子应用"直接切页面，菜单只承担开关作用，选路由仍由 `ReposEntry` 判断。用户侧菜单名称保持不变。
 
@@ -420,10 +422,11 @@ const target = computed(() =>
 ```text
 localStorage.reposSubapp = '0'（单用户应急，最高）
   > permissions.includes('repos_subapp')（菜单 + 角色授权，主开关）
-  > 代码默认值（permissions 为空时，默认走新实现）
+  > 代码默认值（未授权 / permissions 为空时，默认走旧实现）
 ```
 
-- `permissions` 为空视为权限接口未就绪（或超管账号），默认走新实现，避免刷新瞬间闪回旧页面；
+- `permissions` 为空或接口未就绪时**默认走旧实现**：宁可灰度没生效，也不能让"取消授权"失效；
+- 代价是灰度初期必须先确认 `/user/get-operation-permissions` 正常工作，否则会误判成"没授权"；
 - 权限在 `Content.vue` 中 `projectId` 就绪后拉取，变更后需用户刷新页面重新获取；
 - 切换到关闭时，旧组件与旧 API 必须仍在宿主包内（P5 前不删除）。
 
