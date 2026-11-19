@@ -808,6 +808,8 @@
         <strong>不要复用路由自身的权限：</strong><code>repos</code> 路由的 <code>meta.auth</code> 是
         <code>repo_manage</code>，守卫无权限会直接拦掉整条路由。开关必须是独立权限标识，且不写进任何
         <code>meta.auth</code>。<br />
+        <strong>菜单只做开关：</strong>菜单记录只有名称、标识、类型、父级，没有 path/component，宿主路由与入口是静态的，
+        因此仍需由 <code>ReposEntry</code> 选路；用户看到的菜单名称保持不变。<br />
         <strong>局限：</strong>这是按权限生效的开关，不是原子全局开关，生效依赖用户刷新重新拉取权限；
         <code>permissions</code> 为空（接口未就绪 / 超管）时默认走新实现，此时只能用 localStorage 或发版回滚。
       </div>
@@ -816,7 +818,7 @@
         <table>
           <thead><tr><th style="width:22%">操作方式</th><th>动作</th></tr></thead>
           <tbody>
-            <tr><td>全量回滚（一键）</td><td>「菜单管理」把该记录标识由 <code>repos_subapp</code> 改为 <code>repos_subapp_off</code>：所有角色立即失权，用户刷新后回到旧实现；改回即恢复</td></tr>
+            <tr><td>全量回滚</td><td>「角色管理」取消所有角色的 <code>repos_subapp</code> 授权（或删除该菜单记录）：用户刷新后回到旧实现，不改代码、不改标识</td></tr>
             <tr><td>按角色回滚</td><td>「角色管理」取消部分角色的 <code>repos_subapp</code> 授权，灰度回退</td></tr>
             <tr><td>单用户应急</td><td><code>localStorage.setItem('reposSubapp','0')</code> 后刷新；恢复用 <code>removeItem</code></td></tr>
             <tr><td>L2 回滚</td><td><code>kubectl -n &lt;ns&gt; rollout undo deployment/openlibing-repos-web</code></td></tr>
