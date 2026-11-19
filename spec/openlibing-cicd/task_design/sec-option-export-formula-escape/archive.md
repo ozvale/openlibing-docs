@@ -37,6 +37,15 @@
 - "仓库内其他 EasyExcel 写点未覆盖"：确认本次范围仅安全编译选项导出链路，其余链路属独立整改，已写入残余风险与待办
 - "与既有 spec 冲突"：确认存在口径差异，已在既有 spec 加勘误、在本 spec 说明差异原因
 
+## 跨仓残留（来自 Issue #549 评估范围）
+
+| 仓库                   | 现状                                                                                                                           | 跟踪方式                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
+| `openlibing-codecheck` | master 仍有 5 处 `EasyExcel.write` 未转义：`FileDownloadDelegateImpl` 2 处、`StaticAlarmServiceImpl` 3 处；全仓无 converter 类 | 需在 codecheck 仓单独立项跟踪 |
+| `openlibing-coderepo`  | 无 Excel 导出，不涉及                                                                                                          | 已评估，无残留                |
+
+因此 #549 在本仓闭环，不等于同类 CWE-1236 在全平台闭环。
+
 ## 可复用经验
 
 - EasyExcel 中 Converter 与 CellWriteHandler 的执行顺序是 Converter → CellWriteHandler；只要链路里有自定义样式处理器，就必须在处理器侧重新施加 `quotePrefix`，只在 Converter 注册是无效的

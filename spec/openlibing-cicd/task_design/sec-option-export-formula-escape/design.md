@@ -81,5 +81,5 @@ Excel 公式注入有两种常见处置方式：
 - 缓解点：常规取值走 Converter，样式覆盖路径走 `FormulaGuardStyleApplier`，两条写入路径都过判定，不依赖字段白名单
 - 边界：防护只作用于导出文件，不改变数据库存储值与页面展示值
 - 残余风险一（已知限制）：同一处理器内多套基准样式时，危险值单元格只继承首个基准样式的外观，详见第 2 章
-- 残余风险二（仓库级）：本次只保护安全编译选项导出链路。仓库内其他 `EasyExcel.write` 导出链路是否已接入 `ExcelFormulaEscapeConverter` 未逐一核查，需按仓库清单单独跟踪
+- 残余风险二（跨仓）：Issue #549 点名 `openlibing-codecheck` master 仍有 5 处 `EasyExcel.write` 未做公式转义（`FileDownloadDelegateImpl` 2 处、`StaticAlarmServiceImpl` 3 处），且全仓无 converter 类，需在 codecheck 仓单独立项跟踪；`openlibing-coderepo` 经评估无 Excel 导出，不涉及。本仓其他导出链路未逐一核查
 - 残余风险三：后续新增的导出链路若同样自定义了 `CellWriteHandler`，需自行复用同一守卫逻辑；本次未做全局拦截

@@ -41,6 +41,7 @@
 
 ## 检视跟进待办（本次未覆盖）
 
-- [ ] 落库前掩码：`ex_message` 写入时同样过 `maskText`，避免库表直读暴露明文
-- [ ] 异常信息长度截断：按 Issue 要求限制 `ex_message` 落库长度，避免超长异常栈
-- [ ] 跨仓整改：`openlibing-coderepo` 的 `maskRow` 同步补 `exMessage` 掩码
+- [ ] 落库前掩码：`ex_message` 写入时同样过 `maskText`，避免库表直读暴露明文（待立项）
+- [ ] 异常信息长度截断：按 Issue 要求限制 `ex_message` 落库长度，避免超长异常栈（待立项）
+- [ ] 跨仓整改：`openlibing-coderepo` 的 `LoggingServiceImpl.maskRow`（第 420 行）同步补 `exMessage` 掩码
+- [ ] 存量数据评估：确认已落库 `ex_message` 明文是否需要刷洗
