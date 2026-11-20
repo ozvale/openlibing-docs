@@ -2,7 +2,7 @@
 
 ## 1. 基本信息
 
-- **需求链接**: https://gitcode.com/openlibing/hidevlab-transport-service/issues/119
+- **需求链接**: 无，需求不需要跑流水线，无issue链接
 - **需求名称**: 在线开发容器环境DFX能力提升
 - **核心目标**:
   验证功能正确性，以及架构设计中定义的安全与隐私、可靠性与韧性、可服务性与可观测性和性能与伸缩性等非功能专项任务的闭环验收。
@@ -35,6 +35,6 @@
 
 **1. 同一用户在线开发容器支持互联测试报告：在线开发支持同一用户，支持同柜宿主机发放的容器网络互通
 
-- **对应task(issueID)链接:** : 1.https://gitcode.com/openlibing/hidevlab-transport-service/issues/119
+- **对应task(issueID)链接:** :无，需求不需要跑流水线，无issue链接
 - **预期结果**:
   运维面支持在线开发所有容器监控采集
