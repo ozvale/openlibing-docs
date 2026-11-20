@@ -2,7 +2,7 @@
 
 ## 1. 基本信息
 
-- **需求链接**: https://gitcode.com/openlibing/hidevlab-transport-service/issues/119
+- **需求链接**: 无，需求不需要跑流水线，无issue链接
 - **需求名称**: [需求]: [在线开发容器环境DFX能力提升]
 - **开发责任人**: 曾绍辉
 - **测试责任人**: 
@@ -22,7 +22,7 @@
 
 **1.[在线开发容器环境DFX能力提升 ]**:支持在线开发容器指标采集，并支持容器的codeser服务和ssh服务重启
 
-- **对应task(issueID)链接:**: https://gitcode.com/openlibing/hidevlab-transport-service/issues/119
+- **对应task(issueID)链接:**: 无，需求不需要跑流水线，无issue链接
 - **预期结果**:
 支持在线开发容器指标采集，并支持容器的codeser服务和ssh服务重启正常，其他容器指标采集正常
 - **测试结果**：Passed
