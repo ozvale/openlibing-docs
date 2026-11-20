@@ -101,12 +101,13 @@ code{background:#f3f4f6;border-radius:4px;padding:0 5px;font-size:12.5px}
     <li>sbom-action 插件输出结果只有任务 ID（taskId），使用者无法从流水线直接跳转查看 SBOM 产物详情。</li>
     <li>详情落地页为平台 SBOM 页 <code>/apps/sbomManage?projectId=&amp;name=</code>：projectId 恢复项目上下文（壳层 guard 现有能力）；name 为新增支持参数——进入页面后自动按制品名过滤并<b>选中该制品，直接展示其软件成分数据</b>（"打开某个制品的数据"）。</li>
     <li>展示形态对齐 code-metrics-action 的任务结果面板（链接表 + 指标表），并输出包数量 / 关系数量（复用插件本地 SPDX 统计）。</li>
+    <li>额外增强（用户追加）：sbomManage 页制品表筛选参数 <b>URL 化并双向同步</b>——读：URL 携带筛选参数（name / names / 分支等 attr 动态字段 / 解析状态 / 待闭环漏洞级别包含·排除）进入页面自动筛选；写：页面筛选变化时 <code>router.replace</code> 写回 URL，复制链接即可分享当前筛选状态（分支、待闭环漏洞数等）。</li>
   </ul>
 </div>
 
 <h2>二、UI 变化（可交互预演）</h2>
 <div class="card">
-  <p style="font-size:13px">变化点：<span class="tag new">新增</span>任务结果面板「链接」表 + 「包数量 / 关系数量」指标行 &nbsp;·&nbsp; <span class="tag new">新增</span>列表页 name 参数自动过滤并选中制品、联动成分数据 &nbsp;·&nbsp; <span class="tag keep">不变</span>STEP_OUTPUT 既有行 / 页面其余交互 / 软件成分数据区内容</p>
+  <p style="font-size:13px">变化点：<span class="tag new">新增</span>任务结果面板「链接」表 + 「包数量 / 关系数量」指标行 &nbsp;·&nbsp; <span class="tag new">新增</span>列表页筛选参数 URL 双向同步（读：URL 自动过滤 + 单值 name 选中制品；写：筛选变化 router.replace 写回）&nbsp;·&nbsp; <span class="tag keep">不变</span>STEP_OUTPUT 既有行 / 页面其余交互 / 软件成分数据区内容</p>
 
   <div class="mock">
     <div class="mock-bar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>&nbsp;Mockup 1 · GitCode 任务结果面板（sbom-action 步骤，对齐 code-metrics 展示效果）</div>
@@ -141,7 +142,7 @@ code{background:#f3f4f6;border-radius:4px;padding:0 5px;font-size:12.5px}
   <div class="mock">
     <div class="mock-bar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>&nbsp;Mockup 2 · 平台 SBOM 页（复刻 /apps/sbomManage 真实布局：制品信息 + 软件成分数据联动）</div>
     <div class="addr">
-      <input id="addr" value="https://www.openlibing.com/apps/sbomManage?projectId=3&name=openlibing-sbom" spellcheck="false">
+      <input id="addr" value="https://www.openlibing.com/apps/sbomManage?projectId=3&name=openlibing-sbom&branch=master&vulInclude=HIGH" spellcheck="false">
       <button class="btn primary" onclick="openUrl()">打开链接</button>
     </div>
 
@@ -198,7 +199,7 @@ code{background:#f3f4f6;border-radius:4px;padding:0 5px;font-size:12.5px}
       </div>
     </div>
     <div class="note" style="margin:6px 16px 14px">
-      交互演示：① 修改地址栏 name 参数 → 点「打开链接」观察自动过滤（筛选条显示 <span class="active-filter">制品名称: xxx</span>）+ 选中该制品 + 软件成分数据自动展开；② 点击任意制品行名切换选中（现有交互）。
+      交互演示：① 修改地址栏筛选参数（name / names / branch / scanStatus / vulInclude / vulExclude，多值逗号分隔）→ 点「打开链接」观察自动过滤（筛选条逐条显示 <span class="filter-tag">筛选标签</span>）+ 单值 name 自动选中制品并联动成分数据；② 点击筛选标签上的 × 移除筛选 → 地址栏 URL 同步写回（模拟 router.replace 双向同步，projectId 保留）；③ 点击任意制品行名切换选中（现有交互）。
     </div>
   </div>
 </div>
@@ -211,6 +212,7 @@ code{background:#f3f4f6;border-radius:4px;padding:0 5px;font-size:12.5px}
     <tr><td>域名配置（D2）</td><td>复用既有 <code>sbom.service.website.domain</code>（Nacos 配 https://www.openlibing.com）</td><td>避免两套域名配置；未配置时 detailLink=null + warn，不阻塞上报</td></tr>
     <tr><td>落地页形态（D3）</td><td>列表页 <code>?projectId=&amp;name=</code>：过滤 + 自动选中制品行，联动展示其软件成分数据</td><td>详情直连路由当前不存在；页面已有 @current-change 选中联动机制，复用成本最低</td></tr>
     <tr><td>契约承载（D4）</td><td>PublishSbomResponse 新增 detailLink；service 返回 AddAndPublishResult(taskId, detailLink)</td><td>纯增量字段向后兼容；调用方仅 ApigController 一处</td></tr>
+    <tr><td>URL 筛选参数化（D5）</td><td>制品表筛选双向同步：读=onMounted 解析 <code>name</code>（单值，detailLink 场景）/<code>names</code>/attr 动态字段（branch、softwareName…）/<code>scanStatus</code>/<code>vulInclude</code>/<code>vulExclude</code> → 初始化筛选统一查询，单值 name 自动选中；写=筛选变化 <code>router.replace</code> 写回（保留 projectId 等壳层参数，空筛选删 key）；多值逗号分隔，scanStatus 组值内逗号冲突用 <code>|</code> 分隔；names 多值仅筛选不选中</td><td>用户增强诉求：分享/跳转可携带筛选状态（分支、待闭环漏洞级别等）；detailLink 生成侧仍只带 projectId+name 保持最简；成分区筛选/排序/分页不 URL 化避免状态爆炸</td></tr>
   </table>
 </div>
 
@@ -224,6 +226,7 @@ code{background:#f3f4f6;border-radius:4px;padding:0 5px;font-size:12.5px}
     <tr><td>发布顺序：插件先于后端上线</td><td><span class="badge b-low">低</span></td><td>插件读不到 detailLink 仅不输出链接行，概览组正常，无报错</td></tr>
     <tr><td>URL name 无匹配制品（已改名 / 未上报）</td><td><span class="badge b-low">低</span></td><td>筛选条空结果提示"暂无相关内容"，用户手动清除筛选即可（现有空态交互）</td></tr>
     <tr><td>GitCode 面板 ATOMGIT_OUTPUT 渲染规则变化</td><td><span class="badge b-low">低</span></td><td>行为对齐 code-metrics 线上实际效果，随其回归</td></tr>
+    <tr><td>URL 写回与壳层参数（projectId 等）共存冲突</td><td><span class="badge b-low">低</span></td><td>router.replace 仅增删本页筛选 key，壳层参数原样保留；非法/未知参数值解析时忽略</td></tr>
   </table>
 </div>
 </div>
@@ -256,29 +259,70 @@ function selectRow(id){
   });
   toast('已选中制品「'+name+'」，软件成分数据已联动加载（现有 @current-change 交互）');
 }
+const SEV_LABEL={FATAL:'致命',HIGH:'高',MID:'中',LOW:'低'};
+const STATUS_LABEL={SUCCESS:'解析完成',FAILED:'解析失败',PROCESSING:'解析中'};
+function pillCount(cell,sev){
+  const m=cell.innerHTML.match(new RegExp('pill p-'+sev.toLowerCase()+'">[^<]*<i>(\\d+)'));
+  return m?parseInt(m[1],10):0;
+}
 function openUrl(){
-  const raw=document.getElementById('addr').value;let name='';
-  try{name=new URL(raw).searchParams.get('name')||''}catch(e){toast('地址不合法')}
-  const strip=document.getElementById('strip');
+  let q;try{q=new URL(document.getElementById('addr').value).searchParams}catch(e){toast('地址不合法');return}
+  const name=q.get('name')||'';
+  const names=(q.get('names')||'').split(',').filter(Boolean);
+  const branch=q.get('branch')||'';
+  const scanStatus=(q.get('scanStatus')||'').split(',').filter(Boolean);
+  const vulInc=(q.get('vulInclude')||'').split(',').filter(v=>SEV_LABEL[v]);
+  const vulExc=(q.get('vulExclude')||'').split(',').filter(v=>SEV_LABEL[v]);
+  const hasFilter=!!(name||names.length||branch||scanStatus.length||vulInc.length||vulExc.length);
   const rows=[...document.querySelectorAll('tr[data-name]')];
-  let hit=null;
-  rows.forEach(tr=>{const m=!name||tr.dataset.name.includes(name);tr.style.display=m?'':'none';if(m&&name&&tr.dataset.name===name)hit=tr.id;});
-  if(name){
-    strip.innerHTML='筛选条件：<span class="filter-tag">制品名称: '+name+'<span class="x" title="演示：点击可清除筛选（现有交互）">×</span></span><span style="color:#b0b6bf">← 打开链接后页面即处于已筛选制品名称状态</span>';
-    toast('进入页面：制品名称筛选条件已自动填入「'+name+'」并触发查询');
+  const tags=[];
+  const mkTag=(k,l,disp,raw)=>tags.push('<span class="filter-tag">'+l+': '+disp+'<span class="x" data-k="'+k+'" data-v="'+(raw||disp).replace(/"/g,'')+'" title="点击移除该筛选 → 地址栏 URL 同步写回（模拟 router.replace）">×</span></span>');
+  if(name)mkTag('name','制品名称',name);
+  names.forEach(n=>mkTag('names','制品名称',n));
+  if(branch)mkTag('branch','分支',branch);
+  scanStatus.forEach(s=>mkTag('scanStatus','解析状态',STATUS_LABEL[s]||s,s));
+  vulInc.forEach(v=>mkTag('vulInclude','待闭环漏洞级别(含)',SEV_LABEL[v],v));
+  vulExc.forEach(v=>mkTag('vulExclude','待闭环漏洞级别(排除)',SEV_LABEL[v],v));
+  document.getElementById('strip').innerHTML=hasFilter
+    ?'筛选条件：'+tags.join('')+'<span style="color:#b0b6bf">← 打开链接后页面即处于已筛选状态；真实页面筛选变化时 router.replace 写回 URL</span>'
+    :'🔍 点击添加筛选条件';
+  let hit=null;const shown=[];
+  rows.forEach(tr=>{
+    const tds=tr.children,nm=tr.dataset.name;let m=true;
+    if(name)m=nm.includes(name);
+    if(m&&names.length)m=names.some(n=>nm.includes(n));
+    if(m&&branch)m=tds[2].textContent.trim()===branch;
+    if(m&&scanStatus.length){const st=tds[4].textContent.trim();m=scanStatus.some(s=>st.includes(STATUS_LABEL[s]||s))}
+    if(m&&vulInc.length)m=vulInc.every(v=>pillCount(tds[7],v)>0);
+    if(m&&vulExc.length)m=!vulExc.some(v=>pillCount(tds[7],v)>0);
+    tr.style.display=m?'':'none';if(m)shown.push(tr);
+    if(name&&m&&nm===name)hit=tr.id;
+  });
+  if(!hasFilter){toast('URL 无筛选参数：进入页面后手动选择制品（现状行为）');return}
+  if(name&&!names.length){
+    if(hit){selectRow(hit);toast('URL 筛选已应用 → 选中制品「'+name+'」→ 软件成分数据已展开');return}
+    const cand=shown[0];
+    if(cand){selectRow(cand.id);toast('URL name「'+name+'」精确匹配失败，按包含匹配选中「'+cand.dataset.name+'」（其余筛选参数仍生效）');return}
   }
-  else{strip.innerHTML='🔍 点击添加筛选条件';}
-  if(name&&!hit){
-    const cand=rows.find(r=>r.style.display!=='none');
-    if(cand){selectRow(cand.id);toast('URL name「'+name+'」精确匹配失败，已按包含匹配定位并选中「'+cand.dataset.name+'」');return}
-    document.getElementById('comp-empty').textContent='暂无相关内容！（URL name 无匹配制品：可手动清除筛选条件重试）';
+  if(shown.length){toast('URL 筛选已应用（'+tags.length+' 个条件），列表仅显示匹配行'+(names.length?'；names 多值仅筛选不自动选中':''))}
+  else{
+    document.getElementById('comp-empty').textContent='暂无相关内容！（URL 筛选无匹配制品：可手动清除筛选条件重试）';
     document.getElementById('comp-empty').style.display='';
     document.getElementById('comp-body').style.display='none';
-    toast('URL name「'+name+'」无匹配制品，展示空态（现有 empty 交互）');return;
+    toast('URL 筛选条件无匹配制品，展示空态（现有 empty 交互）');
   }
-  if(hit){selectRow(hit);toast('URL 自动过滤「'+name+'」→ 选中制品 → 软件成分数据已展开')}
-  else{toast('URL 无 name 参数：进入页面后手动选择制品（现状行为）')}
 }
+function removeFilter(key,val){
+  const u=new URL(document.getElementById('addr').value);
+  const parts=(u.searchParams.get(key)||'').split(',').filter(x=>x&&x!==val);
+  if(parts.length)u.searchParams.set(key,parts.join(','));else u.searchParams.delete(key);
+  document.getElementById('addr').value=u.toString();
+  openUrl();
+  toast('已移除筛选「'+val+'」→ 地址栏 URL 已写回（模拟 router.replace，projectId 保留）');
+}
+document.getElementById('strip').addEventListener('click',e=>{
+  if(e.target.classList.contains('x'))removeFilter(e.target.dataset.k,e.target.dataset.v);
+});
 </script>
 </body>
 </html>

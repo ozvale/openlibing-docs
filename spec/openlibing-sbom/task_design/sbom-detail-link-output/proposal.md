@@ -26,7 +26,9 @@ sbom-action 插件当前输出结果只有任务 ID（taskId），使用者无�
   - 包数量 / 关系数量复用插件本地 SPDX JSON 已有统计逻辑（从"仅日志"提升为输出）
   - `detailLink` 输出前过 sanitize 防换行注入
   - STEP_OUTPUT 现有可读行保留不动（向后兼容）
-- openlibing-web 前端：SBOM 页（`/apps/sbomManage`，制品信息 + 软件成分数据联动页）支持 URL query 参数 `name`：进入页面读取 `route.query.name` 自动填充制品名称筛选并触发查询，查询结果中匹配制品行自动选中（联动展示该制品的软件成分数据），实现"打开链接即打开某个制品的数据"
+- openlibing-web 前端：SBOM 页（`/apps/sbomManage`，制品信息 + 软件成分数据联动页）支持 URL query 筛选参数并双向同步：
+  - 读：进入页面解析 `route.query`——`name`（制品名称单值，detailLink 场景）/ `names`（多值）/ attr 动态字段（branch、softwareName、version 等，key 即后端字段名）/ `scanStatus` / `vulInclude` / `vulExclude`（待闭环漏洞级别包含/排除）——初始化对应筛选并触发查询；单值 `name` 时查询结果匹配制品行自动选中（联动展示该制品的软件成分数据），实现"打开链接即打开某个制品的数据"
+  - 写：页面筛选条件变化时通过 `router.replace` 将当前筛选写回 URL（保留 `projectId` 等壳层参数，空筛选删除对应 key），复制 URL 即可分享当前筛选状态
 - 平台壳层 `projectId` query 参数由现有 router guard 消费恢复项目上下文，无需改动
 
 ## 不做
@@ -35,6 +37,7 @@ sbom-action 插件当前输出结果只有任务 ID（taskId），使用者无�
 - 不修改遗留 `getSbomPublishResult` 的 `sbomRef` 链接（`#/sbomPackages` 旧 pattern 暂不动，另需求处理）
 - 不修改前端详情页（列表页点击进详情为现有交互）
 - 不修改 sbom-action 的 STEP_OUTPUT 既有输出键
+- 软件成分数据区筛选、列表排序、分页状态不做 URL 参数化（URL 只承载制品信息表筛选）
 
 ## 验收标准
 
@@ -45,4 +48,6 @@ sbom-action 插件当前输出结果只有任务 ID（taskId），使用者无�
 - [ ] 插件任务结果面板展示：链接表（产物详情url，可点击/复制）+ 指标表（任务ID、包数量、关系数量），不含 SBOM 文件路径
 - [ ] 插件编程 outputs 含 detail-link / package-count / relationship-count
 - [ ] 浏览器打开 `{domain}/apps/sbomManage?projectId=3&name=xxx`：项目上下文恢复（壳层 guard），制品表自动过滤并选中对应制品，软件成分数据联动展示；点击行内 name / 其他制品行可切换（现有交互）
+- [ ] 打开带扩展筛选参数的 URL（如 `&branch=master&vulInclude=HIGH`）：制品表按参数自动填充筛选并查询；未知字段名/非法枚举参数被忽略
+- [ ] 页面筛选条件变化后 URL 同步更新（保留 projectId），复制新 URL 重新打开可复现相同筛选状态
 - [ ] 后端新增行为有对应单元测试

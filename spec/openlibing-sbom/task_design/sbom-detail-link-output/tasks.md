@@ -20,13 +20,14 @@
 
 ### 前端 openlibing-web
 
-- [ ] 11. `CompositionAnalysis/index.vue`：读 `route.query.name` → 初始化名称筛选 → 触发查询
+- [ ] 11. `CompositionAnalysis/index.vue`：引入 `useRoute`；onMounted 解析 route.query 筛选参数集（name/names/attr 动态字段/scanStatus/vulInclude/vulExclude）→ 初始化 productFilters → 触发查询；单值 name 匹配行自动选中（selectedProduct 联动）
+- [ ] 11a. `handleProductFilterChange` 中 `router.replace` 写回当前筛选 URL（保留 projectId 等壳层参数，空筛选删除 key，scanStatus 组值 `|` 分隔）
 
 ## Phase 3 自检
 
 - [ ] 12. sbom-web：`mvn -pl sbom-web -am compile` + 相关 UT 通过
 - [ ] 13. sbom-action：`node --check index.js` + ncc 打包成功
-- [ ] 14. openlibing-web：lint 通过
+- [ ] 14. openlibing-web：lint 通过 + 浏览器验证 URL 筛选参数（读：name 选中联动 / branch+vulInclude 组合 / 非法参数忽略；写：筛选变化 URL 同步保留 projectId）
 
 ## Phase 4 后续（用户自测确认后）
 
