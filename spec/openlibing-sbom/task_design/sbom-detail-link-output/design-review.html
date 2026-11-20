@@ -210,8 +210,7 @@ code{background:#f3f4f6;border-radius:4px;padding:0 5px;font-size:12.5px}
     <tr><td>projectId 获取（D1）</td><td>addProduct 确定最终 productType 后，统一调用 framework 机机接口 <code>GET /internal-server/get-project?projectName=&lt;productType&gt;</code> 精确反查 projectId；失败/未命中 → 抛 AddProductException 上报失败，无降级</td><td>framework 是平台项目主数据权威源；显式/缺省回填/already-exists 容忍三路径在 addProduct 返回后收敛；/internal-server 与现有 feign 调用同鉴权域；硬失败与 coderepo 反查现有语义一致</td></tr>
     <tr><td>域名配置（D2）</td><td>复用既有 <code>sbom.service.website.domain</code>（Nacos 配 https://www.openlibing.com）</td><td>避免两套域名配置；未配置时 detailLink=null + warn，不阻塞上报</td></tr>
     <tr><td>落地页形态（D3）</td><td>列表页 <code>?projectId=&amp;name=</code>：过滤 + 自动选中制品行，联动展示其软件成分数据</td><td>详情直连路由当前不存在；页面已有 @current-change 选中联动机制，复用成本最低</td></tr>
-    <tr><td>面板机制（D4）</td><td>ATOMGIT_OUTPUT 分组（概览 + 链接），STEP_OUTPUT 既有行保留</td><td>对齐 code-metrics 线上效果；向后兼容</td></tr>
-    <tr><td>契约承载（D5）</td><td>PublishSbomResponse 新增 detailLink；service 返回 AddAndPublishResult(taskId, detailLink)</td><td>纯增量字段向后兼容；调用方仅 ApigController 一处</td></tr>
+    <tr><td>契约承载（D4）</td><td>PublishSbomResponse 新增 detailLink；service 返回 AddAndPublishResult(taskId, detailLink)</td><td>纯增量字段向后兼容；调用方仅 ApigController 一处</td></tr>
   </table>
 </div>
 
