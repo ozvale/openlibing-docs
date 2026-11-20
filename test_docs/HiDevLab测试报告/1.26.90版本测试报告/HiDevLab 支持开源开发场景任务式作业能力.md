@@ -2,7 +2,7 @@
 
 ## 1. 基本信息
 
-- **需求链接**: 无issue链接
+- **需求链接**: https://gitcode.com/openlibing/hidevlab-transport-service/issues/121
 - **需求名称**: [需求]: [HiDevLab 支持开源开发场景任务式作业能力]
 - **开发责任人**: 周建成
 - **测试责任人**: 项佰云
@@ -22,7 +22,7 @@
 
 **1.[HiDevLab 支持开源开发场景任务式作业能力 ]**:对外支持提供在线开发创建容器相关接口
 
-- **对应task(issueID)链接:**: 无，需求不需要跑流水线，无issue链接
+- **对应task(issueID)链接:**: https://gitcode.com/openlibing/hidevlab-transport-service/issues/121
 - **预期结果**:
 对外支持提供在线开发创建容器相关接口，接口可用且无响应异常
 - **测试结果**：Passed
