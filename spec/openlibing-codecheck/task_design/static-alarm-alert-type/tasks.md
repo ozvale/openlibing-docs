@@ -11,7 +11,7 @@
 ## openlibing-docs（口径数据）
 
 - [ ] T1 创建 `static-code-analysis/solutions/full-analysis/alert-type/`：README.md（口径定义、决策树、治理流程、文件规范）+ tools.yml（34 工具注册：security 4 / bug 2 / code_smell 15 / mixed 13）
-- [ ] T2 mappings/*.yml 初始整理（12 个混合工具，按落位表逐条穷举）并提 MR 评审：ruff（61 前缀）/ pylint（E/F/C/W/R/I 前缀）/ eslint（security/ 插件 15 条 + 核心安全白名单 21 条 + 物料 727 行）/ typescript-eslint（194 行裸名精确匹配）/ clang-tidy（模块前缀 + cert-/security. 安全分支）/ cppcheck（cert- + level 批量）/ shellcheck（level 批量）/ clippy（872 行逐规则）/ golangci-lint（gosec 编码 + 安全 linter 名）/ spotbugs（FindSecBugs 144 条 + catch-all bug）/ pmd（ruleset 维度）/ codeql（correctness tags_pattern + catch-all code_smell）
+- [ ] T2 mappings/*.yml 初始整理（13 个混合工具，按落位表逐条穷举）并提 MR 评审：ruff（61 前缀）/ pylint（E/F/C/W/R/I 前缀）/ eslint（security/ 插件 15 条 + 核心安全白名单 21 条 + 物料 727 行）/ typescript-eslint（194 行裸名精确匹配）/ clang-tidy（模块前缀 + cert-/security. 安全分支）/ cppcheck（cert- + level 批量）/ shellcheck（level 批量）/ clippy（872 行逐规则）/ golangci-lint（gosec 编码 + 安全 linter 名）/ spotbugs（FindSecBugs 144 条 + catch-all bug）/ pmd（ruleset 维度）/ codeql（correctness tags_pattern + catch-all code_smell）/ codearts-check（Criterion UUID 逐条 1280 行：安全类 402 + 缺陷类 877 + catch-all）
 - [ ] T3 CI 校验：yml 格式与唯一性约束（tool 唯一、`(tool, rule_pattern)` 唯一、每行仅一个 pattern 维度字段）
 
 ## openlibing-codecheck（后端）

@@ -10,9 +10,9 @@
 
 ## 功能描述
 
-- **统一三分类口径**：`alert_type` 三值互斥 MECE，判别决策树（运行时出错 → bug；安全风险 → security；其余 → code_smell）与冲突裁决（`security > bug > code_smell`）全仓唯一
+- **统一三分类口径**：`alert_type` 三值互斥 MECE，判别决策树（安全风险 → security；运行时出错 → bug；其余 → code_smell）与冲突裁决（`security > bug > code_smell`）全仓唯一
 - **自动分类引擎**：SARIF 告警入库时按 L1 工具级短路 → L2 SARIF 元数据（仅判安全）→ L3 规则映射表三级流水线定型，兜底 `code_smell`，不依赖人工打标
-- **口径数据 docs 仓承载**：`tools.yml`（34 工具注册）+ `mappings/*.yml`（12 个混合工具规则映射）落 docs 仓 `static-code-analysis/solutions/full-analysis/alert-type/`，变更走 MR 治理，引擎 @Scheduled 每 5 分钟轮询目录 commit SHA 感知刷新
+- **口径数据 docs 仓承载**：`tools.yml`（34 工具注册）+ `mappings/*.yml`（13 个混合工具规则映射，含 codearts-check 1280 行）落 docs 仓 `static-code-analysis/solutions/full-analysis/alert-type/`，变更走 MR 治理，引擎 @Scheduled 每 5 分钟轮询目录 commit SHA 感知刷新
 - **数据落地**：`static_alarm_issue` 仅新增 `alert_type` 一个字段（ENUM NOT NULL，兜底保证非空）
 - **存量回填**：XXL-Job 一次性回填存量告警分类，幂等可重跑，只写空值不覆盖
 - **接口扩展**（无新增接口）：`/static-alarm/v1` 的 list / issue/count / list/export 入参增 `alertTypes` 多选过滤、出参行增 `alertType`；filter-options 出参增告警类型候选项

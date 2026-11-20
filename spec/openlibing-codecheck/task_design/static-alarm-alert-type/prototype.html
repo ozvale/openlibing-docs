@@ -215,14 +215,14 @@
   <!-- 筛选区 -->
   <section class="pcr-toolbar">
     <div class="pcr-filters">
-      <select id="filterTool" style="width:180px">
+      <select id="filterTool" style="width:180px" aria-label="按工具精确筛选">
         <option value="">工具（精确）</option>
       </select>
-      <input id="filterRuleId" type="text" placeholder="规则 ID（模糊）" style="width:240px">
-      <select id="filterCategory" style="width:150px">
+      <input id="filterRuleId" type="text" placeholder="规则 ID（模糊）" style="width:240px" aria-label="按规则 ID 模糊筛选">
+      <select id="filterCategory" style="width:150px" aria-label="按问题分类筛选">
         <option value="">问题分类</option>
       </select>
-      <select id="filterSource" style="width:150px">
+      <select id="filterSource" style="width:150px" aria-label="按来源筛选">
         <option value="">来源</option>
         <option value="AUTO">AUTO 沉淀</option>
         <option value="MANUAL">MANUAL 人工</option>
@@ -243,7 +243,7 @@
     <table class="pcr-table">
       <thead>
         <tr>
-          <th style="width:45px"><input type="checkbox" id="selectAll" onchange="onSelectAll(this.checked)"></th>
+          <th style="width:45px"><input type="checkbox" id="selectAll" onchange="onSelectAll(this.checked)" aria-label="全选当前筛选结果"></th>
           <th style="width:150px">工具</th>
           <th style="min-width:240px">规则 ID</th>
           <th style="width:150px">问题分类</th>
@@ -258,7 +258,7 @@
     </table>
     <div class="pcr-pagination">
       <span class="pcr-total" id="pageTotal"></span>
-      <select id="pageSize" onchange="onPageSizeChange(this.value)" style="height:28px;font-size:13px;border:1px solid #d0d7de;border-radius:4px;">
+      <select id="pageSize" onchange="onPageSizeChange(this.value)" style="height:28px;font-size:13px;border:1px solid #d0d7de;border-radius:4px;" aria-label="每页条数">
         <option value="10">10 条/页</option>
         <option value="20">20 条/页</option>
         <option value="50">50 条/页</option>
@@ -498,11 +498,11 @@ function render() {
     tbody.innerHTML = paged.map(row => `
       <tr>
         <td><input type="checkbox" ${selectedIds.has(row.id) ? 'checked' : ''} onchange="onRowCheck('${row.id}', this.checked)"></td>
-        <td>${row.tool}</td>
-        <td>${row.ruleId}</td>
+        <td>${esc(row.tool)}</td>
+        <td>${esc(row.ruleId)}</td>
         <td>${pillHtml(row.problemCategory)}</td>
         <td>${sourceHtml(row.source)}</td>
-        <td class="cell-dim">${row.createdBy || '—'}</td>
+        <td class="cell-dim">${esc(row.createdBy) || '—'}</td>
         <td class="cell-dim">${row.createdAt}</td>
         <td class="cell-dim">${row.updatedAt}</td>
         <td>
@@ -649,7 +649,7 @@ function submitDelete(id) {
     return;
   }
   showConfirm(
-    `<span class="warn-icon">⚠</span>确定删除 <b>${row.tool} / ${row.ruleId}</b>（${categoryLabel(row.problemCategory)}）的映射吗？删除后存量告警将按「未分类」重算。`
+    `<span class="warn-icon">⚠</span>确定删除 <b>${esc(row.tool)} / ${esc(row.ruleId)}</b>（${categoryLabel(row.problemCategory)}）的映射吗？删除后存量告警将按「未分类」重算。`
   ).then(ok => {
     if (!ok) return;
     RULE_ROWS = RULE_ROWS.filter(item => item.id !== row.id);
@@ -756,7 +756,7 @@ function onImportFileChange(input) {
   document.getElementById('importSubmitBtn').disabled = !importFileChosen;
   if (importFileChosen) {
     document.getElementById('uploadBox').innerHTML =
-      `<b style="color:#1a7f37">已选择：${input.files[0].name}</b>
+      `<b style="color:#1a7f37">已选择：${esc(input.files[0].name)}</b>
        <div class="pcr-upload-tip">Demo 不做真实文件解析，点击导入将写入下方示例数据。</div>`;
   }
 }
@@ -766,12 +766,12 @@ function renderImportSamples(imported) {
     if (imported) {
       const exists = RULE_ROWS.some(r => r.tool === row.tool && r.ruleId.toLowerCase() === row.ruleId.toLowerCase());
       resultHtml = exists ? '<span class="skip-mark">跳过（已存在）</span>' : '<span class="ok-mark">成功</span>';
-    } else if (row.ruleId === 'no-eval') {
+    } else if (RULE_ROWS.some(r => r.tool === row.tool && r.ruleId.toLowerCase() === row.ruleId.toLowerCase())) {
       resultHtml = '<span class="skip-mark">冲突 → 将跳过</span>';
     } else {
       resultHtml = '将新增';
     }
-    return `<tr><td>${row.tool}</td><td>${row.ruleId}</td><td>${pillHtml(row.problemCategory)}</td><td>${resultHtml}</td></tr>`;
+    return `<tr><td>${esc(row.tool)}</td><td>${esc(row.ruleId)}</td><td>${pillHtml(row.problemCategory)}</td><td>${resultHtml}</td></tr>`;
   }).join('');
 }
 function submitImport() {
@@ -794,6 +794,12 @@ function submitImport() {
 }
 
 /* ============================= 工具函数 ============================= */
+function esc(s) {
+  // HTML 转义：所有用户输入插值（tool / ruleId / createdBy / 文件名等）拼入 innerHTML 前统一转义，防 XSS
+  return String(s ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[ch]));
+}
 function formatNow() {
   const d = new Date();
   const pad = n => String(n).padStart(2, '0');

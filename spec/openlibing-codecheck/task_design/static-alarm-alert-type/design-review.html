@@ -109,8 +109,8 @@
     </table>
     <div class="note"><b>三分类对齐 SonarQube 质量模型三值简化版</b>（Vulnerability 与 Security Hotspot 统一归 security）。<b>MECE 设计要点：</b>① 互斥单值——一条告警只有一个 alert_type，统计占比之和恒 100%，<code>GROUP BY alert_type</code> 直接可用；② 完备无兜底桶——三类覆盖全部告警空间，拼写 / 文档 / 格式类告警均属典型 code_smell，纯度量类输出（圈复杂度数值等）不属于告警不进表；③ 冲突裁决——规则同时命中多类信号按 <code>security &gt; bug &gt; code_smell</code> 优先级取主类型。</div>
     <h3>判别决策树（README 1.1.2.2，映射表编写与评审统一依据）</h3>
-    <pre>1. 运行时确凿/大概率出错？  ──►  bug
-2. 存在安全风险？            ──►  security      <span class="cm">// 多信号命中按 security &gt; bug &gt; code_smell 裁决</span>
+    <pre>1. 存在安全风险？            ──►  security      <span class="cm">// 多信号命中按 security &gt; bug &gt; code_smell 裁决</span>
+2. 运行时确凿/大概率出错？  ──►  bug
 3. 其余                      ──►  code_smell   <span class="cm">// 完备兜底</span></pre>
     <h3>边界规则（README 1.1.2.2，写入映射评审基准防歧义）</h3>
     <table class="t">
@@ -162,7 +162,9 @@ alerts 告警表（仅存告警事实数据）新增字段 <b>alert_type</b>   <
     <h3>3. 三层判别流水线（README 1.2.2.1 ~ 1.2.2.3）</h3>
     <pre><span class="cm"># 分类伪代码（README 1.2.2.3）</span>
 def classify(alert, tool_registry, rule_mapping):
-    tool = tool_registry[alert.tool]
+    tool = tool_registry.get(alert.tool)
+    if tool is None:
+        return "code_smell"                  <span class="cm"># 未注册工具（新工具首报 / 别名差异 / 落位表遗漏）兜底，不抛异常</span>
 
     <span class="cm"># L1: 工具级定型（固定类型工具全量同型，短路后续层级）</span>
     if tool.default_alert_type != "mixed":
@@ -221,7 +223,7 @@ def classify(alert, tool_registry, rule_mapping):
     </table>
     <div class="note">code_smell 组内 8 个格式化器 / 调度框架（Prettier、ClangFormat、Google-Java-Format、Scalafmt、Rustfmt、Shfmt、StyLua、Spotless）不产生 SARIF 静态告警，注册仅保持口径完备。</div>
 
-    <h3><span class="pill l2">L2/L3</span>混合工具（default_alert_type = mixed，12 工具）</h3>
+    <h3><span class="pill l2">L2/L3</span>混合工具（default_alert_type = mixed，13 工具）</h3>
     <table class="t">
       <tr><th style="width:150px">工具</th><th style="width:260px">rule_pattern（正则）</th><th style="width:120px">alert_type</th><th>说明</th></tr>
       <tr><td>CodeQL<span class="tag-adjust">已调整</span></td><td><code>tags_pattern: ^correctness$</code> ｜ 其余非安全标签及无 tags catch-all</td><td>bug ｜ code_smell</td><td>官方 query-metadata-style-guide：correctness = detect incorrect program behavior（语义对齐 bug，与 Clippy correctness 组同口径）；经 <code>mappings/codeql.yml</code> <code>tags_pattern</code> 维度定型，承接 L2 放行的非安全告警；安全查询已在 L2 判 security 不进本表</td></tr>
@@ -236,6 +238,7 @@ def classify(alert, tool_registry, rule_mapping):
       <tr><td>Golangci-Lint<span class="tag-adjust">已调整</span></td><td><code>^G[1-6]\d{2}$</code> ｜ <code>^gosec$</code> / <code>^(gas|gitleaks|detect-secrets)$</code> ｜ <code>^(nosec|password|credential|secret)[a-z-]*$</code> ｜ 其余 linter</td><td>security ｜ security ｜ security ｜ code_smell</td><td>物料实测 ruleId 双形态：启用 gosec 时按 Gxxx 编码上报（README 口径）｜ 安全 linter 名 ｜ 凭据 / 密钥类规则名前缀防御 ｜ 其余 linter 暂不细分落兜底，按 linter 分组逐步细化</td></tr>
       <tr><td>SpotBugs<span class="tag-adjust">已调整</span></td><td>FindSecBugs bug pattern 全量清单（144 条精确正则，见 README 1.2.2.5.2） ｜ 其余 bug pattern</td><td>security ｜ bug</td><td>源自 FindSecBugs 官方 findbugs.xml 全部 category="SECURITY" pattern，逐条 <code>^&lt;pattern&gt;$</code> 精确匹配，初始化时全量导入 ｜ SpotBugs 本身为缺陷检测器</td></tr>
       <tr><td>PMD<span class="tag-adjust">已调整</span></td><td>security category ｜ errorprone / multithreading category ｜ 其余 category</td><td>security ｜ bug ｜ code_smell</td><td>按 <code>rules[].properties.ruleset</code> 筛选 ｜ 按 <code>rules[].properties.ruleset</code> 筛选 ｜ 按 <code>rules[].properties.ruleset</code> 筛选</td></tr>
+      <tr><td>CodeArts Check<span class="tag-adjust">已补充</span></td><td>安全类 402 条 <code>^&lt;criterion-uuid&gt;$</code> ｜ 缺陷类 877 条 <code>^&lt;criterion-uuid&gt;$</code> ｜ 其余（代码坏味道 9203 条）catch-all</td><td>security ｜ bug ｜ code_smell</td><td>SARIF ruleId 为 Criterion UUID，按规则清单（criterions API v2, tool_version=202306）逐条枚举 <code>mappings/codearts-check.yml</code>（L3 规则级维护，合计 1280 行）；安全类 / 缺陷类由清单判定依据（criterionType / apiCategory）定型，代码坏味道为兜底类不逐条枚举由 catch-all 承接；新规则接入按清单补行走 MR</td></tr>
     </table>
 
     <h3>口径数据变更治理（README 1.2.2.6）</h3>

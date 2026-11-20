@@ -42,8 +42,8 @@ docs 仓 static-code-analysis/solutions/full-analysis/alert-type/
 ### 2.2 判别决策树与裁决规则
 
 ```text
-1. 运行时确凿/大概率出错？  → bug
-2. 存在安全风险？           → security
+1. 存在安全风险？           → security   # 多信号命中按 security > bug > code_smell 裁决
+2. 运行时确凿/大概率出错？  → bug
 3. 其余                     → code_smell
 ```
 
@@ -90,7 +90,9 @@ docs 仓 static-code-analysis/solutions/full-analysis/alert-type/
 
 ```python
 def classify(alert, tool_registry, rule_mapping):
-    tool = tool_registry[alert.tool]
+    tool = tool_registry.get(alert.tool)
+    if tool is None:
+        return "code_smell"                  # 未注册工具（新工具首报/别名差异/落位表遗漏）兜底，不抛异常
     if tool.default_alert_type != "mixed":          # L1 工具级短路
         return tool.default_alert_type
     tags = [t.lower() for t in alert.rule_properties.get("tags", [])]
@@ -118,10 +120,10 @@ def classify(alert, tool_registry, rule_mapping):
 static-code-analysis/solutions/full-analysis/alert-type/
 ├── README.md          # 目录说明：口径定义、判别决策树、治理流程、文件规范
 ├── tools.yml          # 工具注册数据（default_alert_type、enabled 等）
-└── mappings/          # 规则映射，按工具一文件（12 个混合工具）
+└── mappings/          # 规则映射，按工具一文件（13 个混合工具）
     ├── codeql.yml / clang-tidy.yml / cppcheck.yml / eslint.yml / typescript-eslint.yml
     ├── ruff.yml / pylint.yml / clippy.yml / golangci-lint.yml / spotbugs.yml
-    ├── pmd.yml / shellcheck.yml
+    ├── pmd.yml / shellcheck.yml / codearts-check.yml
     └── ...
 ```
 
@@ -135,23 +137,24 @@ static-code-analysis/solutions/full-analysis/alert-type/
 
 完整逐条穷举清单以 `mappings/*.yml` 与 [design-review.html](./design-review.html) 第五章为准，此处仅录落位策略：
 
-| 工具                                                                                                                                                                                  | 落位策略                                                                                                                                      | 定型       |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| Bandit / Gosec / Gitleaks / Detect-Secrets                                                                                                                                            | L1 固定                                                                                                                                       | security   |
-| Mypy / ErrorProne                                                                                                                                                                     | L1 固定                                                                                                                                       | bug        |
-| Prettier / ClangFormat / Google-Java-Format / Scalafmt / Rustfmt / Shfmt / StyLua / Spotless / Checkstyle / Markdownlint / Xmrlint / Codespell / Typos / Luacheck / Scalafix（15 个） | L1 固定                                                                                                                                       | code_smell |
-| CodeQL                                                                                                                                                                                | L2 安全标签先行；L3 `tags_pattern: ^correctness$` → bug + catch-all → code_smell                                                              | 混合       |
-| Ruff                                                                                                                                                                                  | 61 个官方前缀逐行穷尽，按官方 group 多数派定型（885 条全覆盖）                                                                                | 混合       |
-| Pylint                                                                                                                                                                                | 前缀：`^E` / `^F` → bug；`^(C\|W\|R\|I)` → code_smell                                                                                         | 混合       |
-| ESLint                                                                                                                                                                                | `^security/` 插件 15 条 + 核心安全白名单 21 条 → security；`meta.type = problem` → bug；其余 → code_smell（物料 727 行落盘）                  | 混合       |
-| TypeScript-ESLint                                                                                                                                                                     | SARIF ruleId 裸名逐规则穷举（194 行）：镜像核心白名单 2 条 security；problem 类 → bug；suggestion/deprecated 类 → code_smell                  | 混合       |
-| Clang-Tidy                                                                                                                                                                            | `^cert-`、`^clang-analyzer-security\.` → security；bugprone/concurrency/clang-analyzer/clang-diagnostic → bug；其余 18+ 模块前缀 → code_smell | 混合       |
-| Cppcheck                                                                                                                                                                              | `^cert-` → security；level error/warning → bug；style/performance/portability/information/debug → code_smell                                  | 混合       |
-| ShellCheck                                                                                                                                                                            | level error/warning → bug；style/info → code_smell                                                                                            | 混合       |
-| Clippy                                                                                                                                                                                | 逐规则穷举 872 行（`^clippy::<lint>$`）：correctness/suspicious 154 条 → bug；其余 7 组 + legacy → code_smell                                 | 混合       |
-| Golangci-Lint                                                                                                                                                                         | `^G[1-6]\d{2}$`（gosec 编码）+ 安全 linter 名/凭据类前缀 → security；其余 linter 兜底 code_smell                                              | 混合       |
-| SpotBugs                                                                                                                                                                              | FindSecBugs SECURITY pattern 144 条精确正则 → security；其余 pattern → bug                                                                    | 混合       |
-| PMD                                                                                                                                                                                   | ruleset：security → security；errorprone/multithreading → bug；其余 → code_smell                                                              | 混合       |
+| 工具                                                                                                                                                                                  | 落位策略                                                                                                                                                   | 定型       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Bandit / Gosec / Gitleaks / Detect-Secrets                                                                                                                                            | L1 固定                                                                                                                                                    | security   |
+| Mypy / ErrorProne                                                                                                                                                                     | L1 固定                                                                                                                                                    | bug        |
+| Prettier / ClangFormat / Google-Java-Format / Scalafmt / Rustfmt / Shfmt / StyLua / Spotless / Checkstyle / Markdownlint / Xmrlint / Codespell / Typos / Luacheck / Scalafix（15 个） | L1 固定                                                                                                                                                    | code_smell |
+| CodeQL                                                                                                                                                                                | L2 安全标签先行；L3 `tags_pattern: ^correctness$` → bug + catch-all → code_smell                                                                           | 混合       |
+| Ruff                                                                                                                                                                                  | 61 个官方前缀逐行穷尽，按官方 group 多数派定型（885 条全覆盖）                                                                                             | 混合       |
+| Pylint                                                                                                                                                                                | 前缀：`^E` / `^F` → bug；`^(C\|W\|R\|I)` → code_smell                                                                                                      | 混合       |
+| ESLint                                                                                                                                                                                | `^security/` 插件 15 条 + 核心安全白名单 21 条 → security；`meta.type = problem` → bug；其余 → code_smell（物料 727 行落盘）                               | 混合       |
+| TypeScript-ESLint                                                                                                                                                                     | SARIF ruleId 裸名逐规则穷举（194 行）：镜像核心白名单 2 条 security；problem 类 → bug；suggestion/deprecated 类 → code_smell                               | 混合       |
+| Clang-Tidy                                                                                                                                                                            | `^cert-`、`^clang-analyzer-security\.` → security；bugprone/concurrency/clang-analyzer/clang-diagnostic → bug；其余 18+ 模块前缀 → code_smell              | 混合       |
+| Cppcheck                                                                                                                                                                              | `^cert-` → security；level error/warning → bug；style/performance/portability/information/debug → code_smell                                               | 混合       |
+| ShellCheck                                                                                                                                                                            | level error/warning → bug；style/info → code_smell                                                                                                         | 混合       |
+| Clippy                                                                                                                                                                                | 逐规则穷举 872 行（`^clippy::<lint>$`）：correctness/suspicious 154 条 → bug；其余 7 组 + legacy → code_smell                                              | 混合       |
+| Golangci-Lint                                                                                                                                                                         | `^G[1-6]\d{2}$`（gosec 编码）+ 安全 linter 名/凭据类前缀 → security；其余 linter 兜底 code_smell                                                           | 混合       |
+| SpotBugs                                                                                                                                                                              | FindSecBugs SECURITY pattern 144 条精确正则 → security；其余 pattern → bug                                                                                 | 混合       |
+| PMD                                                                                                                                                                                   | ruleset：security → security；errorprone/multithreading → bug；其余 → code_smell                                                                           | 混合       |
+| CodeArts Check                                                                                                                                                                        | Criterion UUID 逐条枚举 1280 行（`mappings/codearts-check.yml`）：安全类 402 条 → security；缺陷类 877 条 → bug；代码坏味道 9203 条 catch-all → code_smell | 混合       |
 
 ### 4.3 变更治理（MR 流程）
 
