@@ -20,9 +20,10 @@ sbom-action 插件当前输出结果只有任务 ID（taskId），使用者无�
   - productType 缺省：现有 coderepo `queryProjectNames(gitUrl)` 链路回填 productType 后，同样经 framework 接口按最终 productType 反查
 - `projectId` 为硬依赖：反查失败 / 未命中 → 抛 `AddProductException`，上报失败（无降级）
 - 域名配置复用既有 `sbom.service.website.domain`（Nacos 配置 `https://www.openlibing.com`）；域名未配置时 `detailLink` 为 null 并 warn（不阻塞上报，projectId 校验已在前）
+- 遗留查询接口 `GET /apig-api/querySbomPublishResult` 的 `sbomRef` 同步升级：替换旧 `#/sbomPackages` hash 链接为同一 sbomManage 地址 pattern（复用 projectId 反查）；反查失败 / domain 缺失时 `sbomRef=null` 并 warn（查询接口软降级，`success/finish` 不受影响）
 - sbom-action 插件：
   - 新增 outputs：`detail-link` / `package-count` / `relationship-count`（编程取数）
-  - GitCode 输出面板（ATOMGIT_OUTPUT，对齐 code-metrics-action）：概览组（任务ID / 包数量 / 关系数量）+ 链接组（`产物详情url=<detailLink>`，key 以 url 结尾渲染为可点击链接行）；面板不展示 SBOM 文件路径
+  - GitCode 输出面板（ATOMGIT_OUTPUT，对齐 code-metrics-action）：概览组（任务ID / 包数量 / 关系数量）+ 链接组（`SBOM查询url=<detailLink>`，key 以 url 结尾渲染为可点击链接行）；面板不展示 SBOM 文件路径
   - 包数量 / 关系数量复用插件本地 SPDX JSON 已有统计逻辑（从"仅日志"提升为输出）
   - `detailLink` 输出前过 sanitize 防换行注入
   - STEP_OUTPUT 现有可读行保留不动（向后兼容）
@@ -34,7 +35,7 @@ sbom-action 插件当前输出结果只有任务 ID（taskId），使用者无�
 ## 不做
 
 - 不修改 framework / coderepo 服务端代码（仅 sbom-web 侧新增 feign 方法声明）
-- 不修改遗留 `getSbomPublishResult` 的 `sbomRef` 链接（`#/sbomPackages` 旧 pattern 暂不动，另需求处理）
+- 旧 hash 页 `#/sbomPackages` 前端路由与页面本身不动（仅后端不再生成指向它的链接）
 - 不修改前端详情页（列表页点击进详情为现有交互）
 - 不修改 sbom-action 的 STEP_OUTPUT 既有输出键
 - 软件成分数据区筛选、列表排序、分页状态不做 URL 参数化（URL 只承载制品信息表筛选）
@@ -45,7 +46,8 @@ sbom-action 插件当前输出结果只有任务 ID（taskId），使用者无�
 - [ ] 显式 productType 与 productType 缺省两条路径均能返回带 projectId 的 detailLink
 - [ ] projectType 反查 framework 未命中或 feign 异常时，`addAndPublishProduct` 抛 `AddProductException` 失败
 - [ ] 域名配置缺失时响应 `detailLink=null`，上报流程正常完成
-- [ ] 插件任务结果面板展示：链接表（产物详情url，可点击/复制）+ 指标表（任务ID、包数量、关系数量），不含 SBOM 文件路径
+- [ ] `querySbomPublishResult` 任务完成时 `sbomRef` 为新地址格式（含 projectId）；反查失败或 domain 缺失时 `sbomRef=null`，`success/finish` 正常返回
+- [ ] 插件任务结果面板展示：链接表（SBOM查询url，可点击/复制）+ 指标表（任务ID、包数量、关系数量），不含 SBOM 文件路径
 - [ ] 插件编程 outputs 含 detail-link / package-count / relationship-count
 - [ ] 浏览器打开 `{domain}/apps/sbomManage?projectId=3&name=xxx`：项目上下文恢复（壳层 guard），制品表自动过滤并选中对应制品，软件成分数据联动展示；点击行内 name / 其他制品行可切换（现有交互）
 - [ ] 打开带扩展筛选参数的 URL（如 `&branch=master&vulInclude=HIGH`）：制品表按参数自动填充筛选并查询；未知字段名/非法枚举参数被忽略

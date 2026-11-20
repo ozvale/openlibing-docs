@@ -28,11 +28,14 @@ addAndPublishProduct ──────────────▶ ApigControlle
                                          ├─ buildDetailLink(projectId, productName) （新增）
                                          │    {sbom.service.website.domain}/apps/sbomManage
                                          │      ?projectId=<id>&name=<URLEncode(name)>
-                                         └─ publishSbom(...) → taskId           （现有）
+                                         ├─ publishSbom(...) → taskId           （现有）
+                                         └─ getSbomPublishResult(遗留查询)：sbomRef
+                                              同步升级同一 pattern（projectId 软反查，
+                                              失败 → sbomRef=null，不阻塞查询）
                                      ◀── PublishSbomResponse{success,taskId,detailLink}
   输出:
     core.setOutput detail-link/package-count/relationship-count
-    ATOMGIT_OUTPUT 概览组 + 链接组(产物详情url=…) ← GitCode 结果面板
+    ATOMGIT_OUTPUT 概览组 + 链接组(SBOM查询url=…) ← GitCode 结果面板
     sanitize(detailLink) 防换行注入
 
 openlibing-web(零服务端改动)
@@ -53,21 +56,23 @@ openlibing-web(零服务端改动)
 | D3  | 落地页形态                                   | 列表页 `/apps/sbomManage?projectId=&name=` + name 参数定位，点击行内 name 进详情                                                                                                                                                                                                                                                                                      | 详情直连页 `/apps/sbomManageDetail` 需 packageId 且路由当前不存在；对齐用户指定交互                                                                                                                                                                                                                                                              |
 | D4  | 返回值承载                                   | `SbomService.addAndPublishProduct` 返回类型 UUID → `AddAndPublishResult(UUID taskId, String detailLink)`（新 record，model 模块）；`PublishSbomResponse` 新增 `detailLink` 字段                                                                                                                                                                                       | service 层持有 projectId/productName，URL 在 service 层拼好传出；调用方仅 ApigController 一处                                                                                                                                                                                                                                                    |
 | D5  | URL 筛选参数化                               | 制品表筛选参数 URL 化并双向同步。读：onMounted 解析 `name`（单值，detailLink 场景）/`names`/attr 动态字段名（branch、softwareName、version 等）/`scanStatus`/`vulInclude`/`vulExclude` 初始化 productFilters 后统一触发查询；写：筛选变化时 `router.replace` 写回 query（保留 projectId 等壳层参数，空筛选删除对应 key）；多值逗号分隔，scanStatus 组值内逗号冲突用 ` | ` 分隔多组；names 多值时仅筛选不自动选中                                                                                                                                                                                                                                                                                                         | 用户提出的额外增强：分享/跳转可携带筛选状态（分支、待闭环漏洞级别等）；detailLink 生成侧仍只带 projectId+name 保持最简；软件成分数据区筛选、排序、分页不 URL 化（避免状态爆炸） |
+| D6  | 遗留 querySbomPublishResult 的 sbomRef 升级  | `sbomRef` 换用 `SBOM_DETAIL_PAGE_URL_PATTERN` 新地址，projectId 复用 `resolvePlatformProjectId` 反查，但采用**软降级**（反查失败/domain 缺失 → `sbomRef=null` + warn，`success/finish` 不受影响）；删除旧常量 `PACKAGE_LIST_PAGE_URL_PATTERN`（唯一调用方即该路径）                                                                                                   | 查询接口主 payload 是 success/finish，sbomRef 为辅助信息，硬失败会把 framework 故障放大到存量流水线结果查询；与发布路径「projectId 硬依赖」的差异：publish 必须保证链接可得才允许上报成功，查询允许无链接降级                                                                                                                                    |
 
 ## 4. 修改清单（按模块）
 
 ### openlibing-sbom（后端）
 
-| 文件                                                    | 变更                                                                                                    |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `clients/.../feign/FrameworkClient.java`                | 新增 `getProject(projectName, pageNum, pageSize)` → `GET /internal-server/get-project`                  |
-| `model/.../pojo/response/sbom/PublishSbomResponse.java` | 新增 `detailLink` 字段（getter/setter/toString）                                                        |
-| `model/.../pojo/response/sbom/AddAndPublishResult.java` | 新增 record（taskId + detailLink）                                                                      |
-| `model/.../constants/SbomConstants.java`                | 新增 `SBOM_DETAIL_PAGE_URL_PATTERN = "%s/apps/sbomManage?projectId=%s&name=%s"`                         |
-| `sbom-web/.../service/sbom/SbomService.java`            | `addAndPublishProduct` 返回类型改为 `AddAndPublishResult`                                               |
-| `sbom-web/.../service/sbom/impl/SbomServiceImpl.java`   | `addAndPublishProduct`：注入 domain 配置；新增 `resolvePlatformProjectId` / `buildDetailLink`；组装返回 |
-| `sbom-web/.../controller/ApigController.java`           | `addAndPublishProduct` 端点：响应填充 `detailLink`                                                      |
-| `sbom-web/src/test/.../SbomServiceImplTest.java`        | 新增 detailLink 场景 UT                                                                                 |
+| 文件                                                    | 变更                                                                                                                                                                             |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `clients/.../feign/FrameworkClient.java`                | 新增 `getProject(projectName, pageNum, pageSize)` → `GET /internal-server/get-project`                                                                                           |
+| `model/.../pojo/response/sbom/PublishSbomResponse.java` | 新增 `detailLink` 字段（getter/setter/toString）                                                                                                                                 |
+| `model/.../pojo/response/sbom/AddAndPublishResult.java` | 新增 record（taskId + detailLink）                                                                                                                                               |
+| `model/.../constants/SbomConstants.java`                | 新增 `SBOM_DETAIL_PAGE_URL_PATTERN = "%s/apps/sbomManage?projectId=%s&name=%s"`；删除 `PACKAGE_LIST_PAGE_URL_PATTERN`（唯一调用方升级后无引用）                                  |
+| `utils/.../UrlUtil.java`                                | `generateSbomUrl` 改用新 pattern 并增加 projectId 参数；productName 先 URLDecoder.decode（兼容存量库内编码值）再 URLEncoder.encode                                               |
+| `sbom-web/.../service/sbom/SbomService.java`            | `addAndPublishProduct` 返回类型改为 `AddAndPublishResult`                                                                                                                        |
+| `sbom-web/.../service/sbom/impl/SbomServiceImpl.java`   | `addAndPublishProduct`：注入 domain 配置；新增 `resolvePlatformProjectId` / `buildDetailLink`；组装返回。`getSbomPublishResult`：完成分支 sbomRef 接入 projectId 软反查 + 新链接 |
+| `sbom-web/.../controller/ApigController.java`           | `addAndPublishProduct` 端点：响应填充 `detailLink`                                                                                                                               |
+| `sbom-web/src/test/.../SbomServiceImplTest.java`        | 新增 detailLink 场景 UT + `getSbomPublishResult` 升级场景 UT（新链接格式 / 软降级 sbomRef=null）                                                                                 |
 
 ### sbom-action（插件）
 
@@ -96,20 +101,24 @@ openlibing-web(零服务端改动)
 | 插件读取 detailLink 为 null                       | 面板不输出链接行，仅概览组（对齐 code-metrics「无链接不输出」约定）        |
 | URL 筛选参数含未知字段名 / 非法枚举值             | 忽略该参数（不进入筛选），页面正常加载                                     |
 | URL 筛选参数与首屏默认查询并发                    | onMounted 解析完成后仅触发一次查询，不重复请求                             |
+| querySbomPublishResult：framework 反查失败/未命中 | `sbomRef=null` + warn，`success/finish` 正常返回（软降级，不阻塞查询）     |
+| querySbomPublishResult：domain 未配置             | 同上 `sbomRef=null`                                                        |
+| 存量 productName 在库内为 URL 编码值              | generateSbomUrl 先 decode 再 encode，链接 name 形态与 detailLink 一致      |
 
 ## 6. 测试策略
 
-- **UT（sbom-web）**：`SbomServiceImplTest` 新增用例——两路径 detailLink 组装、URLEncode、framework 未命中抛异常、feign 异常传播、domain 缺失 detailLink=null、already-exists 容忍路径仍返回 detailLink。
+- **UT（sbom-web）**：`SbomServiceImplTest` 新增用例——两路径 detailLink 组装、URLEncode、framework 未命中抛异常、feign 异常传播、domain 缺失 detailLink=null、already-exists 容忍路径仍返回 detailLink；另补 `getSbomPublishResult` 升级用例（新链接格式 / 反查失败软降级 / success·finish 不受影响）。
 - **插件**：`node --check`；本地模拟响应断言输出行；`ncc build` 后 diff dist。
 - **前端**：ESLint；浏览器手工验证 query 参数筛选定位与写回（name 单值选中联动；branch/vulInclude 多参数组合筛选；筛选变化后 URL 同步且保留 projectId；design-review.html 提供 mockup 预演）。
-- **联调**：test 环境配置 Nacos `sbom.service.website.domain=https://www.openlibing.com` 后端到端验证（链接可打开、项目上下文正确、列表定位、点击进详情）。
+- **联调**：test 环境配置 Nacos `sbom.service.website.domain=https://www.openlibing.com` 后端到端验证（链接可打开、项目上下文正确、列表定位、点击进详情；`querySbomPublishResult` 返回新 sbomRef 且可打开）。
 
 ## 7. 风险
 
-| 风险                                                                     | 等级 | 缓解                                                                    |
-| ------------------------------------------------------------------------ | ---- | ----------------------------------------------------------------------- |
-| `/internal-server/get-project` 对 feign 直连的鉴权拦截（现网拦截器行为） | 低   | 与现有 `checkPermissionByProductType` 同前缀同鉴权域；联调首验此调用    |
-| project_info 存在同名重复项目（无唯一约束）                              | 低   | 精确匹配 + pageSize=1 取首条；出现重复属平台数据治理问题，warn 日志暴露 |
-| Nacos 域名配置缺失/错误导致链接不可用                                    | 中   | detailLink=null 不阻塞上报；发布检查项加入配置核对                      |
-| GitCode 面板对 ATOMGIT_OUTPUT 渲染分组规则变化                           | 低   | 行为对齐 code-metrics-action 线上实际效果，随其回归                     |
-| `addAndPublishProduct` 签名变更影响未知调用方                            | 低   | 全仓检索仅 ApigController 一处调用                                      |
+| 风险                                                                     | 等级 | 缓解                                                                                                                             |
+| ------------------------------------------------------------------------ | ---- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `/internal-server/get-project` 对 feign 直连的鉴权拦截（现网拦截器行为） | 低   | 与现有 `checkPermissionByProductType` 同前缀同鉴权域；联调首验此调用                                                             |
+| project_info 存在同名重复项目（无唯一约束）                              | 低   | 精确匹配 + pageSize=1 取首条；出现重复属平台数据治理问题，warn 日志暴露                                                          |
+| Nacos 域名配置缺失/错误导致链接不可用                                    | 中   | detailLink=null 不阻塞上报；发布检查项加入配置核对                                                                               |
+| GitCode 面板对 ATOMGIT_OUTPUT 渲染分组规则变化                           | 低   | 行为对齐 code-metrics-action 线上实际效果，随其回归                                                                              |
+| `addAndPublishProduct` 签名变更影响未知调用方                            | 低   | 全仓检索仅 ApigController 一处调用                                                                                               |
+| querySbomPublishResult sbomRef 链接形态变化（旧 hash 链接失效）          | 低   | 全仓检索未发现 sbomRef 的程序化消费方（sbom-tools 仅消费 success/finish/taskId）；旧 hash 页路由保留，历史消息中的旧链接仍可访问 |

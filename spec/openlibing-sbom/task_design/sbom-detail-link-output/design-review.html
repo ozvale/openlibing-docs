@@ -102,12 +102,13 @@ code{background:#f3f4f6;border-radius:4px;padding:0 5px;font-size:12.5px}
     <li>详情落地页为平台 SBOM 页 <code>/apps/sbomManage?projectId=&amp;name=</code>：projectId 恢复项目上下文（壳层 guard 现有能力）；name 为新增支持参数——进入页面后自动按制品名过滤并<b>选中该制品，直接展示其软件成分数据</b>（"打开某个制品的数据"）。</li>
     <li>展示形态对齐 code-metrics-action 的任务结果面板（链接表 + 指标表），并输出包数量 / 关系数量（复用插件本地 SPDX 统计）。</li>
     <li>额外增强（用户追加）：sbomManage 页制品表筛选参数 <b>URL 化并双向同步</b>——读：URL 携带筛选参数（name / names / 分支等 attr 动态字段 / 解析状态 / 待闭环漏洞级别包含·排除）进入页面自动筛选；写：页面筛选变化时 <code>router.replace</code> 写回 URL，复制链接即可分享当前筛选状态（分支、待闭环漏洞数等）。</li>
+    <li>遗留查询接口 <code>querySbomPublishResult</code> 的 sbomRef 仍指向旧 hash 页 <code>#/sbomPackages</code>——本次一并升级为同一 sbomManage 地址（projectId 反查失败时 sbomRef 置空软降级，不影响 success/finish），统一跳转入口。</li>
   </ul>
 </div>
 
 <h2>二、UI 变化（可交互预演）</h2>
 <div class="card">
-  <p style="font-size:13px">变化点：<span class="tag new">新增</span>任务结果面板「链接」表 + 「包数量 / 关系数量」指标行 &nbsp;·&nbsp; <span class="tag new">新增</span>列表页筛选参数 URL 双向同步（读：URL 自动过滤 + 单值 name 选中制品；写：筛选变化 router.replace 写回）&nbsp;·&nbsp; <span class="tag keep">不变</span>STEP_OUTPUT 既有行 / 页面其余交互 / 软件成分数据区内容</p>
+  <p style="font-size:13px">变化点：<span class="tag new">新增</span>任务结果面板「链接」表 + 「包数量 / 关系数量」指标行 &nbsp;·&nbsp; <span class="tag new">新增</span>列表页筛选参数 URL 双向同步（读：URL 自动过滤 + 单值 name 选中制品；写：筛选变化 router.replace 写回）&nbsp;·&nbsp; <span class="tag keep">不变</span>STEP_OUTPUT 既有行 / 页面其余交互 / 软件成分数据区内容 &nbsp;·&nbsp; <span class="tag new">升级</span>遗留 querySbomPublishResult 的 sbomRef 改指新页地址（API 行为，无 UI 变化）</p>
 
   <div class="mock">
     <div class="mock-bar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>&nbsp;Mockup 1 · GitCode 任务结果面板（sbom-action 步骤，对齐 code-metrics 展示效果）</div>
@@ -124,7 +125,7 @@ code{background:#f3f4f6;border-radius:4px;padding:0 5px;font-size:12.5px}
         <div class="sect">链接</div>
         <table>
           <tr><th style="width:30%">名称</th><th>链接</th><th style="width:14%">操作</th></tr>
-          <tr id="link-row"><td>产物详情url</td><td><a class="dlink" id="detail-link" href="#" onclick="fakeNav(event);return false">https://www.openlibing.com/apps/sbomManage?projectId=3&name=openlibing-sbom</a></td><td><button class="btn" onclick="copyLink()">复制链接</button></td></tr>
+          <tr id="link-row"><td>SBOM查询url</td><td><a class="dlink" id="detail-link" href="#" onclick="fakeNav(event);return false">https://www.openlibing.com/apps/sbomManage?projectId=3&name=openlibing-sbom</a></td><td><button class="btn" onclick="copyLink()">复制链接</button></td></tr>
           <tr id="link-row-none" style="display:none"><td colspan="3" style="color:var(--text-sub)">（domain 未配置 / detailLink=null 时：链接表整行不输出）</td></tr>
         </table>
         <div class="sect">其他</div>
@@ -213,6 +214,7 @@ code{background:#f3f4f6;border-radius:4px;padding:0 5px;font-size:12.5px}
     <tr><td>落地页形态（D3）</td><td>列表页 <code>?projectId=&amp;name=</code>：过滤 + 自动选中制品行，联动展示其软件成分数据</td><td>详情直连路由当前不存在；页面已有 @current-change 选中联动机制，复用成本最低</td></tr>
     <tr><td>契约承载（D4）</td><td>PublishSbomResponse 新增 detailLink；service 返回 AddAndPublishResult(taskId, detailLink)</td><td>纯增量字段向后兼容；调用方仅 ApigController 一处</td></tr>
     <tr><td>URL 筛选参数化（D5）</td><td>制品表筛选双向同步：读=onMounted 解析 <code>name</code>（单值，detailLink 场景）/<code>names</code>/attr 动态字段（branch、softwareName…）/<code>scanStatus</code>/<code>vulInclude</code>/<code>vulExclude</code> → 初始化筛选统一查询，单值 name 自动选中；写=筛选变化 <code>router.replace</code> 写回（保留 projectId 等壳层参数，空筛选删 key）；多值逗号分隔，scanStatus 组值内逗号冲突用 <code>|</code> 分隔；names 多值仅筛选不选中</td><td>用户增强诉求：分享/跳转可携带筛选状态（分支、待闭环漏洞级别等）；detailLink 生成侧仍只带 projectId+name 保持最简；成分区筛选/排序/分页不 URL 化避免状态爆炸</td></tr>
+    <tr><td>遗留接口 sbomRef 升级（D6）</td><td><code>querySbomPublishResult</code> 的 sbomRef 换用同一 sbomManage pattern，projectId 复用 resolvePlatformProjectId 反查；<b>软降级</b>：反查失败/domain 缺失 → sbomRef=null + warn，success/finish 不受影响；删除旧 pattern 常量（唯一调用方即该路径）</td><td>查询接口主 payload 是 success/finish，sbomRef 为辅助信息，硬失败会把 framework 故障放大到存量查询；publish 路径硬失败是因为必须保证链接可得才允许上报成功</td></tr>
   </table>
 </div>
 
@@ -227,6 +229,7 @@ code{background:#f3f4f6;border-radius:4px;padding:0 5px;font-size:12.5px}
     <tr><td>URL name 无匹配制品（已改名 / 未上报）</td><td><span class="badge b-low">低</span></td><td>筛选条空结果提示"暂无相关内容"，用户手动清除筛选即可（现有空态交互）</td></tr>
     <tr><td>GitCode 面板 ATOMGIT_OUTPUT 渲染规则变化</td><td><span class="badge b-low">低</span></td><td>行为对齐 code-metrics 线上实际效果，随其回归</td></tr>
     <tr><td>URL 写回与壳层参数（projectId 等）共存冲突</td><td><span class="badge b-low">低</span></td><td>router.replace 仅增删本页筛选 key，壳层参数原样保留；非法/未知参数值解析时忽略</td></tr>
+    <tr><td>querySbomPublishResult 的 sbomRef 链接形态变化（旧 hash 链接失效）</td><td><span class="badge b-low">低</span></td><td>全仓检索未发现 sbomRef 程序化消费方（sbom-tools 仅消费 success/finish/taskId）；旧 hash 页路由保留，历史消息旧链接仍可访问</td></tr>
   </table>
 </div>
 </div>
