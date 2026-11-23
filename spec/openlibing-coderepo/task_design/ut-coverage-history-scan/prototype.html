@@ -147,8 +147,8 @@
     <!-- ================= 视图2：历史扫描记录 ================= -->
     <div class="view" id="view-history">
       <div class="crumbs">
-        <span class="link" onclick="showView('branch')">←</span> <span>/</span>
-        <span class="link" onclick="showView('branch')">分支管理</span> <span>/</span>
+        <span class="link" role="button" tabindex="0" aria-label="返回分支管理" onclick="showView('branch')">←</span> <span>/</span>
+        <span class="link" role="button" tabindex="0" onclick="showView('branch')">分支管理</span> <span>/</span>
         <b>UT行覆盖率扫描记录</b>
       </div>
 
@@ -168,15 +168,16 @@
         <div class="pager" id="hist-pager"></div>
       </div>
       <div class="note">接口：POST <b>/ut/coverage/history</b>（repoId + branchName 分页），返回 retentionDays 供横幅渲染；记录 ID 全链路 String。</div>
-      <div class="urlbar" style="margin-top:12px"><span style="color:var(--text)">页面定位：</span><span>https://www.openlibing.com/apps/repos?<span class="k">projectId</span>=403256&amp;<span class="k">repoId</span>=823&amp;<span class="k"></span>branchName</span>=develop&amp;<span class="k">utCoverageHistory</span>=1</span></div>
+      <div class="note">演示入口（两条提示页在真实场景均由「直接打开链接」触发，而非列表点击）：<span class="link" role="button" tabindex="0" onclick="openDetail('1809999999999999','','0')">模拟刚受理即打开 → 处理中</span> ｜ <span class="link" role="button" tabindex="0" onclick="openDetail('1901111222333444','','0')">模拟旧分享链接 → 已清理</span></div>
+      <div class="urlbar" style="margin-top:12px"><span style="color:var(--text)">页面定位：</span><span>https://www.openlibing.com/apps/repos?<span class="k">projectId</span>=403256&amp;<span class="k">repoId</span>=823&amp;<span class="k">branchName</span>=develop&amp;<span class="k">utCoverageHistory</span>=1</span></div>
     </div>
 
     <!-- ================= 视图3：扫描详情 ================= -->
     <div class="view" id="view-detail">
       <div class="crumbs">
-        <span class="link" onclick="openHistory(currentRepo, currentBranch)">←</span> <span>/</span>
-        <span class="link" onclick="showView('branch')">分支管理</span> <span>/</span>
-        <span class="link" onclick="openHistory(currentRepo, currentBranch)">UT行覆盖率扫描记录</span> <span>/</span>
+        <span class="link" role="button" tabindex="0" aria-label="返回历史扫描记录" onclick="openHistory(currentRepo, currentBranch)">←</span> <span>/</span>
+        <span class="link" role="button" tabindex="0" onclick="showView('branch')">分支管理</span> <span>/</span>
+        <span class="link" role="button" tabindex="0" onclick="openHistory(currentRepo, currentBranch)">UT行覆盖率扫描记录</span> <span>/</span>
         <b>扫描详情</b>
       </div>
 
@@ -185,7 +186,7 @@
           <span>代码仓: <b id="detail-repo">openlibing-cicd</b></span>
           <span>分支: <b id="detail-branch">zw_ut_test</b></span>
           <span>扫描时间: <b id="detail-time">2026-11-17 03:27:41</b></span>
-          <span>来源: <b class="link" onclick="toast('演示：跳转流水线执行记录 ut-canner #5')">ut-canner #5</b></span>
+          <span>来源: <b class="link" role="button" tabindex="0" onclick="toast('演示：跳转流水线执行记录 ut-canner #5')">ut-canner #5</b></span>
           <span>提交: <b id="detail-commit" style="font-family:Consolas,monospace">a3f8c21e</b></span>
           <div style="margin-left:auto;display:flex;gap:8px">
             <button class="btn" onclick="openHistory(currentRepo, currentBranch)">🕘 历史扫描记录</button>
@@ -215,8 +216,8 @@
     <!-- ================= 视图4：已清理提示 ================= -->
     <div class="view" id="view-expired">
       <div class="crumbs">
-        <span class="link" onclick="openHistory(currentRepo, currentBranch)">←</span> <span>/</span>
-        <span class="link" onclick="openHistory(currentRepo, currentBranch)">UT行覆盖率扫描记录</span> <span>/</span> <b>扫描详情</b>
+        <span class="link" role="button" tabindex="0" aria-label="返回历史扫描记录" onclick="openHistory(currentRepo, currentBranch)">←</span> <span>/</span>
+        <span class="link" role="button" tabindex="0" onclick="openHistory(currentRepo, currentBranch)">UT行覆盖率扫描记录</span> <span>/</span> <b>扫描详情</b>
         <span style="margin-left:auto;color:#ff7b72">分享的旧链接，记录已被清理</span>
       </div>
 
@@ -233,8 +234,8 @@
     <!-- ================= 视图5：处理中提示（评审反馈补充） ================= -->
     <div class="view" id="view-pending">
       <div class="crumbs">
-        <span class="link" onclick="openHistory(currentRepo, currentBranch)">←</span> <span>/</span>
-        <span class="link" onclick="openHistory(currentRepo, currentBranch)">UT行覆盖率扫描记录</span> <span>/</span> <b>扫描详情</b>
+        <span class="link" role="button" tabindex="0" aria-label="返回历史扫描记录" onclick="openHistory(currentRepo, currentBranch)">←</span> <span>/</span>
+        <span class="link" role="button" tabindex="0" onclick="openHistory(currentRepo, currentBranch)">UT行覆盖率扫描记录</span> <span>/</span> <b>扫描详情</b>
         <span style="margin-left:auto;color:#d97706">扫描结果处理中</span>
       </div>
 
@@ -257,6 +258,8 @@
 <script>
 /* ============ 模拟数据 ============ */
 const RETENTION = 90;
+/* 保留天数单一来源（评审意见）：横幅/过期页文案由常量驱动渲染，改配置只动 RETENTION 一处 */
+['hist-retention', 'exp-retention'].forEach(id => { document.getElementById(id).textContent = RETENTION; });
 
 const branches = [
   { platform:'gitcode', repo:'openlibing-test/security-scan-test', branch:'main',   def:true,  alert:0, size:325,   cc:3.63, dup:1.95,  fileDup:'21.05%', totalDup:'100%',  ut:{line:'82.44%', recordId:'1926534123456789'}, user:'--',        time:'2026-10-31 03:27' },
@@ -307,9 +310,9 @@ function toast(msg) {
 /* ============ 视图1：分支列表 ============ */
 function renderBranches() {
   const tb = document.getElementById('branch-tbody');
-  tb.innerHTML = branches.map(b => {
+  tb.innerHTML = branches.map((b, i) => {
     const ut = b.ut
-      ? `<span class="metrics-link" onclick="openLatestDetail()">${b.ut.line}</span>`
+      ? `<span class="metrics-link" role="button" tabindex="0" onclick="openLatestDetail(${i})">${b.ut.line}</span>`
       : '--';
     const dash = v => v == null ? '--' : v;
     return `<tr>
@@ -331,10 +334,10 @@ function openHistory(repo, branch) {
   const tb = document.getElementById('hist-tbody');
   tb.innerHTML = historyRecords.map(r => `<tr>
     <td>${r.time}</td>
-    <td>${r.link ? `<span class="link" onclick="toast('演示：跳转流水线执行记录 ${r.src} #${r.num}')">${r.src} #${r.num} ↗</span>` : '--'}</td>
+    <td>${r.link ? `<span class="link" role="button" tabindex="0" onclick="toast('演示：跳转流水线执行记录 ${r.src} #${r.num}')">${r.src} #${r.num} ↗</span>` : '--'}</td>
     <td>${r.line == null ? '--' : '<b>' + r.line + '</b>'}</td>
     <td><span class="tag ${r.status === 0 ? 'ok' : 'fail'}">${r.status === 0 ? '成功' : '失败'}</span></td>
-    <td><span class="link" onclick="openDetail('${r.id}','${r.time}',${r.status},'history')">查看详情</span></td>
+    <td><span class="link" role="button" tabindex="0" onclick="openDetail('${r.id}','${r.time}',${r.status},'history')">查看详情</span></td>
   </tr>`).join('');
   document.getElementById('hist-pager').innerHTML =
     '10条/页 共 ' + historyRecords.length + ' 条 <span class="pg cur">1</span><span class="pg">2</span>';
@@ -342,13 +345,16 @@ function openHistory(repo, branch) {
 }
 
 /* ============ 视图3/4：详情 ============ */
-/* 分支列表指标点击：直进最新一次扫描详情（行为不变） */
-function openLatestDetail() {
-  const latest = historyRecords[0];
-  openDetail(latest.id, latest.time, latest.status, 'branch');
+/* 分支列表指标点击：透传被点击行的 recordId 直进该分支最新扫描详情（行为不变，评审意见修复） */
+function openLatestDetail(idx) {
+  const b = branches[idx];
+  if (!b || !b.ut) return;
+  currentRepo = b.repo; currentBranch = b.branch;
+  const rec = historyRecords.find(r => r.id === b.ut.recordId);
+  openDetail(b.ut.recordId, rec ? rec.time : b.time + ':00', rec ? rec.status : 0, 'branch', rec ? undefined : b.ut.line);
 }
 
-function openDetail(recordId, time, status, source = 'history') {
+function openDetail(recordId, time, status, source = 'history', lineFallback) {
   if (recordId === '1901111222333444') { showView('expired'); return; }
   if (recordId === '1809999999999999') { showView('pending'); return; }
   const rec = historyRecords.find(r => r.id === recordId);
@@ -357,7 +363,7 @@ function openDetail(recordId, time, status, source = 'history') {
   document.getElementById('detail-branch').textContent = currentBranch;
   document.getElementById('detail-time').textContent = time;
   document.getElementById('detail-commit').textContent = rec && rec.commit ? rec.commit : '--';
-  document.getElementById('detail-linecov').textContent = rec && rec.line != null ? rec.line : '--';
+  document.getElementById('detail-linecov').textContent = rec && rec.line != null ? rec.line : (lineFallback != null ? lineFallback : '--');
   const tb = document.getElementById('detail-tbody');
   tb.innerHTML = fileDetails.map((f, i) => `<tr>
     <td>${i + 1}</td><td style="font-family:Consolas,monospace">${f[0]}</td>
@@ -365,12 +371,6 @@ function openDetail(recordId, time, status, source = 'history') {
   </tr>`).join('');
   showView('detail');
 }
-
-/* 演示：历史页追加两条特殊记录供点击体验——“已被清理”（终态）与“处理中”（过程态，评审反馈补充） */
-setTimeout(() => {
-  historyRecords.push({ id:'1901111222333444', time:'2026-07-30 03:27:12', src:'ut-coverage-nightly', num:102, link:true, commit:'old777cc', line:'61.02%', status:0 });
-  historyRecords.unshift({ id:'1809999999999999', time:'2026-11-18 15:04:11', src:'ut-coverage-pr', num:65, link:true, commit:'e7a9b210', line:null, status:0 });
-}, 0);
 
 renderBranches();
 </script>

@@ -1,11 +1,11 @@
 # UT 覆盖率历史扫描记录 — 后端详细设计方案
 
-| 项目 | 内容 |
-| --- | --- |
-| 需求名称 | UT 覆盖率历史扫描记录查看与定期清理 |
-| 涉及仓 | openlibing-coderepo（后端）、openlibing-web（前端）、upload-ut-action（插件） |
+| 项目     | 内容                                                                                                                                      |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 需求名称 | UT 覆盖率历史扫描记录查看与定期清理                                                                                                       |
+| 涉及仓   | openlibing-coderepo（后端）、openlibing-web（前端）、upload-ut-action（插件）                                                             |
 | 关联现状 | `code_ut_record` 表已入库每次扫描记录（含文件明细 LONGTEXT）；上报走 MQ 异步；无历史列表接口、无清理机制；插件仅输出 `result`，无结果链接 |
-| 设计基线 | 分支列表 UT 指标仍取 `repo_branch` 快照；历史能力全部基于 `code_ut_record` 存量数据，无需新建业务表 |
+| 设计基线 | 分支列表 UT 指标仍取 `repo_branch` 快照；历史能力全部基于 `code_ut_record` 存量数据，无需新建业务表                                       |
 
 ---
 
@@ -45,13 +45,15 @@
 </changeSet>
 ```
 
+清理批次查询（评审对齐）拆为 UNION ALL 双分支以稳定走该索引——OR 两侧引用不同列（`detection_completed_at` 与 `create_time`）时 MySQL 无法稳定用单列索引完成整个谓词，大表（含明细 LONGTEXT）易退化为 index merge / 全表扫描：分支一按 `detection_completed_at < cutoff` 区间扫描；分支二覆盖 `detection_completed_at IS NULL` 的失败记录兜底（按 `create_time < cutoff` 过滤），NULL 记录聚簇于同一索引头部、数量少，回表过滤无需额外索引。外层按原口径排序 + LIMIT 收敛，清理批次语义不变（落地实现见 openlibing-coderepo !334 commit `9407647e`）。
+
 ### 2.2 保留周期配置
 
 ```yaml
 ut:
   coverage:
-    retention-days: 90        # 扫描记录保留天数，>0 生效；<=0 关闭自动清理
-    cleanup-batch-size: 500   # 单批删除条数，防长事务锁表
+    retention-days: 90 # 扫描记录保留天数，>0 生效；<=0 关闭自动清理
+    cleanup-batch-size: 500 # 单批删除条数，防长事务锁表
 ```
 
 读取方式：`@Value` 注入 UtCoverageProperties（支持配置中心覆盖）。保留天数随历史列表接口下发，前端据此渲染提示。
