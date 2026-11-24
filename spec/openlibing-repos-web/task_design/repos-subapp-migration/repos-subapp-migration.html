@@ -438,7 +438,7 @@
         </div>
         <div class="card warn">
           <h4>职责边界模糊</h4>
-          <p>代码仓域与流水线域已经分属不同后端服务（<code>openlibing-coderepo</code> / <code>openlibing-cicd</code>），前端却仍共享一个单体 <code>api/api.ts</code> 和一套发布节奏。</p>
+          <p>代码仓域与流水线域已经分属不同后端服务（<code>openlibing-coderepo</code> / <code>openlibing-cicd</code>），前端却仍与 <code>openlibing-web</code> 主工程共享一个单体 <code>api/api.ts</code> 和同一条发布流水线，发布节奏互相牵制。</p>
         </div>
         <div class="card">
           <h4>已有可复制的样板</h4>

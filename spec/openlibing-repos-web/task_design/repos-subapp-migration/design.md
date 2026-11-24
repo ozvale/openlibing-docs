@@ -14,7 +14,7 @@
 继续留在宿主内会导致：
 
 - 宿主主包与首屏体积持续膨胀，构建与热更新变慢；
-- 代码仓域与流水线域（`openlibing-cicd-web`）职责边界不清，发布节奏互相牵制；
+- Repos 与 `openlibing-web` 主工程共用同一条构建与发布流水线，发布节奏互相牵制，职责边界不清晰；
 - 单体 `api/api.ts` 被两个业务域共同修改的概率上升，冲突面扩大。
 
 ### 1.2 目标与非目标
@@ -40,7 +40,7 @@
 | 宿主改动   | 仅 2 个路由改为 `WujieMiddleware`，`name` / `path` / `meta.auth` 不变          |
 | 主要工作量 | 60 个 API 函数抽取、7 个公共组件/工具迁移、5 处跨应用跳转改造、标签页适配      |
 | 最大风险   | 宿主标签页与项目切换的联动（`useTabbarStore` 不可跨应用直接写）                |
-| 回滚方式   | 菜单权限开关切回旧组件，旧代码在验收期内不删除                                 |
+| 回滚方式   | 同名菜单授权切换 + 入口代码兜底，旧代码在验收期内不删除                        |
 
 ## 2. 实现逻辑设计
 
@@ -377,7 +377,7 @@ hooks/useMainContentHeight.ts  # 内容区高度：宿主 CSS 变量优先，失
 
 复用宿主已有的「菜单管理 + 角色管理」权限体系，不新增配置平台、不依赖 K8s ConfigMap：
 
-1. 在「菜单管理」(`/manageCenter/menuManagement`) 新增一条记录：名称「Repos 新子应用」、类型「按钮」、标识 `repos_subapp`，挂在「仓库管理」下。按钮类型不进导航，只作为权限点。
+1. 在「菜单管理」(`/manageCenter/menuManagement`) 新增一条记录：名称与旧菜单**同名**「代码仓管理」、类型「按钮」、标识 `repos_subapp`，挂在「仓库管理」下。**它不是新菜单**——不生成路由、不产生导航项，本质是一个临时开关标识；同名只是为了运营侧能对口识别"切哪条即切实现"。
 2. 在「角色管理」给需要走新实现的角色授予该权限。
 3. 前端 `app.user.permissions` 由 `GET /user/get-operation-permissions` 下发，包含当前用户已授权的全部 `identification`。
 
@@ -406,7 +406,9 @@ const target = computed(() =>
 - **不要复用 `repos` 路由自身的 `meta.auth`（`repo_manage`）做开关**。权限守卫是无权限即拦截路由，取消它会连旧页面一起挡掉。
 - **不要写成 `perms.length === 0 || includes(...)`**。路由守卫的「空即放行」是"没权限数据别挡人"，而开关的语义是"没授权就别上"：一旦权限接口失败或返回空列表，宽松写法会永远停留在新实现，取消授权无法回退。默认值必须是旧实现。
 - 权限标识只用于 `ReposEntry` 内部判定，不写入任何路由的 `meta.auth`。
-- 菜单记录只有 `menuName / identification / menuType / parentId`，没有 path 或 component；宿主路由与入口都是静态的，所以无法靠"新增一条菜单指向子应用"直接切页面，菜单只承担开关作用，选路由仍由 `ReposEntry` 判断。用户侧菜单名称保持不变。
+- **`repos_subapp` 不替代 `repo_manage`，两者必须成对授权**。路由能否进入仍由 `meta.auth = repo_manage` 决定（`guard.ts` 中 `permissions.includes(to.meta.auth)`）；只授 `repos_subapp` 而不授 `repo_manage`，用户会被守卫拦在路由外，表现为"页面打不开"而非"回滚到旧实现"。灰度检查清单需同时核对两个标识。
+- **不要把两者做成"或"门票**（改守卫支持 `meta.auth` 数组，或为 `repo_manage` 加 `|| repos_subapp` 特例）。原因有二：① 守卫是全站安全边界，为单个业务域加硬编码分支，回归面与评审成本都不划算；② 一旦 `repos_subapp` 能当门票，灰度期"未授权"就从"回旧实现"变成"完全进不去"，回滚语义被破坏。`repo_manage` 是代码仓域的功能权限，与新旧实现无关，P5 之后也应继续保留，不需要迁移门票。
+- 菜单记录只有 `menuName / identification / menuType / parentId`，没有 path 或 component。宿主 `preferences.app.accessMode` 为 `'frontend'`（`packages/@core/preferences/src/config.ts`，应用未覆盖），路由由 `generateRoutesByFrontend` 从 `router/routes/modules` 静态表按角色过滤生成，`fetchMenuListAsync` 在该分支不会被调用。因此**无法通过"新建一条同名菜单指向子应用"直接切换页面**：菜单只承担权限开关，选路由仍由 `ReposEntry` 判断。用户侧菜单名称保持不变。
 
 ```ts
 // menu.ts
@@ -459,10 +461,26 @@ kubectl -n <ns> rollout status deployment/openlibing-repos-web
 ### 8.5 可回滚窗口与数据兼容
 
 - **窗口**：P4 切流开始至 P5 清理之前，建议不少于一个发布周期；P5 删除旧代码后仅保留 L2。
-- **路由与标签页**：`name` / `path` 不变，标签页、深链、收藏无需迁移，回滚不影响已打开页面。
-- **localStorage**：新子应用只读旧 key、只写 `repos:` 新 key，窗口期内不删除旧 key；回滚后旧页面照常读取。
-- **未提交数据**：回滚需要刷新页面，未提交的表单会丢失，操作前提示用户。
-- **不可逆变更**：本期不涉及数据库与接口契约变更，回滚不存在数据修复成本。
+- **P5 必须改代码，不能靠菜单下线**：宿主为前端静态路由（`accessMode: 'frontend'`），菜单只下发权限标识、不决定组件；"下掉旧菜单"只会收回 `repo_manage` 连带挡住新页面。P5 分三次动作，顺序不可颠倒：
+  1. 发一版宿主：2 条路由的 `component` 由 `ReposEntry` 改为直连 `WujieMiddleware`，移除分流逻辑与 `LegacyRepos` 引用，旧文件暂留；
+  2. 观察满一个完整发布周期，确认无需回滚后，再单独发一版删除旧代码文件；
+  3. 最后清理 `repos_subapp` 菜单记录与角色授权，`repo_manage` 保留。
+- **不可逆点**：第 2 步删除旧文件后 L1 开关即失效，只剩 L2 镜像回滚与宿主版本回退。因此"切直连"与"删文件"必须拆成两次交付。
+
+**P5 需要改动的清单**（宿主 `openlibing-web/apps/web-openlibing/src`）：
+
+| #   | 对象                                                                                                                                                                           | 动作                                                                                                                       | 注意                                              |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 1   | `router/routes/modules/menu.ts` 中 `repos` / `repoOperationLog` 两条路由                                                                                                       | `component` 由 `ReposEntry` 改为 `WujieMiddleware`，补 `meta.url`（`/repos/repo`、`/repos/operation-log`）与 `meta.assets` | `meta.auth` 保持 `repo_manage` 不变               |
+| 2   | `views/ReposEntry.vue`                                                                                                                                                         | 删除                                                                                                                       | 分流判断、`localStorage.reposSubapp` 读取一并移除 |
+| 3   | `views/Repos/**`（21 个文件）                                                                                                                                                  | 删除                                                                                                                       | 删前 `rg` 确认无其他引用                          |
+| 4   | `api/api.ts` 中 42 个 Repos 函数、`api/Repos/{api,url}.ts`                                                                                                                     | 删除                                                                                                                       | 先确认其他业务域未复用同名函数                    |
+| 5   | `stores/exportTask.ts`、`hooks/useExportTaskSubmit.ts`、`hooks/useVbenMainContentHeight.ts`、`utils/until.ts` 中 Repos 专用函数、`constants/permissions-meta.ts` 中 Repos 条目 | 按引用情况删除或保留                                                                                                       | 仍被其他域使用的必须保留，不能整文件删            |
+| 6   | `views/WujieMiddleware.vue` 的 `resolveWujieAppName`                                                                                                                           | 可选：增加 `/apps/repos` 前缀映射为同一 appName                                                                            | 不加则两条路由各自实例化，切换时子应用会重新加载  |
+| 7   | 菜单管理 `repos_subapp` 记录与各角色授权                                                                                                                                       | 删除                                                                                                                       | `repo_manage` 保留，禁止删                        |
+| 8   | 宿主单测 `views/Repos/dialog/__tests__/*.spec.ts`                                                                                                                              | 迁移至子应用仓并从宿主删除                                                                                                 | 避免宿主覆盖率被已迁代码拖低                      |
+
+**验证项**：`rg` 引用清零 → 构建通过 → 主包体积对比 P0 基线 → 两条路由可进、标签页与深链正常、5 处跨应用跳转正常 → 移除 `repo_manage` 的角色仍被正确拦到无权限页。
 
 ### 8.6 演练与验证
 

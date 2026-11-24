@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代码仓管理（Repos）拆分独立子应用 · 立项申请汇报</title>
+<style>
+:root{
+  --bg:#f6f8fb;
+  --surface:#ffffff;
+  --surface-2:#eef3f9;
+  --ink:#0a2540;
+  --ink-2:#425466;
+  --ink-3:#8898aa;
+  --rule:rgba(10,37,64,.12);
+  --accent:#1d4ed8;
+  --navy:#0a2540;
+  --good:#0e9f6e;
+  --warn:#d97706;
+  --bad:#dc2626;
+  --radius:8px;
+  --font:'Microsoft YaHei','PingFang SC','Hiragino Sans GB','Segoe UI',system-ui,sans-serif;
+  --mono:'Cascadia Mono','Consolas','Microsoft YaHei',monospace;
+  --max:1220px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  font-family:var(--font);color:var(--ink);background:var(--bg);
+  line-height:1.75;-webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+code,.mono{font-family:var(--mono)}
+.inline-code{
+  font-family:var(--mono);font-size:.88em;background:var(--surface-2);
+  border:1px solid var(--rule);border-radius:4px;padding:1px 6px;color:var(--accent);white-space:nowrap;
+}
+
+/* ===== progress ===== */
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:90}
+.progress > span{display:block;height:100%;width:0;background:var(--accent);transition:width .15s linear}
+
+/* ===== hero ===== */
+.hero{
+  background:
+    radial-gradient(900px 500px at 85% 15%,rgba(29,78,216,.28),transparent 62%),
+    linear-gradient(120deg,#0a2540 0%,#112e51 60%,#16385f 100%);
+  color:#eaf1fb;padding:76px 32px 64px;position:relative;overflow:hidden;
+}
+.hero::after{
+  content:'';position:absolute;right:-120px;top:-140px;width:620px;height:620px;
+  border:1px solid rgba(255,255,255,.09);border-radius:50%;
+}
+.hero::before{
+  content:'';position:absolute;right:60px;top:-40px;width:360px;height:360px;
+  border:1px solid rgba(255,255,255,.07);border-radius:50%;
+}
+.hero-inner{max-width:var(--max);margin:0 auto;position:relative;z-index:2}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#7fb2ff}
+.hero h1{font-size:clamp(30px,4.4vw,50px);line-height:1.16;font-weight:800;letter-spacing:-.02em;margin-top:18px;max-width:20ch;color:#fff}
+.hero .sub{margin-top:20px;font-size:17px;line-height:1.8;color:rgba(234,241,251,.78);max-width:66ch}
+.hero .rule{width:88px;height:4px;background:#4f86e8;margin:26px 0 0}
+.hero-meta{display:flex;flex-wrap:wrap;gap:14px 44px;margin-top:34px;font-size:12.5px;color:rgba(234,241,251,.55)}
+.hero-meta b{display:block;font-size:14.5px;font-weight:600;color:#fff;margin-top:4px}
+.hero-kpis{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.14);margin-top:44px;max-width:900px;
+}
+.hero-kpis div{background:rgba(10,37,64,.42);padding:18px 22px}
+.hero-kpis b{display:block;font-size:30px;font-weight:800;color:#fff;line-height:1.1;font-variant-numeric:tabular-nums}
+.hero-kpis b .u{font-size:14px;font-weight:600;color:#9dbbed;margin-left:2px}
+.hero-kpis span{display:block;font-size:12px;color:rgba(234,241,251,.62);margin-top:6px}
+
+/* ===== layout ===== */
+.wrap{max-width:var(--max);margin:0 auto;padding:56px 32px 90px;display:grid;grid-template-columns:206px minmax(0,1fr);gap:52px;align-items:start}
+.toc{position:sticky;top:28px;border-left:1px solid var(--rule);padding-left:18px;font-size:13.5px}
+.toc-label{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+.toc ol{list-style:none;display:grid;gap:7px}
+.toc a{color:var(--ink-3);display:flex;gap:9px;line-height:1.45;padding:2px 0}
+.toc a:hover{color:var(--accent);text-decoration:none}
+.toc a.active{color:var(--accent);font-weight:600}
+.toc .n{font-family:var(--mono);font-size:11px;color:var(--ink-3);padding-top:2px;min-width:16px}
+.toc a.active .n{color:var(--accent)}
+main{min-width:0}
+
+/* ===== sections ===== */
+section{margin-bottom:64px;scroll-margin-top:24px}
+.sec-head{display:flex;align-items:baseline;gap:14px;border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:26px}
+.sec-num{font-family:var(--mono);font-size:12.5px;letter-spacing:.1em;color:var(--accent);font-weight:700}
+h2{font-size:27px;line-height:1.25;letter-spacing:-.01em;font-weight:800}
+h3{font-size:18px;line-height:1.4;font-weight:700;margin:34px 0 12px;display:flex;align-items:center;gap:9px}
+h3::before{content:'';width:6px;height:6px;background:var(--accent);flex-shrink:0}
+p{margin-bottom:12px;color:var(--ink-2)}
+p.lead{font-size:16.5px;color:#2b3d52}
+.muted{color:var(--ink-3)}
+.small{font-size:13px}
+strong{color:var(--ink)}
+
+/* ===== metric row ===== */
+.mrow{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--rule);background:var(--surface);border-radius:var(--radius);overflow:hidden;margin:18px 0 22px}
+.mcell{padding:18px 18px 16px;border-right:1px solid var(--rule)}
+.mcell:last-child{border-right:none}
+.mcell b{display:block;font-size:28px;font-weight:800;color:var(--accent);line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.mcell b .u{font-size:13px;font-weight:600;color:var(--ink-3);margin-left:2px}
+.mcell span{display:block;font-size:12px;color:var(--ink-3);margin-top:6px}
+
+/* ===== cards ===== */
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius);padding:20px 22px}
+.card h4{font-size:15.5px;font-weight:700;margin-bottom:7px}
+.card p{font-size:13.5px;line-height:1.7;color:var(--ink-2);margin:0}
+.card.accent-top{border-top:3px solid var(--accent)}
+.card.ic{border-left:3px solid var(--accent)}
+.card.ic.bad{border-left-color:var(--bad)}
+.card.ic.good{border-left-color:var(--good)}
+.card.ic.warn{border-left-color:var(--warn)}
+.card .no{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;margin-bottom:8px}
+
+/* ===== comparison ===== */
+.vs{display:grid;grid-template-columns:1fr 56px 1fr;gap:18px;align-items:stretch;margin:18px 0}
+.vs .side{background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius);padding:22px 24px}
+.vs .mid{display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--ink-3);font-weight:700}
+.vs .bad-side{border-top:3px solid var(--bad)}
+.vs .good-side{border-top:3px solid var(--good)}
+.vs h4{display:flex;align-items:center;gap:9px;font-size:15.5px;margin-bottom:12px}
+.vs ul{padding-left:19px;margin:0;font-size:13.5px;line-height:1.9;color:var(--ink-2)}
+.vs li::marker{color:var(--bad)}
+.vs .good-side li::marker{color:var(--good)}
+.vs li b{color:var(--ink);font-weight:600}
+
+/* ===== pills / callout ===== */
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;border:1px solid var(--rule);background:var(--surface-2);color:var(--ink-2)}
+.pill.blue{background:rgba(29,78,216,.08);border-color:rgba(29,78,216,.26);color:var(--accent)}
+.pill.red{background:rgba(220,38,38,.08);border-color:rgba(220,38,38,.24);color:var(--bad)}
+.pill.warn{background:rgba(217,119,6,.09);border-color:rgba(217,119,6,.26);color:var(--warn)}
+.callout{border-left:3px solid var(--accent);background:var(--surface);border-radius:0 var(--radius) var(--radius) 0;
+  padding:14px 20px;font-size:14px;line-height:1.75;color:var(--ink-2);margin:20px 0}
+.callout.bad{border-left-color:var(--bad);background:rgba(220,38,38,.045)}
+.callout.good{border-left-color:var(--good);background:rgba(14,159,110,.045)}
+.callout.warn{border-left-color:var(--warn);background:rgba(217,119,6,.045)}
+.callout strong{color:var(--ink)}
+
+/* ===== architecture ===== */
+.arch{display:flex;flex-direction:column;margin:18px 0}
+.abox{background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius);padding:16px 22px;text-align:center}
+.abox .at{font-size:15.5px;font-weight:700;color:var(--ink)}
+.abox .ad{font-size:12.5px;color:var(--ink-3);margin-top:5px;line-height:1.6}
+.abox .paths{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.abox .paths span{font-family:var(--mono);font-size:11.5px;color:var(--accent);background:rgba(29,78,216,.07);border:1px solid rgba(29,78,216,.2);border-radius:4px;padding:2px 8px}
+.abox.host{border-top:3px solid var(--navy)}
+.abox.sub{border-top:3px solid var(--accent);background:#f7faff}
+.abox.back{border-top:3px solid var(--good)}
+.aarrow{display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:1px}
+.aarrow .ln{width:2px;height:14px;background:rgba(10,37,64,.25)}
+.aarrow span{font-size:11.5px;color:var(--ink-3);font-family:var(--mono);text-align:center}
+
+/* ===== code / tree ===== */
+pre{font-family:var(--mono);border-radius:var(--radius);overflow-x:auto;margin:16px 0}
+pre.tree{font-size:12.5px;line-height:1.75;color:var(--ink-2);background:var(--surface);border:1px solid var(--rule);padding:18px 20px;white-space:pre}
+pre.tree b{color:var(--accent);font-weight:600}
+pre.code{font-size:12.5px;line-height:1.8;color:#dbe7f7;background:#0c1a2b;padding:18px 20px;white-space:pre}
+pre.code .c{color:#7d93ad}
+pre.code .k{color:#7fb2ff}
+pre.code .s{color:#8fd3a8}
+
+/* ===== table ===== */
+.t-wrap{border:1px solid var(--rule);border-radius:var(--radius);overflow-x:auto;background:var(--surface);margin:16px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);font-weight:700;background:var(--surface-2);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#fafcff}
+td:first-child{color:var(--ink);font-weight:600;white-space:nowrap}
+td .mono{font-size:12px;color:var(--accent)}
+
+/* ===== steps ===== */
+.steps{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:18px 0}
+.step{background:var(--surface);border:1px solid var(--rule);border-top:3px solid var(--accent);border-radius:var(--radius);padding:16px 12px 14px;text-align:center}
+.step .n{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--accent);letter-spacing:.08em}
+.step h4{font-size:13.5px;font-weight:700;margin:7px 0 5px}
+.step p{font-size:11.5px;line-height:1.55;color:var(--ink-3);margin:0}
+
+/* ===== layers ===== */
+.layer{display:grid;grid-template-columns:76px 1fr auto;gap:18px;align-items:center;background:var(--surface);
+  border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px}
+.layer .lv{font-family:var(--mono);font-size:19px;font-weight:800;color:var(--accent)}
+.layer .lv small{display:block;font-size:10.5px;color:var(--ink-3);font-weight:400;letter-spacing:.06em}
+.layer h4{font-size:14.5px;margin-bottom:4px}
+.layer p{font-size:12.5px;line-height:1.6;color:var(--ink-2);margin:0}
+.layer .eta{font-size:11.5px;color:var(--ink-3);white-space:nowrap;text-align:right}
+.layer.gray{border-left-color:#8898aa}
+.layer.gray .lv{color:#8898aa}
+
+/* ===== decision ===== */
+.dcard{background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius);padding:22px 24px;margin-bottom:16px}
+.dhead{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
+.dnum{font-family:var(--mono);font-size:22px;font-weight:800;color:var(--accent);line-height:1.1;min-width:40px}
+.dhead h4{font-size:16.5px;line-height:1.4;margin:0}
+.dhead .why{font-size:12.5px;color:var(--ink-3);margin-top:3px}
+.dbody{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.dbody .opt{border:1px solid var(--rule);border-radius:6px;padding:14px 16px;background:#fbfdff}
+.dbody .opt.reject{border-left:3px solid var(--bad);background:#fefafa}
+.dbody .opt.accept{border-left:3px solid var(--good);background:#f7fdfa}
+.dbody .opt h5{font-size:13px;font-weight:700;margin-bottom:6px;color:var(--ink)}
+.dbody .opt p{font-size:12.5px;line-height:1.65;margin:0;color:var(--ink-2)}
+.dfoot{margin-top:12px;padding-top:12px;border-top:1px dashed var(--rule);font-size:12.5px;color:var(--ink-2)}
+.dfoot b{color:var(--accent)}
+
+/* ===== footer ===== */
+footer{border-top:1px solid var(--rule);background:var(--surface);padding:30px 32px 40px}
+.foot-inner{max-width:var(--max);margin:0 auto;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-3)}
+.foot-inner b{color:var(--ink);font-weight:600}
+
+@media (max-width:1080px){
+  .wrap{grid-template-columns:1fr;gap:0;padding-top:40px}
+  .toc{display:none}
+  .hero-kpis{grid-template-columns:repeat(2,1fr)}
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .mrow{grid-template-columns:repeat(2,1fr)}
+  .mcell{border-bottom:1px solid var(--rule)}
+  .vs{grid-template-columns:1fr}
+  .vs .mid{display:none}
+  .steps{grid-template-columns:repeat(2,1fr)}
+  .dbody{grid-template-columns:1fr}
+  .layer{grid-template-columns:64px 1fr;gap:12px}
+  .layer .eta{display:none}
+}
+@media print{
+  .toc,.progress{display:none}
+  .wrap{display:block;max-width:none;padding:0}
+  .hero{background:#0a2540!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  section{page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<div class="progress"><span id="progressBar"></span></div>
+
+<!-- ================= HERO ================= -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">立项申请 · 前端架构演进</div>
+    <h1>代码仓管理（Repos）<br>拆分独立子应用</h1>
+    <div class="rule"></div>
+    <p class="sub">从宿主内的 21 个文件、15,659 行代码、215 KB 单文件模块，演进为可独立开发、独立发布、独立回滚的前端子应用。对外 URL、路由与权限保持不变。</p>
+    <div class="hero-meta">
+      <div>汇报人<b>陈宁</b></div>
+      <div>日期<b>2026-11</b></div>
+      <div>汇报结构<b>背景 · 方案 · 决策点</b></div>
+      <div>关联设计<b>repos-subapp-migration/design.md</b></div>
+    </div>
+    <div class="hero-kpis">
+      <div><b>21<span class="u">个</span></b><span>Repos 模块文件</span></div>
+      <div><b>15,659<span class="u">行</span></b><span>现有代码规模</span></div>
+      <div><b>215<span class="u">KB</span></b><span>index.vue 单文件</span></div>
+      <div><b>2<span class="u">条</span></b><span>宿主需改动的路由</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- ================= TOC ================= -->
+  <aside class="toc">
+    <div class="toc-label">Contents</div>
+    <ol>
+      <li><a href="#bg"><span class="n">01</span><span>背景：为什么必须拆</span></a></li>
+      <li><a href="#bg-scale"><span class="n">1.1</span><span>现状规模</span></a></li>
+      <li><a href="#bg-locate"><span class="n">1.2</span><span>代码仓定位成本</span></a></li>
+      <li><a href="#bg-release"><span class="n">1.3</span><span>发布与迭代耦合</span></a></li>
+      <li><a href="#bg-fix"><span class="n">1.4</span><span>问题定位与修复</span></a></li>
+      <li><a href="#bg-value"><span class="n">1.5</span><span>拆分后的收益</span></a></li>
+      <li><a href="#plan"><span class="n">02</span><span>方案：怎么拆</span></a></li>
+      <li><a href="#plan-arch"><span class="n">2.1</span><span>目标架构</span></a></li>
+      <li><a href="#plan-host"><span class="n">2.2</span><span>宿主侧改动</span></a></li>
+      <li><a href="#plan-repo"><span class="n">2.3</span><span>新仓工程形态</span></a></li>
+      <li><a href="#plan-scope"><span class="n">2.4</span><span>迁移范围</span></a></li>
+      <li><a href="#plan-phase"><span class="n">2.5</span><span>分期落地</span></a></li>
+      <li><a href="#plan-rollback"><span class="n">2.6</span><span>回滚设计</span></a></li>
+      <li><a href="#decision"><span class="n">03</span><span>决策点</span></a></li>
+      <li><a href="#apply"><span class="n">04</span><span>部署资源申请</span></a></li>
+    </ol>
+  </aside>
+
+  <main>
+    <!-- ================= 01 背景 ================= -->
+    <section id="bg">
+      <div class="sec-head">
+        <span class="sec-num">01</span>
+        <h2>背景：为什么必须拆</h2>
+      </div>
+      <p class="lead">Repos 已经不是"宿主里的一个页面"，而是一个完整业务域。继续留在宿主内，代码定位、问题定位、修复、发布和迭代的成本会随着每次需求持续放大。这个问题不是靠更努力地搜索或更谨慎地评审能解决的，它需要一次结构性的调整。</p>
+
+      <h3 id="bg-scale">1.1 现状规模：一个页面长成了一个业务系统</h3>
+      <div class="mrow">
+        <div class="mcell"><b>21<span class="u">个</span></b><span>文件</span></div>
+        <div class="mcell"><b>15,659<span class="u">行</span></b><span>代码</span></div>
+        <div class="mcell"><b>215<span class="u">KB</span></b><span>index.vue 单文件</span></div>
+        <div class="mcell"><b>60<span class="u">个</span></b><span>接口函数</span></div>
+        <div class="mcell"><b>5<span class="u">处</span></b><span>跨应用 / 跨路由跳转</span></div>
+      </div>
+      <p>今天的 Repos 已覆盖：仓库列表与同步、分支管理、标签管理、仓库成员、GitCode 角色映射、全局配置、重复代码、UT 覆盖率、指标详情、接口扫描结果、操作日志。无论是功能数量还是代码体量，它都已经达到一个独立系统的规模，却仍然以单个路由的形式寄居在宿主 <span class="inline-code">web-openlibing</span> 内。</p>
+      <div class="grid g3" style="margin-top:18px">
+        <div class="card ic bad"><h4>与宿主强耦合</h4><p>路由、鉴权 store、标签页 store、公共组件、单体 <span class="inline-code">api/api.ts</span> 五处耦合，任何调整都要评估宿主影响。</p></div>
+        <div class="card ic bad"><h4>与主工程共用一条发布流水线</h4><p>Repos 与 <span class="inline-code">openlibing-web</span> 主工程共用同一条构建与发布流水线，发布节奏互相牵制，职责边界不清晰。</p></div>
+        <div class="card ic bad"><h4>仍在宿主主包里</h4><p>整块业务常驻宿主构建产物，主包与首屏体积持续膨胀，构建和热更新变慢。</p></div>
+      </div>
+
+      <h3 id="bg-locate">1.2 代码仓定位：先找得到，才改得动</h3>
+      <div class="vs">
+        <div class="side bad-side">
+          <h4><span class="pill red">现状</span>在宿主里找代码</h4>
+          <ul>
+            <li>215 KB 单文件，<b>template / script / style 全在一处</b>，搜索命中后还要人工判断上下文</li>
+            <li>42 个 Repos 接口散在单体 <b>api/api.ts</b>，与项目等其它业务域混排</li>
+            <li>仓库域与宿主其它业务域边界不清，新人接入要先"认地图"</li>
+            <li>搜索结果混入宿主其它模块，<b>噪音高、确认慢</b></li>
+          </ul>
+        </div>
+        <div class="mid">→</div>
+        <div class="side good-side">
+          <h4><span class="pill blue">拆分后</span>一个仓就是一个域</h4>
+          <ul>
+            <li><b>目录即地图</b>：<span class="inline-code">views/repo</span>、<span class="inline-code">api/repo</span> 一眼看到全部职责</li>
+            <li>60 个接口按域拆为 7 个模块，URL 统一收敛到 <span class="inline-code">api/repo/url.ts</span></li>
+            <li>搜索只在目标仓内进行，<b>不再排除宿主噪音</b></li>
+            <li>新人按"仓库 / 分支 / 成员 / 标签 / 扫描 / 日志"直接定位</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout"><strong>定位效率的差异是结构性的：</strong>不是靠更努力的搜索，而是靠"一个仓对应一个业务域"的物理隔离。仓的边界一旦清晰，代码审查、缺陷归属和新人上手都会同步变简单。</div>
+
+      <h3 id="bg-release">1.3 发布与迭代：两条业务线被绑在同一辆车上</h3>
+      <div class="grid g3">
+        <div class="card ic bad"><h4>发布节奏互相牵制</h4><p>Repos 改一行，也要等宿主整包发布窗口；主工程的紧急上线，又会被仓库域的未完成改动拖住。</p></div>
+        <div class="card ic bad"><h4>构建与热更新变慢</h4><p>整块业务常驻主包，本地启动、热更新、生产构建都要为它付出时间成本，且随代码量继续增长。</p></div>
+        <div class="card ic bad"><h4>冲突面持续扩大</h4><p>单体 <span class="inline-code">api/api.ts</span> 被两个业务域共同修改，合并冲突与回归范围同步扩大。</p></div>
+      </div>
+      <div class="grid g2" style="margin-top:16px">
+        <div class="card"><h4>一个真实的工作流</h4><p>仓库域提测 → 等宿主发版 → 宿主同时带着其它业务域的改动 → 回归范围被迫覆盖多个域 → 出问题难以判断是谁引入的。</p></div>
+        <div class="card"><h4>拆分的本质</h4><p>把"发布单元"和"业务域"重新对齐：谁改的谁发，谁发的谁回滚，回归范围收敛到本域。</p></div>
+      </div>
+
+      <h3 id="bg-fix">1.4 问题定位与快速修复：一次修复，全量回归</h3>
+      <div class="grid g3">
+        <div class="card ic warn"><h4>① 归属难判断</h4><p>线上问题出现时，先要判断是仓库域、宿主公共层还是后端——模块边界不清，定位链路变长。</p></div>
+        <div class="card ic warn"><h4>② 修复必须随宿主发版</h4><p>即使只改一行，也要走宿主完整构建、测试、发布链路，无法当天闭环。</p></div>
+        <div class="card ic warn"><h4>③ 回滚只能整包回退</h4><p>没有独立回滚能力，一个局部缺陷可能迫使整个宿主版本回退，影响无关业务。</p></div>
+      </div>
+      <div class="callout bad"><strong>结果是：</strong>小问题修得慢，大问题不敢改。团队会本能地"绕着代码走"，技术债继续累积，最终反过来限制迭代速度。</div>
+      <div class="grid g2">
+        <div class="card"><h4>拆分后的问题定位</h4><p>前端错误可按子应用维度采集与告警；问题归属一眼可见，必要时独立镜像回滚，不影响宿主。</p></div>
+        <div class="card"><h4>拆分后的修复闭环</h4><p>子应用独立构建、独立发布、独立回滚；修复从"等发版"变成"当天可验证"。</p></div>
+      </div>
+
+      <h3 id="bg-value">1.5 拆分后，直接拿到四个能力</h3>
+      <div class="grid g4">
+        <div class="card accent-top"><div class="no">01</div><h4>定位快</h4><p>一仓一域，目录即地图；接口按域拆分，URL 统一收敛。</p></div>
+        <div class="card accent-top"><div class="no">02</div><h4>修复快</h4><p>独立构建与发布，不再等待宿主发布窗口。</p></div>
+        <div class="card accent-top"><div class="no">03</div><h4>迭代快</h4><p>Repos 需求独立排期，与宿主主工程解耦。</p></div>
+        <div class="card accent-top"><div class="no">04</div><h4>风险低</h4><p>独立镜像 + 独立回滚，缺陷不扩散到宿主。</p></div>
+      </div>
+      <div class="grid g2" style="margin-top:16px">
+        <div class="card ic good"><h4>宿主主包减负</h4><p>整块 <span class="inline-code">views/Repos</span> 移出后，对应约 215 KB 源码块不再进入宿主主包；宿主首屏与构建时间同步收益。</p></div>
+        <div class="card ic good"><h4>责任边界清晰</h4><p>仓库域的问题、发布、值班、回滚都在自己的仓里闭环；跨域协作从"改同一份代码"变成"约定接口"。</p></div>
+      </div>
+      <div class="callout"><strong>这四项能力不是新增功能，而是现有功能"更可控"：</strong>同样的业务，用更小的发布单元、更短的反馈链路去承载。</div>
+    </section>
+
+    <!-- ================= 02 方案 ================= -->
+    <section id="plan">
+      <div class="sec-head">
+        <span class="sec-num">02</span>
+        <h2>方案：怎么拆</h2>
+      </div>
+      <p class="lead">方案不做创新，直接参考已经跑通的 <span class="inline-code">openlibing-cicd-web</span>：wujie 子应用形态，宿主只改 2 条路由，对外 URL、路由 name 与权限完全不变，后端接口契约不动。</p>
+
+      <h3 id="plan-arch">2.1 目标架构：宿主负责壳，Repos 自己跑</h3>
+      <div class="arch">
+        <div class="abox host">
+          <div class="at">宿主 openlibing-web</div>
+          <div class="ad">菜单 · 标签页 · 项目切换 · 登录态 · 权限菜单</div>
+          <div class="paths"><span>/apps/repos</span><span>/apps/repoOperationLog</span></div>
+        </div>
+        <div class="aarrow"><div class="ln"></div><div class="ln"></div><span>wujie（iframe + proxy + shadow DOM）· props：app / tabbar / wujieRoute · bus：项目切换 / 标签页 / 宿主路由</span><div class="ln"></div><div class="ln"></div></div>
+        <div class="abox sub">
+          <div class="at">openlibing-repos-web（新建）</div>
+          <div class="ad">base: /repos/ · dev: 5175 · nginx location /repos</div>
+          <div class="paths"><span>/repos/repo</span><span>/repos/operation-log</span><span>api/repo/*</span><span>wujie/host.ts</span></div>
+        </div>
+        <div class="aarrow"><div class="ln"></div><div class="ln"></div><span>/gateway（cookie 会话，同域部署）</span><div class="ln"></div><div class="ln"></div></div>
+        <div class="abox back">
+          <div class="at">后端服务保持不变</div>
+          <div class="ad">openlibing-coderepo · openlibing-codecheck · …（不改接口契约）</div>
+        </div>
+      </div>
+      <div class="callout"><strong>关键点：</strong>子应用内不直接访问 <span class="inline-code">window.$wujie</span>，统一走 <span class="inline-code">src/wujie/host.ts</span> 适配层，保证 <span class="inline-code">pnpm dev</span> 在无宿主环境下独立运行也不报错。</div>
+
+      <h3 id="plan-host">2.2 宿主侧改动：只改 2 条路由，加 1 个入口组件</h3>
+      <div class="t-wrap">
+        <table>
+          <thead><tr><th>路由 name</th><th>path</th><th>改造前</th><th>改造后</th><th>保持不变</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">repos</td><td class="mono">/apps/repos</td><td>views/Repos/index.vue</td><td>ReposEntry → Wujie / Legacy</td><td>name · path · meta.auth</td></tr>
+            <tr><td class="mono">repoOperationLog</td><td class="mono">/apps/repoOperationLog</td><td>views/Repos/operationLog.vue</td><td>ReposEntry → Wujie / Legacy</td><td>name · path · hideInMenu</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <pre class="code"><span class="c">// src/views/Repos/ReposEntry.vue —— 两个路由共用同一个入口包装组件</span>
+<span class="k">const</span> useSubapp = computed(() =&gt; {
+  <span class="k">if</span> (localStorage.getItem(<span class="s">'reposSubapp'</span>) === <span class="s">'0'</span>) <span class="k">return</span> <span class="k">false</span>;   <span class="c">// 单用户应急</span>
+  <span class="k">const</span> perms = app.user?.permissions;
+  <span class="k">if</span> (!Array.isArray(perms)) <span class="k">return</span> <span class="k">false</span>;                        <span class="c">// 权限未就绪 → 旧实现</span>
+  <span class="k">return</span> perms.includes(<span class="s">'repos_subapp'</span>);                            <span class="c">// 必须显式授权</span>
+});
+<span class="k">const</span> target = computed(() =&gt; useSubapp.value ? WujieMiddleware : LegacyRepos);</pre>
+      <div class="grid g3">
+        <div class="card"><h4>对外行为完全不变</h4><p>URL、路由 name、菜单位置、标签页标题、深链、收藏全部保持原样，用户无感知。</p></div>
+        <div class="card"><h4>权限体系不动</h4><p><span class="inline-code">meta.auth = repo_manage</span> 继续由宿主判定；子应用内按钮权限按原有方式拉取，双层保留。</p></div>
+        <div class="card"><h4>同一子应用复用实例</h4><p>两条路由共用一个 wujie 实例 key，切换时只下发 <span class="inline-code">wujieRoute</span>，不重复加载。</p></div>
+      </div>
+
+      <h3 id="plan-repo">2.3 新仓工程形态：参考 cicd-web，保持一致</h3>
+      <div class="grid g2" style="grid-template-columns:1.1fr 1fr;align-items:start">
+        <pre class="tree">openlibing-repos-web/
+├── Dockerfile
+├── nginx/{nginx_beta,nginx_gamma,nginx_prod}.conf
+├── vite.config.ts          <b># base '/repos/' · port 5175</b>
+├── .env.{development,beta,gamma,production}
+├── .gitcode/workflows/     <b># 构建 · 镜像 · 部署</b>
+├── src/
+│   ├── main.ts / App.vue
+│   ├── api/
+│   │   ├── ApiClient.ts
+│   │   ├── core/url.ts
+│   │   └── repo/{repo,branch,member,tag,scan,role,log}.ts
+│   ├── components/  hooks/  stores/  utils/
+│   ├── router/index.ts     <b># createWebHistory('/repos/')</b>
+│   ├── views/repo/{index.vue,OperationLog.vue,components/…}
+│   └── wujie/host.ts       <b># 宿主能力唯一出口</b>
+└── tests/unit/</pre>
+        <div>
+          <div class="t-wrap" style="margin-top:0">
+            <table>
+              <tbody>
+                <tr><td>部署路径</td><td><span class="inline-code">base: '/repos/'</span></td></tr>
+                <tr><td>本地端口</td><td><span class="inline-code">5175</span></td></tr>
+                <tr><td>nginx</td><td><span class="inline-code">location /repos</span></td></tr>
+                <tr><td>路由模式</td><td><span class="inline-code">createWebHistory('/repos/')</span></td></tr>
+                <tr><td>环境</td><td>beta / gamma / prod 三套</td></tr>
+                <tr><td>缓存</td><td>静态资源 immutable，index.html 不缓存</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout" style="margin-bottom:0"><strong>为什么参考 cicd-web：</strong>同一套 wujie 接入方式、同一套 nginx 与流水线策略，运维与前端都不需要学习新东西，问题也有现成参照。</div>
+        </div>
+      </div>
+
+      <h3 id="plan-scope">2.4 迁移范围：搬什么、怎么搬，边界先划清</h3>
+      <div class="grid g3">
+        <div class="card ic"><h4>页面：21 个文件全量迁出</h4><p><span class="inline-code">index.vue</span>、分支、成员、标签、角色映射、扫描结果、6 个弹窗、3 个业务组件、<span class="inline-code">useSigSync</span> 与单测。</p></div>
+        <div class="card ic"><h4>接口：60 个按域拆分</h4><p>原 <span class="inline-code">api/api.ts</span> 42 个 + <span class="inline-code">api/Repos/api.ts</span> 18 个，拆为 <b>repo / branch / member / tag / scan / role / log</b> 7 个模块。</p></div>
+        <div class="card ic"><h4>跳转：5 处收敛到适配层</h4><p>检测中心、接口管理、代码检查、项目管理 4 个跨应用目标页，加操作日志内部路由，统一走 <span class="inline-code">navigateToHost</span> 白名单。</p></div>
+      </div>
+      <div class="grid g2" style="margin-top:16px">
+        <div class="card"><h4>公共依赖处理</h4><p><b>首次迁移：</b>ContactInformation、BatchAddMemberDialog 复制到新仓；BatchOperation / Empty / NoPermissionPopover 以 cicd-web 为基线 Diff 后取较新版本；CategorySearch / DateRangePicker 直接复用 cicd-web，避免第三份副本。</p></div>
+        <div class="card"><h4>明确不做的三件事</h4><p>不改后端接口契约；不做 UI 改版与组件化重构；不在本期抽公共组件包。迁移与优化不叠加，保证回归可定位。</p></div>
+      </div>
+      <div class="callout warn"><strong>已知代价：</strong>公共组件在两个前端仓各有一份，缺陷需双仓同步修。这是本期主动接受的成本，用来换取迁移风险最小。</div>
+
+      <h3 id="plan-phase">2.5 分期落地：六个阶段，每阶段独立验收</h3>
+      <div class="steps">
+        <div class="step"><div class="n">P0</div><h4>搭空壳</h4><p>参考 cicd-web 初始化工程、流水线与三环境配置</p></div>
+        <div class="step"><div class="n">P1</div><h4>路由接入</h4><p>宿主 2 条路由接 wujie，子应用路由映射打通</p></div>
+        <div class="step"><div class="n">P2</div><h4>页面迁移</h4><p>页面与业务组件迁出，标签页、跳转改造</p></div>
+        <div class="step"><div class="n">P3</div><h4>接口与组件</h4><p>60 个接口按域拆分，公共组件与工具落位</p></div>
+        <div class="step"><div class="n">P4</div><h4>灰度与演练</h4><p>按角色灰度，演练"开 → 关 → 开"回滚</p></div>
+        <div class="step"><div class="n">P5</div><h4>下线旧实现</h4><p>观察满一个发布周期后清理宿主旧代码</p></div>
+      </div>
+      <div class="grid g2">
+        <div class="callout good" style="margin:0"><strong>P5 之前，旧实现始终留在宿主包内。</strong>任何阶段发现问题，都可以不改代码直接切回，风险可控。</div>
+        <div class="callout" style="margin:0"><strong>每阶段独立验收：</strong>P1 验路由、P2 验功能、P3 验接口参数一致、P4 验回滚时延与指标、P5 验主包减负。</div>
+      </div>
+      <div class="callout bad"><strong>P5 必须改一次代码，菜单配置做不到。</strong>宿主是前端静态路由，菜单不驱动组件；"把旧菜单下掉"只会收回权限，不会改变页面加载哪套实现，甚至会把新页面一起挡掉。正确动作是：<b>①</b> 先发一版宿主，把 2 条路由的 <span class="inline-code">component</span> 从 <span class="inline-code">ReposEntry</span> 直连 <span class="inline-code">WujieMiddleware</span>，分流逻辑与 <span class="inline-code">LegacyRepos</span> 引用一并移除（旧文件暂留）；<b>②</b> 观察一个完整发布周期，无回滚需求后再单独发一版删除旧代码文件；<b>③</b> 最后清理 <span class="inline-code">repos_subapp</span> 菜单记录，<span class="inline-code">repo_manage</span> 必须保留。<br>顺序不能反：一旦旧文件删除，L1 开关即失效，回滚只剩 L2 镜像与宿主版本回退。因此"删文件"和"切直连"建议拆成两次交付，把不可逆动作尽量后移。</div>
+
+      <h3 id="plan-rollback">2.6 回滚设计：三层回滚，互不依赖</h3>
+      <div class="layer">
+        <div class="lv">L1<small>主开关</small></div>
+        <div><h4>同名按钮记录授权切换 + 入口代码兜底</h4><p>菜单管理新增一条<b>同名</b>「代码仓管理」记录（标识 <span class="inline-code">repos_subapp</span>，按钮类型）。它<b>不是新增菜单</b>：不生成路由、不进导航，本质是一个临时开关标识；同名只是为了运营侧能对口识别。角色勾选即走子应用，取消勾选即回旧实现；组件分流由入口 <span class="inline-code">ReposEntry</span> 按该标识判定，权限未就绪时一律回旧实现。不改代码、不发版。</p></div>
+        <div class="eta">刷新后生效</div>
+      </div>
+      <div class="layer gray" style="border-left-color:#64748b">
+        <div class="lv" style="color:#64748b">L2<small>镜像回滚</small></div>
+        <div><h4>子应用版本回退</h4><p>某次发布引入缺陷、但路由形态正常时，用 <span class="inline-code">kubectl rollout undo</span> 或发布平台回退上一镜像。</p></div>
+        <div class="eta">3–5 分钟</div>
+      </div>
+      <div class="layer gray">
+        <div class="lv">L3<small>单用户兜底</small></div>
+        <div><h4>单用户强制走旧实现</h4><p><span class="inline-code">localStorage.reposSubapp = '0'</span> 后刷新，仅影响当前浏览器，用于个别用户被阻断的应急场景。</p></div>
+        <div class="eta">立即</div>
+      </div>
+      <div class="callout bad"><strong>默认值必须是旧实现：</strong>权限未就绪、接口失败或返回空列表时，一律回旧实现。宁可灰度没生效，也不能让"取消授权"失效。</div>
+      <div class="callout"><strong>为什么必须有代码兜底：</strong>宿主是前端静态路由（<span class="inline-code">accessMode: 'frontend'</span>），菜单只下发权限标识、不生成路由也不指定组件，所以"切菜单"最终仍要落到 <span class="inline-code">ReposEntry</span> 的判断上。菜单负责"谁走新实现"，代码负责"没授权就一定走旧实现"。</div>
+    </section>
+
+    <!-- ================= 03 决策点 ================= -->
+    <section id="decision">
+      <div class="sec-head">
+        <span class="sec-num">03</span>
+        <h2>决策点：需要评审拍板什么</h2>
+      </div>
+      <p class="lead">以下四项需要在本次评审拍板。每项都给出推荐选项与理由，避免实施阶段反复讨论、反复返工。</p>
+
+      <div class="dcard">
+        <div class="dhead">
+          <div class="dnum">01</div>
+          <div>
+            <h4>回滚开关是同名按钮记录（临时标识），不是新增菜单</h4>
+            <div class="why">对应设计文档 §8.2 · 一票否决项：必须可回滚</div>
+          </div>
+        </div>
+        <div class="dbody">
+          <div class="opt reject"><h5>否决：复用 meta.auth = repo_manage</h5><p>路由守卫的语义是"无权限即拦截"。取消它会把旧页面一起挡掉，开关变成"要么都不可用，要么都可用"。</p></div>
+          <div class="opt accept"><h5>推荐：同名按钮记录 + 独立标识 + 入口兜底</h5><p>新增一条同名「代码仓管理」按钮记录（标识 <span class="inline-code">repos_subapp</span>），只做权限开关，不生成路由与导航项。角色勾选即开启、取消即回滚；<span class="inline-code">ReposEntry</span> 按该标识分流，不写入任何路由的 <span class="inline-code">meta.auth</span>。</p></div>
+        </div>
+        <div class="dfoot">请明确两点：<b>①</b> <span class="inline-code">repos_subapp</span> 不替代 <span class="inline-code">repo_manage</span>——路由能否进入仍由守卫判断 <span class="inline-code">meta.auth</span>，只授新标识不授旧标识会被挡在路由外，因此必须成对授权；<b>②</b> 宿主为前端静态路由（<span class="inline-code">accessMode: 'frontend'</span>），菜单<b>不生成路由、不指定组件</b>，组件分流必须由 <span class="inline-code">ReposEntry</span> 判定。<br><b>请评审确认：</b>同意"同名按钮记录（临时开关标识）授权 + 入口代码兜底"作为回滚主开关。</div>
+      </div>
+
+      <div class="dcard">
+        <div class="dhead">
+          <div class="dnum">02</div>
+          <div>
+            <h4>URL 与路由 name 不变，入口内部分流</h4>
+            <div class="why">对应设计文档 §2.6 / §8.5 · 兼容性策略</div>
+          </div>
+        </div>
+        <div class="dbody">
+          <div class="opt accept"><h5>深链、收藏、标签页零迁移</h5><p><span class="inline-code">/apps/repos</span> 与 <span class="inline-code">/apps/repoOperationLog</span> 路径不变，历史链接、书签、外部系统跳转全部继续可用。</p></div>
+          <div class="opt accept"><h5>周边调用方零改造</h5><p>其它模块按路由 <span class="inline-code">name</span> 跳转 Repos（如 PR 管理），name 不变即无需改动调用方；回滚只换组件，不影响已打开页面。</p></div>
+        </div>
+        <div class="dfoot">代价是宿主保留 <span class="inline-code">ReposEntry.vue</span> 与旧实现代码，直到 P5 清理——这是可控且有用明确下线时间的成本。<br><b>请评审确认：</b>接受"入口组件 + 双实现共存"的过渡形态，过渡期不少于一个发布周期。</div>
+      </div>
+
+      <div class="dcard">
+        <div class="dhead">
+          <div class="dnum">03</div>
+          <div>
+            <h4>只迁移不重构，公共组件本期不抽包</h4>
+            <div class="why">对应设计文档 §2.3 / §2.4 · 范围控制</div>
+          </div>
+        </div>
+        <div class="dbody">
+          <div class="opt accept"><h5>迁移与重构不叠加</h5><p>本期不改 <span class="inline-code">index.vue</span> 的组件拆分粒度，不做 UI 改版。避免"迁移 + 重构"双重变更导致回归问题无法定位到具体原因。</p></div>
+          <div class="opt accept"><h5>公共组件先复制 / 同源</h5><p>不新建公共组件仓。抽包会引入版本、发布、兼容三套机制，超出本次立项范围。</p></div>
+        </div>
+        <div class="dfoot">代价：公共组件在两个前端仓各一份，缺陷需双仓同步修。待两个子应用稳定后，再单独立项抽公共包，届时是纯粹的增量收益。<br><b>请评审确认：</b>同意本期范围仅限"迁移"，重构与公共包抽取另行立项。</div>
+      </div>
+
+      <div class="dcard">
+        <div class="dhead">
+          <div class="dnum">04</div>
+          <div>
+            <h4>灰度路径与回滚触发阈值</h4>
+            <div class="why">对应设计文档 §8.4 / §8.6 · 验收标准</div>
+          </div>
+        </div>
+        <div class="dbody">
+          <div class="opt accept"><h5>灰度路径：beta 演练 → gamma 小范围 → prod 分批</h5><p>beta 完整演练"开 → 关 → 开"并记录生效时延；gamma 先覆盖内部角色观察一个工作日；prod 按角色分批授权，任一指标越线即执行 L1 回滚，不等待定位根因。</p></div>
+          <div class="opt accept" style="padding:0;border:none;background:transparent">
+            <div class="t-wrap" style="margin:0">
+              <table>
+                <thead><tr><th>指标</th><th>阈值</th></tr></thead>
+                <tbody>
+                  <tr><td>前端 JS 错误率</td><td>&gt; 1%，持续 5 分钟</td></tr>
+                  <tr><td>加载失败 / 白屏</td><td>&gt; 0.5%</td></tr>
+                  <tr><td>首屏 P95</td><td>&gt; 3s，持续 10 分钟</td></tr>
+                  <tr><td>阻断性功能异常</td><td>列表 / 同步 / 成员 / 权限任一不可用</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="dfoot">验收清单：功能回归、4 个跨应用跳转、按钮权限与申请引导、构建产物 <span class="inline-code">base=/repos/</span>、三环境可访问、迁移后单测与适配层单测通过。<br><b>请评审确认：</b>认可上述灰度路径与四个回滚阈值。</div>
+      </div>
+    </section>
+
+    <!-- ================= 04 申请事项 ================= -->
+    <section id="apply">
+      <div class="sec-head">
+        <span class="sec-num">04</span>
+        <h2>申请事项：拆分后需要申请的部署资源</h2>
+      </div>
+      <p class="lead">拆分后新增 1 个前端服务与 1 个 nginx location，不改变网关与后端。容器资源按华为云容器实例申请（4.1），其余配套项全部参考 <span class="inline-code">openlibing-cicd-web</span> 已落地的机制（4.2），无新增平台能力要求。</p>
+
+      <h3>4.1 容器资源规格（华为云）</h3>
+      <div class="t-wrap">
+        <table>
+          <thead><tr><th>环境</th><th>实例数</th><th>CPU 申请（request）</th><th>CPU 限制（limit）</th><th>内存申请（request）</th><th>内存限制（limit）</th></tr></thead>
+          <tbody>
+            <tr><td>beta</td><td>1 实例</td><td>0.25 cores</td><td>0.5 cores</td><td>512 MiB</td><td>1024 MiB</td></tr>
+            <tr><td>gamma</td><td>1 实例</td><td>0.25 cores</td><td>0.5 cores</td><td>512 MiB</td><td>1024 MiB</td></tr>
+            <tr><td>prod</td><td>2 实例</td><td>0.25 cores</td><td>1 core</td><td>1024 MiB</td><td>1024 MiB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout good"><strong>合计申请：</strong>4 个容器实例。beta / gamma 各 1 实例用于测试与预发验证；prod 2 实例保证生产高可用，内存 request 与 limit 一致（1024 MiB），避免超卖导致的 OOM 风险。</div>
+
+      <h3>4.2 配套资源类目</h3>
+      <div class="t-wrap">
+        <table>
+          <thead><tr><th>类别</th><th>申请内容</th><th>用途 / 说明</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td>前端服务</td><td>新建 openlibing-repos-web 服务，beta / gamma / prod 三套镜像</td><td>承载 Repos 子应用静态资源与 nginx</td><td><span class="pill blue">规格已确认</span></td></tr>
+            <tr><td>K8s 资源</td><td>华为云容器实例，规格见 4.1：beta 1 实例、gamma 1 实例、prod 2 实例</td><td>命名空间、Deployment、Service 随服务创建</td><td><span class="pill blue">规格已确认</span></td></tr>
+            <tr><td>网关 / 域名</td><td>复用现有三套域名，仅新增 <span class="inline-code">/repos</span> 路径转发至新服务</td><td><span class="inline-code">beta.openlibing.com</span> / <span class="inline-code">gamma.openlibing.com</span> / <span class="inline-code">www.openlibing.com</span>，与宿主同域保证 cookie 会话</td><td><span class="pill blue">已确认</span></td></tr>
+            <tr><td>nginx</td><td>三环境 conf（beta / gamma / prod），listen 8099 ssl；<span class="inline-code">location /repos</span> 静态资源 immutable 一年缓存、index.html no-cache、Gzip、限流 1000r/s</td><td>与 cicd-web nginx 策略完全一致，含安全响应头与健康检查保护</td><td><span class="pill blue">已确认</span></td></tr>
+            <tr><td>镜像仓库</td><td>华为云 SWR（<span class="inline-code">swr.cn-north-4.myhuaweicloud.com</span>）组织下新建项目与推送权限</td><td>基础镜像沿用 <span class="inline-code">openeuler/nginx:1.24.0-22.03-lts-sp1</span>，业务镜像按环境打 tag</td><td><span class="pill blue">已确认</span></td></tr>
+            <tr><td>流水线</td><td><b>华为云流水线 3 条，分别对应 beta、gamma、prod 三套环境</b>，各自独立构建镜像并部署到本环境；另配构建 / 单测做 PR 门禁</td><td>三环境流水线互不影响，单环境可独立重跑与回滚；runner 复用现有 self-hosted 资源</td><td><span class="pill blue">已确认</span></td></tr>
+            <tr><td>监控告警</td><td>健康检查接口（<span class="inline-code">/health-check</span> 拒绝外部访问）+ 前端 JS 错误率 / 白屏率 / 首屏 P95 告警</td><td>告警阈值对应本文回滚触发条件，接入现有告警通道</td><td><span class="pill blue">已确认</span></td></tr>
+            <tr><td>日志</td><td>access / error 日志经 <span class="inline-code">/dev/stdout</span> 输出，由平台统一采集</td><td>自定义 log_format 含 request_id 与 upstream 耗时，支持问题定位串联</td><td><span class="pill blue">已确认</span></td></tr>
+            <tr><td>配置项</td><td><span class="inline-code">VITE_BASE_URL</span> 三环境：<span class="inline-code">beta/gamma.openlibing.com</span>、<span class="inline-code">www.openlibing.com</span></td><td>与 cicd-web 环境变量口径一致，构建时注入</td><td><span class="pill blue">已确认</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout good"><strong>说明：</strong>全部资源项已参考 cicd-web 确认完毕，可直接进入审批。新增项为：4 个容器实例配额、3 条华为云环境流水线（beta / gamma / prod 各一条）；域名、SWR、runner、告警通道均为现有平台资源复用，不引入新的运维成本。</div>
+
+      <div class="callout good" style="margin-top:28px">
+        <strong>结论：</strong>Repos 已经是 21 个文件、15,659 行、215 KB 单文件、60 个接口的完整业务域。拆出去，才能让定位、修复、迭代和回滚回到可控范围；而宿主只改 2 条路由、对外 URL 与权限不变，代价与风险都可量化、可回滚。
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer>
+  <div class="foot-inner">
+    <div><b>代码仓管理（Repos）拆分独立子应用</b> · 立项申请汇报</div>
+    <div>关联设计文档：<span class="mono">openlibing-docs/spec/openlibing-repos-web/task_design/repos-subapp-migration/design.md</span></div>
+    <div>2026-11</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var bar = document.getElementById('progressBar');
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var targets = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+
+  function onScroll(){
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - window.innerHeight;
+    bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + '%';
+
+    var pos = window.scrollY + 140;
+    var active = 0;
+    targets.forEach(function(t, i){
+      if (t && t.offsetTop <= pos) active = i;
+    });
+    links.forEach(function(a, i){ a.classList.toggle('active', i === active); });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+})();
+</script>
+</body>
+</html>
