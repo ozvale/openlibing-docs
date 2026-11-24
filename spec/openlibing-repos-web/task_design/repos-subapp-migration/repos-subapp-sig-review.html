@@ -113,8 +113,6 @@
     <div class="toc-label">目录</div>
     <a href="#s1">01 背景</a>
     <a href="#s2">02 方案与决策</a>
-    <a href="#s2-3" class="sub-link">变更影响</a>
-    <a href="#s2-4" class="sub-link">框架组支撑事项</a>
     <a href="#s2-5" class="sub-link">资源需求</a>
   </nav>
 
@@ -150,44 +148,6 @@
       <div class="card"><h4>主包减负</h4><p>15,659 行迁出宿主，主工程构建产物与首屏体积下降。</p></div>
       <div class="card"><h4>用户无感知</h4><p>对外 URL、菜单、权限体系保持不变，入口仍是同一条「代码仓管理」菜单。</p></div>
       <div class="card"><h4>风险可控</h4><p>回滚通过菜单授权开关切回旧实现，不发版、不回退镜像，分钟级生效。</p></div>
-    </div>
-
-    <h3>关键决策</h3>
-    <table>
-      <thead><tr><th style="width:24%">决策点</th><th style="width:36%">结论</th><th>理由</th></tr></thead>
-      <tbody>
-        <tr><td>拆分形态</td><td>对齐 cicd-web（wujie 子应用）</td><td>参考生产已验证方案，风险最低、平台改造量最小</td></tr>
-        <tr><td>对外契约</td><td>URL、菜单、权限均不变</td><td>用户零感知，不涉及使用习惯与培训成本</td></tr>
-        <tr><td>回滚方式</td><td>菜单授权开关，取消授权即回旧实现</td><td>无需发版即可回退，灰度期可随时止血</td></tr>
-        <tr><td>变更范围</td><td>本期只拆分、不重构</td><td>缩小变更面，功能行为与迁移前一致，便于验收</td></tr>
-        <tr><td>后端范围</td><td>不动后端接口契约</td><td>纯前端拆仓，不产生跨端联调成本</td></tr>
-      </tbody>
-    </table>
-
-    <h3 id="s2-3">变更影响</h3>
-    <table>
-      <thead><tr><th style="width:26%">影响对象</th><th>影响内容</th></tr></thead>
-      <tbody>
-        <tr><td>宿主主工程</td><td>仅 2 条路由改为子应用挂载（<code>repos</code>、<code>repoOperationLog</code>），路由名与路径不变；主包减少 15,659 行</td></tr>
-        <tr><td>最终用户</td><td>无感知：入口菜单、URL、操作路径、权限均保持一致</td></tr>
-        <tr><td>后端服务</td><td>无变更：不改接口契约，仍走原网关与后端服务</td></tr>
-        <tr><td>发布体系</td><td>新增 1 个可独立发布的前端服务与 3 条环境流水线，纳入现有发布流程</td></tr>
-        <tr><td>运维监控</td><td>新增 1 个被监控对象，接入现有告警、日志、安全扫描通道</td></tr>
-      </tbody>
-    </table>
-
-    <h3 id="s2-4">框架组支撑事项</h3>
-
-    <div class="owner-card">
-      <table>
-        <thead><tr><th style="width:34%">事项</th><th>内容</th></tr></thead>
-        <tbody>
-          <tr><td>GitCode 仓库创建</td><td>新建 <code>openlibing-repos-web</code>，三环境共用同一仓库</td></tr>
-          <tr><td>SWR 镜像项目</td><td>组织下新建项目，基础镜像沿用 <code>openeuler/nginx</code> 系列</td></tr>
-          <tr><td>CCE 容器配额</td><td>beta 1 实例、gamma 1 实例、prod 2 实例（规格见 2.5）</td></tr>
-          <tr><td>发布流水线</td><td>3 条：openlibing-repos-web-beta / openlibing-repos-web-gamma / openlibing-repos-web-prod</td></tr>
-        </tbody>
-      </table>
     </div>
 
     <h3 id="s2-5">资源需求明细（按环境）</h3>
