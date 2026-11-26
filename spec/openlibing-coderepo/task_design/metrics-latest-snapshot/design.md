@@ -91,3 +91,17 @@ Liquibase changeset 含对称回滚；不落来源 runId/时间列（详情兜�
 - 排序字段白名单枚举映射（非字符串拼接）；新增 SQL 全部 MyBatis 参数化；jobParam 校验格式；
 - 新增列均为度量数值，无敏感泄露面；
 - 写列失败/解析失败降级不阻断上报主链路；刷数遍历中单条 JSON 解析失败 warn 跳过继续向上；刷数任务异常跳过该分支继续。
+
+## 8. 增量优化：指标快照独立更新时间（updateTime，PR #353 追加）
+
+分支管理列表 5 个指标列需要展示各指标的更新时间。因快照列写入语义不同，5 个指标的更新时间**可能各不相同**：正常写入 5 值同源最新记录（同刻）；刷数补齐场景从新到旧先到先得，各指标值可能来自不同历史记录（时间各自独立）。
+
+**数据模型**：`repo_branch` 为 5 个快照列各配一个 `DATETIME` 时间列（`code_scale_update_time` 等，Liquibase changeSet `20261125_add_metrics_snapshot_update_time_to_repo_branch`），语义为「该指标当前值来源记录的 `detection_completed_at`」；值列与时间列同写同空（值 null 则时间 null，哨兵值同样携带时间），修正第 4 节"不落时间列"结论。
+
+**写入**（`refreshBranchMetricsSnapshot`）：5 指标同源最新记录，5 个时间统一取该记录 `detection_completed_at`。
+
+**刷数**（`backfillBranchMetricsHistory`）：先到先得命中即记录该来源记录时间（含哨兵命中），逐指标独立；`syncBranchSnapshotColumns` / `updateMetricsSnapshot` 增加 5 个时间参数透传。
+
+**查询**：`MetricItemVO` 新增 `updateTime`（String，`yyyy-MM-dd HH:mm:ss`，null=无快照）；单仓 `queryRepoBranchInfo` 与跨仓 `queryProjectBranch` 两个入口经 `buildBranchMetricsVo` 一致带出（实体/行实体各加 5 个 Date 字段）。历史扫描记录页（`scan-record/page`）**不改**：每行即一条扫描记录，行上 `scanTime` 与 5 个指标值同源同刻，语义无缺口。
+
+**兼容性**：响应仅在既有 `metrics[key]` 对象上新增字段，向后兼容；历史存量数据时间列为 NULL（刷数任务重跑即可回填）。
