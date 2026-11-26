@@ -30,14 +30,14 @@
 
 权限数据在 MySQL `openlibing` 库，核心表：
 
-| 表 | 关键字段 | 说明 |
-|---|---|---|
-| `user_role_info` | `user_id, role, product_id, project_id, repo_id, perm_group_id` | 用户角色行，一行代表一个作用域 |
-| `role_type_info` | `role, type` | `type = system/product/project/repo/general` |
-| `project_info` | `project_id, product_id, parent_id` | 项目、所属产品、父子层级 |
-| `repo_info` | `repo_id, repo_url, project_id` | 仓库归属项目 |
-| `sdi_repo_info`（Doris） | `repo_id, repo_url, project_id` | 分析库仓库维度，用于 repoUrl 反查 |
-| `perm_group` / `perm_group_resource_binding` | `project_id, resource_type, resource_id` | 权限组资源绑定，目前仅 PIPELINE，测试库 5 条 |
+| 表                                           | 关键字段                                                        | 说明                                         |
+| -------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------- |
+| `user_role_info`                             | `user_id, role, product_id, project_id, repo_id, perm_group_id` | 用户角色行，一行代表一个作用域               |
+| `role_type_info`                             | `role, type`                                                    | `type = system/product/project/repo/general` |
+| `project_info`                               | `project_id, product_id, parent_id`                             | 项目、所属产品、父子层级                     |
+| `repo_info`                                  | `repo_id, repo_url, project_id`                                 | 仓库归属项目                                 |
+| `sdi_repo_info`（Doris）                     | `repo_id, repo_url, project_id`                                 | 分析库仓库维度，用于 repoUrl 反查            |
+| `perm_group` / `perm_group_resource_binding` | `project_id, resource_type, resource_id`                        | 权限组资源绑定，目前仅 PIPELINE，测试库 5 条 |
 
 测试库数据特征（2026-11-14）：
 
@@ -56,13 +56,13 @@
 
 ### 2.3 菜单授权现状（ops 相关）
 
-| 菜单 | menu_level | 已授权角色 |
-|---|---|---|
-| 开源项目运营看板 100576 | menu_system | admin、dashboard、platform_operater、数字化运营看板管理员 |
-| 工程能力运营看板 100834 | menu_system | admin、dashboard、数字化运营看板管理员 |
-| 精准测试 100904 | menu_general | visitor、admin |
-| 查询测试报告 100925 | menu_general | visitor |
-| ops备案系统 100980 | menu_general | visitor、数字化运营看板管理员 |
+| 菜单                    | menu_level   | 已授权角色                                                |
+| ----------------------- | ------------ | --------------------------------------------------------- |
+| 开源项目运营看板 100576 | menu_system  | admin、dashboard、platform_operater、数字化运营看板管理员 |
+| 工程能力运营看板 100834 | menu_system  | admin、dashboard、数字化运营看板管理员                    |
+| 精准测试 100904         | menu_general | visitor、admin                                            |
+| 查询测试报告 100925     | menu_general | visitor                                                   |
+| ops备案系统 100980      | menu_general | visitor、数字化运营看板管理员                             |
 
 结论：不能按“角色类型”一刀切放行。`visitor` 被授予了精准测试/测试报告菜单，但业务上不允许其查看源码和测试明细，必须在 ops 内做项目级校验。
 
@@ -80,25 +80,25 @@
 
 ### 4.1 资源范围
 
-| 范围 | 判定 | 典型接口 |
-|---|---|---|
-| `GLOBAL` | 不查资源，网关菜单权限已控制 | 全局汇总看板、项目/产品下拉元数据、健康检查 |
-| `PROJECT` | 校验项目权限；`repoId` 先反查 `project_id` | 项目/仓库明细、测试报告、精准覆盖率、流水线明细 |
-| `OWNER` | `userId` 等于资源归属人 | 备案、备注等个人数据 |
-| `LIST_FILTER` | 不返回 403，按可见项目集合过滤 | 列表、导出、下拉 |
+| 范围          | 判定                                       | 典型接口                                        |
+| ------------- | ------------------------------------------ | ----------------------------------------------- |
+| `GLOBAL`      | 不查资源，网关菜单权限已控制               | 全局汇总看板、项目/产品下拉元数据、健康检查     |
+| `PROJECT`     | 校验项目权限；`repoId` 先反查 `project_id` | 项目/仓库明细、测试报告、精准覆盖率、流水线明细 |
+| `OWNER`       | `userId` 等于资源归属人                    | 备案、备注等个人数据                            |
+| `LIST_FILTER` | 不返回 403，按可见项目集合过滤             | 列表、导出、下拉                                |
 
 不设 `REPO` 范围。`repoId`、`repoUrl`、`pipelineId` 都先反查 `project_id`，再按项目权限判断。
 
 ### 4.2 判定矩阵
 
-| 角色/条件 | 全局汇总读 | 项目明细读 | 项目配置写 |
-|---|---|---|---|
-| `super_admin` / `admin` / `platform_operater` | 放行 | 放行 | 放行 |
-| `dashboard` / `数字化运营看板管理员` | 放行 | 放行（跨项目） | 拒绝 |
-| `product_manager` 且 `product_id` 命中 | 放行 | 放行 | 拒绝 |
-| project 类型角色且 `project_id` 命中目标或祖先 | 放行 | 放行 | 仅 `project_manager` |
-| repo 类型角色 | 放行（如果菜单允许） | 拒绝 | 拒绝 |
-| `visitor` / `general` | 放行（如果菜单允许） | 拒绝 | 拒绝 |
+| 角色/条件                                      | 全局汇总读           | 项目明细读     | 项目配置写           |
+| ---------------------------------------------- | -------------------- | -------------- | -------------------- |
+| `super_admin` / `admin` / `platform_operater`  | 放行                 | 放行           | 放行                 |
+| `dashboard` / `数字化运营看板管理员`           | 放行                 | 放行（跨项目） | 拒绝                 |
+| `product_manager` 且 `product_id` 命中         | 放行                 | 放行           | 拒绝                 |
+| project 类型角色且 `project_id` 命中目标或祖先 | 放行                 | 放行           | 仅 `project_manager` |
+| repo 类型角色                                  | 放行（如果菜单允许） | 拒绝           | 拒绝                 |
+| `visitor` / `general`                          | 放行（如果菜单允许） | 拒绝           | 拒绝                 |
 
 说明：
 
@@ -115,15 +115,15 @@
 
 ### 4.4 与旧方案的区别
 
-| 项 | 旧方案 | v2 |
-|---|---|---|
-| 角色类型短路 | system/general 全放行 | 只对显式全局读角色放行；visitor 不放行项目明细 |
-| 空资源 id | 跳过校验 | PROJECT 缺 id 返回 400；列表走 LIST_FILTER |
-| repo 角色 | 带 project_id 可看整个项目 | 不算项目权限 |
-| 读写 | 同一套 | 写只允许全局管理员 + `project_manager` |
-| 列表/导出 | 可查全量 | 按可见项目集合过滤 |
-| 项目层级 | 不处理 | 父项目继承子项目 |
-| 权限组 | 不处理 | 固定 `perm_group_id = 0`，为后续留口子 |
+| 项           | 旧方案                     | v2                                             |
+| ------------ | -------------------------- | ---------------------------------------------- |
+| 角色类型短路 | system/general 全放行      | 只对显式全局读角色放行；visitor 不放行项目明细 |
+| 空资源 id    | 跳过校验                   | PROJECT 缺 id 返回 400；列表走 LIST_FILTER     |
+| repo 角色    | 带 project_id 可看整个项目 | 不算项目权限                                   |
+| 读写         | 同一套                     | 写只允许全局管理员 + `project_manager`         |
+| 列表/导出    | 可查全量                   | 按可见项目集合过滤                             |
+| 项目层级     | 不处理                     | 父项目继承子项目                               |
+| 权限组       | 不处理                     | 固定 `perm_group_id = 0`，为后续留口子         |
 
 ## 5. 组件设计
 
@@ -242,26 +242,26 @@ Doris 查询同样先在 MySQL 取可见 `project_id` 集合，再下推 `IN`；
 
 ### 6.1 分类
 
-| Controller | 范围 | 说明 |
-|---|---|---|
-| `PrecisionCoverageController` | `PROJECT` | 所有下钻接口强制 projectId/repoId；`file/detail`、`case/file/detail` 为 P1 |
-| `ReportController` | `PROJECT` / `LIST_FILTER` | `data/query` 强制 repoUrls 或 projectId；`template/list` 过滤 |
-| `RepoController` | `PROJECT` + `WRITE` | 读写分离；`branch/config/batch` 写权限 |
-| `OpsOverviewController` | `GLOBAL` / `PROJECT` + `WRITE` | 汇总 GLOBAL；项目明细 PROJECT；`pr-e2e-target/batch`、`link-config` 写权限 |
-| `PipelineController` | `PROJECT` | `repoUrl` 反查 project |
-| `ProjectController` | `PROJECT` | 项目详情 |
-| `OpsGithubController` | `LIST_FILTER` / `PROJECT` | 不传 projectId 时过滤；传了则校验 |
-| `ResourceOperationController` | `PROJECT` | 资源运营明细 |
-| `ResourceController` | `PROJECT` | 资源看板 |
-| `CodeCheckDashboardController` | `PROJECT` + `WRITE` | `branch-config/add` 写权限 |
-| `SecurityDashboardController` | `PROJECT` | 安全/版权/依赖明细 |
-| `NpuUsageController` | `PROJECT` / `LIST_FILTER` | filters 过滤；明细校验 |
-| `QualityDashboardController` | `PROJECT` | 质量看板 |
-| `TestCaseBoardController` | `PROJECT` | 用例目录树 |
-| `Filing*` | `OWNER` + 现有审批逻辑 | 保留 creator/审批人/管理员判定 |
-| `ProductQuality*` | `PROJECT` + `WRITE` | `milestoneId → projectId` 反查；写权限 |
-| `CommonController` | 注册表 | `/common/detail` 按 category 注册；`remark` 走 `OWNER`；`export` 走 `LIST_FILTER` |
-| `external/*` | 不纳入 | 机机接口，按网关 HMAC 体系处理 |
+| Controller                     | 范围                           | 说明                                                                              |
+| ------------------------------ | ------------------------------ | --------------------------------------------------------------------------------- |
+| `PrecisionCoverageController`  | `PROJECT`                      | 所有下钻接口强制 projectId/repoId；`file/detail`、`case/file/detail` 为 P1        |
+| `ReportController`             | `PROJECT` / `LIST_FILTER`      | `data/query` 强制 repoUrls 或 projectId；`template/list` 过滤                     |
+| `RepoController`               | `PROJECT` + `WRITE`            | 读写分离；`branch/config/batch` 写权限                                            |
+| `OpsOverviewController`        | `GLOBAL` / `PROJECT` + `WRITE` | 汇总 GLOBAL；项目明细 PROJECT；`pr-e2e-target/batch`、`link-config` 写权限        |
+| `PipelineController`           | `PROJECT`                      | `repoUrl` 反查 project                                                            |
+| `ProjectController`            | `PROJECT`                      | 项目详情                                                                          |
+| `OpsGithubController`          | `LIST_FILTER` / `PROJECT`      | 不传 projectId 时过滤；传了则校验                                                 |
+| `ResourceOperationController`  | `PROJECT`                      | 资源运营明细                                                                      |
+| `ResourceController`           | `PROJECT`                      | 资源看板                                                                          |
+| `CodeCheckDashboardController` | `PROJECT` + `WRITE`            | `branch-config/add` 写权限                                                        |
+| `SecurityDashboardController`  | `PROJECT`                      | 安全/版权/依赖明细                                                                |
+| `NpuUsageController`           | `PROJECT` / `LIST_FILTER`      | filters 过滤；明细校验                                                            |
+| `QualityDashboardController`   | `PROJECT`                      | 质量看板                                                                          |
+| `TestCaseBoardController`      | `PROJECT`                      | 用例目录树                                                                        |
+| `Filing*`                      | `OWNER` + 现有审批逻辑         | 保留 creator/审批人/管理员判定                                                    |
+| `ProductQuality*`              | `PROJECT` + `WRITE`            | `milestoneId → projectId` 反查；写权限                                            |
+| `CommonController`             | 注册表                         | `/common/detail` 按 category 注册；`remark` 走 `OWNER`；`export` 走 `LIST_FILTER` |
+| `external/*`                   | 不纳入                         | 机机接口，按网关 HMAC 体系处理                                                    |
 
 ### 6.2 拆分原则
 
@@ -272,11 +272,11 @@ Doris 查询同样先在 MySQL 取可见 `project_id` 集合，再下推 `IN`；
 
 ### 6.3 实施顺序
 
-| 阶段 | 范围 |
-|---|---|
-| P1 | 精准覆盖率源码、测试报告明细、所有配置写接口 |
-| P2 | 仓库/流水线/安全/NPU/质量/用例等明细；列表与导出过滤 |
-| P3 | `/common/detail` 拆分；全局汇总接口标注 `GLOBAL`；删除“空 id 全量”逻辑 |
+| 阶段 | 范围                                                                   |
+| ---- | ---------------------------------------------------------------------- |
+| P1   | 精准覆盖率源码、测试报告明细、所有配置写接口                           |
+| P2   | 仓库/流水线/安全/NPU/质量/用例等明细；列表与导出过滤                   |
+| P3   | `/common/detail` 拆分；全局汇总接口标注 `GLOBAL`；删除“空 id 全量”逻辑 |
 
 ## 7. 性能与缓存
 
@@ -317,29 +317,29 @@ Doris 查询同样先在 MySQL 取可见 `project_id` 集合，再下推 `IN`；
 
 ## 11. 风险与待定项
 
-| 项 | 说明 | 处理 |
-|---|---|---|
-| `dashboard`/`数字化运营看板管理员` 跨项目读明细 | 包括源码/测试明细，权限较高 | 已确认；加访问审计 |
-| `product_manager` 读本产品项目 | 代码中无现成产品→项目过滤 | 已按默认处理；如需收紧再改 |
-| repoUrl 反查 | `repo_info` 只有 1,192 条，Doris `sdi_repo_info` 更全 | 先 MySQL 后 Doris，查不到拒绝 |
-| 520 角色用户 | 可见项目集合可能较大 | 列表用 SQL 子查询，不加载全量 id |
-| 权限收回延迟 | 缓存 TTL 30~60s | 可接受则保留，否则去缓存 |
-| 项目层级数据异常 | 19 个子项目，最深 3 层 | 启动校验 parent 不存在/环，异常按根处理并告警 |
+| 项                                              | 说明                                                  | 处理                                          |
+| ----------------------------------------------- | ----------------------------------------------------- | --------------------------------------------- |
+| `dashboard`/`数字化运营看板管理员` 跨项目读明细 | 包括源码/测试明细，权限较高                           | 已确认；加访问审计                            |
+| `product_manager` 读本产品项目                  | 代码中无现成产品→项目过滤                             | 已按默认处理；如需收紧再改                    |
+| repoUrl 反查                                    | `repo_info` 只有 1,192 条，Doris `sdi_repo_info` 更全 | 先 MySQL 后 Doris，查不到拒绝                 |
+| 520 角色用户                                    | 可见项目集合可能较大                                  | 列表用 SQL 子查询，不加载全量 id              |
+| 权限收回延迟                                    | 缓存 TTL 30~60s                                       | 可接受则保留，否则去缓存                      |
+| 项目层级数据异常                                | 19 个子项目，最深 3 层                                | 启动校验 parent 不存在/环，异常按根处理并告警 |
 
 ## 12. 代码改动清单
 
-| 文件 | 改动 |
-|---|---|
-| `infrastructure/aop/permission/ResourceScope.java` | 新增注解 |
-| `infrastructure/aop/permission/ResourceScopes.java` | 新增容器注解 |
-| `infrastructure/aop/permission/ResourceScopeAspect.java` | 重写切面 |
-| `infrastructure/enums/ScopeType.java` | 新增 |
-| `infrastructure/enums/ResourceId.java` | 扩展 REPO_URL/PIPELINE_ID |
-| `infrastructure/enums/OperationType.java` | 新增 READ/WRITE |
-| `domain/service/permission/ResourceAccessService.java` | 重写判定与可见集合 |
-| `domain/service/permission/ProjectHierarchyService.java` | 新增层级解析 |
-| `domain/mapper/permission/ResourceAccessMapper.java` + XML | 重写 SQL |
-| `infrastructure/exception/PermissionDeniedException.java` | 复用 |
-| `infrastructure/exception/GlobalExceptionHandler.java` | 403 handler |
-| `api/controller/*` | 按第 6 章加注解、拆接口 |
-| `src/test/java/.../permission/*` | 新增单测 |
+| 文件                                                       | 改动                      |
+| ---------------------------------------------------------- | ------------------------- |
+| `infrastructure/aop/permission/ResourceScope.java`         | 新增注解                  |
+| `infrastructure/aop/permission/ResourceScopes.java`        | 新增容器注解              |
+| `infrastructure/aop/permission/ResourceScopeAspect.java`   | 重写切面                  |
+| `infrastructure/enums/ScopeType.java`                      | 新增                      |
+| `infrastructure/enums/ResourceId.java`                     | 扩展 REPO_URL/PIPELINE_ID |
+| `infrastructure/enums/OperationType.java`                  | 新增 READ/WRITE           |
+| `domain/service/permission/ResourceAccessService.java`     | 重写判定与可见集合        |
+| `domain/service/permission/ProjectHierarchyService.java`   | 新增层级解析              |
+| `domain/mapper/permission/ResourceAccessMapper.java` + XML | 重写 SQL                  |
+| `infrastructure/exception/PermissionDeniedException.java`  | 复用                      |
+| `infrastructure/exception/GlobalExceptionHandler.java`     | 403 handler               |
+| `api/controller/*`                                         | 按第 6 章加注解、拆接口   |
+| `src/test/java/.../permission/*`                           | 新增单测                  |

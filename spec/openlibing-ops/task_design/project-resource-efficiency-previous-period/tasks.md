@@ -15,6 +15,7 @@
 ### Task 1：确定请求和响应契约
 
 **文件：**
+
 - 修改：`openlibing-ops/src/test/java/com/openlibing/ops/domain/mapper/ops/ResourceEfficiencyMapperXmlTest.java`
 - 修改：`openlibing-ops/src/main/java/com/openlibing/ops/api/request/common/detail/OpsProjectResourceEfficiencyReq.java`
 - 修改：`openlibing-ops/src/main/java/com/openlibing/ops/api/response/common/detail/OpsProjectResourceEfficiencyResp.java`
@@ -30,6 +31,7 @@
 ### Task 2：让现有 Mapper 支持可选当前页项目集合
 
 **文件：**
+
 - 修改：`openlibing-ops/src/test/java/com/openlibing/ops/domain/mapper/ops/ResourceEfficiencyMapperXmlTest.java`
 - 修改：`openlibing-ops/src/main/java/com/openlibing/ops/domain/mapper/ops/ResourceEfficiencyMapper.java`
 - 修改：`openlibing-ops/src/main/resources/mapper/ResourceEfficiencyMapper.xml`
@@ -45,6 +47,7 @@
 ### Task 3：实现上一期窗口推导且保持默认路径不变
 
 **文件：**
+
 - 修改：`openlibing-ops/src/test/java/com/openlibing/ops/app/service/ops/ResourceEfficiencyServiceTest.java`
 - 修改：`openlibing-ops/src/main/java/com/openlibing/ops/app/service/ops/ResourceEfficiencyService.java`
 
@@ -60,6 +63,7 @@
 ### Task 4：查询、归一化并合并上一期数据
 
 **文件：**
+
 - 修改：`openlibing-ops/src/test/java/com/openlibing/ops/app/service/ops/ResourceEfficiencyServiceTest.java`
 - 修改：`openlibing-ops/src/main/java/com/openlibing/ops/app/service/ops/ResourceEfficiencyService.java`
 
@@ -77,6 +81,7 @@
 ### Task 5：前端按统一规则展示环比
 
 **文件：**
+
 - 前端项目中的项目资源效率列表、指标展示组件及对应测试；实际路径由前端负责人在其仓内定位，本计划不假设前端仓结构。
 - 联调依据：本目录 `design.md` 第 8 节。
 
@@ -91,6 +96,7 @@
 ### Task 6：回归、性能检查和交付
 
 **文件：**
+
 - 修改：本目录 `frontend-integration.md`（进入联调前补充最终请求/响应示例）。
 - 修改：本目录 `tasks.md`（勾选实际完成项）。
 

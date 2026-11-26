@@ -60,8 +60,8 @@
 
 `OpsProjectResourceEfficiencyResp` 新增：
 
-| 字段 | 类型 | 单位 | 口径 |
-| --- | --- | --- | --- |
+| 字段                | 类型   | 单位 | 口径                                                                |
+| ------------------- | ------ | ---- | ------------------------------------------------------------------- |
 | `prAvgQueueMinutes` | Double | 分钟 | 每个 PR run 取排队最长的 job 作为 run 样本，再对全部 run 样本求平均 |
 
 在现有 `qagg` 中与 `PERCENTILE(..., 0.9)` 并列增加 `AVG(sample_duration) / 60.0`，经 `pr_agg` 和最终 SELECT 透传。Service 复用 `NumberUtil.roundDecimalOrNull` 保留两位小数，无样本保持 `null`。

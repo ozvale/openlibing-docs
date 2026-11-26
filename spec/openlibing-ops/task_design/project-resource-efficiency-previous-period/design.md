@@ -23,13 +23,13 @@ POST /common/detail
 
 关键文件：
 
-| 文件 | 当前职责 |
-| --- | --- |
-| `OpsProjectResourceEfficiencyReq.java` | 项目过滤和 `engineeringScope` |
-| `OpsProjectResourceEfficiencyResp.java` | 项目信息、10 个数值指标和资源池列表 |
-| `ResourceEfficiencyService.java` | 时间校验、排序白名单、窗口天数、分页和响应归一化 |
-| `ResourceEfficiencyMapper.java` | 项目列表/count/资源池查询定义 |
-| `ResourceEfficiencyMapper.xml` | PR run、排队、卡时和资源池指标聚合 |
+| 文件                                    | 当前职责                                         |
+| --------------------------------------- | ------------------------------------------------ |
+| `OpsProjectResourceEfficiencyReq.java`  | 项目过滤和 `engineeringScope`                    |
+| `OpsProjectResourceEfficiencyResp.java` | 项目信息、10 个数值指标和资源池列表              |
+| `ResourceEfficiencyService.java`        | 时间校验、排序白名单、窗口天数、分页和响应归一化 |
+| `ResourceEfficiencyMapper.java`         | 项目列表/count/资源池查询定义                    |
+| `ResourceEfficiencyMapper.xml`          | PR run、排队、卡时和资源池指标聚合               |
 
 ### 2.2 必须保持的口径
 
@@ -61,11 +61,11 @@ POST /common/detail
 
 ## 4. 备选方案比较
 
-| 方案 | 正确性 | 查询成本 | 改造量 | 结论 |
-| --- | --- | --- | --- | --- |
-| A. 后端当前页 + 上一期 projectIds 两次聚合，后端算增减值/增减率 | 两期复用同一 SQL；当前排序分页准确；按 ID 合并 | 增加一次必要的上一期列表聚合，不重复 count 和资源池查询 | 中，复用现有 SQL | **采用** |
-| B. 单 SQL 双窗口并返回完整环比 | 可保证单查询内口径一致 | 一次往返，但若不先确定当前页，会对全部项目做双期聚合 | 大，CTE、分页、排序和结果映射均需调整 | 作为后续性能优化备选 |
-| C. 前端调用两次现有接口 | 默认项目排序下可用；按当前指标排序时上一期页内项目可能不同 | 两次列表 + 两次 count + 两次资源池查询，且有两个请求时点 | 后端小、前端中 | 不用于正式方案 |
+| 方案                                                            | 正确性                                                     | 查询成本                                                 | 改造量                                | 结论                 |
+| --------------------------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------- | -------------------- |
+| A. 后端当前页 + 上一期 projectIds 两次聚合，后端算增减值/增减率 | 两期复用同一 SQL；当前排序分页准确；按 ID 合并             | 增加一次必要的上一期列表聚合，不重复 count 和资源池查询  | 中，复用现有 SQL                      | **采用**             |
+| B. 单 SQL 双窗口并返回完整环比                                  | 可保证单查询内口径一致                                     | 一次往返，但若不先确定当前页，会对全部项目做双期聚合     | 大，CTE、分页、排序和结果映射均需调整 | 作为后续性能优化备选 |
+| C. 前端调用两次现有接口                                         | 默认项目排序下可用；按当前指标排序时上一期页内项目可能不同 | 两次列表 + 两次 count + 两次资源池查询，且有两个请求时点 | 后端小、前端中                        | 不用于正式方案       |
 
 增减值/增减率按用户要求由后端统一计算（口径与两期一致），前端只负责正负号、百分点和颜色的格式化展示，不重复实现计算逻辑。
 
@@ -75,9 +75,9 @@ POST /common/detail
 
 `OpsProjectResourceEfficiencyReq` 新增：
 
-| 字段 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- |
-| `includePreviousPeriod` | Boolean | 否 | `false` | 是否返回紧邻前一等长自然日周期数据 |
+| 字段                    | 类型    | 必填 | 默认值  | 说明                               |
+| ----------------------- | ------- | ---- | ------- | ---------------------------------- |
+| `includePreviousPeriod` | Boolean | 否   | `false` | 是否返回紧邻前一等长自然日周期数据 |
 
 示例：
 
@@ -101,19 +101,19 @@ POST /common/detail
 
 新增独立 `OpsProjectResourceEfficiencyPreviousPeriodResp`：
 
-| 字段 | 说明 |
-| --- | --- |
-| `startTime/endTime` | 实际上一期查询窗口 |
-| `queueP90` | 上一期 PR 排队 P90（分钟） |
-| `prAvgQueueMinutes` | 上一期 PR 平均排队（分钟） |
-| `npuAllocHours` | 上一期 PR NPU 分配卡时 |
-| `prAvgUsedHours` | 上一期单次 run 平均消耗卡时 |
-| `npuUsageRate` | 上一期全部池利用率（%） |
-| `npuAllocRate` | 上一期全部池分配率（%） |
-| `sharedNpuAllocRate` | 上一期共享池分配率（%） |
-| `exclusiveNpuAllocRate` | 上一期独占池分配率（%） |
-| `sharedNpuUsageRate` | 上一期共享池利用率（%） |
-| `exclusiveNpuUsageRate` | 上一期独占池利用率（%） |
+| 字段                    | 说明                        |
+| ----------------------- | --------------------------- |
+| `startTime/endTime`     | 实际上一期查询窗口          |
+| `queueP90`              | 上一期 PR 排队 P90（分钟）  |
+| `prAvgQueueMinutes`     | 上一期 PR 平均排队（分钟）  |
+| `npuAllocHours`         | 上一期 PR NPU 分配卡时      |
+| `prAvgUsedHours`        | 上一期单次 run 平均消耗卡时 |
+| `npuUsageRate`          | 上一期全部池利用率（%）     |
+| `npuAllocRate`          | 上一期全部池分配率（%）     |
+| `sharedNpuAllocRate`    | 上一期共享池分配率（%）     |
+| `exclusiveNpuAllocRate` | 上一期独占池分配率（%）     |
+| `sharedNpuUsageRate`    | 上一期共享池利用率（%）     |
+| `exclusiveNpuUsageRate` | 上一期独占池利用率（%）     |
 
 此外每个指标返回后端计算好的 `<指标>Delta`（增减值）与 `<指标>ChangeRate`（增减率，百分比数值，如 23.0 表示 +23%）：任一期为 null 时两者为 null；上一期为 0 时 Delta 可算、ChangeRate 为 null；百分比指标 Delta 单位为百分点。前端直接展示，不再计算。
 
@@ -123,15 +123,15 @@ POST /common/detail
 {
   "projectId": 100,
   "projectName": "example",
-  "queueP90": 12.30,
-  "prAvgQueueMinutes": 8.20,
-  "npuUsageRate": 65.40,
+  "queueP90": 12.3,
+  "prAvgQueueMinutes": 8.2,
+  "npuUsageRate": 65.4,
   "previousPeriod": {
     "startTime": "2026-11-15 00:00:00",
     "endTime": "2026-11-19 23:59:59",
-    "queueP90": 10.00,
-    "prAvgQueueMinutes": 7.50,
-    "npuUsageRate": 60.00
+    "queueP90": 10.0,
+    "prAvgQueueMinutes": 7.5,
+    "npuUsageRate": 60.0
   }
 }
 ```
@@ -148,9 +148,9 @@ previousStartTime = startTime - windowDays 天
 previousEndTime = endTime - windowDays 天
 ```
 
-| 当前期 | 上一期 |
-| --- | --- |
-| 2026-11-24 | 2026-11-23 |
+| 当前期                 | 上一期                 |
+| ---------------------- | ---------------------- |
+| 2026-11-24             | 2026-11-23             |
 | 2026-11-20～2026-11-24 | 2026-11-15～2026-11-19 |
 | 2026-11-01～2026-11-03 | 2026-10-29～2026-10-31 |
 | 2026-01-01～2026-01-02 | 2025-12-30～2025-12-31 |
@@ -197,14 +197,14 @@ queryProjectEfficiencyList(req, windowDays, projectIds)
 
 ### 7.3 指标计算
 
-| 指标类别 | 两期计算方式 |
-| --- | --- |
-| `queueP90` | 各期从该期全部 run 级样本重新计算 P90，不合并日/流水线 P90 |
-| `prAvgQueueMinutes` | 各期对与 P90 相同的 run 级样本求平均 |
-| `npuAllocHours` | 各期对窗口内申请切片求和 |
-| `prAvgUsedHours` | 各期分别计算卡时合计 ÷ 该期去重 run 数 |
-| 全部/共享/独占利用率 | 各期分别汇总 used、total 后相除 |
-| 全部/共享/独占分配率 | 各期分别汇总 assign，并使用该期工作日/自然日分母 |
+| 指标类别             | 两期计算方式                                               |
+| -------------------- | ---------------------------------------------------------- |
+| `queueP90`           | 各期从该期全部 run 级样本重新计算 P90，不合并日/流水线 P90 |
+| `prAvgQueueMinutes`  | 各期对与 P90 相同的 run 级样本求平均                       |
+| `npuAllocHours`      | 各期对窗口内申请切片求和                                   |
+| `prAvgUsedHours`     | 各期分别计算卡时合计 ÷ 该期去重 run 数                     |
+| 全部/共享/独占利用率 | 各期分别汇总 used、total 后相除                            |
+| 全部/共享/独占分配率 | 各期分别汇总 assign，并使用该期工作日/自然日分母           |
 
 上一期结果使用与当前期相同的归一化方法，确保前端拿到的两期都是分钟、卡时或 0～100 百分比，不混用 SQL 的 0～1 比率。
 
@@ -230,12 +230,12 @@ Delta      = current - previous
 ChangeRate = (current - previous) / previous × 100   // 百分比数值
 ```
 
-| 场景 | Delta | ChangeRate | 建议展示 |
-| --- | --- | --- | --- |
-| 两期均非 `null`，`previous != 0` | 数值 | 数值 | 当前值 + 环比增减率 |
-| `previous = 0` | 数值 | `null` | 增减率 `--`，可在 Tooltip 展示增减值 |
-| 任一期为 `null` | `null` | `null` | `--`，不得当成 0 |
-| 两期相等 | 0 | 0 | 0.00% |
+| 场景                             | Delta  | ChangeRate | 建议展示                             |
+| -------------------------------- | ------ | ---------- | ------------------------------------ |
+| 两期均非 `null`，`previous != 0` | 数值   | 数值       | 当前值 + 环比增减率                  |
+| `previous = 0`                   | 数值   | `null`     | 增减率 `--`，可在 Tooltip 展示增减值 |
+| 任一期为 `null`                  | `null` | `null`     | `--`，不得当成 0                     |
+| 两期相等                         | 0      | 0          | 0.00%                                |
 
 ChangeRate 已是百分比数值（前端不要再乘 100）；百分比指标 Delta 单位为百分点。计算和显示保留两位小数。
 
@@ -258,17 +258,17 @@ ChangeRate 已是百分比数值（前端不要再乘 100）；百分比指标 D
 
 ## 10. 涉及文件
 
-| 文件 | 操作 | 说明 |
-| --- | --- | --- |
-| `OpsProjectResourceEfficiencyReq.java` | 修改 | 新增 `includePreviousPeriod` |
-| `OpsResourceEfficiencyMetricsResp.java` | 新增 | 当前期与上一期共用的 10 个指标字段 + `copyMetricsFrom` / `normalize` |
+| 文件                                                  | 操作 | 说明                                                                                                                                             |
+| ----------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `OpsProjectResourceEfficiencyReq.java`                | 修改 | 新增 `includePreviousPeriod`                                                                                                                     |
+| `OpsResourceEfficiencyMetricsResp.java`               | 新增 | 当前期与上一期共用的 10 个指标字段 + `copyMetricsFrom` / `normalize`                                                                             |
 | `OpsProjectResourceEfficiencyPreviousPeriodResp.java` | 新增 | 上一期窗口；指标继承公共基类，并含后端计算的 `<指标>Delta` / `<指标>ChangeRate`；工厂方法 `of(start, end, previous, current)` 一次完成赋值与计算 |
-| `OpsProjectResourceEfficiencyResp.java` | 修改 | 新增 `previousPeriod` |
-| `ResourceEfficiencyService.java` | 修改 | 推导窗口、复制请求、查询和合并上一期，复用归一化 |
-| `ResourceEfficiencyMapper.java` | 修改 | 列表查询增加可空 `projectIds` 参数 |
-| `ResourceEfficiencyMapper.xml` | 修改 | `proj_pool` 增加可选项目 ID 集合过滤 |
-| `ResourceEfficiencyServiceTest.java` | 修改 | 窗口、复制条件、合并、空值和默认路径测试 |
-| `ResourceEfficiencyMapperXmlTest.java` | 修改 | 可选 `projectIds` 动态 SQL 和兼容性测试 |
+| `OpsProjectResourceEfficiencyResp.java`               | 修改 | 新增 `previousPeriod`                                                                                                                            |
+| `ResourceEfficiencyService.java`                      | 修改 | 推导窗口、复制请求、查询和合并上一期，复用归一化                                                                                                 |
+| `ResourceEfficiencyMapper.java`                       | 修改 | 列表查询增加可空 `projectIds` 参数                                                                                                               |
+| `ResourceEfficiencyMapper.xml`                        | 修改 | `proj_pool` 增加可选项目 ID 集合过滤                                                                                                             |
+| `ResourceEfficiencyServiceTest.java`                  | 修改 | 窗口、复制条件、合并、空值和默认路径测试                                                                                                         |
+| `ResourceEfficiencyMapperXmlTest.java`                | 修改 | 可选 `projectIds` 动态 SQL 和兼容性测试                                                                                                          |
 
 Controller、通用 `DetailReq` 注册、数据库表和其他 category 不需要修改。
 

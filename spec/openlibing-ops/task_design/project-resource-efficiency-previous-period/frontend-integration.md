@@ -12,9 +12,9 @@
 
 沿用现有请求，只新增一个参数：
 
-| 字段 | 类型 | 必填 | 默认 | 说明 |
-| --- | --- | --- | --- | --- |
-| `includePreviousPeriod` | boolean | 否 | `false` | `true` 时返回紧邻前一等长自然日周期的数据 |
+| 字段                    | 类型    | 必填 | 默认    | 说明                                      |
+| ----------------------- | ------- | ---- | ------- | ----------------------------------------- |
+| `includePreviousPeriod` | boolean | 否   | `false` | `true` 时返回紧邻前一等长自然日周期的数据 |
 
 ```json
 {
@@ -37,37 +37,37 @@
 
 ### 3.1 窗口与上一期原值
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `previousPeriod` | object \| null | 上一期数据；未开启环比时为 `null` |
-| `previousPeriod.startTime` | string | 上一期起始时间，`yyyy-MM-dd HH:mm:ss` |
-| `previousPeriod.endTime` | string | 上一期结束时间，`yyyy-MM-dd HH:mm:ss` |
-| `previousPeriod.queueP90` | number \| null | 上一期 PR 排队时长 P90（分钟） |
-| `previousPeriod.prAvgQueueMinutes` | number \| null | 上一期 PR 平均排队时长（分钟） |
-| `previousPeriod.npuAllocHours` | number \| null | 上一期 PR NPU 分配（卡时） |
-| `previousPeriod.prAvgUsedHours` | number \| null | 上一期单次 run 平均消耗（卡时） |
-| `previousPeriod.npuUsageRate` | number \| null | 上一期 NPU 使用率（%，全部池） |
-| `previousPeriod.npuAllocRate` | number \| null | 上一期 NPU 分配率（%，全部池） |
-| `previousPeriod.sharedNpuAllocRate` | number \| null | 上一期共享池分配率（%） |
-| `previousPeriod.exclusiveNpuAllocRate` | number \| null | 上一期独占池分配率（%） |
-| `previousPeriod.sharedNpuUsageRate` | number \| null | 上一期共享池使用率（%） |
-| `previousPeriod.exclusiveNpuUsageRate` | number \| null | 上一期独占池使用率（%） |
+| 字段                                   | 类型           | 说明                                  |
+| -------------------------------------- | -------------- | ------------------------------------- |
+| `previousPeriod`                       | object \| null | 上一期数据；未开启环比时为 `null`     |
+| `previousPeriod.startTime`             | string         | 上一期起始时间，`yyyy-MM-dd HH:mm:ss` |
+| `previousPeriod.endTime`               | string         | 上一期结束时间，`yyyy-MM-dd HH:mm:ss` |
+| `previousPeriod.queueP90`              | number \| null | 上一期 PR 排队时长 P90（分钟）        |
+| `previousPeriod.prAvgQueueMinutes`     | number \| null | 上一期 PR 平均排队时长（分钟）        |
+| `previousPeriod.npuAllocHours`         | number \| null | 上一期 PR NPU 分配（卡时）            |
+| `previousPeriod.prAvgUsedHours`        | number \| null | 上一期单次 run 平均消耗（卡时）       |
+| `previousPeriod.npuUsageRate`          | number \| null | 上一期 NPU 使用率（%，全部池）        |
+| `previousPeriod.npuAllocRate`          | number \| null | 上一期 NPU 分配率（%，全部池）        |
+| `previousPeriod.sharedNpuAllocRate`    | number \| null | 上一期共享池分配率（%）               |
+| `previousPeriod.exclusiveNpuAllocRate` | number \| null | 上一期独占池分配率（%）               |
+| `previousPeriod.sharedNpuUsageRate`    | number \| null | 上一期共享池使用率（%）               |
+| `previousPeriod.exclusiveNpuUsageRate` | number \| null | 上一期独占池使用率（%）               |
 
 ### 3.2 增减值 / 增减率（后端已计算，前端直接读）
 
 每个指标对应两个字段，命名规则为 `<指标名>Delta`（增减值）和 `<指标名>ChangeRate`（增减率）：
 
-| 指标 | 增减值字段 | 增减率字段 |
-| --- | --- | --- |
-| queueP90 | `previousPeriod.queueP90Delta` | `previousPeriod.queueP90ChangeRate` |
-| prAvgQueueMinutes | `previousPeriod.prAvgQueueMinutesDelta` | `previousPeriod.prAvgQueueMinutesChangeRate` |
-| npuAllocHours | `previousPeriod.npuAllocHoursDelta` | `previousPeriod.npuAllocHoursChangeRate` |
-| prAvgUsedHours | `previousPeriod.prAvgUsedHoursDelta` | `previousPeriod.prAvgUsedHoursChangeRate` |
-| npuUsageRate | `previousPeriod.npuUsageRateDelta` | `previousPeriod.npuUsageRateChangeRate` |
-| npuAllocRate | `previousPeriod.npuAllocRateDelta` | `previousPeriod.npuAllocRateChangeRate` |
-| sharedNpuAllocRate | `previousPeriod.sharedNpuAllocRateDelta` | `previousPeriod.sharedNpuAllocRateChangeRate` |
+| 指标                  | 增减值字段                                  | 增减率字段                                       |
+| --------------------- | ------------------------------------------- | ------------------------------------------------ |
+| queueP90              | `previousPeriod.queueP90Delta`              | `previousPeriod.queueP90ChangeRate`              |
+| prAvgQueueMinutes     | `previousPeriod.prAvgQueueMinutesDelta`     | `previousPeriod.prAvgQueueMinutesChangeRate`     |
+| npuAllocHours         | `previousPeriod.npuAllocHoursDelta`         | `previousPeriod.npuAllocHoursChangeRate`         |
+| prAvgUsedHours        | `previousPeriod.prAvgUsedHoursDelta`        | `previousPeriod.prAvgUsedHoursChangeRate`        |
+| npuUsageRate          | `previousPeriod.npuUsageRateDelta`          | `previousPeriod.npuUsageRateChangeRate`          |
+| npuAllocRate          | `previousPeriod.npuAllocRateDelta`          | `previousPeriod.npuAllocRateChangeRate`          |
+| sharedNpuAllocRate    | `previousPeriod.sharedNpuAllocRateDelta`    | `previousPeriod.sharedNpuAllocRateChangeRate`    |
 | exclusiveNpuAllocRate | `previousPeriod.exclusiveNpuAllocRateDelta` | `previousPeriod.exclusiveNpuAllocRateChangeRate` |
-| sharedNpuUsageRate | `previousPeriod.sharedNpuUsageRateDelta` | `previousPeriod.sharedNpuUsageRateChangeRate` |
+| sharedNpuUsageRate    | `previousPeriod.sharedNpuUsageRateDelta`    | `previousPeriod.sharedNpuUsageRateChangeRate`    |
 | exclusiveNpuUsageRate | `previousPeriod.exclusiveNpuUsageRateDelta` | `previousPeriod.exclusiveNpuUsageRateChangeRate` |
 
 取值约定（均为 `number | null`，保留两位小数）：
@@ -94,21 +94,21 @@
       {
         "projectId": 100,
         "projectName": "agent-core",
-        "queueP90": 12.30,
-        "npuUsageRate": 65.40,
-        "npuAllocHours": 120.00,
+        "queueP90": 12.3,
+        "npuUsageRate": 65.4,
+        "npuAllocHours": 120.0,
         "resourcePools": ["共享-Pool-A"],
         "previousPeriod": {
           "startTime": "2026-11-15 00:00:00",
           "endTime": "2026-11-19 23:59:59",
-          "queueP90": 10.00,
-          "queueP90Delta": 2.30,
-          "queueP90ChangeRate": 23.00,
-          "npuUsageRate": 60.00,
-          "npuUsageRateDelta": 5.40,
-          "npuUsageRateChangeRate": 9.00,
+          "queueP90": 10.0,
+          "queueP90Delta": 2.3,
+          "queueP90ChangeRate": 23.0,
+          "npuUsageRate": 60.0,
+          "npuUsageRateDelta": 5.4,
+          "npuUsageRateChangeRate": 9.0,
           "npuAllocHours": 0,
-          "npuAllocHoursDelta": 120.00,
+          "npuAllocHoursDelta": 120.0,
           "npuAllocHoursChangeRate": null
         }
       }
@@ -133,25 +133,25 @@ type Nullable = number | null | undefined;
 
 /** 增减率文案：后端已返回百分比数值（23.0 = +23%），null 显示 -- */
 export function formatChangeRate(changeRate: Nullable): string {
-  if (changeRate == null) return '--';
-  const sign = changeRate > 0 ? '+' : '';
+  if (changeRate == null) return "--";
+  const sign = changeRate > 0 ? "+" : "";
   return `${sign}${changeRate.toFixed(2)}%`;
 }
 
 /** 增减值文案：isPercent=true 时单位为百分点(pp)，否则按指标原单位 */
 export function formatDelta(delta: Nullable, isPercent = false): string {
-  if (delta == null) return '--';
-  const sign = delta > 0 ? '+' : '';
-  return `${sign}${delta.toFixed(2)}${isPercent ? 'pp' : ''}`;
+  if (delta == null) return "--";
+  const sign = delta > 0 ? "+" : "";
+  return `${sign}${delta.toFixed(2)}${isPercent ? "pp" : ""}`;
 }
 ```
 
-| 场景 | ChangeRate | Delta | 展示 |
-| --- | --- | --- | --- |
-| 两期都有值且上一期 ≠ 0 | 数值 | 数值 | 当前值 + 增减率 |
-| 上一期 = 0 | `null` | 数值 | 增减率 `--`，Tooltip 可显示增减值 |
-| 任一期 `null`（含 previousPeriod 为 null） | `null` | `null` | `--`，**不能当 0** |
-| 两期相等 | `0` | `0` | `0.00%` |
+| 场景                                       | ChangeRate | Delta  | 展示                              |
+| ------------------------------------------ | ---------- | ------ | --------------------------------- |
+| 两期都有值且上一期 ≠ 0                     | 数值       | 数值   | 当前值 + 增减率                   |
+| 上一期 = 0                                 | `null`     | 数值   | 增减率 `--`，Tooltip 可显示增减值 |
+| 任一期 `null`（含 previousPeriod 为 null） | `null`     | `null` | `--`，**不能当 0**                |
+| 两期相等                                   | `0`        | `0`    | `0.00%`                           |
 
 ## 6. 展示建议
 
@@ -162,13 +162,13 @@ export function formatDelta(delta: Nullable, isPercent = false): string {
 
 计算样例（数值均由后端返回）：
 
-| 指标 | 当前 | 上一期 | Delta | ChangeRate | 展示 |
-| --- | --- | --- | --- | --- | --- |
-| 排队 P90 | 12.30 | 10.00 | +2.30 | 23.00 | `12.30 (+23.00%)` |
-| 平均排队 | 8.20 | 9.00 | -0.80 | -8.89 | `8.20 (-8.89%)` |
-| NPU 使用率 | 65.40 | 60.00 | +5.40pp | 9.00 | `65.40% (+5.40pp)` |
-| 分配卡时 | 120.00 | 0 | +120.00 | null | `120.00 (--)` |
-| 任意指标 | 12.30 | null | null | null | `12.30 (--)` |
+| 指标       | 当前   | 上一期 | Delta   | ChangeRate | 展示               |
+| ---------- | ------ | ------ | ------- | ---------- | ------------------ |
+| 排队 P90   | 12.30  | 10.00  | +2.30   | 23.00      | `12.30 (+23.00%)`  |
+| 平均排队   | 8.20   | 9.00   | -0.80   | -8.89      | `8.20 (-8.89%)`    |
+| NPU 使用率 | 65.40  | 60.00  | +5.40pp | 9.00       | `65.40% (+5.40pp)` |
+| 分配卡时   | 120.00 | 0      | +120.00 | null       | `120.00 (--)`      |
+| 任意指标   | 12.30  | null   | null    | null       | `12.30 (--)`       |
 
 ## 7. 注意事项
 

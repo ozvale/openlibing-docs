@@ -2,15 +2,15 @@
 
 ## 1. 改动总览
 
-| 页面/功能 | 接口 | 前端需要改动 |
-| --- | --- | --- |
-| 资源运营看板热力图/折线图下钻 | `POST /common/detail` | 排队/运行任务请求传选中窗口的 `startTime/endTime`，不再传 `slotTime/slotGranularity` |
-| 流水线运行明细跳转 | `POST /common/detail`，`category=ops-pipeline-run-detail` | 请求不变；读取记录中的 `repoUrl`、`platform`，结合 `runId` 按现有规则拼接跳转地址 |
-| Nightly 看板跳转 | `POST /common/detail`，`category=nightly-dashboard` | 请求不变；读取记录中的 `repoUrl`、`platform`、`pipelineId` 等字段拼接跳转地址 |
-| 运行分析机器列表排序 | `POST /resource-operation/run-analysis` | 请求和响应结构不变；直接按后端返回顺序渲染 `allocServers`、`usageServers` |
-| 项目 PR 平均排队与工程范围过滤 | `POST /common/detail`，`category=ops-project-resource-efficiency` | 新增展示 `prAvgQueueMinutes`；仅查工程能力运营看板范围时，请求增加 `engineeringScope=true` |
-| 项目下钻流水线每日排队 P90 趋势 | `POST /common/chart`，`category=ops-pipeline-queue-p90` | 新增多折线图，沿用平均消耗卡时趋势的筛选条件和 `xAxis + series` 渲染方式 |
-| 流水线分析单任务卡时汇总 | `POST /resource-operation/run-analysis` | 请求不变；读取新增顶层 `taskSummaries` 渲染任务汇总表，原两张热力图保持不变 |
+| 页面/功能                       | 接口                                                              | 前端需要改动                                                                               |
+| ------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 资源运营看板热力图/折线图下钻   | `POST /common/detail`                                             | 排队/运行任务请求传选中窗口的 `startTime/endTime`，不再传 `slotTime/slotGranularity`       |
+| 流水线运行明细跳转              | `POST /common/detail`，`category=ops-pipeline-run-detail`         | 请求不变；读取记录中的 `repoUrl`、`platform`，结合 `runId` 按现有规则拼接跳转地址          |
+| Nightly 看板跳转                | `POST /common/detail`，`category=nightly-dashboard`               | 请求不变；读取记录中的 `repoUrl`、`platform`、`pipelineId` 等字段拼接跳转地址              |
+| 运行分析机器列表排序            | `POST /resource-operation/run-analysis`                           | 请求和响应结构不变；直接按后端返回顺序渲染 `allocServers`、`usageServers`                  |
+| 项目 PR 平均排队与工程范围过滤  | `POST /common/detail`，`category=ops-project-resource-efficiency` | 新增展示 `prAvgQueueMinutes`；仅查工程能力运营看板范围时，请求增加 `engineeringScope=true` |
+| 项目下钻流水线每日排队 P90 趋势 | `POST /common/chart`，`category=ops-pipeline-queue-p90`           | 新增多折线图，沿用平均消耗卡时趋势的筛选条件和 `xAxis + series` 渲染方式                   |
+| 流水线分析单任务卡时汇总        | `POST /resource-operation/run-analysis`                           | 请求不变；读取新增顶层 `taskSummaries` 渲染任务汇总表，原两张热力图保持不变                |
 
 ## 2. 资源运营看板热力图/折线图下钻
 
@@ -33,18 +33,18 @@ POST /common/detail
 
 通过 `category` 区分：
 
-| 下钻内容 | category |
-| --- | --- |
-| 排队任务 | `ops-npu-slot-queue-detail` |
+| 下钻内容 | category                      |
+| -------- | ----------------------------- |
+| 排队任务 | `ops-npu-slot-queue-detail`   |
 | 运行任务 | `ops-npu-slot-running-detail` |
 
 时间及相关请求字段：
 
-| 字段 | 类型 | 是否必传 | 说明 |
-| --- | --- | --- | --- |
-| `startTime` | String | 是 | 查询窗口开始时间，格式 `yyyy-MM-dd HH:mm:ss` |
-| `endTime` | String | 是 | 查询窗口结束时间，格式 `yyyy-MM-dd HH:mm:ss` |
-| `serverIp` | String | 热力图按格子传入 | 取当前机器行的 `ip`；折线图无机器维度时不传 |
+| 字段        | 类型   | 是否必传         | 说明                                         |
+| ----------- | ------ | ---------------- | -------------------------------------------- |
+| `startTime` | String | 是               | 查询窗口开始时间，格式 `yyyy-MM-dd HH:mm:ss` |
+| `endTime`   | String | 是               | 查询窗口结束时间，格式 `yyyy-MM-dd HH:mm:ss` |
+| `serverIp`  | String | 热力图按格子传入 | 取当前机器行的 `ip`；折线图无机器维度时不传  |
 
 不再传 `slotTime/slotGranularity`。精确窗口使用 `startTime/endTime`，不要用 `startDate/endDate` 代替。
 
@@ -107,12 +107,12 @@ Content-Type: application/json
 
 ### 3.2 记录新增/已有跳转字段
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `repoUrl` | String | **本次新增**，仓库地址；不是完整的流水线运行跳转地址 |
-| `platform` | String | 已有字段，平台：`codearts` / `gitcode` / `github` |
-| `runId` | String | 已有字段，流水线运行 ID |
-| `pipelineName` | String | 已有字段，流水线名称 |
+| 字段           | 类型   | 说明                                                 |
+| -------------- | ------ | ---------------------------------------------------- |
+| `repoUrl`      | String | **本次新增**，仓库地址；不是完整的流水线运行跳转地址 |
+| `platform`     | String | 已有字段，平台：`codearts` / `gitcode` / `github`    |
+| `runId`        | String | 已有字段，流水线运行 ID                              |
+| `pipelineName` | String | 已有字段，流水线名称                                 |
 
 记录字段示例：
 
@@ -155,13 +155,13 @@ Content-Type: application/json
 
 ### 4.2 记录新增/已有跳转字段
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `repoUrl` | String | **本次新增**，仓库地址 |
-| `platform` | String | 已有字段，托管平台 |
-| `pipelineId` | String | 已有字段，流水线 ID |
-| `projectId` | Number | 已有字段，项目 ID |
-| `pipelineName` | String | 已有字段，流水线名称 |
+| 字段           | 类型   | 说明                   |
+| -------------- | ------ | ---------------------- |
+| `repoUrl`      | String | **本次新增**，仓库地址 |
+| `platform`     | String | 已有字段，托管平台     |
+| `pipelineId`   | String | 已有字段，流水线 ID    |
+| `projectId`    | Number | 已有字段，项目 ID      |
+| `pipelineName` | String | 已有字段，流水线名称   |
 
 记录字段示例：
 
@@ -232,16 +232,16 @@ Content-Type: application/json
 
 本次新增可选请求参数：
 
-| 字段 | 类型 | 是否必传 | 说明 |
-| --- | --- | --- | --- |
-| `engineeringScope` | Boolean | 否 | 传 `true` 时仅查询工程能力运营看板仓库范围内的数据；不传或传 `false` 时保持原查询范围 |
+| 字段               | 类型    | 是否必传 | 说明                                                                                  |
+| ------------------ | ------- | -------- | ------------------------------------------------------------------------------------- |
+| `engineeringScope` | Boolean | 否       | 传 `true` 时仅查询工程能力运营看板仓库范围内的数据；不传或传 `false` 时保持原查询范围 |
 
 启用后，项目列表和总数只保留至少包含一个工程能力运营仓的项目，PR 排队与 PR NPU 指标只统计运营仓 run。资源池指标没有仓库维度，仍返回入围项目的项目级资源池指标。`prAvgQueueMinutes` 未新增排序参数。
 
 ### 6.2 响应新增字段
 
-| 字段 | 类型 | 单位 | 展示建议 |
-| --- | --- | --- | --- |
+| 字段                | 类型        | 单位 | 展示建议                             |
+| ------------------- | ----------- | ---- | ------------------------------------ |
 | `prAvgQueueMinutes` | Number/null | 分钟 | 列名建议为“PR 资源排队平均时长(min)” |
 
 记录字段示例：
@@ -284,12 +284,12 @@ Content-Type: application/json
 }
 ```
 
-| 字段 | 类型 | 是否必传 | 说明 |
-| --- | --- | --- | --- |
-| `category` | String | 是 | 固定为 `ops-pipeline-queue-p90` |
-| `projectId` | Number | 是 | 当前下钻项目 ID |
-| `pipelineType` | String | 否 | `PR` / `Nightly`，跟随页面页签；不传或空字符串时默认 `Nightly` |
-| `startDate` / `endDate` | String | 是 | 查询日期范围，格式 `yyyy-MM-dd`，最长 30 天 |
+| 字段                    | 类型   | 是否必传 | 说明                                                           |
+| ----------------------- | ------ | -------- | -------------------------------------------------------------- |
+| `category`              | String | 是       | 固定为 `ops-pipeline-queue-p90`                                |
+| `projectId`             | Number | 是       | 当前下钻项目 ID                                                |
+| `pipelineType`          | String | 否       | `PR` / `Nightly`，跟随页面页签；不传或空字符串时默认 `Nightly` |
+| `startDate` / `endDate` | String | 是       | 查询日期范围，格式 `yyyy-MM-dd`，最长 30 天                    |
 
 ### 7.2 响应与展示
 
@@ -338,13 +338,13 @@ Content-Type: application/json
 
 ### 8.2 新增字段
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `taskSummaries` | Array | 按任务汇总，每个 `jobId` 仅一条；无任务时为空数组 |
-| `taskSummaries[].jobId` | String | 任务 ID |
-| `taskSummaries[].taskName` | String | 任务名称 |
-| `taskSummaries[].npuHours` | Number | 该任务跨所有机器的累计 NPU 卡时，保留两位小数 |
-| `taskSummaries[].serverIps` | Array\<String\> | 该任务涉及的机器 IP，去重后升序 |
+| 字段                        | 类型            | 说明                                              |
+| --------------------------- | --------------- | ------------------------------------------------- |
+| `taskSummaries`             | Array           | 按任务汇总，每个 `jobId` 仅一条；无任务时为空数组 |
+| `taskSummaries[].jobId`     | String          | 任务 ID                                           |
+| `taskSummaries[].taskName`  | String          | 任务名称                                          |
+| `taskSummaries[].npuHours`  | Number          | 该任务跨所有机器的累计 NPU 卡时，保留两位小数     |
+| `taskSummaries[].serverIps` | Array\<String\> | 该任务涉及的机器 IP，去重后升序                   |
 
 新增字段示例：
 
