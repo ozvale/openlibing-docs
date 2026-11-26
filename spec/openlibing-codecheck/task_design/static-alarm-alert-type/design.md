@@ -84,14 +84,14 @@ docs 仓 static-code-analysis/solutions/full-analysis/alert-type/
 ```
 
 - **L1 固定类型短路**：security 工具（Bandit、Gosec、Gitleaks、Detect-Secrets）、bug 工具（Mypy、ErrorProne）、code_smell 工具（Prettier、Checkstyle、Codespell 等 15 个格式化/拼写/风格工具）全量直接定型；工具名匹配先精确匹配 `tool` 正名，未命中按小写归一的 `aliases` 别名回落正名（tools.yml 注册；生产 SARIF 上送名与注册名存在大小写/格式差异，精确匹配下会静默兜底）；
-- **L2 仅判安全**：CodeQL 的 `correctness → bug` 等非安全定型规则**不进 L2**，外置于 `mappings/codeql.yml`（`tags_pattern` 维度）由 L3 承接，保持 L2 纯「仅判安全」语义；
+- **L2 仅判安全**：CodeQL 的 `correctness → bug` 等非安全定型规则**不进 L2**，外置于 `mappings/CodeQL.yml`（`tags_pattern` 维度）由 L3 承接，保持 L2 纯「仅判安全」语义；
 - **L3 pattern 语义**：`rule_pattern` 为正则（前缀 `^S`、精确 `^S608$`）；severity 维度工具（ShellCheck / Cppcheck）用 `level_pattern` 匹配级别（优先 `rules[].defaultConfiguration.level`，缺失取 `results[].level`）；category 维度（PMD）用 `ruleset_pattern` 匹配 `rules[].properties.ruleset`；富元数据工具（CodeQL）用 `tags_pattern` 匹配 `rules[].properties.tags` 任一标签；一条映射可多维度组合（AND 语义，全部命中才生效）；精确形 `^literal$` 提取 literal 做哈希 O(1) 直查；多条命中按 `security > bug > code_smell` 取序（映射行顺序无关）。
 
 ### 3.2 伪代码（判定流程唯一依据）
 
 ```python
 def classify(alert, tool_registry, rule_mapping):
-    if not catalog_loaded:                  # 口径未加载（isLoaded 为 false，特性未启用/远端尚未刷新成功）
+    if not catalog.isLoaded():               # 口径未加载（isLoaded 为 false，特性未启用/远端尚未刷新成功）
         return None                          # 入库 alert_type 留空，待口径恢复后由存量回填任务补齐
     tool = tool_registry.resolve(alert.tool)        # 正名精确匹配，未命中按小写归一 aliases 别名回落
     if tool is None:
@@ -124,7 +124,7 @@ static-code-analysis/solutions/full-analysis/alert-type/
 ├── README.md          # 目录说明：口径定义、判别决策树、治理流程、文件规范
 ├── tools.yml          # 工具注册数据（default_alert_type、enabled 等）
 └── mappings/          # 规则映射，按工具一文件（13 个混合工具），文件名与 tool 值完全一致（含大小写）
-    ├── CodeQL.yml / clang-tidy.yml / Cppcheck.yml / ESLint.yml / typescript-eslint.yml
+    ├── CodeQL.yml / Clang-Tidy.yml / Cppcheck.yml / ESLint.yml / typescript-eslint.yml
     ├── ruff.yml / Pylint.yml / clippy.yml / golangci-lint.yml / SpotBugs.yml
     ├── PMD.yml / shellcheck.yml / CodeArtsCheck.yml
     └── ...
@@ -138,7 +138,7 @@ static-code-analysis/solutions/full-analysis/alert-type/
 
 ### 4.2 工具落位（34 工具概要）
 
-完整逐条穷举清单以 `mappings/*.yml` 为准；[design-review.html](./design-review.html) 已随本文 v6 同步更新（2026-11-26），与本文冲突时以本文为准。此处仅录落位策略：
+完整逐条穷举清单以 `mappings/*.yml` 为准；[design-review.html](./design-review.html) 已随本文 v7 同步更新（2026-11-26），与本文冲突时以本文为准。此处仅录落位策略：
 
 | 工具                                                                                                                                                                                  | 落位策略                                                                                                                                                  | 定型       |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
@@ -199,7 +199,7 @@ API 消耗：288 次/天/实例（3 实例约 864 次/天）全为轻量 GET，�
 | 字段           | 类型                | 说明                                                                                                                                                                          |
 | -------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `raw_severity` | VARCHAR（既有字段） | 工具生效级别（映射前原值，入库前转小写）：优先 SARIF `rules[].defaultConfiguration.level`，缺失取 `results[].level`；level 维度匹配与回填重放的级别来源即此值，与入库判定同源 |
-| `alert_type`   | ENUM NOT NULL       | `security` / `bug` / `code_smell`（互斥单值，分类引擎写入；口径已加载后兜底保证非空，口径未加载窗口期入库允许为空、由存量回填任务补齐）                                       |
+| `alert_type`   | ENUM（可空）        | `security` / `bug` / `code_smell`（互斥单值，分类引擎写入；口径已加载后兜底保证非空，口径未加载窗口期入库为空值（留空待回填），由存量回填任务补齐）                           |
 | `rule_tags`    | LIST                | 规则完整标签（SARIF `rules[].properties.tags`），L3 tags 维度匹配与存量回填重放依据                                                                                           |
 | `rule_ruleset` | VARCHAR             | 规则集名（SARIF `rules[].properties.ruleset`），PMD 等 ruleset 维度工具的回填重放依据                                                                                         |
 
@@ -235,6 +235,8 @@ API 消耗：288 次/天/实例（3 实例约 864 次/天）全为轻量 GET，�
 | `POST /static-alarm/v1/issue/count`（及批量计数） | 入参同步新增 `alertTypes`，计数口径与列表一致                                                                                                                                                                       |
 | `POST /static-alarm/v1/list/export`               | 入参同步新增 `alertTypes`（导出遵循同一过滤语义）；导出 Excel 列头展示为「问题分类」                                                                                                                                |
 | `POST /static-alarm/v1/issue/filter-options`      | 入参新增 `alertTypes`（按已选分类收窄语言/工具/规则等其余维度候选）；出参新增 `alertTypes` 固定三项候选 `{value: security/bug/code_smell, label: 安全/缺陷/代码坏味道}`（不随数据聚合变化；预留字段，前端暂未消费） |
+
+接口返回沿用现有统一包装 `DataResult.build`（与 `/static-alarm/v1` 现有四个接口一致），鉴权继承原有菜单横向鉴权，本需求无新增写接口。
 
 ## 9. 前端落地（openlibing-web，交接实施）
 
@@ -278,9 +280,9 @@ API 消耗：288 次/天/实例（3 实例约 864 次/天）全为轻量 GET，�
 
 ### 12.2 验收标准
 
-见 [proposal.md](./proposal.md) 验收标准章节（分类覆盖率 100% / 工具级正确性 / 抽样准确率 ≥ 95% / 口径一致性 / 存量稳定性）。
+见 [proposal.md](./proposal.md) 验收标准章节（分类覆盖率：口径加载后新告警非空 100%，窗口期空值由存量回填补齐后 100% / 工具级正确性 / 抽样准确率 ≥ 95% / 口径一致性 / 存量稳定性）。
 
 ## 13. 原型与评审
 
-- 设计评审页：[design-review.html](./design-review.html)（已随本文 v6 同步更新，含完整工具落位穷举表格；与本文冲突时以本文为准）
+- 设计评审页：[design-review.html](./design-review.html)（已随本文 v7 同步更新，含完整工具落位穷举表格；与本文冲突时以本文为准）
 - 规则配置交互原型：[prototype.html](./prototype.html)

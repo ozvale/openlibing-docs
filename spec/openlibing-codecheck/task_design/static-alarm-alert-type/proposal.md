@@ -6,14 +6,14 @@
 
 核心矛盾：**多数工具不做告警分类**，类型属性只能由平台侧统一定义和提取。方案为告警三分类（`security` / `bug` / `code_smell`，对齐 SonarQube 质量模型三值简化版）+ 入库时自动分类 + 按口径统计。
 
-方案演进：口径与平台设计 v1.1（2026-11-26）→ codecheck 落地设计 v6（2026-11-26），均已随实现（!422，Issue #430）同步；权威基准为口径 README，本文档归档两者的合并落地口径。
+方案演进：口径与平台设计 v1.1（2026-11-26）→ codecheck 落地设计 v7（2026-11-26），均已随实现（!422，Issue #430）同步；权威基准为口径 README，本文档归档两者的合并落地口径。
 
 ## 功能描述
 
 - **统一三分类口径**：`alert_type` 三值互斥 MECE，判别决策树（安全风险 → security；运行时出错 → bug；其余 → code_smell）与冲突裁决（`security > bug > code_smell`）全仓唯一
 - **自动分类引擎**：SARIF 告警入库时按口径未加载返回 null 留空待回填 → L1 工具级短路（含 `aliases` 别名匹配，生产上送名大小写/格式差异不再静默兜底）→ L2 SARIF 元数据（仅判安全）→ L3 规则映射表三级流水线定型，口径已加载时兜底 `code_smell` 保证非空，不依赖人工打标
 - **口径数据 docs 仓承载**：`tools.yml`（34 工具注册）+ `mappings/*.yml`（13 个混合工具规则映射，含 CodeArtsCheck 1280 行）落 docs 仓 `static-code-analysis/solutions/full-analysis/alert-type/`，变更走 MR 治理，引擎 @Scheduled 每 5 分钟轮询目录 commit SHA 感知刷新；口径唯一来源为远端仓库（启动 ApplicationReady 异步对齐，无本地打包兜底），发布顺序必须口径先就位
-- **数据落地**：`static_alarm_issue` 新增 `alert_type`（ENUM NOT NULL，口径已加载后兜底保证非空；口径未加载窗口期入库允许为空、由存量回填任务补齐）+ `rule_tags` / `rule_ruleset`（规则元数据落库，支撑存量回填多维度重放）共三个字段
+- **数据落地**：`static_alarm_issue` 新增 `alert_type`（ENUM 可空：security / bug / code_smell，互斥单值；口径已加载后兜底保证非空，口径未加载窗口期入库为空、留空待存量回填任务补齐）+ `rule_tags` / `rule_ruleset`（规则元数据落库，支撑存量回填多维度重放）共三个字段
 - **存量回填**：XXL-Job 一次性回填存量告警分类，幂等可重跑，只写空值不覆盖
 - **接口扩展**（无新增接口）：`/static-alarm/v1` 的 list / issue/count / list/export 入参增 `alertTypes` 多选过滤、出参行增 `alertType`；filter-options 入参增 `alertTypes` 收窄其余维度候选、出参增固定三项候选（label：安全/缺陷/代码坏味道，预留字段前端暂未消费）
 - **前端**：列表页「告警类型」多选筛选 + 行内三色标签（security 红 / bug 橙 / code_smell 紫）
