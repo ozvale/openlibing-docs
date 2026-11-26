@@ -52,6 +52,8 @@
      - 仅允许 URL 路径字符；
      - 拒绝 `@`、`#`、`?`、`\`、空白与控制字符；
      - 拒绝以 `//` 开头和包含 `..` 路径段；
+   - `allowed-hosts`：逗号分隔的受信主机列表，默认 `apig.openlibing.com`；
+     最终 host 必须精确匹配列表项；私有化/自建平台显式追加；
    - `buildSummaryUrl(ip, prefix, repositoryName)`：
      - 拼接后 `new URL()` 解析；
      - 要求最终 `origin` 与 `codecheck-ip` 的 `origin` 完全一致，阻断
@@ -59,23 +61,24 @@
      - `repositoryName` 使用 `encodeURIComponent`；
    - 校验在 `getVulnSummary()` 调用 `callApig()` 之前执行；失败写入明确中文错误并
      `process.exit(-1)`，不换取 STS 凭证、不发送任何请求；
-   - 受信边界：`codecheck-ip` 仍视为管理员受信配置。本加固不试图防御“恶意配置者”
-     （其本就能在 workflow 执行任意命令），只阻断协议、userinfo、IP/内网、前缀
-     覆盖与参数注入等可被误配置/低权限输入放大的路径；SDK 固定 host 白名单由 SDK 维护人员处理。
+   - 受信边界：`codecheck-ip` 仍视为管理员受信配置，`allowed-hosts` 默认只含公有云 APIG。
+     本加固不试图防御“同时控制 codecheck-ip 与 allowed-hosts 的恶意配置者”（其本就能在
+     workflow 执行任意命令），只阻断协议、userinfo、IP/内网、前缀覆盖与参数注入等可被
+     误配置/低权限输入放大的路径；SDK 固定 host 白名单由 SDK 维护人员处理。
 
 ## 涉及文件
 
-| 文件                              | 操作 | 说明                                                                                |
-| --------------------------------- | ---- | ----------------------------------------------------------------------------------- |
-| `argus-action/dist/argus-scan.js` | 修改 | 默认端点常量；`gitleaks:allow`；Summary 超链接；URL/前缀校验；`repositoryName` 编码 |
-| `argus-action/action.yml`         | 注释 | 默认值说明；`codecheck-ip` / `codecheck-prefix` 标注为管理员受信配置                |
-| `argus-action/README.md`          | 修改 | 移除 AK/SK、`signer.js`；补 OIDC `id-token: write`；默认值、受信配置与禁止用法说明  |
-| `test/mock-sdk.js`                | 修改 | 记录 `callApig` 收到的 URL                                                          |
-| `test/argus.test.js`              | 修改 | 默认端点、CLI/Action 覆盖、Summary 链接、URL 安全校验、编码用例                     |
-| `zip.js`                          | 修改 | 打包前同步 bundle 到 `argus-action/dist/index.js`                                   |
-| `.gitleaks.toml`                  | 修改 | 打包产物路径白名单，消除第三方依赖误报                                              |
-| `argus-action/dist/index.js`      | 重建 | ncc 产物                                                                            |
-| `argus-action.zip`                | 重建 | 发布包                                                                              |
+| 文件                              | 操作 | 说明                                                                                        |
+| --------------------------------- | ---- | ------------------------------------------------------------------------------------------- |
+| `argus-action/dist/argus-scan.js` | 修改 | 默认端点常量；`gitleaks:allow`；Summary 超链接；URL/前缀校验；`repositoryName` 编码         |
+| `argus-action/action.yml`         | 注释 | 默认值说明；`codecheck-ip` / `codecheck-prefix` 标注为管理员受信配置；新增 `allowed-hosts`  |
+| `argus-action/README.md`          | 修改 | 移除 AK/SK、`signer.js`；补 OIDC `id-token: write`；默认值、受信配置与 `allowed-hosts` 说明 |
+| `test/mock-sdk.js`                | 修改 | 记录 `callApig` 收到的 URL                                                                  |
+| `test/argus.test.js`              | 修改 | 默认端点、CLI/Action 覆盖、Summary 链接、URL 安全校验、编码用例                             |
+| `zip.js`                          | 修改 | 打包前同步 bundle 到 `argus-action/dist/index.js`                                           |
+| `.gitleaks.toml`                  | 修改 | 打包产物路径白名单，消除第三方依赖误报                                                      |
+| `argus-action/dist/index.js`      | 重建 | ncc 产物                                                                                    |
+| `argus-action.zip`                | 重建 | 发布包                                                                                      |
 
 ## 风险 & 缓解
 

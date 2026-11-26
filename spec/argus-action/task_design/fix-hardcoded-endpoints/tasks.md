@@ -2,7 +2,7 @@
 
 > 覆盖 Issue：#2（硬编码公网端点）、#14（codecheck-ip/prefix SSRF 与签名请求外发）。
 
-## 进度: 16/16 complete
+## 进度: 17/17 complete
 
 ### #2（已完成）
 
@@ -25,3 +25,4 @@
 - [x] 14. 补测试：http/IP/localhost/userinfo/`@` 前缀/query/编码
 - [x] 15. README / action.yml 标注受信配置与禁止用法
 - [x] 16. `npm test` + `npm run build` + `pre-commit`，提交 #14 commit
+- [x] 17. 新增 `allowed-hosts` 受信主机列表（默认 `apig.openlibing.com`），最终 host 必须命中

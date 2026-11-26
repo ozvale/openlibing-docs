@@ -48,6 +48,8 @@ issue #14 记录了一个条件性 SSRF / 签名请求外发风险：
 
 - 校验 `codecheck-ip`：仅允许 HTTPS；拒绝 userinfo、IP 直连、localhost、内网地址、query/fragment；
 - 校验 `codecheck-prefix`：必须以 `/` 开头，仅允许路径字符，拒绝 `@`、`#`、`?`、反斜杠、空白；
+- 新增 `allowed-hosts` 输入（逗号分隔，默认 `apig.openlibing.com`），最终请求 host 必须在列表内；
+  私有化/自建平台可显式追加；
 - 拼接后再次解析完整 URL，要求 origin 与 `codecheck-ip` 一致（阻断 `@host` 绕过）；
 - `repositoryName` 使用 `encodeURIComponent` 编码；
 - 校验失败在发起任何请求前报错退出，不换取凭证、不发送请求；
@@ -58,7 +60,7 @@ issue #14 记录了一个条件性 SSRF / 签名请求外发风险：
 
 - 不删除默认地址，不新增环境变量；
 - 不修改 SDK；SDK 根因由 SDK 维护人员处理；
-- 不引入固定单域白名单（避免破坏私有化/自建平台），以 `codecheck-ip` 的 origin 作为受信基准；
+- 不引入不可配置的固定单域白名单；通过 `allowed-hosts` 默认值 + 显式配置兼顾私有化/自建平台；
 - 不改门禁判定、退出码语义以外的业务逻辑；
 - 不处理 ncc 内联的第三方 URL；
 - 不重构目录结构、不升版本号、不打 tag。
@@ -82,6 +84,8 @@ issue #14 记录了一个条件性 SSRF / 签名请求外发风险：
 - [ ] `codecheck-ip` 为 `http://`、IP、localhost、userinfo 或含 query/fragment 时，启动即报错，不发起请求；
 - [ ] `codecheck-prefix` 含 `@`、`#`、`?`、反斜杠或非 `/` 开头时，启动即报错；
 - [ ] 拼接后的 URL origin 与 `codecheck-ip` 不一致时被拒绝；
+- [ ] `codecheck-ip` 主机不在 `allowed-hosts` 列表内时被拒绝；
+- [ ] `allowed-hosts` 支持逗号分隔的多个受信主机；
 - [ ] `repositoryName` 含 `&`、`?`、`#`、`%` 时正确编码；
 - [ ] 默认配置功能回归通过（正常获取摘要、门禁判定不变）；
 - [ ] pre-commit / 测试 / 构建全绿。
