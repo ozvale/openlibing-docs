@@ -12,7 +12,7 @@
 
 - **统一三分类口径**：`alert_type` 三值互斥 MECE，判别决策树（安全风险 → security；运行时出错 → bug；其余 → code_smell）与冲突裁决（`security > bug > code_smell`）全仓唯一
 - **自动分类引擎**：SARIF 告警入库时按 L1 工具级短路（含 `aliases` 别名匹配，生产上送名大小写/格式差异不再静默兜底）→ L2 SARIF 元数据（仅判安全）→ L3 规则映射表三级流水线定型，兜底 `code_smell`，不依赖人工打标
-- **口径数据 docs 仓承载**：`tools.yml`（34 工具注册）+ `mappings/*.yml`（13 个混合工具规则映射，含 codearts-check 1280 行）落 docs 仓 `static-code-analysis/solutions/full-analysis/alert-type/`，变更走 MR 治理，引擎 @Scheduled 每 5 分钟轮询目录 commit SHA 感知刷新；口径唯一来源为远端仓库（启动 ApplicationReady 异步对齐，无本地打包兜底），发布顺序必须口径先就位
+- **口径数据 docs 仓承载**：`tools.yml`（34 工具注册）+ `mappings/*.yml`（13 个混合工具规则映射，含 CodeArtsCheck 1280 行）落 docs 仓 `static-code-analysis/solutions/full-analysis/alert-type/`，变更走 MR 治理，引擎 @Scheduled 每 5 分钟轮询目录 commit SHA 感知刷新；口径唯一来源为远端仓库（启动 ApplicationReady 异步对齐，无本地打包兜底），发布顺序必须口径先就位
 - **数据落地**：`static_alarm_issue` 新增 `alert_type`（ENUM NOT NULL，兜底保证非空）+ `rule_tags` / `rule_ruleset`（规则元数据落库，支撑存量回填多维度重放）共三个字段
 - **存量回填**：XXL-Job 一次性回填存量告警分类，幂等可重跑，只写空值不覆盖
 - **接口扩展**（无新增接口）：`/static-alarm/v1` 的 list / issue/count / list/export 入参增 `alertTypes` 多选过滤、出参行增 `alertType`；filter-options 入参增 `alertTypes` 收窄其余维度候选、出参增固定三项候选（label：安全/缺陷/代码坏味道，预留字段前端暂未消费）

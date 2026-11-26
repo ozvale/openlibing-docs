@@ -136,31 +136,31 @@ static-code-analysis/solutions/full-analysis/alert-type/
 
 ### 4.2 工具落位（34 工具概要）
 
-完整逐条穷举清单以 `mappings/*.yml` 与 [design-review.html](./design-review.html) 第五章为准，此处仅录落位策略：
+完整逐条穷举清单以 `mappings/*.yml` 为准；[design-review.html](./design-review.html) 为 v5 时点历史评审物料快照，保留原貌不随升版更新，与本文冲突时以本文 v6 为准。此处仅录落位策略：
 
-| 工具                                                                                                                                                                                  | 落位策略                                                                                                                                                   | 定型       |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| Bandit / Gosec / Gitleaks / Detect-Secrets                                                                                                                                            | L1 固定                                                                                                                                                    | security   |
-| Mypy / ErrorProne                                                                                                                                                                     | L1 固定                                                                                                                                                    | bug        |
-| Prettier / ClangFormat / Google-Java-Format / Scalafmt / Rustfmt / Shfmt / StyLua / Spotless / Checkstyle / Markdownlint / Xmllint / Codespell / Typos / Luacheck / Scalafix（15 个） | L1 固定                                                                                                                                                    | code_smell |
-| CodeQL                                                                                                                                                                                | L2 安全标签先行；L3 `tags_pattern: ^correctness$` → bug + catch-all → code_smell                                                                           | 混合       |
-| Ruff                                                                                                                                                                                  | 61 个官方前缀逐行穷尽，按官方 group 多数派定型（885 条全覆盖）                                                                                             | 混合       |
-| Pylint                                                                                                                                                                                | 前缀：`^E` / `^F` → bug；`^(C\|W\|R\|I)` → code_smell                                                                                                      | 混合       |
-| ESLint                                                                                                                                                                                | `^security/` 插件 15 条 + 核心安全白名单 21 条 → security；`meta.type = problem` → bug；其余 → code_smell（物料 727 行落盘）                               | 混合       |
-| TypeScript-ESLint                                                                                                                                                                     | SARIF ruleId 裸名逐规则穷举（194 行）：镜像核心白名单 2 条 security；problem 类 → bug；suggestion/deprecated 类 → code_smell                               | 混合       |
-| Clang-Tidy                                                                                                                                                                            | `^cert-`、`^clang-analyzer-security\.` → security；bugprone/concurrency/clang-analyzer/clang-diagnostic → bug；其余 18+ 模块前缀 → code_smell              | 混合       |
-| Cppcheck                                                                                                                                                                              | `^cert-` → security；level error/warning → bug；style/performance/portability/information/debug → code_smell                                               | 混合       |
-| ShellCheck                                                                                                                                                                            | level error/warning → bug；style/info → code_smell                                                                                                         | 混合       |
-| Clippy                                                                                                                                                                                | 逐规则穷举 872 行（`^clippy::<lint>$`）：correctness/suspicious 154 条 → bug；其余 7 组 + legacy → code_smell                                              | 混合       |
-| Golangci-Lint                                                                                                                                                                         | `^G[1-6]\d{2}$`（gosec 编码）+ 安全 linter 名/凭据类前缀 → security；其余 linter 兜底 code_smell                                                           | 混合       |
-| SpotBugs                                                                                                                                                                              | FindSecBugs SECURITY pattern 144 条精确正则 → security；其余 pattern → bug                                                                                 | 混合       |
-| PMD                                                                                                                                                                                   | ruleset：security → security；errorprone/multithreading → bug；其余 → code_smell                                                                           | 混合       |
-| CodeArts Check                                                                                                                                                                        | Criterion UUID 逐条枚举 1280 行（`mappings/codearts-check.yml`）：安全类 402 条 → security；缺陷类 877 条 → bug；代码坏味道 9203 条 catch-all → code_smell | 混合       |
+| 工具                                                                                                                                                                                  | 落位策略                                                                                                                                                  | 定型       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Bandit / Gosec / Gitleaks / Detect-Secrets                                                                                                                                            | L1 固定                                                                                                                                                   | security   |
+| Mypy / ErrorProne                                                                                                                                                                     | L1 固定                                                                                                                                                   | bug        |
+| Prettier / ClangFormat / Google-Java-Format / Scalafmt / Rustfmt / Shfmt / StyLua / Spotless / Checkstyle / Markdownlint / Xmllint / Codespell / Typos / Luacheck / Scalafix（15 个） | L1 固定                                                                                                                                                   | code_smell |
+| CodeQL                                                                                                                                                                                | L2 安全标签先行；L3 `tags_pattern: ^correctness$` → bug + catch-all → code_smell                                                                          | 混合       |
+| Ruff                                                                                                                                                                                  | 61 个官方前缀逐行穷尽，按官方 group 多数派定型（885 条全覆盖）                                                                                            | 混合       |
+| Pylint                                                                                                                                                                                | 前缀：`^E` / `^F` → bug；`^(C\|W\|R\|I)` → code_smell                                                                                                     | 混合       |
+| ESLint                                                                                                                                                                                | `^security/` 插件 15 条 + 核心安全白名单 21 条 → security；`meta.type = problem` → bug；其余 → code_smell（物料 727 行落盘）                              | 混合       |
+| TypeScript-ESLint                                                                                                                                                                     | SARIF ruleId 裸名逐规则穷举（194 行）：镜像核心白名单 2 条 security；problem 类 → bug；suggestion/deprecated 类 → code_smell                              | 混合       |
+| Clang-Tidy                                                                                                                                                                            | `^cert-`、`^clang-analyzer-security\.` → security；bugprone/concurrency/clang-analyzer/clang-diagnostic → bug；其余 18+ 模块前缀 → code_smell             | 混合       |
+| Cppcheck                                                                                                                                                                              | `^cert-` → security；level error/warning → bug；style/performance/portability/information/debug → code_smell                                              | 混合       |
+| ShellCheck                                                                                                                                                                            | level error/warning → bug；style/info → code_smell                                                                                                        | 混合       |
+| Clippy                                                                                                                                                                                | 逐规则穷举 872 行（`^clippy::<lint>$`）：correctness/suspicious 154 条 → bug；其余 7 组 + legacy → code_smell                                             | 混合       |
+| Golangci-Lint                                                                                                                                                                         | `^G[1-6]\d{2}$`（gosec 编码）+ 安全 linter 名/凭据类前缀 → security；其余 linter 兜底 code_smell                                                          | 混合       |
+| SpotBugs                                                                                                                                                                              | FindSecBugs SECURITY pattern 144 条精确正则 → security；其余 pattern → bug                                                                                | 混合       |
+| PMD                                                                                                                                                                                   | ruleset：security → security；errorprone/multithreading → bug；其余 → code_smell                                                                          | 混合       |
+| CodeArts Check                                                                                                                                                                        | Criterion UUID 逐条枚举 1280 行（`mappings/CodeArtsCheck.yml`）：安全类 402 条 → security；缺陷类 877 条 → bug；代码坏味道 9203 条 catch-all → code_smell | 混合       |
 
 ### 4.3 变更治理（MR 流程）
 
 1. **提案**：新工具接入或口径调整 → docs 仓 alert-type 目录 MR（工具/规则/alert_type/依据）；
-2. **评审**：安全团队确认 security 归类（重点核验「误判为安全」），工程团队确认 bug / code_smell 边界（依据 2.2 决策树）；CI 自动校验格式与唯一性约束；
+2. **评审**：安全团队确认 security 归类（重点核验「误判为安全」），工程团队确认 bug / code_smell 边界（依据 2.2 决策树）；docs 仓不设 CI 校验门禁，格式与唯一性约束由 codecheck 服务端解析校验兜底（任一失败整体拒绝刷新、保留旧口径，见 §5），MR 阶段以人工评审把关；
 3. **生效**：MR 合并后各实例轮询感知（最长 5 分钟），**下次扫描起对新告警生效**，存量不变；
 4. **审计**：变更历史即 git 历史，口径版本 = alert-type 目录 commit SHA。
 
@@ -186,7 +186,7 @@ API 消耗：288 次/天/实例（3 实例约 864 次/天）全为轻量 GET，�
 
 **口径版本：目录 commit SHA（不设 version 字段）**：SHA 取 alert-type 目录最后一次变更 commit，docs 仓其他目录变更不影响比对（天然按路径免疫）。
 
-**启动对齐**：ApplicationReady 时异步发起一次远端刷新（不阻塞 main 线程、不阻断启动）；**口径唯一来源为远端仓库，不打包本地兜底 yml**——远端不可用期间进程内无口径，全部告警兜底 code_smell，待轮询恢复。发布前置顺序：口径先合入 docs 仓 → 配齐 Nacos 配置 → 发版 → 确认首轮刷新成功（日志出现 `Alert type catalog refreshed from remote`）→ 恢复增量扫描 → 手工触发存量回填。
+**启动对齐**：ApplicationReady 时异步发起一次远端刷新（不阻塞 main 线程、不阻断启动）；**口径唯一来源为远端仓库，不打包本地兜底 yml**——远端不可用期间进程内无口径，新告警兜底 code_smell 入库，且窗口期落库值不会被后续机制自动纠正（见 §12.1），待轮询恢复后仅对新告警生效。发布前置顺序：口径先合入 docs 仓 → 配齐 Nacos 配置 → 发版 → 确认首轮刷新成功（日志出现 `Alert type catalog refreshed from remote`）→ 恢复增量扫描 → 手工触发存量回填。
 
 **多实例偏斜**：各实例独立轮询独立刷新，实例间存在 ≤5 分钟口径版本偏斜窗口；结合「存量保持入库时值、仅新告警按当前口径定型」语义，偏斜影响可忽略（同一次扫描任务内口径一致）。
 
@@ -194,11 +194,12 @@ API 消耗：288 次/天/实例（3 实例约 864 次/天）全为轻量 GET，�
 
 `static_alarm_issue` 新增三个字段：
 
-| 字段           | 类型          | 说明                                                                                  |
-| -------------- | ------------- | ------------------------------------------------------------------------------------- |
-| `alert_type`   | ENUM NOT NULL | `security` / `bug` / `code_smell`（互斥单值，分类引擎写入；兜底保证非空）             |
-| `rule_tags`    | LIST          | 规则完整标签（SARIF `rules[].properties.tags`），L3 tags 维度匹配与存量回填重放依据   |
-| `rule_ruleset` | VARCHAR       | 规则集名（SARIF `rules[].properties.ruleset`），PMD 等 ruleset 维度工具的回填重放依据 |
+| 字段           | 类型                | 说明                                                                                                                                                                          |
+| -------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `raw_severity` | VARCHAR（既有字段） | 工具生效级别（映射前原值，入库前转小写）：优先 SARIF `rules[].defaultConfiguration.level`，缺失取 `results[].level`；level 维度匹配与回填重放的级别来源即此值，与入库判定同源 |
+| `alert_type`   | ENUM NOT NULL       | `security` / `bug` / `code_smell`（互斥单值，分类引擎写入；兜底保证非空）                                                                                                     |
+| `rule_tags`    | LIST                | 规则完整标签（SARIF `rules[].properties.tags`），L3 tags 维度匹配与存量回填重放依据                                                                                           |
+| `rule_ruleset` | VARCHAR             | 规则集名（SARIF `rules[].properties.ruleset`），PMD 等 ruleset 维度工具的回填重放依据                                                                                         |
 
 - 不新增 Mongo 口径集合：口径由 docs 仓 yml 唯一承载，DB 仅存告警事实；
 - 索引：`alert_type` 基数为 3，不单独建索引，列表 `$in` 过滤复用现有索引结果集；新增 `idx_issue_tool_rule (tool, rule_id)` 复合索引支撑回填按组合批量更新（此前该类查询全表扫描）与后续按工具 × 规则聚合；
@@ -212,15 +213,15 @@ API 消耗：288 次/天/实例（3 实例约 864 次/天）全为轻量 GET，�
 
 ### 7.2 一次性回填（XXL-Job）
 
-| 项   | 设计                                                                                                                                                                                                                                          |
-| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 触发 | XXL-Job 手动触发一次；幂等可重跑（已回填数据不再命中扫描条件，二次执行空跑）                                                                                                                                                                  |
-| 扫描 | 口径未加载（loadedSha 为空）时拒绝执行（守卫，防止全量存量被兜底误写）；`alert_type` 为空的数据按 `_id` 游标分页全量过滤（batchSize 参数 long 解析防溢出，默认 10000 = 上限）                                                                 |
-| 聚合 | 内存 `DISTINCT (tool, rule_id, raw_severity)` 组合，并聚合 rule_tags 并集 / rule_ruleset 任一非空                                                                                                                                             |
-| 判定 | 逐组合调用**与入库同源**的分类引擎（同一缓存实例）：L1 短路 → L2（security_severity + cwe_tags / rule_tags 判据）→ L3 注入 rawSeverity / ruleTags / ruleRuleset 合成上下文查表（覆盖 level / ruleset / tags 维度的存量重放）→ 兜底 code_smell |
-| 回填 | 按组合批量 `UPDATE ... WHERE tool = ? AND rule_id = ? AND raw_severity 精确匹配 AND alert_type 为空`（存量无 raw_severity 时匹配空值），只写空值、不覆盖任何已有值；命中 `idx_issue_tool_rule` 索引                                           |
-| 失败 | 单组合失败记录日志跳过继续；依赖幂等重跑恢复，不做断点续传                                                                                                                                                                                    |
-| 统计 | 执行前口径覆盖检查（只读不阻断）：未注册工具 / 已注册混合工具但无映射的清单与受影响告警条数并入 Job 摘要；输出扫描条数、聚合组合数、回填行数（按三分类分列）、失败组合数                                                                      |
+| 项   | 设计                                                                                                                                                                                                                                                                                                                                 |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 触发 | XXL-Job 手动触发一次；幂等可重跑（已回填数据不再命中扫描条件，二次执行空跑）                                                                                                                                                                                                                                                         |
+| 扫描 | 口径未加载（loadedSha 为空）时拒绝执行（守卫，防止全量存量被兜底误写）；`alert_type` 为空的数据按 `_id` 游标分页全量过滤（batchSize 参数 long 解析防溢出，默认 10000 = 上限）                                                                                                                                                        |
+| 聚合 | 内存 `DISTINCT (tool, rule_id, raw_severity)` 组合，并聚合 rule_tags 并集 / rule_ruleset 任一非空                                                                                                                                                                                                                                    |
+| 判定 | 逐组合调用**与入库同源**的分类引擎（同一缓存实例）：L1 短路 → L2（security_severity + cwe_tags / rule_tags 判据）→ L3 注入 rawSeverity / ruleTags / ruleRuleset 合成上下文查表（覆盖 level / ruleset / tags 维度的存量重放；raw_severity 即入库生效级别，见 §6 字段表，level 维度直接按落库值重放，与入库判定同源）→ 兜底 code_smell |
+| 回填 | 按组合批量 `UPDATE ... WHERE tool = ? AND rule_id = ? AND raw_severity 精确匹配 AND alert_type 为空`（存量无 raw_severity 时匹配空值），只写空值、不覆盖任何已有值；命中 `idx_issue_tool_rule` 索引                                                                                                                                  |
+| 失败 | 单组合失败记录日志跳过继续；依赖幂等重跑恢复，不做断点续传                                                                                                                                                                                                                                                                           |
+| 统计 | 执行前口径覆盖检查（只读不阻断）：未注册工具 / 已注册混合工具但无映射的清单与受影响告警条数并入 Job 摘要；输出扫描条数、聚合组合数、回填行数（按三分类分列）、失败组合数                                                                                                                                                             |
 
 ## 8. 接口落地（无新增接口）
 
@@ -263,14 +264,15 @@ API 消耗：288 次/天/实例（3 实例约 864 次/天）全为轻量 GET，�
 
 ### 12.1 风险与应对
 
-| 风险                               | 影响                         | 应对                                                                             |
-| ---------------------------------- | ---------------------------- | -------------------------------------------------------------------------------- |
-| 映射表误判（错标/漏标）            | 统计口径失真                 | 映射变更走评审（安全团队 + 工程团队），下次扫描起自动修正                        |
-| bug 与 code_smell 边界争议         | 映射评审反复                 | 2.2 决策树与边界规则为裁决基准，争议案例沉淀进边界规则表                         |
-| 工具升级新增/更名规则              | 新规则落入兜底（code_smell） | 工具版本入库；升级时比对规则集差异并补映射                                       |
-| SARIF 质量参差（无元数据、无指纹） | L2 判别失效、去重漂移        | 转换器统一补齐指纹；L3 映射兜底                                                  |
-| 海量告警性能                       | 入库与查询变慢               | 批量 upsert、分区表、聚合预计算                                                  |
-| 口径理解不一致                     | 各团队统计对不上             | 口径 README 为唯一口径来源，报表页脚注明口径版本（= alert-type 目录 commit SHA） |
+| 风险                               | 影响                                                                                                                 | 应对                                                                                                        |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 映射表误判（错标/漏标）            | 统计口径失真                                                                                                         | 映射变更走评审（安全团队 + 工程团队），下次扫描起自动修正                                                   |
+| bug 与 code_smell 边界争议         | 映射评审反复                                                                                                         | 2.2 决策树与边界规则为裁决基准，争议案例沉淀进边界规则表                                                    |
+| 工具升级新增/更名规则              | 新规则落入兜底（code_smell）                                                                                         | 工具版本入库；升级时比对规则集差异并补映射                                                                  |
+| SARIF 质量参差（无元数据、无指纹） | L2 判别失效、去重漂移                                                                                                | 转换器统一补齐指纹；L3 映射兜底                                                                             |
+| 海量告警性能                       | 入库与查询变慢                                                                                                       | 批量 upsert、分区表、聚合预计算                                                                             |
+| 远端不可用窗口期误定型             | 口径未加载期间新告警被兜底 code_smell 落库（成为既有值，回填只写空值，无自动纠偏路径），窗口内 security 告警可能少计 | 发布前置顺序强制确认首轮刷新成功（§5）；刷新失败告警监控；如需自动纠偏属实现层增强，走 codecheck 仓另行立项 |
+| 口径理解不一致                     | 各团队统计对不上                                                                                                     | 口径 README 为唯一口径来源，报表页脚注明口径版本（= alert-type 目录 commit SHA）                            |
 
 ### 12.2 验收标准
 
@@ -278,5 +280,5 @@ API 消耗：288 次/天/实例（3 实例约 864 次/天）全为轻量 GET，�
 
 ## 13. 原型与评审
 
-- 设计评审页：[design-review.html](./design-review.html)（含完整工具落位穷举表格）
+- 设计评审页：[design-review.html](./design-review.html)（v5 时点历史评审物料快照，含完整工具落位穷举表格；与本文冲突时以本文 v6 为准）
 - 规则配置交互原型：[prototype.html](./prototype.html)
