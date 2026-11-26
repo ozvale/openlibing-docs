@@ -2,7 +2,7 @@
 
 ## 进度: 10/10 主任务已完成（交接项 T12 另行实施）
 
-> 归档基线（2026-11-26）：codecheck 侧已通过 PR !422 合入 master（分支 `feat/static-alarm-problem-category`，关联 Issue #430）；docs 仓口径数据已落盘 `static-code-analysis/solutions/full-analysis/alert-type/`。任务内容已按最终实现同步。
+> 归档基线（2026-11-26）：codecheck 侧已通过 PR !422 合入 master（分支 `feat/static-alarm-problem-category`，关联 Issue #430），评审修订随 PR !426 迭代——口径未加载时 alert_type 留空待回填（Holder 显式 isLoaded 标志）；docs 仓口径数据已落盘 `static-code-analysis/solutions/full-analysis/alert-type/`。任务内容已按最终实现同步。
 
 ## 准备
 
@@ -16,8 +16,8 @@
 
 ## openlibing-codecheck（后端）
 
-- [x] T4 数据落地：`static_alarm_issue` 实体新增 `alert_type`（ENUM 语义 security/bug/code_smell，兜底 code_smell 保证非空）与 `rule_tags` / `rule_ruleset`（回填重放依据）三个字段；`alert_type` 不建索引、不入指纹，另建 `idx_issue_tool_rule (tool, rule_id)` 支撑回填批量更新
-- [x] T5 分类引擎：策略接口 + 工厂路由（同 `ISarifParser` / `SarifParserFactory` 风格）；L1 工具级短路（aliases 别名回落正名）/ L2 元数据仅判安全四判据（tags security、security-severity、cwe-*、cweTags 非空兜底）/ L3 四维 pattern 查表（可多维度 AND 组合，精确形哈希直查，多命中按 security > bug > code_smell 取序）/ 兜底 code_smell；判定流程对齐 design.md §3.2 伪代码
+- [x] T4 数据落地：`static_alarm_issue` 实体新增 `alert_type`（ENUM 语义 security/bug/code_smell，口径已加载后兜底保证非空；口径未加载窗口期入库留空待回填）与 `rule_tags` / `rule_ruleset`（回填重放依据）三个字段；`alert_type` 不建索引、不入指纹，另建 `idx_issue_tool_rule (tool, rule_id)` 支撑回填批量更新
+- [x] T5 分类引擎：策略接口 + 工厂路由（同 `ISarifParser` / `SarifParserFactory` 风格）；口径未加载（isLoaded 为 false）前置返回 null 留空待回填 / L1 工具级短路（aliases 别名回落正名）/ L2 元数据仅判安全四判据（tags security、security-severity、cwe-*、cweTags 非空兜底）/ L3 四维 pattern 查表（可多维度 AND 组合，精确形哈希直查，多命中按 security > bug > code_smell 取序）/ 口径已加载时兜底 code_smell；判定流程对齐 design.md §3.2 伪代码
 - [x] T6 口径缓存与刷新：进程内缓存（哈希/正则 + volatile 整体替换）；@Scheduled 每 5 分钟轮询 alert-type 目录 commit SHA（专用单线程执行器执行，在途去重），不一致经 GitCode v5 contents API 拉全量（429/5xx 指数退避重试 3 次），校验失败保留旧口径并告警；启动对齐：ApplicationReady 异步远端刷新，口径唯一来源远端仓库（无本地打包兜底）；token 四级链路（配置直供密文 > 项目公共账号 > 全局 token > 匿名 + enable 强制匿名开关）
 - [x] T7 SARIF 解析入库链路接入：result 解析取 tool + ruleId → classify → 写入 alert_type（rule_tags / rule_ruleset 同步落库）；upsert 存量保持入库时值、alert_type 为空时补写本次分类（口径变更仅对新告警生效）
 - [x] T8 接口扩展（无新增接口）：list / issue/count / list/export 入参增 `alertTypes` 多选、list 出参行增 `alertType`、导出列头「问题分类」；filter-options 入参增 `alertTypes` 收窄其余维度、出参增固定三项候选（label：安全/缺陷/代码坏味道，预留字段前端暂未消费）
