@@ -6,7 +6,7 @@
 - 业务 Issue #14：https://gitcode.com/openlibing/vulnerability-hunting-action/issues/14
 - 业务 PR #23：https://gitcode.com/openlibing/vulnerability-hunting-action/merge_requests/23
 - SDK 根因 Issue #45：https://gitcode.com/openlibing/huaweicloud-oidc-sdk-nodejs/issues/45
-- docs PR：本 PR
+- docs PR：https://gitcode.com/openlibing/openlibing-docs/merge_requests/1440
 
 ## 交付历程
 
