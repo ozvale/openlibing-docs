@@ -38,17 +38,17 @@
 
 ## 涉及文件
 
-| 文件                              | 操作 | 说明                                                                            |
-| --------------------------------- | ---- | ------------------------------------------------------------------------------- |
-| `argus-action/dist/argus-scan.js` | 修改 | 顶部两个默认端点常量；`getConfig()` / `parseArgs()` 复用；`gitleaks:allow` 理由 |
-| `argus-action/action.yml`         | 注释 | 两个 default 上方注明公开 SaaS 端点、可被 input 覆盖、`gitleaks:allow`          |
-| `argus-action/README.md`          | 修改 | 移除 AK/SK、`signer.js`；补 OIDC `id-token: write`；修正默认值与覆盖说明        |
-| `test/mock-sdk.js`                | 修改 | 记录 `callApig` 收到的 URL                                                      |
-| `test/argus.test.js`              | 修改 | 默认端点、`--codecheck-ip` 覆盖、Summary 链接用例                               |
-| `zip.js`                          | 修改 | 打包前同步 bundle 到 `argus-action/dist/index.js`                               |
-| `.gitleaks.toml`                  | 修改 | 打包产物路径白名单，消除第三方依赖误报                                          |
-| `argus-action/dist/index.js`      | 重建 | ncc 产物                                                                        |
-| `argus-action.zip`                | 重建 | 发布包                                                                          |
+| 文件                              | 操作 | 说明                                                                                                            |
+| --------------------------------- | ---- | --------------------------------------------------------------------------------------------------------------- |
+| `argus-action/dist/argus-scan.js` | 修改 | 顶部两个默认端点常量；`getConfig()` / `parseArgs()` 复用；`gitleaks:allow` 理由；Summary 改为「漏洞详情」超链接 |
+| `argus-action/action.yml`         | 注释 | 两个 default 上方注明公开 SaaS 端点、可被 input 覆盖、`gitleaks:allow`                                          |
+| `argus-action/README.md`          | 修改 | 移除 AK/SK、`signer.js`；补 OIDC `id-token: write`；修正默认值与覆盖说明                                        |
+| `test/mock-sdk.js`                | 修改 | 记录 `callApig` 收到的 URL                                                                                      |
+| `test/argus.test.js`              | 修改 | 默认端点、`--codecheck-ip` 覆盖、Summary 链接用例                                                               |
+| `zip.js`                          | 修改 | 打包前同步 bundle 到 `argus-action/dist/index.js`                                                               |
+| `.gitleaks.toml`                  | 修改 | 打包产物路径白名单，消除第三方依赖误报                                                                          |
+| `argus-action/dist/index.js`      | 重建 | ncc 产物                                                                                                        |
+| `argus-action.zip`                | 重建 | 发布包                                                                                                          |
 
 ## 风险 & 缓解
 

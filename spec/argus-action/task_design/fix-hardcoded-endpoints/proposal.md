@@ -18,6 +18,7 @@ issue #2（SenInfo）指出 argus-action 代码中存在硬编码 URL（apig 地
 做什么：
 
 - 将两个默认端点收敛为 `argus-scan.js` 顶部常量，删除 4 处重复字面量；
+- 门禁失败 Summary 以「漏洞详情」超链接展示，不再输出裸 URL；
 - 对齐两处默认值漂移；
 - 在默认值行登记 `gitleaks:allow` 并写明理由；
 - 补测试覆盖默认端点、CLI 覆盖和 Summary 链接；
@@ -37,6 +38,7 @@ issue #2（SenInfo）指出 argus-action 代码中存在硬编码 URL（apig 地
 - [ ] Action 模式下 `codecheck-ip` / `openlibing-url` 的 effective 默认值不变；
 - [ ] CLI 默认链接对齐到 `https://www.openlibing.com/apps/argus`（唯一有意行为变化）；
 - [ ] 源码中两个端点各只声明一次，无重复字面量；
+- [ ] 门禁失败 Summary 在「漏洞详情」处渲染超链接，不出现裸 URL；
 - [ ] `npm test` 全绿，新增用例覆盖默认值 / 覆盖 / Summary 链接；
 - [ ] `npm run build` 后 `argus-action/dist/index.js` 与 `argus-action.zip` 同源；
 - [ ] pre-commit（含 gitleaks）全绿；
