@@ -47,11 +47,14 @@ log_operation 表以「三合一替换」方式调整索引：删除既有 `idx_
 
 ```
 listAllowed()
-  ├─ 读内存快照（cachedAllowed, expireAtMs），未过期 → 直接返回快照
-  └─ 已过期/无快照 → synchronized 重新拉取 Feign
-       ├─ 成功且非空 → 写快照 + expireAtMs = now + ttl，返回
-       └─ 失败/空 → 不写快照，返回 emptyList（闭门失败，语义与现状一致）
+  ├─ 读内存快照（cachedAllowed, expireAtMs），未过期 → 直接返回快照（拷贝）
+  └─ 已过期/无快照 → synchronized
+       ├─ 锁内二次检查：快照未过期（已被并发线程刷新）→ 直接返回快照
+       ├─ 仍过期 → 拉取 Feign，成功且非空 → 写快照 + expireAtMs = now + ttl，返回
+       └─ 失败/空 → 不写快照（保留锁外快照的重试能力），返回 emptyList（闭门失败，语义与现状一致）
 ```
+
+- 双重检查保证 TTL 到期瞬间并发线程只触发 1 次远程调用，其余线程复用刷新后的快照（两仓单测均含并发双检用例：主线程持锁刷新期间并发线程进入锁后直接命中二次检查，断言远程调用仅 1 次）。
 
 - TTL 配置键（Apollo，`@Value`，支持运行期热更）：cicd 仓 `openlibing.cicd.operation-log.whitelist-cache-ttl-seconds`（默认 60）；coderepo 仓 `openlibing.coderepo.operation-log.whitelist-cache-ttl-seconds`（默认 60）。TTL ≤ 0 视为禁用缓存。
 - 快照为不可变 List（拷贝返回），防止调用方污染缓存。
@@ -83,8 +86,10 @@ queryFilterMeta(query, userId)
 
 新增 `db/changelog/v1.0.1/log_operation_filter_meta_index.xml`，两个 changeSet（**先 create 新索引、后 drop 旧索引**：构建新索引期间旧索引继续服务全部查询，任意时刻至少存在一个 `(project_id, module_id, operation_end_time)` 前缀索引，消除查询裸奔窗口），参照 `iam_account_query_perf_index.xml` 既有风格：
 
-- drop changeSet：`tableExists + indexExists` 双前置条件，`onFail="MARK_RAN"` 幂等；rollback 为重建 `idx_project_module_time`；
-- create changeSet：`tableExists + not indexExists` 前置条件，`onFail="MARK_RAN"` 幂等；rollback 为 `dropIndex`；
+**changeSet 在 XML 中的书写顺序必须为 create → drop**（Liquibase 按 changeSet 先后顺序执行，与下列分项一一对应）：
+
+- create changeSet（先执行）：`tableExists + not indexExists` 前置条件，`onFail="MARK_RAN"` 幂等；rollback 为 `dropIndex`；
+- drop changeSet（后执行，新索引就绪后才删）：`tableExists + indexExists` 双前置条件，`onFail="MARK_RAN"` 幂等；rollback 为重建 `idx_project_module_time`；
 - 在 `db.changelog.xml` 末尾追加 include 注册。
 
 索引在 BETA 环境由 Liquibase 随服务启动自动执行；上线前用 EXPLAIN 验证 filter-meta 各维度执行计划。

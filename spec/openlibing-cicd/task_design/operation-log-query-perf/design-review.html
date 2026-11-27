@@ -73,7 +73,7 @@
 
 <h2>4. 风险与回滚</h2>
 <table>
-<tr><th>风险</th><th>缓解</th><th>回滚</th></tr>
+<tr><th scope="col">风险</th><th scope="col">缓解</th><th scope="col">回滚</th></tr>
 <tr><td>缓存导致元数据短时陈旧（最长 30s/60s）</td><td>TTL 可经 Apollo 调整，≤0 即禁用；筛选候选值场景可接受</td><td>Apollo 配置置 0，即时生效</td></tr>
 <tr><td>替换索引后 user_name/resource_name 以外维度（ip / log_result）仍回表</td><td>两维度基数低、占比小；观察收益后再定</td><td>Liquibase rollback（删新索引 + 重建旧索引）</td></tr>
 <tr><td>索引 DDL 在大表上的构建耗时</td><td>经 Liquibase 启动执行，BETA 先行验证 EXPLAIN</td><td>changeSet MARK_RAN 幂等可重放</td></tr>
