@@ -1,13 +1,13 @@
 # Bug 修复：分支列表 UT 覆盖率排序不生效
 
-| 项           | 内容                                                                                                          |
-| ------------ | ------------------------------------------------------------------------------------------------------------- |
-| 所属仓       | openlibing-coderepo                                                                                           |
-| 接口         | `POST /gateway/openlibing-coderepo/repo/branch/list`（项目维度分支列表）                                      |
-| 现象         | 前端传 `sortField=utCoverage&sortOrder=desc`，列表未按行覆盖率排序，实际仍按更新时间排序                      |
-| 前端请求示例 | `{"projectId":3,"pageNum":1,"pageSize":10,"sortField":"utCoverage","sortOrder":"desc"}`                       |
-| 修复分支     | `fix-ut-coverage-sort`（基于 master）                                                                          |
-| 修复日期     | 2026-11-12                                                                                                    |
+| 项           | 内容                                                                                     |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| 所属仓       | openlibing-coderepo                                                                      |
+| 接口         | `POST /gateway/openlibing-coderepo/repo/branch/list`（项目维度分支列表）                 |
+| 现象         | 前端传 `sortField=utCoverage&sortOrder=desc`，列表未按行覆盖率排序，实际仍按更新时间排序 |
+| 前端请求示例 | `{"projectId":3,"pageNum":1,"pageSize":10,"sortField":"utCoverage","sortOrder":"desc"}`  |
+| 修复分支     | `fix-ut-coverage-sort`（基于 master）                                                    |
+| 修复日期     | 2026-11-12                                                                               |
 
 ## 1. 根因分析
 
@@ -58,13 +58,13 @@ QueryProjectBranchDTO.sortField = "utCoverage"
 
 ## 4. 影响范围与风险
 
-| 维度     | 评估                                                                                     |
-| -------- | ---------------------------------------------------------------------------------------- |
-| 改动面   | 2 行生产代码（白名单映射 + ORDER BY 分支）+ 1 个轻量契约测试用例，无接口契约/DDL/MQ 变化 |
-| 兼容性   | 纯增量：`utCoverage` 从「静默回退 update_at」变为按预期排序；其余字段行为不变             |
-| SQL 注入 | sortField 仍经白名单归一后才进入 ORDER BY（`<choose>` 精确匹配 OGNL 常量），无注入面扩大 |
+| 维度     | 评估                                                                                          |
+| -------- | --------------------------------------------------------------------------------------------- |
+| 改动面   | 2 行生产代码（白名单映射 + ORDER BY 分支）+ 1 个轻量契约测试用例，无接口契约/DDL/MQ 变化      |
+| 兼容性   | 纯增量：`utCoverage` 从「静默回退 update_at」变为按预期排序；其余字段行为不变                 |
+| SQL 注入 | sortField 仍经白名单归一后才进入 ORDER BY（`<choose>` 精确匹配 OGNL 常量），无注入面扩大      |
 | 性能     | ORDER BY 列与既有度量列同表同模式，无新增 join/子查询；如需可后续评估 `ut_line_coverage` 索引 |
-| 数据     | 无 DDL、无数据迁移                                                                       |
+| 数据     | 无 DDL、无数据迁移                                                                            |
 
 ## 5. 验证
 

@@ -31,26 +31,26 @@ getFileDetail 明细接口：runNumber/checkTime 字段链路存在但值恒为�
 
 **根因结论**（git 考古修正版）：
 
-| 时间点 | 提交 | 行为 |
-| --- | --- | --- |
-| 2026-09-20 | `90e02d2f`（UT 覆盖率功能引入） | `parseDateTime` 对空值**兜底返回 `new Date()`**（服务器当前时间）。插件 JSON 从未携带 `detectionCompletedAt`，故每条记录的检测时间 = 上报处理时刻 ≈ create_time（假时间） |
-| 2026-09-23 17:09 | `379bed9e`（Refs #189 修复） | **兜底被刻意移除**：`return new Date()` → `return null` + 告警。提交注释明确：「避免用服务器当前时间冒充检测时间（会失真展示并打乱『取最近一次成功记录』排序）」。发版后新记录 detection_completed_at 恒为 NULL |
-| 2026-10-14 | `62fc4c90`（OBS 流式解析重构） | `parseDateTime` 行为未变（仅调用点格式化），非分界点 |
+| 时间点           | 提交                            | 行为                                                                                                                                                                                                            |
+| ---------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-20       | `90e02d2f`（UT 覆盖率功能引入） | `parseDateTime` 对空值**兜底返回 `new Date()`**（服务器当前时间）。插件 JSON 从未携带 `detectionCompletedAt`，故每条记录的检测时间 = 上报处理时刻 ≈ create_time（假时间）                                       |
+| 2026-09-23 17:09 | `379bed9e`（Refs #189 修复）    | **兜底被刻意移除**：`return new Date()` → `return null` + 告警。提交注释明确：「避免用服务器当前时间冒充检测时间（会失真展示并打乱『取最近一次成功记录』排序）」。发版后新记录 detection_completed_at 恒为 NULL |
+| 2026-10-14       | `62fc4c90`（OBS 流式解析重构）  | `parseDateTime` 行为未变（仅调用点格式化），非分界点                                                                                                                                                            |
 
 即：**早期记录的「有值」是后端兜底产生的假时间**（≈create_time，无真实语义），兜底移除后暴露出插件侧 `detectionCompletedAt` 元数据从未上报的事实，形成「分界线之后全 NULL」。`run_number` 与 `pipeline_name` 则是纯粹的同模式插件侧元数据缺失（从未有值）。issue 中「检查时间后端已返回」的定位需要修正——后端返回链路存在但依赖插件数据，数据源头即为 NULL，「缺少检查时间」的根因同样在插件侧数据缺失，而非前端未渲染。
 
 ### 1.2 同类先例（对齐目标，code-metrics-action 仓已核实）
 
-| 项 | code metrics（已修，#219） | UT 覆盖率（本设计） |
-| --- | --- | --- |
-| pipelineName 来源 | `index.js:199`：`ciEnv('workflow')`——GitCode 取 `ATOMGIT_WORKFLOW`，GitHub 取 `GITHUB_WORKFLOW`（`src/utils/ciContext.js` 双平台适配） | `ATOMGIT_WORKFLOW`（UT 插件当前仅适配 GitCode 平台） |
-| runNumber 来源 | `ciEnv('runNumber')`——GitCode 取 `ATOMGIT_RUN_NUMBER`（ciContext.js:27） | `ATOMGIT_RUN_NUMBER`（UT 插件从未上报，本次补齐） |
-| JSON 元数据 | `CodeMetricsPayload.pipelineName`（L52）；OBS 全量 JSON 写入（`CoderepoUploader.js:306`） | 元数据区缺 pipelineName/runNumber/detectionCompletedAt，补齐 |
-| 上报请求体 | `/metrics/code/report` body **不含** pipelineName（`CoderepoUploader.js:327-337`），仅 JSON 元数据单一来源 | 同款：请求 DTO 不动 |
-| 流式解析 | `CodeMetricsServiceImpl:388 case "pipelineName"` | runNumber/detectionCompletedAt case 已存在（L283/L292），仅新增 pipelineName case |
-| 入库 | `code_metrics_record.pipeline_name`（changeSet `20261016_add_pipeline_name_to_code_metrics_record`） | `code_ut_record` 加列 pipeline_name；run_number/detection_completed_at 列已存在（数据源补齐后即有值） |
-| 下钻返回 | `FileMetricDetailVO.pipelineName`（`CodeMetricsServiceImpl:992`） | `UtCoverageFileDetailVO` 新增 pipelineName；checkTime/runNumber 字段已存在 |
-| 下钻页展示 | `流水线: {pipelineName} #{runNumber}` 整体为跳转链接（组合样式） | UT 详情页对齐同款 |
+| 项                | code metrics（已修，#219）                                                                                                             | UT 覆盖率（本设计）                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| pipelineName 来源 | `index.js:199`：`ciEnv('workflow')`——GitCode 取 `ATOMGIT_WORKFLOW`，GitHub 取 `GITHUB_WORKFLOW`（`src/utils/ciContext.js` 双平台适配） | `ATOMGIT_WORKFLOW`（UT 插件当前仅适配 GitCode 平台）                                                  |
+| runNumber 来源    | `ciEnv('runNumber')`——GitCode 取 `ATOMGIT_RUN_NUMBER`（ciContext.js:27）                                                               | `ATOMGIT_RUN_NUMBER`（UT 插件从未上报，本次补齐）                                                     |
+| JSON 元数据       | `CodeMetricsPayload.pipelineName`（L52）；OBS 全量 JSON 写入（`CoderepoUploader.js:306`）                                              | 元数据区缺 pipelineName/runNumber/detectionCompletedAt，补齐                                          |
+| 上报请求体        | `/metrics/code/report` body **不含** pipelineName（`CoderepoUploader.js:327-337`），仅 JSON 元数据单一来源                             | 同款：请求 DTO 不动                                                                                   |
+| 流式解析          | `CodeMetricsServiceImpl:388 case "pipelineName"`                                                                                       | runNumber/detectionCompletedAt case 已存在（L283/L292），仅新增 pipelineName case                     |
+| 入库              | `code_metrics_record.pipeline_name`（changeSet `20261016_add_pipeline_name_to_code_metrics_record`）                                   | `code_ut_record` 加列 pipeline_name；run_number/detection_completed_at 列已存在（数据源补齐后即有值） |
+| 下钻返回          | `FileMetricDetailVO.pipelineName`（`CodeMetricsServiceImpl:992`）                                                                      | `UtCoverageFileDetailVO` 新增 pipelineName；checkTime/runNumber 字段已存在                            |
+| 下钻页展示        | `流水线: {pipelineName} #{runNumber}` 整体为跳转链接（组合样式）                                                                       | UT 详情页对齐同款                                                                                     |
 
 ### 1.3 前端现状（含对齐目标口径）
 
@@ -92,14 +92,14 @@ getFileDetail 明细接口：runNumber/checkTime 字段链路存在但值恒为�
 
 ### 2.2 后端解析与入库（openlibing-coderepo）
 
-| # | 文件 | 改动 |
-| --- | --- | --- |
-| 1 | `UtCoveragePayload` | 新增 `private String pipelineName;`（与 runNumber/commitId 同组） |
-| 2 | `UtCoverageServiceImpl#readUtMetaField` | switch **仅新增** `case "pipelineName": payload.setPipelineName(parser.getValueAsString()); break;`——runNumber（L283）/detectionCompletedAt（L292）case 已存在，数据源补齐后自动生效，零改动 |
-| 3 | `CodeUtRecordEntity` | 新增 `private String pipelineName;`（@Builder 链式，紧跟 runNumber） |
-| 4 | `UtCoverageServiceImpl#saveUtRecord`（L444 附近 builder） | `.pipelineName(payload.getPipelineName())`；runNumber/detectionCompletedAt 入库链路已存在（L444/L448），零改动 |
-| 5 | `UtCoverageFileDetailVO` | 新增 `private String pipelineName;` |
-| 6 | `UtCoverageServiceImpl#getFileDetail`（L586-600 builder） | `.pipelineName(record.getPipelineName())`；checkTime/runNumber 返回链路已存在（L592-594） |
+| #   | 文件                                                      | 改动                                                                                                                                                                                         |
+| --- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `UtCoveragePayload`                                       | 新增 `private String pipelineName;`（与 runNumber/commitId 同组）                                                                                                                            |
+| 2   | `UtCoverageServiceImpl#readUtMetaField`                   | switch **仅新增** `case "pipelineName": payload.setPipelineName(parser.getValueAsString()); break;`——runNumber（L283）/detectionCompletedAt（L292）case 已存在，数据源补齐后自动生效，零改动 |
+| 3   | `CodeUtRecordEntity`                                      | 新增 `private String pipelineName;`（@Builder 链式，紧跟 runNumber）                                                                                                                         |
+| 4   | `UtCoverageServiceImpl#saveUtRecord`（L444 附近 builder） | `.pipelineName(payload.getPipelineName())`；runNumber/detectionCompletedAt 入库链路已存在（L444/L448），零改动                                                                               |
+| 5   | `UtCoverageFileDetailVO`                                  | 新增 `private String pipelineName;`                                                                                                                                                          |
+| 6   | `UtCoverageServiceImpl#getFileDetail`（L586-600 builder） | `.pipelineName(record.getPipelineName())`；checkTime/runNumber 返回链路已存在（L592-594）                                                                                                    |
 
 设计约束：
 
@@ -112,13 +112,13 @@ getFileDetail 明细接口：runNumber/checkTime 字段链路存在但值恒为�
 
 标准 JSON 元数据区从 5 字段补齐至 8 字段（新增 **runNumber / pipelineName / detectionCompletedAt**）：
 
-| # | 文件 | 改动 |
-| --- | --- | --- |
-| 1 | `index.js`（L139-140 附近） | 新增两行上下文读取：`const runNumber = (process.env.ATOMGIT_RUN_NUMBER \|\| '').trim();`（对齐 code-metrics-action `ciContext.js:27`）、`const pipelineName = (process.env.ATOMGIT_WORKFLOW \|\| '').trim();`（对齐 `ciContext.js:29`） |
-| 2 | `index.js:190` | `CoverageNormalizer.normalize(parsedList, { gitUrl, branchName, pipelineRunId, commitId, runNumber, pipelineName }, repoRoot)` |
-| 3 | `CoverageNormalizer.js`（L76-82 元数据区） | 新增三个字段：`runNumber: meta.runNumber \|\| ''`、`pipelineName: meta.pipelineName \|\| ''`、`detectionCompletedAt: <组装完成时刻，格式 yyyy-MM-dd HH:mm:ss>`——完成时间由插件在组装标准 JSON 时打点（与 metrics 的 scanner 写入 detectionStartedAt/CompletedAt 同款语义），格式走后端 `parseDetectionTime` 已兼容的空格分隔形式 |
-| 4 | `test/` | normalize 用例扩展：meta 带/不带 runNumber、pipelineName 的断言 + 元数据区字段完整性快照 |
-| 5 | `dist/` | `npm run build` 重新生成并随版本发布；`package.json` 版本号升级 |
+| #   | 文件                                       | 改动                                                                                                                                                                                                                                                                                                                             |
+| --- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `index.js`（L139-140 附近）                | 新增两行上下文读取：`const runNumber = (process.env.ATOMGIT_RUN_NUMBER \|\| '').trim();`（对齐 code-metrics-action `ciContext.js:27`）、`const pipelineName = (process.env.ATOMGIT_WORKFLOW \|\| '').trim();`（对齐 `ciContext.js:29`）                                                                                          |
+| 2   | `index.js:190`                             | `CoverageNormalizer.normalize(parsedList, { gitUrl, branchName, pipelineRunId, commitId, runNumber, pipelineName }, repoRoot)`                                                                                                                                                                                                   |
+| 3   | `CoverageNormalizer.js`（L76-82 元数据区） | 新增三个字段：`runNumber: meta.runNumber \|\| ''`、`pipelineName: meta.pipelineName \|\| ''`、`detectionCompletedAt: <组装完成时刻，格式 yyyy-MM-dd HH:mm:ss>`——完成时间由插件在组装标准 JSON 时打点（与 metrics 的 scanner 写入 detectionStartedAt/CompletedAt 同款语义），格式走后端 `parseDetectionTime` 已兼容的空格分隔形式 |
+| 4   | `test/`                                    | normalize 用例扩展：meta 带/不带 runNumber、pipelineName 的断言 + 元数据区字段完整性快照                                                                                                                                                                                                                                         |
+| 5   | `dist/`                                    | `npm run build` 重新生成并随版本发布；`package.json` 版本号升级                                                                                                                                                                                                                                                                  |
 
 要点：
 
@@ -137,11 +137,11 @@ getFileDetail 明细接口：runNumber/checkTime 字段链路存在但值恒为�
 
 `UtCoverageDetailDialog.vue` 信息条改造：
 
-| 项 | 现状（MR 879 版本） | 目标（对齐 metrics 页） |
-| --- | --- | --- |
-| 扫描时间 | label 为「检查时间」（checkTime）；**存量记录值为空**（数据源缺失，§1.1） | label 统一为「**扫描时间**：{{ checkTime }}」——与 metrics 页同字段同 label；**空值兜底 `--`**（存量记录/旧插件数据 checkTime 为 null） |
-| 检测时间 | 额外展示「检测时间：{{ utCoverage.detectionTime }}」 | **移除**——与扫描时间同源重复（分支行快照 detectionTime 与记录 detection_completed_at 取自同一最新记录，值恒等），metrics 页无此双重展示 |
-| 流水线 | `#{{ runNumber }}`（**存量记录 runNumber 为空 → 仅显示 `#`**） | `pipelineDisplayName` computed 同款复刻：`pipelineName ? \`${pipelineName} #${runNumber}\` : \`#${runNumber}\``，整体走既有 `pipeline-link` 链接样式（点击 `goToNotice(pipelineLink)`；pipelineLink 缺失时保持纯文本） |
+| 项       | 现状（MR 879 版本）                                                       | 目标（对齐 metrics 页）                                                                                                                                                                                              |
+| -------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 扫描时间 | label 为「检查时间」（checkTime）；**存量记录值为空**（数据源缺失，§1.1） | label 统一为「**扫描时间**：{{ checkTime }}」——与 metrics 页同字段同 label；**空值兜底 `--`**（存量记录/旧插件数据 checkTime 为 null）                                                                               |
+| 检测时间 | 额外展示「检测时间：{{ utCoverage.detectionTime }}」                      | **移除**——与扫描时间同源重复（分支行快照 detectionTime 与记录 detection_completed_at 取自同一最新记录，值恒等），metrics 页无此双重展示                                                                              |
+| 流水线   | `#{{ runNumber }}`（**存量记录 runNumber 为空 → 仅显示 `#`**）            | `pipelineDisplayName` computed 同款复刻：`pipelineName ? \`${pipelineName} #${runNumber}\` : \`#${runNumber}\``，整体走既有 `pipeline-link`链接样式（点击`goToNotice(pipelineLink)`；pipelineLink 缺失时保持纯文本） |
 
 要点：
 
@@ -163,13 +163,13 @@ getFileDetail 明细接口：runNumber/checkTime 字段链路存在但值恒为�
 
 ### 3.1 后端单测（openlibing-coderepo）
 
-| 用例 | 断言 |
-| --- | --- |
-| 报告 JSON 含 pipelineName/runNumber/detectionCompletedAt 元数据（新版插件形态） | 三字段解析入库一致，VO 返回 pipelineName + checkTime + runNumber 同值 |
-| 报告 JSON 无三字段（旧插件/历史形态，当前线上真实形态） | pipelineName/runNumber 为 null、detection_completed_at 为 null（parseDateTime(null)→null），VO 返回空，不抛错、不落失败记录 |
-| pipelineName 为空串 | 按原样入库（空串），VO 返回空串——前端兜底展示，与 metrics 侧一致 |
-| 失败记录路径 | saveFailureRecord 不写 pipelineName（保持 null） |
-| changeSet | preConditions 幂等（重复执行 MARK_RAN 不报错）——跟随既有 changelog 测试惯例 |
+| 用例                                                                            | 断言                                                                                                                        |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 报告 JSON 含 pipelineName/runNumber/detectionCompletedAt 元数据（新版插件形态） | 三字段解析入库一致，VO 返回 pipelineName + checkTime + runNumber 同值                                                       |
+| 报告 JSON 无三字段（旧插件/历史形态，当前线上真实形态）                         | pipelineName/runNumber 为 null、detection_completed_at 为 null（parseDateTime(null)→null），VO 返回空，不抛错、不落失败记录 |
+| pipelineName 为空串                                                             | 按原样入库（空串），VO 返回空串——前端兜底展示，与 metrics 侧一致                                                            |
+| 失败记录路径                                                                    | saveFailureRecord 不写 pipelineName（保持 null）                                                                            |
+| changeSet                                                                       | preConditions 幂等（重复执行 MARK_RAN 不报错）——跟随既有 changelog 测试惯例                                                 |
 
 ### 3.2 插件单测（upload-ut-action）
 
@@ -182,13 +182,13 @@ getFileDetail 明细接口：runNumber/checkTime 字段链路存在但值恒为�
 
 ## 4. 风险与开放问题
 
-| 项 | 评估 |
-| --- | --- |
-| Liquibase 加列（可空，单行 DDL） | 锁表时间短，风险低；preConditions 防重跑 |
+| 项                                                 | 评估                                                                                                                                                                                                                                                 |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Liquibase 加列（可空，单行 DDL）                   | 锁表时间短，风险低；preConditions 防重跑                                                                                                                                                                                                             |
 | 存量数据 run_number/detection_completed_at 全 NULL | 数据源缺失所致（列一直存在），不做刷数回填——详情页空值兜底 `--`；分界线前少数记录 detection_completed_at 为后端兜底假时间（≈create_time，详见 §1.1 时间线），无真实语义不清洗；如需回填可另行评估基于 pipeline_run_id 的离线刷数任务（不在本次范围） |
-| 旧版插件共存期 | 新插件上线前数据三要素为 NULL，前端空值兜底展示，无功能破坏 |
-| 「检测时间」展示移除 | 与扫描时间同源同值（同一最新记录），对齐 metrics 页口径去重；如评审有异议可保留，不阻塞 |
-| pipelineName 环境变量 | **已闭环**：`ATOMGIT_WORKFLOW`，与 code-metrics-action `ciContext.js` GitCode 分支同源（该仓已核实）；手动触发无该变量时兜底空串，前端组合展示自动退化为仅编号 |
-| UT 插件双平台适配 | UT 插件存量仅 GitCode（`ATOMGIT_*`）；GitHub 平台（`GITHUB_WORKFLOW`）适配为可选增强，随插件上 GitHub 需求另行评估，不在本次范围 |
-| 跨仓发版顺序 | 见 §2.5，三环节任意顺序上线均向后兼容 |
-| 明细接口响应体膨胀 | 新增 1 个可空字符串字段，影响可忽略 |
+| 旧版插件共存期                                     | 新插件上线前数据三要素为 NULL，前端空值兜底展示，无功能破坏                                                                                                                                                                                          |
+| 「检测时间」展示移除                               | 与扫描时间同源同值（同一最新记录），对齐 metrics 页口径去重；如评审有异议可保留，不阻塞                                                                                                                                                              |
+| pipelineName 环境变量                              | **已闭环**：`ATOMGIT_WORKFLOW`，与 code-metrics-action `ciContext.js` GitCode 分支同源（该仓已核实）；手动触发无该变量时兜底空串，前端组合展示自动退化为仅编号                                                                                       |
+| UT 插件双平台适配                                  | UT 插件存量仅 GitCode（`ATOMGIT_*`）；GitHub 平台（`GITHUB_WORKFLOW`）适配为可选增强，随插件上 GitHub 需求另行评估，不在本次范围                                                                                                                     |
+| 跨仓发版顺序                                       | 见 §2.5，三环节任意顺序上线均向后兼容                                                                                                                                                                                                                |
+| 明细接口响应体膨胀                                 | 新增 1 个可空字符串字段，影响可忽略                                                                                                                                                                                                                  |
