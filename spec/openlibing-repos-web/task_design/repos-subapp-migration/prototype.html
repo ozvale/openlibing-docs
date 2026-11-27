@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代码仓管理（Repos）子应用 — 页面原型</title>
+<style>
+  :root {
+    --bg: #f5f7fa; --surface: #ffffff; --line: #e4e8ef; --line-2: #eef1f6;
+    --ink: #1f2733; --ink-2: #4a5565; --muted: #8a94a6;
+    --primary: #2f6feb; --primary-soft: #eaf1ff;
+    --ok: #1a9e6c; --warn: #d98600; --danger: #d33c3c;
+    --radius: 6px;
+    --font: 'Microsoft YaHei', 'PingFang SC', 'Segoe UI', system-ui, sans-serif;
+    --mono: 'Cascadia Code', 'Consolas', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--ink); font-size: 13px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  code { font-family: var(--mono); font-size: 0.92em; background: #eef1f6; padding: 1px 5px; border-radius: 3px; color: #3b4658; }
+
+  /* ---------- 评审提示条 ---------- */
+  .proto-bar { background: #1e2733; color: #cfd6e2; font-size: 12px; padding: 7px 18px; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+  .proto-bar b { color: #eaf1ff; font-weight: 600; }
+  .proto-bar .dot { width: 6px; height: 6px; border-radius: 50%; background: #f0b429; display: inline-block; margin-right: 6px; }
+
+  /* ---------- 宿主外壳示意 ---------- */
+  .host-shell { display: flex; min-height: calc(100vh - 34px); }
+  .host-side { width: 188px; flex: 0 0 188px; background: #202b38; color: #a9b4c4; padding: 14px 0; font-size: 12.5px; }
+  .host-logo { color: #e8edf5; font-size: 14px; font-weight: 700; padding: 0 18px 14px; display: flex; align-items: center; gap: 8px; }
+  .host-logo i { width: 18px; height: 18px; background: var(--primary); border-radius: 4px; display: inline-block; }
+  .host-group { padding: 6px 18px; color: #66738a; font-size: 11px; letter-spacing: .08em; }
+  .host-item { padding: 7px 18px; display: flex; align-items: center; gap: 8px; }
+  .host-item.active { background: rgba(47,111,235,.18); color: #fff; border-right: 2px solid var(--primary); }
+  .host-item span { opacity: .55; font-size: 11px; }
+
+  .host-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .host-tabbar { background: var(--surface); border-bottom: 1px solid var(--line); padding: 0 16px; display: flex; align-items: center; gap: 6px; height: 40px; font-size: 12.5px; }
+  .host-tab { padding: 5px 12px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink-2); background: #fafbfd; }
+  .host-tab.active { color: var(--primary); border-color: #bcd2ff; background: var(--primary-soft); }
+  .host-crumb { margin-left: auto; color: var(--muted); font-size: 12px; }
+
+  /* ---------- 子应用内容 ---------- */
+  .page { padding: 14px 16px 40px; }
+  .page-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .page-head h1 { font-size: 16px; font-weight: 700; }
+  .route-tag { font-family: var(--mono); font-size: 11px; color: #5b6a83; background: #eef1f6; border: 1px solid var(--line); padding: 1px 7px; border-radius: 3px; }
+  .page-head .switcher { margin-left: auto; display: flex; background: #eef1f6; border: 1px solid var(--line); border-radius: var(--radius); padding: 2px; }
+  .page-head .switcher button { border: 0; background: none; font-family: var(--font); font-size: 12.5px; color: var(--ink-2); padding: 4px 14px; border-radius: 4px; cursor: pointer; }
+  .page-head .switcher button.on { background: var(--surface); color: var(--primary); font-weight: 600; box-shadow: 0 1px 2px rgba(31,39,51,.08); }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+  .toolbar { padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; border-bottom: 1px solid var(--line-2); }
+  .field { display: flex; align-items: center; gap: 6px; }
+  .field label { color: var(--ink-2); white-space: nowrap; font-size: 12.5px; }
+  .input, select.input { height: 30px; border: 1px solid var(--line); border-radius: 4px; background: #fff; padding: 0 9px; font-family: var(--font); font-size: 12.5px; color: var(--ink); min-width: 130px; outline: none; }
+  .input:focus, select.input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(47,111,235,.12); }
+  .btn { height: 30px; padding: 0 13px; border-radius: 4px; border: 1px solid var(--line); background: #fff; font-family: var(--font); font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+  .btn:hover { border-color: #c3cede; color: var(--ink); }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .btn.primary:hover { background: #2761d4; }
+  .btn.link { border: 0; background: none; color: var(--primary); padding: 0 4px; height: auto; }
+  .btn.link.danger { color: var(--danger); }
+  .toolbar .right { margin-left: auto; display: flex; gap: 8px; }
+
+  .stat-strip { display: flex; gap: 0; border-bottom: 1px solid var(--line-2); }
+  .stat { flex: 1; padding: 10px 14px; border-right: 1px solid var(--line-2); }
+  .stat:last-child { border-right: 0; }
+  .stat b { display: block; font-family: var(--mono); font-size: 17px; line-height: 1.3; color: var(--ink); }
+  .stat span { font-size: 11.5px; color: var(--muted); }
+  .stat.warn b { color: var(--warn); }
+  .stat.ok b { color: var(--ok); }
+
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  thead th { background: #f7f9fc; color: var(--ink-2); font-weight: 600; text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+  tbody tr:hover td { background: #fafcff; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .repo-name { font-weight: 600; color: var(--ink); }
+  .repo-name small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
+  .link-text { color: var(--primary); text-decoration: none; font-family: var(--mono); font-size: 11.5px; }
+  .link-text:hover { text-decoration: underline; }
+  .tag { display: inline-block; font-size: 11.5px; padding: 0 8px; border-radius: 10px; line-height: 19px; border: 1px solid transparent; white-space: nowrap; }
+  .tag.ok { color: var(--ok); background: #e8f7f0; border-color: #bfe8d6; }
+  .tag.warn { color: var(--warn); background: #fdf4e3; border-color: #f3ddb0; }
+  .tag.err { color: var(--danger); background: #fdecec; border-color: #f5c6c6; }
+  .tag.info { color: #3b6fd4; background: #eaf1ff; border-color: #cddcfd; }
+  .tag.plain { color: var(--ink-2); background: #f1f3f7; border-color: var(--line); }
+  .ops { display: flex; gap: 2px; flex-wrap: wrap; }
+
+  .pager { display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: var(--ink-2); font-size: 12.5px; border-top: 1px solid var(--line-2); }
+  .pager .pages { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+  .pager .pg { min-width: 26px; height: 26px; border: 1px solid var(--line); background: #fff; border-radius: 4px; font-size: 12px; color: var(--ink-2); cursor: pointer; }
+  .pager .pg.on { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+
+  .hint { margin-top: 10px; font-size: 11.5px; color: var(--muted); }
+  .hidden { display: none !important; }
+
+  @media (max-width: 900px) {
+    .host-side { display: none; }
+    .stat-strip { flex-wrap: wrap; }
+    .stat { flex: 1 1 45%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="proto-bar">
+  <span><span class="dot"></span><b>静态原型</b> — 仅用于评审对齐页面形态，数据为模拟，不含真实接口</span>
+  <span>子应用 <b>openlibing-repos-web</b></span>
+  <span>路由 <b>/repos/repo</b> · <b>/repos/operation-log</b></span>
+  <span>宿主入口 <b>/apps/repos</b> · <b>/apps/repoOperationLog</b></span>
+</div>
+
+<div class="host-shell">
+  <!-- 宿主侧边栏（示意，非本期改动） -->
+  <aside class="host-side">
+    <div class="host-logo"><i></i>openLiBing</div>
+    <div class="host-group">工作台</div>
+    <div class="host-item">首页</div>
+    <div class="host-group">研发流程</div>
+    <div class="host-item">项目管理</div>
+    <div class="host-item">流水线</div>
+    <div class="host-item active">代码仓管理 <span>wujie</span></div>
+    <div class="host-item">代码检查</div>
+    <div class="host-item">检测中心</div>
+    <div class="host-item">接口管理</div>
+    <div class="host-group">管理</div>
+    <div class="host-item">菜单管理</div>
+    <div class="host-item">角色管理</div>
+  </aside>
+
+  <div class="host-main">
+    <!-- 宿主标签页（示意） -->
+    <div class="host-tabbar">
+      <div class="host-tab">工作台</div>
+      <div class="host-tab active" id="hostTab">代码仓管理</div>
+      <div class="host-crumb">宿主：openlibing-web &nbsp;/&nbsp; 子应用：repos</div>
+    </div>
+
+    <div class="page">
+      <div class="page-head">
+        <h1 id="pageTitle">代码仓管理</h1>
+        <span class="route-tag" id="routeTag">/repos/repo</span>
+        <div class="switcher">
+          <button class="on" data-view="repo">仓库管理</button>
+          <button data-view="log">操作日志</button>
+        </div>
+      </div>
+
+      <!-- ================= 视图一：仓库管理 ================= -->
+      <section id="view-repo">
+        <div class="card">
+          <div class="toolbar">
+            <div class="field"><label>仓库名称</label><input class="input" id="kw" placeholder="请输入仓库名称 / 地址" style="min-width:180px"></div>
+            <div class="field"><label>归属项目</label>
+              <select class="input" id="projectFilter">
+                <option value="">全部项目</option>
+                <option>openLiBing</option>
+                <option>开源社区</option>
+                <option>基础平台</option>
+              </select>
+            </div>
+            <div class="field"><label>代码平台</label>
+              <select class="input">
+                <option>全部平台</option>
+                <option>GitCode</option>
+                <option>Gitee</option>
+                <option>GitHub</option>
+              </select>
+            </div>
+            <button class="btn primary" id="btnSearch">查询</button>
+            <button class="btn" id="btnReset">重置</button>
+            <div class="right">
+              <button class="btn">列配置</button>
+              <button class="btn">同步仓库</button>
+              <button class="btn primary">新增仓库</button>
+            </div>
+          </div>
+
+          <div class="stat-strip">
+            <div class="stat"><b>128</b><span>仓库总数</span></div>
+            <div class="stat ok"><b>119</b><span>同步正常</span></div>
+            <div class="stat warn"><b>6</b><span>同步中</span></div>
+            <div class="stat"><b>3</b><span>同步失败</span></div>
+            <div class="stat"><b>14</b><span>本页分支合计</span></div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:26px"><input type="checkbox" aria-label="全选"></th>
+                  <th>仓库名称</th>
+                  <th>仓库地址</th>
+                  <th>代码平台</th>
+                  <th>归属项目</th>
+                  <th>负责人</th>
+                  <th>分支数</th>
+                  <th>同步状态</th>
+                  <th>最近同步</th>
+                  <th style="width:210px">操作</th>
+                </tr>
+              </thead>
+              <tbody id="repoBody"></tbody>
+            </table>
+          </div>
+
+          <div class="pager">
+            <span>共 <b id="repoTotal">128</b> 条</span>
+            <span>每页 10 条</span>
+            <div class="pages">
+              <button class="pg">‹</button>
+              <button class="pg on">1</button>
+              <button class="pg">2</button>
+              <button class="pg">3</button>
+              <button class="pg">…</button>
+              <button class="pg">13</button>
+              <button class="pg">›</button>
+            </div>
+          </div>
+        </div>
+        <p class="hint">原型说明：列配置、同步进度、新增 / 编辑弹窗、分支管理、成员管理等二级交互不在本页展开；交互形态以迁移前页面为准，本期不做 UI 改版。</p>
+      </section>
+
+      <!-- ================= 视图二：操作日志 ================= -->
+      <section id="view-log" class="hidden">
+        <div class="card">
+          <div class="toolbar">
+            <div class="field"><label>操作时间</label><input class="input" value="2026-11-01 00:00 ~ 2026-11-25 23:59" readonly style="min-width:230px"></div>
+            <div class="field"><label>操作模块</label>
+              <select class="input"><option>全部模块</option><option>仓库管理</option><option>分支管理</option><option>仓库成员</option></select>
+            </div>
+            <div class="field"><label>操作对象</label><input class="input" placeholder="仓库名称 / 成员"></div>
+            <div class="field"><label>触发人员</label><input class="input" placeholder="姓名 / 工号" style="min-width:110px"></div>
+            <button class="btn primary" id="btnLogSearch">查询</button>
+            <button class="btn" id="btnLogReset">重置</button>
+            <div class="right"><button class="btn">刷新</button><button class="btn">导出</button></div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>触发人员</th>
+                  <th>操作</th>
+                  <th>资源名称</th>
+                  <th>操作开始时间</th>
+                  <th>执行结果</th>
+                  <th>IP</th>
+                  <th style="width:90px">数据详情</th>
+                </tr>
+              </thead>
+              <tbody id="logBody"></tbody>
+            </table>
+          </div>
+
+          <div class="pager">
+            <span>共 <b>2,431</b> 条</span>
+            <span>每页 10 条</span>
+            <div class="pages">
+              <button class="pg">‹</button>
+              <button class="pg on">1</button>
+              <button class="pg">2</button>
+              <button class="pg">3</button>
+              <button class="pg">…</button>
+              <button class="pg">244</button>
+              <button class="pg">›</button>
+            </div>
+          </div>
+        </div>
+        <p class="hint">原型说明：数据详情抽屉展示变更前后 JSON（文本渲染，不使用 v-html）；执行结果三态为 成功 / 进行中 / 失败。</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------- 模拟数据 ----------
+  var repos = [
+    { name: 'openlibing-web', addr: 'openlibing/openlibing-web', platform: 'GitCode', project: 'openLiBing', owner: '陈宁', branches: 12, status: 'ok', synced: '2026-11-25 09:12' },
+    { name: 'openlibing-cicd-web', addr: 'openlibing/openlibing-cicd-web', platform: 'GitCode', project: 'openLiBing', owner: '李明', branches: 8, status: 'ok', synced: '2026-11-25 09:10' },
+    { name: 'openlibing-coderepo', addr: 'openlibing/openlibing-coderepo', platform: 'GitCode', project: 'openLiBing', owner: '王强', branches: 5, status: 'syncing', synced: '2026-11-25 09:08' },
+    { name: 'openlibing-gateway', addr: 'openlibing/openlibing-gateway', platform: 'GitCode', project: '基础平台', owner: '赵敏', branches: 3, status: 'ok', synced: '2026-11-24 18:40' },
+    { name: 'openlibing-codecheck', addr: 'openlibing/openlibing-codecheck', platform: 'GitCode', project: '基础平台', owner: '刘洋', branches: 6, status: 'ok', synced: '2026-11-24 17:22' },
+    { name: 'majun-framework', addr: 'community/majun-framework', platform: 'Gitee', project: '开源社区', owner: '周涛', branches: 4, status: 'failed', synced: '2026-11-24 15:05' },
+    { name: 'openlibing-docs', addr: 'openlibing/openlibing-docs', platform: 'GitCode', project: 'openLiBing', owner: '陈宁', branches: 2, status: 'ok', synced: '2026-11-24 11:30' },
+    { name: 'openlibing-common', addr: 'openlibing/openlibing-common', platform: 'GitCode', project: 'openLiBing', owner: '孙悦', branches: 7, status: 'ok', synced: '2026-11-23 20:15' },
+    { name: 'openlibing-scan', addr: 'openlibing/openlibing-scan', platform: 'GitCode', project: '基础平台', owner: '吴迪', branches: 3, status: 'syncing', synced: '2026-11-23 16:48' },
+    { name: 'openlibing-repos-web', addr: 'openlibing/openlibing-repos-web', platform: 'GitCode', project: 'openLiBing', owner: '陈宁', branches: 1, status: 'ok', synced: '2026-11-25 09:15' }
+  ];
+
+  var logs = [
+    { user: '陈宁', op: '新增仓库', res: 'openlibing-repos-web', time: '2026-11-25 09:15:22', result: 'ok', ip: '10.12.33.41' },
+    { user: '李明', op: '同步仓库', res: 'openlibing-cicd-web', time: '2026-11-25 09:10:04', result: 'ok', ip: '10.12.33.58' },
+    { user: '王强', op: '同步仓库', res: 'openlibing-coderepo', time: '2026-11-25 09:08:47', result: 'running', ip: '10.12.34.12' },
+    { user: '赵敏', op: '新增分支', res: 'openlibing-gateway / release_20261125', time: '2026-11-24 18:40:11', result: 'ok', ip: '10.12.35.03' },
+    { user: '刘洋', op: '删除分支', res: 'openlibing-codecheck / hotfix-login', time: '2026-11-24 17:22:39', result: 'ok', ip: '10.12.36.77' },
+    { user: '周涛', op: '同步仓库', res: 'majun-framework', time: '2026-11-24 15:05:18', result: 'failed', ip: '10.12.31.29' },
+    { user: '陈宁', op: '修改成员', res: 'openlibing-docs / 成员 孙悦', time: '2026-11-24 11:30:52', result: 'ok', ip: '10.12.33.41' },
+    { user: '孙悦', op: '修改角色映射', res: 'openlibing-common / Maintainer', time: '2026-11-23 20:15:09', result: 'ok', ip: '10.12.37.66' },
+    { user: '吴迪', op: '同步仓库', res: 'openlibing-scan', time: '2026-11-23 16:48:30', result: 'running', ip: '10.12.38.15' },
+    { user: '陈宁', op: '查询操作日志', res: '代码仓管理', time: '2026-11-23 10:02:07', result: 'ok', ip: '10.12.33.41' }
+  ];
+
+  function statusTag(s) {
+    if (s === 'ok') return '<span class="tag ok">同步成功</span>';
+    if (s === 'syncing') return '<span class="tag warn">同步中</span>';
+    return '<span class="tag err">同步失败</span>';
+  }
+  function resultTag(r) {
+    if (r === 'ok') return '<span class="tag ok">成功</span>';
+    if (r === 'running') return '<span class="tag warn">进行中</span>';
+    return '<span class="tag err">失败</span>';
+  }
+
+  function renderRepos(list) {
+    var body = document.getElementById('repoBody');
+    body.innerHTML = list.map(function (r) {
+      return '<tr>' +
+        '<td><input type="checkbox" aria-label="选择 ' + r.name + '"></td>' +
+        '<td><div class="repo-name">' + r.name + '<small>最近同步 ' + r.synced + '</small></div></td>' +
+        '<td><a class="link-text" href="#" onclick="return false">' + r.addr + '</a></td>' +
+        '<td><span class="tag plain">' + r.platform + '</span></td>' +
+        '<td>' + r.project + '</td>' +
+        '<td>' + r.owner + '</td>' +
+        '<td>' + r.branches + '</td>' +
+        '<td>' + statusTag(r.status) + '</td>' +
+        '<td>' + r.synced + '</td>' +
+        '<td><div class="ops">' +
+          '<button class="btn link">分支管理</button>' +
+          '<button class="btn link">成员</button>' +
+          '<button class="btn link">全局配置</button>' +
+          '<button class="btn link danger">删除</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('') || '<tr><td colspan="10" style="text-align:center;color:#8a94a6;padding:28px">暂无数据</td></tr>';
+    document.getElementById('repoTotal').textContent = list.length === repos.length ? 128 : list.length;
+  }
+
+  function renderLogs(list) {
+    var body = document.getElementById('logBody');
+    body.innerHTML = list.map(function (l) {
+      return '<tr>' +
+        '<td>' + l.user + '</td>' +
+        '<td>' + l.op + '</td>' +
+        '<td>' + l.res + '</td>' +
+        '<td>' + l.time + '</td>' +
+        '<td>' + resultTag(l.result) + '</td>' +
+        '<td><code>' + l.ip + '</code></td>' +
+        '<td><button class="btn link">查看</button></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  // ---------- 视图切换 ----------
+  var tabs = document.querySelectorAll('.switcher button');
+  tabs.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      tabs.forEach(function (b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      var view = btn.getAttribute('data-view');
+      var isRepo = view === 'repo';
+      document.getElementById('view-repo').classList.toggle('hidden', !isRepo);
+      document.getElementById('view-log').classList.toggle('hidden', isRepo);
+      document.getElementById('pageTitle').textContent = isRepo ? '代码仓管理' : '代码仓操作日志';
+      document.getElementById('routeTag').textContent = isRepo ? '/repos/repo' : '/repos/operation-log';
+      document.getElementById('hostTab').textContent = isRepo ? '代码仓管理' : '代码仓操作日志';
+    });
+  });
+
+  // ---------- 简易筛选（仅演示交互） ----------
+  function applyFilter() {
+    var kw = document.getElementById('kw').value.trim().toLowerCase();
+    var project = document.getElementById('projectFilter').value;
+    var list = repos.filter(function (r) {
+      var hitKw = !kw || r.name.toLowerCase().indexOf(kw) > -1 || r.addr.toLowerCase().indexOf(kw) > -1;
+      var hitProj = !project || r.project === project;
+      return hitKw && hitProj;
+    });
+    renderRepos(list);
+  }
+  document.getElementById('btnSearch').addEventListener('click', applyFilter);
+  document.getElementById('kw').addEventListener('keydown', function (e) { if (e.key === 'Enter') applyFilter(); });
+  document.getElementById('projectFilter').addEventListener('change', applyFilter);
+  document.getElementById('btnReset').addEventListener('click', function () {
+    document.getElementById('kw').value = '';
+    document.getElementById('projectFilter').value = '';
+    renderRepos(repos);
+  });
+  document.getElementById('btnLogReset').addEventListener('click', function () {
+    document.querySelectorAll('#view-log .input').forEach(function (el) {
+      if (el.tagName === 'INPUT' && !el.readOnly) el.value = '';
+    });
+    renderLogs(logs);
+  });
+
+  renderRepos(repos);
+  renderLogs(logs);
+</script>
+</body>
+</html>

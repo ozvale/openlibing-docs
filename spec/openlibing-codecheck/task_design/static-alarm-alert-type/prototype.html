@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>问题分类-规则配置 Demo（1.2.2 新增功能）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    color: #24292f;
+    background: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+  }
+  .pcr-container { display: flex; flex-direction: column; padding: 24px; }
+
+  /* Demo 顶栏 */
+  .pcr-demo-bar {
+    display: flex; flex-shrink: 0; gap: 10px; align-items: center;
+    margin-bottom: 16px; padding: 10px 12px; font-size: 14px;
+    background: #fff8e1; border: 1px solid #d4a72c; border-radius: 6px;
+  }
+  .pcr-demo-tag {
+    flex-shrink: 0; padding: 1px 8px; font-size: 12px; color: #9a6700;
+    border: 1px solid #d4a72c; border-radius: 10px;
+  }
+  .pcr-demo-title { font-weight: 600; }
+  .pcr-demo-hint { margin-left: auto; font-size: 12px; color: #9a6700; }
+
+  /* 工具栏 */
+  .pcr-toolbar {
+    display: flex; flex-shrink: 0; gap: 12px; align-items: center;
+    justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .pcr-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .pcr-filters select, .pcr-filters input {
+    height: 32px; padding: 0 8px; font-size: 13px; color: #24292f;
+    background: #fff; border: 1px solid #d0d7de; border-radius: 6px; outline: none;
+  }
+  .pcr-filters select:focus, .pcr-filters input:focus { border-color: #0969da; }
+  .pcr-filters input { width: 240px; }
+  .pcr-actions { display: flex; flex-shrink: 0; gap: 8px; align-items: center; }
+
+  /* 按钮（Element Plus 风格） */
+  .el-btn {
+    display: inline-flex; gap: 4px; align-items: center; justify-content: center;
+    height: 32px; padding: 0 15px; font-size: 14px; cursor: pointer;
+    border: 1px solid #d0d7de; border-radius: 6px; background: #fff; color: #24292f;
+    transition: all .15s;
+  }
+  .el-btn:hover { color: #0969da; border-color: #0969da; background: #f0f7ff; }
+  .el-btn-primary { color: #fff; background: #0969da; border-color: #0969da; }
+  .el-btn-primary:hover { color: #fff; background: #0550ae; border-color: #0550ae; }
+  .el-btn-danger-plain { color: #f56c6c; border-color: #fbc4c4; }
+  .el-btn-danger-plain:hover { color: #fff; background: #f56c6c; border-color: #f56c6c; }
+  .el-btn[disabled] { opacity: .5; cursor: not-allowed; }
+  .el-btn-link {
+    height: auto; padding: 0; font-size: 13px; background: transparent; border: none;
+  }
+  .el-btn-link.danger { color: #f56c6c; }
+  .el-btn-link.danger:hover { color: #ff8f8f; background: transparent; }
+
+  /* 面板 */
+  .pcr-panel { padding: 16px; background: #fff; border: 1px solid #d0d7de; border-radius: 6px; }
+
+  /* 表格 */
+  .pcr-table { width: 100%; border-collapse: collapse; }
+  .pcr-table th, .pcr-table td {
+    padding: 10px 12px; font-size: 14px; text-align: left; font-weight: 400;
+    border-bottom: 1px solid #ebeef5;
+  }
+  .pcr-table th { color: #909399; font-weight: 600; background: #f8f9fa; white-space: nowrap; }
+  .pcr-table tbody tr:hover { background: #f6f8fa; }
+  .pcr-table .cell-dim { color: #57606a; }
+
+  /* 分类 pill（与告警列表标签同款：圆角描边 + 色点） */
+  .pcr-pill {
+    display: inline-flex; gap: 6px; align-items: center; padding: 1px 8px;
+    font-size: 12px; background: transparent; border: 1px solid; border-radius: 10px;
+  }
+  .pcr-dot { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; }
+  .pcr-radio-dot {
+    display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 50%;
+  }
+
+  /* 来源徽标 */
+  .pcr-source {
+    display: inline-block; padding: 1px 8px; font-size: 12px;
+    border: 1px solid; border-radius: 10px;
+  }
+  .pcr-source-auto { color: #0550ae; border-color: #0969da; }
+  .pcr-source-manual { color: #9a6700; border-color: #d4a72c; }
+  .pcr-source-import { color: #8250df; border-color: #8250df; }
+
+  /* 分页 */
+  .pcr-pagination {
+    display: flex; gap: 12px; align-items: center; justify-content: flex-end; margin-top: 12px;
+  }
+  .pcr-total { font-size: 13px; color: #57606a; }
+  .pcr-page-btns { display: flex; gap: 4px; }
+  .pcr-page-btn {
+    min-width: 28px; height: 28px; padding: 0 6px; font-size: 13px; cursor: pointer;
+    color: #24292f; background: #f4f5f7; border: none; border-radius: 4px;
+  }
+  .pcr-page-btn.active { color: #fff; background: #0969da; }
+  .pcr-page-btn[disabled] { opacity: .4; cursor: not-allowed; }
+
+  /* 浮动批量操作条 */
+  .pcr-batch-bar {
+    position: fixed; left: 50%; bottom: 32px; z-index: 900;
+    display: none; gap: 16px; align-items: center;
+    padding: 10px 20px; color: #fff; font-size: 14px;
+    background: #24292f; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    transform: translateX(-50%);
+  }
+  .pcr-batch-bar.show { display: flex; }
+  .pcr-batch-bar .el-btn { height: 30px; background: transparent; color: #fff; border-color: #6e7781; }
+  .pcr-batch-bar .el-btn:hover { background: #3a4149; color: #fff; border-color: #8b949e; }
+  .pcr-batch-bar .el-btn.batch-del { color: #ff8f8f; border-color: #a05252; }
+  .pcr-batch-bar .el-btn.batch-del:hover { background: #f56c6c; color: #fff; border-color: #f56c6c; }
+  .pcr-batch-close { cursor: pointer; color: #8b949e; font-size: 16px; }
+  .pcr-batch-close:hover { color: #fff; }
+
+  /* 弹窗 */
+  .pcr-mask {
+    position: fixed; inset: 0; z-index: 1000; display: none;
+    background: rgba(0,0,0,.5);
+  }
+  .pcr-mask.show { display: flex; align-items: flex-start; justify-content: center; }
+  .pcr-dialog {
+    width: 520px; max-width: 94vw; max-height: 86vh; overflow: auto;
+    margin-top: 8vh; background: #fff; border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.2);
+  }
+  .pcr-dialog.wide { width: 640px; }
+  .pcr-dialog-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; font-size: 16px; font-weight: 600; border-bottom: 1px solid #ebeef5;
+  }
+  .pcr-dialog-close { cursor: pointer; font-size: 18px; font-style: normal; color: #909399; }
+  .pcr-dialog-close:hover { color: #24292f; }
+  .pcr-dialog-body { padding: 20px; }
+  .pcr-dialog-footer {
+    display: flex; gap: 8px; justify-content: flex-end; padding: 12px 20px;
+    border-top: 1px solid #ebeef5;
+  }
+  .pcr-form-item { display: flex; align-items: flex-start; margin-bottom: 18px; }
+  .pcr-form-label { width: 90px; padding-top: 6px; font-size: 14px; text-align: right; }
+  .pcr-form-label.req::before { content: "*"; margin-right: 2px; color: #f56c6c; }
+  .pcr-form-ctrl { flex: 1; }
+  .pcr-form-ctrl select, .pcr-form-ctrl input[type=text] {
+    width: 100%; height: 32px; padding: 0 8px; font-size: 13px;
+    border: 1px solid #d0d7de; border-radius: 6px; outline: none;
+  }
+  .pcr-form-ctrl select:focus, .pcr-form-ctrl input:focus { border-color: #0969da; }
+  .pcr-form-ctrl input[disabled] { color: #909399; background: #f6f8fa; cursor: not-allowed; }
+  .pcr-radio-row { display: flex; gap: 18px; align-items: center; height: 32px; }
+  .pcr-radio-row label { display: flex; gap: 4px; align-items: center; cursor: pointer; }
+  .pcr-dialog-note { margin: 0 0 8px 90px; font-size: 12px; color: #57606a; }
+  .pcr-batch-summary { margin: 0 0 12px; font-size: 13px; font-weight: 600; color: #1f2328; }
+  .pcr-alert-info {
+    margin-bottom: 16px; padding: 8px 12px; font-size: 13px; color: #0550ae;
+    background: #f0f7ff; border: 1px solid #b6d4fe; border-radius: 4px;
+  }
+
+  /* 导入 */
+  .pcr-upload {
+    padding: 24px; text-align: center; color: #57606a; font-size: 14px;
+    border: 1px dashed #d0d7de; border-radius: 6px; cursor: pointer;
+  }
+  .pcr-upload:hover { border-color: #0969da; }
+  .pcr-upload em { font-style: normal; color: #0969da; }
+  .pcr-upload-tip { margin-top: 6px; font-size: 12px; color: #57606a; }
+  .pcr-import-sample { margin-top: 12px; }
+  .pcr-import-sample-title { margin-bottom: 8px; font-size: 13px; color: #57606a; }
+  .pcr-import-sample table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .pcr-import-sample th, .pcr-import-sample td {
+    padding: 6px 10px; text-align: left; border-bottom: 1px solid #ebeef5;
+  }
+  .pcr-import-sample th { color: #909399; font-weight: 600; }
+  .skip-mark { color: #9a6700; }
+  .ok-mark { color: #1a7f37; }
+
+  /* Toast（ElMessage 风格） */
+  .pcr-toast-wrap {
+    position: fixed; top: 20px; left: 50%; z-index: 2000;
+    display: flex; flex-direction: column; gap: 10px; align-items: center;
+    transform: translateX(-50%); pointer-events: none;
+  }
+  .pcr-toast {
+    padding: 10px 16px; font-size: 14px; background: #fff;
+    border: 1px solid #d0d7de; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    animation: pcr-toast-in .2s ease-out;
+  }
+  .pcr-toast.success { color: #1a7f37; border-color: #a6ddb8; background: #f0fff4; }
+  .pcr-toast.warning { color: #9a6700; border-color: #e8d18a; background: #fff8e1; }
+  .pcr-toast.error   { color: #cf222e; border-color: #f0b1b1; background: #fff1f0; }
+  .pcr-toast.info    { color: #0550ae; border-color: #b6d4fe; background: #f0f7ff; }
+  @keyframes pcr-toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+  /* confirm 弹窗 */
+  .pcr-confirm-body { font-size: 14px; color: #24292f; }
+  .pcr-confirm-body .warn-icon { margin-right: 6px; color: #d4a72c; }
+</style>
+</head>
+<body>
+<div class="pcr-container">
+  <!-- Demo 顶栏 -->
+  <div class="pcr-demo-bar">
+    <span class="pcr-demo-tag">本地 Demo</span>
+    <span class="pcr-demo-title">问题分类-规则配置（1.2.2 新增功能）</span>
+    <span class="pcr-demo-hint">独立静态页面，数据为内存 mock，刷新即还原</span>
+  </div>
+
+  <!-- 筛选区 -->
+  <section class="pcr-toolbar">
+    <div class="pcr-filters">
+      <select id="filterTool" style="width:180px" aria-label="按工具精确筛选">
+        <option value="">工具（精确）</option>
+      </select>
+      <input id="filterRuleId" type="text" placeholder="规则 ID（模糊）" style="width:240px" aria-label="按规则 ID 模糊筛选">
+      <select id="filterCategory" style="width:150px" aria-label="按问题分类筛选">
+        <option value="">问题分类</option>
+      </select>
+      <select id="filterSource" style="width:150px" aria-label="按来源筛选">
+        <option value="">来源</option>
+        <option value="AUTO">AUTO 沉淀</option>
+        <option value="MANUAL">MANUAL 人工</option>
+        <option value="IMPORT">IMPORT 导入</option>
+      </select>
+      <button class="el-btn el-btn-primary" onclick="onQuery()">查询</button>
+      <button class="el-btn" onclick="resetFilters()">重置</button>
+    </div>
+    <div class="pcr-actions">
+      <button class="el-btn el-btn-primary" onclick="openAddDialog()">新增</button>
+      <button class="el-btn" onclick="openImportDialog()">导入</button>
+      <button class="el-btn" id="exportBtn" onclick="submitExport()">导出</button>
+    </div>
+  </section>
+
+  <!-- 规则表 -->
+  <section class="pcr-panel">
+    <table class="pcr-table">
+      <thead>
+        <tr>
+          <th style="width:45px"><input type="checkbox" id="selectAll" onchange="onSelectAll(this.checked)" aria-label="全选当前筛选结果"></th>
+          <th style="width:150px">工具</th>
+          <th style="min-width:240px">规则 ID</th>
+          <th style="width:150px">问题分类</th>
+          <th style="width:140px">来源</th>
+          <th style="width:160px">创建人</th>
+          <th style="width:170px">创建时间</th>
+          <th style="width:170px">更新时间</th>
+          <th style="width:130px">操作</th>
+        </tr>
+      </thead>
+      <tbody id="ruleTbody"></tbody>
+    </table>
+    <div class="pcr-pagination">
+      <span class="pcr-total" id="pageTotal"></span>
+      <select id="pageSize" onchange="onPageSizeChange(this.value)" style="height:28px;font-size:13px;border:1px solid #d0d7de;border-radius:4px;" aria-label="每页条数">
+        <option value="10">10 条/页</option>
+        <option value="20">20 条/页</option>
+        <option value="50">50 条/页</option>
+        <option value="100">100 条/页</option>
+      </select>
+      <div class="pcr-page-btns" id="pageBtns"></div>
+    </div>
+  </section>
+</div>
+
+<!-- 浮动批量操作条 -->
+<div class="pcr-batch-bar" id="batchBar">
+  <span>已选 <b id="batchCount">0</b> 条</span>
+  <button class="el-btn" onclick="openBatchEditDialog()">批量修改</button>
+  <button class="el-btn batch-del" onclick="submitBatchDelete()">批量删除</button>
+  <span class="pcr-batch-close" onclick="clearSelection()">✕</span>
+</div>
+
+<!-- 新增弹窗 -->
+<div class="pcr-mask" id="addMask">
+  <div class="pcr-dialog">
+    <div class="pcr-dialog-header">新增规则分类<i class="pcr-dialog-close" onclick="closeDialog('addMask')">✕</i></div>
+    <div class="pcr-dialog-body">
+      <div class="pcr-form-item">
+        <div class="pcr-form-label req">工具</div>
+        <div class="pcr-form-ctrl"><select id="addTool"></select></div>
+      </div>
+      <div class="pcr-form-item">
+        <div class="pcr-form-label req">规则 ID</div>
+        <div class="pcr-form-ctrl"><input id="addRuleId" type="text" placeholder="如 no-eval / B101"></div>
+      </div>
+      <div class="pcr-form-item">
+        <div class="pcr-form-label req">问题分类</div>
+        <div class="pcr-form-ctrl"><div class="pcr-radio-row" id="addCategory"></div></div>
+      </div>
+    </div>
+    <div class="pcr-dialog-footer">
+      <button class="el-btn" onclick="closeDialog('addMask')">取消</button>
+      <button class="el-btn el-btn-primary" onclick="submitAdd()">保存（写 source=MANUAL）</button>
+    </div>
+  </div>
+</div>
+
+<!-- 修改弹窗（仅允许改分类） -->
+<div class="pcr-mask" id="editMask">
+  <div class="pcr-dialog">
+    <div class="pcr-dialog-header">修改规则分类<i class="pcr-dialog-close" onclick="closeDialog('editMask')">✕</i></div>
+    <div class="pcr-dialog-body">
+      <div class="pcr-form-item">
+        <div class="pcr-form-label">工具</div>
+        <div class="pcr-form-ctrl"><input id="editTool" type="text" disabled></div>
+      </div>
+      <div class="pcr-form-item">
+        <div class="pcr-form-label">规则 ID</div>
+        <div class="pcr-form-ctrl"><input id="editRuleId" type="text" disabled></div>
+      </div>
+      <div class="pcr-form-item">
+        <div class="pcr-form-label req">问题分类</div>
+        <div class="pcr-form-ctrl"><div class="pcr-radio-row" id="editCategory"></div></div>
+      </div>
+      <div class="pcr-dialog-note">tool / ruleId 不可修改（变更等同新增，防主键漂移）；保存后级联刷新该组合全部存量告警。</div>
+    </div>
+    <div class="pcr-dialog-footer">
+      <button class="el-btn" onclick="closeDialog('editMask')">取消</button>
+      <button class="el-btn el-btn-primary" onclick="submitEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 批量修改弹窗 -->
+<div class="pcr-mask" id="batchEditMask">
+  <div class="pcr-dialog">
+    <div class="pcr-dialog-header">批量修改分类<i class="pcr-dialog-close" onclick="closeDialog('batchEditMask')">✕</i></div>
+    <div class="pcr-dialog-body">
+      <div class="pcr-alert-info">所选规则将统一改为目标分类；AUTO 沉淀行修改后转为 MANUAL 人工行（修改天然优先于沉淀）。</div>
+      <div class="pcr-batch-summary" id="batchEditSummary"></div>
+      <div class="pcr-form-item">
+        <div class="pcr-form-label req">目标分类</div>
+        <div class="pcr-form-ctrl"><div class="pcr-radio-row" id="batchEditCategory"></div></div>
+      </div>
+      <div class="pcr-dialog-note">保存后逐组合级联刷新存量告警；分类未变化的行自动跳过。</div>
+    </div>
+    <div class="pcr-dialog-footer">
+      <button class="el-btn" onclick="closeDialog('batchEditMask')">取消</button>
+      <button class="el-btn el-btn-primary" onclick="submitBatchEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 导入弹窗 -->
+<div class="pcr-mask" id="importMask">
+  <div class="pcr-dialog wide">
+    <div class="pcr-dialog-header">批量导入规则分类<i class="pcr-dialog-close" onclick="closeDialog('importMask')">✕</i></div>
+    <div class="pcr-dialog-body">
+      <div class="pcr-upload" onclick="document.getElementById('importFile').click()" id="uploadBox">
+        将 Excel 文件拖到此处，或<em>点击上传</em>
+        <div class="pcr-upload-tip">列固定：tool | ruleId | problemCategory；≤ 5MB、≤ 5000 行；Demo 不做真实文件解析。</div>
+      </div>
+      <input type="file" id="importFile" accept=".xlsx" style="display:none" onchange="onImportFileChange(this)">
+      <div class="pcr-import-sample">
+        <div class="pcr-import-sample-title">本次将导入的示例数据（模拟 Excel 解析结果）：</div>
+        <table>
+          <thead><tr><th style="width:140px">tool</th><th>ruleId</th><th style="width:160px">problemCategory</th><th style="width:140px">导入结果</th></tr></thead>
+          <tbody id="importSampleTbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="pcr-dialog-footer">
+      <button class="el-btn" onclick="closeDialog('importMask')">关闭</button>
+      <button class="el-btn el-btn-primary" id="importSubmitBtn" disabled onclick="submitImport()">开始导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- confirm 弹窗 -->
+<div class="pcr-mask" id="confirmMask">
+  <div class="pcr-dialog" style="width:420px">
+    <div class="pcr-dialog-header">删除确认<i class="pcr-dialog-close" onclick="resolveConfirm(false)">✕</i></div>
+    <div class="pcr-dialog-body"><div class="pcr-confirm-body" id="confirmText"></div></div>
+    <div class="pcr-dialog-footer">
+      <button class="el-btn" onclick="resolveConfirm(false)">取消</button>
+      <button class="el-btn el-btn-primary" id="confirmOkBtn" onclick="resolveConfirm(true)">删除</button>
+    </div>
+  </div>
+</div>
+
+<div class="pcr-toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ============================= 分类元数据（与服务端统一枚举对齐，三值 MECE） ============================= */
+const PROBLEM_CATEGORY_LIST = [
+  { code: 'SECURITY',   label: '安全类',     dotColor: '#cf222e' },
+  { code: 'BUG',        label: '缺陷类',     dotColor: '#bc4c00' },
+  { code: 'CODE_SMELL', label: '代码坏味道', dotColor: '#8250df' },
+];
+const META_BY_CODE = new Map(PROBLEM_CATEGORY_LIST.map(i => [i.code, i]));
+function categoryLabel(code) { return META_BY_CODE.get(code)?.label ?? code; }
+function categoryColor(code) { return META_BY_CODE.get(code)?.dotColor ?? '#57606a'; }
+
+/** 26 个接入工具白名单（新增/导入校验用） */
+const TOOL_WHITELIST = [
+  'Bandit', 'Checkstyle', 'Clang-Tidy', 'Clippy', 'CodeArtsCheck', 'CodeQL',
+  'Cppcheck', 'codespell', 'detect-secrets', 'ErrorProne', 'ESLint',
+  'golangci-lint', 'Gitleaks', 'gosec', 'Luacheck', 'markdownlint', 'Mypy',
+  'PMD', 'Pylint', 'Ruff', 'Scalafix', 'ShellCheck', 'SpotBugs', 'typos',
+  'typescript-eslint', 'Xmllint',
+].sort();
+
+const SOURCE_LABEL = { AUTO: 'AUTO 沉淀', IMPORT: 'IMPORT 导入', MANUAL: 'MANUAL 人工' };
+
+/** Demo 规则映射表（内存 mock） */
+let RULE_ROWS = [
+  { id:'rule-01', tool:'ESLint', ruleId:'no-eval', problemCategory:'SECURITY', source:'MANUAL', createdBy:'u12345', createdAt:'2026-11-06 09:15:00', updatedAt:'2026-11-08 10:12:00' },
+  { id:'rule-02', tool:'Clang-Tidy', ruleId:'cppcoreguidelines-slicing', problemCategory:'SECURITY', source:'MANUAL', createdBy:'u12345', createdAt:'2026-11-06 09:20:00', updatedAt:'2026-11-06 09:20:00' },
+  { id:'rule-03', tool:'Bandit', ruleId:'B101', problemCategory:'SECURITY', source:'AUTO', createdBy:'', createdAt:'2026-11-03 14:02:00', updatedAt:'2026-11-03 14:02:00' },
+  { id:'rule-04', tool:'CodeQL', ruleId:'js/sql-injection', problemCategory:'SECURITY', source:'AUTO', createdBy:'', createdAt:'2026-11-02 11:40:00', updatedAt:'2026-11-02 11:40:00' },
+  { id:'rule-05', tool:'gosec', ruleId:'G401', problemCategory:'SECURITY', source:'AUTO', createdBy:'', createdAt:'2026-11-02 11:41:00', updatedAt:'2026-11-02 11:41:00' },
+  { id:'rule-06', tool:'Cppcheck', ruleId:'nullPointer', problemCategory:'BUG', source:'AUTO', createdBy:'', createdAt:'2026-11-04 08:30:00', updatedAt:'2026-11-04 08:30:00' },
+  { id:'rule-07', tool:'Mypy', ruleId:'assignment', problemCategory:'BUG', source:'AUTO', createdBy:'', createdAt:'2026-11-04 08:31:00', updatedAt:'2026-11-04 08:31:00' },
+  { id:'rule-08', tool:'SpotBugs', ruleId:'NP_NULL_ON_SOME_PATH', problemCategory:'BUG', source:'AUTO', createdBy:'', createdAt:'2026-11-05 16:00:00', updatedAt:'2026-11-05 16:00:00' },
+  { id:'rule-09', tool:'Checkstyle', ruleId:'UnusedImports', problemCategory:'CODE_SMELL', source:'AUTO', createdBy:'', createdAt:'2026-11-01 10:00:00', updatedAt:'2026-11-01 10:00:00' },
+  { id:'rule-10', tool:'CodeArtsCheck', ruleId:'da5dd3be6db811eea68ffa163e0fa374', problemCategory:'CODE_SMELL', source:'AUTO', createdBy:'', createdAt:'2026-11-01 10:01:00', updatedAt:'2026-11-01 10:01:00' },
+  { id:'rule-11', tool:'ShellCheck', ruleId:'SC2086', problemCategory:'CODE_SMELL', source:'IMPORT', createdBy:'u67890', createdAt:'2026-11-07 15:20:00', updatedAt:'2026-11-07 15:20:00' },
+  { id:'rule-12', tool:'ESLint', ruleId:'no-plusplus', problemCategory:'UNCLASSIFIED', source:'MANUAL', createdBy:'u12345', createdAt:'2026-11-09 11:00:00', updatedAt:'2026-11-09 11:00:00' },
+];
+
+/** 模拟级联刷新的存量告警条数（Demo 固定值，体现「改完立即生效」语义） */
+const CASCADE_STUB_COUNT = {
+  'ESLint|no-eval': 36,
+  'Clang-Tidy|cppcoreguidelines-slicing': 8,
+  'Bandit|B101': 124,
+  'CodeQL|js/sql-injection': 57,
+  'gosec|G401': 12,
+  'Cppcheck|nullPointer': 23,
+  'Mypy|assignment': 41,
+  'SpotBugs|NP_NULL_ON_SOME_PATH': 9,
+  'Checkstyle|UnusedImports': 76,
+  'CodeArtsCheck|da5dd3be6db811eea68ffa163e0fa374': 15,
+  'ShellCheck|SC2086': 30,
+  'ESLint|no-plusplus': 4,
+};
+function cascadeCount(tool, ruleId) { return CASCADE_STUB_COUNT[`${tool}|${ruleId}`] ?? 6; }
+
+/* ============================= 列表查询 ============================= */
+let pageNum = 1;
+let pageSize = 10;
+const selectedIds = new Set();
+
+function filteredRows() {
+  const ft = document.getElementById('filterTool').value;
+  const fr = document.getElementById('filterRuleId').value.trim().toLowerCase();
+  const fc = document.getElementById('filterCategory').value;
+  const fs = document.getElementById('filterSource').value;
+  return RULE_ROWS.filter(row => {
+    if (ft && row.tool !== ft) return false;
+    if (fr && !row.ruleId.toLowerCase().includes(fr)) return false;
+    if (fc && row.problemCategory !== fc) return false;
+    if (fs && row.source !== fs) return false;
+    return true;
+  });
+}
+
+function onQuery() { pageNum = 1; render(); }
+function onPageSizeChange(v) { pageSize = +v; pageNum = 1; render(); }
+function resetFilters() {
+  document.getElementById('filterTool').value = '';
+  document.getElementById('filterRuleId').value = '';
+  document.getElementById('filterCategory').value = '';
+  document.getElementById('filterSource').value = '';
+  pageNum = 1;
+  render();
+}
+
+/* ============================= 渲染 ============================= */
+function pillHtml(code) {
+  const c = categoryColor(code);
+  return `<span class="pcr-pill" style="color:${c};border-color:${c}"><i class="pcr-dot" style="background:${c}"></i>${categoryLabel(code)}</span>`;
+}
+function sourceHtml(source) {
+  return `<span class="pcr-source pcr-source-${source.toLowerCase()}">${SOURCE_LABEL[source] || source}</span>`;
+}
+
+function render() {
+  const rows = filteredRows();
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (pageNum > totalPages) pageNum = totalPages;
+  const start = (pageNum - 1) * pageSize;
+  const paged = rows.slice(start, start + pageSize);
+
+  document.getElementById('pageTotal').textContent = `共 ${total} 条`;
+
+  const tbody = document.getElementById('ruleTbody');
+  if (!paged.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#909399;padding:32px 0">暂无数据</td></tr>`;
+  } else {
+    tbody.innerHTML = paged.map(row => `
+      <tr>
+        <td><input type="checkbox" ${selectedIds.has(row.id) ? 'checked' : ''} onchange="onRowCheck('${row.id}', this.checked)"></td>
+        <td>${esc(row.tool)}</td>
+        <td>${esc(row.ruleId)}</td>
+        <td>${pillHtml(row.problemCategory)}</td>
+        <td>${sourceHtml(row.source)}</td>
+        <td class="cell-dim">${esc(row.createdBy) || '—'}</td>
+        <td class="cell-dim">${row.createdAt}</td>
+        <td class="cell-dim">${row.updatedAt}</td>
+        <td>
+          <button class="el-btn el-btn-link" style="color:#0969da" onclick="openEditDialog('${row.id}')">修改</button>
+          <button class="el-btn el-btn-link danger" onclick="submitDelete('${row.id}')">删除</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  // 分页按钮（简化：上一页 / 页码窗口 / 下一页）
+  const btns = [];
+  btns.push(`<button class="pcr-page-btn" ${pageNum <= 1 ? 'disabled' : ''} onclick="goPage(${pageNum - 1})">‹</button>`);
+  const winStart = Math.max(1, Math.min(pageNum - 2, totalPages - 4));
+  const winEnd = Math.min(totalPages, winStart + 4);
+  for (let i = winStart; i <= winEnd; i++) {
+    btns.push(`<button class="pcr-page-btn ${i === pageNum ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`);
+  }
+  btns.push(`<button class="pcr-page-btn" ${pageNum >= totalPages ? 'disabled' : ''} onclick="goPage(${pageNum + 1})">›</button>`);
+  document.getElementById('pageBtns').innerHTML = btns.join('');
+
+  renderBatchBar();
+}
+
+function goPage(p) { pageNum = p; render(); }
+
+function renderBatchBar() {
+  const bar = document.getElementById('batchBar');
+  document.getElementById('batchCount').textContent = selectedIds.size;
+  bar.classList.toggle('show', selectedIds.size > 0);
+  document.getElementById('selectAll').checked =
+    filteredRows().length > 0 && filteredRows().every(r => selectedIds.has(r.id));
+}
+
+function onRowCheck(id, checked) {
+  checked ? selectedIds.add(id) : selectedIds.delete(id);
+  renderBatchBar();
+}
+function onSelectAll(checked) {
+  filteredRows().forEach(r => checked ? selectedIds.add(r.id) : selectedIds.delete(r.id));
+  renderBatchBar();
+}
+function clearSelection() {
+  selectedIds.clear();
+  renderBatchBar();
+}
+
+/* ============================= Toast / Confirm ============================= */
+function toast(msg, type = 'success') {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = `pcr-toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+let confirmResolver = null;
+function showConfirm(html) {
+  document.getElementById('confirmText').innerHTML = html;
+  document.getElementById('confirmMask').classList.add('show');
+  return new Promise(resolve => { confirmResolver = resolve; });
+}
+function resolveConfirm(ok) {
+  document.getElementById('confirmMask').classList.remove('show');
+  confirmResolver?.(ok);
+  confirmResolver = null;
+}
+
+/* ============================= 弹窗通用 ============================= */
+function closeDialog(id) { document.getElementById(id).classList.remove('show'); }
+
+function radioRowHtml(name, list, checkedCode) {
+  return list.map(item => `
+    <label>
+      <input type="radio" name="${name}" value="${item.code}" ${item.code === checkedCode ? 'checked' : ''}>
+      <span class="pcr-radio-dot" style="background:${item.dotColor}"></span>${item.label}
+    </label>`).join('')
+    + (list.some(i => i.code === checkedCode) ? '' :
+      `<label><input type="radio" name="${name}" value="UNCLASSIFIED" checked><span class="pcr-radio-dot" style="background:#57606a"></span>未分类</label>`);
+}
+function radioValue(name) {
+  return document.querySelector(`input[name="${name}"]:checked`)?.value;
+}
+
+/* ============================= 新增 ============================= */
+function openAddDialog() {
+  const toolSel = document.getElementById('addTool');
+  toolSel.innerHTML = '<option value="">选择 26 个接入工具</option>'
+    + TOOL_WHITELIST.map(t => `<option value="${t}">${t}</option>`).join('');
+  document.getElementById('addRuleId').value = '';
+  document.getElementById('addCategory').innerHTML = radioRowHtml('addCategoryRadio', PROBLEM_CATEGORY_LIST, 'SECURITY');
+  document.getElementById('addMask').classList.add('show');
+}
+
+function submitAdd() {
+  const tool = document.getElementById('addTool').value.trim();
+  const ruleId = document.getElementById('addRuleId').value.trim();
+  const category = radioValue('addCategoryRadio');
+  if (!tool || !ruleId) { toast('请填写 tool 与 ruleId', 'warning'); return; }
+  if (!TOOL_WHITELIST.includes(tool)) { toast('tool 不在 26 个接入工具白名单内', 'warning'); return; }
+  const exists = RULE_ROWS.some(r => r.tool === tool && r.ruleId.toLowerCase() === ruleId.toLowerCase());
+  if (exists) { toast('该 (tool, ruleId) 已有分类，请走修改', 'error'); return; }
+  const now = formatNow();
+  RULE_ROWS.unshift({
+    id: `rule-${Date.now()}`, tool, ruleId, problemCategory: category,
+    source: 'MANUAL', createdBy: 'u12345（当前用户）', createdAt: now, updatedAt: now,
+  });
+  closeDialog('addMask');
+  render();
+  toast(`新增成功，已级联刷新存量告警 ${cascadeCount(tool, ruleId)} 条（Demo 模拟）`);
+}
+
+/* ============================= 修改 ============================= */
+let editTarget = null;
+function openEditDialog(id) {
+  const row = RULE_ROWS.find(r => r.id === id);
+  if (!row) return;
+  editTarget = row;
+  document.getElementById('editTool').value = row.tool;
+  document.getElementById('editRuleId').value = row.ruleId;
+  document.getElementById('editCategory').innerHTML = radioRowHtml('editCategoryRadio', PROBLEM_CATEGORY_LIST, row.problemCategory);
+  document.getElementById('editMask').classList.add('show');
+}
+function submitEdit() {
+  if (!editTarget) return;
+  const category = radioValue('editCategoryRadio');
+  if (category === editTarget.problemCategory) { closeDialog('editMask'); return; }
+  editTarget.problemCategory = category;
+  editTarget.source = 'MANUAL';
+  editTarget.createdBy = editTarget.createdBy || 'u12345（当前用户）';
+  editTarget.updatedAt = formatNow();
+  closeDialog('editMask');
+  render();
+  toast(`修改成功，已级联刷新存量告警 ${cascadeCount(editTarget.tool, editTarget.ruleId)} 条（Demo 模拟）`);
+}
+
+/* ============================= 删除 ============================= */
+function submitDelete(id) {
+  const row = RULE_ROWS.find(r => r.id === id);
+  if (!row) return;
+  if (row.source === 'AUTO') {
+    // 对应后端业务冲突码：AUTO 行删除后会被入库 / Job 沉淀重新写入
+    toast('AUTO 沉淀行不可删除：删除后会被重新沉淀，如需调整分类请走修改', 'error');
+    return;
+  }
+  showConfirm(
+    `<span class="warn-icon">⚠</span>确定删除 <b>${esc(row.tool)} / ${esc(row.ruleId)}</b>（${categoryLabel(row.problemCategory)}）的映射吗？删除后存量告警将按「未分类」重算。`
+  ).then(ok => {
+    if (!ok) return;
+    RULE_ROWS = RULE_ROWS.filter(item => item.id !== row.id);
+    selectedIds.delete(row.id);
+    render();
+    toast('删除成功，存量告警已按「未分类」重算（Demo 模拟）');
+  });
+}
+
+/* ============================= 批量修改 / 批量删除 ============================= */
+function openBatchEditDialog() {
+  document.getElementById('batchEditSummary').textContent = `已选 ${selectedIds.size} 条规则映射`;
+  document.getElementById('batchEditCategory').innerHTML = radioRowHtml('batchEditRadio', PROBLEM_CATEGORY_LIST, 'SECURITY');
+  document.getElementById('batchEditMask').classList.add('show');
+}
+function submitBatchEdit() {
+  const rows = RULE_ROWS.filter(r => selectedIds.has(r.id));
+  if (!rows.length) { closeDialog('batchEditMask'); return; }
+  const target = radioValue('batchEditRadio');
+  const now = formatNow();
+  let changed = 0, cascadeTotal = 0;
+  rows.forEach(row => {
+    if (row.problemCategory === target) return;
+    row.problemCategory = target;
+    row.source = 'MANUAL';
+    row.createdBy = row.createdBy || 'u12345（当前用户）';
+    row.updatedAt = now;
+    changed += 1;
+    cascadeTotal += cascadeCount(row.tool, row.ruleId);
+  });
+  closeDialog('batchEditMask');
+  clearSelection();
+  render();
+  if (changed === 0) { toast('所选规则分类均未变化，未执行任何更新', 'info'); return; }
+  toast(`批量修改 ${changed} 条（含 AUTO 行转人工），共级联刷新存量告警 ${cascadeTotal} 条（Demo 模拟）`);
+}
+
+function submitBatchDelete() {
+  const rows = RULE_ROWS.filter(r => selectedIds.has(r.id));
+  // AUTO 行删除后会被入库 / Job 沉淀重新写入，批量删除统一跳过（对应后端逐行冲突拒绝语义）
+  const deletable = rows.filter(r => r.source !== 'AUTO');
+  const autoCount = rows.length - deletable.length;
+  if (!deletable.length) {
+    toast('所选全部为 AUTO 沉淀行，不可删除；如需调整分类请走修改', 'error');
+    return;
+  }
+  showConfirm(
+    `<span class="warn-icon">⚠</span>确定删除选中的 <b>${deletable.length}</b> 条规则映射吗？删除后存量告警将按「未分类」重算。`
+    + (autoCount ? `<br>其中 ${autoCount} 条 AUTO 沉淀行将跳过不删。` : '')
+  ).then(ok => {
+    if (!ok) return;
+    const deleteIds = new Set(deletable.map(r => r.id));
+    RULE_ROWS = RULE_ROWS.filter(r => !deleteIds.has(r.id));
+    clearSelection();
+    render();
+    toast(`批量删除 ${deletable.length} 条成功` + (autoCount ? `，跳过 ${autoCount} 条 AUTO 行` : '') + '，存量告警已按「未分类」重算（Demo 模拟）');
+  });
+}
+
+/* ============================= 导出 ============================= */
+function submitExport() {
+  const btn = document.getElementById('exportBtn');
+  btn.disabled = true;
+  // Demo：用当前筛选结果生成 CSV（Excel 可直接打开），模拟后端 export 接口
+  setTimeout(() => {
+    const header = 'tool,ruleId,problemCategory,source,createdBy,createdAt,updatedAt';
+    const esc = v => `"${String(v ?? '').replaceAll('"', '""')}"`;
+    const lines = filteredRows().map(row =>
+      [row.tool, row.ruleId, row.problemCategory, row.source, row.createdBy, row.createdAt, row.updatedAt]
+        .map(esc).join(','));
+    // UTF-8 BOM：保证 Excel 打开中文不乱码
+    const blob = new Blob(['\uFEFF' + [header, ...lines].join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    a.href = url;
+    a.download = `problem-category-rules-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    btn.disabled = false;
+    toast(`已导出 ${filteredRows().length} 条规则分类`);
+  }, 300);
+}
+
+/* ============================= 导入 ============================= */
+/** 示例导入数据（固定，模拟 Excel 解析结果；第 2 行与已有规则冲突 → 跳过） */
+const IMPORT_SAMPLES = [
+  { tool: 'ESLint', ruleId: 'no-undef', problemCategory: 'BUG' },
+  { tool: 'ESLint', ruleId: 'no-eval', problemCategory: 'SECURITY' },
+  { tool: 'Ruff', ruleId: 'S101', problemCategory: 'SECURITY' },
+];
+let importFileChosen = false;
+
+function openImportDialog() {
+  importFileChosen = false;
+  document.getElementById('importFile').value = '';
+  document.getElementById('importSubmitBtn').disabled = true;
+  renderImportSamples(null);
+  document.getElementById('importMask').classList.add('show');
+}
+function onImportFileChange(input) {
+  importFileChosen = !!input.files?.length;
+  document.getElementById('importSubmitBtn').disabled = !importFileChosen;
+  if (importFileChosen) {
+    document.getElementById('uploadBox').innerHTML =
+      `<b style="color:#1a7f37">已选择：${esc(input.files[0].name)}</b>
+       <div class="pcr-upload-tip">Demo 不做真实文件解析，点击导入将写入下方示例数据。</div>`;
+  }
+}
+function renderImportSamples(imported) {
+  document.getElementById('importSampleTbody').innerHTML = IMPORT_SAMPLES.map(row => {
+    let resultHtml;
+    if (imported) {
+      const exists = RULE_ROWS.some(r => r.tool === row.tool && r.ruleId.toLowerCase() === row.ruleId.toLowerCase());
+      resultHtml = exists ? '<span class="skip-mark">跳过（已存在）</span>' : '<span class="ok-mark">成功</span>';
+    } else if (RULE_ROWS.some(r => r.tool === row.tool && r.ruleId.toLowerCase() === row.ruleId.toLowerCase())) {
+      resultHtml = '<span class="skip-mark">冲突 → 将跳过</span>';
+    } else {
+      resultHtml = '将新增';
+    }
+    return `<tr><td>${esc(row.tool)}</td><td>${esc(row.ruleId)}</td><td>${pillHtml(row.problemCategory)}</td><td>${resultHtml}</td></tr>`;
+  }).join('');
+}
+function submitImport() {
+  let success = 0, skipped = 0;
+  const now = formatNow();
+  IMPORT_SAMPLES.forEach(sample => {
+    const exists = RULE_ROWS.some(r => r.tool === sample.tool && r.ruleId.toLowerCase() === sample.ruleId.toLowerCase());
+    if (exists) { skipped += 1; return; }
+    RULE_ROWS.unshift({
+      ...sample,
+      id: `rule-${Date.now()}-${success}`,
+      source: 'IMPORT', createdBy: 'u12345（当前用户）', createdAt: now, updatedAt: now,
+    });
+    success += 1;
+  });
+  renderImportSamples(true);
+  document.getElementById('importSubmitBtn').disabled = true;
+  render();
+  toast(`导入完成：成功 ${success} 条 / 跳过 ${skipped} 条；新增行已逐组合级联刷新存量告警（Demo 模拟）`);
+}
+
+/* ============================= 工具函数 ============================= */
+function esc(s) {
+  // HTML 转义：所有用户输入插值（tool / ruleId / createdBy / 文件名等）拼入 innerHTML 前统一转义，防 XSS
+  return String(s ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[ch]));
+}
+function formatNow() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+/* ============================= 初始化 ============================= */
+(function init() {
+  document.getElementById('filterTool').innerHTML = '<option value="">工具（精确）</option>'
+    + TOOL_WHITELIST.map(t => `<option value="${t}">${t}</option>`).join('');
+  document.getElementById('filterCategory').innerHTML = '<option value="">问题分类</option>'
+    + PROBLEM_CATEGORY_LIST.map(i => `<option value="${i.code}">${i.label}</option>`).join('');
+  document.getElementById('filterRuleId').addEventListener('keyup', e => { if (e.key === 'Enter') { pageNum = 1; render(); } });
+  render();
+})();
+</script>
+</body>
+</html>

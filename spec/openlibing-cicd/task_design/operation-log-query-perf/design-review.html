@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>操作日志查询性能优化 — 评审串讲</title>
+<style>
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; max-width: 960px; margin: 0 auto; padding: 32px 24px; color: #1f2328; line-height: 1.7; }
+  h1 { border-bottom: 3px solid #2563eb; padding-bottom: 8px; }
+  h2 { margin-top: 36px; border-left: 5px solid #2563eb; padding-left: 10px; }
+  .meta { color: #6b7280; font-size: 14px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #d1d5db; padding: 8px 12px; text-align: left; }
+  th { background: #eff6ff; }
+  code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  .flow { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; font-family: Consolas, monospace; font-size: 14px; white-space: pre; overflow-x: auto; }
+  .decision { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 12px 0; }
+  .ok { color: #16a34a; font-weight: bold; }
+  .no { color: #dc2626; }
+</style>
+</head>
+<body>
+
+<h1>操作日志查询性能优化 — 评审串讲</h1>
+<p class="meta">业务 Issue: <a href="https://gitcode.com/openlibing/openlibing-cicd/issues/569">openlibing/openlibing-cicd#569</a> · 涉及仓: openlibing-cicd / openlibing-coderepo / openlibing-framework · 依据: task_design/operation-log-query-perf/design.md</p>
+
+<h2>1. 问题与根因（一句话版）</h2>
+<p>五个日志查询接口「首查慢、后续快」= <b>filter-meta 每维度 GROUP BY 无覆盖索引（回表+temporary+filesort）</b> + <b>每请求 Feign 远程拉白名单无缓存</b> + <b>冷启动开销</b>。后续变快是 buffer pool / JIT 热身，不是问题被解决。</p>
+
+<h2>2. 总体流程设计</h2>
+
+<h3>2.1 阶段一：查询侧缓存（cicd + coderepo）</h3>
+<div class="flow">queryFilterMeta / list 查询请求
+  │
+  ├─ ① 权限校验 checkProjectMember（不变，先于缓存）
+  │
+  ├─ ② 白名单 listAllowed()
+  │     ├─ TTL 内 → 内存快照（0 次远程调用）
+  │     └─ 过期 → Feign 拉取；仅「成功且非空」才入缓存
+  │                失败/空 → 当次闭门失败（语义与现状一致）
+  │
+  └─ ③ queryFilterMeta 专属：
+        ├─ 构建 cacheKey = projectId + 维度集合 + 规范化过滤值
+        │                + selectedValues + 时间区间按分钟取整
+        ├─ 30s TTL 命中 → 直接返回缓存副本
+        └─ 未命中 → 原有 5 维度 GROUP BY 循环 → 结果写缓存</div>
+
+<h3>2.2 阶段二：存储侧覆盖索引（framework）</h3>
+<div class="flow">log_operation（索引总数 6 → 6，写入零净增；执行顺序：先建新索引、后删旧索引）
+  新增: idx_project_module_time_user_resource
+        (project_id, module_id, operation_end_time, id, user_name, resource_name)
+  删除: idx_project_module_time (project_id, module_id, operation_end_time, id) —— 新索引就绪后再删
+
+  WHERE 前缀命中 → user_name / resource_name 聚合列已在索引内 → 免回表，GROUP BY 免物化
+  id 紧跟 operation_end_time → 列表 ORDER BY time DESC, id DESC 仍走索引序免 filesort
+  交付方式: Liquibase changeSet（tableExists + indexExists 幂等 + 双向 rollback）</div>
+
+<h3>2.3 与既有链路的衔接</h3>
+<p>五个接口路径、入参、出参、权限语义全部不变；明细脱敏链路（OperationLogSensitiveMasker）不动；白名单写入链路不受影响（写入不调用 OperationLogWriteModules）。framework 侧无需任何 Java 改动。</p>
+
+<h2>3. 决策点</h2>
+
+<div class="decision"><b>D1 缓存实现：手写轻量 TTL，不引入 Caffeine/Guava。</b> 两仓 pom 均无缓存框架依赖，新增依赖属过度工程；白名单与 filter-meta 两个场景用不上高级特性。</div>
+
+<div class="decision"><b>D2 白名单失败语义：仅缓存「成功且非空」，失败/空不入缓存。</b> 若把失败结果缓存 60s，一次网络抖动会放大成全局 60s 闭门——比现状更差。不缓存则保留每请求可重试的恢复能力。</div>
+
+<div class="decision"><b>D3 filter-meta 缓存 key：时间区间按分钟取整。</b> 提升命中率；筛选候选值列表是元数据，分钟级精度无业务影响。权限校验先于缓存读写，命中不绕过鉴权。</div>
+
+<div class="decision"><b>D4 索引只上 user_name / resource_name 两个，ip / log_result 不建。</b> log_result 基数仅 3；ip 过滤低频。高频维度先见效，低频维度观察后再定，避免宽表写放大过度。</div>
+
+<div class="decision"><b>D5 三合一替换：删除 idx_project_module_time，新建 (project_id, module_id, operation_end_time, id, user_name, resource_name)。</b> 新索引前三列与旧索引完全一致，任何命中旧索引的查询都可用新索引（含 ORDER BY time DESC, id DESC 的索引序，因 id 紧跟 time）。若保留旧索引另加 2 个新索引，日志三条写路径（INSERT / updateFinish 回填 end_time / 清理 DELETE）的索引维护 +33%；三合一后索引数 6→6，写入零净增，同时覆盖 user_name / resource_name 两维度。评审时因写放大顾虑由「加 2 个」改为本方案。</div>
+
+<div class="decision"><b>D6 framework 白名单端不做缓存。</b> 瓶颈在调用频次而非单次库内查询耗时，调用方缓存已消除频次问题。</div>
+
+<h2>4. 风险与回滚</h2>
+<table>
+<tr><th scope="col">风险</th><th scope="col">缓解</th><th scope="col">回滚</th></tr>
+<tr><td>缓存导致元数据短时陈旧（最长 30s/60s）</td><td>TTL 可经 Apollo 调整，≤0 即禁用；筛选候选值场景可接受</td><td>Apollo 配置置 0，即时生效</td></tr>
+<tr><td>替换索引后 user_name/resource_name 以外维度（ip / log_result）仍回表</td><td>两维度基数低、占比小；观察收益后再定</td><td>Liquibase rollback（删新索引 + 重建旧索引）</td></tr>
+<tr><td>索引 DDL 在大表上的构建耗时</td><td>经 Liquibase 启动执行，BETA 先行验证 EXPLAIN</td><td>changeSet MARK_RAN 幂等可重放</td></tr>
+</table>
+
+<h2>5. 验收要点</h2>
+<ul>
+<li class="ok">filter-meta 各维度 EXPLAIN 无 temporary / filesort</li>
+<li class="ok">白名单 Feign 调用频次 = 每 TTL 窗口至多 1 次</li>
+<li class="ok">权限校验先于缓存（行为不变）</li>
+<li class="ok">cicd / coderepo 增量行覆盖率 ≥80%</li>
+</ul>
+
+</body>
+</html>

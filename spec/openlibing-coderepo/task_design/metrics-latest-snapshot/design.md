@@ -56,7 +56,7 @@
 | `CodeMetricsService`（接口）                                        | -`getLatestMetricsByGitUrl(s)`                                                                                                                                                           |
 | `RepoServiceImpl`                                                   | 两查询改读分支表列；删内存排序路径与 repoUrl 收集                                                                                                                                        |
 | `BranchMetricsSyncJob`（新增，实际命名 `branchMetricsSyncHandler`） | XxlJob handler：入参解析 / 分支遍历 / 调 `backfillBranchMetricsHistory` / 汇总日志                                                                                                       |
-| `BranchMetricsVO` / `MetricItemVO`                                  | 结构不变；value 值源改分支表列，pipelineRunId 恒 null                                                                                                                                    |
+| `BranchMetricsVO` / `MetricItemVO`                                  | `MetricItemVO` +`updateTime` 字段（第 8 节增量，`BranchMetricsVO` 结构不变）；value 值源改分支表列，pipelineRunId 恒 null，updateTime 取指标来源记录时间（第 8 节）                      |
 
 ## 4. 数据模型设计
 
@@ -69,7 +69,17 @@ ALTER TABLE repo_branch
   ADD COLUMN total_file_duplication_rate DECIMAL(10,2) DEFAULT NULL COMMENT '总文件重复率快照';
 ```
 
-Liquibase changeset 含对称回滚；不落来源 runId/时间列（详情兜底可反查，无不可替代消费点）；无需新增索引（排序 filesort 行数量级可控，实测超阈值再评估组合索引）；`code_metrics_record` 结构与内容零变更。
+```sql
+-- 20261125 增量（详见第 8 节）：指标快照独立更新时间列
+ALTER TABLE repo_branch
+  ADD COLUMN code_scale_update_time DATETIME DEFAULT NULL COMMENT '代码规模快照更新时间（值来源记录的 detection_completed_at）',
+  ADD COLUMN avg_function_loc_update_time DATETIME DEFAULT NULL COMMENT '平均代码行数快照更新时间（值来源记录的 detection_completed_at）',
+  ADD COLUMN avg_cyclomatic_complexity_update_time DATETIME DEFAULT NULL COMMENT '平均圈复杂度快照更新时间（值来源记录的 detection_completed_at）',
+  ADD COLUMN total_code_duplication_rate_update_time DATETIME DEFAULT NULL COMMENT '总代码重复率快照更新时间（值来源记录的 detection_completed_at）',
+  ADD COLUMN total_file_duplication_rate_update_time DATETIME DEFAULT NULL COMMENT '总文件重复率快照更新时间（值来源记录的 detection_completed_at）';
+```
+
+Liquibase changeset 含对称回滚；不落来源 runId 列（详情兜底可反查，无不可替代消费点）——「不落时间列」结论已被第 8 节增量推翻，5 个时间列 DDL 见上方 20261125 增量块（changeSet `20261125_add_metrics_snapshot_update_time_to_repo_branch`，含对称回滚）；无需新增索引（排序 filesort 行数量级可控，实测超阈值再评估组合索引）；`code_metrics_record` 结构与内容零变更。
 
 ## 5. 性能设计
 
@@ -80,7 +90,7 @@ Liquibase changeset 含对称回滚；不落来源 runId/时间列（详情兜�
 
 ## 6. API 接口设计
 
-- 对外 HTTP 接口（`/repo/branch/list`、`/project-repo/query-repo-branch`、`/repo/branch/filter-meta`）路径/入参/出参结构零变化；
+- 对外 HTTP 接口（`/repo/branch/list`、`/project-repo/query-repo-branch`、`/repo/branch/filter-meta`）路径/入参零变化；出参 `metrics[key]` 新增 `updateTime` 字段（第 8 节增量，仅增字段向后兼容）；
 - 出参语义变化：`metrics[key].value` 值源为分支表快照列——写入语义为"最新成功快照值"，经刷数存量补齐后与改造前"跨记录补齐值"完全等价；`metrics[key].pipelineRunId` 恒为 null（跳转走详情接口兜底）；
 - 度量详情 `/metrics/file-detail` 零改动；机机接口 `/metrics/code/latest-by-commit/batch` 零影响；
 - XxlJob 新增刷数任务注册。
@@ -91,3 +101,17 @@ Liquibase changeset 含对称回滚；不落来源 runId/时间列（详情兜�
 - 排序字段白名单枚举映射（非字符串拼接）；新增 SQL 全部 MyBatis 参数化；jobParam 校验格式；
 - 新增列均为度量数值，无敏感泄露面；
 - 写列失败/解析失败降级不阻断上报主链路；刷数遍历中单条 JSON 解析失败 warn 跳过继续向上；刷数任务异常跳过该分支继续。
+
+## 8. 增量优化：指标快照独立更新时间（updateTime，PR #353 追加）
+
+分支管理列表 5 个指标列需要展示各指标的更新时间。因快照列写入语义不同，5 个指标的更新时间**可能各不相同**：正常写入 5 值同源最新记录（同刻）；刷数补齐场景从新到旧先到先得，各指标值可能来自不同历史记录（时间各自独立）。
+
+**数据模型**：`repo_branch` 为 5 个快照列各配一个 `DATETIME` 时间列（`code_scale_update_time` 等，Liquibase changeSet `20261125_add_metrics_snapshot_update_time_to_repo_branch`），语义为「该指标当前值来源记录的 `detection_completed_at`」；值列与时间列同写同空（值 null 则时间 null，哨兵值同样携带时间），修正第 4 节"不落时间列"结论。
+
+**写入**（`refreshBranchMetricsSnapshot`）：5 指标同源最新记录，5 个时间统一取该记录 `detection_completed_at`。
+
+**刷数**（`backfillBranchMetricsHistory`）：先到先得命中即记录该来源记录时间（含哨兵命中），逐指标独立；`syncBranchSnapshotColumns` / `updateMetricsSnapshot` 增加 5 个时间参数透传。
+
+**查询**：`MetricItemVO` 新增 `updateTime`（String，`yyyy-MM-dd HH:mm:ss`；null=无快照或来源时间未知——前端以 `value` 判空判断「无快照」，`updateTime` 仅展示用途不承载判据）；单仓 `queryRepoBranchInfo` 直接调 `buildBranchMetricsVo(entity)`，跨仓 `queryProjectBranch` 在 `buildProjectBranchInfoList` 行实体构建中调 `buildBranchMetricsVo(row)`——两入口收敛于同一构建方法重载（实体/行实体各加 5 个 Date 字段）。历史扫描记录页（`scan-record/page`）**不改**：每行即一条扫描记录，行上 `scanTime` 与 5 个指标值同源同刻，语义无缺口。
+
+**兼容性**：响应仅在既有 `metrics[key]` 对象上新增字段，向后兼容；历史存量数据时间列为 NULL（刷数任务重跑即可回填）。

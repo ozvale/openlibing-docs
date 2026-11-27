@@ -1,0 +1,38 @@
+# 实现任务 — sbom-detail-link-output
+
+## Phase 3 编码
+
+### 后端 openlibing-sbom
+
+- [ ] 1. `FrameworkClient` 新增 `getProject(projectName, pageNum, pageSize)` feign 方法（`GET /internal-server/get-project`）
+- [ ] 2. `SbomConstants` 新增 `SBOM_DETAIL_PAGE_URL_PATTERN`
+- [ ] 3. model 新增 `AddAndPublishResult` record（taskId + detailLink）；`PublishSbomResponse` 新增 `detailLink` 字段
+- [ ] 4. `SbomService` 接口 `addAndPublishProduct` 返回类型改 `AddAndPublishResult`
+- [ ] 5. `SbomServiceImpl`：注入 `sbom.service.website.domain`；新增 `resolvePlatformProjectId`（framework 反查，硬失败）与 `buildDetailLink`（URLEncode + domain 空判）；改造 `addAndPublishProduct`
+- [ ] 5a. `UrlUtil.generateSbomUrl` 改造：改用 `SBOM_DETAIL_PAGE_URL_PATTERN` 并增加 projectId 参数（productName 先 decode 后 encode）；`SbomConstants` 删除 `PACKAGE_LIST_PAGE_URL_PATTERN`
+- [ ] 5b. `SbomServiceImpl.getSbomPublishResult`：完成分支 `sbomRef` 接入 projectId 反查（try/catch 软降级：失败 → `sbomRef=null` + warn）
+- [ ] 6. `ApigController.addAndPublishProduct` 响应填充 `detailLink`
+- [ ] 7. UT：`SbomServiceImplTest` 补 detailLink 场景（两路径 / 未命中抛异常 / feign 异常 / domain 缺失 / already-exists 容忍）+ `getSbomPublishResult` 升级场景（新链接格式 / 软降级 sbomRef=null / success·finish 不受影响）
+
+### 插件 sbom-action
+
+- [ ] 8. `index.js`：`addAndPublishProduct` 解析响应 `detailLink`；包/关系统计变量提升作用域
+- [ ] 9. `index.js`：复刻 `sanitize` / `appendAtomgitOutput`；新增 outputs（core.setOutput 三项 + ATOMGIT_OUTPUT 概览组[任务ID/包数量/关系数量]/链接组[SBOM查询url]，面板不含 SBOM 文件路径）；STEP_OUTPUT 既有行不动
+- [ ] 10. `ncc build` 重新打包 dist 并 diff 确认
+
+### 前端 openlibing-web
+
+- [ ] 11. `CompositionAnalysis/index.vue`：引入 `useRoute`；onMounted 解析 route.query 筛选参数集（name/names/attr 动态字段/scanStatus/vulInclude/vulExclude）→ 初始化 productFilters → 触发查询；单值 name 匹配行自动选中（selectedProduct 联动）
+- [ ] 11a. `handleProductFilterChange` 中 `router.replace` 写回当前筛选 URL（保留 projectId 等壳层参数，空筛选删除 key，scanStatus 组值 `|` 分隔）
+
+## Phase 3 自检
+
+- [ ] 12. sbom-web：`mvn -pl sbom-web -am compile` + 相关 UT 通过
+- [ ] 13. sbom-action：`node --check index.js` + ncc 打包成功
+- [ ] 14. openlibing-web：lint 通过 + 浏览器验证 URL 筛选参数（读：name 选中联动 / branch+vulInclude 组合 / 非法参数忽略；写：筛选变化 URL 同步保留 projectId）
+
+## Phase 4 后续（用户自测确认后）
+
+- [ ] 15. 业务 PR（openlibing-sbom / sbom-action / openlibing-web 三仓，标题与 Issue 一致，ai-assisted 标签，关联 #185）
+- [ ] 16. test 环境 Nacos 配置 `sbom.service.website.domain` 后端到端联调（含 `querySbomPublishResult` 返回新 sbomRef 验证）
+- [ ] 17. docs PR 归档 spec + design-review.html

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Review — 【openlibing-sbom】sbom-action返回产物详情地址</title>
+<style>
+:root{
+  --primary:#4a6ef5;--primary-light:#eef2ff;--green:#22a06b;--green-light:#e8f7f0;
+  --orange:#d97706;--orange-light:#fef3e2;--red:#dc2626;--red-light:#fee2e2;
+  --text:#1f2937;--text-sub:#6b7280;--border:#e5e7eb;--bg:#f5f6fa;--card:#ffffff;
+  --el-blue:#1a66e8;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.wrap{max-width:1140px;margin:0 auto;padding:24px 20px 80px}
+header{background:linear-gradient(135deg,#4a6ef5,#7c3aed);border-radius:12px;padding:28px 32px;color:#fff;margin-bottom:24px}
+header h1{font-size:20px;font-weight:600}
+header .meta{margin-top:8px;font-size:13px;opacity:.85}
+h2{font-size:16px;font-weight:600;margin:32px 0 12px;padding-left:10px;border-left:4px solid var(--primary)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:8px}
+.tag{display:inline-block;font-size:12px;padding:2px 10px;border-radius:999px;margin-right:6px}
+.tag.new{background:var(--green-light);color:var(--green)}
+.tag.keep{background:var(--primary-light);color:var(--primary)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border:1px solid var(--border);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:#f9fafb;font-weight:600;white-space:nowrap}
+.badge{font-size:11px;padding:1px 8px;border-radius:4px}
+.b-low{background:var(--green-light);color:var(--green)}
+.b-mid{background:var(--orange-light);color:var(--orange)}
+/* mockup common */
+.mock{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:12px;background:#fff}
+.mock-bar{background:#f9fafb;border-bottom:1px solid var(--border);padding:6px 14px;font-size:12px;color:var(--text-sub);display:flex;gap:8px;align-items:center}
+.mock-bar .dot{width:10px;height:10px;border-radius:50%}
+/* panel mockup 1 */
+.panel{display:flex;min-height:340px;font-size:13px}
+.panel-side{width:190px;border-right:1px solid var(--border);padding:14px 10px;background:#fafbfd}
+.panel-side .title{font-size:13px;font-weight:600;margin-bottom:12px;padding-left:4px}
+.step{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:6px;color:var(--text-sub);font-size:13px}
+.step.active{background:var(--primary-light);color:var(--primary);font-weight:600}
+.step .ok{color:var(--green);font-size:12px}
+.panel-main{flex:1;padding:16px 20px}
+.panel-main h3{font-size:14px;display:flex;align-items:center;gap:6px;margin-bottom:12px}
+.panel-main h3 .ok-badge{color:var(--green)}
+.sect{font-size:13px;font-weight:600;margin:10px 0 6px}
+a.dlink{color:var(--primary);text-decoration:none;word-break:break-all}
+a.dlink:hover{text-decoration:underline}
+.btn{border:1px solid var(--border);background:#fff;border-radius:5px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--text)}
+.btn:hover{border-color:var(--primary);color:var(--primary)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+/* sbom page mockup 2 — 复刻 /apps/sbomManage 真实布局 */
+.addr{display:flex;gap:8px;padding:10px 14px;background:#f9fafb;border-bottom:1px solid var(--border)}
+.addr input{flex:1;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;font-family:Consolas,monospace}
+.block-head{display:flex;align-items:center;gap:8px;padding:12px 16px 4px;font-size:13px;font-weight:600}
+.block-head .ico{width:14px;height:14px;border-radius:3px;background:linear-gradient(135deg,#4a6ef5,#9333ea);display:inline-block}
+.block-head .caret{font-size:11px;color:var(--text-sub);cursor:pointer}
+.filter-strip{margin:0 16px;border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;color:#b0b6bf;display:flex;align-items:center;gap:6px}
+.filter-tag{display:inline-flex;align-items:center;gap:5px;color:var(--primary);background:var(--primary-light);border:1px solid #c3d0fb;padding:1px 4px 1px 8px;border-radius:4px;font-size:12px}
+.filter-tag .x{cursor:pointer;font-weight:600;opacity:.7;padding:0 3px}
+.filter-tag .x:hover{opacity:1}
+.sb-table{margin:8px 16px 0;font-size:12.5px}
+.sb-table table{border-collapse:collapse}
+.sb-table th{background:#f4f6fa;font-weight:600;color:var(--text)}
+.sb-table td,.sb-table th{border:1px solid #eef0f4;padding:7px 10px;white-space:nowrap;text-align:left}
+tr.product-selected td{background:#e8f1ff !important}
+tr.product-selected td:first-child{box-shadow:inset 3px 0 0 var(--el-blue)}
+.pill{display:inline-flex;align-items:center;border-radius:999px;padding:0 8px;font-size:11px;margin-right:4px;line-height:18px}
+.pill i{font-style:normal;margin-left:4px}
+.p-total{background:#eef2ff;color:#4a6ef5}
+.p-fatal{background:#fee2e2;color:#dc2626}
+.p-high{background:#ffedd5;color:#ea580c}
+.p-mid{background:#fef3c7;color:#d97706}
+.p-low{background:#d1fae5;color:#059669}
+.p-none{background:#f3f4f6;color:#6b7280}
+.p-gray{background:#f3f4f6;color:#6b7280}
+.status-ok{color:var(--green)}
+td .name-link{color:var(--text);cursor:pointer}
+tr.product-selected td .name-link{color:var(--el-blue);font-weight:600}
+td .name-link:hover{text-decoration:underline;color:var(--el-blue)}
+.comp-area{margin:10px 16px 16px;border-top:1px dashed var(--border);padding-top:10px}
+.comp-toolbar{display:flex;justify-content:flex-end;gap:8px;margin:0 16px 6px}
+.comp-toolbar .btn-exp{background:var(--el-blue);color:#fff;border:none;border-radius:5px;padding:4px 12px;font-size:12px;cursor:pointer}
+.comp-empty{margin:10px 16px 16px;border:1px dashed var(--border);border-radius:8px;padding:26px;text-align:center;color:var(--text-sub);font-size:12.5px}
+.note{font-size:12px;color:var(--text-sub);margin-top:8px}
+#toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);background:#1f2937;color:#fff;padding:8px 18px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99}
+#toast.show{opacity:1}
+ul.tight{margin-left:18px;font-size:13px}
+code{background:#f3f4f6;border-radius:4px;padding:0 5px;font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Design Review：sbom-action 返回产物详情地址</h1>
+  <div class="meta">openlibing/openlibing-sbom#185 · 变更名 sbom-detail-link-output · 影响仓：openlibing-sbom / sbom-action / openlibing-web · 2026-11-19</div>
+</header>
+
+<h2>一、需求背景</h2>
+<div class="card">
+  <ul class="tight">
+    <li>sbom-action 插件输出结果只有任务 ID（taskId），使用者无法从流水线直接跳转查看 SBOM 产物详情。</li>
+    <li>详情落地页为平台 SBOM 页 <code>/apps/sbomManage?projectId=&amp;name=</code>：projectId 恢复项目上下文（壳层 guard 现有能力）；name 为新增支持参数——进入页面后自动按制品名过滤并<b>选中该制品，直接展示其软件成分数据</b>（"打开某个制品的数据"）。</li>
+    <li>展示形态对齐 code-metrics-action 的任务结果面板（链接表 + 指标表），并输出包数量 / 关系数量（复用插件本地 SPDX 统计）。</li>
+    <li>额外增强（用户追加）：sbomManage 页制品表筛选参数 <b>URL 化并双向同步</b>——读：URL 携带筛选参数（name / names / 分支等 attr 动态字段 / 解析状态 / 待闭环漏洞级别包含·排除）进入页面自动筛选；写：页面筛选变化时 <code>router.replace</code> 写回 URL，复制链接即可分享当前筛选状态（分支、待闭环漏洞数等）。</li>
+    <li>遗留查询接口 <code>querySbomPublishResult</code> 的 sbomRef 仍指向旧 hash 页 <code>#/sbomPackages</code>——本次一并升级为同一 sbomManage 地址（projectId 反查失败时 sbomRef 置空软降级，不影响 success/finish），统一跳转入口。</li>
+  </ul>
+</div>
+
+<h2>二、UI 变化（可交互预演）</h2>
+<div class="card">
+  <p style="font-size:13px">变化点：<span class="tag new">新增</span>任务结果面板「链接」表 + 「包数量 / 关系数量」指标行 &nbsp;·&nbsp; <span class="tag new">新增</span>列表页筛选参数 URL 双向同步（读：URL 自动过滤 + 单值 name 选中制品；写：筛选变化 router.replace 写回）&nbsp;·&nbsp; <span class="tag keep">不变</span>STEP_OUTPUT 既有行 / 页面其余交互 / 软件成分数据区内容 &nbsp;·&nbsp; <span class="tag new">升级</span>遗留 querySbomPublishResult 的 sbomRef 改指新页地址（API 行为，无 UI 变化）</p>
+
+  <div class="mock">
+    <div class="mock-bar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>&nbsp;Mockup 1 · GitCode 任务结果面板（sbom-action 步骤，对齐 code-metrics 展示效果）</div>
+    <div class="panel">
+      <div class="panel-side">
+        <div class="title">任务结果</div>
+        <div class="step"><span class="ok">✔</span>初始化步骤</div>
+        <div class="step"><span class="ok">✔</span>Checkout</div>
+        <div class="step active"><span class="ok">✔</span>sbom-scan</div>
+        <div class="step"><span class="ok">✔</span>后处理步骤</div>
+      </div>
+      <div class="panel-main">
+        <h3><span class="ok-badge">✔</span> sbom-scan</h3>
+        <div class="sect">链接</div>
+        <table>
+          <tr><th style="width:30%">名称</th><th>链接</th><th style="width:14%">操作</th></tr>
+          <tr id="link-row"><td>SBOM查询url</td><td><a class="dlink" id="detail-link" href="#" onclick="fakeNav(event);return false">https://www.openlibing.com/apps/sbomManage?projectId=3&name=openlibing-sbom</a></td><td><button class="btn" onclick="copyLink()">复制链接</button></td></tr>
+          <tr id="link-row-none" style="display:none"><td colspan="3" style="color:var(--text-sub)">（domain 未配置 / detailLink=null 时：链接表整行不输出）</td></tr>
+        </table>
+        <div class="sect">其他</div>
+        <table>
+          <tr><th style="width:55%">标识</th><th>结果</th></tr>
+          <tr><td>任务ID（taskId）</td><td id="v-task">9f2c1e0a-3b7d-4e25-a1c9-88f0d2b46a77</td></tr>
+          <tr class="new-row"><td>包数量（packageCount）&nbsp;<span class="tag new">新增</span></td><td id="v-pkg">42</td></tr>
+          <tr class="new-row"><td>关系数量（relationshipCount）&nbsp;<span class="tag new">新增</span></td><td id="v-rel">156</td></tr>
+        </table>
+        <div class="note">交互：点击链接（模拟跳转平台 SBOM 页）/ 复制链接按钮。面板不展示 SBOM 文件路径（sbomFile 仅保留在编程 outputs 与日志）。编程 outputs 同步新增 detail-link / package-count / relationship-count。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mock">
+    <div class="mock-bar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>&nbsp;Mockup 2 · 平台 SBOM 页（复刻 /apps/sbomManage 真实布局：制品信息 + 软件成分数据联动）</div>
+    <div class="addr">
+      <input id="addr" value="https://www.openlibing.com/apps/sbomManage?projectId=3&name=openlibing-sbom&branch=master&vulInclude=HIGH" spellcheck="false">
+      <button class="btn primary" onclick="openUrl()">打开链接</button>
+    </div>
+
+    <div class="block-head"><span class="ico"></span>制品信息 <span class="caret" onclick="toast('演示：制品信息区展开/收起（现有交互不变）')">展开 ∧</span></div>
+    <div class="filter-strip" id="strip">🔍 点击添加筛选条件</div>
+    <div class="sb-table" style="overflow-x:auto">
+      <table>
+        <tr>
+          <th>制品名称 ▾</th><th>软件名</th><th>分支</th><th>构建来源</th><th>解析状态</th><th>依赖包数量 ▾</th><th>License数量 ▾</th><th>待闭环漏洞数 ⓘ▾</th>
+        </tr>
+        <tr data-name="vulnerability-manager-platform-website_dev_master" id="row-1">
+          <td><span class="name-link" onclick="selectRow('row-1')">vulnerability-manager-platform-website_dev_...</span></td>
+          <td>vulnerability-manager-platfo...</td><td>dev</td><td>nightly</td><td><span class="status-ok">解析完成</span></td>
+          <td>135</td><td>7</td>
+          <td><span class="pill p-total">总数<i>17</i></span><span class="pill p-fatal">致命<i>0</i></span><span class="pill p-high">高<i>2</i></span><span class="pill p-mid">中<i>1</i></span><span class="pill p-low">低<i>3</i></span><span class="pill p-none">无风险<i>11</i></span><span class="pill p-gray">未知<i>0</i></span></td>
+        </tr>
+        <tr data-name="openlibing-sbom" id="row-2">
+          <td><span class="name-link" onclick="selectRow('row-2')">openlibing-sbom</span></td>
+          <td>openlibing-sbom</td><td>master</td><td>nightly</td><td><span class="status-ok">解析完成</span></td>
+          <td>42</td><td>6</td>
+          <td><span class="pill p-total">总数<i>3</i></span><span class="pill p-fatal">致命<i>0</i></span><span class="pill p-high">高<i>1</i></span><span class="pill p-mid">中<i>0</i></span><span class="pill p-low">低<i>1</i></span><span class="pill p-none">无风险<i>1</i></span><span class="pill p-gray">未知<i>0</i></span></td>
+        </tr>
+        <tr data-name="openlibing-web" id="row-3">
+          <td><span class="name-link" onclick="selectRow('row-3')">openlibing-web</span></td>
+          <td>openlibing-web</td><td>master</td><td>pr</td><td><span class="status-ok">解析完成</span></td>
+          <td>120</td><td>9</td>
+          <td><span class="pill p-total">总数<i>5</i></span><span class="pill p-fatal">致命<i>0</i></span><span class="pill p-high">高<i>2</i></span><span class="pill p-mid">中<i>1</i></span><span class="pill p-low">低<i>2</i></span><span class="pill p-none">无风险<i>0</i></span><span class="pill p-gray">未知<i>0</i></span></td>
+        </tr>
+        <tr data-name="sbom-action" id="row-4">
+          <td><span class="name-link" onclick="selectRow('row-4')">sbom-action</span></td>
+          <td>sbom-action</td><td>master</td><td>pr</td><td><span class="status-ok">解析完成</span></td>
+          <td>18</td><td>3</td>
+          <td><span class="pill p-total">总数<i>0</i></span><span class="pill p-fatal">致命<i>0</i></span><span class="pill p-high">高<i>0</i></span><span class="pill p-mid">中<i>0</i></span><span class="pill p-low">低<i>0</i></span><span class="pill p-none">无风险<i>0</i></span><span class="pill p-gray">未知<i>0</i></span></td>
+        </tr>
+      </table>
+    </div>
+
+    <div id="comp-zone">
+      <div class="comp-empty" id="comp-empty">点击制品信息中的制品行，查看该制品的软件成分数据（现有交互：行选中 @current-change 联动）</div>
+      <div id="comp-body" style="display:none">
+        <div class="block-head"><span class="ico"></span>软件成分数据 <span class="caret" onclick="toast('演示：软件成分数据区收起/展开（现有交互不变）')">收起 ∧</span></div>
+        <div class="filter-strip">🔍 点击添加筛选条件</div>
+        <div class="comp-toolbar">
+          <button class="btn" onclick="toast('演示：漏洞刷新（现有功能不变）')">漏洞刷新 ⓘ</button>
+          <button class="btn-exp" onclick="toast('演示：导出下拉（现有功能不变）')">导出 ∨</button>
+        </div>
+        <div class="sb-table" style="overflow-x:auto">
+          <table id="comp-table">
+            <tr>
+              <th>编号</th><th>软件包名称 ▾</th><th>版本 ▾</th><th>依赖类型 ▾</th><th>语言类型</th><th>包管理器类型</th><th>待闭环漏洞数 ⓘ▾</th><th>License ▾</th><th>PURL</th><th>Supplier</th>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="note" style="margin:6px 16px 14px">
+      交互演示：① 修改地址栏筛选参数（name / names / branch / scanStatus / vulInclude / vulExclude，多值逗号分隔）→ 点「打开链接」观察自动过滤（筛选条逐条显示 <span class="filter-tag">筛选标签</span>）+ 单值 name 自动选中制品并联动成分数据；② 点击筛选标签上的 × 移除筛选 → 地址栏 URL 同步写回（模拟 router.replace 双向同步，projectId 保留）；③ 点击任意制品行名切换选中（现有交互）。
+    </div>
+  </div>
+</div>
+
+<h2>三、决策点</h2>
+<div class="card">
+  <table>
+    <tr><th style="width:34%">决策</th><th>结论</th><th style="width:34%">依据</th></tr>
+    <tr><td>projectId 获取（D1）</td><td>addProduct 确定最终 productType 后，统一调用 framework 机机接口 <code>GET /internal-server/get-project?projectName=&lt;productType&gt;</code> 精确反查 projectId；失败/未命中 → 抛 AddProductException 上报失败，无降级</td><td>framework 是平台项目主数据权威源；显式/缺省回填/already-exists 容忍三路径在 addProduct 返回后收敛；/internal-server 与现有 feign 调用同鉴权域；硬失败与 coderepo 反查现有语义一致</td></tr>
+    <tr><td>域名配置（D2）</td><td>复用既有 <code>sbom.service.website.domain</code>（Nacos 配 https://www.openlibing.com）</td><td>避免两套域名配置；未配置时 detailLink=null + warn，不阻塞上报</td></tr>
+    <tr><td>落地页形态（D3）</td><td>列表页 <code>?projectId=&amp;name=</code>：过滤 + 自动选中制品行，联动展示其软件成分数据</td><td>详情直连路由当前不存在；页面已有 @current-change 选中联动机制，复用成本最低</td></tr>
+    <tr><td>契约承载（D4）</td><td>PublishSbomResponse 新增 detailLink；service 返回 AddAndPublishResult(taskId, detailLink)</td><td>纯增量字段向后兼容；调用方仅 ApigController 一处</td></tr>
+    <tr><td>URL 筛选参数化（D5）</td><td>制品表筛选双向同步：读=onMounted 解析 <code>name</code>（单值，detailLink 场景）/<code>names</code>/attr 动态字段（branch、softwareName…）/<code>scanStatus</code>/<code>vulInclude</code>/<code>vulExclude</code> → 初始化筛选统一查询，单值 name 自动选中；写=筛选变化 <code>router.replace</code> 写回（保留 projectId 等壳层参数，空筛选删 key）；多值逗号分隔，scanStatus 组值内逗号冲突用 <code>|</code> 分隔；names 多值仅筛选不选中</td><td>用户增强诉求：分享/跳转可携带筛选状态（分支、待闭环漏洞级别等）；detailLink 生成侧仍只带 projectId+name 保持最简；成分区筛选/排序/分页不 URL 化避免状态爆炸</td></tr>
+    <tr><td>遗留接口 sbomRef 升级（D6）</td><td><code>querySbomPublishResult</code> 的 sbomRef 换用同一 sbomManage pattern，projectId 复用 resolvePlatformProjectId 反查；<b>软降级</b>：反查失败/domain 缺失 → sbomRef=null + warn，success/finish 不受影响；删除旧 pattern 常量（唯一调用方即该路径）</td><td>查询接口主 payload 是 success/finish，sbomRef 为辅助信息，硬失败会把 framework 故障放大到存量查询；publish 路径硬失败是因为必须保证链接可得才允许上报成功</td></tr>
+  </table>
+</div>
+
+<h2>四、风险点</h2>
+<div class="card">
+  <table>
+    <tr><th style="width:38%">风险</th><th style="width:10%">等级</th><th>缓解</th></tr>
+    <tr><td>/internal-server/get-project 对 feign 直连的鉴权拦截行为</td><td><span class="badge b-low">低</span></td><td>与现有 checkPermissionByProductType 同前缀同鉴权域；联调首验此调用</td></tr>
+    <tr><td>project_info 同名重复项目（无唯一约束）</td><td><span class="badge b-low">低</span></td><td>精确匹配取首条 + warn 日志暴露，属平台数据治理问题</td></tr>
+    <tr><td>Nacos 域名配置缺失 / 错误导致链接不可用</td><td><span class="badge b-mid">中</span></td><td>detailLink=null 不阻塞上报；发布检查项加入配置核对</td></tr>
+    <tr><td>发布顺序：插件先于后端上线</td><td><span class="badge b-low">低</span></td><td>插件读不到 detailLink 仅不输出链接行，概览组正常，无报错</td></tr>
+    <tr><td>URL name 无匹配制品（已改名 / 未上报）</td><td><span class="badge b-low">低</span></td><td>筛选条空结果提示"暂无相关内容"，用户手动清除筛选即可（现有空态交互）</td></tr>
+    <tr><td>GitCode 面板 ATOMGIT_OUTPUT 渲染规则变化</td><td><span class="badge b-low">低</span></td><td>行为对齐 code-metrics 线上实际效果，随其回归</td></tr>
+    <tr><td>URL 写回与壳层参数（projectId 等）共存冲突</td><td><span class="badge b-low">低</span></td><td>router.replace 仅增删本页筛选 key，壳层参数原样保留；非法/未知参数值解析时忽略</td></tr>
+    <tr><td>querySbomPublishResult 的 sbomRef 链接形态变化（旧 hash 链接失效）</td><td><span class="badge b-low">低</span></td><td>全仓检索未发现 sbomRef 程序化消费方（sbom-tools 仅消费 success/finish/taskId）；旧 hash 页路由保留，历史消息旧链接仍可访问</td></tr>
+  </table>
+</div>
+</div>
+<div id="toast"></div>
+<script>
+const COMP_PACKAGES = {
+  'row-1': [['@babel/helper-string-parser','7.25.9','间接依赖','JavaScript','npm'],['@babel/parser','7.26.9','间接依赖','JavaScript','npm'],['@babel/runtime','7.26.9','直接依赖','JavaScript','npm'],['@element-plus/icons-vue','2.3.1','直接依赖','JavaScript','npm'],['floating-ui-core','1.6.9','间接依赖','JavaScript','npm']],
+  'row-2': [['org.opensourceway.sbom-common','1.0.0','直接依赖','Java','maven'],['org.opensourceway.sbom-web','1.2.0','直接依赖','Java','maven'],['com.fasterxml.jackson.core','2.17.1','间接依赖','Java','maven'],['org.projectlombok','1.18.34','直接依赖','Java','maven'],['org.mockito','5.11.0','间接依赖','Java','maven']],
+  'row-3': [['vue','3.5.13','直接依赖','JavaScript','npm'],['pinia','2.2.6','直接依赖','JavaScript','npm'],['axios','1.7.9','直接依赖','JavaScript','npm'],['element-plus','2.9.1','直接依赖','JavaScript','npm']],
+  'row-4': [['@actions/core','1.11.1','直接依赖','JavaScript','npm'],['@actions/exec','1.1.1','直接依赖','JavaScript','npm'],['yaml','2.6.1','间接依赖','JavaScript','npm']],
+};
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200)}
+function copyLink(){const u=document.getElementById('detail-link').textContent;(navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast('已复制到剪贴板')).catch(()=>toast(u))}
+function fakeNav(e){e.preventDefault();toast('跳转 → '+e.target.textContent)}
+let currentSelected=null;
+function selectRow(id){
+  if(currentSelected)document.getElementById(currentSelected).classList.remove('product-selected');
+  currentSelected=id;document.getElementById(id).classList.add('product-selected');
+  const row=document.getElementById(id);const name=row.querySelector('.name-link').textContent;
+  document.getElementById('comp-empty').style.display='none';
+  document.getElementById('comp-body').style.display='';
+  const tb=document.getElementById('comp-table');
+  tb.innerHTML='<tr><th>编号</th><th>软件包名称 ▾</th><th>版本 ▾</th><th>依赖类型 ▾</th><th>语言类型</th><th>包管理器类型</th><th>待闭环漏洞数 ⓘ▾</th><th>License ▾</th><th>PURL</th><th>Supplier</th></tr>';
+  (COMP_PACKAGES[id]||[]).forEach((p,i)=>{
+    const tr=document.createElement('tr');
+    const vul='<span class="pill p-total">总数<i>0</i></span><span class="pill p-fatal">致命<i>0</i></span><span class="pill p-high">高<i>0</i></span><span class="pill p-mid">中<i>0</i></span><span class="pill p-low">低<i>0</i></span><span class="pill p-none">无风险<i>0</i></span><span class="pill p-gray">未知<i>0</i></span>';
+    const purl='pkg:'+p[4]+'/%2540'+p[0].replace(/^@/,'')+'@'+p[1];
+    tr.innerHTML='<td>'+(i+1)+'</td><td>📦 '+p[0]+'</td><td>🏷 '+p[1]+'</td><td>'+p[2]+'</td><td>'+p[3]+'</td><td>'+p[4]+'</td><td>'+vul+'</td><td>● MIT</td><td>'+purl+'</td><td>NOASSERTION</td>';
+    tb.appendChild(tr);
+  });
+  toast('已选中制品「'+name+'」，软件成分数据已联动加载（现有 @current-change 交互）');
+}
+const SEV_LABEL={FATAL:'致命',HIGH:'高',MID:'中',LOW:'低'};
+const STATUS_LABEL={SUCCESS:'解析完成',FAILED:'解析失败',PROCESSING:'解析中'};
+function pillCount(cell,sev){
+  const m=cell.innerHTML.match(new RegExp('pill p-'+sev.toLowerCase()+'">[^<]*<i>(\\d+)'));
+  return m?parseInt(m[1],10):0;
+}
+function openUrl(){
+  let q;try{q=new URL(document.getElementById('addr').value).searchParams}catch(e){toast('地址不合法');return}
+  const name=q.get('name')||'';
+  const names=(q.get('names')||'').split(',').filter(Boolean);
+  const branch=q.get('branch')||'';
+  const scanStatus=(q.get('scanStatus')||'').split(',').filter(Boolean);
+  const vulInc=(q.get('vulInclude')||'').split(',').filter(v=>SEV_LABEL[v]);
+  const vulExc=(q.get('vulExclude')||'').split(',').filter(v=>SEV_LABEL[v]);
+  const hasFilter=!!(name||names.length||branch||scanStatus.length||vulInc.length||vulExc.length);
+  const rows=[...document.querySelectorAll('tr[data-name]')];
+  const tags=[];
+  const mkTag=(k,l,disp,raw)=>tags.push('<span class="filter-tag">'+l+': '+disp+'<span class="x" data-k="'+k+'" data-v="'+(raw||disp).replace(/"/g,'')+'" title="点击移除该筛选 → 地址栏 URL 同步写回（模拟 router.replace）">×</span></span>');
+  if(name)mkTag('name','制品名称',name);
+  names.forEach(n=>mkTag('names','制品名称',n));
+  if(branch)mkTag('branch','分支',branch);
+  scanStatus.forEach(s=>mkTag('scanStatus','解析状态',STATUS_LABEL[s]||s,s));
+  vulInc.forEach(v=>mkTag('vulInclude','待闭环漏洞级别(含)',SEV_LABEL[v],v));
+  vulExc.forEach(v=>mkTag('vulExclude','待闭环漏洞级别(排除)',SEV_LABEL[v],v));
+  document.getElementById('strip').innerHTML=hasFilter
+    ?'筛选条件：'+tags.join('')+'<span style="color:#b0b6bf">← 打开链接后页面即处于已筛选状态；真实页面筛选变化时 router.replace 写回 URL</span>'
+    :'🔍 点击添加筛选条件';
+  let hit=null;const shown=[];
+  rows.forEach(tr=>{
+    const tds=tr.children,nm=tr.dataset.name;let m=true;
+    if(name)m=nm.includes(name);
+    if(m&&names.length)m=names.some(n=>nm.includes(n));
+    if(m&&branch)m=tds[2].textContent.trim()===branch;
+    if(m&&scanStatus.length){const st=tds[4].textContent.trim();m=scanStatus.some(s=>st.includes(STATUS_LABEL[s]||s))}
+    if(m&&vulInc.length)m=vulInc.every(v=>pillCount(tds[7],v)>0);
+    if(m&&vulExc.length)m=!vulExc.some(v=>pillCount(tds[7],v)>0);
+    tr.style.display=m?'':'none';if(m)shown.push(tr);
+    if(name&&m&&nm===name)hit=tr.id;
+  });
+  if(!hasFilter){toast('URL 无筛选参数：进入页面后手动选择制品（现状行为）');return}
+  if(name&&!names.length){
+    if(hit){selectRow(hit);toast('URL 筛选已应用 → 选中制品「'+name+'」→ 软件成分数据已展开');return}
+    const cand=shown[0];
+    if(cand){selectRow(cand.id);toast('URL name「'+name+'」精确匹配失败，按包含匹配选中「'+cand.dataset.name+'」（其余筛选参数仍生效）');return}
+  }
+  if(shown.length){toast('URL 筛选已应用（'+tags.length+' 个条件），列表仅显示匹配行'+(names.length?'；names 多值仅筛选不自动选中':''))}
+  else{
+    document.getElementById('comp-empty').textContent='暂无相关内容！（URL 筛选无匹配制品：可手动清除筛选条件重试）';
+    document.getElementById('comp-empty').style.display='';
+    document.getElementById('comp-body').style.display='none';
+    toast('URL 筛选条件无匹配制品，展示空态（现有 empty 交互）');
+  }
+}
+function removeFilter(key,val){
+  const u=new URL(document.getElementById('addr').value);
+  const parts=(u.searchParams.get(key)||'').split(',').filter(x=>x&&x!==val);
+  if(parts.length)u.searchParams.set(key,parts.join(','));else u.searchParams.delete(key);
+  document.getElementById('addr').value=u.toString();
+  openUrl();
+  toast('已移除筛选「'+val+'」→ 地址栏 URL 已写回（模拟 router.replace，projectId 保留）');
+}
+document.getElementById('strip').addEventListener('click',e=>{
+  if(e.target.classList.contains('x'))removeFilter(e.target.dataset.k,e.target.dataset.v);
+});
+</script>
+</body>
+</html>
