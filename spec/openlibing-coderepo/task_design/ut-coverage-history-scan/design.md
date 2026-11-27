@@ -1,11 +1,12 @@
 # UT 覆盖率历史扫描记录 — 后端详细设计方案
 
-| 项目     | 内容                                                                                                                                      |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 需求名称 | UT 覆盖率历史扫描记录查看与定期清理                                                                                                       |
-| 涉及仓   | openlibing-coderepo（后端）、openlibing-web（前端）、upload-ut-action（插件）                                                             |
-| 关联现状 | `code_ut_record` 表已入库每次扫描记录（含文件明细 LONGTEXT）；上报走 MQ 异步；无历史列表接口、无清理机制；插件仅输出 `result`，无结果链接 |
-| 设计基线 | 分支列表 UT 指标仍取 `repo_branch` 快照；历史能力全部基于 `code_ut_record` 存量数据，无需新建业务表                                       |
+| 项目     | 内容                                                                                                                                                         |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 需求名称 | UT 覆盖率历史扫描记录查看与定期清理                                                                                                                          |
+| 涉及仓   | openlibing-coderepo（后端）、openlibing-web（前端）、upload-ut-action（插件）                                                                                |
+| 关联现状 | `code_ut_record` 表已入库每次扫描记录（含文件明细 LONGTEXT）；上报走 MQ 异步；无历史列表接口、无清理机制；插件仅输出 `result`，无结果链接                    |
+| 设计基线 | 分支列表 UT 指标仍取 `repo_branch` 快照；历史能力全部基于 `code_ut_record` 存量数据，无需新建业务表                                                          |
+| 落地记录 | 主设计随 !345 合入 master；后期按实地演进三次跟进（见 §9 演进记录）：!345 收尾修复、!355 详情接口透出增强、!363 链接定位参数改造。**本文档已按实地实现更新** |
 
 ---
 
@@ -15,6 +16,9 @@
 插件 upload-ut-action
   └─ 回调 /ut/coverage/report（MQ 异步入库）
   └─ 响应直接返回 {recordId, reportUrl}（recordId 受理时预生成，对齐点①：不再新增查询接口）
+     └─ reportUrl = {openlibing.domain}/apps/repos/branch/ut-coverage
+        ?projectId=..&platforms=..&repoUrlLike=owner/repo&branchName=..&recordId=..
+       （后期演进 !363：定位参数由 repoId 改为 platforms+repoUrlLike 组合，§3.3）
        └─ 插件 setOutput("report_url", ...) 输出结果链接
 
 前端
@@ -56,7 +60,7 @@ ut:
     cleanup-batch-size: 500 # 单批删除条数，防长事务锁表
 ```
 
-读取方式：`@Value` 注入 UtCoverageProperties（支持配置中心覆盖）。保留天数随历史列表接口下发，前端据此渲染提示。
+读取方式（按实地实现）：`@Value` 直接注入使用方——历史列表/详情透出在 `UtCoverageServiceImpl`（`ut.coverage.retention-days:90`），清理逻辑在 `UtCoverageCleanupServiceImpl`（`retention-days` 与 `cleanup-batch-size:500`，含非法值兜底告警），未引入独立 Properties 聚合类。保留天数随历史列表与详情接口下发，前端据此渲染提示。
 
 ## 3. API 接口设计
 
@@ -90,23 +94,41 @@ POST /ut/coverage/history
 
 ```
 POST /ut/coverage/file-detail（存量）
-入参 UtCoverageFileDetailQueryDTO 增加字段：recordId: String
+入参 UtCoverageFileDetailQueryDTO：
+  repoId: Integer（可选，定位方式一）
+  repoUrlLike: String（可选，定位方式二，ownerRepo 段如 owner/repo，与 platforms 成对）
+  platforms: String（可选，gitcode/gitee/github 等，与 repoUrlLike 成对）
+  recordId: String（定位优先级最高）
 ```
 
-- `locateRecord` 定位优先级调整为：**recordId 精确匹配 > pipelineRunId 精确匹配 > 最近一条成功记录（兜底，现状不变）**。
+- **仓库定位二选一（后期演进 !363）**：`repoId`（页面直传/历史旧链接，既有链路）或 `repoUrlLike + platforms`（成对，插件结果链接口径——插件链接已去掉 repoId，前端从历史流水线链接进来拿不到 repoId）；二者同时传入时 `repoId` 优先。DTO 类级联合校验（`@AssertTrue`）：repoId 缺失时 repoUrlLike 与 platforms 必须成对提供（单独 platforms 无定位意义、单独 repoUrlLike 跨平台同名仓有歧义）。
+- **repoUrlLike 反查实现**：`locateReposByRepoUrlLike(platforms, repoUrlLike)`——`platform` 精确过滤 + repo_url LIKE `/{ownerRepo}` 预过滤（MP 自动补两侧 %，尾随通配覆盖 .git 后缀）缩小候选集，再按 `extractOwnerRepo` **忽略大小写**等值比验收敛（与 `RepoCoordinateResolverImpl` 慢路径"逐条坐标比对忽略大小写"口径一致，兼容仓库删除重建后 repoUrl 大小写形态漂移）。LIKE 结果集上限 `REPO_URL_LIKE_MAX_CANDIDATES=50`（LIMIT 51），超出视为宽泛输入放大，按统一拒绝口径处理，避免先于鉴权的慢查询与 N 次鉴权放大；DTO 对 repoUrlLike/platforms 附加 `@Size`/`@Pattern` 白名单约束。
+- **同仓多项目归属多候选**：逐候选独立鉴权（`verifyPermissionsByProduct`），无权限候选跳过，首个"鉴权通过且记录定位成功"的候选返回；全部候选无权限按横向越权口径拒绝（与无候选场景异常类型与文案完全一致，防存在性探测）。
+- `locateRecord` 定位优先级：**recordId 精确匹配 > pipelineRunId 精确匹配 > 最近一条成功记录（兜底，现状不变）**。
 - Mapper 新增 `selectMetaById(recordId)`（不含明细大字段；越权校验通过后再查明细）。
-- 查无记录（含已被清理）时返回统一文案「该扫描记录不存在或已超出保留期」（HTTP 200 + 失败文案，前端据此渲染过期提示页并引导返回历史列表）。
-- **过程态区分（评审反馈补充）**：插件结果链接在受理响应直返后可能被立即打开，此时 MQ 消费尚未入库——recordId 未命中时解码雪花 ID 时间戳（纪元 1288834974657，与生成口径一致），距当前 ≤ 5 分钟（覆盖消费侧 3 次退避重试 + OBS 下载解析耗时）判定为"受理后处理中"，返回文案「该扫描记录正在处理中，请稍后刷新查看结果」；超窗口仍未入库或已清理返回终态文案。前端按文案区分渲染：处理中态引导刷新重试，终态引导返回历史列表。非法格式/归属不符等确定性未命中固定归终态，不放行处理中提示。
-- **兼容性**：看板组适配新链接格式前，旧链接（pipelineRunId/无参兜底）行为不变；`pipelineRunId` 与 `recordId` 同时存在时 `recordId` 优先（记录唯一定位优先于流水线定位）。
-- 详情出参包含 `commitId`（对齐点②：历史列表「提交」列取消，提交信息在详情页顶部信息区展示）。
+- 查无记录（含已被清理）时返回统一文案常量 `RECORD_NOT_FOUND_MESSAGE`「该扫描记录不存在或已超出保留期」（HTTP 200 + 失败文案，前端据此渲染过期提示页并引导返回历史列表）。
+- **过程态区分（评审反馈补充）**：插件结果链接在受理响应直返后可能被立即打开，此时 MQ 消费尚未入库——recordId 未命中时解码雪花 ID 时间戳（纪元 1288834974657，与生成口径一致），距当前 ≤ 5 分钟（覆盖消费侧 3 次退避重试 + OBS 下载解析耗时）判定为"受理后处理中"，返回常量 `RECORD_PENDING_MESSAGE`「该扫描记录正在处理中，请稍后刷新查看结果」；超窗口仍未入库或已清理返回终态文案。前端按文案区分渲染：处理中态引导刷新重试，终态引导返回历史列表。非法格式/归属不符等确定性未命中固定归终态，不放行处理中提示；repoUrlLike 多候选模式下归属不符优先于处理中窗口判定（不泄露记录存在性）。
+- **兼容性**：看板组适配新链接格式前，旧链接（pipelineRunId/repoId）行为不变。
+- **详情出参（按实地实现）**：包含 `commitId`（对齐点②：历史列表「提交」列取消，提交信息在详情页展示）、`lineCoverage`（!345 补充：详情页回显当次记录覆盖率，页面刷新后不依赖列表页透传）、`retentionDays`（!355 补充：详情页直接渲染保留范围提示，与历史列表同口径）。
 
 ### 3.3 上报接口响应扩展（对齐点①：不再新增查询接口）
 
 `POST /ut/coverage/report` 保持 MQ 异步受理语义，同步响应 `data` 扩展为 `{ recordId: String, reportUrl: String }`：
 
 - **recordId 预生成**：Controller 受理时即生成雪花 ID（实体 `@TableId(type = IdType.INPUT)` 已支持指定写入），随 MQ 消息透传，消费者入库沿用同一 ID。响应返回时记录可能尚未入库（MQ 异步），但 recordId 与链接已确定，插件无需二次查询。
-- `reportUrl = {webBaseUrl}/apps/repos?projectId={projectId}&repoId={repoId}&branchName={urlencode(branch)}&recordId={recordId}&utCoverageDetail=1`
+- **reportUrl 格式（后期演进 !363 后的实地格式）**：
+
+  ```
+  {openlibing.domain}/apps/repos/branch/ut-coverage
+    ?projectId={projectId}&platforms={platform}&repoUrlLike={owner/repo}&branchName={urlencode(branch)}&recordId={recordId}
+  ```
+
+  - **定位参数不含 repoId**：repoId 是可变 ID，仓库删除后通过"同步仓库"重建会生成新 ID，写进历史流水线输出链接会在仓库重建后失效；`repoUrlLike` 取 git 地址剥离协议头与 .git 后缀后的 ownerRepo 段（`MetricsObsObjectKeyParser.extractOwnerRepo` 与插件同口径，repoUrl 先剥 query 参数防污染），git 地址不随仓库删除重建变化，链接长期有效。
+  - **platforms 按仓库 URL 域名判定**（复用 `SigInfoClient.parsePlatformFromUrl`：gitcode.com/atomgit.com→gitcode、gitee.com→gitee、github.com→github，值域外返回空），与 repoUrlLike 组合才能在跨平台同名仓场景唯一确认仓库；二者任一无法判定时定位链路不成立，`reportUrl` 降级 null（插件降级告警不失败）。
+  - **branchName 编码**：`encodeQueryValue`（URL 编码后 `+` 统一转 `%20`），保证前端 `decodeURIComponent` 正确还原空格（URLEncoder 的 `+` 是表单语义）。
+
 - `webBaseUrl` 复用 Nacos 既有配置 `openlibing.domain`（如 beta `https://10.0.15.101:8076`），不新增配置项。
+- **受理零失败语义**：链接拼装涉及仓库坐标反查（DB 查询），查询异常或定位失败时降级为 `reportUrl = null` 而不阻断受理——recordId 已生成，MQ 投递与入库不受影响，插件侧链接缺失仅告警。
 - MQ 消费延迟/失败窗口内 URL 短暂指向未入库记录：消费侧 MQ 重试自愈（最终一致），插件不做重试；前端访问窗口内未入库的 recordId 返回「处理中」过程态提示（见 3.2 过程态区分），不误报「记录不存在」。
 - **兼容性**：响应字段为新增，旧版插件不读取新字段行为不变；旧版后端响应无新字段时插件降级告警（见 §5）。
 
@@ -119,12 +141,13 @@ POST /ut/coverage/file-detail（存量）
 ```
 
 - 触发：每日凌晨低峰（运维在 xxl-job 控制台配置 cron）。
-- 执行逻辑：
-  1. `retentionDays <= 0` 直接返回（关闭态）；
+- 执行逻辑（实地实现：`utCoverageCleanupHandler` → `UtCoverageCleanupService.cleanupExpiredRecords()`）：
+  1. `retentionDays <= 0` 直接返回（关闭态，`XxlJobHelper.handleSuccess("Cleanup disabled")`）；
   2. 计算 cutoff = now - retentionDays；
-  3. 循环 `DELETE FROM code_ut_record WHERE detection_completed_at < cutoff LIMIT {batchSize}`，直至影响行数 0；每批之间记录删除量汇总；
-  4. 输出执行摘要（删除总数、耗时），失败记录（status=1）与成功记录统一按 `detection_completed_at` 清理；
-  5. `repo_branch` 的 UT 快照列（ut_line_coverage/ut_pipeline_run_id/ut_detection_time）**不清理**——分支列表"最新指标"始终有值。
+  3. 循环按 `cleanup-batch-size`（500）分批删除：`selectExpiredForCleanup`（UNION ALL 双分支走 detection_completed_at 单列索引）取批 → 逐对象校验 + OBS 级联删除 → 主键批量删 DB，直至批内删除 0 或批不满；
+  4. 输出执行摘要（cutoff、recordsDeleted、obsDeleted、obsFailed）；
+  5. `repo_branch` 的 UT 快照列**不清理**——分支列表"最新指标"始终有值（后期演进：快照新增 `ut_synced_at` 同步时间列，属分支列表指标更新时间任务 branch-metric-update-time，不在本设计范围）。
+- **job 结果判定（按实地实现）**：OBS 级联删除失败仅 `[WARN]` 记录并计入摘要、不回滚 DB 删除、不中断本轮批次，但 **`obsFailed > 0` 时 `XxlJobHelper.handleFail`**（与 branchMetricsSyncHandler 既有约定一致：孤儿对象残留需运维感知）；批间节流被中断时停止后续批次。
 - 与业务的一致性：清理只删历史记录，`selectLatestByGitAndBranch`（分支最新一条）永远能命中保留期内数据；若整个分支数据全部过期，兜底查询自然返回空，前端展示为无扫描记录，无异常路径。
 
 ### 4.1 OBS 原始报告 JSON 文件级联清理（已对齐：方案 A，任务级联删除）
@@ -153,11 +176,11 @@ POST /ut/coverage/file-detail（存量）
 2. 成功：`setOutput('report_url', reportUrl)`；响应无该字段（旧后端版本）：仅 `[WARN]` 告警，不影响 `result=success`——链接缺失不构成流水线失败；
 3. 无额外查询请求、无重试逻辑（对齐点①：URL 由上报响应直接返回）。
 
-输出示例（GitCode step 输出文件，机制不变）：
+输出示例（GitCode step 输出文件，机制不变；链接格式为后期演进 !363 后的实地形态）：
 
 ```
 result=success
-report_url=https://www.openlibing.com/apps/repos?projectId=403256&repoId=823&branchName=develop&recordId=1926534...&utCoverageDetail=1
+report_url=https://www.openlibing.com/apps/repos/branch/ut-coverage?projectId=403256&platforms=gitcode&repoUrlLike=owner%2Frepo&branchName=develop&recordId=1926534...
 ```
 
 ## 6. 前端适配要点（openlibing-web）
@@ -178,13 +201,25 @@ report_url=https://www.openlibing.com/apps/repos?projectId=403256&repoId=823&bra
 
 ## 8. 任务分解（checkbox）
 
-- [ ] db.changelog：新增 detection_completed_at 单列索引
-- [ ] Mapper：selectHistoryPage / countHistory / selectById（不含大字段）
-- [ ] Service/Controller：history 列表接口（含越权校验、retentionDays 下发）
-- [ ] Service/Controller：file-detail 增 recordId 定位 + UT_COVERAGE_RECORD_NOT_FOUND 错误码
-- [ ] Service/Controller：/ut/coverage/report 响应扩展（recordId 预生成 + reportUrl 拼装，复用 Nacos 既有 openlibing.domain）
-- [ ] XxlJobHandler：utCoverageCleanupHandler（分批删除 + OBS 原始报告级联清理 + 摘要日志）
-- [ ] 配置：ut.coverage.retention-days / cleanup-batch-size（application.yml + 配置中心）；reportUrl 域名复用既有 openlibing.domain
-- [ ] 单测：locateRecord 优先级矩阵（recordId/pipelineRunId/兜底）、清理分批边界（含 OBS 级联 NULL 跳过/失败告警）、history 分页
-- [ ] 插件：回调响应消费 recordId/reportUrl + setOutput report_url（含单测）
-- [ ] 前端：历史记录页 + 详情 URL recordId 迁移 + 信息区换位改名 + 过期提示
+- [x] db.changelog：新增 detection_completed_at 单列索引
+- [x] Mapper：selectHistoryPage / countHistory / selectById（不含大字段）
+- [x] Service/Controller：history 列表接口（含越权校验、retentionDays 下发）
+- [x] Service/Controller：file-detail 增 recordId 定位 + UT_COVERAGE_RECORD_NOT_FOUND 统一文案（实地以常量文案 + HTTP 200 失败 DataResult 落地，非独立错误码）
+- [x] Service/Controller：/ut/coverage/report 响应扩展（recordId 预生成 + reportUrl 拼装，复用 Nacos 既有 openlibing.domain）
+- [x] XxlJobHandler：utCoverageCleanupHandler（分批删除 + OBS 原始报告级联清理 + 摘要日志 + obsFailed>0 时 handleFail）
+- [x] 配置：ut.coverage.retention-days / cleanup-batch-size（application.yaml + 配置中心）；reportUrl 域名复用既有 openlibing.domain
+- [x] 单测：locateRecord 优先级矩阵（recordId/pipelineRunId/兜底）、清理分批边界（含 OBS 级联 NULL 跳过/失败告警）、history 分页
+- [x] 插件：回调响应消费 recordId/reportUrl + setOutput report_url（含单测）
+- [x] 前端：历史记录页 + 详情 URL recordId 迁移 + 信息区换位改名 + 过期提示（前端范围：以 !345/!355 前端交付为准）
+
+## 9. 后期演进记录（按实地实现更新）
+
+主设计落地后，同一功能域内又经历三轮跟进（均已合入 master），本设计文档已按实地实现同步更新：
+
+| PR                                    | 主题                                                                                    | 对本设计的影响                                                                                                                                                                                   |
+| ------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| !345（feat-ut-coverage-history 收尾） | 清理查询 UNION 分支括号修复 + 详情接口透出行覆盖率                                      | §2.1 清理批次 SQL 修复；§3.2 详情出参新增 `lineCoverage`（详情页回显当次记录覆盖率）                                                                                                             |
+| !355（分支列表指标更新时间）          | `getFileDetail` 详情接口透出 `retentionDays`                                            | §3.2 详情出参新增 `retentionDays`（详情页直接渲染保留范围提示，与历史列表同口径）。注：分支列表 `utSyncedAt`/`staticAlertCountSyncedAt` 透出属独立任务 branch-metric-update-time，不在本设计范围 |
+| !363（插件结果链接定位参数改造）      | 链接去掉 repoId，改用 `platforms + repoUrlLike` 组合定位；`/file-detail` 仓库定位二选一 | §3.3 reportUrl 格式与降级语义；§3.2 双模式定位 + 反查实现（like 预过滤 + 忽略大小写等值收敛 + LIMIT 50 上限 + 逐候选鉴权 + 防探测统一拒绝）                                                      |
+
+演进动机归档：repoId 为可变 ID（仓库删除重建后失效）是 !363 的根因；详情页保留天数提示与覆盖率回显由前端页面诉求驱动；UNION 括号为 !334 清理批次 SQL 的语法错误修复。

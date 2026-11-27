@@ -1,6 +1,6 @@
 # UT 覆盖率历史扫描记录 — 实现任务（后端 + 插件）
 
-## 进度: 12/12 complete
+## 进度: 12/12 complete + 后期演进 5 项 complete
 
 ## 准备
 
@@ -22,3 +22,11 @@
 ## upload-ut-action（插件）
 
 - [x] T10 回调响应消费 recordId/reportUrl（uploadAndNotify 返回受理 data）+ run() setOutput('report_url')；旧后端无字段/回调失败仅 [WARN] 降级不影响 result；主流程测试重构 + 2 新用例；dist 重建并规范化（npm run package，版本不变）——全量 74 例通过
+
+## 后期演进（按实地实现合入 master）
+
+- [x] E1 !345 收尾：清理批次查询补 UNION 分支括号修复语法错误（SQL 契约回归锁）+ 详情接口回显 lineCoverage（页面刷新后不依赖列表页透传）
+- [x] E2 !355 详情接口透出 retentionDays（详情页直接渲染保留范围提示，与历史列表同口径；UtCoverageFileDetailVO + Service 回填 + 单测）——注：分支列表 utSyncedAt/staticAlertCountSyncedAt 透出属独立任务 branch-metric-update-time
+- [x] E3 !363 链接定位参数改造：reportUrl 去掉 repoId，改用 platforms（SigInfoClient.parsePlatformFromUrl 按 URL 域名判定）+ repoUrlLike（extractOwnerRepo ownerRepo 段，repoUrl 先剥 query）；platform/ownerRepo 无法判定时 reportUrl=null 插件降级；branchName 空格编码 + → %20（encodeQueryValue 口径）
+- [x] E4 !363 /file-detail 仓库定位二选一：repoId（既有链路）或 repoUrlLike+platforms（成对，DTO 类级 @AssertTrue 联合校验，repoId 优先）；反查 = platform 精确过滤 + ownerRepo LIKE 预过滤 + 忽略大小写等值收敛（resolver 慢路径同哲学）+ LIMIT 50 上限（超限统一拒绝防查询放大）+ 逐候选鉴权（无权限跳过、全部无权限与无候选同口径拒绝、归属不符终态优先于处理中窗口）
+- [x] E5 检视意见闭环：反查查询条件 ArgumentCaptor 契约断言（platforms 等值 + ownerRepo like 真实入条件）、候选全部无权限/窗口内记录缺失两分支用例补齐、pageNum 下界用例假通过修复、DTO @Size/@Pattern 白名单、helper platform 字段补齐
