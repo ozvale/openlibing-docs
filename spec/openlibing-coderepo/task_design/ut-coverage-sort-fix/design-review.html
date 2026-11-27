@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分支列表 UT 覆盖率排序修复 — 设计评审方案</title>
+<style>
+  :root {
+    --primary: #1a66ff; --primary-dark: #0e4ecc; --success: #00b578; --danger: #fa5151;
+    --warn: #ff8f1f; --text: #1f2329; --sub: #646a73; --border: #e5e6eb; --bg: #f5f6f7;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; color:var(--text); background:var(--bg); font-size:14px; line-height:1.7; }
+
+  .hero { background:linear-gradient(135deg,#0e4ecc,#1a66ff 55%,#4d8aff); color:#fff; padding:56px 8% 44px; }
+  .hero h1 { font-size:30px; letter-spacing:1px; margin-bottom:12px; }
+  .hero p { opacity:.92; font-size:15px; max-width:900px; }
+  .hero .meta { display:flex; gap:12px; margin-top:22px; flex-wrap:wrap; }
+  .hero .chip { background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.35); border-radius:20px; padding:4px 16px; font-size:13px; }
+
+  nav.toc { position:sticky; top:0; background:#fff; border-bottom:1px solid var(--border); padding:0 8%; display:flex; gap:28px; z-index:10; }
+  nav.toc a { color:var(--sub); text-decoration:none; padding:12px 0; font-size:13px; border-bottom:2px solid transparent; }
+  nav.toc a:hover { color:var(--primary); border-color:var(--primary); }
+
+  section { padding:44px 8% 10px; }
+  h2 { font-size:22px; margin-bottom:6px; display:flex; align-items:center; gap:10px; }
+  h2 .idx { background:var(--primary); color:#fff; font-size:14px; width:28px; height:28px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; }
+  .sub { color:var(--sub); margin-bottom:22px; }
+
+  .card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:22px 26px; margin-bottom:18px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .pain { border-left:4px solid var(--danger); }
+  .pain h3 { font-size:15px; margin-bottom:8px; }
+  .pain p { color:var(--sub); font-size:13px; }
+  .pain .tag { color:var(--danger); font-weight:700; font-size:12px; }
+
+  .arch { background:#fff; border:1px solid var(--border); border-radius:12px; padding:26px; }
+  .arch .flow { display:flex; align-items:stretch; gap:10px; flex-wrap:wrap; margin:14px 0; }
+  .node { border:1.5px solid var(--primary); border-radius:10px; padding:12px 16px; min-width:150px; background:#f4f8ff; }
+  .node b { color:var(--primary-dark); display:block; margin-bottom:3px; font-size:13px; }
+  .node span { font-size:12px; color:var(--sub); }
+  .node.dark { border-color:#3d465a; background:#eef0f4; } .node.dark b { color:#3d465a; }
+  .arrow { align-self:center; color:var(--primary); font-size:20px; font-weight:700; }
+  .lane { margin-bottom:8px; font-size:12px; color:var(--sub); font-weight:700; }
+
+  table { width:100%; border-collapse:collapse; background:#fff; }
+  th { background:#f7f8fa; text-align:left; padding:10px 14px; border-bottom:1px solid var(--border); font-size:13px; color:var(--sub); }
+  td { padding:10px 14px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  .tbl-card { background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:18px; }
+
+  .decision { border-left:4px solid var(--primary); }
+  .decision h3 { font-size:15px; margin-bottom:6px; }
+  .decision p { color:var(--sub); font-size:13px; }
+  .decision .why { margin-top:8px; background:#f4f8ff; border-radius:8px; padding:8px 14px; font-size:12.5px; color:var(--primary-dark); }
+
+  .pill { display:inline-block; padding:1px 10px; border-radius:12px; font-size:12px; font-weight:600; }
+  .pill.blue { background:#e8efff; color:var(--primary); }
+  .pill.green { background:#e8f7f2; color:var(--success); }
+  .pill.orange { background:#fff3e0; color:var(--warn); }
+  .pill.red { background:#fdecec; color:var(--danger); }
+
+  .check { display:flex; gap:8px; align-items:flex-start; margin-bottom:8px; font-size:13px; }
+  .check::before { content:"✓"; color:var(--success); font-weight:700; }
+
+  footer { padding:30px 8% 60px; color:var(--sub); font-size:12px; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>分支列表 UT 覆盖率排序修复 — 设计评审方案</h1>
+  <p>前端传 sortField=utCoverage 排序被静默回退为更新时间排序。根因是排序链路两层白名单均未纳入该字段——数据侧本已具备排序条件（快照列已 SELECT），修复仅需在两层白名单补齐合法映射 + 一个 SQL 渲染契约测试防回归。</p>
+  <div class="meta">
+    <span class="chip">openlibing-coderepo · 后端</span>
+    <span class="chip">bugfix · 2 行生产代码 + 1 契约测试</span>
+    <span class="chip">修复日期 2026-11-12</span>
+    <span class="chip">设计评审稿 v1.0</span>
+  </div>
+</div>
+
+<nav class="toc">
+  <a href="#pain">问题现象</a><a href="#root">根因链路</a><a href="#fix">修复方案</a>
+  <a href="#decision">关键设计决策</a><a href="#impact">影响范围</a><a href="#accept">验证方式</a>
+</nav>
+
+<section id="pain">
+  <h2><span class="idx">1</span>问题现象</h2>
+  <div class="sub">用户按 UT 行覆盖率排序分支列表，列表实际仍按更新时间排序，且无任何报错——静默失败。</div>
+  <div class="tbl-card"><table>
+    <tr><th style="width:130px">项</th><th>内容</th></tr>
+    <tr><td>接口</td><td><code>POST /gateway/openlibing-coderepo/repo/branch/list</code>（项目维度分支列表）</td></tr>
+    <tr><td>现象</td><td>前端传 <code>sortField=utCoverage&amp;sortOrder=desc</code>，列表未按行覆盖率排序，实际仍按更新时间排序</td></tr>
+    <tr><td>请求示例</td><td><code>{"projectId":3,"pageNum":1,"pageSize":10,"sortField":"utCoverage","sortOrder":"desc"}</code></td></tr>
+    <tr><td>修复分支</td><td><code>fix-ut-coverage-sort</code>（基于 master）</td></tr>
+  </table></div>
+</section>
+
+<section id="root">
+  <h2><span class="idx">2</span>根因链路</h2>
+  <div class="sub">排序参数在链路上经两层白名单校验，两层均无 utCoverage 条目，getOrDefault 与 otherwise 双双静默回退。</div>
+  <div class="arch">
+    <div class="lane">▎静默回退链路</div>
+    <div class="flow">
+      <div class="node dark"><b>QueryProjectBranchDTO</b><span>sortField = "utCoverage"</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>resolveProjectBranchSortField</b><span class="pill red">白名单 ① 无该条目</span><span>PROJECT_BRANCH_SORT_FIELD_MAP 无 "utCoverage" → getOrDefault 回退 update_at</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>projectBranchOrderBy</b><span class="pill red">白名单 ② 无该分支</span><span>RepoBranchInfoMapper.xml &lt;choose&gt; 无 ut_line_coverage 分支 → &lt;otherwise&gt;b.update_at&lt;/otherwise&gt;</span></div>
+    </div>
+  </div>
+  <div class="card decision">
+    <h3>关键事实：数据侧已具备排序条件</h3>
+    <p><code>queryProjectBranchByLimit</code> 本就 SELECT 了 <code>repo_branch</code> 分支表的 UT 覆盖率快照列 <code>b.ut_line_coverage</code>（与 code_scale、static_alert_count 等度量快照列同表同模式），仅排序白名单遗漏该字段。白名单双重校验的设计目的是<b>防 SQL 注入</b>（用户输入不直接拼列名），因此修复不是放开透传，而是在两层白名单中补齐合法映射。</p>
+  </div>
+</section>
+
+<section id="fix">
+  <h2><span class="idx">3</span>修复方案</h2>
+  <div class="sub">共 2 行生产代码 + 1 个 SQL 渲染契约测试。</div>
+  <div class="grid3">
+    <div class="card decision"><h3>① Java 服务层白名单补映射</h3>
+      <p><code>RepoServiceImpl#PROJECT_BRANCH_SORT_FIELD_MAP</code> 补齐 <code>"utCoverage" → "ut_line_coverage"</code> 映射（紧跟 staticAlertCount 条目）。</p>
+      <div class="why">DTO 驼峰字段名归一为数据库裸列名，sortField 从「静默回退 update_at」变为按预期排序。</div></div>
+    <div class="card decision"><h3>② Mapper XML ORDER BY 补 when 分支</h3>
+      <p><code>RepoBranchInfoMapper.xml &lt;sql id="projectBranchOrderBy"&gt;</code> 新增 <code>&lt;when test="info.sortField == 'ut_line_coverage'"&gt;b.ut_line_coverage&lt;/when&gt;</code>（位于 static_alert_count 分支之后、otherwise 之前）。</p>
+      <div class="why">&lt;choose&gt; 精确匹配 OGNL 常量，白名单归一后才进入 ORDER BY，无注入面扩大。</div></div>
+    <div class="card decision"><h3>③ SQL 渲染契约测试防回归</h3>
+      <p><code>RepoBranchInfoMapperSqlTest</code> 新增用例 <code>projectBranchOrderBy_RendersBareColumn_ForUtLineCoverage</code>：断言该 when 分支渲染为裸列 <code>b.ut_line_coverage</code>。</p>
+      <div class="why">防止被误删或改写成 IFNULL 包裹（NULL 按 0 参与排序会导致未上报分支与 0 覆盖率分支混排）。</div></div>
+  </div>
+</section>
+
+<section id="decision">
+  <h2><span class="idx">4</span>关键设计决策</h2>
+  <div class="tbl-card"><table>
+    <tr><th style="width:220px">决策点</th><th>方案</th><th style="width:330px">理由与备选</th></tr>
+    <tr><td><b>裸列排序 NULL 语义</b></td><td><code>ut_line_coverage</code> 使用<b>裸列</b>排序，依赖 MySQL 原生 NULL 语义：desc 时无 UT 覆盖率（未上报）的分支恒排最后，asc 时恒排最前</td><td>与 static_alert_count 及其余度量快照字段口径完全统一（staticAlertCount 排序定案时的既定口径）。<b>禁止</b>：IFNULL 包裹会把 NULL 当 0 参与排序，导致未上报分支与 0 覆盖率分支混排</td></tr>
+    <tr><td><b>白名单补齐而非放开透传</b></td><td>sortField 仍经两层白名单归一后才进入 ORDER BY，仅补合法映射条目</td><td>防 SQL 注入是白名单存在目的，用户输入永不直接拼列名；放开透传会扩大注入面</td></tr>
+    <tr><td><b>契约测试锁排序语义</b></td><td>SQL 渲染断言锁定裸列形态（projectBranchOrderBy_RendersBareColumn_ForUtLineCoverage）</td><td>白名单双重校验是纯配置式修复，最易被后续改动误删/误包 IFNULL；契约测试以最低成本锁死回归点</td></tr>
+  </table></div>
+</section>
+
+<section id="impact">
+  <h2><span class="idx">5</span>影响范围与风险</h2>
+  <div class="tbl-card"><table>
+    <tr><th style="width:130px">维度</th><th>评估</th></tr>
+    <tr><td>改动面</td><td>2 行生产代码（白名单映射 + ORDER BY 分支）+ 1 个轻量契约测试用例，无接口契约 / DDL / MQ 变化</td></tr>
+    <tr><td>兼容性</td><td>纯增量：utCoverage 从「静默回退 update_at」变为按预期排序；其余字段行为不变</td></tr>
+    <tr><td>SQL 注入</td><td>sortField 仍经白名单归一后才进入 ORDER BY（&lt;choose&gt; 精确匹配 OGNL 常量），无注入面扩大</td></tr>
+    <tr><td>性能</td><td>ORDER BY 列与既有度量列同表同模式，无新增 join / 子查询；如需可后续评估 ut_line_coverage 索引</td></tr>
+    <tr><td>数据</td><td>无 DDL、无数据迁移；UT 覆盖率快照列由上报链路写入 / 维护（分支最新一次成功解析的行覆盖率），排序值与详情页展示值同源，无一致性风险</td></tr>
+  </table></div>
+</section>
+
+<section id="accept">
+  <h2><span class="idx">6</span>验证方式</h2>
+  <div class="card">
+    <div class="check">RepoBranchInfoMapperSqlTest：2/2 通过（static_alert_count + ut_line_coverage 裸列断言）。</div>
+    <div class="check">联调验证：projectId=3 下传 sortField=utCoverage&amp;sortOrder=desc，确认列表按行覆盖率降序、无覆盖率的分支排尾部；sortOrder=asc 时无覆盖率分支排头部。</div>
+  </div>
+</section>
+
+<footer>
+  设计评审稿 · 分支列表 UT 覆盖率排序修复 · 详见同目录《design.md》
+</footer>
+
+</body>
+</html>
