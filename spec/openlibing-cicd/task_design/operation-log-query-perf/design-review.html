@@ -44,15 +44,19 @@
         ├─ 30s TTL 命中 → 直接返回缓存副本
         └─ 未命中 → 原有 5 维度 GROUP BY 循环 → 结果写缓存</div>
 
-<h3>2.2 阶段二：存储侧覆盖索引（framework）</h3>
-<div class="flow">log_operation（索引总数 6 → 6，写入零净增；执行顺序：先建新索引、后删旧索引）
-  新增: idx_project_module_time_user_resource
-        (project_id, module_id, operation_end_time, id, user_name, resource_name)
-  删除: idx_project_module_time (project_id, module_id, operation_end_time, id) —— 新索引就绪后再删
+<h3>2.2 阶段二：存储侧覆盖索引（framework）【已撤销，未交付】</h3>
+<div class="flow">原方案: 三合一替换（先建 idx_project_module_time_user_resource → 后删 idx_project_module_time）
 
-  WHERE 前缀命中 → user_name / resource_name 聚合列已在索引内 → 免回表，GROUP BY 免物化
-  id 紧跟 operation_end_time → 列表 ORDER BY time DESC, id DESC 仍走索引序免 filesort
-  交付方式: Liquibase changeSet（tableExists + indexExists 幂等 + 双向 rollback）</div>
+撤销（PR !560 检视发现，commit 9f347e43）:
+  ① P0 阻断: 6 列索引键长 = 5×1020(utf8mb4 VARCHAR(255)) + 5(DATETIME) = 5105 字节
+     > InnoDB 3072 上限 → CREATE INDEX 必报 ERROR 1071，
+     changeSet 随启动重放、每次阻断应用启动
+  ② P3 列序: user_name / resource_name 位于范围列 operation_end_time 之后，
+     GROUP BY 仍走 temporary/filesort，尾列仅覆盖扫描、收益存疑
+  ③ 反证: 既有 idx_project_module_time 已达 3065 字节贴上限，
+     当前列宽（VARCHAR(255) × utf8mb4）下不存在可行的超集覆盖索引
+
+最终交付: 仅阶段一缓存；framework 无任何 DDL 变更，索引总数维持 6 个</div>
 
 <h3>2.3 与既有链路的衔接</h3>
 <p>五个接口路径、入参、出参、权限语义全部不变；明细脱敏链路（OperationLogSensitiveMasker）不动；白名单写入链路不受影响（写入不调用 OperationLogWriteModules）。framework 侧无需任何 Java 改动。</p>
@@ -65,9 +69,9 @@
 
 <div class="decision"><b>D3 filter-meta 缓存 key：时间区间按分钟取整。</b> 提升命中率；筛选候选值列表是元数据，分钟级精度无业务影响。权限校验先于缓存读写，命中不绕过鉴权。</div>
 
-<div class="decision"><b>D4 索引只上 user_name / resource_name 两个，ip / log_result 不建。</b> log_result 基数仅 3；ip 过滤低频。高频维度先见效，低频维度观察后再定，避免宽表写放大过度。</div>
+<div class="decision"><b>D4 索引只上 user_name / resource_name 两个，ip / log_result 不建。【随阶段二撤销而失效】</b> log_result 基数仅 3；ip 过滤低频。该决策以「可建索引」为前提，覆盖索引经检视否决后不再成立。</div>
 
-<div class="decision"><b>D5 三合一替换：删除 idx_project_module_time，新建 (project_id, module_id, operation_end_time, id, user_name, resource_name)。</b> 新索引前三列与旧索引完全一致，任何命中旧索引的查询都可用新索引（含 ORDER BY time DESC, id DESC 的索引序，因 id 紧跟 time）。若保留旧索引另加 2 个新索引，日志三条写路径（INSERT / updateFinish 回填 end_time / 清理 DELETE）的索引维护 +33%；三合一后索引数 6→6，写入零净增，同时覆盖 user_name / resource_name 两维度。评审时因写放大顾虑由「加 2 个」改为本方案。</div>
+<div class="decision"><b>D5 阶段二覆盖索引方案：经 PR !560 检视否决，整体撤销（commit 9f347e43）。</b> 检视证据链：6 列索引键长 5105 字节超 InnoDB 3072 上限（5×VARCHAR(255) utf8mb4 单列 1020 + DATETIME 5），CREATE INDEX 必报 ERROR 1071，changeSet 随启动重放阻断启动；既有 idx_project_module_time 已达 3065 字节贴上限，无追加余量；且 GROUP BY 分组列位于范围列后无法免 temporary/filesort。曾评估的替代方向（窄索引 (project_id, module_id, user_name)=3060 字节贴上限且失去时间下推、缩列宽 schema 变更）均有明确代价，留待 BETA 实测数据后再评估。历史决策记录：最初「新增 2 个独立索引」因写放大 +33% 否决 → 改为「三合一替换」→ 检视发现键长硬阻断后整体撤销。</div>
 
 <div class="decision"><b>D6 framework 白名单端不做缓存。</b> 瓶颈在调用频次而非单次库内查询耗时，调用方缓存已消除频次问题。</div>
 
@@ -75,15 +79,15 @@
 <table>
 <tr><th scope="col">风险</th><th scope="col">缓解</th><th scope="col">回滚</th></tr>
 <tr><td>缓存导致元数据短时陈旧（最长 30s/60s）</td><td>TTL 可经 Apollo 调整，≤0 即禁用；筛选候选值场景可接受</td><td>Apollo 配置置 0，即时生效</td></tr>
-<tr><td>替换索引后 user_name/resource_name 以外维度（ip / log_result）仍回表</td><td>两维度基数低、占比小；观察收益后再定</td><td>Liquibase rollback（删新索引 + 重建旧索引）</td></tr>
-<tr><td>索引 DDL 在大表上的构建耗时</td><td>经 Liquibase 启动执行，BETA 先行验证 EXPLAIN</td><td>changeSet MARK_RAN 幂等可重放</td></tr>
+<tr><td>filter-meta 首查仍走原执行计划（回表+temporary+filesort），首查耗时改善有限</td><td>索引优化经检视否决（键长超 InnoDB 上限），本期以同参数重复查询命中缓存为主要收益；首查优化留待列宽/窄索引评估</td><td>不涉及 DDL，无索引回滚项</td></tr>
 </table>
 
 <h2>5. 验收要点</h2>
 <ul>
-<li class="ok">filter-meta 各维度 EXPLAIN 无 temporary / filesort</li>
+<li class="ok">filter-meta 同参数重复查询 TTL 内命中缓存、不触达 DB（首查执行计划不变）</li>
 <li class="ok">白名单 Feign 调用频次 = 每 TTL 窗口至多 1 次</li>
 <li class="ok">权限校验先于缓存（行为不变）</li>
+<li class="ok">log_operation 无任何 DDL 变更，索引总数维持 6 个</li>
 <li class="ok">cicd / coderepo 增量行覆盖率 ≥80%</li>
 </ul>
 

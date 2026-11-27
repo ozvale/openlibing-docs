@@ -23,21 +23,22 @@
 - 阶段一（openlibing-cicd + openlibing-coderepo）：
   - 白名单 TTL 本地缓存（默认 60s，Apollo 可配，失败闭门语义不变）；
   - filter-meta 查询结果 TTL 缓存（默认 30s，key = projectId + 规范化过滤条件 + 时间区间分钟取整），权限校验保持在缓存之前。
-- 阶段二（openlibing-framework）：
-  - Liquibase「三合一替换」覆盖索引（先建后删）：新建 `idx_project_module_time_user_resource (project_id, module_id, operation_end_time, id, user_name, resource_name)`，新索引就绪后删除 `idx_project_module_time`；索引总数保持 6 个不变，写入索引维护零净增（原「新增 2 个独立索引」方案经评审因写放大 +33% 否决）；幂等可回滚。
-- 不做（本期明确排除）：ip / log_result 维度索引（基数低，观察后再定）、framework 白名单端缓存、预热 / 并行 / JOIN 改写。
+- 阶段二（openlibing-framework）【已撤销，未交付】：
+  - 原方案为 Liquibase「三合一替换」覆盖索引（先建后删）：新建 `idx_project_module_time_user_resource (project_id, module_id, operation_end_time, id, user_name, resource_name)`，新索引就绪后删除 `idx_project_module_time`（该方案此前已因写放大 +33% 否决过「新增 2 个独立索引」方案）。
+  - **撤销原因（PR !560 检视发现）**：6 列索引键长 5105 字节（5×VARCHAR(255) utf8mb4 单列 1020 + DATETIME 5）超 InnoDB 3072 字节上限，CREATE INDEX 必报 ERROR 1071，changeSet 随启动重放阻断应用启动；且分组列位于范围列之后，GROUP BY 无法免 temporary/filesort。方案级否决详见 design.md §1。
+- 不做（本期明确排除）：ip / log_result 维度索引（基数低，观察后再定）、framework 白名单端缓存、预热 / 并行 / JOIN 改写；以及任何 log_operation 索引/列宽变更（既有 `idx_project_module_time` 已达 3065 字节贴 InnoDB 上限，当前列宽下不存在可行的覆盖索引，后续如需优化须先评估列宽收缩）。
 
 ## 验收标准
 
-- [ ] filter-meta 各维度查询执行计划不再出现 temporary / filesort（EXPLAIN 验证）
+- [ ] filter-meta 同参数重复查询在 TTL 窗口内命中缓存、不触达 DB（阶段二索引优化已否决，重复查询收益由缓存承担；首查执行计划不变）
 - [ ] 白名单远程拉取频次降为每 TTL 窗口一次
-- [ ] 接口首查耗时明显下降
+- [ ] filter-meta 首查执行计划（temporary / filesort）不变，不承诺首查整体耗时明显下降（首查优化留待列宽/窄索引后续评估）；首查收益仅限白名单 Feign 调用频次下降
 - [ ] 权限校验行为不变（校验先于缓存生效）
-- [ ] 索引替换（先建后删）幂等可回滚；log_operation 二级索引总数保持 6 个不变、写入索引维护零净增、任意时刻至少存在一个 `(project_id, module_id, operation_end_time)` 前缀索引可用
+- [ ] log_operation 表无任何 DDL 变更：二级索引总数维持 6 个、无列变更（openlibing-framework PR !560 检视后已撤销阶段二，commit `9f347e43`）
 - [ ] cicd / coderepo 改动行增量覆盖率 ≥80%
 
 ## 影响范围
 
 - openlibing-cicd：`common/operationlog/OperationLogWriteModules.java`、`business/service/impl/LoggingServiceImpl.java`（queryFilterMeta 缓存）、新增缓存组件与单测
 - openlibing-coderepo：同名类与同链路改动
-- openlibing-framework：`db/changelog/v1.0.1/log_operation_filter_meta_index.xml`（新增，create 新索引 → drop 旧 `idx_project_module_time`）、`db/changelog.xml`（include 注册）
+- openlibing-framework：无改动（原 changeSet 文件 log_operation_filter_meta_index.xml 与 include 注册已随阶段二整体撤销，commit `9f347e43`）
