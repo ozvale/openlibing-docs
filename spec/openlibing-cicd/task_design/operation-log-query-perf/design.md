@@ -10,34 +10,39 @@
 
 ### 总体方案
 
-分两个阶段，互相独立、可分别交付：
+原设计分两个阶段，互相独立、可分别交付；**阶段二已在 PR !560 检视后整体撤销，最终交付仅含阶段一**：
 
 **阶段一 —— 查询侧缓存（openlibing-cicd + openlibing-coderepo）**
 
 1. 白名单 TTL 本地缓存：`OperationLogWriteModules.listAllowed()` 增加进程内 TTL 缓存，默认 60s，Apollo 配置可调（`@Value`，与两仓既有配置注入风格一致）。
 2. filter-meta 结果 TTL 缓存：`LoggingServiceImpl.queryFilterMeta` 在权限校验通过后按规范化 key 缓存最终 `filterMeta` 结果，默认 30s。
 
-**阶段二 —— 存储侧覆盖索引（openlibing-framework）**
+**阶段二 —— 存储侧覆盖索引（openlibing-framework）【已撤销，未交付】**
 
-log_operation 表以「三合一替换」方式调整索引：删除既有 `idx_project_module_time`，新建一个覆盖索引（其前缀完整替代旧索引的全部查询能力），使 user_name / resource_name 维度的 GROUP BY 查询获得覆盖索引，消除回表，且索引总数保持 6 个不变：
+原方案：log_operation 表以「三合一替换」方式调整索引——删除既有 `idx_project_module_time`，新建覆盖索引 `idx_project_module_time_user_resource (project_id, module_id, operation_end_time, id, user_name, resource_name)`，使 user_name / resource_name 维度的 GROUP BY 获得覆盖索引，索引总数保持 6 个不变。
 
-- 删除 `idx_project_module_time (project_id, module_id, operation_end_time, id)`
-- 新增 `idx_project_module_time_user_resource (project_id, module_id, operation_end_time, id, user_name, resource_name)`
+**撤销原因（PR !560 检视发现，openlibing-framework commit `9f347e43` 已撤销全部 DDL）**：
 
-冷启动开销（连接池懒建连、mapper 首解析、JIT、buffer pool）不做专项处理：阶段一缓存天然把首查后的重复查询挡在缓存层，阶段二索引缩小扫描面，两者叠加后冷启动剩余开销可接受。
+1. **索引键长超上限（P0，阻断性）**：`log_operation` 相关列（id / module_id / project_id / resource_id / resource_name / user_name）均为 `VARCHAR(255)` 且表已 `CONVERT TO CHARACTER SET utf8mb4`（每字符 4 字节，单列索引键 1020 字节），6 列索引键长 = 5×1020 + 5(DATETIME) = **5105 字节 > InnoDB 单索引 3072 字节上限**，`CREATE INDEX` 必报 ERROR 1071；changeSet 失败不写 DATABASECHANGELOG，随启动重放、每次阻断应用启动。反向佐证：现有 `idx_project_module_time`（3×1020+5=3065 字节）已贴上限，无追加任何列的余量。
+2. **列序无法达成设计目标（P3）**：user_name / resource_name 位于范围谓词列 operation_end_time 之后，分组列不连续，GROUP BY 仍走 temporary/filesort，尾列仅提供覆盖扫描；而 5105 字节的超宽键使 16KB 页仅容纳约 3 条键，覆盖扫描收益存疑。
+3. **写放大评估修正**：即便可行，覆盖扫描相对阶段一缓存叠加的边际收益，不足以补偿超宽索引对高频写入宽表（INSERT / updateFinish 回填 / 清理 DELETE）的维护成本。
+
+结论：阶段二经检视否决，**性能优化仅交付阶段一**。列宽收缩（schema 变更）、窄索引（如 `(project_id, module_id, user_name)`，3060 字节贴上限且失去时间范围下推）等替代方向均存在明确代价，留待后续按 BETA 实测数据另行评估（不在本期范围）。
+
+冷启动开销（连接池懒建连、mapper 首解析、JIT、buffer pool）不做专项处理：阶段一缓存把首查后的重复查询挡在缓存层，剩余冷启动开销可接受。
 
 ### 关键决策
 
-| 决策点                         | 结论                                                                            | 理由                                                                                                                                                                                                                              |
-| ------------------------------ | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 缓存实现                       | 手写轻量 TTL 结构，不引入 Caffeine/Guava                                        | 两仓 pom 均无缓存框架依赖；改动最小、无新依赖风险                                                                                                                                                                                 |
-| 白名单失败语义                 | 仅缓存「成功且非空」结果；失败/空列表不入缓存，当次请求照旧闭门失败             | 保持现有每请求可重试的失败恢复能力，避免把瞬时故障放大成 60s 全局闭门                                                                                                                                                             |
-| filter-meta 缓存 key           | projectId + 维度集合 + 各维度规范化过滤值 + selectedValues + 时间区间按分钟取整 | 时间按分钟取整提升命中率；分钟级精度对「筛选候选值列表」这类元数据无业务影响                                                                                                                                                      |
-| 权限校验与缓存顺序             | 校验先于缓存读写                                                                | 缓存命中仍要求当前用户是项目成员，行为与现状一致                                                                                                                                                                                  |
-| 索引列顺序                     | project_id, module_id, operation_end_time, id, user_name, resource_name         | 前三列与既有 `idx_project_module_time` 前缀一致；`id` 紧跟 `operation_end_time` 保持 `ORDER BY operation_end_time DESC, id DESC` 的索引序免 filesort；user_name / resource_name 尾列使两维度 GROUP BY 免回表                      |
-| 既有 `idx_project_module_time` | 删除（被新索引前缀完整替代）                                                    | 新索引前三列与其完全一致，任何命中旧索引的查询都可用新索引；删除后索引总数 6→6，日志写入（INSERT / updateFinish 回填 / 清理 DELETE）的索引维护成本零净增；若保留旧索引则 6→8，索引维护 +33%（方案评审时因写入放大顾虑改为三合一） |
-| ip / log_result 维度           | 不建索引                                                                        | ip 与 log_result 过滤基数低；本期先上 user_name / resource_name 两个高频维度，观察收益后再定                                                                                                                                      |
-| framework 白名单端             | 不做缓存                                                                        | 白名单查询 framework 侧走库内查询，瓶颈在调用频次而非单次耗时；调用方缓存已消除频次问题                                                                                                                                           |
+| 决策点                                   | 结论                                                                            | 理由                                                                                                                                                                                                                               |
+| ---------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 缓存实现                                 | 手写轻量 TTL 结构，不引入 Caffeine/Guava                                        | 两仓 pom 均无缓存框架依赖；改动最小、无新依赖风险                                                                                                                                                                                  |
+| 白名单失败语义                           | 仅缓存「成功且非空」结果；失败/空列表不入缓存，当次请求照旧闭门失败             | 保持现有每请求可重试的失败恢复能力，避免把瞬时故障放大成 60s 全局闭门                                                                                                                                                              |
+| filter-meta 缓存 key                     | projectId + 维度集合 + 各维度规范化过滤值 + selectedValues + 时间区间按分钟取整 | 时间按分钟取整提升命中率；分钟级精度对「筛选候选值列表」这类元数据无业务影响                                                                                                                                                       |
+| 权限校验与缓存顺序                       | 校验先于缓存读写                                                                | 缓存命中仍要求当前用户是项目成员，行为与现状一致                                                                                                                                                                                   |
+| 索引列顺序（已否决）                     | project_id, module_id, operation_end_time, id, user_name, resource_name         | 原设计意图：前三列与既有 `idx_project_module_time` 前缀一致、`id` 紧跟时间列保持索引序免 filesort、尾列使 GROUP BY 免回表；**经检视否决**：6 列键长 5105 字节超 InnoDB 3072 上限必建失败，且分组列位于范围列后本就无法免 temporary |
+| 既有 `idx_project_module_time`（已否决） | 不删除（阶段二整体撤销）                                                        | 原方案「三合一替换」依赖覆盖索引建成；覆盖索引经检视否决后，替换失去前提，旧索引保留不动，索引总数维持 6 个                                                                                                                        |
+| ip / log_result 维度                     | 不建索引                                                                        | ip 与 log_result 过滤基数低；本期先上 user_name / resource_name 两个高频维度，观察收益后再定                                                                                                                                       |
+| framework 白名单端                       | 不做缓存                                                                        | 白名单查询 framework 侧走库内查询，瓶颈在调用频次而非单次耗时；调用方缓存已消除频次问题                                                                                                                                            |
 
 ## 2. 实现逻辑设计
 
@@ -82,17 +87,11 @@ queryFilterMeta(query, userId)
 - 失败路径（异常返回 failure）不写缓存。
 - 敏感信息脱敏（OperationLogSensitiveMasker）发生在明细查询链路，filter-meta 仅含维度候选值与计数，不涉及脱敏逻辑变化。
 
-### 2.3 覆盖索引 changeSet（framework）
+### 2.3 覆盖索引 changeSet（framework）【已撤销】
 
-新增 `db/changelog/v1.0.1/log_operation_filter_meta_index.xml`，两个 changeSet（**先 create 新索引、后 drop 旧索引**：构建新索引期间旧索引继续服务全部查询，任意时刻至少存在一个 `(project_id, module_id, operation_end_time)` 前缀索引，消除查询裸奔窗口），参照 `iam_account_query_perf_index.xml` 既有风格：
+原设计为新增 `db/changelog/v1.0.1/log_operation_filter_meta_index.xml`（两个 changeSet，先 create 新索引、后 drop 旧索引，幂等前置条件 + 双向 rollback），并在 `db.changelog.xml` 注册 include。
 
-**changeSet 在 XML 中的书写顺序必须为 create → drop**（Liquibase 按 changeSet 先后顺序执行，与下列分项一一对应）：
-
-- create changeSet（先执行）：`tableExists + not indexExists` 前置条件，`onFail="MARK_RAN"` 幂等；rollback 为 `dropIndex`；
-- drop changeSet（后执行，新索引就绪后才删）：`tableExists + indexExists` 双前置条件，`onFail="MARK_RAN"` 幂等；rollback 为重建 `idx_project_module_time`；
-- 在 `db.changelog.xml` 末尾追加 include 注册。
-
-索引在 BETA 环境由 Liquibase 随服务启动自动执行；上线前用 EXPLAIN 验证 filter-meta 各维度执行计划。
+**处置**：PR !560 检视发现 6 列覆盖索引键长 5105 字节超 InnoDB 3072 字节上限（详见 §1 阶段二撤销原因），该 changeSet 一旦合入将随服务启动重复失败并阻断启动。已按方案 A **整体撤销阶段二**：删除 changeSet 文件与 include 注册（framework commit `9f347e43`，pre-commit 全部通过），framework 侧不再包含任何 DDL 变更。
 
 ## 3. 类设计
 
@@ -102,28 +101,25 @@ queryFilterMeta(query, userId)
 | openlibing-cicd      | `common/operationlog/FilterMetaCache`（新增） | LRU+TTL 缓存组件：put/get/容量上限                                        |
 | openlibing-cicd      | `LoggingServiceImpl`                          | `queryFilterMeta` 接入缓存（key 构建 + 读写副本）                         |
 | openlibing-coderepo  | 同名三个类                                    | 同构改动（coderepo 的 `listAllowed` 无 mirror_detail 排除逻辑，其余一致） |
-| openlibing-framework | 无 Java 类改动                                | 仅 Liquibase changeSet 文件 + include 注册                                |
+| openlibing-framework | 无 Java 类改动                                | 无任何改动（原阶段二 Liquibase changeSet 经检视撤销）                     |
 
 两仓类结构互为镜像（既有代码即如此：`OperationLogWriteModules` 在两仓各自存在），本次沿用该组织方式，不抽公共库（跨仓共享需走 common SDK 发版，超出本期范围）。
 
 ## 4. 数据模型设计
 
-log_operation 表无列变化，索引数保持 6 个：删除 1 个、新增 1 个：
+log_operation 表**无任何变化**：无列变更、无索引增删，二级索引总数维持既有 6 个（`idx_operation_time` / `idx_module_time` / `idx_project_module_time` / `idx_project_resource_time` / `idx_user_time` / `idx_account_time`）。
 
-| 索引名                                  | 动作 | 列                                                                      |
-| --------------------------------------- | ---- | ----------------------------------------------------------------------- |
-| `idx_project_module_time`               | 删除 | project_id, module_id, operation_end_time, id                           |
-| `idx_project_module_time_user_resource` | 新增 | project_id, module_id, operation_end_time, id, user_name, resource_name |
+原阶段二「三合一替换」索引方案经 PR !560 检视否决后撤销（撤销理由与证据链见 §1）：核心阻断点是覆盖索引键长 5105 字节超 InnoDB 3072 字节上限；既有 `idx_project_module_time` 本身已达 3065 字节、贴上限无追加余量，说明在当前 VARCHAR(255) × utf8mb4 列宽下该表**不存在可行的超集覆盖索引**，任何索引增强都需先做列宽收缩（schema 变更）并另行评估。
 
-写放大权衡：log_operation 为写入高频宽表（异步 INSERT、`updateFinish` 回填 operation_end_time、清理 DELETE 三条写路径都要维护全部二级索引）。原方案新增 2 个索引会使索引维护成本 +33%；三合一替换后索引数不变、写入零净增，同时 user_name / resource_name 查询消除回表 + temporary 开销。代价是新索引较宽（多两条 varchar 尾列、树页密度略降），可接受。ip / log_result 维度基数低，不建索引。
+ip / log_result 维度不建索引的结论不变（基数低）。
 
 ## 5. 性能设计
 
 - 白名单：每请求 1~N 次 Feign 调用 → 每 TTL 窗口（默认 60s）至多 1 次，P99 时延直接削掉一次远程 RTT。
 - filter-meta：同参数组合 30s 窗口内重复查询由 5 次维度 GROUP BY（每次 temporary+filesort）降为 0 次 DB 访问。
-- 覆盖索引：user_name / resource_name 维度 GROUP BY 免回表；moduleId / logResult 维度维持现状（前者本就命中新索引的 `(project_id, module_id, operation_end_time)` 前缀，后者基数 3）；列表查询 `ORDER BY operation_end_time DESC, id DESC` 继续走索引序免 filesort（`id` 紧跟 `operation_end_time`）。
-- 冷启动：阶段一缓存使首查后的查询不再依赖冷路径，阶段二降低首查扫描量；不单独做预热。
-- 验证方式：本地单测（缓存命中/过期/禁用/失败闭门）+ BETA 环境 EXPLAIN 与接口时延对比。
+- 冷启动：阶段一缓存使首查后的重复查询不再依赖冷路径；不单独做预热。
+- filter-meta 各维度执行计划（temporary / filesort）本期**不变**：索引优化经检视否决（§1），同参数重复查询的性能收益由 30s 缓存承担，首查仍走原执行计划。
+- 验证方式：本地单测（缓存命中/过期/禁用/失败闭门）+ BETA 环境接口时延对比。
 
 ## 6. API接口设计
 
