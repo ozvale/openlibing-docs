@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UT 覆盖率详情页来源流水线信息补齐 — 设计评审方案</title>
+<style>
+  :root {
+    --primary: #1a66ff; --primary-dark: #0e4ecc; --success: #00b578; --danger: #fa5151;
+    --warn: #ff8f1f; --text: #1f2329; --sub: #646a73; --border: #e5e6eb; --bg: #f5f6f7;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; color:var(--text); background:var(--bg); font-size:14px; line-height:1.7; }
+
+  .hero { background:linear-gradient(135deg,#0e4ecc,#1a66ff 55%,#4d8aff); color:#fff; padding:56px 8% 44px; }
+  .hero h1 { font-size:30px; letter-spacing:1px; margin-bottom:12px; }
+  .hero p { opacity:.92; font-size:15px; max-width:900px; }
+  .hero .meta { display:flex; gap:12px; margin-top:22px; flex-wrap:wrap; }
+  .hero .chip { background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.35); border-radius:20px; padding:4px 16px; font-size:13px; }
+
+  nav.toc { position:sticky; top:0; background:#fff; border-bottom:1px solid var(--border); padding:0 8%; display:flex; gap:28px; z-index:10; }
+  nav.toc a { color:var(--sub); text-decoration:none; padding:12px 0; font-size:13px; border-bottom:2px solid transparent; }
+  nav.toc a:hover { color:var(--primary); border-color:var(--primary); }
+
+  section { padding:44px 8% 10px; }
+  h2 { font-size:22px; margin-bottom:6px; display:flex; align-items:center; gap:10px; }
+  h2 .idx { background:var(--primary); color:#fff; font-size:14px; width:28px; height:28px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; }
+  .sub { color:var(--sub); margin-bottom:22px; }
+
+  .card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:22px 26px; margin-bottom:18px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .pain { border-left:4px solid var(--danger); }
+  .pain h3 { font-size:15px; margin-bottom:8px; }
+  .pain p { color:var(--sub); font-size:13px; }
+  .pain .tag { color:var(--danger); font-weight:700; font-size:12px; }
+
+  .arch { background:#fff; border:1px solid var(--border); border-radius:12px; padding:26px; }
+  .arch .flow { display:flex; align-items:stretch; gap:10px; flex-wrap:wrap; margin:14px 0; }
+  .node { border:1.5px solid var(--primary); border-radius:10px; padding:12px 16px; min-width:150px; background:#f4f8ff; }
+  .node b { color:var(--primary-dark); display:block; margin-bottom:3px; font-size:13px; }
+  .node span { font-size:12px; color:var(--sub); }
+  .node.dark { border-color:#3d465a; background:#eef0f4; } .node.dark b { color:#3d465a; }
+  .arrow { align-self:center; color:var(--primary); font-size:20px; font-weight:700; }
+  .lane { margin-bottom:8px; font-size:12px; color:var(--sub); font-weight:700; }
+
+  table { width:100%; border-collapse:collapse; background:#fff; }
+  th { background:#f7f8fa; text-align:left; padding:10px 14px; border-bottom:1px solid var(--border); font-size:13px; color:var(--sub); }
+  td { padding:10px 14px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  .tbl-card { background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:18px; }
+
+  .decision { border-left:4px solid var(--primary); }
+  .decision h3 { font-size:15px; margin-bottom:6px; }
+  .decision p { color:var(--sub); font-size:13px; }
+  .decision .why { margin-top:8px; background:#f4f8ff; border-radius:8px; padding:8px 14px; font-size:12.5px; color:var(--primary-dark); }
+
+  .pill { display:inline-block; padding:1px 10px; border-radius:12px; font-size:12px; font-weight:600; }
+  .pill.blue { background:#e8efff; color:var(--primary); }
+  .pill.green { background:#e8f7f2; color:var(--success); }
+  .pill.orange { background:#fff3e0; color:var(--warn); }
+  .pill.red { background:#fdecec; color:var(--danger); }
+
+  .check { display:flex; gap:8px; align-items:flex-start; margin-bottom:8px; font-size:13px; }
+  .check::before { content:"✓"; color:var(--success); font-weight:700; }
+
+  footer { padding:30px 8% 60px; color:var(--sub); font-size:12px; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>UT 覆盖率详情页来源流水线信息补齐 — 设计评审方案</h1>
+  <p>对齐同仓 code metrics 既有先例（#219 已修）：插件标准 JSON 元数据一次补齐三个缺失字段（runNumber / pipelineName / detectionCompletedAt），后端解析入库展示链路就位后，UT 覆盖率详情页呈现完整来源信息——扫描时间、流水线名称 + 编号组合链接。</p>
+  <div class="meta">
+    <span class="chip">openlibing-coderepo · 后端</span>
+    <span class="chip">openlibing-web · 前端</span>
+    <span class="chip">upload-ut-action · 插件</span>
+    <span class="chip">关联 Issue #249</span>
+    <span class="chip">设计评审稿 v1.0</span>
+  </div>
+</div>
+
+<nav class="toc">
+  <a href="#pain">现状与痛点</a><a href="#root">根因链路</a><a href="#arch">方案总览</a>
+  <a href="#decision">关键设计决策</a><a href="#scope">交付范围</a><a href="#risk">风险与对策</a><a href="#accept">验收标准</a>
+</nav>
+
+<section id="pain">
+  <h2><span class="idx">1</span>现状与痛点</h2>
+  <div class="sub">详情页信息条「检查时间、流水线名称、流水线编号」三项恒空（Issue #249），用户无法判断覆盖率数据来自哪次检测、哪条流水线。同类问题 code metrics 下钻页已在 #219 修复，本次对齐同款口径。</div>
+  <div class="grid3">
+    <div class="card pain"><span class="tag">缺失 ①</span><h3>检查时间恒为空</h3>
+      <p><code>detection_completed_at</code> 自 2026-09-23 后全 NULL；早期少数「有值」记录是后端 <code>parseDateTime</code> 空值兜底 <code>new Date()</code> 产生的假时间（≈create_time），兜底已在 379bed9e 刻意移除后暴露数据源缺失。</p></div>
+    <div class="card pain"><span class="tag">缺失 ②</span><h3>流水线编号恒为空</h3>
+      <p><code>run_number</code> 生产库全量 NULL（截图实证）——插件从未上报该元数据；前端已实现 <code>#{{runNumber}}</code> 渲染但存量记录仅显示「#」。</p></div>
+    <div class="card pain"><span class="tag">缺失 ③</span><h3>流水线名称整链路缺失</h3>
+      <p>报告 JSON 无该元数据、<code>code_ut_record</code> 无列、VO 无字段、上报 DTO 不携带——四层全缺，是本设计主体。</p></div>
+  </div>
+</section>
+
+<section id="root">
+  <h2><span class="idx">2</span>根因链路</h2>
+  <div class="sub">后端解析与入库链路大半已存在，数据源头（插件标准 JSON 元数据区仅 5 字段）缺失是唯一根因。</div>
+  <div class="arch">
+    <div class="lane">▎断点位置（基于 release_20261116_iter1 实测）</div>
+    <div class="flow">
+      <div class="node dark"><b>upload-ut-action</b><span>CoverageNormalizer.js:76-82 元数据区仅 5 字段<br>无 runNumber / pipelineName / detectionCompletedAt（src 全文 grep 零命中）</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>readUtMetaField</b><span class="pill orange">case 永不命中</span><span>runNumber(L283) / detectionCompletedAt(L292) 已存在，JSON 无对应字段 → payload 恒 null</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>saveUtRecord</b><span class="pill orange">入库 NULL</span><span>run_number / detection_completed_at 恒 NULL，分支快照同源同命运</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>getFileDetail</b><span class="pill orange">展示恒空</span><span>字段链路存在但值恒为空</span></div>
+    </div>
+  </div>
+  <div class="tbl-card"><table>
+    <tr><th style="width:170px">时间点</th><th style="width:230px">提交</th><th>行为</th></tr>
+    <tr><td>2026-09-20</td><td><code>90e02d2f</code> UT 功能引入</td><td><code>parseDateTime</code> 空值兜底返回 <code>new Date()</code> → 每条记录检测时间 = 上报处理时刻（假时间，≈create_time）</td></tr>
+    <tr><td>2026-09-23 17:09</td><td><code>379bed9e</code> Refs #189</td><td>兜底被刻意移除（<code>return null</code> + 告警），避免假时间失真展示与打乱排序 → 新记录 <code>detection_completed_at</code> 恒 NULL，形成分界线</td></tr>
+    <tr><td>2026-10-14</td><td><code>62fc4c90</code> OBS 流式解析重构</td><td>parseDateTime 行为未变，非分界点</td></tr>
+  </table></div>
+</section>
+
+<section id="arch">
+  <h2><span class="idx">3</span>方案总览</h2>
+  <div class="sub">三仓三段：插件补数据源（核心），后端补一个 case + 一列，前端对齐 metrics 口径；上报请求契约零变更。</div>
+  <div class="arch">
+    <div class="lane">▎插件侧（upload-ut-action，核心改动）</div>
+    <div class="flow">
+      <div class="node dark"><b>index.js</b><span class="pill blue">新增</span><span>读取 ATOMGIT_RUN_NUMBER（编号）+ ATOMGIT_WORKFLOW（名称），手动触发无变量兜底空串</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>CoverageNormalizer</b><span class="pill blue">元数据区 5 → 8 字段</span><span>新增 runNumber / pipelineName / detectionCompletedAt（组装完成时刻打点）</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>dist 重建发版</b><span>ncc 打包 + 版本升级</span></div>
+    </div>
+    <div class="lane">▎后端侧（openlibing-coderepo）</div>
+    <div class="flow">
+      <div class="node"><b>db.changelog</b><span class="pill blue">加列</span><span>code_ut_record.pipeline_name VARCHAR(255) 可空，preConditions 防重跑</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>readUtMetaField</b><span class="pill blue">仅加 1 个 case</span><span>case "pipelineName"；runNumber / detectionCompletedAt case 已存在，数据到位即生效</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>saveUtRecord / VO</b><span>实体、入库、UtCoverageFileDetailVO 各加 1 字段透出</span></div>
+    </div>
+    <div class="lane">▎前端侧（openlibing-web）</div>
+    <div class="flow">
+      <div class="node"><b>信息条对齐 metrics 口径</b><span>label 统一「扫描时间」（移除同源重复的「检测时间」）+ 空值兜底 --</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>pipelineDisplayName</b><span class="pill blue">组合链接</span><span>名称+编号整体跳转，缺名称退化仅编号，双缺整段 --</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="decision">
+  <h2><span class="idx">4</span>关键设计决策</h2>
+  <div class="sub">7 个决策项，均以「单一数据来源 + 零契约破坏 + 向后兼容」为原则。</div>
+  <div class="tbl-card"><table>
+    <tr><th style="width:220px">决策点</th><th>方案</th><th style="width:330px">理由与备选</th></tr>
+    <tr><td><b>数据来源</b></td><td>pipelineName / runNumber / detectionCompletedAt 只进 OBS 标准 JSON 元数据，<b>请求 DTO 不动</b></td><td>与 runNumber / commitId 同口径，避免「请求参数 vs JSON 内容」双源不一致；metrics 先例（CodeMetricsPayload.pipelineName）同为 JSON 元数据</td></tr>
+    <tr><td><b>一次补齐三字段</b></td><td>三个缺失元数据同源同模式一次补齐：流水线上下文 → JSON 元数据 → 后端既有解析 case → 入库</td><td>runNumber / detectionCompletedAt 的解析与入库链路已存在（L283/L292、L444/L448），插件补数据后立即生效、后端零改动</td></tr>
+    <tr><td><b>向后兼容</b></td><td>旧版插件 JSON 无新字段 → 流式解析 <code>default: skipChildren</code> 跳过 → 入库 NULL → VO 返回 null</td><td>既有机制零破坏；旧后端对新 JSON 未知字段跳过、旧前端不读新字段，三环节任意顺序上线均兼容</td></tr>
+    <tr><td><b>detectionCompletedAt 打点语义</b></td><td>取标准 JSON <b>组装完成时刻</b>（此时扫描已完成），无上下文时不兜底假值，空串由后端归一 NULL</td><td>吸取 379bed9e 教训：不用服务器当前时间冒充检测时间（失真展示 + 打乱取最近一次排序）</td></tr>
+    <tr><td><b>发版顺序</b></td><td>后端先行 → 插件发版 → 前端发版（§2.5 灰度顺序）</td><td>后端兼容旧 JSON；插件上线后新数据三要素齐全；前端发版后存量记录兜底 --，任一环节单独上线无破坏</td></tr>
+    <tr><td><b>存量数据</b></td><td>run_number / detection_completed_at 历史 NULL <b>不刷数回填</b>，详情页空值兜底 --</td><td>分界线前少数记录为兜底假时间无真实语义，不清洗不参与展示口径；如需回填另行评估基于 pipeline_run_id 的离线任务（不在本次范围）</td></tr>
+    <tr><td><b>「检测时间」展示移除</b></td><td>与扫描时间同源同值（同一最新记录），对齐 metrics 页口径去重</td><td>UI 口径统一决策；若评审认为分支快照检测时间有独立价值可保留，不阻塞</td></tr>
+  </table></div>
+</section>
+
+<section id="scope">
+  <h2><span class="idx">5</span>交付范围与分工</h2>
+  <div class="tbl-card"><table>
+    <tr><th style="width:190px">仓库</th><th>交付项</th><th style="width:120px">类型</th></tr>
+    <tr><td rowspan="3"><b>upload-ut-action</b></td><td>index.js 上下文注入（ATOMGIT_RUN_NUMBER / ATOMGIT_WORKFLOW）+ CoverageNormalizer 元数据区补齐三字段</td><td><span class="pill blue">插件</span></td></tr>
+    <tr><td>normalize 用例扩展：meta 带/不带 runNumber、pipelineName 断言 + 元数据区完整性快照；dist 重建 + 版本升级</td><td><span class="pill green">测试</span></td></tr>
+    <tr><td>上报请求契约零变更（POST /ut/coverage/report 请求体不动）</td><td><span class="pill green">兼容</span></td></tr>
+    <tr><td rowspan="3"><b>openlibing-coderepo</b></td><td>db.changelog：code_ut_record 加列 pipeline_name（preConditions 幂等，对齐 metrics changeSet 结构）</td><td><span class="pill blue">数据</span></td></tr>
+    <tr><td>UtCoveragePayload / readUtMetaField / CodeUtRecordEntity / saveUtRecord / UtCoverageFileDetailVO 各补 pipelineName 字段</td><td><span class="pill blue">接口</span></td></tr>
+    <tr><td>单测：有/无 pipelineName 两条解析返回路径 + 空串 + 失败记录不带 + changeSet 幂等</td><td><span class="pill green">测试</span></td></tr>
+    <tr><td><b>openlibing-web</b></td><td>UtCoverageDetailDialog 信息条：扫描时间 label 统一 + 空值兜底 -- + 移除同源重复「检测时间」+ pipelineDisplayName 组合链接（对齐 MetricsDetailDialog.vue L83-87）</td><td><span class="pill blue">页面</span></td></tr>
+  </table></div>
+</section>
+
+<section id="risk">
+  <h2><span class="idx">6</span>风险与对策</h2>
+  <div class="tbl-card"><table>
+    <tr><th style="width:230px">风险</th><th>影响</th><th>对策</th></tr>
+    <tr><td>Liquibase 加列（可空，单行 DDL）</td><td><span class="pill green">低</span></td><td>锁表时间短；preConditions 防重跑（columnExists MARK_RAN）幂等安全</td></tr>
+    <tr><td>存量数据 run_number / detection_completed_at 全 NULL</td><td><span class="pill green">低</span></td><td>数据源缺失所致（列一直存在），详情页空值兜底 --，不刷数回填</td></tr>
+    <tr><td>旧版插件共存期</td><td><span class="pill green">低</span></td><td>新数据三要素为 NULL，前端空值兜底展示，无功能破坏</td></tr>
+    <tr><td>pipelineName 环境变量</td><td><span class="pill green">已闭环</span></td><td>ATOMGIT_WORKFLOW，与 code-metrics-action ciContext.js GitCode 分支同源（已核实）；手动触发兜底空串，组合展示自动退化仅编号</td></tr>
+    <tr><td>UT 插件双平台适配</td><td><span class="pill orange">中</span></td><td>存量仅 GitCode（ATOMGIT_*）；GitHub 平台（GITHUB_WORKFLOW）适配为可选增强，随插件上 GitHub 需求另行评估</td></tr>
+    <tr><td>明细接口响应体膨胀</td><td><span class="pill green">低</span></td><td>新增 1 个可空字符串字段，影响可忽略</td></tr>
+  </table></div>
+</section>
+
+<section id="accept">
+  <h2><span class="idx">7</span>验收标准</h2>
+  <div class="card">
+    <div class="check">新版插件上报后：详情页展示扫描时间、流水线（名称 + 编号组合链接），与 code metrics 下钻页信息口径一致。</div>
+    <div class="check">旧版插件 / 历史记录（JSON 无新增字段）：明细接口 pipelineName / runNumber / checkTime 返回空，前端流水线段与扫描时间兜底 --，不影响既有功能；存量数据不做刷数回填。</div>
+    <div class="check">上报契约零破坏：请求 DTO 不变，幂等清理与定位逻辑不变。</div>
+    <div class="check">单测覆盖「有 pipelineName」「无 pipelineName（历史 / 旧插件）」两条解析与返回路径。</div>
+    <div class="check">上报解析失败落失败记录的路径不受影响（失败记录不带 pipelineName，与 runNumber / commitId 同口径）。</div>
+  </div>
+</section>
+
+<footer>
+  设计评审稿 · UT 覆盖率详情页来源流水线信息补齐 · 详见同目录《proposal.md》《design.md》（关联 openlibing-coderepo Issue #249，同类先例 #219）
+</footer>
+
+</body>
+</html>
