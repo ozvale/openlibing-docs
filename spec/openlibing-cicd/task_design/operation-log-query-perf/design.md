@@ -6,7 +6,7 @@
 
 ### 目标
 
-消除五个日志查询接口（cicd / coderepo 的 list 与 filter-meta、framework 的 operation-logs/list）首查与重复查询的性能问题，同时保持权限校验与失败语义完全不变。
+消除五个日志查询接口（cicd / coderepo 的 list 与 filter-meta、framework 的 operation-logs/list）重复查询的性能问题，并降低 filter-meta 首查中的白名单远程调用放大；首查执行计划与冷启动开销本期不优化（阶段二索引优化已撤销，见下）。权限校验与失败语义保持完全不变。
 
 ### 总体方案
 
@@ -41,7 +41,7 @@
 | 权限校验与缓存顺序                       | 校验先于缓存读写                                                                | 缓存命中仍要求当前用户是项目成员，行为与现状一致                                                                                                                                                                                   |
 | 索引列顺序（已否决）                     | project_id, module_id, operation_end_time, id, user_name, resource_name         | 原设计意图：前三列与既有 `idx_project_module_time` 前缀一致、`id` 紧跟时间列保持索引序免 filesort、尾列使 GROUP BY 免回表；**经检视否决**：6 列键长 5105 字节超 InnoDB 3072 上限必建失败，且分组列位于范围列后本就无法免 temporary |
 | 既有 `idx_project_module_time`（已否决） | 不删除（阶段二整体撤销）                                                        | 原方案「三合一替换」依赖覆盖索引建成；覆盖索引经检视否决后，替换失去前提，旧索引保留不动，索引总数维持 6 个                                                                                                                        |
-| ip / log_result 维度                     | 不建索引                                                                        | ip 与 log_result 过滤基数低；本期先上 user_name / resource_name 两个高频维度，观察收益后再定                                                                                                                                       |
+| ip / log_result 维度                     | 不建索引                                                                        | ip 与 log_result 过滤基数低；原拟随阶段二先上 user_name / resource_name 两个高频维度，阶段二已整体撤销，本期不建任何 log_operation 索引，待列宽收缩评估后再定                                                                      |
 | framework 白名单端                       | 不做缓存                                                                        | 白名单查询 framework 侧走库内查询，瓶颈在调用频次而非单次耗时；调用方缓存已消除频次问题                                                                                                                                            |
 
 ## 2. 实现逻辑设计
@@ -123,7 +123,7 @@ ip / log_result 维度不建索引的结论不变（基数低）。
 
 ## 6. API接口设计
 
-不涉及。五个 HTTP 接口的路径、入参、出参、权限语义均不变；改动均为服务内部实现与数据库索引。前端无需适配。
+不涉及。五个 HTTP 接口的路径、入参、出参、权限语义均不变；改动均为服务内部实现与进程内缓存，不涉及任何数据库 DDL / 索引变更。前端无需适配。
 
 ## 7. 安全设计
 
