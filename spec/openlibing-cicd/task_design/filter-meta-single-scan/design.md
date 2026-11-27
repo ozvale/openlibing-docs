@@ -44,19 +44,19 @@ queryFilterMeta（缓存未命中路径）
 
 ### 关键决策
 
-| 决策点                       | 结论                                                                                                                 | 理由                                                                                                                                                                      |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| moduleId 是否并入 combo      | 不并入，保持独立查询                                                                                                 | module_id 并入会使用户×资源×IP×结果组合数再乘以模块数（白名单可达数十），截断熔断风险显著上升；module_id 单查本就走索引前缀、成本最低，5→2 次已拿到主要收益（用户已确认） |
-| 截断熔断阈值                 | 常量 10000（`COMBO_ROW_LIMIT`），返回行数等于阈值即回退                                                              | 项目级日志 30 天窗口内组合数实测远低于此；避免过度配置化（用户已确认）。回退保证最坏情形（超大组合基数）结果正确，仅退化为现状性能                                        |
-| skip 自身维度语义            | 应用侧复现：combo 查询不带任何维度值过滤，拆分时对其他维度应用严格 IN 过滤（存在 selectedValues 则行值必须命中集合） | 与旧 SQL `skipDimension` 精确等价；单条 SQL 无法表达 4 种不同 WHERE，应用侧拆分是唯一保真路径                                                                             |
-| combo 启用条件               | 仅当请求含 ≥2 个值维度时启用 combo；恰好 1 个值维度时直走既有 `selectFilterMetaGroupBy`                              | 单维度场景 combo 无归并收益，反而传输放大（检视修订）                                                                                                                     |
-| 超限校验时机                 | selectedValues >1000 的 paramError 校验统一前移到任何 DB 查询之前                                                    | 避免先发 combo 查询再被拒绝的无效开销；校验语义与结果不变（检视修订）                                                                                                     |
-| collation 归一化             | IN 匹配、归并 key、排序 value 均按 `Locale.ROOT` 小写后比较                                                          | 对齐 MySQL `utf8mb4_*_ci` 大小写不敏感排序规则；重音不敏感未实现（代码注释注明）；展示值经 displayNames 保留原文（检视修订）                                              |
-| 空值/空串语义                | 拆分时跳过自身列空行的行；该行仍计入其他维度                                                                         | 等价旧 SQL 仅对自身列 `IS NOT NULL AND != ''` 的行为                                                                                                                      |
-| 排序位置                     | 原 SQL `ORDER BY selected优先, count DESC, value` 移入应用侧 comparator                                              | combo 行无单一排序目标；应用侧排序结果与原 SQL 语义一致（selected 优先 → count 降序 → 值升序）                                                                            |
-| 旧 `selectFilterMetaGroupBy` | 保留                                                                                                                 | moduleId 维度 + 熔断回退路径共用，不删                                                                                                                                    |
-| 缓存层                       | 不动                                                                                                                 | 30s TTL 缓存、cacheKey 构成、TTL 配置键均不变；combo 属于缓存未命中路径内部优化                                                                                           |
-| 两仓实现方式                 | 各自同构实现，不抽公共库                                                                                             | 沿用既有组织方式（跨仓共享需 common SDK 发版，超出本期范围）                                                                                                              |
+| 决策点                       | 结论                                                                                                                 | 理由                                                                                                                                                                          |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| moduleId 是否并入 combo      | 不并入，保持独立查询                                                                                                 | module_id 并入会使用户×资源×IP×结果组合数再乘以模块数（白名单可达数十），截断熔断风险显著上升；module_id 单查本就走索引前缀、成本最低，5→2 次已拿到主要收益（用户已确认）     |
+| 截断熔断阈值                 | 常量 10000（`COMBO_ROW_LIMIT`），返回行数等于阈值即回退                                                              | 项目级日志 30 天窗口内组合数实测远低于此；避免过度配置化（用户已确认）。回退保证最坏情形（超大组合基数）结果正确，代价为现状 5 次逐维度查询 + 1 次 combo 查询，略劣于现状性能 |
+| skip 自身维度语义            | 应用侧复现：combo 查询不带任何维度值过滤，拆分时对其他维度应用严格 IN 过滤（存在 selectedValues 则行值必须命中集合） | 与旧 SQL `skipDimension` 精确等价；单条 SQL 无法表达 4 种不同 WHERE，应用侧拆分是唯一保真路径                                                                                 |
+| combo 启用条件               | 仅当请求含 ≥2 个值维度时启用 combo；恰好 1 个值维度时直走既有 `selectFilterMetaGroupBy`                              | 单维度场景 combo 无归并收益，反而传输放大（检视修订）                                                                                                                         |
+| 超限校验时机                 | selectedValues >1000 的 paramError 校验统一前移到任何 DB 查询之前                                                    | 避免先发 combo 查询再被拒绝的无效开销；校验语义与结果不变（检视修订）                                                                                                         |
+| collation 归一化             | IN 匹配、归并 key、排序 value 均按 `Locale.ROOT` 小写后比较                                                          | 对齐 MySQL `utf8mb4_*_ci` 大小写不敏感排序规则；重音不敏感未实现（代码注释注明）；展示值经 displayNames 保留原文（检视修订）                                                  |
+| 空值/空串语义                | 拆分时跳过自身列空行的行；该行仍计入其他维度                                                                         | 等价旧 SQL 仅对自身列 `IS NOT NULL AND != ''` 的行为                                                                                                                          |
+| 排序位置                     | 原 SQL `ORDER BY selected优先, count DESC, value` 移入应用侧 comparator                                              | combo 行无单一排序目标；应用侧排序结果与原 SQL 语义一致（selected 优先 → count 降序 → 值升序）                                                                                |
+| 旧 `selectFilterMetaGroupBy` | 保留                                                                                                                 | moduleId 维度 + 熔断回退路径共用，不删                                                                                                                                        |
+| 缓存层                       | 不动                                                                                                                 | 30s TTL 缓存、cacheKey 构成、TTL 配置键均不变；combo 属于缓存未命中路径内部优化                                                                                               |
+| 两仓实现方式                 | 各自同构实现，不抽公共库                                                                                             | 沿用既有组织方式（跨仓共享需 common SDK 发版，超出本期范围）                                                                                                                  |
 
 ## 2. 实现逻辑设计
 
@@ -94,8 +94,10 @@ queryFilterMeta（缓存未命中路径）
     for row in combo 行:
       value = row[d]（firstPresent 兼容大小写键）
       if value 为 null/空串: continue            # 自身空值不计自身维度
+      hit = true
       for k in otherKeys[d]:
-        if selectedSets[k] 非空 且 lower(row[k])（Locale.ROOT）不在集合内: continue  # 严格 IN
+        if selectedSets[k] 非空 且 lower(row[k])（Locale.ROOT）不在集合内: hit = false; break  # 严格 IN
+      if not hit: continue                        # 未通过其他维度严格 IN，整行跳过
       counts.merge(lower(value), row.filterCount, Long::sum)
     items = toFilterMetaItems(counts, d, query)   # 零值补齐 + 应用侧排序 + 截断 1000；展示值经 displayNames 保留原文
   返回 filterMeta
@@ -112,11 +114,11 @@ queryFilterMeta（缓存未命中路径）
 
 ```text
 comboRows = mapper.selectFilterMetaCombo(comboFilter, COMBO_ROW_LIMIT)
-if comboRows.size() >= COMBO_ROW_LIMIT:
+if comboRows.size() == COMBO_ROW_LIMIT:   # combo SQL 以 LIMIT 封顶，行数最多等于阈值，等于即认定可能截断
     走旧逐维度路径（selectFilterMetaGroupBy × N）   # 行为与现状完全一致
 ```
 
-回退仅发生在组合基数异常大的项目，性能退化为现状、结果始终正确。
+回退仅发生在组合基数异常大的项目，代价为现状 5 次逐维度查询 + 已付出的 1 次 combo 查询（额外 ≤10000 行传输），略劣于现状性能，结果始终正确。
 
 ## 3. 类设计
 
@@ -135,7 +137,7 @@ if comboRows.size() >= COMBO_ROW_LIMIT:
 ## 5. 性能设计
 
 - 缓存未命中路径：4 值维度 4 次全扫描 + moduleId 1 次 → **combo 1 次全扫描 + moduleId 1 次**；首查 DB 侧耗时近似降为 2/5（全扫描行集相同，组合聚合的 CPU 开销由一次 GROUP BY 承担）。
-- 网络与内存代价：传输组合行（≤10000 × 5 列）替代 4 份聚合行（各 ≤1000 × 2 列）；典型项目组合数千级，净收益为正；异常项目触发熔断回退，不放大。
+- 网络与内存代价：传输组合行（≤10000 × 5 列）替代 4 份聚合行（各 ≤1000 × 2 列）；典型项目组合数千级，净收益为正；异常项目触发熔断回退（额外多 1 次 combo 查询），不放大。
 - 缓存命中路径：不受影响（0 次 DB）。
 - 验证方式：单测（拆分正确性、熔断回退、语义对齐）+ BETA 环境首查接口时延对比（同参数、缓存清空场景）。
 

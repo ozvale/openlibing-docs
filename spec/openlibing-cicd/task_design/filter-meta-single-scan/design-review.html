@@ -59,7 +59,7 @@
 <table>
   <tr><th>#</th><th>决策</th><th>结论与理由</th></tr>
   <tr><td>D1</td><td>moduleId 是否并入 combo</td><td><strong>不并入</strong>。并入会使组合数再乘以模块数（白名单可达数十），截断风险显著上升；module_id 单查走索引前缀、成本最低（用户已确认）</td></tr>
-  <tr><td>D2</td><td>截断熔断阈值</td><td><strong>常量 10000</strong>；返回行数 == 阈值即自动回退旧逐维度路径——最坏退化为现状性能，结果始终正确，避免配置化过度设计（用户已确认）</td></tr>
+  <tr><td>D2</td><td>截断熔断阈值</td><td><strong>常量 10000</strong>；返回行数 == 阈值即自动回退旧逐维度路径——最坏 = 现状 5 次逐维度查询 + 已付出的 1 次 combo 查询（额外 ≤10000 行传输），略劣于现状性能；结果始终正确，避免配置化过度设计（用户已确认）</td></tr>
   <tr><td>D3</td><td>旧 selectFilterMetaGroupBy 去留</td><td><strong>保留</strong>。moduleId 维度与熔断回退路径共用</td></tr>
   <tr><td>D4</td><td>两仓实现方式</td><td><strong>各自同构实现</strong>，不抽公共库（跨仓共享需 common SDK 发版，超范围）</td></tr>
   <tr><td>D5</td><td>combo 启用条件</td><td>仅当请求含 <strong>≥2 个值维度</strong>时启用；单值维度直走 selectFilterMetaGroupBy（单维度无归并收益，combo 反而传输放大）</td></tr>
@@ -70,7 +70,7 @@
 <h2>四、风险与对策</h2>
 <table>
   <tr><th>风险</th><th>对策</th></tr>
-  <tr><td>组合基数异常大（超 10000）→ combo 结果不完整</td><td>行数 == 阈值即熔断回退旧路径；正确性不劣于现状，仅性能退化</td></tr>
+  <tr><td>组合基数异常大（超 10000）→ combo 结果不完整</td><td>行数 == 阈值即熔断回退旧路径；结果始终正确；性能代价 = 现状 5 次逐维度查询 + 1 次 combo 查询，略劣于现状</td></tr>
   <tr><td>网络传输组合行（≤10000×5 列）大于 4 份聚合行</td><td>典型项目组合数千级，净收益为正；异常项目被熔断兜底</td></tr>
   <tr><td>拆分聚合引入回归（排序 / 空值 / skip 语义）</td><td>单测逐项覆盖语义对齐表中的每一行；BETA 同参数首查结果与现状 diff 比对</td></tr>
 </table>
@@ -79,6 +79,7 @@
 <ul>
   <li>缓存未命中时：4 值维度仅 1 次 combo SQL + moduleId 1 次专用 SQL（可从 SQL 日志/mapper mock verify 断言）</li>
   <li>combo 行数达 10000 时自动回退，返回结果与旧路径一致</li>
+  <li>组合基数接近/超过 10000 的项目：回退路径首查时延不显著劣于现状（5 次逐维度 + 1 次 combo）</li>
   <li>候选值列表内容、排序、截断、零值补齐与现状完全一致</li>
   <li>接口路径/出入参/权限语义零变化，前端无需适配</li>
   <li>增量行覆盖率 ≥ 80%</li>
