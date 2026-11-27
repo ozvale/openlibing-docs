@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>filter-meta 组合扫描合并（方案一）— 设计串讲</title>
+<style>
+  body { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; max-width: 960px; margin: 0 auto; padding: 24px; color: #1f2328; line-height: 1.65; }
+  h1 { border-bottom: 2px solid #0969da; padding-bottom: 8px; font-size: 1.5em; }
+  h2 { color: #0969da; margin-top: 2em; font-size: 1.25em; border-left: 4px solid #0969da; padding-left: 10px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.92em; }
+  th, td { border: 1px solid #d0d7de; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f6f8fa; }
+  code { background: #f6f8fa; padding: 2px 5px; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #f6f8fa; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.88em; }
+  .tag { display: inline-block; background: #ddf4ff; color: #0969da; border-radius: 12px; padding: 2px 10px; font-size: 0.85em; margin-right: 6px; }
+  .warn { background: #fff8c5; border-left: 4px solid #d4a72c; padding: 10px 14px; border-radius: 4px; margin: 12px 0; }
+  .ok { color: #1a7f37; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>filter-meta 组合扫描合并（方案一）</h1>
+<p>
+  <span class="tag">Issue #569</span>
+  <span class="tag">cicd + coderepo 两仓同构</span>
+  <span class="tag">零 DDL</span>
+  <span class="tag">Standard 模式</span>
+</p>
+<p>前置：<code>operation-log-query-perf</code> 阶段一缓存（PR !714 / !364）。本变更解决其遗留根因——首查仍对同一批行做 5 次独立全扫描。</p>
+
+<h2>一、总体流程</h2>
+<table>
+  <tr><th>现状（首查）</th><th>本方案（首查）</th></tr>
+  <tr>
+    <td>
+      userName / resourceName / ip / logResult / moduleId 各发一条 <code>GROUP BY + COUNT</code><br>
+      → 同一批 WHERE 命中行被<strong>全量扫描 5 次</strong>（前 4 次回表 + temporary + filesort）
+    </td>
+    <td>
+      ① 1 次 combo 扫描：<code>GROUP BY user_name, resource_name, ip, log_result LIMIT 10000</code>（仅当请求含 <strong>≥2 个值维度</strong>时启用；单值维度直走旧路径）<br>
+      ② 1 次 moduleId 专用查询（不变，走索引前缀，最便宜）<br>
+      ③ 4 个值维度候选列表在<strong>应用侧</strong>从 combo 行拆分聚合<br>
+      <span class="ok">5 次扫描 → 2 次，首查 DB 耗时近似降为 2/5</span>
+    </td>
+  </tr>
+</table>
+
+<h2>二、语义保真（与现状逐项对齐）</h2>
+<table>
+  <tr><th>现状行为</th><th>combo 方案等价实现</th></tr>
+  <tr><td>skipDimension：候选列表不被自身 selectedValues 过滤，但受其他维度过滤</td><td>combo SQL 不带任何维度过滤；拆分维度 d 时对<strong>其他三个维度</strong>应用严格 IN 过滤（存在 selectedValues 则行值必须命中 HashSet，null / 空串天然不命中即跳过）</td></tr>
+  <tr><td>自身列 <code>IS NOT NULL AND != ''</code></td><td>拆分时跳过自身列空值行；该行仍计入其他维度（不变）</td></tr>
+  <tr><td><code>ORDER BY selected 优先, count DESC, value</code> + LIMIT 1000</td><td>应用侧三级 comparator 排序 + 截断 1000（<code>toFilterMetaItems</code> 增强）</td></tr>
+  <tr><td>logResult 零值枚举补齐、selected 零值补齐、fillMenuNames</td><td>全部保留不变</td></tr>
+  <tr><td>30s TTL 缓存 / cacheKey / 权限前置 / 失败闭门</td><td>全部不动（combo 属缓存未命中路径内部优化）</td></tr>
+</table>
+
+<h2>三、决策点</h2>
+<table>
+  <tr><th>#</th><th>决策</th><th>结论与理由</th></tr>
+  <tr><td>D1</td><td>moduleId 是否并入 combo</td><td><strong>不并入</strong>。并入会使组合数再乘以模块数（白名单可达数十），截断风险显著上升；module_id 单查走索引前缀、成本最低（用户已确认）</td></tr>
+  <tr><td>D2</td><td>截断熔断阈值</td><td><strong>常量 10000</strong>；返回行数 == 阈值即自动回退旧逐维度路径——最坏 = 现状 5 次逐维度查询 + 已付出的 1 次 combo 查询（额外 ≤10000 行传输），略劣于现状性能；结果始终正确，避免配置化过度设计（用户已确认）</td></tr>
+  <tr><td>D3</td><td>旧 selectFilterMetaGroupBy 去留</td><td><strong>保留</strong>。moduleId 维度与熔断回退路径共用</td></tr>
+  <tr><td>D4</td><td>两仓实现方式</td><td><strong>各自同构实现</strong>，不抽公共库（跨仓共享需 common SDK 发版，超范围）</td></tr>
+  <tr><td>D5</td><td>combo 启用条件</td><td>仅当请求含 <strong>≥2 个值维度</strong>时启用；单值维度直走 selectFilterMetaGroupBy（单维度无归并收益，combo 反而传输放大）</td></tr>
+  <tr><td>D6</td><td>超限校验时机</td><td>selectedValues &gt;1000 的 paramError 校验<strong>前移到任何 DB 查询之前</strong>统一预检；语义不变，避免无效查询开销</td></tr>
+  <tr><td>D7</td><td>collation 归一化</td><td>IN 匹配、归并 key、排序 value 均按 <code>Locale.ROOT</code> 小写比较，对齐 MySQL <code>utf8mb4_*_ci</code>；重音不敏感未实现（注释注明）；展示值经 displayNames 保留原文</td></tr>
+</table>
+
+<h2>四、风险与对策</h2>
+<table>
+  <tr><th>风险</th><th>对策</th></tr>
+  <tr><td>组合基数异常大（超 10000）→ combo 结果不完整</td><td>行数 == 阈值即熔断回退旧路径；结果始终正确；性能代价 = 现状 5 次逐维度查询 + 1 次 combo 查询，略劣于现状</td></tr>
+  <tr><td>网络传输组合行（≤10000×5 列）大于 4 份聚合行</td><td>典型项目组合数千级，净收益为正；异常项目被熔断兜底</td></tr>
+  <tr><td>拆分聚合引入回归（排序 / 空值 / skip 语义）</td><td>单测逐项覆盖语义对齐表中的每一行；BETA 同参数首查结果与现状 diff 比对</td></tr>
+</table>
+
+<h2>五、验收要点</h2>
+<ul>
+  <li>缓存未命中时：4 值维度仅 1 次 combo SQL + moduleId 1 次专用 SQL（可从 SQL 日志/mapper mock verify 断言）</li>
+  <li>combo 行数达 10000 时自动回退，返回结果与旧路径一致</li>
+  <li>组合基数接近/超过 10000 的项目：回退路径首查时延不显著劣于现状（5 次逐维度 + 1 次 combo）</li>
+  <li>候选值列表内容、排序、截断、零值补齐与现状完全一致</li>
+  <li>接口路径/出入参/权限语义零变化，前端无需适配</li>
+  <li>增量行覆盖率 ≥ 80%</li>
+</ul>
+
+<div class="warn">注：此前 Issue #569 评论中「moduleId 候选值来自白名单不走 DB」表述不准确——moduleId 维度实际走 DB（GROUP BY module_id + menu_info 补名称），交付时在 PR/Issue 中更正。</div>
+</body>
+</html>
